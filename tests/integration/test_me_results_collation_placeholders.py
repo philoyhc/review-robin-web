@@ -38,14 +38,14 @@ def _make_session(
 # ── /results ──────────────────────────────────────────────────────────
 
 
-def test_results_403_when_user_is_not_a_reviewee(
+def test_results_404_when_user_is_not_a_reviewee(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="res-deny")
     response = client.get(
         f"/me/sessions/{review_session.id}/results"
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_results_renders_for_email_identified_reviewee(
@@ -98,7 +98,7 @@ def test_results_renders_without_description_card_when_none(
     assert '<div class="card rs-status-panel">' not in body
 
 
-def test_results_403_for_inactive_reviewee(
+def test_results_404_for_inactive_reviewee(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="res-inact")
@@ -114,20 +114,20 @@ def test_results_403_for_inactive_reviewee(
     response = client.get(
         f"/me/sessions/{review_session.id}/results"
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 # ── /collation ────────────────────────────────────────────────────────
 
 
-def test_collation_403_when_user_is_not_an_observer(
+def test_collation_404_when_user_is_not_an_observer(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="col-deny")
     response = client.get(
         f"/me/sessions/{review_session.id}/collation"
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_collation_renders_for_observer(
@@ -178,7 +178,7 @@ def test_collation_renders_without_description_card_when_none(
     assert '<div class="card rs-status-panel">' not in body
 
 
-def test_collation_403_for_inactive_observer(
+def test_collation_404_for_inactive_observer(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="col-inact")
@@ -194,4 +194,4 @@ def test_collation_403_for_inactive_observer(
     response = client.get(
         f"/me/sessions/{review_session.id}/collation"
     )
-    assert response.status_code == 403
+    assert response.status_code == 404

@@ -129,7 +129,7 @@ def test_non_operator_cannot_view_other_session(
     bob_client = make_client(bob)
     response = bob_client.get(f"/operator/sessions/{review_session.id}")
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_create_missing_name_returns_422(client: TestClient) -> None:

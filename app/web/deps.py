@@ -1,3 +1,32 @@
+"""Route dependencies — identity resolution and the access gates.
+
+**Session-scoped gates answer 404, never 403** (Segment 19F PR 1). The
+four gates that take a ``session_id`` — ``require_session_operator``,
+``require_reviewer_in_session``, ``require_reviewee_in_session`` and
+``require_observer_in_session`` — raise a bare
+``HTTPException(404)`` on every refusal, byte-identical to the one they
+already raise for a session id that does not exist. Before 19F they
+split it: 404 for "no such session", 403 for "the session exists but you
+are not on it", each 403 carrying a ``detail`` naming the role it was
+refusing. Any signed-in person could therefore **enumerate session ids**
+by reading the status code — content never leaked, but existence and
+count did.
+
+The rule the author set: *if you do not have a role granting visibility,
+you should not be able to infer anything.* One code and one body now
+cover all of: no such session, a session you hold no role on, and a role
+you hold that has been made inactive.
+
+Two gates are deliberately **not** covered, because neither discloses
+anything about a session: ``require_operator`` keeps its 303 to ``/me``
+(the workspace allowlist), and ``require_sys_admin`` keeps its 403 — a
+caller who reaches it is already inside the operator surface. See
+``spec/permissions.md`` §5.
+
+The gates keep logging what they refuse, with gate, user and session.
+The inference being closed is the caller's, not the operator's.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -192,10 +221,7 @@ def require_session_operator(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     review_session = sessions.get_for_user(db, user, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -243,7 +269,7 @@ def require_reviewer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewer, ReviewSession]:
-    """403 unless the authenticated user has an active Reviewer row in the session.
+    """404 unless the authenticated user has an active Reviewer row in the session.
 
     Identity match is case-insensitive email equality (``casefold()`` both
     sides). Reviewer rows whose ``status`` is anything other than ``active``
@@ -276,10 +302,7 @@ def require_reviewer_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active reviewer in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 
@@ -290,7 +313,7 @@ def require_reviewee_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
-    """403 unless the authenticated user has an active Reviewee row
+    """404 unless the authenticated user has an active Reviewee row
     in the session whose ``email_or_identifier`` parses as an email
     matching the user's email (case-insensitive).
 
@@ -333,10 +356,7 @@ def require_reviewee_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active reviewee in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 
@@ -347,7 +367,7 @@ def require_observer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Observer, ReviewSession]:
-    """403 unless the authenticated user has an active Observer row
+    """404 unless the authenticated user has an active Observer row
     in the session.
 
     Identity match is case-insensitive email equality. Observer rows
@@ -385,10 +405,7 @@ def require_observer_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active observer in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 

@@ -17,7 +17,8 @@ Exercises the Owners section, which lives on Session Home's config card
   have full operator access via the normal session-operator path.
   owners/add is self-only for a non-owner sys-admin; clone stays allowed.
 - Audit events emitted with correct envelope.
-- Plain non-owner operator still 403s on the session config surface.
+- Plain non-owner operator still refused on the session config
+  surface — a 404 since 19F PR 1, indistinguishable from no such session.
 """
 from __future__ import annotations
 
@@ -78,7 +79,7 @@ def test_edit_page_renders_owners_section_for_owner(
     assert "alice@example.edu" in response.text
 
 
-def test_edit_page_403s_for_plain_non_member_operator(
+def test_edit_page_404s_for_plain_non_member_operator(
     db: Session,
     client: TestClient,
     make_client,
@@ -86,12 +87,13 @@ def test_edit_page_403s_for_plain_non_member_operator(
 ) -> None:
     review_session = _make_session(client, db, code="own-403")
     bob_client = make_client(bob)
-    # 18R Item 4 — Session Home is the config surface; a non-owner 403s.
+    # 18R Item 4 — Session Home is the config surface; a non-owner is
+    # refused, with a 404 since 19F PR 1.
     response = bob_client.get(
         f"/operator/sessions/{review_session.id}",
         follow_redirects=False,
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_sys_admin_non_member_denied_edit_until_adopt(
@@ -111,7 +113,7 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
     bob_client = make_client(bob)
     # Denied before adopting.
     denied = bob_client.get(f"/operator/sessions/{review_session.id}")
-    assert denied.status_code == 403
+    assert denied.status_code == 404
 
     # The audited elevation door: self-add as owner, land on Home.
     adopt = bob_client.post(
@@ -352,7 +354,7 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="own-sa-self")
     # Bob hits a session route first to land his user row via the bootstrap
-    # (get_or_create_user runs even though the operator gate 403s him).
+    # (get_or_create_user runs even though the operator gate refuses him).
     bob_client = make_client(bob)
     bob_client.get(f"/operator/sessions/{review_session.id}")
 
@@ -417,7 +419,7 @@ def test_non_owner_sys_admin_denied_edit_submit(
         data={"name": "x", "code": "deny-edit", "description": ""},
         follow_redirects=False,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_non_owner_sys_admin_denied_lobby_edit(
@@ -431,7 +433,7 @@ def test_non_owner_sys_admin_denied_lobby_edit(
         data={"name": "x", "code": "deny-lobby", "tags": ""},
         follow_redirects=False,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_non_owner_sys_admin_denied_owners_remove(
@@ -445,7 +447,7 @@ def test_non_owner_sys_admin_denied_owners_remove(
         f"/operator/sessions/{review_session.id}/owners/1/remove",
         follow_redirects=False,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_owners_add_self_only_blocks_adding_other(

@@ -127,16 +127,58 @@ suite and are verified on the dev slot.
 
 **Result: no gaps found.**
 
+## Session-id enumeration — found and closed (2026-09-07)
+
+**Vector.** Until Segment 19F PR 1 the four session-scoped gates split
+their refusals: **404** for "no such session", **403** for "the session
+exists but you are not on it", each 403 carrying a `detail` that named
+the role in prose — *"You are not an active reviewer in this session"*,
+*"You do not have access to this session"*. Any signed-in account could
+therefore walk `/operator/sessions/{n}` or `/me/sessions/{n}/results`
+and learn, from the status code alone, **which session ids exist and how
+many there are**. Sign-in is open to the whole tenant
+(`spec/role_landing_and_visibility.md` §1), so "any signed-in account"
+means anyone in the institution.
+
+**Severity: low, and worth fixing anyway.** No content leaked — every
+gate refused before rendering — and session ids are sequential integers,
+so the count was inferable from a single owned session's id. What leaked
+was existence, count and rate of creation.
+
+**Found by probing a running app**, not by reading the gates: the four
+of them were exercised with a signed-in stranger against both an
+existing session and an absent id, and the responses differed. The
+reading had in fact gone the other way — `spec/permissions.md` argued
+that `require_session_operator` checking membership first meant "a
+non-member sees 403, never a 404 that leaks existence", which has the
+threat model backwards. That inverted note is corrected in place rather
+than deleted; it is why the vector survived review.
+
+**Closed** by making every session-scoped refusal a bare 404, identical
+to an unknown id in both status and body.
+`tests/integration/test_session_enumeration_gate.py` asserts the
+indistinguishability per gate by probing *both* sides, so a gate that
+answered 404 for one and something else for the other still fails.
+`require_operator` (303) and `require_sys_admin` (403) are untouched:
+neither takes a session id.
+
+**Not closed by this, and deliberately so:** sign-in itself stays open
+to the tenant. That is the author's decision of 2026-09-07, recorded in
+`spec/role_landing_and_visibility.md` §6. The 404 change is what makes
+that posture cheap to hold — a signed-in stranger can now learn nothing
+from the session surfaces at all.
+
 ## Denial-path test coverage
 
 | Gate | Test |
 |---|---|
 | `require_operator` | `test_operator_allowlist_gate.py` |
-| `require_session_operator` | `test_assignment_routes.py::test_non_operator_gets_403_on_assignments_hub_and_post` |
+| `require_session_operator` | `test_assignment_routes.py::test_non_operator_gets_404_on_assignments_hub_and_post` |
 | `require_sys_admin` | `test_sys_admin_chrome.py` (root + diagnostics) |
-| `require_reviewer_in_session` | `test_reviewer_response_flow.py::test_other_session_url_returns_403`, `::test_inactive_reviewer_row_403s_on_surface` |
+| `require_reviewer_in_session` | `test_reviewer_response_flow.py::test_other_session_url_returns_404`, `::test_inactive_reviewer_row_404s_on_surface` |
 | Client-id trust (reviewer POST) | `test_reviewer_response_flow.py::test_save_drops_foreign_assignment_id_from_post` |
 | Export sys-admin gate | `test_extracts_audit_log_route.py::test_audit_log_route_rejects_non_sys_admin` |
+| Session-id enumeration (all four session-scoped gates) | `test_session_enumeration_gate.py` |
 
 ## Identity trust model — Azure Easy Auth
 

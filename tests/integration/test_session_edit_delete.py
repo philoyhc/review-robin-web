@@ -270,7 +270,7 @@ def test_delete_all_assignments_clears_mode(
     assert event.detail["counts"] == {"deleted": 1}
 
 
-def test_non_operator_gets_403_on_destructive_routes(
+def test_non_operator_gets_404_on_destructive_routes(
     db: Session,
     alice: AuthenticatedUser,
     bob: AuthenticatedUser,
@@ -286,14 +286,14 @@ def test_non_operator_gets_403_on_destructive_routes(
         data={"name": "x", "code": "y"},
         follow_redirects=False,
     )
-    assert edit.status_code == 403
+    assert edit.status_code == 404
 
     delete = bob_client.post(
         f"/operator/sessions/{review_session.id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
-    assert delete.status_code == 403
+    assert delete.status_code == 404
 
     for path in (
         f"/operator/sessions/{review_session.id}/reviewers/delete-all",
@@ -301,4 +301,4 @@ def test_non_operator_gets_403_on_destructive_routes(
         f"/operator/sessions/{review_session.id}/assignments/delete-all",
     ):
         r = bob_client.post(path, data={"confirm": "true"}, follow_redirects=False)
-        assert r.status_code == 403, path
+        assert r.status_code == 404, path

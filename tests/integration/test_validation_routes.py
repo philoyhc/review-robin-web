@@ -86,7 +86,7 @@ def test_non_operator_cannot_view_validate(
     bob_client = make_client(bob)
     response = bob_client.get(f"/operator/sessions/{review_session.id}/validate")
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_session_detail_shows_counts_and_validate_link(

@@ -1075,7 +1075,7 @@ def test_cancel_link_renders_last_saved_values(
     assert 'value="4"' in page.text
 
 
-def test_other_session_url_returns_403(
+def test_other_session_url_returns_404(
     db: Session,
     alice: AuthenticatedUser,
     bob: AuthenticatedUser,
@@ -1103,10 +1103,10 @@ def test_other_session_url_returns_403(
     own = rae_client.get(f"/me/sessions/{rae_session.id}")
     other = rae_client.get(f"/me/sessions/{other_session.id}")
     assert own.status_code == 200
-    assert other.status_code == 403
+    assert other.status_code == 404
 
 
-def test_inactive_reviewer_row_403s_on_surface(
+def test_inactive_reviewer_row_404s_on_surface(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
@@ -1128,7 +1128,7 @@ def test_inactive_reviewer_row_403s_on_surface(
 
     rae_client = make_client(rae)
     response = rae_client.get(f"/me/sessions/{review_session.id}")
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_save_drops_foreign_assignment_id_from_post(

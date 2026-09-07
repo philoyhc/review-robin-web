@@ -196,7 +196,7 @@ def test_reviewer_import_renders_issues_for_bad_csv(
     assert reviewers == []
 
 
-def test_non_operator_gets_403_on_reviewer_import(
+def test_non_operator_gets_404_on_reviewer_import(
     db: Session,
     alice: AuthenticatedUser,
     bob: AuthenticatedUser,
@@ -218,7 +218,7 @@ def test_non_operator_gets_403_on_reviewer_import(
         follow_redirects=False,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def _reviewee_csv(*rows: tuple[str, str]) -> bytes:
@@ -713,7 +713,7 @@ def test_relationships_page_renders_column_chips(
     assert "data-tag-toggle" not in flat
 
 
-def test_non_operator_gets_403_on_roster_pages(
+def test_non_operator_gets_404_on_roster_pages(
     db: Session,
     alice: AuthenticatedUser,
     bob: AuthenticatedUser,
@@ -725,9 +725,9 @@ def test_non_operator_gets_403_on_roster_pages(
     bob_client = make_client(bob)
     assert (
         bob_client.get(f"/operator/sessions/{review_session.id}/reviewers").status_code
-        == 403
+        == 404
     )
     assert (
         bob_client.get(f"/operator/sessions/{review_session.id}/reviewees").status_code
-        == 403
+        == 404
     )

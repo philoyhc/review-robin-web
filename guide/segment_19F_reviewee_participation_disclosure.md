@@ -318,6 +318,85 @@ the contract decision 6 reverses. It should be rewritten in place, under
 a name that says the opposite, rather than deleted — the assertion is
 still the right assertion, pointed the other way.
 
+## Status
+
+**2026-09-07 — PR 1 shipped: every session-scoped gate answers 404.**
+`require_session_operator`, `require_reviewer_in_session`,
+`require_reviewee_in_session` and `require_observer_in_session` raise a
+bare `HTTPException(404)` on refusal, byte-identical to the one they
+already raised for an unknown id. The role-naming `detail` strings are
+gone. `require_operator` (303) and `require_sys_admin` (403) untouched,
+as planned; `grep -rn "HTTP_403_FORBIDDEN" app/web/deps.py` returns one
+line, in `require_sys_admin`, and a test now asserts that rather than
+leaving it to a reader.
+
+**The triage came in at 24 assertions across 12 files, against a ceiling
+of 47 across 21.** The ceiling was honest — the plan said so — and the
+half that fell away is the half it predicted: sys-admin, owner-error and
+allowlist paths that decision 5 leaves alone. Method worth keeping:
+rather than grepping and judging each `403` by eye, the gates were
+converted first and the **suite's failures were the triage**. A test
+that failed was by construction one asserting a converted gate; nothing
+had to be classified by reading, and nothing could be missed.
+
+**Three findings, none of them the gates.**
+
+- **A test that had never tested its contract.**
+  `test_operator_lobby_access_gate.py::test_sys_admin_reaches_other_owners_per_session_route`
+  asserted `!= 403` against `/operator/sessions/{id}/audit-log.csv` — a
+  URL that does not exist and never has (the route is
+  `…/export/audit_log.csv`, and 16C PR 1 moved it to plain
+  `require_sys_admin` besides). It 404'd on routing, `!= 403` held, and
+  the test passed green while exercising no gate at all: it would have
+  passed with the sys-admin bypass deleted. It surfaced only because
+  `!= 403` stops being falsifiable *at all* once no refusal is a 403, so
+  the assertion had to be strengthened — and strengthening it turned it
+  red. Rewritten to hit `owners/add`, which really does mount
+  `require_sys_admin_or_session_operator`, and to assert the effect (the
+  `session_operators` row appears) rather than the absence of one code.
+  **The general lesson: a negative assertion about a status code is only
+  as strong as the code's continued existence.**
+- **`spec/permissions.md` had the threat model backwards, and that is
+  why the vector survived review.** Its gate table argued that
+  `require_session_operator` runs the membership check before the
+  existence check "so a non-member sees 403, never a 404 that leaks
+  existence". A 404 leaks nothing; the **403** is what confirms the
+  session is there, and each `detail` confirmed it again in prose. The
+  note is corrected in place with the old reasoning quoted, not deleted
+  — a spec that was confidently wrong is more useful to the next reader
+  than a spec that is silently right.
+- **A sys-admin now gets a bare 404 on a link the app just showed them.**
+  `sys_admin_sessions.html:31` links every session name to
+  `/operator/sessions/{id}`, which sits behind `require_session_operator`
+  — and `permissions.user_can_view_session` is strict owner membership,
+  with no sys-admin exemption (18S Item 3, deliberately: a sys-admin
+  self-adds through the audited adopt door, whose button is on that same
+  row). Before PR 1 a non-owner sys-admin clicking that name got a 403
+  page that explained itself. Now they get a bare 404 about a session
+  they are looking at a list of. **This is a degradation PR 1
+  introduces, not a break it exposes** — the link was already refused,
+  just legibly. Not fixed here, because the fix is a decision:
+  (a) stop linking the name for a non-owner sys-admin and leave Adopt as
+  the only affordance — small, in the template, contradicts nothing; or
+  (b) exempt sys-admins from the uniform 404, which conceals nothing
+  from someone who can already enumerate every session on a dedicated
+  page, but breaks decision 5's own `## Definition of done` grep. Author
+  decides; (a) is the recommendation.
+
+**Doc impact honoured at this rung** as the bullets tag it:
+`spec/permissions.md` (gate table, §5 failure semantics, test index) and
+`docs/security_posture.md` (denial-path index, plus the vector recorded
+as found-and-closed with its severity and how it was found). The other
+four doc-impact paths belong to later rungs and are untouched.
+
+**Suite: 2,867 passed / 16 skipped**, up six for
+`tests/integration/test_session_enumeration_gate.py` — the
+indistinguishability property per gate, probing **both** an existing
+session the caller holds no role on and an absent id, because a gate
+answering 404 for one and something else for the other would pass a
+one-sided check. Mutation-checked: regressing one gate to its old 403
+turns three of the six red.
+
 ## PR ladder
 
 1. **PR 1 — 404 on refusal, across all four session-scoped gates.**
