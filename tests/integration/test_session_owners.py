@@ -19,6 +19,10 @@ Exercises the Owners section, which lives on Session Home's config card
 - Audit events emitted with correct envelope.
 - Plain non-owner operator still refused on the session config
   surface — a 404 since 19F PR 1, indistinguishable from no such session.
+- A non-owner **sys-admin** is refused with a **403** instead: they are
+  exempt from that uniform 404, because the sys-admin Sessions list
+  already names every session and the refusal has to stay legible on a
+  link that page renders.
 """
 from __future__ import annotations
 
@@ -113,7 +117,11 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
     bob_client = make_client(bob)
     # Denied before adopting.
     denied = bob_client.get(f"/operator/sessions/{review_session.id}")
-    assert denied.status_code == 404
+    # 403, not the uniform 404: sys-admins are exempt (19F PR 1
+    # follow-up) because the sys-admin Sessions list already names
+    # every session, so a 404 here would only break a link that page
+    # renders. The refusal points at the adopt door.
+    assert denied.status_code == 403
 
     # The audited elevation door: self-add as owner, land on Home.
     adopt = bob_client.post(
@@ -419,7 +427,11 @@ def test_non_owner_sys_admin_denied_edit_submit(
         data={"name": "x", "code": "deny-edit", "description": ""},
         follow_redirects=False,
     )
-    assert resp.status_code == 404
+    # 403, not the uniform 404: sys-admins are exempt (19F PR 1
+    # follow-up) because the sys-admin Sessions list already names
+    # every session, so a 404 here would only break a link that page
+    # renders. The refusal points at the adopt door.
+    assert resp.status_code == 403
 
 
 def test_non_owner_sys_admin_denied_lobby_edit(
@@ -433,7 +445,11 @@ def test_non_owner_sys_admin_denied_lobby_edit(
         data={"name": "x", "code": "deny-lobby", "tags": ""},
         follow_redirects=False,
     )
-    assert resp.status_code == 404
+    # 403, not the uniform 404: sys-admins are exempt (19F PR 1
+    # follow-up) because the sys-admin Sessions list already names
+    # every session, so a 404 here would only break a link that page
+    # renders. The refusal points at the adopt door.
+    assert resp.status_code == 403
 
 
 def test_non_owner_sys_admin_denied_owners_remove(
@@ -447,7 +463,11 @@ def test_non_owner_sys_admin_denied_owners_remove(
         f"/operator/sessions/{review_session.id}/owners/1/remove",
         follow_redirects=False,
     )
-    assert resp.status_code == 404
+    # 403, not the uniform 404: sys-admins are exempt (19F PR 1
+    # follow-up) because the sys-admin Sessions list already names
+    # every session, so a 404 here would only break a link that page
+    # renders. The refusal points at the adopt door.
+    assert resp.status_code == 403
 
 
 def test_owners_add_self_only_blocks_adding_other(

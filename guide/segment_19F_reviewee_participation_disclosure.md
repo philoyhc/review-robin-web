@@ -93,6 +93,29 @@ Four decisions from the author (2026-09-07), each with what it rules out:
    enumerate other operators' sessions by the same means, and the
    principle does not stop at the participant boundary.
 
+   **Amended at build, 2026-09-07 — sys-admins are exempt, on
+   `require_session_operator` only.** PR 1 surfaced that
+   `sys_admin_sessions.html` links every session name to the route this
+   gate guards, so the uniform 404 turned a link the app renders into a
+   dead end for the one role whose job is workspace oversight. The
+   author's reason: *the whole point is that they should be able to see
+   what's going on in the workspace as a whole.* A 404 conceals nothing
+   from someone reading a page that lists every session by name. They
+   get the old 403, reworded to name the adopt door (18S Item 3).
+   *Rejected: option (a), unlinking the name for a non-owner sys-admin*
+   — it removes an affordance to protect information the same page
+   already shows.
+
+   Two things keep the exemption narrow, and both are asserted:
+   it sits **behind an existence check**, since without one it would
+   answer "you are not an owner of this session" for ids that never
+   existed — a worse leak than the one being closed; and it is
+   **`require_session_operator` only**, because nothing in the app
+   routes a sys-admin to `/results` or `/collation`, so the three
+   participant gates have no affordance to keep legible and answer 404
+   to everyone. Super-admins need no branch of their own: both sign-in
+   paths in `get_or_create_user` force `is_sys_admin` for them.
+
 6. **`/guide` closes to a viewer who resolves no audiences** (author,
    2026-09-07). A signed-in stranger currently sees the **whole** Guide —
    all eleven cards — while every role-holder sees only their own
@@ -365,7 +388,8 @@ had to be classified by reading, and nothing could be missed.
   note is corrected in place with the old reasoning quoted, not deleted
   — a spec that was confidently wrong is more useful to the next reader
   than a spec that is silently right.
-- **A sys-admin now gets a bare 404 on a link the app just showed them.**
+- **A sys-admin got a bare 404 on a link the app just showed them —
+  resolved the same day by an author decision; see below.**
   `sys_admin_sessions.html:31` links every session name to
   `/operator/sessions/{id}`, which sits behind `require_session_operator`
   — and `permissions.user_can_view_session` is strict owner membership,
@@ -382,6 +406,42 @@ had to be classified by reading, and nothing could be missed.
   from someone who can already enumerate every session on a dedicated
   page, but breaks decision 5's own `## Definition of done` grep. Author
   decides; (a) is the recommendation.
+
+**2026-09-07 — the sys-admin finding, resolved: option (b), the
+exemption.** The author took the second option and gave the reason the
+first one missed: *the whole point is that they should be able to see
+what's going on in the workspace as a whole.* Unlinking the session name
+(option (a), my recommendation) would have removed an affordance in
+order to protect information the very same page already displays — every
+session, by name, on `/operator/sys-admin/sessions`. The 404 was
+protecting nothing from that reader.
+
+So `require_session_operator` answers **403** to a sys-admin who is not
+an owner of an existing session, with the message reworded to name the
+adopt door rather than restating the old *"You do not have access"*.
+Two guards, both asserted:
+
+- **Behind an existence check.** Written without one, the exemption
+  answers *"you are not an owner of this session"* for an id that never
+  existed — turning a refusal into a confirmation, and a worse leak than
+  the one this rung closed. Mutation-checked: dropping the check turns
+  the guard test red.
+- **`require_session_operator` only.** Nothing in the app routes a
+  sys-admin to `/results` or `/collation`, so the three participant
+  gates have no affordance to keep legible; they answer 404 to everyone,
+  sys-admins included. Scoping this myself rather than reading "exempt
+  sys-admins" as global — flagged here in case the author wants it
+  wider.
+
+Super-admins needed no separate branch: both sign-in paths in
+`get_or_create_user` force `is_sys_admin` for them, so the capability
+nesting super ⊇ admin already holds at the gate.
+
+**The `## Definition of done` grep changed with it**, and the change is
+struck rather than rewritten: it read "returns only `require_sys_admin`"
+and now returns two lines. The replacement test pins each of the two to
+its own function, so the looser property ("there are some 403s") cannot
+pass in place of the real one.
 
 **Doc impact honoured at this rung** as the bullets tag it:
 `spec/permissions.md` (gate table, §5 failure semantics, test index) and
@@ -451,9 +511,16 @@ who a no-grant reviewee is from the moment either of them changes.
 ## Definition of done
 
 - All four session-scoped gates answer **404** on refusal, with a body
-  indistinguishable from an unknown session id, asserted for each gate:
-  `grep -rn "HTTP_403_FORBIDDEN" app/web/deps.py` returns only
-  `require_sys_admin`.
+  indistinguishable from an unknown session id, asserted for each gate.
+  ~~`grep -rn "HTTP_403_FORBIDDEN" app/web/deps.py` returns only
+  `require_sys_admin`.~~ **Revised 2026-09-07 with decision 5's
+  sys-admin exemption:** that grep returns **two** lines —
+  `require_sys_admin`, and `require_session_operator`'s exemption — and
+  a test pins both to their own function so a third cannot appear in a
+  participant gate unnoticed.
+- The sys-admin exemption answers **403** for an existing session the
+  sys-admin does not own and **404** for an absent id, asserted against
+  both.
 - A signed-in caller cannot tell an existing session they hold no role on
   from a session id that does not exist, asserted by probing both.
 - A reviewee with no currently-resolving grant sees no row on `/me` and

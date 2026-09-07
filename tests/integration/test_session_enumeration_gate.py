@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import ReviewSession
 
 # An id far past anything the per-test database allocates.
@@ -105,18 +106,58 @@ def test_no_refusal_body_names_a_role_or_a_session(
         assert "this session" not in body, path
 
 
-def test_only_require_sys_admin_still_answers_403() -> None:
+def test_the_only_403s_left_are_the_two_that_are_meant_to_be() -> None:
     """The Definition-of-done grep, as an assertion.
 
-    ``require_operator`` (303 to ``/me``) and ``require_sys_admin``
-    (403) are deliberately out of scope: neither takes a session id, so
-    neither discloses anything about one. If a session-scoped gate ever
-    regains a 403, this fails.
+    Exactly two ``403``s survive in ``deps.py``, and this pins both so a
+    third cannot creep back into a session-scoped gate unnoticed:
+
+    * ``require_sys_admin`` — out of scope from the start. It takes no
+      session id, so it discloses nothing about one.
+    * ``require_session_operator``'s **sys-admin exemption** (author,
+      2026-09-07) — a sys-admin who is not an owner of an existing
+      session gets the legible refusal, because
+      ``/operator/sys-admin/sessions`` already names every session to
+      them and links to this very route.
+
+    ``require_operator`` keeps its 303 and appears in neither count.
     """
     source = (
         __import__("pathlib").Path("app/web/deps.py").read_text()
     )
-    assert source.count("HTTP_403_FORBIDDEN") == 1
-    before, _, after = source.partition("HTTP_403_FORBIDDEN")
-    assert "def require_sys_admin(" in before
-    assert "def require_session_operator(" not in before
+    assert source.count("status.HTTP_403_FORBIDDEN") == 2
+    # And they are in the two functions named above — not, say, both in
+    # a participant gate.
+    first, _, rest = source.partition("status.HTTP_403_FORBIDDEN")
+    assert "def require_sys_admin(" in first
+    assert "def require_session_operator(" not in first
+    second, _, _tail = rest.partition("status.HTTP_403_FORBIDDEN")
+    assert "def require_session_operator(" in second
+    assert "def require_reviewer_in_session(" not in second
+
+
+def test_the_sys_admin_exemption_does_not_invent_sessions(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The exemption is gated on the session actually existing.
+
+    Without that check it would be a worse leak than the one 19F closed:
+    a sys-admin probing ids would get "you are not an owner of this
+    session" for ids that have never existed, turning a refusal into a
+    confirmation. An existing session they do not own answers 403; an
+    absent id answers 404.
+    """
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="enum-sysadmin")
+    bob_client = make_client(bob)
+
+    existing = bob_client.get(
+        f"/operator/sessions/{review_session.id}", follow_redirects=False
+    )
+    assert existing.status_code == 403
+
+    missing = bob_client.get(
+        f"/operator/sessions/{MISSING_SESSION_ID}", follow_redirects=False
+    )
+    assert missing.status_code == 404

@@ -162,6 +162,19 @@ answered 404 for one and something else for the other still fails.
 `require_operator` (303) and `require_sys_admin` (403) are untouched:
 neither takes a session id.
 
+**One exemption** (author, 2026-09-07): a **sys-admin** — and so a
+super-admin, since both sign-in paths force `is_sys_admin` for them —
+who is not an owner of an **existing** session gets a 403 naming the
+adopt door rather than the uniform 404, on `require_session_operator`
+only. It conceals nothing from them: `/operator/sys-admin/sessions`
+lists every session by name and links each to that very route, so the
+404 would have broken a link the app itself renders while hiding
+something the same person can read on the previous page. It sits behind
+an existence check, or it would answer "you are not an owner" for ids
+that never existed — a worse leak than the one being closed. The three
+participant gates carry no exemption: nothing routes a sys-admin to
+`/results` or `/collation`.
+
 **Not closed by this, and deliberately so:** sign-in itself stays open
 to the tenant. That is the author's decision of 2026-09-07, recorded in
 `spec/role_landing_and_visibility.md` §6. The 404 change is what makes

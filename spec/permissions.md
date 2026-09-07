@@ -80,7 +80,7 @@ is emitted on every miss.
 | `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email |
 | `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
-| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable (19F PR 1) |
+| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable (19F PR 1). **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
 | `require_sys_admin_or_session_operator` | `is_sys_admin`, else falls through to `require_session_operator` | `ReviewSession` | as above; a sys-admin gets **404** on an unknown id |
 | `require_relationships_enabled_session` / `require_observers_enabled_session` | wraps `require_session_operator`, then the per-session feature toggle | `ReviewSession` | **404** when the feature is off — a deep link to a disabled tab misses cleanly rather than rendering an orphan page. The permission check still runs first |
 | `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically (19F PR 1) |
@@ -203,6 +203,7 @@ the operation-level mappings.
 | Not on the operator allowlist | **303 → `/me`** | `OperatorAllowlistDenied` handler, `app/main.py` |
 | Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
 | Not a session member; not an active participant | **404**, bare | the four session-scoped gates |
+| Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | Missing email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
@@ -230,6 +231,24 @@ prose. The gate order was right for a reason that did not hold.
 
 `require_operator` and `require_sys_admin` keep their codes: neither
 takes a session id, so neither discloses anything about one.
+
+**The one exemption, and why it is not a hole** (author, 2026-09-07).
+Overseeing the workspace as a whole *is* the sys-admin role, and
+`/operator/sys-admin/sessions` already lists every session by name —
+linking each one to `/operator/sessions/{id}`, the route this gate
+guards. A 404 therefore conceals nothing from a sys-admin that the app
+does not already hand them on a page of their own, while turning a link
+that page renders into a dead end. They get the legible refusal instead,
+naming the adopt action that is the sanctioned way in (18S Item 3).
+
+Two properties keep it narrow. It is **behind an existence check**:
+without one the exemption would answer *"you are not an owner of this
+session"* for ids that have never existed, turning a refusal into a
+confirmation — a worse leak than the one 19F closed. And it is
+**`require_session_operator` only**: nothing in the app routes a
+sys-admin to `/results` or `/collation`, so there is no affordance to
+keep legible on the three participant gates, and they answer 404 to
+everyone.
 
 ---
 
