@@ -162,12 +162,23 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | The fact its card must carry |
    |---|---|
-   | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
-   | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate) |
+   | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete; and an empty roster blocks `draft → validated` (`reviewers.empty`, error severity) |
+   | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate); an empty roster blocks `draft → validated` (`reviewees.empty`, error severity) |
    | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments._new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it |
    | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
    | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
    | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
+
+   **The three "must have at least one" sentences do not describe the same
+   mechanism, and the cards say so.** Instruments is a **hard guard** — the
+   route refuses the last delete outright (`Cannot delete the last
+   instrument`), so the card states it flatly. Reviewers and Reviewees are
+   **not** guarded: an operator can empty either roster in Draft and the app
+   allows it. What they cannot do is leave Draft — `reviewers.empty` and
+   `reviewees.empty` are error-severity rules, and
+   `session_lifecycle.mark_validated` refuses the transition while any error
+   stands. So those two cards say "to reach **Validated**", and a reader who
+   takes them for a delete guard is not surprised later.
 
    Instruments runs *what an instrument is* → *when you want another* →
    *what each one controls*: the order the questions arrive in, and the
