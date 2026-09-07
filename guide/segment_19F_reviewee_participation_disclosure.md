@@ -1,6 +1,6 @@
 # Segment 19F — Reviewee participation disclosure
 
-**Opened:** 2026-09-07 · **Theme:** a reviewee learns they are being reviewed only once something has been granted to them · **Related:** `spec/role_landing_and_visibility.md`, `spec/participant_model.md`, `spec/visibility_policy.md`, `guide/archive/participant_model_upgrade.md`
+**Opened:** 2026-09-07 · **Theme:** a reviewee learns they are being reviewed only once something has been granted to them · **Related:** `spec/role_landing_and_visibility.md`, `spec/participant_model.md`, `spec/visibility_policy.md`, `spec/audience_and_identity_model.md`, `guide/archive/participant_model_upgrade.md`
 
 ## Opportunity
 
@@ -93,10 +93,55 @@ Four decisions from the author (2026-09-07), each with what it rules out:
    enumerate other operators' sessions by the same means, and the
    principle does not stop at the participant boundary.
 
+6. **`/guide` closes to a viewer who resolves no audiences** (author,
+   2026-09-07). A signed-in stranger currently sees the **whole** Guide —
+   all eleven cards — while every role-holder sees only their own
+   sections. That is backwards. It is 19E rung 7's fallback, shipped
+   2026-09-06 and spec'd the same day — *"a viewer holding nothing sees
+   everything"*, on the reasoning that an empty Guide serves nobody — and
+   the author reverses it: it makes no sense to give a stranger more than
+   a reviewer gets. A viewer whose audience set resolves empty is
+   **bounced to `/about`**, and the chrome renders no Guide link for
+   them.
+
+   *Rejected: 404 on `/guide`* — the chrome offers that link to everyone
+   (`base.html:3509`), and a 404 on a link the app itself just showed you
+   is a worse answer than a redirect. *Rejected: render the shell with no
+   cards* — precisely what rung 7 argued against, and it would leave the
+   Guide's own "Signed in as" chrome sitting above nothing.
+
+   `/about` is not a new destination: it has been the app's "signed in
+   but no access" landing since 18R Item 6 retired `/request-access`, and
+   it carries the identity and operator-contact note such a viewer
+   actually needs. The bounce mirrors `require_operator`'s
+   `OperatorAllowlistDenied` → 303 to `/me`.
+
+   **This reverses a two-day-old decision, and the plan says so rather
+   than papering over it.** The contract it overturns is written in
+   `spec/audience_and_identity_model.md` (at rung 7) and in
+   `spec/operator_ui_concept.md` (rewritten at 19E's close hours later).
+   Both must say the opposite when 19F lands, and `## Status` must record
+   a decision changing — otherwise the next drift sweep reads two
+   rewrites of one paragraph in three days as a spec that cannot keep
+   still.
+
+7. **An archived session's observer row is present but unlinked**
+   (author, 2026-09-07). Decision 4 keeps the observer's row in every
+   lifecycle state, and archived sessions stay on `/me` for reviewers and
+   observers alike (see `## Out of scope`), reading "not opened". PR 5
+   closes the observer's archive grant, so `/collation` on an archived
+   session is empty by construction and a live link to it is a dead end.
+   The row renders unlinked, matching the reviewer's "not opened" row
+   beside it. *Rejected: keep the link live* — it would be the only link
+   in that table guaranteed to lead nowhere.
+
 **Landing rules, restated as the segment's invariant** — strangers and
 participants always land on `/me`; operators, sys-admins and
 super-admins always land on the session lobby. 19F must not change
-either; it changes only what a participant's `/me` contains.
+either; it changes only what a participant's `/me` contains. Decision 6
+adds a **redirect**, which is a different thing: `/guide` is a page a
+signed-in viewer navigates to, not a place anyone arrives at from
+sign-in.
 
 ## Semantics
 
@@ -153,6 +198,36 @@ touch the participant path only. Decision 5 is the exception and says so:
 it changes `require_session_operator`'s failure code, not who may pass
 it.
 
+**The Guide gate rides the same predicate as the `/me` row.** A no-grant
+reviewee must be refused `/guide` too, or the segment closes the row and
+leaves the *For reviewees* card standing one page over — the same
+disclosure, relocated. `visible_audiences()` already unions the operator
+flag with `participants.roles_held_anywhere`, so the gate follows for
+free **once that function is grant-aware**. It is not today: it returns
+`reviewee` for any active, email-identified reviewee. That is the whole
+reason the Guide rung lands after the predicate rung rather than first,
+where its independence would otherwise put it.
+
+**`roles_held_anywhere` stops meaning what it is called.** Once its
+reviewee arm consults the visibility resolver, the function answers
+*roles that currently grant something*, not *roles held*. It has exactly
+one caller (`app/web/views/_guide.py`), so renaming it is contained — and
+leaving the old name would put a lie one line above the gate that most
+needs reading. The new name is a build decision; `## Status` records it.
+
+**Nothing outside the chrome offers a non-operator a Guide link.** Seven
+templates carry one besides `base.html` — six deep links into Guide
+sections (`#guide-create_and_set_up` ×5, `#guide-give_access` ×1) from
+the Setup and Instruments pages' `What this page is for` disclosures,
+plus the lobby first-run card's — and every one of those pages is
+operator-only already. So decision 6's markup work is exactly one
+conditional, in the chrome link row.
+
+**The archived observer link is not a new mechanism.** `_dashboard.py`
+enables the observer link unconditionally today; decision 7 gives it a
+lifecycle condition of the same shape the reviewer link already carries
+(`session_status != "not opened"`).
+
 ## Judgment calls — decided
 
 - **Named a segment, not a 19C item** — 19C is behavior/contract polish
@@ -164,8 +239,11 @@ it.
   work already done is how this segment came to exist.
 - **The known observer archive grant** (`spec/role_landing_and_visibility.md`
   §6 — `_observer_collation.py` has no `is_archived` short-circuit and
-  resolves a live grant on an archived session) is **in scope as PR 3**,
-  not deferred. It is the same file family, the same override, and the
+  resolves a live grant on an archived session) is **in scope as PR 5**,
+  not deferred. *(Said "PR 3" when written; the ladder named it PR 4 even
+  then, and decision 6's rung shifted it to PR 5. Corrected 2026-09-07 —
+  a rung number in prose is the first thing a re-cut ladder makes
+  wrong.)* It is the same file family, the same override, and the
   same one-line shape as the reviewee guard it should mirror.
 - **404 conversion is its own rung, landing first** (2026-09-07). It is
   independent of the visibility work, it is the change most likely to
@@ -173,6 +251,18 @@ it.
   commit rather than at a rung doing two things.
 - **The gates keep logging what they refuse** — see `## Semantics`. The
   inference being closed is the caller's, not the operator's.
+- **The Guide rung lands after the predicate rung, not first**
+  (2026-09-07). Decision 6 reads like an independent change and is not:
+  refusing a no-grant reviewee depends on `roles_held_anywhere` becoming
+  grant-aware, which is PR 2's work. Landing it earlier would close the
+  Guide to strangers while still handing a no-grant reviewee the *For
+  reviewees* card — the disclosure this segment exists to close, moved
+  rather than removed.
+- **The reversal is recorded as a reversal** (2026-09-07). Two specs
+  written in the previous 36 hours state the contract decision 6
+  overturns. The `## Doc impact` bullets name them and say what they
+  said, so a reader meets a decision that changed rather than a paragraph
+  that would not settle.
 - **No new "does any grant resolve" caching** — measure first. The
   dashboard runs three queries today; if the per-session resolution
   proves slow, that is a `## Status` finding and a follow-up, not a
@@ -207,6 +297,27 @@ assertions have to be read individually to tell "not on this session"
 (becomes 404) from "not a sys-admin" (stays 403). That triage is the
 rung's real work, and the count above is the ceiling, not the estimate.
 
+**Decision 6's own radius**, counted 2026-09-07 at `770c774d` — small,
+and the smallness is the point: rung 7 put the whole audience question
+behind one function.
+
+| What | Count | Command |
+|---|---|---|
+| Callers of `roles_held_anywhere` | **1** | `grep -rn "roles_held_anywhere" app/ --include=*.py` → `views/_guide.py` |
+| Test files naming it or `visible_audiences` | 1 | `grep -rln "roles_held_anywhere\|visible_audiences" tests/ --include=*.py` |
+| Tests hitting `/guide` | 5 files | `grep -rln 'get("/guide' tests/ --include=*.py \| wc -l` |
+| Templates with a `/guide` href | 8 | `grep -rln 'href="/guide' app/web/templates \| wc -l` |
+| …of which are operator-only pages | 7 | six Setup / Instruments disclosures + the lobby first-run card |
+| …leaving markup to change | **1** | the chrome link row in `base.html` |
+| Specs naming `/guide` | 7 | `grep -rln "/guide" spec/ \| wc -l` |
+
+One test **inverts** rather than adjusts:
+`tests/integration/test_guide_scaffold.py::test_a_viewer_holding_no_role_sees_everything`
+asserts `visible_audiences(db, viewer) == frozenset(AUDIENCES)`, which is
+the contract decision 6 reverses. It should be rewritten in place, under
+a name that says the opposite, rather than deleted — the assertion is
+still the right assertion, pointed the other way.
+
 ## PR ladder
 
 1. **PR 1 — 404 on refusal, across all four session-scoped gates.**
@@ -225,23 +336,38 @@ rung's real work, and the count above is the ceiling, not the estimate.
    `role_links` when it returns False, with the row surviving on any
    other role. Re-reads the 11 dashboard tests. **Must not touch**
    `/results`, the observer path, or any landing redirect.
-3. **PR 3 — the `/results` surface.** Makes the route answer 404 when no
-   grant resolves — the same 404 PR 1 established, so "no grant" and
-   "not a reviewee" are one outcome. **Must not touch** the `/me`
-   dashboard.
-4. **PR 4 — the observer archive grant.** Mirrors the reviewee
-   `is_archived` short-circuit into `_observer_collation.py`, closing
-   the divergence `spec/role_landing_and_visibility.md` §6 records.
-   Corrects the two stale `W16 will gate` / `W17 will gate` comments.
-   **Must not touch** observer visibility in any non-archived state —
-   decision 4 stands.
-5. **PR 5 — specs.** The doc-impact files below. **Must not** change
-   behavior.
+3. **PR 3 — the Guide audience gate** *(added 2026-09-07 with decision
+   6; every rung below shifts by one — what this plan first called PR 3
+   is now PR 4, and so on)*. Reverses rung 7's no-role fallback:
+   `visible_audiences()` returns an empty set for a viewer holding
+   nothing, `/guide` bounces such a viewer to `/about`, and `base.html`
+   stops rendering the Guide chrome link for them. Renames
+   `roles_held_anywhere` to match what PR 2 made it mean. **Must not
+   touch** the per-audience card filtering for viewers who *do* hold a
+   role — that is rung 7's and it is correct. After PR 2, because the
+   reviewee arm of the predicate is PR 2's.
+4. **PR 4 — the `/results` surface** *(was PR 3)*. Makes the route answer
+   404 when no grant resolves — the same 404 PR 1 established, so "no
+   grant" and "not a reviewee" are one outcome. **Must not touch** the
+   `/me` dashboard.
+5. **PR 5 — the observer archive grant, and the unlinked archived row**
+   *(was PR 4)*. Mirrors the reviewee `is_archived` short-circuit into
+   `_observer_collation.py`, closing the divergence
+   `spec/role_landing_and_visibility.md` §6 records, and lands decision 7
+   by giving the observer's `/me` link the lifecycle condition the
+   reviewer's already has. Corrects the two stale `W16 will gate` /
+   `W17 will gate` comments. **Must not touch** observer visibility in
+   any non-archived state — decision 4 stands.
+6. **PR 6 — specs** *(was PR 5)*. The doc-impact files below. **Must
+   not** change behavior.
 
 Each rung leaves the app coherent. PR 1 narrows what every refusal
 discloses without changing who passes. After PR 2 the reviewee row is
 gated while the surface is still reachable by direct URL — a narrower
-disclosure than today, not a wider one — and PR 3 closes that.
+disclosure than today, not a wider one — and PR 4 closes that. PR 3 sits
+between them because it depends on PR 2's predicate and nothing depends
+on it; landing it there means the Guide and the dashboard agree about
+who a no-grant reviewee is from the moment either of them changes.
 
 ## Definition of done
 
@@ -260,7 +386,15 @@ disclosure than today, not a wider one — and PR 3 closes that.
 - A reviewee who is also a reviewer on the same session keeps the row,
   with `reviewee` absent from its role chips.
 - An observer's row and surface are unchanged in every lifecycle state
-  except `archived`, where the grant is closed.
+  except `archived`, where the grant is closed and the row renders
+  **unlinked**, asserted beside the reviewer's "not opened" row.
+- A viewer who resolves no audiences is bounced from `/guide` to
+  `/about` and sees no Guide link in the chrome, asserted for a stranger
+  **and** for a reviewee with no current grant.
+- A viewer holding any role still reaches `/guide` and sees exactly their
+  own sections — rung 7's contract, asserted unchanged.
+- `grep -rn "roles_held_anywhere" app/` is empty: the function carries a
+  name PR 2 made true.
 - Strangers and participants land on `/me`; operators, sys-admins and
   super-admins land on `/operator/sessions` — unchanged, asserted.
 - No `W16 will gate` / `W17 will gate` comment remains:
@@ -299,20 +433,38 @@ disclosure than today, not a wider one — and PR 3 closes that.
   pending a future segment; decided against.
 - **Reviewer disclosure.** A reviewer is being asked to do work and must
   know about it; no equivalent question arises.
+- **Filtering archived sessions off `/me`.** Raised 2026-09-07 as a
+  possible rung and **declined by the author**: reviewers and observers
+  keep seeing an archived session as "not opened" until it is deleted.
+  The *reviewee* role still leaves an archived session's row, but it
+  leaves by the archive override closing the grant (see `## Semantics`),
+  not by a filter — so the two roles diverging here is a consequence of
+  decision 1, not a second rule.
 - **Any change to the landing rules.** They are the invariant 19F
-  preserves, not the thing it edits.
+  preserves, not the thing it edits. Decision 6's `/guide` → `/about`
+  bounce is a redirect off a navigated page, not a landing.
 
 ## Doc impact
 
 - `spec/participant_model.md` — the reviewee `/me` row and `/results`
   contract gain the current-grant precondition, including that the row
   appears and disappears as windows move (PRs 1, 2).
-- `spec/role_landing_and_visibility.md` — §4's reviewee table is
-  rewritten from "listed and linked in every state" to the gated
-  behavior; §6 loses the observer-archive divergence once PR 3 closes it
-  (PRs 1–3).
+- `spec/role_landing_and_visibility.md` — §3's Guide-audiences table
+  loses its "no role → all four" row for the bounce to `/about` (PR 3);
+  §4's reviewee table is rewritten from "listed and linked in every
+  state" to the gated behavior, and its reviewee/observer table gains the
+  archived observer row's unlinked state (PRs 2, 5); §6 loses the
+  observer-archive divergence once PR 5 closes it (PRs 1–5).
 - `spec/visibility_policy.md` — the archive override's scope restated
-  now that both non-operator audiences honor it (PR 3).
+  now that both non-operator audiences honor it (PR 5).
+- `spec/audience_and_identity_model.md` — the `/guide` audience contract
+  **reverses**: a viewer holding nothing sees nothing and is bounced to
+  `/about`. The entry that goes says *"a viewer holding nothing sees
+  everything"*, written at 19E rung 7 on 2026-09-06; the replacement
+  names it as superseded rather than quietly occupying its place (PR 3).
+- `spec/operator_ui_concept.md` — the `/guide` role-filtering paragraph,
+  itself rewritten at 19E's close on 2026-09-07, and the chrome link
+  row's new conditional (PR 3).
 - `spec/permissions.md` — §5 Failure semantics: the "not a session
   member; not an active participant" row moves from **403** to **404**,
   and §3's per-route matrix follows (PR 1).
