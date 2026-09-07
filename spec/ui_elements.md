@@ -595,6 +595,7 @@ spacing.
 | `.session-meta-row`, `.session-status-row` | keep | — |
 | `.field-builder` + `.field-builder.locked` | keep | — |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) — equal-width tile row inside a card | added 2026-09-07 | — |
+| `.guide-figure` (+ `.guide-figure-narrow`) — screencap figure on `/guide` | added 2026-09-07 | — |
 
 `.setup-nav` is a candidate for deletion (see §2).
 
@@ -648,6 +649,33 @@ existing card variant rather than a new tile look.
 
 First user: the sessions-lobby first-run card
 (`spec/sessions_overview.md`).
+
+**`.guide-figure` / `.guide-figure-narrow`.** The `/guide` screencaps.
+The figure gives the image a `border-subtle` edge and 6px radius the
+screenshot itself has not got — without one a white-backed capture
+bleeds into the page and the reader cannot see where the app stops.
+
+The captures arrive at **two scales**: six 1× shots at ~830px and six 2×
+at ~1680px. Unmodified, both fill the prose column, so the 1× ones are
+blown up past their own pixels while the 2× ones are still shrinking —
+the same UI at two apparent scales on one page. `.guide-figure-narrow`
+renders the 1× family at a flat **664px** (80% of their natural ~830).
+One shared number rather than 80% of each image's own width: they differ
+by at most 13px, and a consistent width across the six reads better than
+six near-identical ones that are not. It sets `width`, not `max-width` —
+only `width` shrinks an image below its natural size — and the base
+`max-width: 100%` still takes over on a narrower column.
+
+Which family a capture belongs to is asserted from its **actual pixel
+width** in `tests/integration/test_guide_screencaps.py`, not from a
+hand-kept list, so a capture retaken at the other scale fails rather
+than quietly rendering wrong.
+
+In-card headings on `/guide` take a `--space-6` top margin
+(`body.ui-v2 .card[id^="guide-"] h3`): its cards run long enough that
+their `<h3>`s are section breaks rather than labels on the paragraph
+below, which is what ui-v2's global `h3` rule assumes. Scoped by the
+`guide-` id prefix the cards already carry, so no other page moves.
 
 ### 11. Misc one-offs
 

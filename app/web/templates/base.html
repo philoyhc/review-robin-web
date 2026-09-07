@@ -1177,6 +1177,31 @@
         border: 1px solid var(--border-subtle);
         border-radius: 6px;
       }
+      /* The captures arrive in two families — six at ~830px and six at
+         ~1680px, 1x and 2x shots of the same app. Left alone, both fill
+         the prose column, so the 1x ones are blown up past their pixels
+         while the 2x ones are still shrinking: the same UI at two
+         apparent scales on one page.
+
+         The narrow family renders at 664px, 80% of its natural ~830.
+         One shared number rather than 80% of each image's own width:
+         they differ by 13px at most, and a consistent width across the
+         six reads better than six near-identical ones that aren't.
+         `width` (not `max-width`) is what shrinks an image below its
+         natural size; `max-width: 100%` above still takes over on a
+         column narrower than 664px. */
+      body.ui-v2 .guide-figure-narrow img {
+        width: 664px;
+      }
+      /* One blank line above each in-card heading. The Guide's cards run
+         long enough that its `<h3>`s are section breaks rather than
+         labels on the paragraph below, and ui-v2's `h3` rule sets
+         `margin-top: 0` for the label case. Scoped by the `guide-`
+         id prefix the cards already carry, so no markup changes and no
+         other page's headings move. */
+      body.ui-v2 .card[id^="guide-"] h3 {
+        margin-top: var(--space-6);
+      }
       body.ui-v2 .guide-figure figcaption {
         margin-top: var(--space-2);
         font-size: var(--fs-small);

@@ -80,3 +80,47 @@ def test_the_guide_links_the_setup_templates_download(client: TestClient) -> Non
 
     assert 'href="/templates/starter.zip">template CSV files with mock data' in body
     assert client.get("/templates/starter.zip").status_code == 200
+
+
+# ── Two capture families (2026-09-07) ──────────────────────────────────
+#
+# The screencaps arrive at two scales: six 1x shots at ~830px and six 2x
+# shots at ~1680px. Left alone both fill the prose column, so the 1x ones
+# are blown up past their own pixels while the 2x ones are still shrinking
+# — the same UI at two apparent scales on one page. The narrow six carry
+# `.guide-figure-narrow`, which renders them at 664px.
+#
+# The split is by the file's actual pixel width, not by a hand-kept list,
+# so a capture retaken at the other scale fails here rather than quietly
+# rendering at the wrong size.
+NARROW_MAX_WIDTH = 1000
+
+
+def _png_width(path: pathlib.Path) -> int:
+    with path.open("rb") as handle:
+        handle.read(16)
+        return int.from_bytes(handle.read(4), "big")
+
+
+@pytest.mark.parametrize("name", REFERENCED)
+def test_narrow_captures_carry_the_narrow_figure_class(name: str) -> None:
+    markup = " ".join(GUIDE_TEMPLATE.read_text().split())
+    figure = markup.rsplit(f'src="/static/guide/{name}"', 1)[0]
+    figure = figure[figure.rindex("<figure") :]
+
+    is_narrow = _png_width(STATIC_GUIDE / name) < NARROW_MAX_WIDTH
+
+    assert ("guide-figure-narrow" in figure) is is_narrow, (
+        f"{name} is {_png_width(STATIC_GUIDE / name)}px wide; "
+        f"{'expected' if is_narrow else 'did not expect'} .guide-figure-narrow"
+    )
+
+
+def test_both_capture_families_are_present() -> None:
+    """Guards the rule above: if every capture were re-taken at one scale
+    the parametrised test would pass while asserting nothing about the
+    split it exists to protect."""
+    widths = [_png_width(STATIC_GUIDE / name) for name in REFERENCED]
+
+    assert any(w < NARROW_MAX_WIDTH for w in widths)
+    assert any(w >= NARROW_MAX_WIDTH for w in widths)
