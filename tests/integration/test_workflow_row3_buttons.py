@@ -31,12 +31,40 @@ def _draft_session(db: Session, code: str) -> tuple[ReviewSession, User]:
 
 
 def test_release_responses_now_stamps_release_at(db: Session) -> None:
+    """Closed session, because that is the only state the button is
+    offered in — the Workflow card gates Release and Stop-release on
+    ``is_expired``, and since 19F PR 2a the predicate agrees.
+
+    The service itself is still permissive: called on a ``draft``
+    session it stamps the anchor and the window stays shut, so the call
+    is inert rather than refused. Left that way deliberately — the
+    import / apply-config paths also write these columns, and the
+    predicate is now the single place the rule lives."""
     review_session, op = _draft_session(db, "rel-stamp")
+    review_session.status = "expired"
+    db.commit()
     assert review_session.responses_release_at is None
     lifecycle.release_responses_now(
         db, review_session=review_session, user=op
     )
     assert review_session.responses_release_at is not None
+    assert lifecycle.is_response_release_window_open(review_session)
+
+
+def test_release_responses_now_is_inert_on_an_unclosed_session(
+    db: Session,
+) -> None:
+    """The permissiveness above, pinned: the anchor lands, the window
+    does not open, and closing the session later opens it on the
+    schedule that was written."""
+    review_session, op = _draft_session(db, "rel-inert")
+    lifecycle.release_responses_now(
+        db, review_session=review_session, user=op
+    )
+    assert review_session.responses_release_at is not None
+    assert not lifecycle.is_response_release_window_open(review_session)
+
+    review_session.status = "expired"
     assert lifecycle.is_response_release_window_open(review_session)
 
 
@@ -78,7 +106,9 @@ def test_release_responses_now_emits_audit_event(db: Session) -> None:
 
 def test_stop_responses_release_stamps_until(db: Session) -> None:
     review_session, op = _draft_session(db, "stop-stamp")
-    # Open the release window first.
+    # Open the release window first — closed session plus a reached
+    # anchor, since 19F PR 2a.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)

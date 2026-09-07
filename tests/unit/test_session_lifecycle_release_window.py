@@ -2,10 +2,17 @@
 
 Pins the predicate spelled out in
 ``spec/visibility_policy.md`` §3.2: the after-release window
-is open iff the anchor (``responses_release_at``) is set and
-reached, and the close (``responses_release_until``) is either
-NULL (open-ended) or hasn't yet arrived. Anchor-null reads as
-inert (window closed) regardless of any saved close datetime.
+is open iff the session has **closed** (``expired``), the anchor
+(``responses_release_at``) is set and reached, and the close
+(``responses_release_until``) is either NULL (open-ended) or hasn't yet
+arrived. Anchor-null reads as inert (window closed) regardless of any
+saved close datetime.
+
+The lifecycle condition arrived with Segment 19F PR 2a: the two
+visibility windows mean literally "as data is coming in"
+(``while_ongoing`` = ``ready``) and "after the review has closed"
+(``after_release`` = ``expired``). Every test here therefore builds an
+``expired`` session unless it is testing that condition itself.
 """
 
 from __future__ import annotations
@@ -26,12 +33,14 @@ def _session(
     *,
     release_at: datetime | None,
     release_until: datetime | None = None,
+    status: str = "expired",
 ) -> ReviewSession:
     """Build a bare ``ReviewSession`` instance for the predicate;
     not added to a Session — the helper only reads attributes."""
     return ReviewSession(
         name="S",
         code="rw",
+        status=status,
         responses_release_at=release_at,
         responses_release_until=release_until,
     )
@@ -115,3 +124,24 @@ def test_default_now_defers_to_current_time() -> None:
         release_at=datetime.now(timezone.utc) + timedelta(days=365)
     )
     assert not is_response_release_window_open(future_session)
+
+
+def test_an_unclosed_session_reads_as_closed_whatever_the_anchors() -> None:
+    """19F PR 2a — responses are released *because the session is
+    over*. This was already the Workflow card's rule (it gates both
+    Release and Stop-release on ``is_expired``); the predicate now
+    agrees with it, so paths that set the anchors without the button
+    can no longer open a window the UI would never offer.
+    """
+    for status in ("draft", "validated", "ready", "archived"):
+        session = _session(
+            release_at=_at(2020, 1, 1), release_until=None, status=status
+        )
+        assert not is_response_release_window_open(session), status
+
+
+def test_a_closed_session_with_a_reached_anchor_is_open() -> None:
+    """The positive control for the rule above — without it the test
+    beside it would pass on a predicate that always returns False."""
+    session = _session(release_at=_at(2020, 1, 1), status="expired")
+    assert is_response_release_window_open(session)

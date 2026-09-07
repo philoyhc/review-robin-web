@@ -127,21 +127,29 @@ practice this means *inside an open response-release window*, and never
 on an archived session — the archive override closes every non-operator
 grant.
 
-So the lifecycle table that used to sit here would be misleading. Take
-one session at a time and vary only its state:
+**The grant needs two things, and lifecycle is one of them** (19F
+PR 2a). A reviewee's `while_ongoing` cell is off by construction, so
+their grant lives entirely in the after-release window — and that window
+now requires `sessions.status = "expired"` as well as a reached anchor,
+because responses are released *because the session is over*
+(`spec/visibility_policy.md` §3.2). Take one session and vary it:
 
-| One session, lifecycle | Release window | Reviewee row |
-|---|---|---|
-| `ready` | closed / not yet reached | **none** |
-| `draft` | open | **shown** |
+| One session | Reviewee row |
+|---|---|
+| `ready`, anchor reached | **none** — the review is still running |
+| `expired`, no policy row or window closed | **none** |
+| `expired`, anchor reached, policy row set | **shown** |
+| reverted to `draft` after all of the above | **none** |
 
-Both halves are operator-reachable, and the second is not a
-misconfiguration:
-`scheduled_events.parse_and_validate_responses_release_at` deliberately
-applies **no minimum-lead-time floor**, so an operator may backdate
-"Release responses from" to make results viewable immediately — on a
-session that has not been activated. The rule is the grant, not the
-state.
+The last row is the case that prompted PR 2a:
+`revert_session_to_draft` accepts `expired` → `draft` and leaves the
+anchor stamped, so a session the operator had withdrawn used to go on
+showing released responses. The anchor survives the revert but goes
+inert.
+
+So a five-state lifecycle table would still mislead — `expired` alone
+does not produce a row, and the grant is what decides — but lifecycle is
+no longer irrelevant to it either.
 
 **A reviewee with no current grant is indistinguishable from a
 stranger** — the same empty `/me`, the same 404 — which is the point of
