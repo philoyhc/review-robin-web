@@ -160,12 +160,26 @@ Specifics:
 The status strip sits below the chrome and above the page body on all session-scoped pages. Composition, left to right:
 
 ```
-Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [count]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
+Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [total / configured]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
 ```
 
 Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
+
+**Instruments state values (2026-09-07).** The Instruments pill reports **two** numbers, `total / configured`, computed by `app.web.views.session_status_pills` from `instruments.configured_counts`:
+
+| Pill text | Pill class | Condition |
+|---|---|---|
+| `none` | `pill-warning` | The session has no instruments. |
+| `<total> / <configured>` | `pill-info` | Every instrument is configured (`configured == total`). |
+| `<total> / <configured>` | `pill-warning` | At least one instrument is not configured. |
+
+**Configured** is `instruments.is_configured`: at least one `visible=True` response field, **and** all three Band 1 links touched (`band1_touched_links`). Both that predicate and the batched `configured_counts` apply the same rule, and `has_unconfigured` reads its answer from the latter, so there is one definition rather than three.
+
+Until 2026-09-07 the pill showed the bare total. An instrument with no visible response field — one a reviewer would meet as an empty page — therefore counted exactly like a finished one, and the strip read *done* for a session that could not be answered. The colour is what makes this scannable: the numbers say what is left, the tint says whether anything is.
+
+Zero reads `none` rather than `0 / 0`, matching Reviewers and Reviewees; instruments are likewise required to validate, so the same warning tint applies rather than a third treatment.
 
 **Invitations state values.** The Invitations pill reads one of four labels, computed by `app.web.views.session_status_pills` from the `Invitation` and `EmailOutbox` rows for the session:
 

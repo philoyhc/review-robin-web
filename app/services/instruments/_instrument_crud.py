@@ -622,10 +622,18 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
     return _BAND1_REQUIRED_LINKS.issubset(touched)
 
 
-def has_unconfigured(db: Session, session_id: int) -> bool:
-    """True iff the session has zero instruments, or any instrument
-    fails :func:`is_configured`. Drives the Next Action card's
-    "Empty Setup" state.
+def configured_counts(db: Session, session_id: int) -> tuple[int, int]:
+    """``(total, configured)`` for the session's instruments.
+
+    The batched counterpart to :func:`is_configured`, which asks the
+    same question one instrument at a time. Both apply the same two
+    rules — at least one ``visible=True`` response field, and all
+    three Band 1 links touched — and this is the only place the
+    batched form of them lives: :func:`has_unconfigured` reads its
+    answer from here rather than keeping a third copy.
+
+    ``configured <= total`` always, and a session with no instruments
+    returns ``(0, 0)``.
     """
     instruments = list(
         db.execute(
@@ -633,24 +641,35 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
         ).scalars()
     )
     if not instruments:
-        return True
-    instrument_ids = [inst.id for inst in instruments]
+        return (0, 0)
     # Batched: which instruments have at least one visible response field?
     rows = db.execute(
         select(InstrumentResponseField.instrument_id)
-        .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
+        .where(
+            InstrumentResponseField.instrument_id.in_(
+                [inst.id for inst in instruments]
+            )
+        )
         .where(InstrumentResponseField.visible.is_(True))
         .distinct()
     ).all()
-    configured_ids = {row[0] for row in rows}
-    for inst in instruments:
-        if inst.id not in configured_ids:
-            return True
-        if not _BAND1_REQUIRED_LINKS.issubset(
-            set(inst.band1_touched_links or [])
-        ):
-            return True
-    return False
+    has_visible_field = {row[0] for row in rows}
+    configured = sum(
+        1
+        for inst in instruments
+        if inst.id in has_visible_field
+        and _BAND1_REQUIRED_LINKS.issubset(set(inst.band1_touched_links or []))
+    )
+    return (len(instruments), configured)
+
+
+def has_unconfigured(db: Session, session_id: int) -> bool:
+    """True iff the session has zero instruments, or any instrument
+    fails :func:`is_configured`. Drives the Next Action card's
+    "Empty Setup" state.
+    """
+    total, configured = configured_counts(db, session_id)
+    return total == 0 or configured < total
 
 
 def has_unpinned(db: Session, session_id: int) -> bool:
