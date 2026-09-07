@@ -123,9 +123,17 @@ Every Setup Page renders, top-to-bottom:
    tweak a two-file edit, and a second copy drifts. What is specced is
    what an edit is *held to*:
 
-   1. **Short.** Two paragraphs; a third only when it is a distinct
-      question (Instruments). An operator opening a disclosure wants
-      the thing they were missing, not the page's manual.
+   1. **One paragraph per question, and no paragraph without a
+      question.** Written as a two-paragraph ceiling; the roster pages
+      overran it at the author's 2026-09-07 pass and the rule was the
+      thing that gave, not the copy. What the ceiling was protecting is
+      still right and is what this rule now says: an operator opening a
+      disclosure wants the things they were missing, not the page's
+      manual, so each paragraph earns its place by answering one
+      question a reader actually has (*what is this? who must have an
+      email? what do the tags do? what does upload cost me?*) and the
+      card ends when the questions do. Five paragraphs of that is
+      shorter to read than two that bundle four subjects.
    2. **Say what the page's own controls do not.** A card labelled
       "Upload Reviewers" already says it uploads reviewers. Each page's
       guidance earns its place by carrying one fact the page is
@@ -154,16 +162,33 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | The fact its card must carry |
    |---|---|
-   | Reviewers | The email is the identity a sign-in is matched against, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
-   | Reviewees | A plain identifier is legitimate — and costs that person their own results, since there is no address to match a sign-in against (surfaced only as `reviewees.unreachable_for_results` on Validate) |
-   | Relationships | They do **not** decide who reviews whom; they are context for the instrument's assignment rule to filter on |
-   | Observers | The cohort rule grants sight rather than narrowing it — an observer with no rule sees **nothing** (see "Cohort match rule editor" below) |
-   | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited |
+   | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
+   | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate) |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments._new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it |
+   | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
+   | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
    | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
 
    Instruments runs *what an instrument is* → *when you want another* →
    *what each one controls*: the order the questions arrive in, and the
    order that keeps the Guide link at the end.
+
+   **Mode names are quoted from the app, not translated.** The
+   Observers card writes `Anonymized` / `Summarized` with the app's own
+   US spellings, because those are the words on the Band 3 policy
+   control an operator is being sent to
+   (`app/services/visibility_policies.py`, `spec/visibility_policy.md`).
+   Rule 4 settles it independently of whatever the surrounding prose
+   convention is: a card that says "anonymised" sends a reader looking
+   for a label that does not exist. (The repo's prose convention is US
+   spelling as of 2026-09-07 — `CLAUDE.md` → Project conventions — so
+   the two now agree, but this rule held while they disagreed and is
+   what to reason from if they ever diverge again.) Reviewers and Reviewees
+   run the same way — *who they are* → *what identifies them* → *what
+   the tags do* → *what upload costs* → the Guide link on its own line.
+   The two pages are deliberately near-parallel: an operator reads them
+   minutes apart, and the sentences that differ are then the ones
+   carrying the difference.
 
    Drafted in `guide/archive/page_help_text.md`, retired 2026-09-06 —
    read it for why each sentence was chosen, not for what the app says.

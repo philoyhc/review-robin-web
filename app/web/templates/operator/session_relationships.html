@@ -60,17 +60,26 @@
       {% call page_guidance.guidance() %}
       <p>
         A relationship attaches <strong>context to one reviewer–reviewee
-        pair</strong> — three tag slots describing something true of that
-        pairing, such as a shared group or a supervision link. This page is
-        optional; a session works without any relationships at all.
+        pair</strong>, such as a shared group or a supervision link. Note that
+        a session <strong>works without any explicitly set relationships</strong>
+        at all. Set relationships to provide information that isn't already
+        derivable from reviewer and reviewee tags.
       </p>
       <p>
-        <strong>Relationships do not decide who reviews whom.</strong> That
-        comes from each instrument's assignment rule, and the pairs appear
-        when you Prepare the session. What relationships give you is something
-        for those rules to filter on, so a rule can say "only pairs in the
-        same group". Both rosters need people in them before a pair can be
-        added. See
+        <strong>Assignment rules</strong> are able to filter on the three tag
+        columns, but only if they are populated. So put the pairwise context attributes meant to affect who
+        reviews (or does not review) whom there (e.g., mentor–mentee, declared
+        couple, conflict of interest).
+      </p>
+      <p>
+        Uploading a CSV <strong>replaces the whole relationship roster</strong>
+        and clears any assignments already generated. To take specific
+        relationships out of consideration for a running session without losing
+        those rows, mark them <strong>inactive</strong> instead of deleting. You
+        can also add new relationships on this page.
+      </p>
+      <p>
+        See
         <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
         and set up a session</a> in the Guide.
       </p>

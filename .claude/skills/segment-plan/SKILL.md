@@ -122,7 +122,8 @@ Do not run the whole-folder sweep at close; that is a separate cadence with a se
 
 ## Style
 
-British spelling. Backtick every path, route, identifier and constant. Enum values for code-facing references, display labels for user-facing copy, and say which is which. Short sections; a plan that needs a table of contents has become a spec. Where a choice could have gone another way, one sentence on why it didn't.
+US spelling (`CLAUDE.md` → Project conventions; existing British forms in older
+plans stay put). Backtick every path, route, identifier and constant. Enum values for code-facing references, display labels for user-facing copy, and say which is which. Short sections; a plan that needs a table of contents has become a spec. Where a choice could have gone another way, one sentence on why it didn't.
 
 ## Template
 
