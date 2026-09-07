@@ -16,8 +16,11 @@ Three layers, all in `app/web/deps.py`:
   behind it. A signed-in user not on the operator/sys-admin
   allowlist is redirected to `/me`.
 - **`require_session_operator`** — per-session membership gate.
-  Resolves `{session_id}` and 403s unless the caller is an operator
-  of *that* session. Applied per-route on session-scoped operator
+  Resolves `{session_id}` and **404s, bare,** unless the caller is an
+  operator of *that* session — see *Session-id enumeration — found and
+  closed* below for why, and for the one sys-admin exemption (403 on a
+  session that exists and they do not own; existence is checked first).
+  Before Segment 19F this was a 403 with a role-naming `detail`. Applied per-route on session-scoped operator
   routes, either directly or via slice helpers
   (`_require_instrument_in_session`, `_require_rtd_in_session`, …)
   that also re-scope any child id to the session.
@@ -29,17 +32,20 @@ Three layers, all in `app/web/deps.py`:
   lobby rename/tag, remove owners) now requires `require_session_operator`
   (real ownership); a non-owner sys-admin elevates via the audited self-add
   door `POST /operator/sys-admin/sessions/{id}/adopt` (Diagnostics "Manage").
-- **`require_reviewer_in_session`** — reviewer identity gate. 403s
-  unless the caller has an *active* `Reviewer` row whose email
+- **`require_reviewer_in_session`** — reviewer identity gate. **404s,
+  bare,** unless the caller has an *active* `Reviewer` row whose email
   matches the authenticated identity (case-insensitive).
-- **`require_reviewee_in_session`** — reviewee identity gate for the
-  reviewee results surface (`/me/sessions/{id}/results`). 403s unless
-  the caller matches an *active* `Reviewee` row by email
+- **`require_reviewee_in_session`** — reviewee identity gate. **404s,
+  bare,** unless the caller matches an *active* `Reviewee` row by email
   (case-insensitive); reviewees with a non-email identifier fail the
-  reachability check.
+  reachability check. The reviewee results surface
+  (`/me/sessions/{id}/results`) is gated by
+  **`require_reviewee_with_current_grant`**, which composes this check
+  with `visibility_policies.reviewee_has_current_grant` and gives the
+  same bare 404 when no grant currently resolves (Segment 19F).
 - **`require_observer_in_session`** — observer identity gate for the
-  observer collation surface (`/me/sessions/{id}/collation`). 403s
-  unless the caller matches an *active* `Observer` row by email
+  observer collation surface (`/me/sessions/{id}/collation`). **404s,
+  bare,** unless the caller matches an *active* `Observer` row by email
   (case-insensitive).
 
 ### Three-tier role hierarchy (Segment 18S)
@@ -89,9 +95,9 @@ the dependencies above; no route trusts a client-supplied actor id.
 | `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
-| Reviewer surface + save/submit/clear | `require_reviewer_in_session` | |
-| Reviewee results (`/me/sessions/{id}/results` + acknowledge) | `require_reviewee_in_session` | Active-`Reviewee` email match; non-email identifiers fail reachability. |
-| Observer collation (`/me/sessions/{id}/collation` + CSV) | `require_observer_in_session` | Active-`Observer` email match. |
+| Reviewer surface + save/submit/clear | `require_reviewer_in_session` | Refusal is a bare 404 (19F). The save / submit / clear **403s** are a separate post-gate check on a caller already confirmed as a reviewer — the session or instrument is no longer accepting. |
+| Reviewee results (`/me/sessions/{id}/results` + acknowledge) | `require_reviewee_with_current_grant` | Active-`Reviewee` email match **plus** a currently-resolving visibility grant (19F); non-email identifiers fail reachability. Every refusal is a bare 404, so "no grant" and "not a reviewee" are indistinguishable. |
+| Observer collation (`/me/sessions/{id}/collation` + CSV) | `require_observer_in_session` | Active-`Observer` email match; refusal is a bare 404 (19F). |
 | `/me/invite/{token}` | identity + token lookup | Email-mismatch → dedicated 403 page. |
 
 POST endpoints verified not to trust client-side identifiers:

@@ -2576,7 +2576,99 @@ into a short-lived 19F on 2026-09-05 and folded them back the same day —
 the split was an implementation-layer distinction (services/data vs.
 view), which is not a theme, and the rule is thematic. The 19F planned
 2026-09-07 is unrelated scope: reviewee participation disclosure, in
-**Upcoming** below.
+the entry below.
+
+### Segment 19F — Reviewee participation disclosure — ✅ complete + archived 2026-09-07 (planned #2174, replanned #2175 + #2178; seven rungs across #2179 → #2186, + close #2187; plan archived: `guide/archive/segment_19F_reviewee_participation_disclosure.md`)
+
+Planned and shipped in one day, on the defect the **Upcoming** stub had
+carried since 19E: an active reviewee got a `/me` row — name, status, a
+live link to `/results` — from the moment the roster was uploaded, in
+every lifecycle state, whether or not any instrument granted them a
+view. The row disclosed that someone is the subject of a review before
+anyone had decided they may see anything about it, and kept disclosing
+it on an archived session after that decision had been withdrawn.
+`_dashboard.py` still read *"W16 will gate this"* eleven weeks after
+W16 shipped.
+
+**The gate is a currently-resolving visibility grant.** Not roster
+membership, not the lifecycle state on its own:
+`visibility_policies.reviewee_has_current_grant()` asks whether any
+instrument policy resolves to a mode for this reviewee *right now*, and
+the `/me` row, the role chip and `/results` all hang off that one
+predicate. Observers and reviewers are unaffected by author decision —
+a reviewer is being asked to do work and must know about it — and
+sign-in itself stays open to the whole tenant.
+
+- **Rung 1 — #2179. Every session-scoped gate answers 404.** The wide
+  one, and the segment's real security change: `require_session_operator`,
+  `require_reviewer_in_session`, `require_reviewee_in_session` and
+  `require_observer_in_session` now refuse with a 404 carrying no
+  role-naming detail, so a signed-in stranger cannot tell an existing
+  session from an id that was never issued. 24 assertions moved across
+  12 files, against a measured ceiling of 47. The follow-up in the same
+  PR **exempts sys-admins** (author decision): 403 for an existing
+  session they do not own — existence checked first, so the exemption
+  cannot invent sessions — and 404 for an absent id. `spec/permissions.md`
+  had the threat model backwards, arguing that 403-first *avoided*
+  leaking existence; corrected in place with the old reasoning quoted.
+- **Rung 2 — #2180, and rung 2a — #2181.** The predicate, and the `/me`
+  row gated on it. 2a is the author's correction, not a slice of the
+  plan: `while_ongoing` is `status = "ready"` and `after_release` now
+  requires `status = "expired"` **and** the anchor passed. Two paths had
+  been opening the release window on a session that was never closed —
+  a backdated anchor, and `revert_session_to_draft` never clearing one.
+  "The two visibility windows are meant to be literally *as data is
+  coming in* and *after the review has closed*."
+- **Rung 4 — #2182. `/results` answers 404 without a grant**, through a
+  new `require_reviewee_with_current_grant`, so "no grant" and "not a
+  reviewee" are one outcome rather than two distinguishable ones.
+- **Rung 5 — #2183. The observer archive short-circuit**, closing the
+  divergence `spec/role_landing_and_visibility.md` §6 had recorded, plus
+  the archived observer's `/me` row rendered **unlinked** beside the
+  reviewer's "not opened". Archived sessions stay on `/me` for both —
+  the author declined filtering them out; the reviewee's row leaves by
+  the archive override closing the grant, not by a filter.
+- **Rung 3 — #2184, built last. The Guide closes to a viewer who
+  resolves no audiences**, reversing 19E rung 7's fallback by author
+  decision: it made no sense to hand a stranger the whole Guide while
+  role-holders see only their own sections. `/guide` 303s them to
+  `/about`; the chrome link goes with it. `roles_held_anywhere` →
+  `disclosable_roles`, its reviewee arm made grant-aware here — the plan
+  claimed rung 2 had already done that, and it never had.
+- **Rung 6 — #2185. The specs**, and three specs the plan never named:
+  `spec/reviewer-surface.md` (six stale claims), `spec/architecture.md`
+  and `spec/rrw_functional_spec.md`.
+- **Rung 7 — #2186, added during the close. The chip strip.**
+  `build_role_chips` was still answering from roster membership alone,
+  so a user who was a reviewer **and** an ungranted reviewee on the same
+  session saw a live **Reviewee** chip on the reviewer surface: a link
+  to the 404 rung 4 had introduced, and a statement that they are a
+  reviewee here — the disclosure rung 2 had closed one surface over. The
+  chip is **omitted, not greyed** (greying still makes the statement);
+  the observer chip greys on an archived session instead, because being
+  an observer is not a disclosure about the observer. A test had been
+  asserting the defect. Found by the close's `spec-writer` pass, which
+  also turned up `spec/role_navigator.md` as a fourth undeclared spec,
+  and `spec/lifecycle.md` as a fifth.
+
+**Three findings the plan keeps.** `close_check` **verifies commitments
+kept, not commitments complete** — it passed on a manifest that was
+missing three paths, and caught one of them only as an advisory note.
+A **check that greps for a string is defeated by any comment explaining
+that string**: rung 5's own commentary quoted the marker the Definition
+of done greps for, leaving the tripwire permanently tripped. And a
+**negative assertion about a status code is only as strong as that
+code's continued existence** — a sys-admin test asserting `!= 403`
+against a URL that has never existed had been passing on a 404 from the
+router, and would have gone on passing with the bypass deleted.
+
+**Two audits against the running app, not the source**, one on what a
+reviewee sees at sign-in and one on `/results`. They are what found the
+draft-session-with-an-open-window case, `/about` rendering *"Signed in
+as "* with an empty name — the identical defect 19E rung 7 fixed on
+`/guide`, in the sibling route nobody re-checked — and the bounce loop
+that offered a stranger a link straight back to the page that had just
+bounced them.
 
 ---
 
@@ -2594,7 +2686,8 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **14B and 20 (both gated on the institutional Azure
-deployment concluding — decision 2026-09-05)** (19E closed
+deployment concluding — decision 2026-09-05)** (19F closed
+2026-09-07; 19E closed
 2026-09-07; 19B closed
 2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
@@ -2631,31 +2724,6 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19F — Reviewee participation disclosure** *(planned 2026-09-07, not
-  gated; the second use of this number — the first was folded back into
-  19E on 2026-09-05, see the 19E entry in **Done**)*. An active reviewee
-  gets a `/me` row for their session — name, status, a live link to
-  `/results` — from the moment the roster is uploaded, in every lifecycle
-  state, whether or not any instrument grants them a view. Recorded
-  against a running app in `spec/role_landing_and_visibility.md` §4. The
-  row discloses that someone is the subject of a review before anyone has
-  decided they may see anything about it, and keeps disclosing it on an
-  archived session after that decision has been withdrawn. Never the
-  intent: `_dashboard.py:192` still reads *"W16 will gate this … today the
-  placeholder accepts any active reviewee"*, and W16 shipped in
-  PRs #1737 → #1752. The gate is a **currently-resolving visibility
-  grant**; observers and reviewers are unaffected by author decision, and
-  sign-in itself stays open to the whole tenant.
-  Five rungs, the first of which is the wide one: **every session-scoped
-  gate answers 404 rather than 403** on refusal, so a stranger cannot
-  infer from a status code that a session exists (author decision
-  2026-09-07; ceiling of 47 `403` assertions across 21 files, measured at
-  `841bbfa0`). Rung 4 closes the known **observer archive-override gap**
-  (`spec/role_landing_and_visibility.md` §6), where
-  `_observer_collation.py` has no `is_archived` short-circuit and
-  `resolve_mode` returns a live grant on an archived session.
-  **Plan:** `guide/segment_19F_reviewee_participation_disclosure.md`.
-
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does
   not start until the institutional Azure deployment has successfully
@@ -2691,6 +2759,8 @@ dep chains called out at the bottom of this file.
   in-app Guide is now the operator guide 20 would otherwise have written.
   (19A closed + archived 2026-09-05 — Part 3 as Item 3, Part 2 as Item 2;
   its sweep's findings shipped as 19C Item 7.)
-- **19F** carries no ordering constraint either and is not gated. It
-  touches the four session-scoped gates and the `/me` dashboard, none of
-  which 20 or 14B wait on.
+- **19F** carried no ordering constraint either and **closed +
+  archived 2026-09-07**. It touched the four session-scoped gates and
+  the `/me` dashboard, neither of which 20 or 14B waited on; what it
+  changed that outlives it is the uniform 404 on every session-scoped
+  refusal, which any later route added behind those gates inherits.

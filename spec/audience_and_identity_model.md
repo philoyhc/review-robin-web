@@ -56,7 +56,11 @@ The reviewee is a live participant audience. W16 + W19 (PRs #1737–#1752) shipp
 
 - A `require_reviewee_in_session` gate in `app/web/deps.py` that
   matches a signed-in user to an active Reviewee row by
-  case-insensitive email equality.
+  case-insensitive email equality. Since Segment 19F the surface itself
+  is gated by **`require_reviewee_with_current_grant`**, which composes
+  that roster check with a currently-resolving visibility grant
+  (`visibility_policies.reviewee_has_current_grant`); without one the
+  page answers a bare **404**, identical to what a stranger gets.
 - A **Reviewee Results** page at `GET /me/sessions/{id}/results`
   rendering per-instrument sections in raw / anonymized / summarized
   mode, filtered through the per-instrument visibility policy.
@@ -380,7 +384,7 @@ someone else's session sees both sets.
 
 A **reviewee carried under a non-email identifier holds nothing** here,
 exactly as they pass no results gate — the Guide must not advertise a
-page that will 403.
+page that will 404.
 
 **Why the reviewee row differs from the other two.** Being asked to
 review, or appointed to observe, is not a disclosure *about* the person
