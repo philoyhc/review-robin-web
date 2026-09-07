@@ -49,7 +49,7 @@ shorthand:
 | **Secondary** | White bg + `border-default` outline. The default button — routine submits, Cancel, View detail, etc. |
 | **Destructive** | Outline `accent-red`. Confirm-step inside `.card.danger-zone`. |
 | **Outline-amber** | Outline `accent-amber-dark`. Recovery action inside a `.card.lock`. |
-| **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. |
+| **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. **No current users** since the lobby empty-state CTA was retired (2026-09-07). |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Used by chrome-detour pages (Operator Settings, About). The Rule Builder child page also used this pattern before its retirement in Wave 5 PR 5.1. (See `spec/ui_elements.md` §6.) |
@@ -91,8 +91,9 @@ Source: `app/web/templates/operator/sessions_list.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 11 | Header | Create new session | `<a>` | `btn` | Primary | Top-right of the page header |
-| 12 | Empty state | Create new session | `<a>` | `btn-cta` | Primary (CTA) | Only when zero sessions exist |
+| 11 | Search | Add new session | `<a>` | `btn` | Primary | The lobby's **only** create affordance, in every state. Was `Create new session` in a header strip until 2026-09-07 |
+| 12 | Search | Rehydrate / Go to Archive | `<a>` | `btn secondary` | Secondary | Always rendered; `Go to Archive` is active in every state, `Rehydrate` in every state, `Cancel` only when live sessions exist |
+| 12a | Empty state | ~~Create new session~~ | — | ~~`btn-cta`~~ | — | **Retired 2026-09-07.** The first-run card's CTA was the second button to `/operator/sessions/new`; the card now names row 11's button instead. See `spec/sessions_overview.md` "Empty state" |
 | 13 | Danger Zone (bulk delete) | Delete selected sessions | `<button type="submit">` | `btn destructive` | Destructive | Card hidden until ≥1 row tick — see `spec/sessions_overview.md` |
 
 ---

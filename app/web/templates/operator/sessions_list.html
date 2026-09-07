@@ -790,9 +790,16 @@
         <a href="/templates/starter.zip">download the setup templates</a>
         to fill in before you start.
       </p>
-      <div class="btn-pair">
-        <a class="btn-cta" href="/operator/sessions/new">Create new session</a>
-      </div>
+      {# No CTA of its own (2026-09-07). Standardising the lobby left this
+         card and the Search card offering the same destination in the same
+         state, under two different names; the card now points at the button
+         instead of competing with it, so there is one way to start a session
+         and one name for it. Named by label, not position — "the Search
+         card" survives a move, "the card above" does not. #}
+      <p>
+        When you're ready, use <strong>Add new session</strong> in the Search
+        card to start one.
+      </p>
     </div>
   {% endif %}
 {% endblock %}
