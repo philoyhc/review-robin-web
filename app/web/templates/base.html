@@ -2822,7 +2822,13 @@
       body.ui-v2 .banner .banner-headline {
         margin: 0 0 var(--space-2) 0;
         font-weight: 600;
-        font-size: var(--fs-h3);
+        /* `--fs-h3` was never in the type scale — it is five steps
+           (tiny / small / body / h2 / h1) and h3 shares the body step,
+           which is what `body.ui-v2 h3` above uses. An unresolvable
+           `var()` makes the whole declaration invalid, so this headline
+           has been inheriting 1rem since 11G PR D; naming `--fs-body`
+           is the same size, stated. */
+        font-size: var(--fs-body);
       }
       body.ui-v2 .banner .banner-actions {
         display: flex;

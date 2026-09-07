@@ -1071,6 +1071,79 @@
       /* Grid children default to ``min-width: auto``, which lets a wide
          table or a long unbroken string push a column past its share. */
       body.ui-v2 .card-columns > * { min-width: 0; }
+      /* Sub-card row — equal-width tiles laid across the inside of an
+         outer ``.card``. Unlike .card-columns (columns that stack their
+         own cards), every child here is one tile in a single row, and
+         they DO stretch to match: four parallel steps that ended at
+         four different heights would read as four different weights.
+         ``--n`` sets the count, defaulting to 4; ``minmax(0, 1fr)``
+         keeps a long word inside its tile instead of widening it.
+
+         The row styles layout only; the tiles are ordinary cards and
+         bring their own look. In practice that means
+         ``.card.rs-help-card`` — a row of tiles inside a card is
+         explaining something, which is what the help-card semantics
+         already say. (An earlier ``.subcard`` class here duplicated
+         .data-shape-card's tile shape; it was retired the same day for
+         the existing one, since a second answer to "bordered thing
+         inside a bordered thing" earns nothing.) First user: the lobby
+         first-run card. */
+      body.ui-v2 .subcard-row {
+        display: grid;
+        grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+        gap: var(--space-3);
+        margin: var(--space-3) 0;
+      }
+      /* Cards carry their own margins for the non-grid case; inside the
+         row the gap is the only spacing that should apply. */
+      body.ui-v2 .subcard-row > .card { margin: 0; }
+      /* ``.stepped`` — the tiles are a sequence, so a `\2192` sits
+         between them. One ``auto`` track follows each tile to hold it;
+         the last such track is left empty (four tiles, three arrows) and
+         an ``auto`` track with no content is zero-width, so nothing
+         trails off the right-hand end.
+
+         ``column-gap`` drops to 0 here because the arrows' own side
+         padding *is* the gap — leaving both would double the space
+         either side of every arrow. ``row-gap`` survives for the
+         wrapped case below. The tiles keep ``minmax(0, 1fr)``, so
+         adding arrows narrows them rather than widening the row. */
+      body.ui-v2 .subcard-row.stepped {
+        grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr) auto);
+        column-gap: 0;
+      }
+      body.ui-v2 .subcard-arrow {
+        align-self: center;
+        padding: 0 var(--space-3);
+        color: var(--text-subtle);
+        font-size: var(--fs-h2);
+        line-height: 1;
+      }
+      @media (max-width: 900px) {
+        body.ui-v2 .subcard-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        /* Once the row wraps, the tiles are no longer in reading order
+           left-to-right across one line, and a horizontal arrow between
+           stacked tiles points at nothing. Hide them and put the plain
+           gap back — the sequence is still carried by reading order,
+           which is where a screen reader gets it from in any case. */
+        body.ui-v2 .subcard-arrow { display: none; }
+        body.ui-v2 .subcard-row.stepped {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          column-gap: var(--space-3);
+        }
+      }
+      @media (max-width: 560px) {
+        body.ui-v2 .subcard-row,
+        body.ui-v2 .subcard-row.stepped {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      /* The tile's own h3 already carries ui-v2's heading rule; only
+         the trailing paragraph margin needs clearing so the tile's
+         padding is the only bottom space. */
+      body.ui-v2 .subcard-row > .card > :last-child { margin-bottom: 0; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -2732,7 +2805,13 @@
       body.ui-v2 .banner .banner-headline {
         margin: 0 0 var(--space-2) 0;
         font-weight: 600;
-        font-size: var(--fs-h3);
+        /* `--fs-h3` was never in the type scale — it is five steps
+           (tiny / small / body / h2 / h1) and h3 shares the body step,
+           which is what `body.ui-v2 h3` above uses. An unresolvable
+           `var()` makes the whole declaration invalid, so this headline
+           has been inheriting 1rem since 11G PR D; naming `--fs-body`
+           is the same size, stated. */
+        font-size: var(--fs-body);
       }
       body.ui-v2 .banner .banner-actions {
         display: flex;
@@ -2826,11 +2905,13 @@
         font-size: var(--fs-small);
         color: var(--text-subtle);
       }
-      /* Sessions-list lobby header — pairs the H1 with the "Create
-         new session" Primary affordance flush right. Body is a v2
-         table inside a single .card; the empty state is a separate
-         .card with explanatory text and a .btn-cta that doubles as
-         the prominent affordance. */
+      /* Sessions-list lobby — the H1 stands alone; the create
+         affordance is the Search card's `Add new session` Primary,
+         and it is the page's only one (2026-09-07). Body is a v2
+         table inside a single .card; when there are no live sessions
+         the table is replaced by the first-run .card, which carries
+         explanatory text and points at that button rather than
+         repeating it. */
       /* Sessions-lobby row — two equal half-width cards side by side
          above the sessions table: a stats card (left) and an actions
          card (right). */
@@ -2848,6 +2929,17 @@
       }
       body.ui-v2 .sessions-lobby-card h2,
       body.ui-v2 .sessions-action-card h2 { margin-top: 0; }
+      /* Narrow viewports stack the two cards, Search below Sessions.
+         Side by side they are each half of an already-narrow page, and
+         the Search card is the one that suffers: its four buttons wrap
+         into a ragged block and the input shrinks to a stub. 800px is
+         the app's established two-column collapse point — `.page-grid`
+         and `.bottom-grid`, the other half-width card layouts, both
+         give way there. Sessions stays first: it is the page's summary,
+         and the actions read as what you do about it. */
+      @media (max-width: 800px) {
+        body.ui-v2 .sessions-lobby-row { flex-direction: column; }
+      }
       body.ui-v2 .sessions-lobby-pills {
         display: flex;
         flex-wrap: wrap;
