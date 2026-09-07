@@ -127,10 +127,21 @@ practice this means *inside an open response-release window*, and never
 on an archived session — the archive override closes every non-operator
 grant.
 
-So the lifecycle table that used to sit here would be misleading: a
-`ready` session with no open release window shows a reviewee nothing,
-and a `draft` session with an open one shows them a row. The rule is the
-grant, not the state.
+So the lifecycle table that used to sit here would be misleading. Take
+one session at a time and vary only its state:
+
+| One session, lifecycle | Release window | Reviewee row |
+|---|---|---|
+| `ready` | closed / not yet reached | **none** |
+| `draft` | open | **shown** |
+
+Both halves are operator-reachable, and the second is not a
+misconfiguration:
+`scheduled_events.parse_and_validate_responses_release_at` deliberately
+applies **no minimum-lead-time floor**, so an operator may backdate
+"Release responses from" to make results viewable immediately — on a
+session that has not been activated. The rule is the grant, not the
+state.
 
 **A reviewee with no current grant is indistinguishable from a
 stranger** — the same empty `/me`, the same 404 — which is the point of

@@ -315,3 +315,43 @@ def test_an_archived_session_closes_the_reviewee_row(
     review_session.status = "archived"
     db.commit()
     assert 'class="pill pill-role-reviewee"' not in client.get("/me").text
+
+
+def test_lifecycle_state_does_not_decide_the_reviewee_row(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The grant decides, not the lifecycle — asserted on **one**
+    session at a time so the claim cannot be read as two sessions
+    being compared.
+
+    `draft` + open release window shows a row; flipping the same
+    session to `ready` and closing the window takes it away. Both
+    states are operator-reachable:
+    `scheduled_events.parse_and_validate_responses_release_at`
+    deliberately applies no minimum-lead-time floor, so "Release
+    responses from" can be backdated to make results viewable
+    immediately on a session that was never activated.
+
+    This pins the sentence in `spec/role_landing_and_visibility.md` §4
+    that replaced the old five-state table.
+    """
+    review_session = _make_session_and_activate(client, db, code="me-lifecycle")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+
+    # draft + open window → row.
+    grant_reviewee_visibility(review_session)
+    assert review_session.status == "draft"
+    assert 'class="pill pill-role-reviewee"' in client.get("/me").text
+
+    # Same session, now ready, window closed → no row.
+    review_session.status = "ready"
+    review_session.responses_release_at = None
+    db.commit()
+    assert 'class="pill pill-role-reviewee"' not in client.get("/me").text

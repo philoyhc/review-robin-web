@@ -394,9 +394,10 @@ red, so no test is covering another's ground by accident.
 precondition, the three properties, and the row appearing and disappearing as
 windows move) and `spec/role_landing_and_visibility.md` §4 — whose reviewee
 lifecycle table is **replaced rather than amended**, because the reviewee role
-no longer follows the lifecycle at all. A `ready` session with no open window
-shows nothing; a `draft` session with an open one shows a row. Keeping a
-five-state table there would have been a well-formatted lie. Observers keep
+no longer follows the lifecycle at all. Vary one session's state and nothing
+else: `ready` with the release window closed shows nothing, `draft` with it
+open shows a row. Keeping a five-state table there would have been a
+well-formatted lie. Observers keep
 their lifecycle table, now stated as its own section.
 
 **2026-09-07 — PR 1 shipped: every session-scoped gate answers 404.**
