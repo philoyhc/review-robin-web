@@ -184,7 +184,7 @@ sessions that don't use observers.
 - **Same tab shape across rows.** The labels and rows do the grouping work; tabs themselves don't need to differ in shape.
 - **Active tab** uses an underline marker. The marker uses one tone per row (lighter than the row's full accent) so the marker says *"you are here"* without competing with the label.
 
-Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the Setup-entity counts (Reviewers / Reviewees / Relationships / Instruments — reported `total / configured` — / Email Template), then two operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
+Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the Setup-entity counts (Reviewers / Reviewees / Relationships / Instruments — reported `configured / total` — / Email Template), then two operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
 
 ### Behaviour
 

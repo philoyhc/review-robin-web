@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
+from app.db.models import Instrument, ReviewSession, User
 from app.services import instruments as instruments_service
 from app.web import views
 
@@ -530,31 +530,55 @@ def test_configured_counts_is_zero_zero_without_instruments(
     assert instruments_service.configured_counts(db, review_session.id) == (0, 0)
 
 
-def test_status_row_reports_instruments_as_total_over_configured(
+def test_status_row_reports_instruments_as_configured_over_total(
     client: TestClient, db: Session
 ) -> None:
-    """The pill reports both numbers and takes its tint from whether they
-    match.
+    """The pill reports both numbers, done-first, and takes its tint from
+    whether they match.
 
     Until 2026-09-07 it showed the bare total, so an instrument with no
     visible response field — one a reviewer would meet as an empty page —
     counted exactly like a finished one, and the row read done for a
     session that could not be answered.
+
+    Order is `configured / total`, matching the Responses pill in the same
+    row (`3 drafts / 5`). The first cut of this shipped total-first and
+    read backwards as a fraction: `5 / 3` is not a proportion anyone can
+    complete, so the direction is asserted, not just the pair of numbers.
     """
     review_session = _make_session(client, db, code="pill-two-numbers")
     instrument = _default_instrument(db, review_session.id)
+    # Created through the service, not the model, so it is seeded with the
+    # default response fields. A bare `Instrument(...)` has none, and
+    # `is_configured` would then refuse it however many Band 1 links are
+    # touched — the test could never reach its all-configured case.
+    second = instruments_service.create_instrument(
+        db,
+        review_session=review_session,
+        actor=db.execute(select(User)).scalars().first(),
+    )
+    db.flush()
+
     url = f"/operator/sessions/{review_session.id}"
 
-    # Untouched Band 1 links: 1 instrument, 0 configured -> amber.
+    # Untouched Band 1 links on both: 0 of 2 configured -> amber. Two
+    # instruments rather than one so the two numbers differ and the order
+    # is actually pinned.
     body = " ".join(client.get(url).text.split())
-    assert '<span class="pill pill-warning">1 / 0</span>' in body
+    assert '<span class="pill pill-warning">0 / 2</span>' in body
 
     instrument.band1_touched_links = ["link1", "link2", "link3"]
     db.flush()
 
+    body = " ".join(client.get(url).text.split())
+    assert '<span class="pill pill-warning">1 / 2</span>' in body
+
+    second.band1_touched_links = ["link1", "link2", "link3"]
+    db.flush()
+
     # All configured -> blue.
     body = " ".join(client.get(url).text.split())
-    assert '<span class="pill pill-info">1 / 1</span>' in body
+    assert '<span class="pill pill-info">2 / 2</span>' in body
 
 
 def test_status_row_reports_no_instruments_as_none(
