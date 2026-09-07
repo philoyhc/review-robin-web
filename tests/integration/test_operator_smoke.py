@@ -27,7 +27,12 @@ def test_operator_sessions_renders(client: TestClient) -> None:
     response = client.get("/operator/sessions")
 
     assert response.status_code == 200
-    assert "You don't have any sessions yet." in response.text
+    # Anchored on the card's id rather than its headline: this is a smoke
+    # test for "the template rendered at all", and a copy edit to the
+    # headline broke it once already (2026-09-07). The id is the stable
+    # thing; the wording is not, and is asserted where it belongs, in
+    # tests/integration/test_lobby_first_run_card.py.
+    assert 'id="lobby-first-run"' in response.text
 
 
 def test_operator_session_home_renders(client: TestClient) -> None:

@@ -1096,37 +1096,71 @@
          ``--n`` sets the count, defaulting to 4; ``minmax(0, 1fr)``
          keeps a long word inside its tile instead of widening it.
 
-         Tile shape (1px subtle border, 6px radius, ``surface-card``
-         fill) is deliberately the same as .data-shape-card: a bordered
-         thing inside a bordered thing needs to read as subordinate to
-         it, and there is no reason for two answers to that. First
-         user: the lobby first-run card. */
+         The row styles layout only; the tiles are ordinary cards and
+         bring their own look. In practice that means
+         ``.card.rs-help-card`` — a row of tiles inside a card is
+         explaining something, which is what the help-card semantics
+         already say. (An earlier ``.subcard`` class here duplicated
+         .data-shape-card's tile shape; it was retired the same day for
+         the existing one, since a second answer to "bordered thing
+         inside a bordered thing" earns nothing.) First user: the lobby
+         first-run card. */
       body.ui-v2 .subcard-row {
         display: grid;
         grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
         gap: var(--space-3);
         margin: var(--space-3) 0;
       }
+      /* Cards carry their own margins for the non-grid case; inside the
+         row the gap is the only spacing that should apply. */
+      body.ui-v2 .subcard-row > .card { margin: 0; }
+      /* ``.stepped`` — the tiles are a sequence, so a `\2192` sits
+         between them. One ``auto`` track follows each tile to hold it;
+         the last such track is left empty (four tiles, three arrows) and
+         an ``auto`` track with no content is zero-width, so nothing
+         trails off the right-hand end.
+
+         ``column-gap`` drops to 0 here because the arrows' own side
+         padding *is* the gap — leaving both would double the space
+         either side of every arrow. ``row-gap`` survives for the
+         wrapped case below. The tiles keep ``minmax(0, 1fr)``, so
+         adding arrows narrows them rather than widening the row. */
+      body.ui-v2 .subcard-row.stepped {
+        grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr) auto);
+        column-gap: 0;
+      }
+      body.ui-v2 .subcard-arrow {
+        align-self: center;
+        padding: 0 var(--space-3);
+        color: var(--text-subtle);
+        font-size: var(--fs-h2);
+        line-height: 1;
+      }
       @media (max-width: 900px) {
         body.ui-v2 .subcard-row {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-      }
-      @media (max-width: 560px) {
-        body.ui-v2 .subcard-row {
-          grid-template-columns: minmax(0, 1fr);
+        /* Once the row wraps, the tiles are no longer in reading order
+           left-to-right across one line, and a horizontal arrow between
+           stacked tiles points at nothing. Hide them and put the plain
+           gap back — the sequence is still carried by reading order,
+           which is where a screen reader gets it from in any case. */
+        body.ui-v2 .subcard-arrow { display: none; }
+        body.ui-v2 .subcard-row.stepped {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          column-gap: var(--space-3);
         }
       }
-      body.ui-v2 .subcard {
-        border: 1px solid var(--border-subtle);
-        border-radius: 6px;
-        background: var(--surface-card);
-        padding: var(--space-3);
+      @media (max-width: 560px) {
+        body.ui-v2 .subcard-row,
+        body.ui-v2 .subcard-row.stepped {
+          grid-template-columns: minmax(0, 1fr);
+        }
       }
       /* The tile's own h3 already carries ui-v2's heading rule; only
          the trailing paragraph margin needs clearing so the tile's
          padding is the only bottom space. */
-      body.ui-v2 .subcard > :last-child { margin-bottom: 0; }
+      body.ui-v2 .subcard-row > .card > :last-child { margin-bottom: 0; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;

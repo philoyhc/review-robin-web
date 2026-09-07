@@ -772,18 +772,37 @@
        Four tiles of equal width and equal height say "four stages, all
        of them ordinary" in a way a 1-2-3-4 list does not. #}
     <div class="card" id="lobby-first-run">
-      <h2>You don't have any sessions yet.</h2>
-      <div class="subcard-row">
-        <div class="subcard">
+      <h2>You don't have any sessions yet</h2>
+      {# The definition stands under the card header rather than inside the
+         first tile: it is what all four tiles are about, so it belongs to
+         the card, not to stage one. It also lets the first tile open on an
+         instruction like the other three instead of on a definition. #}
+      <p>
+        A <strong>session</strong> is one review round with its own people,
+        form, dates, and results.
+      </p>
+      {# Tiles are `.card.rs-help-card` — the app's existing help-card
+         semantics — rather than a tile look of their own. A row of tiles
+         inside a card is explaining something, which is what that style
+         already says.
+
+         `.stepped` puts a `→` between them: these are four stages in
+         order, not four parallel options. The arrows are `aria-hidden`
+         and carry no text — the sequence is already in reading order,
+         and "right arrow" announced three times between four headings
+         is noise. They hide below 900px, where the row wraps and a
+         horizontal arrow would point at nothing. #}
+      <div class="subcard-row stepped">
+        <div class="card rs-help-card">
           <h3>Set up a session</h3>
           <p>
-            A <strong>session</strong> is one review round with its own
-            people, form, dates, and results. Create one using the
-            <strong>Add new session</strong> button above. Add reviewers,
-            reviewees, and choose the questions they answer.
+            Create one using the <strong>Add new session</strong> button
+            above. Add reviewers, reviewees, and choose the questions they
+            answer.
           </p>
         </div>
-        <div class="subcard">
+        <span class="subcard-arrow" aria-hidden="true">→</span>
+        <div class="card rs-help-card">
           <h3>Prepare and launch</h3>
           <p>
             Use the app to generate the assignment pairs, run the pre-flight
@@ -791,14 +810,16 @@
             receive responses.
           </p>
         </div>
-        <div class="subcard">
+        <span class="subcard-arrow" aria-hidden="true">→</span>
+        <div class="card rs-help-card">
           <h3>Give reviewers access</h3>
           <p>
             Share the app's address; people sign in and see the reviews that
             apply to them.
           </p>
         </div>
-        <div class="subcard">
+        <span class="subcard-arrow" aria-hidden="true">→</span>
+        <div class="card rs-help-card">
           <h3>Download responses</h3>
           <p>
             At the close of the session, download the collected data.
