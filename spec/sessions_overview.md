@@ -37,11 +37,14 @@ archived-sessions child page.
 A single-column page:
 
 ```
-┌─ <h1>Sessions</h1>          [ Create new session ] ┐  ← header strip
+┌─ <h1>Sessions Lobby</h1> ───────────────────────────┐
 │                                                     │
-│ ┌─ tag-filter strip + Search card + Archive link ┐  │
-│ │ …                                              │  │
-│ └────────────────────────────────────────────────┘  │
+│ ┌─ Sessions ─────────┐ ┌─ Search ─────────────────┐ │
+│ │ counts + tag chips │ │ [search box]             │ │
+│ │                    │ │ [Cancel] [Add new        │ │
+│ │                    │ │  session] [Rehydrate]    │ │
+│ │                    │ │ [Go to Archive]          │ │
+│ └────────────────────┘ └──────────────────────────┘ │
 │                                                     │
 │ ┌─ sessions table card (full width) ─────────────┐  │
 │ │ Name | Code | Created by | … | Status | Tags | ☐ │  │
@@ -50,27 +53,34 @@ A single-column page:
 └─────────────────────────────────────────────────────┘
 ```
 
+The two half-width cards render in **every** state; the table is
+replaced by the first-run card when there are no live sessions.
+
 The table sits inside a single `<form method="post">` so the
 per-row checkboxes submit with whichever expander button the
 operator clicks (each button carries its own `formaction`). The
 destructive bulk actions live in the row-expander, not a separate
 Danger Zone card.
 
-## Header strip
+## Header
 
-A flex row above the table.
+- **`<h1>Sessions Lobby</h1>`** — page title, left-aligned, on its
+  own line.
 
-- **`<h1>Sessions</h1>`** — page title, left-aligned.
-- **`Create new session`** primary button — right-aligned, links to
-  `/operator/sessions/new`. Rendered only when at least one session
-  exists; the empty state has its own CTA.
+*(Until 2026-09-07 this was a flex strip pairing the title with a
+right-aligned `Create new session` Primary, rendered only when at
+least one session existed. Both the button and the strip are gone:
+the create affordance is now the Search card's `Add new session`,
+present in every state — see "Lobby states" below.)*
 
 ## Empty state — the first-run card
 
 When the operator has **zero non-archived sessions**, the page
-renders a single onboarding card (`id="lobby-first-run"`) in place
-of the whole populated branch — the stats card, the Search card,
-the table, and the bulk-action form all go with it.
+renders an onboarding card (`id="lobby-first-run"`) **below the
+`Sessions` and `Search` cards**, in place of the table and the
+bulk-action form. *(Before the 2026-09-07 standardisation the two
+cards went with the table, so this card was the whole page. See
+"Lobby states" below.)*
 
 The card carries, in order:
 
@@ -88,8 +98,14 @@ The card carries, in order:
    documentation, and the chrome link alone is easy to miss on a
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
-4. The **`Create new session`** CTA (`.btn-cta`), linking to
-   `/operator/sessions/new`.
+4. A closing line pointing at the Search card's **`Add new
+   session`** button. **The card has no CTA of its own** (changed
+   2026-09-07): standardisation left it and the Search card
+   offering the same destination in the same state under two
+   different names, so the card now defers rather than competes —
+   one way to start a session, one name for it. The button is
+   named by **label**, not position, so the sentence survives the
+   card moving.
 
 Item 3's muted line also carries the **setup-template download**
 (`GET /templates/starter.zip`, Segment 19E rung 4) — four generic
@@ -106,14 +122,16 @@ never had a session". An operator who archives everything sees the
 card again, which is intended: they are back at the start. No
 "has-ever-had" state is tracked.
 
-**Superseded 2026-09-07 — the Search card's `Add new session` is no
-longer suppressed here.** Standardising the lobby made both cards render
-in every state, and that button stays active in the empty one on
-purpose: with `Rehydrate`, it is one of the two ways *out* of an empty
-lobby. So the page offers the same destination twice, at different
-weights — the first-run card's `.btn-cta` and the Search card's Primary.
-The weight difference is what stops them competing; the old rule assumed
-they would be the same size.
+**Superseded 2026-09-07, twice, and the second time settles it.** The
+rule was that this state shows a single create affordance. Standardising
+the lobby broke it: the Search card's `Add new session` stays active in
+the empty lobby on purpose — with `Rehydrate` it is one of the two ways
+*out* of one — so the page briefly offered the same destination twice,
+under two names, distinguished only by weight. Removing the first-run
+card's own CTA restores the rule rather than abandoning it: **one create
+affordance in this state, and it is the Search card's.** What the first
+version got wrong was assuming a weight difference was enough to keep
+two names for one action from confusing a first-time operator.
 
 > **Known gap — closed 2026-09-07 by the standardisation below.**
 > `Go to Archive` used to live in the Search card *inside the populated

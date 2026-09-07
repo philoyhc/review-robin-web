@@ -2843,11 +2843,13 @@
         font-size: var(--fs-small);
         color: var(--text-subtle);
       }
-      /* Sessions-list lobby header — pairs the H1 with the "Create
-         new session" Primary affordance flush right. Body is a v2
-         table inside a single .card; the empty state is a separate
-         .card with explanatory text and a .btn-cta that doubles as
-         the prominent affordance. */
+      /* Sessions-list lobby — the H1 stands alone; the create
+         affordance is the Search card's `Add new session` Primary,
+         and it is the page's only one (2026-09-07). Body is a v2
+         table inside a single .card; when there are no live sessions
+         the table is replaced by the first-run .card, which carries
+         explanatory text and points at that button rather than
+         repeating it. */
       /* Sessions-lobby row — two equal half-width cards side by side
          above the sessions table: a stats card (left) and an actions
          card (right). */
