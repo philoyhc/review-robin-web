@@ -85,10 +85,12 @@ def test_the_guide_links_the_setup_templates_download(client: TestClient) -> Non
 # ── Two capture families (2026-09-07) ──────────────────────────────────
 #
 # The screencaps arrive at two scales: six 1x shots at ~830px and six 2x
-# shots at ~1680px. Left alone both fill the prose column, so the 1x ones
-# are blown up past their own pixels while the 2x ones are still shrinking
-# — the same UI at two apparent scales on one page. The narrow six carry
-# `.guide-figure-narrow`, which renders them at 664px.
+# shots at ~1680px. Left to fill the prose column they read at two
+# different apparent scales, so each family gets a fixed display width —
+# 1200px for the wide six, 600px for the narrow six, which carry
+# `.guide-figure-narrow`. Both numbers are the author's, set from the
+# rendered page; this file asserts only which family an image is in, not
+# the widths themselves, which are presentation and will move again.
 #
 # The split is by the file's actual pixel width, not by a hand-kept list,
 # so a capture retaken at the other scale fails here rather than quietly
