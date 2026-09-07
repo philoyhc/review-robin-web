@@ -35,8 +35,9 @@ read surfaces are live:
 - **Reviewee results** — `GET /me/sessions/{id}/results` renders a
   reviewee's own incoming results per instrument (raw / anonymized
   / summarized, per the per-instrument visibility policy) plus an
-  Acknowledge gesture. Gated by `require_reviewee_in_session`
-  (`app/web/deps.py`).
+  Acknowledge gesture. Gated by `require_reviewee_with_current_grant`
+  (`app/web/deps.py`), which composes the roster check with a
+  currently-resolving visibility grant (Segment 19F PR 4).
 - **Observer collation** — observers view *collated* results across
   the session (not just their own). `observers` has a dedicated CRUD
   Setup page gated by `session.observers_enabled` and an
@@ -734,10 +735,12 @@ decide which shape to interpret.
   last-owner floor, and audited via `session.owner_added` /
   `session.owner_removed`.
 
-- **Participant gates** — `require_reviewee_in_session` /
-  `require_observer_in_session` gate the reviewee results and
-  observer collation routes; `require_reviewer_in_session` gates the
-  reviewer write-path. All three match the signed-in user's email
+- **Participant gates** — `require_reviewee_with_current_grant` (which
+  wraps `require_reviewee_in_session`) / `require_observer_in_session`
+  gate the reviewee results and observer collation routes;
+  `require_reviewer_in_session` gates the reviewer write-path. All
+  refuse with a bare **404**, indistinguishable from an unknown session
+  id (19F PR 1). They match the signed-in user's email
   (case-insensitive) against the session roster and require the row
   to be `active`.
 

@@ -1516,7 +1516,9 @@ this reviewer's rows).
 
 An email-identified reviewee reaches
 `/me/sessions/{id}/results` (gated by
-`require_reviewee_in_session`). The body is per-instrument
+`require_reviewee_with_current_grant` — the roster check plus a
+currently-resolving visibility grant, Segment 19F PR 4; without one the
+route answers 404). The body is per-instrument
 sections — one section per instrument that carries a `reviewee`
 visibility policy — rendering the responses collected *about this
 reviewee* in the policy's mode:

@@ -815,6 +815,17 @@ matching; only `status == "active"` rows contribute; the result is
 deduplicated per session and sorted by `session.updated_at`
 descending.
 
+**The `reviewee` role additionally requires a currently-resolving
+visibility grant** (Segment 19F PR 2). An active, email-identified
+roster row is necessary but not sufficient: at least one instrument in
+the session must grant the reviewee a mode under the windows open right
+now (`visibility_policies.reviewee_has_current_grant`). Without one the
+`reviewee` entry never enters `roles`, so the session contributes no row
+at all unless the user holds another role on it — the role is gated, not
+the row. Reviewers and observers are not grant-gated. Full contract in
+`spec/participant_model.md` §5 and `spec/role_landing_and_visibility.md`
+§4.
+
 Reviewer-specific columns (Reviewer status, deep-link target)
 populate only when the user is an active reviewer on that session;
 reviewee-/observer-only rows show `—` in those cells.
@@ -837,10 +848,11 @@ reviewee-/observer-only rows show `—` in those cells.
     deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
   - **View responses** — placeholder; renders `<span
-    class="muted">—</span>` today. Will surface the
-    `responses_release_at` / `responses_release_until` access
-    window link once wired (W16 shipped `/results` + W19 Acknowledge;
-    this dashboard column is a follow-on).
+    class="muted">—</span>` today. The access-window gate it was
+    waiting on landed instead on the **row itself** at 19F PR 2: a
+    reviewee row exists only while a grant currently resolves, so a
+    dedicated window column would now restate what the row's presence
+    already says.
   - **Until** — placeholder; renders `<span
     class="muted">—</span>` today. Will show the computed
     close time of the results-viewing window once wired.
@@ -869,8 +881,8 @@ per role the user holds:
 | Role | Target URL | Reachable today |
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
-| `reviewee` | `/me/sessions/{id}/results` | always `True` today (W16 shipped the `/results` surface; the `responses_release_at` dashboard-row gate is a follow-on) |
-| `observer` | `/me/sessions/{id}/collation` | always `True` for any active observer; per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context` (W17, shipped 2026-06-02) |
+| `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — and since 19F PR 2 the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
+| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`** (19F PR 5): archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` (W17, shipped 2026-06-02) |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
@@ -991,11 +1003,31 @@ for the gate semantics.
 
 `GET /me/sessions/{id}/results` + `POST /me/sessions/{id}/results/acknowledge`.
 
-**Gate** — `require_reviewee_in_session` in `app/web/deps.py`:
-the authenticated user must have an active Reviewee row whose
-`email_or_identifier` is a valid email matching the user's email
-(case-insensitive). Confidential reviewees (non-email identifiers)
-never grant access. On mismatch: **HTTP 403**.
+**Gate** — `require_reviewee_with_current_grant` in
+`app/web/deps.py` (19F PR 4), shared by the GET **and** the
+`POST …/acknowledge` companion. It composes two conditions:
+
+1. the roster check from `require_reviewee_in_session` — an active
+   Reviewee row whose `email_or_identifier` is a valid email matching
+   the user's, case-insensitively; confidential reviewees (non-email
+   identifiers) never pass; **and**
+2. `visibility_policies.reviewee_has_current_grant` — at least one
+   instrument granting them a mode under the windows open right now.
+
+**On any failure: a bare HTTP 404**, byte-identical to an unknown
+session id (19F PR 1). Unknown session, not a reviewee here, an inactive
+row, a non-email identifier, and a reviewee with nothing currently
+granted are one outcome with one body — a reviewee granted nothing is
+indistinguishable from a stranger. It answered **403** with a
+role-naming `detail` until 19F, which told the caller the session
+existed and that they were on it.
+
+**Retired at PR 4: the pre-release scaffolding.** A policy authored on
+`after_release` whose window had not opened used to render the section
+with the reviewer rows visible — names and emails — and only the values
+hidden. That told a reviewee who was lined up to review them before
+anything had been granted, so the page now 404s instead. A preview of
+what a reviewee *will* see belongs on an operator surface.
 
 **Body** — per-instrument sections built by
 `app/web/views/_reviewee_results.py::build_reviewee_results_context`,
@@ -1023,7 +1055,14 @@ PR #1713 — `GET /me/sessions/{id}/collation`.
 
 **Gate** — `require_observer_in_session` in `app/web/deps.py`:
 the authenticated user must have an active Observer row whose
-`email` matches (case-insensitive). On mismatch: **HTTP 403**.
+`email` matches (case-insensitive). On mismatch: a bare **HTTP 404**,
+byte-identical to an unknown session id (19F PR 1) — it was a 403 with
+a role-naming `detail` until then, which confirmed the session existed.
+
+Observers are **not** grant-gated the way reviewees became at 19F PR 4:
+being appointed an observer is not a disclosure *about* the observer, so
+the surface opens in every lifecycle state and simply renders nothing
+until their window does (19F decision 4).
 
 **Current state** — reviewer-surface chrome (`reviewer/collation.html`)
 plus the per-instrument 3-row collation table (reviewer-side
@@ -1073,11 +1112,16 @@ modifiers.
 Reachability mirrors the dashboard's `role_links.enabled` logic:
 reviewer is reachable when `session_status != "not opened"`;
 reviewee and observer surfaces are always reachable for an
-active row in the matching roster. W16 / W17 apply the
-`responses_release_at` + `responses_release_until` gates
-inside the per-instrument render (sections / instrument cards
-fall through to empty state when the window is closed), not at
-route-level 403.
+active row in the matching roster. **W17 (observer)** still applies the
+`responses_release_at` + `responses_release_until` gates inside the
+per-instrument render only — instrument cards fall through to the empty
+state when the window is closed, with no route-level refusal.
+
+**W16 (reviewee) no longer works that way.** 19F PR 4 moved the window
+question to the route: with no instrument granting anything, `/results`
+answers 404 rather than rendering an empty page that named the session
+to its subject. Inside an open page the per-instrument resolver still
+decides what renders, so a sparse body remains normal.
 
 ---
 
@@ -1111,7 +1155,10 @@ followed by a `.btn-pair` with two Secondary anchors:
 
 The remedy is to sign out and sign back in with the invited
 account. This is the only reviewer-side page that returns a non-200
-status under normal flow (HTTP 403).
+status under normal flow **for a caller who is in the right place** —
+a 403, and unrelated to the session-scoped gates. Since 19F the gates
+themselves answer 404 to anyone they refuse, but that is a caller in the
+wrong place rather than a normal flow.
 
 The mismatch page renders with the reviewer chrome variant
 (`body.ui-v2 reviewer`) so the operator's identity is suppressed
