@@ -178,9 +178,12 @@ Every Setup Page renders, top-to-bottom:
    US spellings, because those are the words on the Band 3 policy
    control an operator is being sent to
    (`app/services/visibility_policies.py`, `spec/visibility_policy.md`).
-   Rule 4 outranks the repo's British prose convention here: a card that
-   says "anonymised" sends a reader looking for a label that does not
-   exist. Reviewers and Reviewees
+   Rule 4 settles it independently of whatever the surrounding prose
+   convention is: a card that says "anonymised" sends a reader looking
+   for a label that does not exist. (The repo's prose convention is US
+   spelling as of 2026-09-07 — `CLAUDE.md` → Project conventions — so
+   the two now agree, but this rule held while they disagreed and is
+   what to reason from if they ever diverge again.) Reviewers and Reviewees
    run the same way — *who they are* → *what identifies them* → *what
    the tags do* → *what upload costs* → the Guide link on its own line.
    The two pages are deliberately near-parallel: an operator reads them

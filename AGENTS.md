@@ -33,6 +33,24 @@ other AI coding agent working in this repository.
 - Do not implement Microsoft authentication in app code unless
   explicitly requested; assume Azure App Service Easy Auth will provide
   authenticated identity headers in deployed environments.
+- **US spelling in new prose** (author's preference, 2026-09-07):
+  *color*, *behavior*, *materialized*, *anonymized*. Three tiers, because
+  the point is a default and not a campaign:
+  - **New or rewritten prose** — US.
+  - **Existing prose** — left alone. There are ~430 British forms across
+    live `spec/`, `docs/` and `guide/` (116 `colour`, 101 `behaviour`);
+    fix them when you are editing that line anyway, never as a sweep, and
+    never as a PR of its own. Nothing enforces this, deliberately: a check
+    that failed on 430 existing lines would be turned off within a day.
+  - **Identifiers, filenames, DB columns and shipped labels** — never
+    renamed for spelling. `normalise_status`, `_normalised_name` and their
+    kin stay as they are; a name is a name, and churning them buys a
+    reader nothing.
+  **Where prose names a control, quote the control.** The app's visibility
+  modes are `Anonymized` / `Summarized` (`app/services/visibility_policies.py`),
+  so prose about them spells them that way regardless of the surrounding
+  convention — a reader sent to hunt for a label that does not exist is
+  worse served than one reading a mixed page.
 - Keep changes small and PR-sized.
 
 ## Working approach
