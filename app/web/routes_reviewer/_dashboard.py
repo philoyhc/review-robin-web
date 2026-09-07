@@ -202,10 +202,12 @@ def reviewer_dashboard(
                 # placeholder: `roles` only carries `reviewee` when
                 # `reviewee_has_current_grant` said yes above, so
                 # reaching here already means there is something to
-                # link to. (This comment used to read "W16 will gate
-                # this …" — W16 shipped in PRs #1737–#1752 and the
+                # link to. (A placeholder marker naming W16 stood here
+                # until 19F PR 2. W16 shipped in PRs #1737–#1752 and the
                 # marker outlived it by three months, which is how 19F
-                # came to exist.)
+                # came to exist. The phrase itself is not repeated here:
+                # the segment's Definition of done greps `app/` for it,
+                # and a comment quoting the tripwire keeps it tripped.)
                 "enabled": True,
             }
         if "observer" in roles:
@@ -222,9 +224,10 @@ def reviewer_dashboard(
                 # row stays, reading "not opened", and loses its link —
                 # matching the reviewer row beside it.
                 #
-                # (This comment read "W17 will gate this …" until 19F
-                # PR 5. W17 shipped in PRs #1769–#1808; the marker
-                # outlived it, which is how this segment came to exist.)
+                # (A placeholder marker naming W17 stood here until 19F
+                # PR 5, the twin of W16's above. W17 shipped in
+                # PRs #1769–#1808 and the marker outlived it too. Phrase
+                # deliberately not quoted — see the note above.)
                 "enabled": not lifecycle.is_archived(review_session),
             }
 

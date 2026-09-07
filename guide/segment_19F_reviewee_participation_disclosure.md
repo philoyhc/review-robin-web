@@ -419,6 +419,15 @@ live in every state but `archived`. Neither behaviour had any test
 before this rung — the change produced zero failures, which is how that
 was discovered — so both directions are now pinned.
 
+**The Definition-of-done tripwire caught me quoting it.** That line
+reads `grep -rn "will gate this" app/` is empty — and both replacement
+comments I wrote *quoted the retired marker* to record what had stood
+there, which left the grep matching my own prose and the check
+permanently failing. Reworded to describe the marker without repeating
+the phrase. A cheap mistake, but the general shape is worth keeping: a
+check that greps for a string is defeated by any comment explaining the
+string, so the two cannot both exist.
+
 **Tests: 2,896 passed / 16 skipped**, up 5.
 
 **Doc impact honoured at this rung:** `spec/role_landing_and_visibility.md`
