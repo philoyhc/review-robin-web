@@ -95,7 +95,7 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 - Reviewee results: gated by `require_reviewee_with_current_grant` (19F PR 4) — an active reviewee whose `email_or_identifier` matches the user's email reaches the page **while a grant currently resolves**, and every other caller gets a bare 404. The gate composes the roster check with `visibility_policies.reviewee_has_current_grant`, so the surface and the `/me` row agree by construction rather than by two readings of one rule. Both the GET and the `POST .../acknowledge` companion share it. Inside the page, the per-instrument resolver still decides what renders: a grant on one instrument opens the page, and instruments granting nothing contribute nothing, so an open page with a sparse body is normal.
 
   **Retired with PR 4: the pre-release scaffolding.** Before it, a policy authored on `after_release` whose window had not opened rendered the section with the reviewer rows visible — names and emails — and only the values hidden. That told a reviewee who was lined up to review them before anyone had granted them anything, so the page now 404s instead. If the preview is wanted back it belongs on an operator surface.
-- Observer collation: reachable for any active observer. The per-instrument visibility-policy resolver inside `build_observer_collation_context` applies the window gate at view time — instruments only render when the active window (while_ongoing / after_release) has a policy-permitted mode for the observer audience. The route itself does not 403 based on the release window.
+- Observer collation: reachable for any active observer, on any session but an **archived** one — `build_observer_collation_context` short-circuits there and returns no sections (19F PR 5), which is why the `/me` link is unlinked in that state. The per-instrument visibility-policy resolver inside `build_observer_collation_context` applies the window gate at view time — instruments only render when the active window (while_ongoing / after_release) has a policy-permitted mode for the observer audience. The route itself does not 403 based on the release window.
 
 The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable via W14 + S12 and consumed at view time by W16 (reviewee `/results`) and W17 (observer `/collation`).
 
@@ -127,7 +127,7 @@ Reachability per role for the link:
 |---|---|
 | reviewer | `session_status_for_reviewer != "not opened"` (per §4). Surfaces with `pill.state == "submitted"` link to `/me/sessions/{id}/summary` instead of `/me/sessions/{id}/1`. |
 | reviewee | Whenever the role is present at all — and since 19F PR 2 the role is itself conditional on a currently-resolving grant (above), so reaching this row means there is something to link to. |
-| observer | Per-instrument render gated on the Band 3 observer policy + the active session window (W17, shipped 2026-06-02). The lobby link is reachable for any active observer. |
+| observer | Per-instrument render gated on the Band 3 observer policy + the active session window (W17, shipped 2026-06-02). The lobby link is reachable for any active observer **except on an archived session** (19F PR 5): archive closes every non-operator grant, so the page behind the link is empty by construction. The row stays and reads "not opened"; it simply loses its link, matching the reviewer row beside it. |
 
 If no role is reachable, the session name renders as plain text.
 
@@ -144,6 +144,8 @@ The W18 cross-role union lives inline in `_dashboard.py`. The `sessions_for_user
 Every participant-facing surface (reviewer surface, reviewer summary, reviewee results, observer collation) renders a chip strip below the page header showing each role the user holds on this session. The chip matching the current page is highlighted (no link); the others are muted links to their surfaces. Lets a multi-role user swap surfaces without bouncing through `/me`.
 
 Full contract in `spec/role_navigator.md`. Key seam: every surface route calls `build_role_chips(db, user=user, review_session=session, active_role=...)` from `app/web/routes_reviewer/_shared.py` and passes the result as the `role_chips` template context value.
+
+**The chip strip carries the same gating as `/me`** (19F PR 7): the `reviewee` chip is omitted without a currently-resolving grant, exactly as the role is absent from the dashboard's `roles`, and the `observer` chip greys on an archived session, exactly as its dashboard link does. The two surfaces answer the question separately — the dashboard for a list of sessions, the chip strip for the one in hand — so the rule is stated in both places rather than inherited.
 
 ---
 

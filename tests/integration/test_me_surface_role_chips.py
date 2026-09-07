@@ -255,9 +255,19 @@ def test_collation_chip_renders_observer_active(
     )
 
 
-def test_collation_chips_show_reviewee_when_user_holds_both(
+def test_collation_omits_reviewee_chip_without_a_current_grant(
     client: TestClient, db: Session
 ) -> None:
+    """**Rewritten at 19F PR 7**, because it asserted the defect.
+
+    It set up an observer who is also a reviewee on a ``draft``
+    session and asserted a live Reviewee anchor. After PR 4 that
+    anchor pointed at a 404 — and, worse, it said *you are a reviewee
+    on this session* on a surface reached by a different role, which
+    is the disclosure PR 2 had just closed on ``/me``. The chip is
+    omitted now, not greyed: greying it would keep making the
+    statement.
+    """
     review_session = _make_session(client, db, code="chip-ob-re")
     db.add_all(
         [
@@ -274,6 +284,43 @@ def test_collation_chips_show_reviewee_when_user_holds_both(
         ]
     )
     db.commit()
+    body = client.get(
+        f"/me/sessions/{review_session.id}/collation"
+    ).text
+    # Scoped to the chip markup: a bare ``pill-role-reviewee`` also
+    # matches the CSS rule in ``base.html``'s inlined stylesheet, which
+    # is present on every page and would pass this test forever.
+    assert 'class="pill pill-role-reviewee' not in body
+    assert f"/me/sessions/{review_session.id}/results" not in body
+    assert (
+        '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>'
+        in body
+    )
+
+
+def test_collation_shows_reviewee_chip_once_a_grant_resolves(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The positive half of the pair above — without it, deleting the
+    grant check would leave a suite that passes on an always-absent
+    chip."""
+    review_session = _make_session(client, db, code="chip-ob-re-ok")
+    db.add_all(
+        [
+            Observer(
+                session_id=review_session.id,
+                email="alice@example.edu",
+                display_name="Alice",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Alice",
+                email_or_identifier="alice@example.edu",
+            ),
+        ]
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/collation"
     ).text

@@ -369,6 +369,45 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 7 shipped: the chip strip, found by the close's
+`spec-writer` pass and not by the ladder.** `build_role_chips`
+(`app/web/routes_reviewer/_shared.py`) had been answering from roster
+membership alone: `enabled: True` for the reviewee and observer chips,
+no grant check, no archive check. So a user who was an active reviewer
+**and** an ungranted reviewee on the same session opened the reviewer
+surface and was shown a live **Reviewee** chip — a link to the 404 PR 4
+had just introduced, and, more to the point, a statement that they are
+a reviewee here, which is precisely the disclosure PR 2 had closed one
+surface over.
+
+**The chip is omitted, not greyed.** Greying it would keep making the
+statement; the dashboard drops the role from `roles` rather than
+disabling its link, and the strip now matches. The observer chip does
+the opposite — present, greyed on an archived session — because being
+an observer is not a disclosure about the observer (decision 4), and
+that asymmetry is the same one decisions 1–4 already carry.
+
+**A test asserted the defect.**
+`test_collation_chips_show_reviewee_when_user_holds_both` set up exactly
+this pairing on a `draft` session and asserted the live anchor. It was
+written before PR 4 made the target refuse, and no rung revisited it —
+the suite was pinning the bug in place. Rewritten as a pair (absent
+without a grant, present with one), plus four unit tests on the builder
+for the archived-observer case, which no participant surface can
+reach: archive closes the reviewee grant so `/results` 404s, and on
+`/collation` the observer chip is the active one and carries no link
+either way.
+
+**Why the ladder missed it.** The blast radius counted `role_links` in
+`_dashboard.py` and stopped there. The chip strip asks the same
+question from a different function on a different surface, and
+`git log -- app/web/routes_reviewer/_shared.py` shows no 19F commit
+before this one. Its docstring still read *"the W16 / W17 gates will
+land later"* — a stale marker of exactly the kind that started this
+segment, and one that slipped past PR 5's `will gate this` grep because
+it is phrased differently. **A grep-shaped tripwire only catches the
+phrasing it was written for.**
+
 **2026-09-07 — PR 6 shipped: the specs pass, and it found a spec the
 plan never named.** `close_check.py 19F` passes on the manifest, but
 emits two notes: `_dashboard` and `_results` touched, with
@@ -892,6 +931,15 @@ turns three of the six red.
    any non-archived state — decision 4 stands.
 6. **PR 6 — specs** *(was PR 5)*. The doc-impact files below. **Must
    not** change behavior.
+7. **PR 7 — the chip strip** *(added 2026-09-07, during the close)*.
+   Mirrors PRs 2 and 5 into `build_role_chips`
+   (`app/web/routes_reviewer/_shared.py`): the `reviewee` chip is
+   omitted without a currently-resolving grant, the `observer` chip
+   greys on an archived session. Found by the close's `spec-writer`
+   pass, not by the ladder — the plan's blast radius counted the
+   dashboard's `role_links` and never the chip strip, which answers the
+   same question on a different surface. **Must not touch** the
+   dashboard, the gates, or any route.
 
 Each rung leaves the app coherent. PR 1 narrows what every refusal
 discloses without changing who passes. After PR 2 the reviewee row is
@@ -987,7 +1035,10 @@ who a no-grant reviewee is from the moment either of them changes.
 
 - `spec/participant_model.md` — the reviewee `/me` row and `/results`
   contract gain the current-grant precondition, including that the row
-  appears and disappears as windows move (PRs 1, 2).
+  appears and disappears as windows move (PRs 1, 2); §5's observer
+  reachability row gains the archived exception PR 5 made true without
+  touching this file, and §6 gains the chip strip's copy of both rules
+  (PRs 5, 7).
 - `spec/role_landing_and_visibility.md` — §3's Guide-audiences table
   loses its "no role → all four" row for the bounce to `/about` (PR 3);
   §4's reviewee table is rewritten from "listed and linked in every
@@ -1005,6 +1056,9 @@ who a no-grant reviewee is from the moment either of them changes.
   `/about`. The entry that goes says *"a viewer holding nothing sees
   everything"*, written at 19E rung 7 on 2026-09-06; the replacement
   names it as superseded rather than quietly occupying its place (PR 3).
+  **Corrected again at close:** a `/guide` sentence still warned against
+  advertising *"a page that will 403"*, and §3 still named
+  `require_reviewee_in_session` as the `/results` gate (close).
 - `spec/operator_ui_concept.md` — the `/guide` role-filtering paragraph,
   itself rewritten at 19E's close on 2026-09-07, and the chrome link
   row's new conditional (PR 3).
@@ -1013,7 +1067,11 @@ who a no-grant reviewee is from the moment either of them changes.
   and §3's per-route matrix follows (PR 1).
 - `docs/security_posture.md` — the permission matrix's failure codes, and
   the session-enumeration vector recorded as closed rather than
-  undiscovered (PR 1).
+  undiscovered (PR 1). **Corrected again at close:** the
+  authorization-model prose and the §5.6 table still described all four
+  gates as **403** while the same file's later section documented the
+  404 conversion in detail — a file contradicting itself one screen
+  apart (close).
 - `spec/reviewer-surface.md` — **added at build, PR 6**, and the plan
   should have named it at planning time. `close_check.py` flagged it:
   the segment touched `_dashboard.py` and `_results.py` twice each, and
@@ -1025,11 +1083,27 @@ who a no-grant reviewee is from the moment either of them changes.
   `/results` gate (`require_reviewee_with_current_grant`, 404 not 403,
   and the retired pre-release scaffolding), the observer gate's 403, and
   the claim that W16 applies its window "not at route-level" — which PR
-  4 reversed (PR 6).
+  4 reversed (PR 6). **Also PR 7:** the chip-strip section claimed
+  reachability "mirrors the dashboard's `role_links.enabled` logic" —
+  true of the reviewer chip, false of the other two (PR 7).
 - `spec/architecture.md` — **added at build, PR 6**. Names the
   participant gates in two places: the reviewee-results entry and the
   gate summary. Both said `require_reviewee_in_session` and neither
   mentioned the 404 (PR 6).
 - `spec/rrw_functional_spec.md` — **added at build, PR 6**. Same stale
   gate name on the reviewee-results paragraph (PR 6).
-- `docs/status.md` — a row per rung as it lands.
+- `spec/role_navigator.md` — **added at close, PR 7**, and the fourth
+  path the plan never named. Its reachability table still read
+  *"reviewee — Always (today). W16 will gate on `responses_release_at` +
+  `release_until_offset`"* — stale three ways over: W16 shipped in
+  PRs #1737–#1752, PR 4 moved the question to the route, and
+  `release_until_offset` was retired for the absolute
+  `responses_release_until` column. The observer row's "Always" was
+  accurate about the code and wrong about the contract, which is what
+  PR 7 fixes (PR 7).
+- `spec/lifecycle.md` — **added at close**, the fifth undeclared path.
+  The release-from anchor row said *"Route-level 403 gates stay
+  unimplemented"*; `require_reviewee_with_current_grant` is exactly one,
+  answering 404 (close).
+- `docs/status.md` — a row per rung as it lands, plus the close's
+  currency pass over `Capabilities today`.

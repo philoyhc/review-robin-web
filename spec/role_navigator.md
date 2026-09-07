@@ -62,8 +62,23 @@ When the user has no roles on the session (an empty list returned), the template
 | Role | Target | Reachable when |
 |---|---|---|
 | reviewer | `/me/sessions/{id}/summary` if `pill.state == "submitted"`, else `/me/sessions/{id}/1` | `session_status_for_reviewer(reviewer, session) != "not opened"`. Closes when the session is `draft` / `validated` (the reviewer surface itself would 403 / redirect). |
-| reviewee | `/me/sessions/{id}/results` | Always (today). W16 will gate on `responses_release_at` + `release_until_offset`. |
-| observer | `/me/sessions/{id}/collation` | Always for any active observer; per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context` (W17, shipped 2026-06-02). |
+| reviewee | `/me/sessions/{id}/results` | Only while `visibility_policies.reviewee_has_current_grant` resolves (19F PR 7). Without one the chip is **omitted**, not greyed — see below. |
+| observer | `/me/sessions/{id}/collation` | Any active observer, **except on an archived session**, where the chip greys (19F PR 7). Per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context` (W17, shipped 2026-06-02); an archived session renders no sections at all. |
+
+**Why one role disappears and the other greys.** A greyed chip is still
+a statement about the viewer: it names a role they hold. For a reviewee
+that statement is the disclosure Segment 19F exists to close — `/me`
+drops the role rather than disabling its link, and the chip strip
+matches. For an observer it is not: being appointed an observer says
+nothing about the observer, so their chip stays visible and only loses
+its link once archive has closed the grant behind it.
+
+Before 19F PR 7 both were `enabled: True` from roster membership alone,
+which left a live Reviewee chip pointing at the 404 PR 4 had introduced
+for exactly that caller. The chips are built per surface
+(`build_role_chips`), so each role's reachability has to be asked
+there — passing the observer gate on `/collation` says nothing about
+the reviewee surface.
 
 ### Identity match
 
