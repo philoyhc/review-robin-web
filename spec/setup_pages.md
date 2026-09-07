@@ -177,8 +177,10 @@ Every Setup Page renders, top-to-bottom:
    allows it. What they cannot do is leave Draft — `reviewers.empty` and
    `reviewees.empty` are error-severity rules, and
    `session_lifecycle.mark_validated` refuses the transition while any error
-   stands. So those two cards say "to reach **Validated**", and a reader who
-   takes them for a delete guard is not surprised later.
+   stands. So those two cards add *"to proceed. Validation will block you"* —
+   which names the thing the operator will actually meet (a blocking issue on
+   Validate) rather than the lifecycle state it gates, and leaves no reader
+   expecting a delete to be refused.
 
    Instruments runs *what an instrument is* → *when you want another* →
    *what each one controls*: the order the questions arrive in, and the
