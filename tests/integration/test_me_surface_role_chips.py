@@ -40,7 +40,7 @@ def _make_session(
 
 
 def test_results_chip_renders_reviewee_active_no_anchor(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     review_session = _make_session(client, db, code="chip-re-only")
     db.add(
@@ -51,6 +51,8 @@ def test_results_chip_renders_reviewee_active_no_anchor(
         )
     )
     db.commit()
+    # 19F PR 4 — /results opens only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/results"
     ).text
@@ -72,7 +74,7 @@ def test_results_chip_renders_reviewee_active_no_anchor(
 
 
 def test_results_chips_show_other_roles_as_muted_anchors(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """A reviewee + observer user lands on /results. The
     Reviewee chip is active; the Observer chip is a muted
@@ -93,6 +95,8 @@ def test_results_chips_show_other_roles_as_muted_anchors(
         ]
     )
     db.commit()
+    # 19F PR 4 — /results opens only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/results"
     ).text
@@ -108,7 +112,7 @@ def test_results_chips_show_other_roles_as_muted_anchors(
 
 
 def test_results_chips_render_in_priority_order(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """Triple-role row visiting /results: chips ordered
     Reviewer → Reviewee → Observer regardless of which is
@@ -135,6 +139,8 @@ def test_results_chips_render_in_priority_order(
         ]
     )
     db.commit()
+    # 19F PR 4 — /results opens only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/results"
     ).text
@@ -144,12 +150,24 @@ def test_results_chips_render_in_priority_order(
     assert -1 < reviewer_pos < reviewee_pos < observer_pos
 
 
-def test_results_reviewer_chip_disabled_when_session_not_opened(
-    client: TestClient, db: Session
+def test_results_reviewer_chip_is_always_live_now(
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
-    """Reviewee on /results who is also a reviewer on a draft
-    session — the reviewer chip greys out as a span (no anchor)
-    since the reviewer surface is ``not opened``."""
+    """**Rewritten at 19F PR 4**, because the case it tested cannot
+    occur on this surface any more.
+
+    It asserted that a reviewee on ``/results`` who is also a reviewer
+    on a **draft** session sees a greyed-out reviewer chip. But
+    ``/results`` now opens only while a reviewee grant resolves, and a
+    reviewee grant needs the session ``expired`` — where
+    ``session_status_for_reviewer`` returns ``"closed"`` and the chip is
+    a live anchor. There is no reachable ``/results`` render with a
+    disabled reviewer chip.
+
+    The disabled branch is **not** dead code — it is still reachable
+    from ``/collation``, where an observer can sit on a draft session,
+    and the test below pins it there. Only this surface lost the case.
+    """
     review_session = _make_session(client, db, code="chip-rv-draft")
     db.add_all(
         [
@@ -166,22 +184,54 @@ def test_results_reviewer_chip_disabled_when_session_not_opened(
         ]
     )
     db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/results"
     ).text
-    # Disabled reviewer chip — muted span, no anchor.
     assert (
         '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>'
-        in body
+        not in body
     )
     assert (
         f'<a class="pill pill-role-reviewer rs-role-nav-muted" '
         f'href="/me/sessions/{review_session.id}'
-        not in body
+    ) in body
+
+
+def test_collation_reviewer_chip_disabled_when_session_not_opened(
+    client: TestClient, db: Session
+) -> None:
+    """The disabled-reviewer-chip case, relocated from ``/results``
+    to the surface where it is still reachable.
+
+    Observers are not grant-gated (19F decision 4), so an observer can
+    open ``/collation`` on a ``draft`` session — and their reviewer chip
+    greys out as a span, because the reviewer surface is
+    ``not opened``.
+    """
+    review_session = _make_session(client, db, code="chip-ob-draft")
+    db.add_all(
+        [
+            Observer(
+                session_id=review_session.id,
+                email="alice@example.edu",
+                display_name="Alice",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+            ),
+        ]
     )
-
-
-# ── Collation surface ────────────────────────────────────────────────
+    db.commit()
+    body = client.get(
+        f"/me/sessions/{review_session.id}/collation"
+    ).text
+    assert (
+        '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>'
+        in body
+    )
 
 
 def test_collation_chip_renders_observer_active(

@@ -253,36 +253,49 @@ def test_results_body_renders_raw_responses_for_reviewee(
     assert "Solid work." in body
 
 
-def test_results_body_empty_when_no_visibility_policy(
+def test_results_404_when_no_visibility_policy(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Reviewer submitted, but no operator-authored visibility
-    policy for the ``reviewee`` audience → empty body."""
+    """**Was `test_results_body_empty_when_no_visibility_policy`.** It
+    asserted the page rendered with "No responses to view yet." — which
+    still named the session and the reviewee's role on it to someone
+    granted nothing. 19F PR 4 closes the page instead: same bare 404 a
+    stranger gets."""
     operator = make_client(alice)
-    review_session = _seed_and_activate(operator, db, code="vp-raw-nopol")
-    _seed_submitted_responses(db, review_session)
+    review_session = _seed_and_activate(operator, db, code="vp-none")
+    _seed_submitted_responses(db, review_session, comments_value="Hi")
 
-    body = make_client(carol).get(
+    response = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
-    ).text
-    assert "No responses to view yet." in body
-    assert "Reviewer</th>" not in body
-
-
-def test_results_body_window_closed_shows_scaffolding_without_values(
+    )
+    assert response.status_code == 404
+def test_results_404_before_the_window_opens_retiring_the_scaffolding(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Operator authored Raw on after_release but ``responses_release_at``
-    is NULL (or in the future) — the section still renders so the
-    reviewee can see the would-be reviewers, but the submitted
-    response values stay hidden until the window opens. Empty
-    cells render as muted em-dashes."""
+    """**A deliberate feature is retired here, not an accident.**
+
+    This test used to assert a *pre-release scaffolding* view: with Raw
+    authored on `after_release` but the anchor not yet reached, the
+    section rendered with the reviewer rows visible — reviewer **names
+    and emails** — and only the submitted values hidden behind muted
+    em-dashes. `_reviewee_results.py` described that as intentional.
+
+    It is precisely the disclosure Segment 19F exists to close, and a
+    sharper one than the `/me` row: it told a reviewee who was lined up
+    to review them, before anyone had decided they could see anything.
+    PR 4 makes the page 404 until a grant resolves, so the scaffolding
+    has no state left to render in.
+
+    Recorded rather than quietly dropped — if the preview is wanted
+    back, it belongs on an operator surface, where a preview of what a
+    reviewee *will* see is unobjectionable.
+    """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-future")
     _seed_submitted_responses(
@@ -292,19 +305,12 @@ def test_results_body_window_closed_shows_scaffolding_without_values(
         db, review_session, operator=_operator_user(db), open_window=False
     )
 
-    body = make_client(carol).get(
+    response = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
-    ).text
-    # Section renders — the reviewer-row scaffolding is visible.
-    assert "No responses to view yet." not in body
-    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
-    assert "Rae" in body
-    # But the submitted values stay hidden until the window opens.
-    assert "Solid work." not in body
-    # And the empty cells render as the muted em-dash placeholder.
-    assert body.count('<span class="muted">—</span>') >= 2
-
-
+    )
+    assert response.status_code == 404
+    # The reviewer's identity, which the scaffolding used to show.
+    assert "Rae" not in response.text
 def test_results_body_drafts_render_empty_value_cells(
     db: Session,
     alice: AuthenticatedUser,
@@ -489,27 +495,26 @@ def test_results_body_omits_instrument_with_policy_off(
     assert "Second Form" not in body
 
 
-def test_results_body_hides_section_when_release_window_explicitly_closed(
+def test_results_404_when_release_window_explicitly_closed(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Once the operator has explicitly shut the after-release
-    window (``responses_release_until`` set and reached — Stop
-    release, or the scheduled close datetime), the reviewee
-    surface drops back to empty. The pre-release scaffolding
-    exception only applies before the window has fired; after
-    the explicit close, the grant is retired and reviewer
-    identities + display fields stop surfacing alongside the
-    values they used to pair with."""
+    """Once the operator has explicitly shut the after-release window
+    (``responses_release_until`` set and reached — Stop release, or the
+    scheduled close), the grant is retired.
+
+    The old assertion was that the surface "drops back to empty" with
+    reviewer identities gone. Since 19F PR 4 it drops further: with no
+    instrument granting anything, the page does not open at all. The
+    stronger outcome, and the same one a stranger gets.
+    """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-closed")
     _seed_submitted_responses(
         db, review_session, comments_value="Solid work."
     )
-    # Author Raw on after_release; stamp anchor + until both in
-    # the past so the window has explicitly closed.
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
@@ -518,15 +523,12 @@ def test_results_body_hides_section_when_release_window_explicitly_closed(
     ) - timedelta(minutes=30)
     db.commit()
 
-    body = make_client(carol).get(
+    response = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
-    ).text
-    assert "No responses to view yet." in body
-    assert "Rae" not in body
-    assert "rae@example.edu" not in body
-    assert "Solid work." not in body
-
-
+    )
+    assert response.status_code == 404
+    assert "Rae" not in response.text
+    assert "Solid work." not in response.text
 def _enable_reviewee_after_release_anonymized(
     db: Session,
     review_session: ReviewSession,
@@ -630,16 +632,21 @@ def test_results_body_anonymized_dashes_identification_keeps_values(
     assert '<span class="muted">—</span>' in body
 
 
-def test_results_body_anonymized_window_closed_explicitly_hides_section(
+def test_results_404_when_anonymized_window_closed_explicitly(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Same gating as Raw — once the operator explicitly closes
-    the after-release window (``responses_release_until`` set +
-    reached), the Anonymized section also hides. The grant has
-    been retired and even the dashed scaffolding stops showing."""
+    """Once the operator has explicitly shut the after-release window
+    (``responses_release_until`` set and reached — Stop release, or the
+    scheduled close), the grant is retired.
+
+    The old assertion was that the surface "drops back to empty" with
+    reviewer identities gone. Since 19F PR 4 it drops further: with no
+    instrument granting anything, the page does not open at all. The
+    stronger outcome, and the same one a stranger gets.
+    """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-anon-closed")
     _seed_submitted_responses(
@@ -653,13 +660,12 @@ def test_results_body_anonymized_window_closed_explicitly_hides_section(
     ) - timedelta(minutes=30)
     db.commit()
 
-    body = make_client(carol).get(
+    response = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
-    ).text
-    assert "No responses to view yet." in body
-    assert "Solid work." not in body
-
-
+    )
+    assert response.status_code == 404
+    assert "Rae" not in response.text
+    assert "Solid work." not in response.text
 def test_results_body_summarized_aggregates_numerical_and_strings(
     db: Session,
     alice: AuthenticatedUser,

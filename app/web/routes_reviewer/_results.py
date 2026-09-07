@@ -1,10 +1,13 @@
 """Reviewee results surface — ``GET /me/sessions/{id}/results``
 and the ``POST .../acknowledge`` companion.
 
-Gated by ``require_reviewee_in_session``: a reviewee whose
-``email_or_identifier`` (case-insensitive) matches the
-authenticated user's email reaches the page; everyone else
-gets 403 / 404 from the gate.
+Gated by ``require_reviewee_with_current_grant`` (19F PR 4): an
+active reviewee whose ``email_or_identifier`` (case-insensitive)
+matches the authenticated user's email reaches the page **while a
+grant currently resolves for them**. Every other caller — unknown
+session, not a reviewee here, an inactive roster row, a non-email
+identifier, or a reviewee with nothing currently granted — gets the
+same bare **404**.
 
 Body content is built by
 ``app.web.views.build_reviewee_results_context`` and reflects
@@ -13,10 +16,11 @@ this session, filtered through the per-instrument visibility
 policy (``app/services/visibility_policies.py``). All three
 resolved modes — ``"raw"``, ``"anonymized"``, ``"summarized"``
 — render; ``summarize_field`` in the view layer produces the
-summarized aggregate primitives. Empty body when no
-instrument has a currently-active grant for the signed-in
-reviewee. See ``spec/participant_model.md`` for the surface
-contract.
+summarized aggregate primitives. The body can still come back
+sparse — a grant resolving on *some* instrument opens the page and
+the others render nothing — but the page no longer opens at all
+when *no* instrument grants anything. See
+``spec/participant_model.md`` for the surface contract.
 """
 
 from __future__ import annotations
@@ -28,7 +32,10 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import reviewees as reviewees_service
-from app.web.deps import get_or_create_user, require_reviewee_in_session
+from app.web.deps import (
+    get_or_create_user,
+    require_reviewee_with_current_grant,
+)
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
@@ -46,7 +53,7 @@ router = APIRouter(prefix="/me")
 def reviewee_results(
     request: Request,
     reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
-        require_reviewee_in_session
+        require_reviewee_with_current_grant
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -82,7 +89,7 @@ def reviewee_results(
 )
 def reviewee_results_acknowledge(
     reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
-        require_reviewee_in_session
+        require_reviewee_with_current_grant
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),

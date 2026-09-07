@@ -51,7 +51,13 @@ from app.config import settings as default_settings
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.logging_config import get_logger
-from app.services import operator_settings, participants, permissions, sessions
+from app.services import (
+    operator_settings,
+    participants,
+    permissions,
+    sessions,
+    visibility_policies,
+)
 from app.services.email_identity import normalize_email
 
 log = get_logger(__name__)
@@ -400,6 +406,51 @@ def require_reviewee_in_session(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
+
+
+def require_reviewee_with_current_grant(
+    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
+        require_reviewee_in_session
+    ),
+    db: Session = Depends(get_db),
+) -> tuple[Reviewee, ReviewSession]:
+    """The reviewee results surface's gate (Segment 19F PR 4).
+
+    Composes the roster gate above with the visibility question:
+    an active, email-identified reviewee reaches ``/results`` only while
+    ``visibility_policies.reviewee_has_current_grant`` holds for the
+    session — at least one instrument granting them a mode under the
+    windows open right now.
+
+    **404, the same one the roster gate raises**, so "no such session",
+    "you are not a reviewee here" and "you are a reviewee with nothing
+    currently granted" are one outcome with one body. A reviewee who has
+    been granted nothing is indistinguishable from a stranger, which is
+    the segment's whole point: before this, they got a 200 naming the
+    session, its description and their own role on it, which announced
+    the review to its subject before anyone had decided they could see
+    anything about it.
+
+    Kept **separate from** ``require_reviewee_in_session`` rather than
+    folded into it. That gate answers a roster question and its name
+    says so; this one answers a visibility question. Merging them would
+    leave a gate whose name promised less than it did — the same trap
+    ``roles_held_anywhere`` is being renamed out of.
+    """
+    reviewee, review_session = reviewee_session
+    if not visibility_policies.reviewee_has_current_grant(
+        db, review_session
+    ):
+        log.warning(
+            "permission denied",
+            extra={
+                "gate": "require_reviewee_with_current_grant",
+                "user_id": reviewee.id,
+                "session_id": review_session.id,
+            },
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return reviewee, review_session
 
 
 def require_observer_in_session(

@@ -369,6 +369,62 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 4 shipped: `/results` answers 404 without a grant.**
+`require_reviewee_with_current_grant` composes the roster gate with
+`reviewee_has_current_grant`, and **both** the GET and the
+`POST .../acknowledge` companion depend on it. Kept as a separate
+dependency rather than folded into `require_reviewee_in_session`: that
+gate answers a roster question and its name says so, and merging them
+would leave a gate promising less than it did — the trap
+`roles_held_anywhere` is being renamed out of at PR 3.
+
+**A deliberate feature is retired here, and it deserves naming.** The
+old `test_results_body_window_closed_shows_scaffolding_without_values`
+pinned a *pre-release scaffolding* view: with a policy authored on
+`after_release` but the window not yet open, the section rendered the
+reviewer rows — **names and emails** — with only the values hidden
+behind muted em-dashes. `_reviewee_results.py` described it as
+intentional, "a preview the operator can use". But it is the reviewee's
+own surface, and it told them who was lined up to review them before
+anyone had granted them anything: a sharper disclosure than the `/me`
+row this segment started from. PR 4 leaves it no state to render in.
+Recorded, not silently dropped — if the preview is wanted, it belongs
+on an operator surface, where previewing what a reviewee *will* see is
+unobjectionable.
+
+**Ten tests moved; four had premises that no longer exist.** The four
+were all "the page renders but shows nothing" cases — no policy row,
+pre-release, and two explicitly-closed windows. Each now asserts 404,
+with the old intent kept in the docstring, because "renders empty" and
+"does not open" are different disclosures and the tests were pinning
+the weaker one.
+
+**A second dead branch, and this one was relocated rather than
+retired.** `test_results_reviewer_chip_disabled_when_session_not_opened`
+asserted a greyed reviewer chip on `/results` for a draft session —
+unreachable now, since `/results` implies a grant, which implies
+`expired`, where that chip is live. But unlike the fall-through at
+PR 2a the branch is **not** dead in general: an observer can open
+`/collation` on a draft session and see exactly that chip. So the case
+moved to `/collation` instead of being rewritten away, and the
+`/results` test now asserts the chip is always live there. Worth the
+distinction — deleting it would have dropped live coverage.
+
+**One self-inflicted scare worth recording.** Restoring a mutation with
+`git checkout <file>` reverted the rung's own edits to that file, not
+just the mutation, and the suite caught it three steps later — seven
+failures where one was expected. Backups for mutation checks now go
+through `cp`, never `git checkout`, since the working tree holds
+uncommitted work by definition at that point.
+
+**Tests: 2,891 passed / 16 skipped**, up 4. Mutation-checked twice:
+no-opping the grant check turns 7 red; pointing only the POST back at
+the roster gate turns exactly the acknowledge test red.
+
+**Doc impact honoured at this rung:** `spec/participant_model.md` (the
+gate, the shared companion route, and the retired scaffolding) and
+`spec/role_landing_and_visibility.md` §4.
+
 **2026-09-07 — PR 2a shipped: the response-release window requires
 `expired`.** Decision 8, and it came from the author reading PR 2's own
 write-up rather than from the plan: the claim that a `draft` session
