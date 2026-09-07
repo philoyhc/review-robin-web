@@ -241,7 +241,11 @@ def test_the_four_steps_are_separated_by_arrows(client: TestClient) -> None:
 # partner and this fails, which is the drift the test was always for.
 CARD_STEP_TO_GUIDE_SECTION = {
     "Set up a session": "Create and set up a session",
-    "Prepare and launch": "Prepare and launch",
+    # Renamed card-side 2026-09-07 ("launch" -> "activate"): `Activate` is
+    # the lifecycle transition's own name, so the tile now uses the word the
+    # operator will meet on the button. The Guide section still says
+    # "launch"; aligning it is a separate edit to a separate page.
+    "Prepare and activate": "Prepare and launch",
     "Give reviewers access": "Give reviewers access",
     "Download responses": "Close, release, and share results",
 }
