@@ -2257,7 +2257,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — **open** (a standing home for small refinements; all eight items shipped) — Item 8 (input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family) ✅ shipped 2026-09-06; Item 7 (the first drift sweep's eight findings) ✅ shipped 2026-09-05; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — **open** (a standing home for small refinements; all eight items shipped) — Item 8 (input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family) ✅ shipped 2026-09-06; Item 7 (the first drift sweep's eight findings) ✅ shipped 2026-09-05; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083), **v1.1 2026-09-06** (primitive readout, unused-primitive marker, stale-document merge fix, 3:1 contrast gate; the `beyond-*` variant set retired); detailed plan: `guide/segment_19C_refinements.md`
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2327,6 +2327,56 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   one family). PRs #2065–#2083. Full plan: `guide/theme_customizer.md` "Plan A —
   First". The operator-facing **Stretch** half remains deferred
   (`guide/deferred_consolidated.md` Part A "Operator theming").
+
+  **v1.1 — 2026-09-06 (PRs #2152 → #2155).** Four changes, all author-directed
+  from using the thing.
+
+  - **Part C reads both directions.** It answered *which token paints this*
+    from a preview element; clicking a **primitive** now answers *what reaches
+    this* — every semantic that resolves to it, **listed per theme**. Per
+    theme is the whole design: `semL` and `semD` target near-disjoint sets
+    (74 of 80 primitives are reached in exactly one theme, only 5 in both), so
+    an active-theme readout would report "nothing targets this" for most
+    primitives most of the time.
+  - **Unused-primitive marker** — a red chip for a primitive no semantic
+    reaches **in either theme**. Same reason: an active-theme marker would
+    have flagged 37 of 80 in light and 39 in dark, every one a false alarm.
+    Across both themes the count is one, `--violet-bright`, added in the same
+    PR precisely so the marker has a live case — a marker that highlights
+    nothing cannot be seen to work. Colour only, no badge: a word in the
+    chip's flow widened the card.
+  - **The stale-document merge fix**, which is the one that mattered. A saved
+    library, Revert, or Import JSON each *replaced* the model, so any token
+    added since that document was written vanished silently — a library saved
+    before `--violet-bright` re-exported 79 primitives out of an
+    80-primitive build. Foreign documents are now **merged over the build's
+    defaults**, with both mismatch counts reported in the status line.
+    Regenerating the tool would not have fixed it: the saved library wins on
+    load.
+  - **The contrast panel gates at 3:1**, in three states — `AA` at 4.5:1 and
+    above, `3:1` between, `✗` below. Every pair it measures is body text, so
+    4.5:1 is its real AA line; one threshold at 3:1 would have made the tool
+    badge a 3.2:1 body pair "AA".
+
+  Also **five token remappings** authored in the customizer and applied to
+  `base.html` (help-card border and two nav strips) — the help-card edge
+  roughly doubles in light, 1.47:1 → 2.54:1 against the page, so
+  `spec/ui_elements.md` and `spec/color_tokens.md` stopped calling it
+  "~1.5:1 … a soft edge, not an outline" and now say what it is.
+
+  **Retired with it:** `theme_variants.gen.py`'s three `beyond-*` variants and
+  `theme_customizer_beyond.html` — a second 2.6 MB customizer that existed to
+  preview two tokens `base.html` deliberately does not have. Item 8 kept them
+  as the record of why the fill route lost; in practice they read as a
+  facility and invited the question they were meant to settle. The numbers
+  live in Item 8's prose instead. The generator stays as a **border-contrast
+  report** (`VARIANTS` empty).
+
+  **Deferred, recorded 2026-09-06:** a **token lifecycle facility** —
+  add / delete / rename a token across `base.html`, its 804 `var()` consumers
+  across the template tree, and `spec/color_tokens.md`. The customizer edits
+  *values and mappings* of a token set frozen at generation time; it cannot
+  change the set. See `guide/deferred_consolidated.md`.
 - **Item 6 (✅ shipped 2026-08-23)** — **semantic colour tokens (two-tier
   reorg).** Migrated `base.html` off the flat colour-named palette
   (`--accent-blue`, `--bg-page`, …) onto a **two-tier** system: **79
@@ -2503,7 +2553,15 @@ dep chains called out at the bottom of this file.
   **Plan:** `guide/segment_19E_operator_onboarding.md`.
   **⏸ Paused 2026-09-06 with rungs 1–6 shipped** — role-awareness
   (rung 7) is the only build item left, and the close sequence has not
-  been run. Paused by the author, not blocked.
+  been run. Paused by the author, not blocked. What is live: `/guide`
+  (canonical since rung 2; `docs/quickstart.md` retired to
+  `docs/archive/`), the lobby first-run card, the starter + demo
+  template sets with a download → Quick Setup → `validated` round-trip,
+  and a `What this page is for` disclosure on all six Setup pages with
+  its copy contract in `spec/setup_pages.md` §0. `visible_audiences()`
+  still returns every audience for every viewer, and
+  `spec/audience_and_identity_model.md` is the one `Doc impact` path
+  committed but unhonoured — so `close_check.py 19E` fails today, correctly.
 
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does
