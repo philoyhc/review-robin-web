@@ -164,14 +164,23 @@ Every Setup Page renders, top-to-bottom:
    |---|---|
    | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
    | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate) |
-   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom |
-   | Observers | The cohort rule grants sight rather than narrowing it — an observer with no rule sees **nothing** (see "Cohort match rule editor" below) |
-   | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments._new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it |
+   | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
+   | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
    | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
 
    Instruments runs *what an instrument is* → *when you want another* →
    *what each one controls*: the order the questions arrive in, and the
-   order that keeps the Guide link at the end. Reviewers and Reviewees
+   order that keeps the Guide link at the end.
+
+   **Mode names are quoted from the app, not translated.** The
+   Observers card writes `Anonymized` / `Summarized` with the app's own
+   US spellings, because those are the words on the Band 3 policy
+   control an operator is being sent to
+   (`app/services/visibility_policies.py`, `spec/visibility_policy.md`).
+   Rule 4 outranks the repo's British prose convention here: a card that
+   says "anonymised" sends a reader looking for a label that does not
+   exist. Reviewers and Reviewees
    run the same way — *who they are* → *what identifies them* → *what
    the tags do* → *what upload costs* → the Guide link on its own line.
    The two pages are deliberately near-parallel: an operator reads them
