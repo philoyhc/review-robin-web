@@ -903,6 +903,53 @@ grow outward.
 
 ### Operator theming
 
+#### 19C — Token lifecycle: add / delete / rename a colour token
+
+> Recorded 2026-09-06 after the author separated three affordances that had
+> been running together: a **developer** facility for changing the app's
+> hard-coded defaults (this one), a **deployment-default** theme editor
+> needing a migration, and an **operator** browser-local tweaker (the
+> Stretch entry below). Only this one was wanted near-term, and only one
+> piece of it is missing.
+
+**The gap.** The customizer edits *values* (80 primitive hexes) and
+*mappings* (107 semantic roles per theme). It cannot change the token
+**set**. The editor's rows are generated markup baked from `base.html` at
+generation time, and `applyActive()` writes only `D.primOrder`, the
+build-time name list — so a primitive added at runtime sits in the model
+and never reaches the DOM, which defeats the point of adding it.
+
+**Ships.**
+
+- `add` — the one operation that genuinely wants the editor, since the
+  point is seeing the new token in place before committing to it. Also the
+  one the architecture resists.
+- `delete` / `rename` — mechanical refactors over a known set, and a
+  script's job rather than a GUI's: rewrite the declaration, every `var()`
+  consumer, and the `spec/color_tokens.md` row, then report counts.
+  `delete` refuses while anything still consumes the token.
+- A `--check` mode. Measured 2026-09-06 at `bac348c9`: **80 primitives ·
+  107 semantics · 804 `var()` usages across the template tree**, of which
+  **96 are outside `base.html`** — so rename is not a one-file operation,
+  which is the fact that makes a script worth more than care.
+
+**Why deferred.** The author judged adding non-critical with 80 primitive
+slots available, and the two theming affordances lower still. The evidence
+that the gap is real rather than theoretical: needing two tokens
+`base.html` did not have once cost a **second 2.6 MB generated
+customizer** (`theme_customizer_beyond.html`, since retired) whose only
+difference was a 582-byte `<style>` shim declaring them.
+
+**Lift trigger.** A second occasion where a token that does not exist has
+to be previewed — or a rename that would otherwise be done by hand across
+100+ call sites.
+
+**Do not confuse with** the two theming affordances: this one changes the
+app's shipped defaults through source, and nothing about it is per-user or
+per-deployment.
+
+---
+
 #### 19C — Operator theme tweaker (Stretch)
 
 > Carved from the theme-customizer design (`guide/theme_customizer.md`
