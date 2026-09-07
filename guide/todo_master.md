@@ -2484,6 +2484,76 @@ on* rather than what it does. Brief and findings:
   ledger, `status.md`, `known_limitations.md`, the 04sep assessment (dated
   notes) and the queue entry below.
 
+### Segment 19E — Operator onboarding — ✅ complete + archived 2026-09-07 (PRs #2131 → #2173; plan archived: `guide/archive/segment_19E_operator_onboarding.md`)
+
+Carved out of Segment 20 on 2026-09-05 as the half that needed the app
+rather than the host, and closed two days later. Seven rungs, plus the
+author's copy and rewrite passes on top of them. What a first-time
+operator now meets:
+
+- **`/guide`** — the canonical operator documentation, in the chrome row
+  beside `/about` with the same `?return_to=` treatment.
+  `docs/quickstart.md` retired to `docs/archive/` and its 11 live
+  references repointed: a document *about* an app kept *outside* it had
+  already gone stale once, and nothing structural stopped that recurring
+  (rungs 1 + 2).
+- **The lobby first-run card**, shown on zero *visible* sessions rather
+  than "never had one", so an operator who archives everything sees it
+  again — correct, because they are back at the start (rung 3). Rebuilt
+  across #2159 → #2164 into four stepped help tiles, with the create
+  affordance settled in the Search card's favour: the button an operator
+  uses for every session after the first is the one they meet on the
+  first.
+- **Two CSV template sets**, both byte-derived from the four serializers
+  rather than hand-authored — a hand-maintained CSV is a second source of
+  truth for `spec/csv_contracts.md` and will drift from the parser that
+  reads it. A **starter** set with one mock row per file, and a **demo**
+  set that builds a populated tutorial session through the real import
+  path: download → Quick Setup → `validated`, which is the rung's
+  acceptance test rather than a fixture's (rungs 4 + 5).
+- **A `What this page is for` disclosure** on all six Setup pages, each
+  carrying the one fact its page is otherwise silent about, with the copy
+  contract in `spec/setup_pages.md` §0 (rung 6). Its drafting doc
+  (`guide/page_help_text.md`) retired early to `guide/archive/` on
+  2026-09-06, once the wording settled, rather than waiting for the
+  close.
+- **Role-aware Guide sections** (rung 7). `visible_audiences()` stops
+  returning a constant: operator derives from `require_operator`'s own
+  predicate rather than restating it, and participant roles come from a
+  new `participants.roles_held_anywhere(db, email)` applying the three
+  per-session gates' rules — active row, case-insensitive email, and for
+  reviewees `is_email_identified`. The roles union. **A viewer holding
+  nothing sees everything** — the judgment the plan did not specify,
+  recorded in `spec/audience_and_identity_model.md`.
+- **The author's Guide rewrite** (#2169 → #2172): the walkthrough with
+  twelve screencaps, behind the app's first `StaticFiles` mount at
+  `/static`, matted so they read as pictures rather than blending into
+  the page they are pictures of.
+
+**Three findings worth keeping.** The Observers guidance was drafted
+claiming an observer with no cohort rule sees every reviewee; the
+services do the opposite — `observer_has_rule` returns `False` on a null
+or empty rule and `materialize_cohort_assignments` short-circuits to
+`EMPTY_COHORT`. That direction matters more, because "sees everything" is
+a privacy bug someone reports within the hour while "sees nothing" is
+silent until a course leader mentions a blank page; the claim is now
+pinned to the service default by a test rather than to the template.
+`/guide` had been rendering `Signed in as ` with an **empty name** since
+it shipped — found by rendering the page in a headless browser rather
+than by reading it, as were the light-theme screencaps glaring off a dark
+page. And filtering makes a new class of dead link possible: a
+`#guide-…` link into a filtered-out card lands scrolled nowhere with no
+error to explain it; all six such links sit on operator-only pages and
+target operator sections, and that is now asserted rather than true by
+luck.
+
+**The number `19F` was used twice.** 19E briefly split its Items 3 + 4
+into a short-lived 19F on 2026-09-05 and folded them back the same day —
+the split was an implementation-layer distinction (services/data vs.
+view), which is not a theme, and the rule is thematic. The 19F planned
+2026-09-07 is unrelated scope: reviewee participation disclosure, in
+**Upcoming** below.
+
 ---
 
 ## Upcoming
@@ -2500,7 +2570,8 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **14B and 20 (both gated on the institutional Azure
-deployment concluding — decision 2026-09-05)** (19B closed
+deployment concluding — decision 2026-09-05)** (19E closed
+2026-09-07; 19B closed
 2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
@@ -2536,32 +2607,30 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19E — Operator onboarding** *(stub created 2026-09-05, carved out
-  of Segment 20; **absorbed the short-lived 19F the same day**)*.
-  Everything a first-time operator needs to get oriented, workplan §18
-  items 1 + 2 + 4 + 5: the **Start Here** page, page-level guidance on
-  the five setup screens, **sample CSV templates**, and a **sample
-  session fixture**. Needs the app, not the host, so it is not gated.
-  Two constraints carry from the plan: the Start Here page adds a page
-  **and** a nav affordance, so it lands **scaffold-first** per
-  `CLAUDE.md` → "Working approach"; and the templates are **derived
-  from the parsers that consume them**, never hand-maintained, or the
-  repo gains a second source of truth for `spec/csv_contracts.md`.
-  (19F split Items 3 + 4 out on an implementation-layer distinction —
-  services/data vs. view — which is not a theme, and the rule is
-  thematic. Folded back; no 19F plan exists.)
-  **Plan:** `guide/segment_19E_operator_onboarding.md`.
-  **⏸ Paused 2026-09-06 with rungs 1–6 shipped** — role-awareness
-  (rung 7) is the only build item left, and the close sequence has not
-  been run. Paused by the author, not blocked. What is live: `/guide`
-  (canonical since rung 2; `docs/quickstart.md` retired to
-  `docs/archive/`), the lobby first-run card, the starter + demo
-  template sets with a download → Quick Setup → `validated` round-trip,
-  and a `What this page is for` disclosure on all six Setup pages with
-  its copy contract in `spec/setup_pages.md` §0. `visible_audiences()`
-  still returns every audience for every viewer, and
-  `spec/audience_and_identity_model.md` is the one `Doc impact` path
-  committed but unhonoured — so `close_check.py 19E` fails today, correctly.
+- **19F — Reviewee participation disclosure** *(planned 2026-09-07, not
+  gated; the second use of this number — the first was folded back into
+  19E on 2026-09-05, see the 19E entry in **Done**)*. An active reviewee
+  gets a `/me` row for their session — name, status, a live link to
+  `/results` — from the moment the roster is uploaded, in every lifecycle
+  state, whether or not any instrument grants them a view. Recorded
+  against a running app in `spec/role_landing_and_visibility.md` §4. The
+  row discloses that someone is the subject of a review before anyone has
+  decided they may see anything about it, and keeps disclosing it on an
+  archived session after that decision has been withdrawn. Never the
+  intent: `_dashboard.py:192` still reads *"W16 will gate this … today the
+  placeholder accepts any active reviewee"*, and W16 shipped in
+  PRs #1737 → #1752. The gate is a **currently-resolving visibility
+  grant**; observers and reviewers are unaffected by author decision, and
+  sign-in itself stays open to the whole tenant.
+  Five rungs, the first of which is the wide one: **every session-scoped
+  gate answers 404 rather than 403** on refusal, so a stranger cannot
+  infer from a status code that a session exists (author decision
+  2026-09-07; ceiling of 47 `403` assertions across 21 files, measured at
+  `841bbfa0`). Rung 4 closes the known **observer archive-override gap**
+  (`spec/role_landing_and_visibility.md` §6), where
+  `_observer_collation.py` has no `is_archived` short-circuit and
+  `resolve_mode` returns a live grant on an archived session.
+  **Plan:** `guide/segment_19F_reviewee_participation_disclosure.md`.
 
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does
@@ -2592,7 +2661,12 @@ dep chains called out at the bottom of this file.
   14B deferral leaves open.
 - **20** is independent of the email + audit pipelines, but as of
   2026-09-05 it is **gated on the institutional Azure deployment**, not
-  interleavable. **19E**, carved out of it the same day, is the
-  interleavable remainder and carries no ordering constraint. (19A
-  closed + archived 2026-09-05 — Part 3 as Item 3, Part 2 as Item 2;
+  interleavable. **19E**, carved out of it the same day as the
+  interleavable remainder, carried no ordering constraint and **closed +
+  archived 2026-09-07**; what it shipped narrows 20 further, since the
+  in-app Guide is now the operator guide 20 would otherwise have written.
+  (19A closed + archived 2026-09-05 — Part 3 as Item 3, Part 2 as Item 2;
   its sweep's findings shipped as 19C Item 7.)
+- **19F** carries no ordering constraint either and is not gated. It
+  touches the four session-scoped gates and the `/me` dashboard, none of
+  which 20 or 14B wait on.

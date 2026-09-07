@@ -1,15 +1,18 @@
 # Segment 19E — Operator onboarding
 
-**Status: build complete 2026-09-07, rungs 1–7 shipped. The close
-sequence has not been run.** Every ladder rung has landed, including the
-author's copy pass and the Guide rewrite that followed it. What remains is
-closing, not building:
+**Status: CLOSED 2026-09-07. Rungs 1–7 shipped; the close sequence has
+been run.** Every ladder rung landed, including the author's copy pass and
+the Guide rewrite that followed it. The close, in the order
+`.claude/skills/segment-plan` sets out:
 
-- `python3 tools/close_check.py 19E` passes as of rung 7 — the last
-  outstanding `Doc impact` path, `spec/audience_and_identity_model.md`, is
-  honoured.
-- `spec-writer` has **not** been run against the doc-impact specs, and the
-  plan has not moved to `guide/archive/`.
+- `python3 tools/close_check.py 19E` passes — eleven committed `Doc impact`
+  paths, none waived, all modified in the segment window.
+- `spec-writer` run against the ten doc-impact specs. **Three drift items,
+  in two files, all from the same cause and all fixed at the close**: prose
+  written against the Guide's pre-rung-7 and pre-rewrite state that later
+  commits the same day made untrue. Adjudicated in `## Status`.
+- `## Status` records intended versus done; `docs/status.md` carries the
+  segment row; this file moves to `guide/archive/` with its index row.
 - `guide/page_help_text.md` retired **early** to `guide/archive/`
   (2026-09-06, once the wording settled) rather than waiting for the close.
   See `## Status`.
@@ -306,6 +309,56 @@ Named, not counted:
 ---
 
 ## Status
+
+**2026-09-07 — closed.** The close sequence ran in the order
+`.claude/skills/segment-plan` sets out; this entry is its record.
+
+`tools/close_check.py 19E` passes — eleven committed `Doc impact` paths,
+zero waived, every one modified inside the segment window.
+
+**`spec-writer` found three drift items across two of the ten doc-impact
+files. All three were fixed rather than waived, and all three have the
+same shape**: prose that was accurate when it was written, made untrue
+hours later the same day by a commit that changed the thing it described
+without touching the file describing it. That is exactly the drift a
+close-time pass exists to catch.
+
+- `spec/operator_ui_concept.md` still called the Guide's audience filter
+  "a live seam with an open gate" — `visible_audiences()` returning every
+  audience for every viewer until rung 7 replaced its body. Rung 7 shipped
+  in `0ed8256a` and updated `spec/audience_and_identity_model.md`, but not
+  this parallel description one section away. Rewritten to state what the
+  resolver does, including the no-role fallback and where its reasoning
+  lives.
+- `spec/operator_ui_concept.md` also described the "Setup templates" card
+  as carrying a scenario paragraph — two students in group `TW01`, tutor
+  as observer — that the author's Guide rewrite (`416d51de`) had moved to
+  the `Sample session` card, where the populated session it describes
+  actually is. Rewritten to describe the friendly-tag-label detour that
+  follows the download link today.
+- `spec/sessions_overview.md` said the lobby card and the Guide "no longer
+  share headings **verbatim**" and named three divergent pairs. True at
+  `aeb8ccfa` (05:00); false by `416d51de` (07:44), which renamed two Guide
+  headings back onto the tiles' wording — the author's own draft reached
+  for the card's vocabulary unprompted. Three of four match now, and the
+  one that does not is deliberate.
+
+**The generalization worth keeping.** All three survived a green suite,
+and none of them could have failed one: each is prose *about* markup that
+the tests already assert directly. The third is the sharpest case —
+`tests/integration/test_lobby_first_run_card.py` carried the corrected
+account in the comment above `CARD_STEP_TO_GUIDE_SECTION`, so the repo
+held both the true and the superseded version of the same fact for two
+hours, in two files, with nothing to reconcile them. This is the phase
+rule's cost showing up where it was predicted to: a spec edited at build
+time can go stale before its own segment closes, and running `spec-writer`
+at the close rather than at the rung is what finds it. No process change
+proposed — three items in ten files is the pass working, not failing.
+
+Remaining close steps done in the same change: `docs/status.md` segment
+row, `guide/todo_master.md` moved 19E from **Stubs** to **Done** (and
+gained the 19F stub in its place), this file to `guide/archive/` with its
+row in `guide/archive/README.md`.
 
 **2026-09-07 — rung 7 shipped; the ladder is complete.**
 `visible_audiences()` no longer returns a constant. Operator comes from

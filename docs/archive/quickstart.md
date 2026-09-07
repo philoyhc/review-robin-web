@@ -14,7 +14,7 @@
 > placeholders and the checklist at the foot. They were never-taken TODOs for
 > a markdown document, and an in-app page carrying "screenshot goes here"
 > callouts would be worse than one carrying none. The intent is recorded in
-> `guide/segment_19E_operator_onboarding.md` → `## Status`.
+> `guide/archive/segment_19E_operator_onboarding.md` → `## Status`.
 
 ---
 

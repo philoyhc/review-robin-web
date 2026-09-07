@@ -10,7 +10,7 @@ viewer; rung 7 replaces that body with a real resolver and changes
 nothing else. Keeping the code path live from the start means it is
 exercised by every rung's tests rather than arriving untested at the end
 — a seam that is built but never executed rots unobserved
-(`guide/segment_19E_operator_onboarding.md` → `## Status`).
+(`guide/archive/segment_19E_operator_onboarding.md` → `## Status`).
 
 Rung 7's work is the resolver, not this shape. Role membership is not a
 property of ``AuthenticatedUser``: ``is_sys_admin`` / ``is_super_admin``

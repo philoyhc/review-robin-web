@@ -403,24 +403,33 @@ bullet of `Tips and troubleshooting`. Both removals are asserted in
 gone from `/guide`, and the content is present where it moved to.
 
 Sections are declared with an audience in `app/web/views/_guide.py` and the
-template renders only sections whose audience is visible. **That filter runs
-but does not yet narrow anything** — `visible_audiences()` returns every
-audience for every viewer until rung 7 replaces its body with a real resolver.
-So a signed-in user currently sees every section, including the three
-addressed to reviewers, observers and reviewees. Do not read this entry as
-describing role-gated output; it describes a live seam with an open gate.
+template renders only sections whose audience is visible. **The filter
+narrows** as of rung 7 (2026-09-07), where it previously ran against a
+constant that admitted everything. `visible_audiences()` unions the viewer's
+operator flag — taken from `require_operator`'s own predicate,
+`is_operator or is_sys_admin`, rather than restated — with whatever roles they
+hold on any roster, via `participants.roles_held_anywhere`. So an operator
+sees the eight operator sections and not the three role-addressed ones; a
+reviewer sees `For reviewers`; someone who is both sees both sets.
+**A viewer holding no role at all sees everything**, which is a deliberate
+fallback and not the old open gate: the page carries no session data, and a
+viewer the app cannot classify is usually about to be rostered. The audience
+contract and that reasoning live in `spec/audience_and_identity_model.md`.
 
 **Setup templates (Segment 19E rung 4).** The "Create and set up a session"
 card offers `GET /templates/starter.zip` — four generic roster templates with
 derived headers and one mock row each, for an operator to fill in *before*
 creating the session and upload through Quick Setup. The link sits in the
-paragraph that explains the roster columns, since it is that paragraph's worked
-example. Two paragraphs follow it: one describing the scenario the set carries
-(two students in group `TW01` reviewing each other, tutor as observer) and the
-`<Column>.<label>` suffixes it demonstrates, and a `.muted` line stating both
-directions of the consequence — uploading unedited renames the session's tag
-columns to the example labels, and a bare tag header clears a name the session
-already has. Contract: `spec/csv_contracts.md` §5a.
+paragraph that points at each Upload card's column list, since it is that
+paragraph's worked example. **The author's Guide rewrite (2026-09-07) moved
+what followed it.** The scenario paragraph — the tutorial groups, the
+`<Column>.<label>` suffixes it demonstrates — now lives in the `Sample session`
+card, where the populated session it describes actually is. What follows the
+link here is the friendly-tag-label detour: a screencap of the Reviewer tag
+labels editor, then a `.muted` line carrying the consequence that is easiest to
+lose — **a bare tag header clears the label a session already has**, because
+the header after the period is the one place a label travels, in both
+directions. Contract: `spec/csv_contracts.md` §5a.
 
 **Sample session card (Segment 19E rung 5).** A card between "Tips and
 troubleshooting" and "For reviewers" — after the operator walkthrough, before
