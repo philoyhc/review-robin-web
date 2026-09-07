@@ -1,20 +1,20 @@
 # Segment 19E — Operator onboarding
 
-**Status: ⏸ paused 2026-09-06, rungs 1–6 shipped.** The ladder is complete
-through rung 6b plus the author's copy pass; **rung 7 (role-awareness) is
-the only build item outstanding**, and the close sequence has not been run.
-Paused by the author with the segment mostly done — not blocked, and not
-abandoned. What that means for anyone picking it up:
+**Status: build complete 2026-09-07, rungs 1–7 shipped. The close
+sequence has not been run.** Every ladder rung has landed, including the
+author's copy pass and the Guide rewrite that followed it. What remains is
+closing, not building:
 
-- `guide/page_help_text.md` has **retired early** to
-  `guide/archive/` (2026-09-06, once the wording settled) rather than
-  waiting for the close. See `## Status`.
-- `visible_audiences()` still returns every audience for every viewer.
-  `spec/audience_and_identity_model.md` is the one outstanding `Doc impact`
-  path, and it is committed but unhonoured until rung 7 lands — so
-  `tools/close_check.py 19E` will fail today, correctly.
-- Rung 7 is slightly smaller than planned: the Guide shed two sections in
-  the copy pass, so there are eleven to gate rather than thirteen.
+- `python3 tools/close_check.py 19E` passes as of rung 7 — the last
+  outstanding `Doc impact` path, `spec/audience_and_identity_model.md`, is
+  honoured.
+- `spec-writer` has **not** been run against the doc-impact specs, and the
+  plan has not moved to `guide/archive/`.
+- `guide/page_help_text.md` retired **early** to `guide/archive/`
+  (2026-09-06, once the wording settled) rather than waiting for the close.
+  See `## Status`.
+- Rung 7 came in smaller than planned: the Guide shed two sections in the
+  copy pass, so eleven were gated rather than thirteen.
 
 Carved out of Segment 20 on
 2026-09-05 when that segment was reserved for after the institutional Azure
@@ -306,6 +306,51 @@ Named, not counted:
 ---
 
 ## Status
+
+**2026-09-07 — rung 7 shipped; the ladder is complete.**
+`visible_audiences()` no longer returns a constant. Operator comes from
+`user.is_operator or user.is_sys_admin` — derived from `require_operator`'s
+own predicate rather than restated, so the Guide cannot end up describing a
+different set of people from the one that can reach the pages it documents.
+Participant roles come from a new `participants.roles_held_anywhere(db,
+email)`, the workspace-level counterpart to the three per-session gates,
+applying their rules: active row, case-insensitive email, and — for reviewees
+— `is_email_identified`, so someone carried under a non-email identifier
+holds nothing here exactly as they pass no results gate. The roles union;
+an operator reviewing on someone else's session sees both sets.
+
+**The judgement the plan did not specify: a viewer holding nothing sees
+everything.** `## Definition of done` required the page to render "for a
+signed-in user with none" without saying what it should contain, and an
+empty Guide is not a rendering. Such a viewer is not a reviewer being spared
+the operator walkthrough — they are someone the app cannot classify, most
+often because they are about to be added to a roster and arrived early. The
+Guide carries no session data, so too much is the recoverable error and
+nothing is not. Recorded in `spec/audience_and_identity_model.md` rather
+than left in the code.
+
+**Two things found at build, neither of them the resolver.**
+
+- **`/guide` has been rendering "Signed in as " with an empty name since it
+  shipped.** The route depended on `get_current_user`, which yields an
+  `AuthenticatedUser`; the chrome reads `user.display_label`, which only the
+  persisted `User` row has. Rung 7 needed `is_operator` — also row-only — so
+  the dependency had to change anyway, and the label came back with it.
+  Found by rendering the page in a headless browser, not by reading it.
+- **Filtering makes a new class of dead link possible.** A `#guide-…` link
+  into a filtered-out card lands on the Guide scrolled nowhere, with no
+  error to explain it. All six such links in the app today sit on
+  operator-only pages and target operator sections, so nothing is broken —
+  and `tests/integration/test_page_guidance.py` now asserts that, rather
+  than leaving it true by luck.
+
+**One test had to be split rather than adjusted.**
+`test_guide_renders_every_committed_section` asserted all eleven headings in
+one render. Once the filter narrows, no single viewer sees all eleven, so a
+render can no longer prove a card exists — deleting a card would look
+identical to it being filtered out. It is now an existence check against the
+template plus a render check derived from `SECTIONS`, which asserts the
+stronger property: exactly the sections that viewer is owed, no more.
 
 **2026-09-06 — rung 1 shipped** (PR #2131). The `/guide` scaffold: route,
 twelve section shells, chrome link beside About, `?return_to=`, and the

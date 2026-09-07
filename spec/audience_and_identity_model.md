@@ -349,6 +349,55 @@ navigation patterns are audience-specific.
 | Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card, W16 + W19) |
 | Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` — per-instrument 3-row table (reviewer / reviewee aggregates + conditional CSV download); MVP shipped 2026-06-02 |
 
+### `/guide` — one surface, audience-filtered content
+
+`/guide` is the exception to the table above: **one page, addressed to
+every audience**, rather than one surface per audience. That was the
+decision at Segment 19E (`guide/segment_19E_operator_onboarding.md` →
+`## Judgment calls`) — one URL to link from an email, and the roles
+overlap enough in practice that per-role pages would duplicate most of
+their content.
+
+Each card declares the audience it is **addressed to** in
+`app/web/views/_guide.py`'s `SECTIONS`, and a viewer is shown the cards
+for the audiences they hold. Audience is *addressed to*, not *permitted
+to read*: an operator wanting to know what a reviewer sees is served by
+the operator-facing material, not by being handed the reviewer's own
+card.
+
+**How a viewer's audiences are resolved** (`visible_audiences`, live
+since 19E rung 7 — before it the resolver returned every audience for
+everyone):
+
+| Audience | Held when |
+|---|---|
+| Operator | `user.is_operator or user.is_sys_admin` — the same predicate `require_operator` gates on, derived from it rather than restated (sys-admin implies operator, F4) |
+| Reviewer / Observer / Reviewee | An **active** roster row in **any** session matching the signed-in email, case-insensitively — `participants.roles_held_anywhere`, applying the same rules as the three per-session gates in `app/web/deps.py` |
+
+The roles are **unioned, not exclusive**: an operator who reviews on
+someone else's session sees both sets.
+
+A **reviewee carried under a non-email identifier holds nothing** here,
+exactly as they pass no results gate — the Guide must not advertise a
+page that will 403.
+
+**A viewer holding no audience sees every section.** A signed-in person
+with no operator flag and no roster row anywhere is not a reviewer being
+spared the operator walkthrough; they are someone the app cannot
+classify, most often because they are about to be added to a roster and
+arrived early. An empty Guide serves them nothing, and the whole Guide
+serves them imperfectly but harmlessly, since it is generic
+documentation carrying no session data.
+
+**This filter is not access control.** Nothing on `/guide` is
+privileged and the filter grants no one anything; it is an editorial
+decision about what to put in front of a reader. The gates in
+`app/web/deps.py` remain the only thing deciding access. One practical
+consequence: a deep link into a filtered-out card lands on the Guide
+scrolled nowhere, with no error to explain it, so
+`tests/integration/test_page_guidance.py` asserts every `#guide-…` link
+in the app targets a section its page's readers can see.
+
 The discipline: **components are universal, chrome is audience-
 local.** A submit button looks the same to operators and reviewers.
 A page header containing a lifecycle badge is operator-only. A tab

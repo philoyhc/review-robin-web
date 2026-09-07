@@ -24,7 +24,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.auth.identity import AuthenticatedUser
+from sqlalchemy.orm import Session
+
+from app.db.models import User
+from app.services import participants
 
 OPERATOR = "operator"
 REVIEWER = "reviewer"
@@ -73,18 +76,49 @@ SECTIONS: tuple[GuideSection, ...] = (
 #: ``tips`` rather than a card of its own.
 
 
-def visible_audiences(user: AuthenticatedUser) -> frozenset[str]:
-    """Audiences whose sections `user` should see.
+def visible_audiences(db: Session, user: User) -> frozenset[str]:
+    """Audiences whose sections `user` should see (19E rung 7).
 
-    Every audience, until 19E rung 7. The parameter is unused on purpose:
-    it is the signature rung 7 needs, wired now so the call site does not
-    change when the body does.
+    Two sources, unioned, because the roles are not exclusive — an
+    operator is often also a reviewer on somebody else's session:
+
+    - **Operator** from the workspace allowlist, using the same
+      predicate ``require_operator`` gates on. Derived from that gate
+      rather than restated, so a change to who counts as an operator
+      cannot leave the Guide describing a different set of people from
+      the one that can reach the pages it documents.
+    - **Reviewer / observer / reviewee** from
+      ``participants.roles_held_anywhere``, which applies the same rules
+      as the three per-session gates.
+
+    **A viewer holding nothing sees everything.** The fallback is
+    deliberate and is the one judgement in this resolver. A signed-in
+    person with no operator flag and no roster row anywhere is not a
+    reviewer being spared the operator walkthrough — they are someone
+    the app cannot classify, most often because they are about to be
+    added to a roster and have arrived early. An empty Guide serves them
+    nothing; the whole Guide serves them badly but not harmfully, since
+    it is generic documentation carrying no session data. Given a choice
+    between a page with nothing on it and a page with too much, too much
+    is the recoverable error.
+
+    This is not an access control. Nothing on `/guide` is privileged, and
+    the per-section filter grants no one anything — it is an editorial
+    decision about what to put in front of a reader. The gates in
+    ``app/web/deps.py`` remain the only thing deciding access.
     """
-    del user  # rung 7 reads this; today every viewer sees everything
-    return frozenset(AUDIENCES)
+    audiences: set[str] = set()
+    # Mirrors ``require_operator``: sys-admin implies operator (F4).
+    if user.is_operator or user.is_sys_admin:
+        audiences.add(OPERATOR)
+    audiences |= participants.roles_held_anywhere(db, user.email)
+
+    if not audiences:
+        return frozenset(AUDIENCES)
+    return frozenset(audiences)
 
 
-def visible_sections(user: AuthenticatedUser) -> frozenset[str]:
+def visible_sections(db: Session, user: User) -> frozenset[str]:
     """Section keys the template should render for `user`."""
-    audiences = visible_audiences(user)
+    audiences = visible_audiences(db, user)
     return frozenset(s.key for s in SECTIONS if s.audience in audiences)
