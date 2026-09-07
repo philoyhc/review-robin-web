@@ -116,7 +116,7 @@ longer follows the lifecycle at all; it follows the **grant**.
 
 | Currently-resolving grant? | `/me` row | Linked? | `/results` |
 |---|---|---|---|
-| no | **absent** | — | **404** (from PR 4) |
+| no | **absent** | — | **404**, identical to a stranger's |
 | yes | listed | **yes** | 200 |
 
 A grant resolves when at least one instrument in the session has a

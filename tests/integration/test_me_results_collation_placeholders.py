@@ -49,7 +49,7 @@ def test_results_404_when_user_is_not_a_reviewee(
 
 
 def test_results_renders_for_email_identified_reviewee(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     review_session = _make_session(
         client, db, code="res-ok", description="Mid-term peer review."
@@ -62,6 +62,8 @@ def test_results_renders_for_email_identified_reviewee(
         )
     )
     db.commit()
+    # 19F PR 4 — /results opens only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     response = client.get(
         f"/me/sessions/{review_session.id}/results"
     )
@@ -77,7 +79,7 @@ def test_results_renders_for_email_identified_reviewee(
 
 
 def test_results_renders_without_description_card_when_none(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     review_session = _make_session(client, db, code="res-nodesc")
     db.add(
@@ -88,6 +90,8 @@ def test_results_renders_without_description_card_when_none(
         )
     )
     db.commit()
+    # 19F PR 4 — /results opens only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     body = client.get(
         f"/me/sessions/{review_session.id}/results"
     ).text
@@ -195,3 +199,93 @@ def test_collation_404_for_inactive_observer(
         f"/me/sessions/{review_session.id}/collation"
     )
     assert response.status_code == 404
+
+
+# ── 19F PR 4 — /results is gated on a currently-resolving grant ───────
+
+
+def test_results_404_for_an_active_reviewee_with_no_grant(
+    client: TestClient, db: Session
+) -> None:
+    """The disclosure this rung closes.
+
+    Before PR 4 this returned **200** and rendered the session name, its
+    description, and a `Reviewee` role chip — telling someone they are
+    the subject of a review, on a page reachable by typing the URL,
+    before anyone had granted them anything. Now it is the same bare 404
+    a stranger gets.
+    """
+    review_session = _make_session(
+        client, db, code="res-nogrant", description="Confidential round"
+    )
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    response = client.get(f"/me/sessions/{review_session.id}/results")
+    assert response.status_code == 404
+    assert "Cohort A" not in response.text
+    assert "Confidential round" not in response.text
+
+
+def test_acknowledge_is_gated_too(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The companion POST shares the gate.
+
+    Easy to miss: gating only the GET would leave an ungranted reviewee
+    able to stamp `results_acknowledged_at` on a review they cannot see
+    — and the 303 back to `/results` would confirm the session exists.
+    """
+    review_session = _make_session(client, db, code="res-ack-gate")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    ungranted = client.post(
+        f"/me/sessions/{review_session.id}/results/acknowledge",
+        follow_redirects=False,
+    )
+    assert ungranted.status_code == 404
+
+    grant_reviewee_visibility(review_session)
+    granted = client.post(
+        f"/me/sessions/{review_session.id}/results/acknowledge",
+        follow_redirects=False,
+    )
+    assert granted.status_code == 303
+
+
+def test_an_ungranted_reviewee_is_byte_identical_to_a_stranger(
+    client: TestClient, db: Session, make_client, bob
+) -> None:
+    """Indistinguishability, asserted rather than assumed.
+
+    A status code alone is not enough — a differing body would leak the
+    same fact more slowly. Alice is an active, email-identified reviewee
+    with nothing granted; Bob holds no role at all. They must get the
+    same answer.
+    """
+    review_session = _make_session(client, db, code="res-identical")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    url = f"/me/sessions/{review_session.id}/results"
+    ungranted_reviewee = client.get(url)
+    stranger = make_client(bob).get(url)
+    assert ungranted_reviewee.status_code == stranger.status_code == 404
+    assert ungranted_reviewee.text == stranger.text
+
