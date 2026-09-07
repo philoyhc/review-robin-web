@@ -25,7 +25,7 @@ from app.db.models import (
 from app.services import visibility_policies
 
 
-def _session(db: Session, *, code: str, status: str = "ready") -> ReviewSession:
+def _session(db: Session, *, code: str, status: str = "expired") -> ReviewSession:
     creator = User(email=f"{code}@example.edu", display_name="Creator")
     db.add(creator)
     db.flush()
@@ -64,6 +64,10 @@ def _reviewee_policy(
 
 
 def _open_release_window(review_session: ReviewSession) -> None:
+    """Open the after-release window. Since 19F PR 2a this needs the
+    session ``expired`` as well as the anchor reached — which is why
+    :func:`_session` defaults to that state."""
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
@@ -190,3 +194,46 @@ def test_another_sessions_grant_does_not_count(db: Session) -> None:
     _instrument(db, bare)
     _open_release_window(bare)
     assert not visibility_policies.reviewee_has_current_grant(db, bare)
+
+
+def test_an_unclosed_session_is_not_a_grant(db: Session) -> None:
+    """19F PR 2a — the two windows mean literally "as data is coming
+    in" (``ready``) and "after the review has closed" (``expired``).
+
+    A reviewee's ``while_ongoing`` cell is off by construction, so
+    their grant lives entirely in the after-release window; a session
+    that is still running therefore grants them nothing however the
+    anchors are set."""
+    review_session = _session(db, code="cg-running", status="ready")
+    _reviewee_policy(db, _instrument(db, review_session))
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    review_session.responses_release_until = None
+    assert not visibility_policies.reviewee_has_current_grant(
+        db, review_session
+    )
+
+
+def test_reverting_a_released_session_to_draft_closes_the_grant(
+    db: Session,
+) -> None:
+    """The case that motivated PR 2a.
+
+    ``revert_session_to_draft`` accepts ``expired`` → ``draft`` and
+    does **not** clear ``responses_release_at``. Before the fix the
+    anchor kept the window open, so a session the operator had
+    withdrawn went on showing released responses. The anchor is still
+    left in place — it simply goes inert until the session is closed
+    again, which is what "release at time T" should mean."""
+    review_session = _session(db, code="cg-reverted")
+    _reviewee_policy(db, _instrument(db, review_session))
+    _open_release_window(review_session)
+    assert visibility_policies.reviewee_has_current_grant(db, review_session)
+
+    review_session.status = "draft"
+    assert not visibility_policies.reviewee_has_current_grant(
+        db, review_session
+    )
+    # The anchor survives the revert — inert, not erased.
+    assert review_session.responses_release_at is not None

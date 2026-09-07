@@ -114,7 +114,32 @@ def is_response_release_window_open(
     Anchor-null inertness: a saved ``responses_release_until``
     with no anchor reads as "not open yet" — the release-window
     doesn't open until the operator sets the anchor.
+
+    **The session must be ``expired``** (Segment 19F PR 2a, author
+    2026-09-07). The two visibility windows mean literally "as data is
+    coming in" (``while_ongoing`` = ``ready``) and "after the review has
+    closed" (``after_release`` = ``expired``); responses are released
+    *because the session is over*. That was already the Workflow card's
+    rule — it gates both Release and Stop-release on ``is_expired`` and
+    says so in a comment — but the predicate itself checked only the
+    anchors, so every path that sets them without the button opened the
+    window in a state the UI would never offer:
+
+    * an anchor **backdated** on Session Edit or Quick Setup, where
+      ``parse_and_validate_responses_release_at`` deliberately applies no
+      lead-time floor, opened the window on a ``draft`` session; and
+    * ``revert_session_to_draft`` (``expired`` → ``draft``) does **not**
+      clear the anchor, so a session the operator withdrew kept showing
+      released responses to every non-operator audience.
+
+    The second is the one that motivated the change: an operator who
+    reverts to draft believes the session has been withdrawn, back to
+    before activation. The anchor is left in place and simply goes inert
+    — re-closing the session re-opens the window on the schedule they
+    originally set, which is what "release at time T" should mean.
     """
+    if not is_expired(review_session):
+        return False
     anchor = _as_utc(review_session.responses_release_at)
     if anchor is None:
         return False

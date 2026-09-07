@@ -85,8 +85,8 @@ One nullable column on `instrument_view_policies` encodes the window:
 
 | `visible_when` | Window |
 |---|---|
-| `while_ongoing` | `[sessions.activated_at, sessions.deadline)`. The session-lifetime window. |
-| `after_release` | `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Session Edit Details / Create New Session (W14 + S12). Operator-explicit Release-now / Stop-release buttons (forthcoming) write the same columns. |
+| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. *(Corrected 2026-09-07: this row read `[sessions.activated_at, sessions.deadline)`, which the code has never implemented — `lifecycle.is_ready` checks the status column. The difference is visible: `expire_session` is only ever called from the Workflow card's Close button, never automatically at the deadline, so a session past its deadline that nobody has closed is still `ready` and still inside this window.)* |
+| `after_release` | **`sessions.status = "expired"`** AND `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Session Edit Details / Create New Session (W14 + S12); the Release-now / Stop-release buttons write the same columns. *(The lifecycle condition arrived 2026-09-07 — see §3.2.)* |
 | `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
 | `always` | **Reserved.** Today this value is only meaningful for the operator (who is not a row in this table). The column accepts it for forward-compatibility. |
 
@@ -102,9 +102,18 @@ One nullable column on `instrument_view_policies` encodes the window:
 
 The `after_release` and `throughout` windows depend on `responses_release_at`. When the anchor is `NULL`, the §8.2.2 anchor-null rule applies — the after-release half is treated as "no scheduled fire". Per the view-time predicate:
 
-> *Release window is open* ⇔ `responses_release_at IS NOT NULL` AND `now() ≥ responses_release_at` AND (`responses_release_until IS NULL` OR `now() < responses_release_until`).
+> *Release window is open* ⇔ **`sessions.status = "expired"`** AND `responses_release_at IS NOT NULL` AND `now() ≥ responses_release_at` AND (`responses_release_until IS NULL` OR `now() < responses_release_until`).
 
 A policy with `visible_when = "after_release"` and no anchor is **inert** — the resolver returns "not viewable" until the operator sets the anchor. Saving the policy without an anchor is allowed and harmless.
+
+**The session must have closed** (author decision, 2026-09-07; Segment 19F PR 2a). The two windows mean literally *as data is coming in* and *after the review has closed*, so responses are released **because the session is over**. That was already the Workflow card's rule — it gates both Release and Stop-release on `is_expired` and says so in a comment — but the predicate itself checked only the anchors, so every path that writes them without the button opened a window the UI would never offer:
+
+- an anchor **backdated** on Session Edit or Quick Setup, where `parse_and_validate_responses_release_at` deliberately applies no lead-time floor, opened the window on a `draft` session; and
+- **`revert_session_to_draft`** (`expired` → `draft`) does not clear the anchor, so a session the operator had *withdrawn* went on showing released responses to every non-operator audience. This is the case that prompted the change: an operator who reverts to draft believes the session is back to before activation.
+
+The anchor is deliberately **left in place** across a revert rather than cleared. It simply goes inert, so re-closing the session re-opens the window on the schedule the operator originally set — which is what "release at time T" should mean.
+
+**Where the rule lives.** In `session_lifecycle.is_response_release_window_open`, and only there. `release_responses_now` stays permissive — called on an unclosed session it stamps the anchor and the window stays shut — because the import and apply-config paths also write these columns, and one predicate is easier to keep true than four call-site guards.
 
 ### 3.3 Archive overrides
 

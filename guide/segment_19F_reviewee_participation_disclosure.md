@@ -148,6 +148,32 @@ Four decisions from the author (2026-09-07), each with what it rules out:
    rewrites of one paragraph in three days as a spec that cannot keep
    still.
 
+8. **The response-release window requires the session to have closed**
+   (author, 2026-09-07, from probing what PR 2 had actually shipped).
+   The two visibility windows mean literally *as data is coming in*
+   (`while_ongoing` = `ready`) and *after the review has closed*
+   (`after_release` = `expired`). Until now the second checked only the
+   anchors, so any path that wrote them without the Release button
+   opened a window the UI would never offer.
+
+   **This was already the Workflow card's rule.** It gates both Release
+   and Stop-release on `is_expired`, with a comment saying "responses
+   are released *because the session is over*". Only the predicate
+   disagreed — so this closes a gap between two halves of the codebase
+   rather than introducing a new position.
+
+   **The case that prompted it:** `revert_session_to_draft` accepts
+   `expired` → `draft` and does **not** clear `responses_release_at`. An
+   operator who reverts believes the session is withdrawn, back to
+   before activation — and it went on showing released responses to
+   every non-operator audience. *Rejected: clear the anchor on revert*
+   — the anchor is a schedule, not a state; leaving it inert means
+   re-closing the session re-opens the window on the schedule the
+   operator set, which is what "release at time T" should mean.
+   *Rejected: gate only the reviewee predicate* — the windows' meaning
+   is global, and a rule that held for one audience and not the other
+   two would be the same divergence in a new place.
+
 7. **An archived session's observer row is present but unlinked**
    (author, 2026-09-07). Decision 4 keeps the observer's row in every
    lifecycle state, and archived sessions stay on `/me` for reviewers and
@@ -342,6 +368,69 @@ a name that says the opposite, rather than deleted — the assertion is
 still the right assertion, pointed the other way.
 
 ## Status
+
+**2026-09-07 — PR 2a shipped: the response-release window requires
+`expired`.** Decision 8, and it came from the author reading PR 2's own
+write-up rather than from the plan: the claim that a `draft` session
+could show a reviewee a row was true, and prompted the question of
+whether it should be.
+
+**The answer was already in the codebase, twice, disagreeing with
+itself.** `_workflow_card.py` gates Release and Stop-release on
+`is_expired` and explains why in a comment — "responses are released
+*because the session is over*". `is_response_release_window_open`
+checked only the anchors. So the UI and the predicate had held opposite
+positions since the release window shipped, and every path that writes
+the anchors without the button — Quick Setup, Session Edit, and
+critically `revert_session_to_draft` — opened a window the card would
+never have offered. PR 2a moves the rule into the predicate, which is
+the only place all five callers pass through.
+
+**The concrete defect, which the author intuited before the code was
+read:** reverting a released session to draft leaves
+`responses_release_at` stamped, so a *withdrawn* session went on showing
+released responses to reviewees and observers alike. Now inert. The
+anchor is deliberately not cleared — it is a schedule, not a state.
+
+**Two consequences neither of us named when deciding.**
+
+- **The Reviewer → Reviewee fall-through is now dead code.** A reviewee
+  link exists only on an `expired` session; on `expired`,
+  `session_status_for_reviewer` returns `"closed"`, which *enables* the
+  reviewer link. So every state carrying a reviewee link also carries a
+  live reviewer link, and reviewer is first in priority order. The test
+  that covered the fall-through is **rewritten to assert the new truth**
+  rather than deleted, and says why. Reviewee → Observer is still
+  reachable.
+- **A test had to change vehicle, not just setup.**
+  `test_session_status_pills_are_visibly_styled` built `draft` / `ready`
+  / `expired` rows out of reviewees; two of those states can no longer
+  carry a reviewee row at all. Switched to observers, who are not
+  grant-gated (decision 4), which preserves exactly what it tested —
+  `_non_reviewer_session_status` is shared.
+
+**25 tests moved**, all of them sessions that opened a release window
+without closing the session. The fixture absorbed 8 of them:
+`grant_reviewee_visibility` now closes the session as part of granting,
+because closing *is* part of what a grant means and a caller who
+forgets it would read the result as a bug in the gate.
+
+**Left permissive on purpose:** `release_responses_now` still accepts a
+call on an unclosed session — it stamps the anchor and the window stays
+shut. Guarding it too would put the rule in two places, and the import /
+apply-config paths write these columns as well. Pinned by a test that
+the call is inert and that closing later opens it.
+
+**The `while_ongoing` correction rides along**, as the author directed:
+`spec/visibility_policy.md` defined it as `[activated_at, deadline)`,
+which the code has never implemented — `lifecycle.is_ready` reads the
+status column. The difference is observable, because `expire_session` is
+only ever called from the Close button and never automatically at the
+deadline: a session past its deadline that nobody closed is still
+`ready`, and still inside the window. Spec corrected to match, with the
+old definition and the reason quoted.
+
+**Tests: 2,887 passed / 16 skipped.**
 
 **2026-09-07 — PR 2 shipped: the reviewee role is gated on a
 currently-resolving grant.** `visibility_policies.reviewee_has_current_grant(db,
@@ -659,7 +748,11 @@ who a no-grant reviewee is from the moment either of them changes.
   archived observer row's unlinked state (PRs 2, 5); §6 loses the
   observer-archive divergence once PR 5 closes it (PRs 1–5).
 - `spec/visibility_policy.md` — the archive override's scope restated
-  now that both non-operator audiences honor it (PR 5).
+  now that both non-operator audiences honor it (PR 5); §3 window
+  definitions corrected — `after_release` gains the `expired`
+  precondition and `while_ongoing` is restated as `status = "ready"`
+  rather than the `[activated_at, deadline)` interval the code never
+  implemented (PR 2a).
 - `spec/audience_and_identity_model.md` — the `/guide` audience contract
   **reverses**: a viewer holding nothing sees nothing and is bounced to
   `/about`. The entry that goes says *"a viewer holding nothing sees

@@ -201,6 +201,9 @@ def _enable_reviewee_after_release_raw(
         user=operator,
     )
     if open_window:
+        # 19F PR 2a — the after-release window also needs the
+        # session closed: released *because the session is over*.
+        review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
             timezone.utc
         ) - timedelta(hours=1)
@@ -471,6 +474,9 @@ def test_results_body_omits_instrument_with_policy_off(
         after_release_mode="raw",
         user=_operator_user(db),
     )
+    # 19F PR 2a — the after-release window also needs the
+    # session closed: released *because the session is over*.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
@@ -543,6 +549,9 @@ def _enable_reviewee_after_release_anonymized(
         user=operator,
     )
     if open_window:
+        # 19F PR 2a — the after-release window also needs the
+        # session closed: released *because the session is over*.
+        review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
             timezone.utc
         ) - timedelta(hours=1)
@@ -576,6 +585,9 @@ def _enable_reviewee_after_release_summarized(
         user=operator,
     )
     if open_window:
+        # 19F PR 2a — the after-release window also needs the
+        # session closed: released *because the session is over*.
+        review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
             timezone.utc
         ) - timedelta(hours=1)
@@ -1114,6 +1126,9 @@ def test_results_body_group_scoped_drops_display_field_columns(
         after_release_mode="raw",
         user=_operator_user(db),
     )
+    # 19F PR 2a — the after-release window also needs the
+    # session closed: released *because the session is over*.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
@@ -1264,6 +1279,9 @@ def test_results_body_excludes_responses_about_other_reviewees(
         after_release_mode="raw",
         user=_operator_user(db),
     )
+    # 19F PR 2a — the after-release window also needs the
+    # session closed: released *because the session is over*.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
@@ -1413,6 +1431,9 @@ def test_results_body_excludes_responses_about_other_groups(
         after_release_mode="raw",
         user=_operator_user(db),
     )
+    # 19F PR 2a — the after-release window also needs the
+    # session closed: released *because the session is over*.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
@@ -1623,6 +1644,9 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         after_release_mode="raw",
         user=_operator_user(db),
     )
+    # 19F PR 2a — the after-release window also needs the
+    # session closed: released *because the session is over*.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)

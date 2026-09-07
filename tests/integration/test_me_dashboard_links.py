@@ -151,16 +151,29 @@ def test_session_name_links_to_reviewer_when_reviewer_reachable(
     assert body.count(f'href="/me/sessions/{review_session.id}/1"') == 2
 
 
-def test_session_name_falls_through_to_reviewee_when_reviewer_not_opened(
+def test_reviewer_wins_over_reviewee_because_the_fall_through_is_unreachable(
     client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
-    """Reviewer + reviewee on a ``draft`` session: the reviewer
-    surface is ``not opened``, so the session-name link falls
-    through to ``/results``.
+    """**Rewritten at 19F PR 2a**, because the case it tested can no
+    longer happen.
 
-    The reviewee half needs a resolving grant since 19F PR 2 — without
-    one there is no reviewee link to fall through *to*, and the test
-    would be asserting a priority order over a single candidate."""
+    It used to assert that on a ``draft`` session a reviewer+reviewee
+    user's session-name link falls through past the disabled reviewer
+    link to ``/results``. Gating the release window on ``expired``
+    killed that scenario outright:
+
+    * a reviewee link exists only when the session is ``expired``
+      (their ``while_ongoing`` cell is off by construction, so their
+      grant needs the after-release window); and
+    * on ``expired``, ``session_status_for_reviewer`` returns
+      ``"closed"``, which *enables* the reviewer link.
+
+    So every state with a reviewee link also has a live reviewer link,
+    and reviewer is first in priority order. **The Reviewer → Reviewee
+    fall-through is now dead code** — recorded in the plan rather than
+    quietly deleted. Reviewee → Observer is still reachable and is
+    covered by the test below.
+    """
     review_session = _make_session(client, db, code="link-fall-re")
     db.add_all(
         [
@@ -179,11 +192,15 @@ def test_session_name_falls_through_to_reviewee_when_reviewer_not_opened(
     db.commit()
     grant_reviewee_visibility(review_session)
     body = client.get("/me").text
-    # Session-name link target is the reviewee surface.
-    assert f'href="/me/sessions/{review_session.id}/results"' in body
-    # The reviewer pill is a plain span (not opened), so no
-    # reviewer anchor at all on this row.
-    assert '<a class="pill pill-role-reviewer"' not in body
+    # Reviewer wins: the name points at the reviewer surface, not
+    # /results, even though a live reviewee link also exists.
+    assert f'href="/me/sessions/{review_session.id}/1"' in body
+    # And the reviewee link is present as its own pill — the escape
+    # hatch the priority order leaves open.
+    assert (
+        f'<a class="pill pill-role-reviewee" '
+        f'href="/me/sessions/{review_session.id}/results">Reviewee</a>'
+    ) in body
 
 
 def test_session_name_falls_through_to_observer_when_only_observer_reachable(
@@ -229,7 +246,7 @@ def test_session_name_is_plain_text_when_no_role_reachable(
 
 
 def test_session_status_pills_are_visibly_styled(
-    client: TestClient, db: Session, grant_reviewee_visibility
+    client: TestClient, db: Session
 ) -> None:
     """Each of the three Session-status states renders as a clearly
     pill-styled span — ``open`` green, ``not opened`` light-blue,
@@ -238,44 +255,45 @@ def test_session_status_pills_are_visibly_styled(
     ``pill-lifecycle-archived`` grey for ``closed``, which read
     as plain text on a glance.
 
-    Uses reviewee-only rows so the non-reviewer status path
-    fires (``_non_reviewer_session_status`` — pure
-    ``is_ready`` / ``is_expired`` peek; no assignment fan-out
-    needed)."""
+    Uses **observer**-only rows so the non-reviewer status path fires
+    (``_non_reviewer_session_status`` — pure ``is_ready`` /
+    ``is_expired`` peek; no assignment fan-out needed).
+
+    Reviewee rows were the original vehicle and no longer work here:
+    since 19F PR 2a a reviewee row exists only on an ``expired``
+    session, so the ``draft`` and ``ready`` cases could not be built at
+    all. Observers are deliberately not grant-gated (decision 4), so
+    they still exercise all three states through the same helper."""
     # "not opened" — fresh session, no activation (draft).
     s_draft = _make_session(client, db, code="status-draft")
     db.add(
-        Reviewee(
+        Observer(
             session_id=s_draft.id,
-            name="Alice",
-            email_or_identifier="alice@example.edu",
+            email="alice@example.edu",
+            display_name="Alice",
         )
     )
     # "open" — second session, lifecycle flipped to ``ready``.
     s_open = _make_session(client, db, code="status-open")
     s_open.status = "ready"
     db.add(
-        Reviewee(
+        Observer(
             session_id=s_open.id,
-            name="Alice",
-            email_or_identifier="alice@example.edu",
+            email="alice@example.edu",
+            display_name="Alice",
         )
     )
     # "closed" — third session, lifecycle ``expired``.
     s_closed = _make_session(client, db, code="status-closed")
     s_closed.status = "expired"
     db.add(
-        Reviewee(
+        Observer(
             session_id=s_closed.id,
-            name="Alice",
-            email_or_identifier="alice@example.edu",
+            email="alice@example.edu",
+            display_name="Alice",
         )
     )
     db.commit()
-    # Each row needs a resolving grant since 19F PR 2, or the reviewee
-    # role contributes no row and there is no status pill to style.
-    for granted in (s_draft, s_open, s_closed):
-        grant_reviewee_visibility(granted)
 
     body = client.get("/me").text
     assert '<span class="pill pill-info">not opened</span>' in body

@@ -63,10 +63,17 @@ def _grant_reviewee_visibility(
     row) has to create one. Two things are needed together and neither
     is sufficient alone:
 
-    * an open response-release window — `responses_release_at` in the
-      past, `responses_release_until` unset; and
+    * an open response-release window, which since 19F PR 2a needs
+      **three** things and not two: the session ``expired``,
+      `responses_release_at` in the past, and `responses_release_until`
+      unset. Responses are released *because the session is over*, so
+      closing it is part of granting, not a separate step a caller can
+      forget; and
     * an ``instrument_view_policies`` row for the ``reviewee`` audience
       whose **after_release** pair is set.
+
+    Callers that need a different lifecycle state should set it
+    *after* calling this — and expect no grant, which is the point.
 
     The ``while_ongoing`` pair is deliberately left off: reviewees may
     never see responses mid-flight, so that cell is invalid for them by
@@ -89,6 +96,7 @@ def _grant_reviewee_visibility(
             after_release_identification=identification,
         )
     )
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)

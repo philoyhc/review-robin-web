@@ -904,8 +904,10 @@ def test_collation_renders_after_release_section_when_window_open(
             submitted_at=datetime.now(timezone.utc),
         )
     )
-    # Critical bit: open the release window by setting
-    # ``responses_release_at`` to a past time.
+    # Critical bit: open the release window. Since 19F PR 2a that
+    # means closing the session *and* backdating the anchor —
+    # responses are released because the session is over.
+    review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
         timezone.utc
     ) - timedelta(hours=1)
