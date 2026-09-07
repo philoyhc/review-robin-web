@@ -103,13 +103,18 @@ def test_sessions_list_empty_state_renders_prominent_cta(
     body = client.get("/operator/sessions").text
     # No sessions exist yet for the test user.
     assert "You don't have any sessions yet." in body
-    # Per spec, the empty state promotes "Create new session" to the
-    # page's prominent affordance — rendered as a `.btn-cta`, not the
-    # smaller header-row Primary that appears once a session exists.
+    # The empty state promotes "Create new session" to the page's
+    # prominent affordance — a `.btn-cta`, visually distinct from the
+    # Search card's Primary.
     assert 'class="btn-cta" href="/operator/sessions/new"' in body
-    # And the header-row Create button is suppressed when the list is
-    # empty (the empty-state CTA is the single affordance).
-    assert 'class="btn" href="/operator/sessions/new"' not in body
+    # The Search card's `Add new session` is NO LONGER suppressed here.
+    # Standardising the lobby (2026-09-07) made both cards render in every
+    # state, and the author kept that button active in the empty one
+    # deliberately: it is one of the two ways out of an empty lobby. So the
+    # page now offers the same destination twice, at different weights —
+    # which reverses the 11D rule that the CTA must be the single
+    # affordance. The weights are what keep them from competing.
+    assert 'class="btn" href="/operator/sessions/new">Add new session</a>' in body
 
 
 # ── Edit Session chrome (B1) ────────────────────────────────────────────
