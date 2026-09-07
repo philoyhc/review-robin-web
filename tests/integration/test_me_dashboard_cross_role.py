@@ -9,6 +9,8 @@ surface on ``/me`` because the route queried reviewers only.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -63,12 +65,16 @@ def test_me_shows_reviewer_pill_when_user_is_reviewer(
 
 
 def test_me_shows_reviewee_pill_when_user_only_reviewee(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """Reviewee-only row used to be missing entirely because the
     route queried reviewers only. Now it surfaces with a
     Reviewee pill, no reviewer-status pill, and the Session
-    name as plain text."""
+    name as plain text.
+
+    Since 19F PR 2 the row is also conditional on a grant that
+    resolves right now — hence `grant_reviewee_visibility`. The
+    no-grant case is its own test below."""
     review_session = _make_session_and_activate(client, db, code="me-re")
     db.add(
         Reviewee(
@@ -78,6 +84,7 @@ def test_me_shows_reviewee_pill_when_user_only_reviewee(
         )
     )
     db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     assert 'class="pill pill-role-reviewee"' in body
     assert "Reviewee" in body
@@ -104,7 +111,7 @@ def test_me_shows_observer_pill_when_user_only_observer(
 
 
 def test_me_unions_all_three_roles_on_one_row(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """A session where the user holds all three roles renders one
     row carrying all three pills."""
@@ -129,6 +136,7 @@ def test_me_unions_all_three_roles_on_one_row(
         ]
     )
     db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     assert body.count('class="pill pill-role-reviewer"') == 1
     assert body.count('class="pill pill-role-reviewee"') == 1
@@ -136,7 +144,7 @@ def test_me_unions_all_three_roles_on_one_row(
 
 
 def test_me_matches_case_insensitively(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     review_session = _make_session_and_activate(client, db, code="me-case")
     db.add(
@@ -147,6 +155,7 @@ def test_me_matches_case_insensitively(
         )
     )
     db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     assert 'class="pill pill-role-reviewee"' in body
 
@@ -189,3 +198,160 @@ def test_me_skips_other_users_roster_rows(
     assert 'class="pill pill-role-reviewer"' not in body
     assert 'class="pill pill-role-reviewee"' not in body
     assert 'class="pill pill-role-observer"' not in body
+
+
+# ── 19F PR 2 — the reviewee role is gated on a current grant ─────────
+
+
+def test_reviewee_with_no_current_grant_gets_no_row_at_all(
+    client: TestClient, db: Session
+) -> None:
+    """Decision 3: a reviewee with nothing currently granted is
+    treated exactly as someone holding no role at all. Not a bespoke
+    outcome, not a disabled link — no row.
+
+    This is the whole point of the segment. Until PR 2 the row
+    appeared the moment an operator uploaded the roster, disclosing
+    that someone is the subject of a review before anyone had decided
+    they may see anything about it."""
+    review_session = _make_session_and_activate(client, db, code="me-nogrant")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewee"' not in body
+    # Id-qualified: a bare "/results" also matches a CSS comment, since
+    # base.html inlines the whole stylesheet into every page.
+    assert f"/me/sessions/{review_session.id}/results" not in body
+    # Indistinguishable from the empty dashboard a stranger sees.
+    assert "You have no pending reviews" in body
+
+
+def test_a_grant_that_exists_but_has_not_opened_does_not_count(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """Decision 1: *currently* resolving, not ever-configured.
+
+    The policy row is set exactly as `grant_reviewee_visibility` sets
+    it, but the release anchor sits in the future — so an operator
+    configuring visibility in advance does not thereby announce the
+    review to its subject."""
+    review_session = _make_session_and_activate(client, db, code="me-future")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) + timedelta(days=7)
+    db.commit()
+
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewee"' not in body
+
+
+def test_the_row_survives_on_another_role_when_the_grant_is_absent(
+    client: TestClient, db: Session
+) -> None:
+    """Decision 2: gate the role, not the row. Hiding the whole row
+    would break two working surfaces to protect a third.
+
+    Alice is a reviewer *and* an ungranted reviewee here: she keeps her
+    row and her reviewer pill, and only the Reviewee pill is missing."""
+    review_session = _make_session_and_activate(client, db, code="me-both")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Alice",
+                email_or_identifier="alice@example.edu",
+            ),
+        ]
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewer"' in body
+    assert 'class="pill pill-role-reviewee"' not in body
+
+
+def test_an_archived_session_closes_the_reviewee_row(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The archive override forces every non-operator grant off
+    (`spec/visibility_policy.md`), so the row leaves when the session
+    is archived — it falls out of decision 1 rather than needing a rule
+    of its own.
+
+    Note the asymmetry this creates on purpose, recorded in the plan:
+    reviewers and observers keep seeing an archived session on `/me` as
+    "not opened", because their rows are not grant-conditioned."""
+    review_session = _make_session_and_activate(client, db, code="me-arch")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    assert 'class="pill pill-role-reviewee"' in client.get("/me").text
+
+    review_session.status = "archived"
+    db.commit()
+    assert 'class="pill pill-role-reviewee"' not in client.get("/me").text
+
+
+def test_lifecycle_state_does_not_decide_the_reviewee_row(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The grant decides, not the lifecycle — asserted on **one**
+    session at a time so the claim cannot be read as two sessions
+    being compared.
+
+    `draft` + open release window shows a row; flipping the same
+    session to `ready` and closing the window takes it away. Both
+    states are operator-reachable:
+    `scheduled_events.parse_and_validate_responses_release_at`
+    deliberately applies no minimum-lead-time floor, so "Release
+    responses from" can be backdated to make results viewable
+    immediately on a session that was never activated.
+
+    This pins the sentence in `spec/role_landing_and_visibility.md` §4
+    that replaced the old five-state table.
+    """
+    review_session = _make_session_and_activate(client, db, code="me-lifecycle")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+
+    # draft + open window → row.
+    grant_reviewee_visibility(review_session)
+    assert review_session.status == "draft"
+    assert 'class="pill pill-role-reviewee"' in client.get("/me").text
+
+    # Same session, now ready, window closed → no row.
+    review_session.status = "ready"
+    review_session.responses_release_at = None
+    db.commit()
+    assert 'class="pill pill-role-reviewee"' not in client.get("/me").text

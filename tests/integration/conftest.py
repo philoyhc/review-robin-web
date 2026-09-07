@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from _sqlite_schema import build_sqlite_schema
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
+from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.db.session import get_db
+from app.services import visibility_policies
 from app.main import app
 
 
@@ -29,6 +32,69 @@ from app.main import app
 # ``_reset_allowlists`` autouse fixture that clears these,
 # overriding the conftest-level seeding for that file only.
 _TEST_OPERATOR_EMAILS = ("alice@example.edu", "bob@example.edu")
+
+
+@pytest.fixture
+def grant_reviewee_visibility(db: Session) -> Callable[..., Instrument]:
+    """Fixture wrapper around :func:`_grant_reviewee_visibility`.
+
+    A fixture rather than an importable helper because
+    ``tests/conftest.py`` shadows this module's name on the import path
+    — ``from conftest import …`` in an integration test resolves to the
+    *parent* conftest and fails.
+    """
+
+    def _grant(
+        review_session: ReviewSession, *, mode: str = "raw"
+    ) -> Instrument:
+        return _grant_reviewee_visibility(db, review_session, mode=mode)
+
+    return _grant
+
+
+def _grant_reviewee_visibility(
+    db: Session, review_session: ReviewSession, *, mode: str = "raw"
+) -> Instrument:
+    """Give the session's ``reviewee`` audience a grant that resolves
+    **right now**, and return the instrument carrying it.
+
+    Segment 19F PR 2 made a reviewee's ``/me`` row conditional on such a
+    grant, so a test that wants a *reviewee* row (rather than merely a
+    row) has to create one. Two things are needed together and neither
+    is sufficient alone:
+
+    * an open response-release window — `responses_release_at` in the
+      past, `responses_release_until` unset; and
+    * an ``instrument_view_policies`` row for the ``reviewee`` audience
+      whose **after_release** pair is set.
+
+    The ``while_ongoing`` pair is deliberately left off: reviewees may
+    never see responses mid-flight, so that cell is invalid for them by
+    construction (`visibility_policies._PER_CELL_VALID_MODES`) and
+    setting it here would encode a state the editor cannot produce.
+    """
+    granularity, identification = visibility_policies.MODE_LABELS[mode]
+    instrument = Instrument(
+        session_id=review_session.id,
+        name="Feedback",
+        order=1,
+    )
+    db.add(instrument)
+    db.flush()
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="reviewee",
+            after_release_granularity=granularity,
+            after_release_identification=identification,
+        )
+    )
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    review_session.responses_release_until = None
+    db.commit()
+    return instrument
 
 
 @pytest.fixture(autouse=True)

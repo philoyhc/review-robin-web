@@ -1,6 +1,6 @@
 # Role landing and visibility
 
-**Current as of 2026-09-07 (`0ed8256a`).** Answers one question from
+**Current as of 2026-09-07 (Segment 19F PR 2).** Answers one question from
 the reader's side: **given my role — or my lack of one — can I sign in,
 where do I land, and what do I see?**
 
@@ -109,26 +109,72 @@ The surface route admits `is_ready` **or `is_expired`** — a **closed**
 session's review surface still opens. Draft, validated and archived
 render the not-open page instead.
 
-### Reviewee and observer
+### Reviewee
 
-| Session state | `/me` row | Linked? | `/results` · `/collation` |
+**Rewritten for Segment 19F PR 2 (2026-09-07).** The reviewee role no
+longer follows the lifecycle at all; it follows the **grant**.
+
+| Currently-resolving grant? | `/me` row | Linked? | `/results` |
+|---|---|---|---|
+| no | **absent** | — | **404** (from PR 4) |
+| yes | listed | **yes** | 200 |
+
+A grant resolves when at least one instrument in the session has a
+`reviewee` policy row whose mode is live **under the windows open right
+now** (`visibility_policies.reviewee_has_current_grant`). Because a
+reviewee's `while_ongoing` cell is always off by construction, in
+practice this means *inside an open response-release window*, and never
+on an archived session — the archive override closes every non-operator
+grant.
+
+So the lifecycle table that used to sit here would be misleading. Take
+one session at a time and vary only its state:
+
+| One session, lifecycle | Release window | Reviewee row |
+|---|---|---|
+| `ready` | closed / not yet reached | **none** |
+| `draft` | open | **shown** |
+
+Both halves are operator-reachable, and the second is not a
+misconfiguration:
+`scheduled_events.parse_and_validate_responses_release_at` deliberately
+applies **no minimum-lead-time floor**, so an operator may backdate
+"Release responses from" to make results viewable immediately — on a
+session that has not been activated. The rule is the grant, not the
+state.
+
+**A reviewee with no current grant is indistinguishable from a
+stranger** — the same empty `/me`, the same 404 — which is the point of
+the segment rather than a side effect. If they also hold a reviewer or
+observer role on that session, the row survives on *that* role and only
+the Reviewee pill is missing.
+
+### Observer
+
+| Session state | `/me` row | Linked? | `/collation` |
 |---|---|---|---|
 | `draft` | listed, "not opened" | **yes** | **200** |
 | `validated` | listed, "not opened" | **yes** | **200** |
 | `ready` | listed, "open" | yes | 200 |
 | `expired` | listed, "closed" | yes | 200 |
-| `archived` | listed, "not opened" | **yes** | **200** |
+| `archived` | listed, "not opened" | yes → **unlinked from PR 5** | 200, empty |
 
-**Access is not lifecycle-gated on these two surfaces; content is.**
-Both routes gate only on an active roster row, so they return 200 in
-every state including archived. What renders is decided per instrument
-by the visibility policy and the release window
-(`spec/visibility_policy.md`), so the ordinary result on a draft or
-archived session is a 200 with an empty body — but that is the policy
-resolver's doing, not the route's.
+**Observers are deliberately not grant-gated** (19F decision 4): being
+appointed an observer is not a disclosure *about* the observer, so the
+privacy argument that gates reviewees does not transfer. They may see
+that they are an observer before their window opens.
 
-**Archived sessions are listed on `/me` for all three roles.** Nothing
-filters them out of the dashboard's three queries.
+**Access is not lifecycle-gated on this surface; content is.** The route
+gates only on an active roster row, so it returns 200 in every state
+including archived. What renders is decided per instrument by the
+visibility policy and the release window
+(`spec/visibility_policy.md`).
+
+**Archived sessions stay on `/me` for reviewers and observers**, reading
+"not opened" until the session is deleted — the author declined to
+filter them (2026-09-07). Only the *reviewee* role leaves an archived
+session, and it leaves via the archive override closing its grant rather
+than by a filter.
 
 ---
 
