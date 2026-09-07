@@ -369,6 +369,64 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 6 shipped: the specs pass, and it found a spec the
+plan never named.** `close_check.py 19F` passes on the manifest, but
+emits two notes: `_dashboard` and `_results` touched, with
+`spec/reviewer-surface.md` absent from `Doc impact`. That file is what
+`spec_registry.py` maps both modules to, and the segment rewrote both —
+twice each. **Undeclared spec impact is the exact failure the section
+exists to prevent**, and the manifest passing while the note fired is
+worth noting on its own: the check verifies commitments kept, not
+commitments complete.
+
+**Six stale claims in it, none cosmetic:**
+
+- the `/me` cross-role union described the three rosters as
+  symmetric — reviewee rows are grant-gated now;
+- the reachability table said `reviewee` and `observer` links are
+  "always `True`", both now conditional;
+- the "View responses" column was a placeholder waiting for a
+  release-window gate — which landed on the *row* instead, making a
+  dedicated column a restatement;
+- the `/results` gate was documented as
+  `require_reviewee_in_session` returning **403**, three changes out
+  of date;
+- the observer gate's **403** likewise; and
+- the claim that W16 applies its window inside the per-instrument
+  render "not at route-level 403" — precisely what PR 4 reversed.
+
+**Three 403s in that file are correct and were left alone**, checked
+against the code rather than swept: the reviewer Save/Submit/Clear
+refusals (`_surface/_context.py`, post-gate route checks on a caller
+already confirmed as a reviewer) and the invitation-mismatch page. A
+segment that converts status codes creates a strong pull to convert
+every mention of one; the discipline is to grep, then read each.
+
+**Also qualified:** the claim that the invitation-mismatch page is "the
+only reviewer-side page that returns a non-200 under normal flow". Still
+true for a caller in the right place, but `/results` now 404s an
+ungranted reviewee, so the sentence needed the distinction rather than a
+deletion.
+
+**Then a name sweep found two more undeclared specs.** Grepping the
+retired `roles_held_anywhere` and the superseded
+`require_reviewee_in_session` across `spec/` and `docs/` turned up
+`spec/architecture.md` (twice — the reviewee-results entry and the
+participant-gate summary, neither mentioning the 404) and
+`spec/rrw_functional_spec.md`. Both added to `Doc impact`. Three
+undeclared paths in one segment is the number worth remembering: the
+manifest is written at planning time from the routes a change is
+*expected* to touch, and a gate rename propagates further than that —
+`close_check` caught one of the three, and only because
+`spec_registry.py` maps the module. The other two needed the grep.
+
+**Left alone, deliberately:** `docs/status.md`'s historical timeline
+rows still say `roles_held_anywhere` and "a viewer holding nothing sees
+everything". Those are dated records of what shipped at the time, not
+current claims, and rewriting them would falsify the history this
+segment keeps citing. The distinction is between a spec, which must be
+true now, and a log, which must be true of its date.
+
 **2026-09-07 — PR 3 shipped: the Guide audience gate** (built last,
 after 5, since the ladder's numbering fixed its dependency and not its
 date). `visible_audiences` returns an empty set for a viewer holding
@@ -956,4 +1014,22 @@ who a no-grant reviewee is from the moment either of them changes.
 - `docs/security_posture.md` — the permission matrix's failure codes, and
   the session-enumeration vector recorded as closed rather than
   undiscovered (PR 1).
+- `spec/reviewer-surface.md` — **added at build, PR 6**, and the plan
+  should have named it at planning time. `close_check.py` flagged it:
+  the segment touched `_dashboard.py` and `_results.py` twice each, and
+  `spec_registry.py` maps both to this file. Six stale claims, none of
+  them cosmetic: the `/me` cross-role union (reviewee rows are
+  grant-gated now), the reachability table's two "always `True`" rows
+  (reviewee and observer both conditional), the "View responses"
+  placeholder waiting for a gate that landed on the row instead, the
+  `/results` gate (`require_reviewee_with_current_grant`, 404 not 403,
+  and the retired pre-release scaffolding), the observer gate's 403, and
+  the claim that W16 applies its window "not at route-level" — which PR
+  4 reversed (PR 6).
+- `spec/architecture.md` — **added at build, PR 6**. Names the
+  participant gates in two places: the reviewee-results entry and the
+  gate summary. Both said `require_reviewee_in_session` and neither
+  mentioned the 404 (PR 6).
+- `spec/rrw_functional_spec.md` — **added at build, PR 6**. Same stale
+  gate name on the reviewee-results paragraph (PR 6).
 - `docs/status.md` — a row per rung as it lands.

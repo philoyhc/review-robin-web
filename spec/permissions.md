@@ -114,7 +114,7 @@ Two things the table implies and the code relies on:
 | `/operator/sys-admin/*` (13 routes: root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable — tightened in Segment 16C PR 1 when the operator-facing entry point retired |
 | reviewer surface, save / submit / clear, post-submit summary | `require_reviewer_in_session` | per route |
-| `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_in_session` | per route |
+| `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant` (19F PR 4); both the GET and the acknowledge POST share it |
 | `/me/sessions/{id}/collation` (+ CSV) | `require_observer_in_session` | per route |
 | `/me` dashboard, `/me/invite/{token}`, `/` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change) |
 | `/about`, `/auth/me`, `/auth/me/debug` | `get_current_user` only (no `users` row created) | identity display and diagnostics |

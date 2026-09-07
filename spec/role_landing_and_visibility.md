@@ -228,7 +228,7 @@ is not, so it is worth stating plainly:
 A reviewee identified by a **non-email identifier** holds no role for
 any of this: `require_reviewee_in_session` applies
 `participants.is_email_identified`, so they cannot reach `/results`, and
-`participants.roles_held_anywhere` applies the same predicate so the
+`participants.disclosable_roles` applies the same predicate so the
 Guide does not offer them a page they would be refused.
 
 ---
