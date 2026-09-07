@@ -581,7 +581,11 @@
         CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
         <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional columns:
         <code>PhotoLink</code>, <code>RevieweeTag1</code>,
-        <code>RevieweeTag2</code>, <code>RevieweeTag3</code>.
+        <code>RevieweeTag2</code>, <code>RevieweeTag3</code>,
+        <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
+        to <code>active</code>).
+        (Friendly tag labels can be keyed into the header after a period,
+        e.g., <code>RevieweeTag1.Tutor</code>.)
         Other columns are ignored.
       </p>
 

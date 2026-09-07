@@ -573,7 +573,11 @@
       <p class="form-help">
         CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
         <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional columns:
-        <code>ReviewerTag1</code>, <code>ReviewerTag2</code>, <code>ReviewerTag3</code>.
+        <code>ReviewerTag1</code>, <code>ReviewerTag2</code>, <code>ReviewerTag3</code>,
+        <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
+        to <code>active</code>).
+        (Friendly tag labels can be keyed into the header after a period,
+        e.g., <code>ReviewerTag1.Tutor</code>.)
         Other columns are ignored.
       </p>
 
