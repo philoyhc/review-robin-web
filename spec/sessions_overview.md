@@ -101,6 +101,12 @@ The card carries, in order:
    their own — a row of tiles inside a card is explaining
    something, which is what those semantics already say.
 
+   The row is `.stepped`, so a muted **`→`** sits between each pair:
+   these are four stages in order, not four parallel options. Three
+   arrows, never a trailing fourth. They are `aria-hidden` (reading
+   order already carries the sequence) and hide below 900px, where
+   the row wraps and a horizontal arrow would point at nothing.
+
    *Changed 2026-09-07 — was a three-item `<ol>`.* A list is read
    top-to-bottom and its last item is read least; the stage an
    operator most wants reassurance about before committing is

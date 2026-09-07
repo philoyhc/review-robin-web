@@ -784,8 +784,15 @@
       {# Tiles are `.card.rs-help-card` — the app's existing help-card
          semantics — rather than a tile look of their own. A row of tiles
          inside a card is explaining something, which is what that style
-         already says. #}
-      <div class="subcard-row">
+         already says.
+
+         `.stepped` puts a `→` between them: these are four stages in
+         order, not four parallel options. The arrows are `aria-hidden`
+         and carry no text — the sequence is already in reading order,
+         and "right arrow" announced three times between four headings
+         is noise. They hide below 900px, where the row wraps and a
+         horizontal arrow would point at nothing. #}
+      <div class="subcard-row stepped">
         <div class="card rs-help-card">
           <h3>Set up a session</h3>
           <p>
@@ -794,6 +801,7 @@
             answer.
           </p>
         </div>
+        <span class="subcard-arrow" aria-hidden="true">→</span>
         <div class="card rs-help-card">
           <h3>Prepare and launch</h3>
           <p>
@@ -802,6 +810,7 @@
             receive responses.
           </p>
         </div>
+        <span class="subcard-arrow" aria-hidden="true">→</span>
         <div class="card rs-help-card">
           <h3>Give reviewers access</h3>
           <p>
@@ -809,6 +818,7 @@
             apply to them.
           </p>
         </div>
+        <span class="subcard-arrow" aria-hidden="true">→</span>
         <div class="card rs-help-card">
           <h3>Download responses</h3>
           <p>

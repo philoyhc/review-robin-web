@@ -1114,13 +1114,46 @@
       /* Cards carry their own margins for the non-grid case; inside the
          row the gap is the only spacing that should apply. */
       body.ui-v2 .subcard-row > .card { margin: 0; }
+      /* ``.stepped`` — the tiles are a sequence, so a `\2192` sits
+         between them. One ``auto`` track follows each tile to hold it;
+         the last such track is left empty (four tiles, three arrows) and
+         an ``auto`` track with no content is zero-width, so nothing
+         trails off the right-hand end.
+
+         ``column-gap`` drops to 0 here because the arrows' own side
+         padding *is* the gap — leaving both would double the space
+         either side of every arrow. ``row-gap`` survives for the
+         wrapped case below. The tiles keep ``minmax(0, 1fr)``, so
+         adding arrows narrows them rather than widening the row. */
+      body.ui-v2 .subcard-row.stepped {
+        grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr) auto);
+        column-gap: 0;
+      }
+      body.ui-v2 .subcard-arrow {
+        align-self: center;
+        padding: 0 var(--space-3);
+        color: var(--text-subtle);
+        font-size: var(--fs-h2);
+        line-height: 1;
+      }
       @media (max-width: 900px) {
         body.ui-v2 .subcard-row {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+        /* Once the row wraps, the tiles are no longer in reading order
+           left-to-right across one line, and a horizontal arrow between
+           stacked tiles points at nothing. Hide them and put the plain
+           gap back — the sequence is still carried by reading order,
+           which is where a screen reader gets it from in any case. */
+        body.ui-v2 .subcard-arrow { display: none; }
+        body.ui-v2 .subcard-row.stepped {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          column-gap: var(--space-3);
+        }
       }
       @media (max-width: 560px) {
-        body.ui-v2 .subcard-row {
+        body.ui-v2 .subcard-row,
+        body.ui-v2 .subcard-row.stepped {
           grid-template-columns: minmax(0, 1fr);
         }
       }

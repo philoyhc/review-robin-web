@@ -594,7 +594,7 @@ spacing.
 | `.card-half` (`max-width: calc(50% - 10px)`) | keep | — |
 | `.session-meta-row`, `.session-status-row` | keep | — |
 | `.field-builder` + `.field-builder.locked` | keep | — |
-| `.subcard-row` (equal-width tile row inside a card) | added 2026-09-07 | — |
+| `.subcard-row` (+ `.stepped`, `.subcard-arrow`) — equal-width tile row inside a card | added 2026-09-07 | — |
 
 `.setup-nav` is a candidate for deletion (see §2).
 
@@ -614,6 +614,30 @@ tile's padding is the only space under it. In practice the children
 are **`.card.rs-help-card`** (§4): a row of tiles inside a card is
 explaining something, which is what the help-card semantics already
 say. Tile headings are plain `<h3>` and need no class.
+
+**`.stepped` + `.subcard-arrow`.** The modifier for a row whose tiles
+are a **sequence** rather than parallel options: it puts a `→` between
+them. Mechanically it interleaves an `auto` track after each tile to
+hold the arrow, so the class and the `<span class="subcard-arrow">`
+children travel together — one without the other is a bug. The last
+such track is left empty (*n* tiles, *n−1* arrows) and an `auto` track
+with no content is zero-width, so nothing trails off the right end.
+`column-gap` drops to 0 under `.stepped` because the arrows' own side
+padding *is* the gap; leaving both would double the space either side
+of every arrow. Tiles keep `minmax(0, 1fr)`, so arrows narrow them
+rather than widening the row.
+
+`→` (U+2192) is the app's established arrow — 151 uses across the
+templates when this landed — so this introduces no new vocabulary.
+Arrows render at `--text-subtle`: the tiles are the content and the
+arrow is punctuation.
+
+**Arrows are `aria-hidden="true"` and hide below 900px.** Order is
+already carried by reading order, which is where a screen reader takes
+it from, and "right arrow" announced between every pair of headings is
+noise. Below 900px the row wraps to two columns and a horizontal arrow
+between stacked tiles points at nothing, so the arrows go and the plain
+column gap comes back.
 
 *A `.subcard` class shipped alongside the row on 2026-09-07 and was
 retired the same day.* It duplicated `.data-shape-card`'s tile shape,

@@ -180,7 +180,7 @@ def test_the_card_lays_its_four_steps_out_as_sub_cards(
     body = client.get("/operator/sessions").text
     flat = " ".join(body.split())
 
-    assert '<div class="subcard-row">' in flat
+    assert '<div class="subcard-row stepped">' in flat
     # Tiles are the app's existing help cards, not a tile look of their own:
     # a row of tiles inside a card is explaining something, which is what
     # `.rs-help-card` already says. A short-lived `.subcard` class that
@@ -196,7 +196,35 @@ def test_the_card_lays_its_four_steps_out_as_sub_cards(
     card = flat.split(CARD_MARKER, 1)[1]
     definition = "A <strong>session</strong> is one review round with its own"
     assert definition in card
-    assert card.index(definition) < card.index('<div class="subcard-row">')
+    assert card.index(definition) < card.index('<div class="subcard-row stepped">')
+
+
+def test_the_four_steps_are_separated_by_arrows(client: TestClient) -> None:
+    """Three arrows, not four: the tiles are a sequence, and a trailing
+    arrow after the last one would point at nothing.
+
+    They are decorative and marked so. The order is already carried by
+    reading order, which is what a screen reader uses; announcing "right
+    arrow" three times between four headings would only add noise. The
+    `.stepped` modifier is what makes room for them — it interleaves an
+    `auto` track after each tile — so the class and the spans have to
+    travel together.
+    """
+    flat = " ".join(client.get("/operator/sessions").text.split())
+
+    assert '<div class="subcard-row stepped">' in flat
+    assert flat.count('<span class="subcard-arrow" aria-hidden="true">') == 3
+
+    # Each arrow sits *between* two tiles — never before the first or
+    # after the last. Splitting the row on the arrows must leave four
+    # segments holding one tile each; a leading or trailing arrow would
+    # produce an empty segment.
+    row = flat.split('<div class="subcard-row stepped">', 1)[1]
+    row = row[: row.index("</div> </div>")]
+    segments = row.split('<span class="subcard-arrow" aria-hidden="true">→</span>')
+    assert len(segments) == 4
+    for segment in segments:
+        assert segment.count('<div class="card rs-help-card">') == 1
 
 
 # Each of the card's four sub-cards is a table-of-contents entry for one
