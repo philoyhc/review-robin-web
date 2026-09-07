@@ -594,8 +594,26 @@ spacing.
 | `.card-half` (`max-width: calc(50% - 10px)`) | keep | — |
 | `.session-meta-row`, `.session-status-row` | keep | — |
 | `.field-builder` + `.field-builder.locked` | keep | — |
+| `.subcard-row` + `.subcard` (equal-width tile row inside a card) | added 2026-09-07 | — |
 
 `.setup-nav` is a candidate for deletion (see §2).
+
+**`.subcard-row` / `.subcard`.** A row of equal-width tiles laid
+across the inside of an outer `.card`. Distinct from `.card-columns`,
+whose children are *columns* that stack their own cards and are
+deliberately allowed to differ in height: `.subcard-row`'s children
+are one row, and they **stretch to match**, because parallel items at
+different heights read as different weights. Count comes from
+`--n` (default 4); tracks are `minmax(0, 1fr)` so a long word cannot
+widen its tile. Collapses to two columns under 900px and one under
+560px.
+
+Tile shape — `1px solid border-subtle`, `6px` radius,
+`surface-card` fill — is deliberately the same as `.data-shape-card`:
+a bordered thing inside a bordered thing has to read as subordinate to
+it, and one answer to that is enough. Tile headings are plain `<h3>`
+and need no class. First user: the sessions-lobby first-run card
+(`spec/sessions_overview.md`).
 
 ### 11. Misc one-offs
 

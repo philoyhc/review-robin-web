@@ -85,27 +85,48 @@ cards went with the table, so this card was the whole page. See
 The card carries, in order:
 
 1. **`You don't have any sessions yet.`** — card `<h2>`.
-2. A one-sentence definition of a session, then the three passes
-   that get one running, as an `<ol>`: **Create and set it up**,
-   **Prepare and launch**, **Give reviewers access**. These reuse
-   the `/guide` section headings verbatim; the card is a table of
-   contents for the Guide, not a second account of the workflow.
-   `tests/integration/test_lobby_first_run_card.py` fails if the
-   two drift apart.
+2. The four stages of a session, as a `.subcard-row` of four
+   equal-width `.subcard` tiles (§10 of `spec/ui_elements.md`):
+   **Set up a session** (which also carries the one-sentence
+   definition of a session), **Prepare and launch**, **Give
+   reviewers access**, **Download responses**.
+
+   *Changed 2026-09-07 — was a three-item `<ol>`.* A list is read
+   top-to-bottom and its last item is read least; the stage an
+   operator most wants reassurance about before committing is
+   getting the data back out, so it should not be the one that
+   trails off the bottom. Four tiles of equal width and equal
+   height say "four ordinary stages" where a numbered list says
+   the fourth is furthest away. The fourth stage is new copy, not
+   a re-cut of the three.
+
+   Each tile is a table-of-contents entry for one `/guide`
+   section; the card is not a second account of the workflow.
+   The two sides no longer share headings **verbatim** — the card
+   is read by someone who has not yet made a session and the Guide
+   by someone already inside one, so "Set up a session" pairs with
+   the Guide's "Create and set up a session", and "Download
+   responses" with the broader "Close, release, and share
+   results". The pairing is pinned as an explicit mapping in
+   `tests/integration/test_lobby_first_run_card.py`
+   (`CARD_STEP_TO_GUIDE_SECTION`), so renaming a heading on either
+   side without its partner still fails.
 3. A muted line linking to
    **`/guide?return_to=/operator/sessions`**. This link is why the
    card exists (Segment 19E): `/guide` is the canonical operator
    documentation, and the chrome link alone is easy to miss on a
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
-4. A closing line pointing at the Search card's **`Add new
-   session`** button. **The card has no CTA of its own** (changed
-   2026-09-07): standardisation left it and the Search card
-   offering the same destination in the same state under two
-   different names, so the card now defers rather than competes —
-   one way to start a session, one name for it. The button is
-   named by **label**, not position, so the sentence survives the
-   card moving.
+4. A closing sentence in that same muted line, pointing at the
+   Search card's **`Add new session`** button. **The card has no
+   CTA of its own** (changed 2026-09-07): standardisation left it
+   and the Search card offering the same destination in the same
+   state under two different names, so the card defers rather than
+   competes — one way to start a session, one name for it. The
+   button is named by **label**, not position, so the sentence
+   survives the card moving. The **Set up a session** tile names
+   the same button a second time, as part of describing the first
+   stage.
 
 Item 3's muted line also carries the **setup-template download**
 (`GET /templates/starter.zip`, Segment 19E rung 4) — four generic

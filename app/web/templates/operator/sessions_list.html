@@ -760,25 +760,56 @@
        canonical documentation, and the chrome link alone is easy to miss on
        a first visit; an operator with no sessions is the one moment
        orientation is both most needed and cheapest to place. The steps below
-       deliberately reuse the Guide's own section vocabulary ("Create and set
-       up", "Prepare and launch", "Give reviewers access") so the card reads
-       as a table of contents for it rather than a second account of the
-       workflow. #}
+       deliberately reuse the Guide's own section vocabulary ("Prepare and
+       launch", "Give reviewers access") so the card reads as a table of
+       contents for it rather than a second account of the workflow.
+
+       Four sub-cards across, not the numbered list this was until
+       2026-09-07. A list gets read top-to-bottom and its last item gets
+       read least; the fourth stage — getting the data back out — is the
+       one an operator is likeliest to want reassurance about before
+       starting, so it should not be the item that trails off the bottom.
+       Four tiles of equal width and equal height say "four stages, all
+       of them ordinary" in a way a 1-2-3-4 list does not. #}
     <div class="card" id="lobby-first-run">
       <h2>You don't have any sessions yet.</h2>
-      <p>
-        A <strong>session</strong> is one review round — its own people,
-        form, dates, and results. Getting one running takes three passes:
-      </p>
-      <ol>
-        <li><strong>Create and set it up</strong> — name it, add your
-          reviewers and reviewees, pair them into assignments, and choose the
-          questions they answer.</li>
-        <li><strong>Prepare and launch</strong> — run the pre-flight
-          check, fix anything blocking, then activate.</li>
-        <li><strong>Give reviewers access</strong> — share the app's
-          address; people sign in and see the reviews that apply to them.</li>
-      </ol>
+      <div class="subcard-row">
+        <div class="subcard">
+          <h3>Set up a session</h3>
+          <p>
+            A <strong>session</strong> is one review round with its own
+            people, form, dates, and results. Create one using the
+            <strong>Add new session</strong> button above. Add reviewers,
+            reviewees, and choose the questions they answer.
+          </p>
+        </div>
+        <div class="subcard">
+          <h3>Prepare and launch</h3>
+          <p>
+            Use the app to generate the assignment pairs, run the pre-flight
+            check, fix anything blocking, then activate the session to
+            receive responses.
+          </p>
+        </div>
+        <div class="subcard">
+          <h3>Give reviewers access</h3>
+          <p>
+            Share the app's address; people sign in and see the reviews that
+            apply to them.
+          </p>
+        </div>
+        <div class="subcard">
+          <h3>Download responses</h3>
+          <p>
+            At the close of the session, download the collected data.
+          </p>
+        </div>
+      </div>
+      {# The card still has no CTA of its own (2026-09-07). Standardising
+         the lobby left it and the Search card offering the same destination
+         in the same state under two different names; the card points at the
+         button instead of competing with it, so there is one way to start a
+         session and one name for it. #}
       <p class="muted">
         The <a href="/guide?return_to=/operator/sessions">Guide</a> walks
         through each of these, and what reviewers, reviewees, and observers
@@ -788,17 +819,8 @@
            before any session exists. Same generic zip, same route. #}
         You can also
         <a href="/templates/starter.zip">download the setup templates</a>
-        to fill in before you start.
-      </p>
-      {# No CTA of its own (2026-09-07). Standardising the lobby left this
-         card and the Search card offering the same destination in the same
-         state, under two different names; the card now points at the button
-         instead of competing with it, so there is one way to start a session
-         and one name for it. Named by label, not position — "the Search
-         card" survives a move, "the card above" does not. #}
-      <p>
-        When you're ready, use <strong>Add new session</strong> in the Search
-        card to start one.
+        to fill in before you start. When you're ready, use
+        <strong>Add new session</strong> in the Search card to start one.
       </p>
     </div>
   {% endif %}
