@@ -88,34 +88,60 @@ def visible_audiences(db: Session, user: User) -> frozenset[str]:
       cannot leave the Guide describing a different set of people from
       the one that can reach the pages it documents.
     - **Reviewer / observer / reviewee** from
-      ``participants.roles_held_anywhere``, which applies the same rules
-      as the three per-session gates.
+      ``participants.disclosable_roles``, which applies the per-session
+      gates' rules and, for reviewees, the current-grant rule 19F added.
 
-    **A viewer holding nothing sees everything.** The fallback is
-    deliberate and is the one judgement in this resolver. A signed-in
-    person with no operator flag and no roster row anywhere is not a
-    reviewer being spared the operator walkthrough — they are someone
-    the app cannot classify, most often because they are about to be
-    added to a roster and have arrived early. An empty Guide serves them
-    nothing; the whole Guide serves them badly but not harmfully, since
-    it is generic documentation carrying no session data. Given a choice
-    between a page with nothing on it and a page with too much, too much
-    is the recoverable error.
+    **A viewer holding nothing sees nothing, and is bounced to
+    ``/about``** (19F decision 6, author 2026-09-07). This **reverses**
+    19E rung 7's fallback, which returned every audience for such a
+    viewer on the reasoning that an empty Guide serves nobody. The
+    reversal's reason is simpler than the original: it made no sense for
+    a stranger to see *more* of the Guide than any role-holder does. A
+    reviewer sees the reviewer section; a stranger saw all eleven.
 
-    This is not an access control. Nothing on `/guide` is privileged, and
-    the per-section filter grants no one anything — it is an editorial
-    decision about what to put in front of a reader. The gates in
-    ``app/web/deps.py`` remain the only thing deciding access.
+    The empty set is returned here rather than the bounce, so this stays
+    a pure resolver. ``routes_guide`` reads it and redirects. The
+    original reasoning is not deleted from the record — see the segment
+    plan's decision 6 — because a decision that changed is more useful
+    to the next reader than a paragraph that quietly moved.
+
+    This is still not an access control. Nothing on `/guide` is
+    privileged, and the per-section filter grants no one anything. But
+    the *set* now feeds a redirect, so an empty result has a
+    consequence it did not have before, which is why the reviewee arm
+    of ``disclosable_roles`` had to become grant-aware first: otherwise
+    a reviewee granted nothing would still be handed a "For reviewees"
+    page, and the disclosure this segment closes would simply have moved
+    one page over.
     """
     audiences: set[str] = set()
     # Mirrors ``require_operator``: sys-admin implies operator (F4).
     if user.is_operator or user.is_sys_admin:
         audiences.add(OPERATOR)
-    audiences |= participants.roles_held_anywhere(db, user.email)
-
-    if not audiences:
-        return frozenset(AUDIENCES)
+    audiences |= participants.disclosable_roles(db, user.email)
     return frozenset(audiences)
+
+
+def guide_is_reachable(db: Session, user: User) -> bool:
+    """Would ``/guide`` render for this user, or bounce them to
+    ``/about``? Used by the chrome to decide whether to offer the link
+    at all (19F PR 3).
+
+    Short-circuits on the operator flag, which is the common case and
+    costs no query: an operator always has at least the operator
+    audience. Only a non-operator reaches
+    :func:`participants.disclosable_roles`, and the pages a non-operator
+    can see are few.
+
+    The link's absence is **cosmetic**; the route's redirect is what
+    actually decides. That ordering matters for the template, which
+    fails *open* — a page that never stamps the flag still renders the
+    link, and a viewer who follows it lands on ``/about`` rather than on
+    an empty Guide.
+    """
+    if user.is_operator or user.is_sys_admin:
+        return True
+    return bool(participants.disclosable_roles(db, user.email))
 
 
 def visible_sections(db: Session, user: User) -> frozenset[str]:

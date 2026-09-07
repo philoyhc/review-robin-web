@@ -388,7 +388,16 @@ absorbs the other. `/about` is identity and access — what this software is, wh
 to contact. `/guide` is how to run a session.
 
 Suppressed on its own path, exactly as `/about` is, so the row never offers a
-link to the page already being viewed.
+link to the page already being viewed. **Also suppressed for a viewer who
+resolves no Guide audiences** (19F PR 3) — they would only be bounced to
+`/about`, and offering the link there would hand them a route straight back to
+the page that bounced them.
+
+The flag is stamped on `request.state` by `get_or_create_user` and read by
+`base.html` as `guide_hidden is not true`, so it **fails open**: a page that
+never reaches that dependency still renders the link, and the route's redirect
+is what actually decides. Failing closed would hide the Guide from operators on
+any page that missed the stamp — a worse error, and a silent one.
 
 **Canonical since Segment 19E rung 2.** The material from
 `docs/quickstart.md` moved in and that file retired to
@@ -407,14 +416,19 @@ template renders only sections whose audience is visible. **The filter
 narrows** as of rung 7 (2026-09-07), where it previously ran against a
 constant that admitted everything. `visible_audiences()` unions the viewer's
 operator flag — taken from `require_operator`'s own predicate,
-`is_operator or is_sys_admin`, rather than restated — with whatever roles they
-hold on any roster, via `participants.roles_held_anywhere`. So an operator
+`is_operator or is_sys_admin`, rather than restated — with whatever roles are
+disclosable to them, via `participants.disclosable_roles`. So an operator
 sees the eight operator sections and not the three role-addressed ones; a
 reviewer sees `For reviewers`; someone who is both sees both sets.
-**A viewer holding no role at all sees everything**, which is a deliberate
-fallback and not the old open gate: the page carries no session data, and a
-viewer the app cannot classify is usually about to be rostered. The audience
-contract and that reasoning live in `spec/audience_and_identity_model.md`.
+
+**A viewer who resolves no audiences is redirected to `/about`** (19F
+decision 6, 2026-09-07), which **reverses** rung 7's fallback of showing such
+a viewer everything. A stranger seeing more of the Guide than any
+role-holder does is backwards. The chrome also stops offering them the Guide
+link — note that only `base.html`'s chrome carries one; the participant top
+bar (`reviewer/_top_bar.html`) never has, so the conditional bites on
+`/about` and the operator pages. The audience contract and the full reasoning
+live in `spec/audience_and_identity_model.md`.
 
 **Setup templates (Segment 19E rung 4).** The "Create and set up a session"
 card offers `GET /templates/starter.zip` — four generic roster templates with

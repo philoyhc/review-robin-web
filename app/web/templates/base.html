@@ -3505,7 +3505,14 @@
             {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}
               <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
             {% endif %}
-            {% if request.url.path not in ("/guide", "/auth/me/debug") %}
+            {# 19F PR 3 — hidden for a viewer who resolves no Guide
+               audiences, who would only be bounced to /about. Tested as
+               `is not true` rather than a plain truth test so that a
+               page which never stamps the flag still renders the link:
+               the absence is cosmetic and routes_guide does the real
+               deciding, so failing open is the safe direction. #}
+            {% if request.url.path not in ("/guide", "/auth/me/debug")
+                  and request.state.guide_hidden is not true %}
               <a class="chrome-link" href="/guide?return_to={{ request.url.path | urlencode }}">Guide</a>
             {% endif %}
             {% if request.url.path not in ("/about", "/auth/me/debug") %}

@@ -367,12 +367,13 @@ card.
 
 **How a viewer's audiences are resolved** (`visible_audiences`, live
 since 19E rung 7 — before it the resolver returned every audience for
-everyone):
+everyone — and narrowed at 19F PR 3):
 
 | Audience | Held when |
 |---|---|
 | Operator | `user.is_operator or user.is_sys_admin` — the same predicate `require_operator` gates on, derived from it rather than restated (sys-admin implies operator, F4) |
-| Reviewer / Observer / Reviewee | An **active** roster row in **any** session matching the signed-in email, case-insensitively — `participants.roles_held_anywhere`, applying the same rules as the three per-session gates in `app/web/deps.py` |
+| Reviewer / Observer | An **active** roster row in **any** session matching the signed-in email, case-insensitively — `participants.disclosable_roles`, applying the same rules as the per-session gates in `app/web/deps.py` |
+| Reviewee | The same, **plus** a currently-resolving visibility grant on at least one of those sessions (`visibility_policies.reviewee_has_current_grant`, 19F PR 3) |
 
 The roles are **unioned, not exclusive**: an operator who reviews on
 someone else's session sees both sets.
@@ -381,13 +382,35 @@ A **reviewee carried under a non-email identifier holds nothing** here,
 exactly as they pass no results gate — the Guide must not advertise a
 page that will 403.
 
-**A viewer holding no audience sees every section.** A signed-in person
-with no operator flag and no roster row anywhere is not a reviewer being
-spared the operator walkthrough; they are someone the app cannot
-classify, most often because they are about to be added to a roster and
-arrived early. An empty Guide serves them nothing, and the whole Guide
-serves them imperfectly but harmlessly, since it is generic
-documentation carrying no session data.
+**Why the reviewee row differs from the other two.** Being asked to
+review, or appointed to observe, is not a disclosure *about* the person
+— they are entitled to know it before any window opens (19F decision 4).
+For a reviewee, **membership itself is the disclosure**: telling them the
+app has a "For reviewees" page is telling them they are being reviewed.
+So the reviewee audience follows the grant, exactly as their `/me` row
+and `/results` surface do. The name `disclosable_roles` records that
+asymmetry; it was `roles_held_anywhere` until 19F PR 3, when the reviewee
+arm stopped answering *holds the role* and started answering *may be told
+they hold it*.
+
+**A viewer holding no audience is redirected to `/about`, and the chrome
+offers them no Guide link.** This **reverses** 19E rung 7 (19F decision
+6, 2026-09-07), which returned every audience for such a viewer on the
+reasoning that an empty Guide serves nobody and the page carries no
+session data, so too much beat nothing. The reversal's reason is
+simpler: a stranger seeing **more** of the Guide than any role-holder
+does is backwards — a reviewer sees one section, a stranger saw all
+eleven.
+
+`/about` rather than a 404, because the chrome offers the link to
+everyone and refusing a link the app itself rendered is a worse answer
+than moving the reader somewhere useful; `/about` has carried the
+"signed in but no access" copy since 18R Item 6. The link-hiding is
+cosmetic and fails **open** — a page that does not stamp the flag still
+renders the link, and following it lands on `/about` anyway. Note that
+the participant chrome (`reviewer/_top_bar.html`) has never offered a
+Guide link at all, so the hiding only bites on `/about` and the operator
+pages.
 
 **This filter is not access control.** Nothing on `/guide` is
 privileged and the filter grants no one anything; it is an editorial

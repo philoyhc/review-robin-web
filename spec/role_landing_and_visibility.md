@@ -72,21 +72,36 @@ still lands on the lobby.
 `/guide` is one page addressed to every audience, filtered per card by
 `app/web/views/_guide.py`. Resolved audiences, recorded:
 
-| Signed-in as | Audiences resolved | Cards shown |
+| Signed-in as | Audiences resolved | Result |
 |---|---|---|
-| No role at all | **all four** | all eleven |
+| No role at all | **none** | **303 → `/about`**; no Guide link in the chrome |
+| Reviewee with no current grant | **none** | as above — indistinguishable from no role |
 | Operator | `operator` | the eight operator cards |
 | Sys-admin | `operator` | the eight operator cards |
 | Reviewer only | `reviewer` | For reviewers |
-| Reviewee only | `reviewee` | For reviewees |
+| Reviewee **with** a current grant | `reviewee` | For reviewees |
 | Observer only | `observer` | For observers |
 | Operator + reviewer | `operator`, `reviewer` | both sets — roles union |
 
-The no-role row is a deliberate fallback, not an accident: an empty
-Guide serves nobody, the page carries no session data, and a viewer the
-app cannot classify is usually about to be rostered. Reasoning in
-`spec/audience_and_identity_model.md` → "`/guide` — one surface,
-audience-filtered content".
+**The first row reverses 19E rung 7** (19F decision 6, 2026-09-07). Rung
+7 returned *all four* audiences for a viewer holding nothing, arguing
+that an empty Guide serves nobody and the page carries no session data,
+so too much beat nothing. The reversal's reason is simpler: it made no
+sense for a stranger to see **more** of the Guide than any role-holder
+does — a reviewer sees one section, a stranger saw all eleven.
+
+`/about` rather than a 404 because the chrome offers the Guide link to
+everyone, and refusing a link the app itself rendered is a worse answer
+than moving the reader somewhere useful; `/about` has been the "signed
+in but no access" landing since 18R Item 6. The chrome additionally
+stops rendering the link for such a viewer, so the bounce is a safety
+net rather than the normal path.
+
+**The reviewee rows are why `participants.disclosable_roles` had to
+become grant-aware first.** Without that, a reviewee granted nothing
+would still resolve the `reviewee` audience and be handed a "For
+reviewees" card — the disclosure 19F closes on `/me` and `/results`,
+relocated one page over rather than removed.
 
 ---
 
