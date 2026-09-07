@@ -166,16 +166,56 @@ def test_the_empty_lobby_leaves_only_the_two_ways_out_active(
     assert 'aria-label="Search sessions" disabled>' in flat
 
 
+def test_the_card_lays_its_four_steps_out_as_sub_cards(
+    client: TestClient,
+) -> None:
+    """Four tiles across, not the numbered list this was until 2026-09-07.
+
+    A list is read top-to-bottom and its last item is read least, and the
+    last of these steps — getting the data back out — is the one an
+    operator most wants reassurance about *before* starting. Four tiles of
+    equal width say "four ordinary stages"; a 1-2-3-4 list says the fourth
+    one is furthest away.
+    """
+    body = client.get("/operator/sessions").text
+    flat = " ".join(body.split())
+
+    assert '<div class="subcard-row">' in flat
+    assert flat.count('<div class="subcard">') == 4
+    # The list it replaced is gone, not merely hidden.
+    assert "<ol>" not in flat.split(CARD_MARKER, 1)[1].split("</div>")[0]
+
+
+# Each of the card's four sub-cards is a table-of-contents entry for one
+# Guide section. Until 2026-09-07 the two sides shared headings verbatim
+# and this test asserted one list against both pages. The four-sub-card
+# rewrite broke that: the card is read by someone who has not yet made a
+# session, the Guide by someone already inside one, and two steps ended up
+# worded for their own reader ("Set up a session" against "Create and set
+# up a session"; "Download responses" against the broader "Close, release,
+# and share results", whose Extract-data paragraph is what the tile means).
+#
+# What still has to hold is the pairing, so the mapping is written down
+# rather than dropped: rename a heading on either side without touching its
+# partner and this fails, which is the drift the test was always for.
+CARD_STEP_TO_GUIDE_SECTION = {
+    "Set up a session": "Create and set up a session",
+    "Prepare and launch": "Prepare and launch",
+    "Give reviewers access": "Give reviewers access",
+    "Download responses": "Close, release, and share results",
+}
+
+
 def test_the_card_reuses_the_guides_step_vocabulary(client: TestClient) -> None:
     """The card is a table of contents for the Guide, not a second account
-    of the workflow. If a Guide heading is reworded and the card is not,
-    the two drift into different vocabularies for the same step."""
+    of the workflow. Every step it names must still have a Guide section
+    behind it, and vice versa."""
     lobby = client.get("/operator/sessions").text
     guide = client.get("/guide").text
 
-    for phrase in ("Create and set", "Prepare and launch", "Give reviewers access"):
-        assert phrase in lobby, phrase
-        assert phrase in guide, phrase
+    for card_step, guide_section in CARD_STEP_TO_GUIDE_SECTION.items():
+        assert f"<h3>{card_step}</h3>" in lobby, card_step
+        assert f"<h2>{guide_section}</h2>" in guide, guide_section
 
 
 def test_an_all_archived_lobby_keeps_the_route_to_the_archive(

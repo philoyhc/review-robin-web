@@ -1088,6 +1088,45 @@
       /* Grid children default to ``min-width: auto``, which lets a wide
          table or a long unbroken string push a column past its share. */
       body.ui-v2 .card-columns > * { min-width: 0; }
+      /* Sub-card row — equal-width tiles laid across the inside of an
+         outer ``.card``. Unlike .card-columns (columns that stack their
+         own cards), every child here is one tile in a single row, and
+         they DO stretch to match: four parallel steps that ended at
+         four different heights would read as four different weights.
+         ``--n`` sets the count, defaulting to 4; ``minmax(0, 1fr)``
+         keeps a long word inside its tile instead of widening it.
+
+         Tile shape (1px subtle border, 6px radius, ``surface-card``
+         fill) is deliberately the same as .data-shape-card: a bordered
+         thing inside a bordered thing needs to read as subordinate to
+         it, and there is no reason for two answers to that. First
+         user: the lobby first-run card. */
+      body.ui-v2 .subcard-row {
+        display: grid;
+        grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+        gap: var(--space-3);
+        margin: var(--space-3) 0;
+      }
+      @media (max-width: 900px) {
+        body.ui-v2 .subcard-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 560px) {
+        body.ui-v2 .subcard-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      body.ui-v2 .subcard {
+        border: 1px solid var(--border-subtle);
+        border-radius: 6px;
+        background: var(--surface-card);
+        padding: var(--space-3);
+      }
+      /* The tile's own h3 already carries ui-v2's heading rule; only
+         the trailing paragraph margin needs clearing so the tile's
+         padding is the only bottom space. */
+      body.ui-v2 .subcard > :last-child { margin-bottom: 0; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
