@@ -656,15 +656,18 @@ screenshot itself has not got — without one a white-backed capture
 bleeds into the page and the reader cannot see where the app stops.
 
 The captures arrive at **two scales**: six 1× shots at ~830px and six 2×
-at ~1680px. Unmodified, both fill the prose column, so the 1× ones are
-blown up past their own pixels while the 2× ones are still shrinking —
-the same UI at two apparent scales on one page. `.guide-figure-narrow`
-renders the 1× family at a flat **664px** (80% of their natural ~830).
-One shared number rather than 80% of each image's own width: they differ
-by at most 13px, and a consistent width across the six reads better than
-six near-identical ones that are not. It sets `width`, not `max-width` —
-only `width` shrinks an image below its natural size — and the base
-`max-width: 100%` still takes over on a narrower column.
+at ~1680px. Left to fill the prose column they read at two different
+apparent scales, so each family gets a **fixed display width** — the base
+rule pins the wide six at **1200px**, `.guide-figure-narrow` pins the
+narrow six at **600px**. Both are author's numbers, set from looking at
+the rendered page rather than derived from the pixel dimensions; treat
+them as presentation, not as a rule with a formula behind it.
+
+They set `width`, not `max-width` — only `width` pins an image below its
+natural size — and the base `max-width: 100%` still takes over on a
+narrower column, so neither number can cause a horizontal scroll. The
+modifier rule must stay **after** the base one: equal specificity means
+source order is what makes it win.
 
 Which family a capture belongs to is asserted from its **actual pixel
 width** in `tests/integration/test_guide_screencaps.py`, not from a

@@ -1172,26 +1172,27 @@
       }
       body.ui-v2 .guide-figure img {
         display: block;
+        width: 1200px;
         max-width: 100%;
         height: auto;
         border: 1px solid var(--border-subtle);
         border-radius: 6px;
       }
       /* The captures arrive in two families — six at ~830px and six at
-         ~1680px, 1x and 2x shots of the same app. Left alone, both fill
-         the prose column, so the 1x ones are blown up past their pixels
-         while the 2x ones are still shrinking: the same UI at two
-         apparent scales on one page.
+         ~1680px, 1x and 2x shots of the same app. Left to fill the prose
+         column they read at two different apparent scales, so each
+         family gets a fixed display width: 1200px above, 600px here.
+         Both are author's numbers, set from looking at the rendered page
+         rather than derived from the pixel dimensions.
 
-         The narrow family renders at 664px, 80% of its natural ~830.
-         One shared number rather than 80% of each image's own width:
-         they differ by 13px at most, and a consistent width across the
-         six reads better than six near-identical ones that aren't.
-         `width` (not `max-width`) is what shrinks an image below its
-         natural size; `max-width: 100%` above still takes over on a
-         column narrower than 664px. */
+         `width` (not `max-width`) is what pins an image below its
+         natural size; the `max-width: 100%` above still takes over on a
+         narrower column, so neither number causes a horizontal scroll.
+
+         This rule must stay *after* the base one: the two selectors have
+         equal specificity, so order is what makes the modifier win. */
       body.ui-v2 .guide-figure-narrow img {
-        width: 664px;
+        width: 600px;
       }
       /* One blank line above each in-card heading. The Guide's cards run
          long enough that its `<h3>`s are section breaks rather than
