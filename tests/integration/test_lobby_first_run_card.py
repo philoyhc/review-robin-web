@@ -115,9 +115,55 @@ def test_archiving_every_session_brings_the_card_back(
 
     body = client.get("/operator/sessions").text
     assert CARD_MARKER in body
-    # The stats pills — including the "N archived" count — live in the
-    # populated branch, so they vanish along with the table.
-    assert "1 archived" not in body
+    # The stats pills stay. They used to live inside the populated branch
+    # and vanished with the table, which is the Known gap
+    # `spec/sessions_overview.md` recorded: an operator who archived
+    # everything lost both the count and the route to it. The cards now
+    # render in every state, so the count survives...
+    assert "1 archived" in body
+    # ...and so does the way back to it.
+    assert 'href="/operator/sessions/archived"' in body
+
+
+def test_the_empty_lobby_still_shows_both_cards(client: TestClient) -> None:
+    """Standardized 2026-09-07: Sessions + Search render in every state, so
+    the lobby has one shape an operator learns rather than two. Before this
+    the whole row lived inside the populated branch and simply disappeared."""
+    body = client.get("/operator/sessions").text
+
+    assert 'class="card sessions-lobby-card"' in body
+    assert 'class="card sessions-action-card"' in body
+    assert "0 sessions" in body
+    assert CARD_MARKER in body  # the first-run card sits below them
+
+
+def test_the_empty_lobby_leaves_only_the_two_ways_out_active(
+    client: TestClient,
+) -> None:
+    """Search and Cancel have nothing to act on, so they go inert. The three
+    navigations stay live: `Add new session` and `Rehydrate` are how an
+    operator gets *out* of an empty lobby, and `Go to Archive` is always
+    active — an empty archive page beats a dead control, and it is one
+    fewer rule to reason about.
+
+    Inert controls are `<span>`s, not disabled anchors: `a.btn.disabled`
+    dims and changes the cursor but does not set `pointer-events: none`, so
+    a disabled anchor would still navigate.
+    """
+    body = client.get("/operator/sessions").text
+
+    assert 'href="/operator/sessions/new">Add new session</a>' in body
+    assert 'href="/operator/sessions/rehydrate"' in body
+    assert 'href="/operator/sessions/archived"' in body
+
+    # Whitespace-normalised: the template wraps these attributes, and
+    # re-wrapping should not break the test.
+    flat = " ".join(body.split())
+    assert (
+        '<span class="btn secondary disabled" aria-disabled="true">'
+        "Cancel</span>" in flat
+    )
+    assert 'aria-label="Search sessions" disabled>' in flat
 
 
 def test_the_card_reuses_the_guides_step_vocabulary(client: TestClient) -> None:
@@ -130,3 +176,39 @@ def test_the_card_reuses_the_guides_step_vocabulary(client: TestClient) -> None:
     for phrase in ("Create and set", "Prepare and launch", "Give reviewers access"):
         assert phrase in lobby, phrase
         assert phrase in guide, phrase
+
+
+def test_an_all_archived_lobby_keeps_the_route_to_the_archive(
+    client: TestClient, db: Session
+) -> None:
+    """The third lobby state, and the one that had no coverage: no live
+    sessions, but archived ones exist.
+
+    It is the state the Known gap was about. `Go to Archive` used to live
+    inside the populated branch, so archiving the last session took away
+    both the `N archived` count and the only in-app route to
+    `/operator/sessions/archived` — the operator's sessions were still
+    there and unreachable. Search and Cancel stay inert (there is nothing
+    live to search), but the way back to the archive does not.
+    """
+    _create_session(client, "Only One", "only-1")
+    session_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "only-1")
+    ).scalar_one()
+    client.post(
+        "/operator/sessions/bulk-archive",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+    db.expire_all()
+
+    flat = " ".join(client.get("/operator/sessions").text.split())
+
+    assert "1 archived" in flat
+    assert 'href="/operator/sessions/archived">Go to Archive</a>' in flat
+    # Still nothing live to search.
+    assert (
+        '<span class="btn secondary disabled" aria-disabled="true">'
+        "Cancel</span>" in flat
+    )
+    assert 'aria-label="Search sessions" disabled>' in flat

@@ -106,15 +106,55 @@ never had a session". An operator who archives everything sees the
 card again, which is intended: they are back at the start. No
 "has-ever-had" state is tracked.
 
-The header's secondary "Create new session" button is suppressed
-in this state so the single primary CTA isn't duplicated.
+**Superseded 2026-09-07 — the Search card's `Add new session` is no
+longer suppressed here.** Standardising the lobby made both cards render
+in every state, and that button stays active in the empty one on
+purpose: with `Rehydrate`, it is one of the two ways *out* of an empty
+lobby. So the page offers the same destination twice, at different
+weights — the first-run card's `.btn-cta` and the Search card's Primary.
+The weight difference is what stops them competing; the old rule assumed
+they would be the same size.
 
-> **Known gap.** `Go to Archive` lives in the Search card, inside
-> the populated branch, so an operator who archives *every*
-> session loses their only in-app route to
-> `/operator/sessions/archived` — and the `N archived` stats pill
-> disappears with it. Not addressed by Segment 19E rung 3, which
-> is scoped to the card itself.
+> **Known gap — closed 2026-09-07 by the standardisation below.**
+> `Go to Archive` used to live in the Search card *inside the populated
+> branch*, so an operator who archived every session lost their only
+> in-app route to `/operator/sessions/archived`, and the `N archived`
+> stats pill disappeared with it. Their sessions were still there and
+> unreachable. Both cards now render in every state and the button is
+> unconditional, so the count and the route survive.
+> `test_lobby_first_run_card.py::test_an_all_archived_lobby_keeps_the_route_to_the_archive`
+> pins the state that used to strand them.
+
+## Lobby states — one shape, three fillings
+
+**Standardised 2026-09-07.** The `Sessions` and `Search` cards render on
+**every** lobby, so an operator learns one page rather than two. Before
+this the whole two-card row sat inside the populated branch and vanished
+with the table. What varies is which Search controls are live:
+
+| Lobby holds | `Sessions` card | Search + Cancel | `Add new session` · `Rehydrate` · `Go to Archive` |
+|---|---|---|---|
+| Live sessions (± archived) | counts + tag filter | **active** | active |
+| Nothing at all | counts, all `0` | **inert** | active |
+| Only archived sessions | counts, `N archived` | **inert** | active |
+
+The last two rows are the same shape by design — there is nothing live
+to search in either — and they differ in what the counts say and in
+whether `Go to Archive` leads anywhere populated. `Go to Archive` is
+**always active**, including on a lobby holding nothing: an empty
+archive page is a better answer than a dead control, and it is one fewer
+rule to reason about.
+
+**Inert controls render as `<span class="btn … disabled"
+aria-disabled="true">`, not disabled anchors.** `a.btn.disabled` in
+`base.html` sets `opacity: 0.5` and `cursor: not-allowed` but **not**
+`pointer-events: none`, so a disabled anchor still navigates. A span
+cannot be clicked or focused. Same shape as the reserved
+`.nav-tab disabled` tabs in `spec/ui_elements.md` §6.
+
+The first-run card still renders **below** the two cards whenever there
+are no live sessions — including the only-archived case, per the rung 3
+trigger (zero non-archived, not "never had one").
 
 ## Sessions table
 
@@ -190,9 +230,12 @@ Post Segment 18A the lobby carries all three:
   Client-side filtering against each row's `data-tags`.
 - **Search.** A Search card with a free-text input matching name,
   code, or tag. Its right-flushed `.sessions-action-buttons` row
-  carries **Cancel**, **Add new** (`/operator/sessions/new`),
-  **Rehydrate** (`/operator/sessions/rehydrate`), and **Go to
-  Archive** (`/operator/sessions/archived`). **Rehydrate** rebuilds a
+  carries **Cancel**, **Add new session**
+  (`/operator/sessions/new`; renamed from `Add new` 2026-09-07 —
+  the lobby is the one page where "new *what*" is not obvious from
+  context), **Rehydrate** (`/operator/sessions/rehydrate`), and **Go
+  to Archive** (`/operator/sessions/archived`). Which of these are
+  live depends on the lobby state — see "Lobby states" above. **Rehydrate** rebuilds a
   live draft session from a complete set of extract CSV files — see
   `spec/rehydrate.md` (Segment 18P Group 2).
 

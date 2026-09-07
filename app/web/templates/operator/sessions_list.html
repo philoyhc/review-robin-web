@@ -6,48 +6,77 @@
 
 {% block content %}
   <h1>Sessions Lobby</h1>
-  {% if sessions %}
-    <div class="sessions-lobby-row">
-      <div class="card sessions-lobby-card">
-        <h2>Sessions</h2>
-        <div class="sessions-lobby-pills">
-          <span class="pill pill-count">{{ lobby_stats.total }} sessions</span>
-          <span class="pill pill-lifecycle-draft">{{ lobby_stats.draft }} draft</span>
-          <span class="pill pill-lifecycle-ready">{{ lobby_stats.activated }} activated</span>
-          <span class="pill pill-lifecycle-archived">{{ lobby_stats.archived }} archived</span>
-        </div>
-        {% if lobby_tags %}
-          <div class="sessions-tag-filter" id="sessions-tag-filter">
-            <span class="sessions-tag-filter-label">Show sessions tagged with:</span>
-            {% for tag in lobby_tags %}
-              <span class="pill pill-count tag-chip" data-tag-chip="{{ tag }}"
-                    role="button" tabindex="0">{{ tag }}</span>
-            {% endfor %}
-            <span class="pill tag-mode-chip" data-tag-mode
-                  role="button" tabindex="0">OR</span>
-            <span class="pill pill-tag-clear" data-tag-clear
-                  role="button" tabindex="0">Clear</span>
-          </div>
-        {% endif %}
-      </div>
+  {# The Sessions + Search cards render in every lobby state, so the page
+     has one shape an operator can learn rather than two. What varies is
+     which Search controls are live:
 
-      <div class="card sessions-action-card">
-        <h2>Search</h2>
-        <input type="text" class="sessions-search-input"
-               placeholder="Search by name, code, or tag"
-               aria-label="Search sessions">
-        <div class="sessions-action-buttons">
-          <button type="button" class="btn secondary"
-                  data-search-cancel>Cancel</button>
-          <a class="btn" href="/operator/sessions/new">Add new</a>
-          <a class="btn secondary"
-             href="/operator/sessions/rehydrate">Rehydrate</a>
-          <a class="btn secondary"
-             href="/operator/sessions/archived">Go to Archive</a>
-        </div>
+     - **Live sessions** — everything active, as before.
+     - **No live sessions** — Search and Cancel go inert (there is nothing
+       to search), while `Add new session` and `Rehydrate` stay active
+       because both are how an operator gets *out* of an empty lobby.
+     - **Go to Archive is always active**, in every state, including a
+       lobby holding nothing at all — an empty archive page is a better
+       answer than a dead control, and it is one fewer rule to reason
+       about. This is what closes the Known gap
+       `spec/sessions_overview.md` recorded: the button used to live inside
+       the populated branch, so an operator who archived *every* session
+       lost their only in-app route to `/operator/sessions/archived`, and
+       the `N archived` pill vanished with it.
+
+     Inert controls render as `<span class="btn ... disabled">` rather than
+     a disabled anchor: `a.btn.disabled` in base.html only dims and changes
+     the cursor — it does not set `pointer-events: none` — so a disabled
+     anchor would still navigate. A span cannot be clicked or focused. Same
+     shape as the reserved `.nav-tab disabled` tabs in
+     `spec/ui_elements.md` section 6. #}
+  {% set has_live = sessions | length > 0 %}
+  <div class="sessions-lobby-row">
+    <div class="card sessions-lobby-card">
+      <h2>Sessions</h2>
+      <div class="sessions-lobby-pills">
+        <span class="pill pill-count">{{ lobby_stats.total }} sessions</span>
+        <span class="pill pill-lifecycle-draft">{{ lobby_stats.draft }} draft</span>
+        <span class="pill pill-lifecycle-ready">{{ lobby_stats.activated }} activated</span>
+        <span class="pill pill-lifecycle-archived">{{ lobby_stats.archived }} archived</span>
       </div>
+      {% if lobby_tags %}
+        <div class="sessions-tag-filter" id="sessions-tag-filter">
+          <span class="sessions-tag-filter-label">Show sessions tagged with:</span>
+          {% for tag in lobby_tags %}
+            <span class="pill pill-count tag-chip" data-tag-chip="{{ tag }}"
+                  role="button" tabindex="0">{{ tag }}</span>
+          {% endfor %}
+          <span class="pill tag-mode-chip" data-tag-mode
+                role="button" tabindex="0">OR</span>
+          <span class="pill pill-tag-clear" data-tag-clear
+                role="button" tabindex="0">Clear</span>
+        </div>
+      {% endif %}
     </div>
 
+    <div class="card sessions-action-card">
+      <h2>Search</h2>
+      <input type="text" class="sessions-search-input"
+             placeholder="Search by name, code, or tag"
+             aria-label="Search sessions"
+             {% if not has_live %}disabled{% endif %}>
+      <div class="sessions-action-buttons">
+        {% if has_live %}
+          <button type="button" class="btn secondary"
+                  data-search-cancel>Cancel</button>
+        {% else %}
+          <span class="btn secondary disabled" aria-disabled="true">Cancel</span>
+        {% endif %}
+        <a class="btn" href="/operator/sessions/new">Add new session</a>
+        <a class="btn secondary"
+           href="/operator/sessions/rehydrate">Rehydrate</a>
+        <a class="btn secondary"
+           href="/operator/sessions/archived">Go to Archive</a>
+      </div>
+    </div>
+  </div>
+
+  {% if sessions %}
     <form method="post" action="/operator/sessions/bulk-delete"
           id="sessions-list-form">
       <div class="card">
