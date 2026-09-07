@@ -51,8 +51,13 @@
     {# Two numbers, not one (2026-09-07): the count alone reported an
        instrument with no visible response field exactly like a finished
        one, so the pill read "done" for a session that could not be
-       answered. Second number is `instruments.is_configured` — a visible
+       answered. `configured` is `instruments.is_configured` — a visible
        response field plus all three Band 1 links touched.
+
+       Order is done-over-total, matching the Responses pill in this same
+       row (`3 drafts / 5`). It shipped total-first for a few hours and
+       read backwards as a fraction: `5 / 3` is not a proportion anyone
+       can complete.
 
        Tint follows the rest of the row: info (blue) only when every
        instrument counted is set up, warning (amber) while any is not.
@@ -65,11 +70,11 @@
     {% if not status_pills.instrument_count %}
       <span class="pill pill-warning">none</span>
     {% elif status_pills.instruments_configured == status_pills.instrument_count %}
-      <span class="pill pill-info">{{ status_pills.instrument_count }} /
-        {{ status_pills.instruments_configured }}</span>
+      <span class="pill pill-info">{{ status_pills.instruments_configured }} /
+        {{ status_pills.instrument_count }}</span>
     {% else %}
-      <span class="pill pill-warning">{{ status_pills.instrument_count }} /
-        {{ status_pills.instruments_configured }}</span>
+      <span class="pill pill-warning">{{ status_pills.instruments_configured }} /
+        {{ status_pills.instrument_count }}</span>
     {% endif %}
     &middot;
     Email Template:
