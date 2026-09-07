@@ -1,6 +1,8 @@
+import pathlib
 import re
 
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
@@ -52,6 +54,18 @@ def create_app() -> FastAPI:
             extra={"event": "super_admin.unconfigured"},
         )
     app = FastAPI(title="Review Robin Web")
+    # The app's first and only static mount. Everything visual has so far
+    # been inline CSS in `base.html` with no image anywhere in the repo,
+    # which is why no mount existed; the Guide's screencaps are the first
+    # asset that cannot be inlined at a sane size. Kept narrow on purpose:
+    # `app/web/static/` ships inside the deploy artefact (which carries
+    # `app/` wholesale), and a mount that serves one directory of PNGs is
+    # a smaller commitment than a general asset pipeline.
+    app.mount(
+        "/static",
+        StaticFiles(directory=pathlib.Path(__file__).parent / "web" / "static"),
+        name="static",
+    )
     app.include_router(health_router)
     app.include_router(about_router)
     app.include_router(guide_router)

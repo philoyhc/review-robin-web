@@ -96,6 +96,19 @@ iterate over (`_setup.py`, `_instruments.py`, `_validate.py`,
 anything in between (e.g. computing a status label from instrument
 state) lives here.
 
+**Static assets** — `app/web/static/`, served by the one `StaticFiles`
+mount at `/static` (`app/main.py`). Added 2026-09-07 for the Guide's
+screencaps, which are the first assets that cannot be inlined at a sane
+size; before them the app shipped no image at all and needed no mount.
+It is a directory of files, not an asset pipeline: CSS remains inline in
+`base.html` per the templating conventions, and nothing here is compiled,
+fingerprinted, or versioned. `app/` ships wholesale in the deploy
+artefact (`.github/workflows/deploy_nus.yml`), so this directory needs no
+workflow change — and equally, anything left in it is shipped.
+`tests/integration/test_guide_screencaps.py` fails both ways: on a file a
+template references but which is not committed, and on a committed file
+no template references.
+
 ### Route conventions
 
 Operator + participant **mutations** follow one house style: a `POST`

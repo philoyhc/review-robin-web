@@ -228,26 +228,23 @@ def test_the_four_steps_are_separated_by_arrows(client: TestClient) -> None:
 
 
 # Each of the card's four sub-cards is a table-of-contents entry for one
-# Guide section. Until 2026-09-07 the two sides shared headings verbatim
-# and this test asserted one list against both pages. The four-sub-card
-# rewrite broke that: the card is read by someone who has not yet made a
-# session, the Guide by someone already inside one, and two steps ended up
-# worded for their own reader ("Set up a session" against "Create and set
-# up a session"; "Download responses" against the broader "Close, release,
-# and share results", whose Extract-data paragraph is what the tile means).
+# Guide section. The two sides shared headings verbatim until the
+# four-sub-card rewrite (2026-09-07) pulled three of them apart; the Guide
+# rewrite later the same day pulled them back, because the author's own
+# draft of the Guide reached for the card's vocabulary unprompted. Three
+# of four now match exactly.
 #
-# What still has to hold is the pairing, so the mapping is written down
-# rather than dropped: rename a heading on either side without touching its
-# partner and this fails, which is the drift the test was always for.
+# The mapping stays written down rather than collapsing to "these strings
+# are equal", because the one remaining divergence is deliberate: the card
+# is read by someone who has not yet made a session, so its tile says
+# "Set up a session", while the Guide section covers creating one as well.
+# Rename a heading on either side without touching its partner and this
+# fails, which is the drift the test was always for.
 CARD_STEP_TO_GUIDE_SECTION = {
     "Set up a session": "Create and set up a session",
-    # Renamed card-side 2026-09-07 ("launch" -> "activate"): `Activate` is
-    # the lifecycle transition's own name, so the tile now uses the word the
-    # operator will meet on the button. The Guide section still says
-    # "launch"; aligning it is a separate edit to a separate page.
-    "Prepare and activate": "Prepare and launch",
+    "Prepare and activate": "Prepare and activate",
     "Give reviewers access": "Give reviewers access",
-    "Download responses": "Close, release, and share results",
+    "Download responses": "Download responses",
 }
 
 

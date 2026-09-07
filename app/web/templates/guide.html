@@ -49,80 +49,131 @@
   {% if "create_and_set_up" in visible_sections %}
   <div class="card" id="guide-create_and_set_up">
     <h2>Create and set up a session</h2>
+
+    <h3>Create a session</h3>
     <p>
-      On the Sessions lobby, choose <strong>Add new</strong>, give the session a
-      name and a short unique code, optionally set a deadline and description,
-      and save. New sessions start in <strong>Draft</strong>: nothing is live,
-      and everything is freely editable.
+      On the Sessions lobby, choose <strong>Add new session</strong>.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/lobby-add-new-session.png"
+           alt="The Sessions lobby's Search card, with the Add new session button.">
+    </figure>
+    <p>
+      Give the session a name and a short unique code, optionally set a
+      deadline and description.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/create-session-details.png"
+           alt="The Create session form: name, code, description, and start
+                and end date/time fields.">
+    </figure>
+    <p>
+      Indicate whether you will need the Relationships and Observers tabs
+      and pages. Note that sessions do not need these to run (optional).
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/create-session-optional-tabs.png"
+           alt="Toggles for the optional Relationships and Observers tabs.">
+    </figure>
+    <p>
+      If you already have the CSV files for the reviewers and reviewees (or
+      Relationships, Observers, and Session settings), you may upload them in
+      advance using Quick setup.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/create-session-quick-setup.png"
+           alt="The Quick setup card on the Create session page, with a file
+                input for each roster CSV.">
+    </figure>
+    <p>
+      Click on <strong>Create Session</strong> to create the session.
+    </p>
+
+    <h3>Finding your way around</h3>
+    <p>
+      Use the tabs at the top of the session pages to navigate to different
+      pages to fully set up the session, or to operate the review. The status
+      bar below the tabs provides a summary of the session's status.
     </p>
     <p>
-      The <strong>Workflow</strong> card at the top of every session page is the
-      control panel — it always shows the most useful next action for the
-      session's current state.
+      In the screen cap below, the status bar shows that this session is in
+      Draft mode, that 154 Reviewers and 154 Reviewees have been added to the
+      session, and that there is 1 instrument, but it's not set up yet, hence
+      <strong>0 / 1</strong>. The <strong>Workflow</strong> card provides
+      guidance on what needs to be done next — here, Reviewers and Reviewees
+      have been populated, but the review's Instruments are not ready.
     </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/session-home-chrome-and-workflow.png"
+           alt="Session Home: the two-row Setup and Operations tab strip, the
+                status bar reading Draft, 154 reviewers, 154 reviewees,
+                Instruments 0 / 1, and the Workflow card with its setup
+                checklist.">
+    </figure>
 
     <h3>Reviewers and reviewees</h3>
     <p>
-      <strong>Use CSV uploads</strong> for anything beyond a handful of people.
-      Each roster CSV needs a name column and an email column, plus three tag
-      columns. Use the tags for attributes that drive rule-based assignment —
-      a tutor, a tutorial group — so that, say, each student reviews only
-      their own group.
+      Every session must have at least one reviewer and at least one reviewee;
+      relationships and observers are optional. You can populate a session
+      using CSV uploads or add them individually on the relevant pages. Use
+      CSV uploads for anything beyond a handful of people.
     </p>
     <p>
-      Headers are <code>ReviewerName</code>, <code>ReviewerEmail</code>,
-      <code>ReviewerTag1</code>–<code>3</code> for reviewers, and
-      <code>RevieweeName</code>, <code>RevieweeEmail</code>,
-      <code>RevieweeTag1</code>–<code>3</code> for reviewees. Friendly tag
-      labels can be set later on the Reviewers / Reviewees pages, or keyed
-      into the header after a period — <code>ReviewerTag1.Tutor</code>, with
-      the values still in the column. Leaving a tag header bare on a later
-      re-upload clears the label.
+      CSV rosters can be uploaded via the <strong>Quick Setup</strong> card
+      (when creating the session or on the Session home page) or via the
+      individual upload cards on each of the Reviewers, Reviewees,
+      Relationships, and Observers pages. The files should be in UTF-8 with
+      max 5000 rows.
     </p>
-    {# 19E rung 4 — the starter templates. Placed here rather than at the top
-       of the card because this is the paragraph that explains the columns
-       they contain: the download is the worked example of the sentence above
-       it. #}
+    <figure class="guide-figure">
+      <img src="/static/guide/roster-upload-card.png"
+           alt="A roster Upload card listing the required and optional CSV
+                columns above a file input.">
+    </figure>
+    {# 19E rung 4 — the starter templates. This is the "downloaded here"
+       sentence from the author's draft, with the link resolved to the route
+       that serves the zip. #}
     <p>
-      <a href="/templates/starter.zip">Download setup templates</a> — a zip of
-      <code>reviewers.csv</code>, <code>reviewees.csv</code>,
-      <code>relationships.csv</code> and <code>observers.csv</code>, each with
-      the correct headers and one example row to replace. Fill them in before
-      you create the session and upload them with Quick Setup as you go.
+      The required and optional columns are listed in each Upload card. A full
+      set of <a href="/templates/starter.zip">template CSV files with mock data
+      can be downloaded here</a> — <code>reviewers.csv</code>,
+      <code>reviewees.csv</code>, <code>relationships.csv</code> and
+      <code>observers.csv</code>, each with the correct headers and example
+      rows to replace.
     </p>
     <p>
-      They carry one worked scenario: two students in tutorial group
-      <code>TW01</code> reviewing each other, their tutor as observer. The tag
-      columns show the naming grammar in use —
-      <code>ReviewerTag1.Tutor</code> and <code>ReviewerTag2.Group</code> on
-      the rosters, <code>PairContextTag1.Interest Group</code> on
-      relationships — with the third tag left bare, since labelling is per
-      column and optional.
+      Apart from the CSV upload, you can also add or edit the friendly tag
+      labels through the Reviewers, Reviewees and Relationships pages:
     </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/reviewer-tag-labels.png"
+           alt="The Reviewer tag labels editor, with Tag 1, Tag 2 and Tag 3
+                renamed to Tutor, Group and Team.">
+    </figure>
     <p class="muted">
-      Because those labels are in the header, uploading a template unedited
-      renames that session's tag columns to <em>Tutor</em> and <em>Group</em>.
-      Change them to your own vocabulary along with the rows. The same rule
-      works in reverse, so if a session already has the names you want, take
-      its roster from its own Setup page rather than starting from this
-      template — a bare tag header on re-upload clears the name.
+      Note that uploading a template with a bare tag header will clear the
+      existing friendly tag label. The labels travel in the CSV header after a
+      period — <code>ReviewerTag1.Tutor</code>, with the values still in the
+      column — so the header is the one place a label is carried, in both
+      directions.
+    </p>
+    <p>
+      The app uses email addresses to identify persons in the session. This
+      means that each person (reviewer, reviewee, observer) should be uniquely
+      associated with one email address. The app will fail to validate a
+      session if the same email address is associated with more than one name.
+      The converse, however, is fine, since two different persons (identified
+      by distinct email addresses) may have the same name.
     </p>
     <div class="card rs-help-card">
-      <strong>Email addresses must be the ones people sign in with — their
-      institutional MS365 accounts.</strong>
-      The app matches each person to their roster row by their signed-in
-      address, so a mismatch means they never see their review. This is the
-      single most important setup step — and it is the app's
-      <em>identifier</em> for a person, not an address the app sends mail to.
+      <strong>For review participants who need to access the app, their email
+      addresses must be the ones tied to their institutional MS365
+      accounts.</strong>
+      That is typically reviewers and observers — but reviewees too, if you
+      need them to see responses. The app matches each person to their roster
+      row by their signed-in address, so a mismatch means they never see their
+      review.
     </div>
-    <p>
-      The <strong>Quick Setup</strong> card on Session Home takes the roster
-      CSVs (and Relationships and Settings, if you use them) in one place.
-      Working page by page instead, each Setup page has its own upload card.
-      Only a few people? Type them straight in. Either way reviewers and
-      reviewees may overlap, and any row can be marked <strong>inactive</strong>
-      to exclude someone without deleting them.
-    </p>
 
     <h3>Build the form (Instruments)</h3>
     <p>
@@ -130,6 +181,9 @@
       instrument carries an assignment rule, <strong>response fields</strong>
       (the questions reviewers answer) and <strong>display fields</strong>
       (read-only context shown to the reviewer, such as the reviewee's name).
+      An instrument counts as set up once it has at least one visible response
+      field and all three assignment links have been set — which is what the
+      status bar's <strong>Instruments</strong> pill counts.
     </p>
 
     <h3>Who reviews whom</h3>
@@ -144,38 +198,78 @@
     </p>
     <p>
       Pairs are not generated here — that happens when you Prepare the session.
-      Afterwards the <strong>Assignments</strong> page shows the resulting
-      pairs per instrument, where you can spot-check coverage and use the
-      Self-reviews toggle.
     </p>
 
     <h3>Optional: visibility, relationships, observers</h3>
     <p>
       Per instrument you can set who sees responses and in what form — raw,
-      anonymised, or summarised — for reviewers, reviewees and observers. Turn
-      on <strong>Relationships</strong> if your review needs per-pairing
-      context, and <strong>Observers</strong> if some people should view
-      results without reviewing. Both are off by default.
+      <code>Anonymized</code>, or <code>Summarized</code> — for reviewers,
+      reviewees and observers. Turn on <strong>Relationships</strong> if your
+      review needs per-pairing context, and <strong>Observers</strong> if some
+      people should view results without reviewing. Both are off by default.
     </p>
   </div>
   {% endif %}
 
   {% if "prepare_and_launch" in visible_sections %}
   <div class="card" id="guide-prepare_and_launch">
-    <h2>Prepare and launch</h2>
-    <ol>
-      <li>On Session Home, use the Workflow card's <strong>Prepare
-        session</strong>. This generates the assignment pairs from every
-        instrument's rule <em>and</em> runs a pre-flight check. Nothing goes
-        live yet.</li>
-      <li>Fix anything blocking; warnings are fine to proceed past. The session
-        moves to <strong>Validated</strong>.</li>
-      <li>When you are ready, <strong>Activate</strong>. Instruments open for
-        responses.</li>
-    </ol>
+    <h2>Prepare and activate</h2>
     <p>
-      Before launching, the <strong>Previews</strong> page shows the exact form
-      a specific reviewer will see — a good final sanity check.
+      Generate the assignment pairs using the <strong>Prepare session</strong>
+      button in the Workflow card:
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/workflow-prepare-session.png"
+           alt="The Workflow card offering the Prepare session button.">
+    </figure>
+    <p>
+      If validation passed, the Workflow card will allow you to create the
+      invites and activate the session. Warnings and blocking issues will be
+      shown on the right side of the Workflow card; more details can also be
+      found on the <strong>Validate</strong> page.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/workflow-after-validation.png"
+           alt="The Workflow card after a successful validation, listing
+                warnings alongside the create-invites and activate actions.">
+    </figure>
+    <p>
+      You can use the <strong>Assignments</strong> page to inspect the
+      assignment pairs, or to deactivate self-review assignments (i.e.,
+      assignment pairs where the reviewer is the same as the reviewee). Note
+      that doing so will not delete those assignment pairs but only make them
+      inactive.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/assignments-page.png"
+           alt="The Assignments page listing generated reviewer-reviewee
+                pairs with the self-reviews toggle.">
+    </figure>
+    <p>
+      You can use the <strong>Previews</strong> page to check what a selected
+      reviewer will see on their side. Note that the preview is generated
+      using the same underlying engine that creates the form for that
+      reviewer.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/previews-page.png"
+           alt="The Previews page with a reviewer selected.">
+    </figure>
+    <p>
+      Activate the session when you are satisfied that everything is ok using
+      the Workflow card. At that point, the Workflow card will give you the
+      option to revert the session to draft mode, or to close the session
+      manually (when the responses have been collected).
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/workflow-activated.png"
+           alt="The Workflow card on an activated session, offering revert to
+                draft and close.">
+    </figure>
+    <p>
+      If you set a Start and End date/time when setting up the session, the
+      app will prepare and activate the session at Start and close the session
+      at End.
     </p>
   </div>
   {% endif %}
@@ -184,24 +278,20 @@
   <div class="card" id="guide-give_access">
     <h2>Give reviewers access</h2>
     <p>
-      The app does not send invitation emails yet, and magic links are not
-      switched on — and you need neither to run a review. Access is based on
-      the roster, so you share the app's address yourself and people sign in.
+      As the email function is not implemented yet, you can notify the
+      reviewers by sharing the app's address. Reviewers will use their MS365
+      account to sign in to see the reviews that apply to them — no invitation
+      or code needed.
     </p>
     <ol>
-      <li>Make sure the session is <strong>Activated</strong> and your reviewers
-        are on the roster with the institutional MS365 addresses they will sign
-        in with.</li>
+      <li>Make sure the session is <strong>Activated</strong> and your
+        reviewers are on the roster with the institutional MS365 addresses
+        they will sign in with.</li>
       <li>Broadcast the app's address through your own channel — an LMS
         announcement, an email to the class, a course page.</li>
       <li>Each person signs in and immediately sees the reviews that apply to
-        them. No invitation or code needed.</li>
+        them.</li>
     </ol>
-    <p class="muted">
-      Share the link, they sign in, they see their reviews. This is separate
-      from the addresses that <em>identify</em> people on the roster, which are
-      essential.
-    </p>
   </div>
   {% endif %}
 
@@ -209,31 +299,32 @@
   <div class="card" id="guide-watch_progress">
     <h2>Watch progress</h2>
     <p>
-      The <strong>Invitations</strong> page shows, per reviewer, how far
-      through the form each person is. Its invitation and reminder columns sit
-      idle until email sending is switched on. The
-      <strong>Responses</strong> page flips the view: per reviewee, how much
-      coverage they have received.
+      The <strong>Invitations</strong> page monitors the reviewers, showing
+      who has started or completed their reviews. (Note that the reminder
+      function, being dependent upon email, is also currently not implemented
+      yet.)
+    </p>
+    <p>
+      The <strong>Responses</strong> page flips the view to the reviewees, to
+      reflect how many responses each has received.
     </p>
   </div>
   {% endif %}
 
   {% if "close_and_share" in visible_sections %}
   <div class="card" id="guide-close_and_share">
-    <h2>Close, release, and share results</h2>
-    <ol>
-      <li>Use the Workflow card to <strong>Close</strong> the session, which
-        stops new responses, and then <strong>Release responses</strong> when
-        you are ready.</li>
-      <li>Reviewees see their results on their own page, in the form you
-        allowed.</li>
-      <li>Observers, if enabled, see collated results on their collation
-        page.</li>
-    </ol>
+    <h2>Download responses</h2>
     <p>
-      The <strong>Extract data</strong> page downloads CSVs of everything —
-      reviewers, reviewees, relationships, settings, and the full responses
-      table — for analysis or archiving.
+      At the close of the session, download the collected data using the
+      <strong>Extract data</strong> page. You can also use the same page to
+      extract a complete set of CSV files that sets up the session.
+    </p>
+    <p>
+      Before that, use the Workflow card to <strong>Close</strong> the
+      session, which stops new responses, and then <strong>Release
+      responses</strong> when you are ready. Reviewees then see their results
+      on their own page, in the form you allowed, and observers, if enabled,
+      see collated results on their collation page.
     </p>
   </div>
   {% endif %}

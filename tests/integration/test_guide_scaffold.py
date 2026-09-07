@@ -34,10 +34,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 SECTION_HEADINGS = (
     "What Review Robin Web does",
     "Create and set up a session",
-    "Prepare and launch",
+    "Prepare and activate",
     "Give reviewers access",
     "Watch progress",
-    "Close, release, and share results",
+    "Download responses",
     "Tips and troubleshooting",
     "Sample session",
     "For reviewers",

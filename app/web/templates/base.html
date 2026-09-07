@@ -1161,6 +1161,27 @@
          the trailing paragraph margin needs clearing so the tile's
          padding is the only bottom space. */
       body.ui-v2 .subcard-row > .card > :last-child { margin-bottom: 0; }
+      /* Guide screencaps. The images are captured at the app's own width
+         and are far wider than the prose column, so they scale down and
+         the figure gets the border the screenshot itself does not have —
+         without it a white-backed capture bleeds into the page and the
+         reader cannot tell where the app stops. `max-width: 100%` plus
+         `height: auto` keeps the aspect ratio at every viewport. */
+      body.ui-v2 .guide-figure {
+        margin: var(--space-4) 0;
+      }
+      body.ui-v2 .guide-figure img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border-subtle);
+        border-radius: 6px;
+      }
+      body.ui-v2 .guide-figure figcaption {
+        margin-top: var(--space-2);
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
