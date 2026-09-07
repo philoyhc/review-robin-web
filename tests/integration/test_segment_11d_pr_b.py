@@ -119,12 +119,21 @@ def test_sessions_list_empty_state_has_one_create_affordance(
     assert 'class="btn" href="/operator/sessions/new">Add new session</a>' in body
     assert body.count('href="/operator/sessions/new"') == 1
     # The first-run card carries no button of its own — it names the one
-    # that exists, by label rather than by position. (`btn-cta` still
-    # appears in the page: base.html inlines the whole stylesheet, so the
-    # rule survives its last user. The assertion is on the markup.)
+    # that exists. (`btn-cta` still appears in the page: base.html inlines
+    # the whole stylesheet, so the rule survives its last user. The
+    # assertion is on the markup.)
     assert 'class="btn-cta"' not in body
     assert ">Create new session<" not in body
-    assert "<strong>Add new session</strong> in the Search" in body
+    # Named once, in the `Set up a session` tile, where it belongs to the
+    # stage it describes. A closing line repeated it three lines later
+    # until 2026-09-07; saying it twice on one card is not emphasis.
+    assert "Create one using the <strong>Add new session</strong> button" in body
+    # Named exactly once *within the card*. Counting across the whole page
+    # would be wrong twice over: the Search card's own button is a legitimate
+    # occurrence, and base.html inlines its stylesheet, so a CSS comment
+    # mentioning the button counts too.
+    card = body.split('id="lobby-first-run"', 1)[1]
+    assert card.count("Add new session") == 1
 
 
 # ── Edit Session chrome (B1) ────────────────────────────────────────────

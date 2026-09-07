@@ -96,7 +96,7 @@ The card carries, in order:
 3. The four stages of a session, as a `.subcard-row` of four
    equal-width **`.card.rs-help-card`** tiles (§10 and §4 of
    `spec/ui_elements.md`): **Set up a session**, **Prepare and
-   launch**, **Give reviewers access**, **Download responses**.
+   activate**, **Give reviewers access**, **Download responses**.
    They carry the app's existing help-card look rather than one of
    their own — a row of tiles inside a card is explaining
    something, which is what those semantics already say.
@@ -121,7 +121,10 @@ The card carries, in order:
    The two sides no longer share headings **verbatim** — the card
    is read by someone who has not yet made a session and the Guide
    by someone already inside one, so "Set up a session" pairs with
-   the Guide's "Create and set up a session", and "Download
+   the Guide's "Create and set up a session", "Prepare and
+   activate" with its "Prepare and launch" (the tile takes the
+   lifecycle transition's own name, `Activate`, which is the word
+   on the button the operator will press), and "Download
    responses" with the broader "Close, release, and share
    results". The pairing is pinned as an explicit mapping in
    `tests/integration/test_lobby_first_run_card.py`
@@ -133,16 +136,16 @@ The card carries, in order:
    documentation, and the chrome link alone is easy to miss on a
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
-5. A closing sentence in that same muted line, pointing at the
-   Search card's **`Add new session`** button. **The card has no
-   CTA of its own** (changed 2026-09-07): standardisation left it
-   and the Search card offering the same destination in the same
-   state under two different names, so the card defers rather than
-   competes — one way to start a session, one name for it. The
-   button is named by **label**, not position, so the sentence
-   survives the card moving. The **Set up a session** tile names
-   the same button a second time, as part of describing the first
-   stage.
+
+**The card has no CTA of its own** (2026-09-07): standardisation
+left it and the Search card offering the same destination in the same
+state under two different names, so the card names that button rather
+than competing with it — one way to start a session, one name for it.
+
+The naming happens **once**, in the **Set up a session** tile, where it
+belongs to the stage it describes. A closing sentence in the muted line
+repeated it three lines later; that was removed the same day, because
+saying it twice on one card is not emphasis.
 
 Item 4's muted line also carries the **setup-template download**
 (`GET /templates/starter.zip`, Segment 19E rung 4) — four generic
