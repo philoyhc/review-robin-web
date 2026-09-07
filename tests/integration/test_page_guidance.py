@@ -448,8 +448,8 @@ PAGE_CLAIMS = {
         "must be identified by an email address tied to their institutional",
     ),
     "relationships": (
-        "Relationships do not decide who reviews whom.",
-        "context to one reviewer–reviewee",
+        "works without any explicitly set relationships",
+        "isn't already derivable from reviewer and reviewee tags",
     ),
     "observers": (
         "an observer with no rule set sees nothing</strong>.",

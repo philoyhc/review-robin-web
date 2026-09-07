@@ -164,7 +164,7 @@ Every Setup Page renders, top-to-bottom:
    |---|---|
    | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
    | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate) |
-   | Relationships | They do **not** decide who reviews whom; they are context for the instrument's assignment rule to filter on |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom |
    | Observers | The cohort rule grants sight rather than narrowing it — an observer with no rule sees **nothing** (see "Cohort match rule editor" below) |
    | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited |
    | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
