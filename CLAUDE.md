@@ -37,11 +37,15 @@ other AI coding agent working in this repository.
   *color*, *behavior*, *materialized*, *anonymized*. Three tiers, because
   the point is a default and not a campaign:
   - **New or rewritten prose** — US.
-  - **Existing prose** — left alone. There are ~430 British forms across
-    live `spec/`, `docs/` and `guide/` (116 `colour`, 101 `behaviour`);
-    fix them when you are editing that line anyway, never as a sweep, and
-    never as a PR of its own. Nothing enforces this, deliberately: a check
-    that failed on 430 existing lines would be turned off within a day.
+  - **Existing prose** — left alone. Measured 2026-09-07 over paired
+    variants (`color`/`colour`, `behavior`/`behaviour`, …), live prose is
+    **439 British against 438 US — a dead heat**, the commonest British
+    forms being `behaviour` (100), `colour` (66), `materialised` (44) and
+    `catalogue` (38). So this is not a British codebase gaining a US
+    exception; it is a mixed one gaining a tie-breaker. Fix a form when
+    you are editing that line anyway, never as a sweep and never as a PR
+    of its own. Nothing enforces it, deliberately: a check failing on ~440
+    existing lines would be switched off within a day.
   - **Identifiers, filenames, DB columns and shipped labels** — never
     renamed for spelling. `normalise_status`, `_normalised_name` and their
     kin stay as they are; a name is a name, and churning them buys a
