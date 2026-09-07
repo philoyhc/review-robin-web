@@ -95,7 +95,7 @@ def test_every_labelled_header_cell_splits_back(template_set) -> None:
 
 @ALL_SETS
 def test_every_address_is_example_edu(template_set) -> None:
-    """`guide/segment_19E_operator_onboarding.md` -> Semantics. A real
+    """`guide/archive/segment_19E_operator_onboarding.md` -> Semantics. A real
     domain in a template is a mail-out waiting to happen once sending is
     switched on."""
     for template in templates_in(template_set):

@@ -96,7 +96,7 @@ def test_archiving_every_session_brings_the_card_back(
 ) -> None:
     """The trigger is zero *visible* sessions, not "has never had one" —
     an operator who archives everything is back at the start and gets the
-    orientation again (`guide/segment_19E_operator_onboarding.md` ->
+    orientation again (`guide/archive/segment_19E_operator_onboarding.md` ->
     Semantics, "Lobby card trigger")."""
     _create_session(client, "Archive Me", "arch-me")
     session_id = db.execute(

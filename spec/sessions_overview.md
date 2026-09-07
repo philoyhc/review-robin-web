@@ -124,18 +124,22 @@ The card carries, in order:
 
    Each tile is a table-of-contents entry for one `/guide`
    section; the card is not a second account of the workflow.
-   The two sides no longer share headings **verbatim** — the card
-   is read by someone who has not yet made a session and the Guide
-   by someone already inside one, so "Set up a session" pairs with
-   the Guide's "Create and set up a session", "Prepare and
-   activate" with its "Prepare and launch" (the tile takes the
-   lifecycle transition's own name, `Activate`, which is the word
-   on the button the operator will press), and "Download
-   responses" with the broader "Close, release, and share
-   results". The pairing is pinned as an explicit mapping in
+   The four-sub-card rewrite (2026-09-07) pulled three of the
+   tile headings away from the Guide's, and the author's Guide
+   rewrite later the same day pulled them back — the draft
+   reached for the card's vocabulary unprompted — so **three of
+   the four now match verbatim**: "Prepare and activate", "Give
+   reviewers access" and "Download responses" are the headings on
+   both sides. The one remaining divergence is the first and it is
+   deliberate: the card is read by someone who has not yet made a
+   session, so its tile says "Set up a session", while the Guide
+   section it points at covers creating one as well and is headed
+   "Create and set up a session". The pairing is pinned as an
+   explicit mapping in
    `tests/integration/test_lobby_first_run_card.py`
-   (`CARD_STEP_TO_GUIDE_SECTION`), so renaming a heading on either
-   side without its partner still fails.
+   (`CARD_STEP_TO_GUIDE_SECTION`) rather than collapsed to a
+   string comparison, so renaming a heading on either side without
+   its partner still fails.
 4. A muted line linking to
    **`/guide?return_to=/operator/sessions`**. This link is why the
    card exists (Segment 19E): `/guide` is the canonical operator

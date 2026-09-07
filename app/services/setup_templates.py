@@ -51,7 +51,7 @@ observing. Every roster row is a person who appears as both reviewer and
 reviewee in the demo set — the review is symmetrical, and a set where
 reviewers and reviewees were disjoint would teach the wrong shape.
 
-Plan: ``guide/segment_19E_operator_onboarding.md`` PR ladder rungs 4–5.
+Plan: ``guide/archive/segment_19E_operator_onboarding.md`` PR ladder rungs 4–5.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ __all__ = [
 ]
 
 #: Every address in every template. Already the codebase convention
-#: (`guide/segment_19E_operator_onboarding.md` -> Semantics).
+#: (`guide/archive/segment_19E_operator_onboarding.md` -> Semantics).
 EXAMPLE_DOMAIN = "example.edu"
 
 

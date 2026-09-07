@@ -631,7 +631,7 @@ session exists: the Guide's "Create and set up a session" card
 (`spec/sessions_overview.md`). Not offered from the Workflow card or
 Extract Data — both were considered and rejected, since neither can
 reach an operator who wants the templates while creating the session
-(`guide/segment_19E_operator_onboarding.md` → Judgment calls).
+(`guide/archive/segment_19E_operator_onboarding.md` → Judgment calls).
 
 ---
 

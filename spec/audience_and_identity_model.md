@@ -353,7 +353,7 @@ navigation patterns are audience-specific.
 
 `/guide` is the exception to the table above: **one page, addressed to
 every audience**, rather than one surface per audience. That was the
-decision at Segment 19E (`guide/segment_19E_operator_onboarding.md` →
+decision at Segment 19E (`guide/archive/segment_19E_operator_onboarding.md` →
 `## Judgment calls`) — one URL to link from an email, and the roles
 overlap enough in practice that per-role pages would duplicate most of
 their content.
