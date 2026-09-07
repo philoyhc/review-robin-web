@@ -29,6 +29,7 @@ from app.db.models import (
 )
 from app.services import participants
 from app.services import responses as responses_service
+from app.services import visibility_policies
 from app.services.email_identity import normalize_email
 from app.services import session_lifecycle as lifecycle
 from app.web import views
@@ -139,9 +140,22 @@ def build_role_chips(
       that chip renders in full colour and carries no link.
     - ``enabled`` — ``True`` when the role's surface is
       currently reachable. Reviewer ``not opened`` flips this
-      ``False`` so the chip greys without a link; reviewee /
-      observer surfaces are always reachable today (the W16 /
-      W17 gates will land later).
+      ``False`` so the chip greys without a link; an observer's
+      chip greys the same way on an archived session.
+
+    **The reviewee role is omitted, not greyed, without a current
+    grant** (19F PR 7). The two are not interchangeable here: a
+    greyed chip still says *you are a reviewee on this session*,
+    which is the disclosure the segment closes on ``/me``. So this
+    mirrors ``_dashboard.py`` exactly — the dashboard drops the
+    role from ``roles`` rather than disabling its link, and the
+    chip strip drops the chip. A user who reaches a surface by
+    another role sees the same set of roles here as on ``/me``.
+
+    Reachability is asked per surface, not inherited from the
+    route's own gate: a caller on ``/collation`` passed the
+    observer gate and nothing else, so their reviewee chip needs
+    its own answer.
 
     Chips render in :data:`_ROLE_PRIORITY` order regardless of
     which role is active, so the lineup is consistent across
@@ -212,7 +226,13 @@ def build_role_chips(
             ),
             "enabled": session_status != "not opened",
         }
-    if reviewee_match is not None:
+    if reviewee_match is not None and visibility_policies.reviewee_has_current_grant(
+        db, review_session
+    ):
+        # Omitted rather than disabled without a grant — see the
+        # docstring. ``/results`` answers 404 in that state (19F PR 4),
+        # so a live chip here was a link to a refusal *and* a statement
+        # about the viewer that ``/me`` had stopped making.
         role_targets["reviewee"] = {
             "target": f"/me/sessions/{review_session.id}/results",
             "enabled": True,
@@ -220,7 +240,12 @@ def build_role_chips(
     if observer is not None:
         role_targets["observer"] = {
             "target": f"/me/sessions/{review_session.id}/collation",
-            "enabled": True,
+            # Archive closes every non-operator grant, so the page is
+            # empty by construction and the link is a dead end. Greyed,
+            # not dropped: being an observer is not a disclosure about
+            # the observer (19F decision 4), so the chip stays visible
+            # exactly as the dashboard row does.
+            "enabled": not lifecycle.is_archived(review_session),
         }
 
     chips: list[dict[str, object]] = []

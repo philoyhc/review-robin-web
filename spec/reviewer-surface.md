@@ -1109,13 +1109,28 @@ Each chip carries:
 `.rs-role-nav-muted` (greyed-out, disabled or inactive role)
 modifiers.
 
-Reachability mirrors the dashboard's `role_links.enabled` logic:
-reviewer is reachable when `session_status != "not opened"`;
-reviewee and observer surfaces are always reachable for an
-active row in the matching roster. **W17 (observer)** still applies the
-`responses_release_at` + `responses_release_until` gates inside the
-per-instrument render only — instrument cards fall through to the empty
-state when the window is closed, with no route-level refusal.
+Reachability mirrors the dashboard's `role_links.enabled` logic, and
+since **19F PR 7** it mirrors all three roles rather than only the
+reviewer:
+
+| Role | Chip |
+|---|---|
+| reviewer | Reachable when `session_status != "not opened"`; greyed otherwise. |
+| reviewee | **Omitted entirely** unless `visibility_policies.reviewee_has_current_grant` resolves — not greyed. A greyed chip still says *you are a reviewee on this session*, which is the disclosure `/me` stops making, so the chip goes with the role. |
+| observer | Present for any active observer, **greyed on an archived session** (`lifecycle.is_archived`), live otherwise. Being an observer is not a disclosure about the observer, so this one greys rather than disappearing. |
+
+Until PR 7 `build_role_chips` answered from roster membership alone for
+both participant roles, so a user holding another role on the same
+session saw a live Reviewee chip pointing at the 404 PR 4 had just
+introduced — the segment's own contract applied on `/me` and not one
+door over. Each surface asks the question for itself: a caller on
+`/collation` passed the observer gate and nothing else, so their
+reviewee chip needs its own answer.
+
+**W17 (observer)** still applies the `responses_release_at` +
+`responses_release_until` gates inside the per-instrument render only —
+instrument cards fall through to the empty state when the window is
+closed, with no route-level refusal.
 
 **W16 (reviewee) no longer works that way.** 19F PR 4 moved the window
 question to the route: with no instrument granting anything, `/results`
