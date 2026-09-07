@@ -16,10 +16,15 @@ import pathlib
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.identity import AuthenticatedUser
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import Reviewer, ReviewSession, User
 from app.web import routes_guide
 from app.web.views._guide import (
     AUDIENCES,
+    OPERATOR,
+    REVIEWER,
     SECTIONS,
     visible_audiences,
     visible_sections,
@@ -58,10 +63,38 @@ def test_guide_renders(client: TestClient) -> None:
     assert "<h1>Guide</h1>" in response.text
 
 
-def test_guide_renders_every_committed_section(client: TestClient) -> None:
-    body = client.get("/guide").text
-    missing = [s for s in SECTION_HEADINGS if f"<h2>{s}</h2>" not in body]
+def test_every_committed_section_exists_in_the_template() -> None:
+    """Every card the page commits to is still written.
+
+    Split from the render check below at rung 7: once the filter narrows,
+    no single viewer sees all eleven, so a render can no longer prove a
+    card exists. Deleting a card would otherwise look identical to being
+    filtered out of that viewer's page.
+    """
+    template = (
+        REPO / "app" / "web" / "templates" / "guide.html"
+    ).read_text()
+    missing = [s for s in SECTION_HEADINGS if f"<h2>{s}</h2>" not in template]
     assert not missing, f"missing Guide sections: {missing}"
+
+
+def test_guide_renders_exactly_the_sections_its_viewer_is_owed(
+    client: TestClient,
+) -> None:
+    """And the render still has to agree with the view.
+
+    The conftest viewer is an operator, so the eight operator cards render
+    and the three role-addressed ones do not. Derived from `SECTIONS`
+    rather than listed, so retagging a section's audience updates both
+    sides at once — a hand-kept list here would just start lying.
+    """
+    body = client.get("/guide").text
+    for heading, section in zip(SECTION_HEADINGS, SECTIONS, strict=True):
+        rendered = f"<h2>{heading}</h2>" in body
+        assert rendered is (section.audience == OPERATOR), (
+            f"{heading!r} ({section.audience}) "
+            f"{'rendered' if rendered else 'did not render'} for an operator"
+        )
 
 
 def test_the_retired_sections_are_gone(client: TestClient) -> None:
@@ -140,18 +173,115 @@ def test_chrome_omits_the_guide_link_on_the_guide_itself(client: TestClient) -> 
 # rot between now and then.
 
 
-def _viewer() -> AuthenticatedUser:
-    return AuthenticatedUser(
-        principal_id="guide-test", email="nobody@example.edu", name="Nobody"
+def _make_session(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    client.post(
+        "/operator/sessions",
+        data={"name": f"Guide {code}", "code": code},
+        follow_redirects=False,
     )
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
 
 
-def test_every_audience_is_visible_before_rung_7() -> None:
-    assert visible_audiences(_viewer()) == frozenset(AUDIENCES)
+def _viewer(
+    db: Session, *, email: str = "nobody@example.edu", operator: bool = False
+) -> User:
+    user = User(
+        email=email,
+        display_name="Nobody",
+        external_principal_id=f"guide-test-{email}",
+        is_operator=operator,
+        is_sys_admin=False,
+    )
+    db.add(user)
+    db.flush()
+    return user
 
 
-def test_every_declared_section_is_visible_before_rung_7() -> None:
-    assert visible_sections(_viewer()) == frozenset(s.key for s in SECTIONS)
+def test_a_viewer_holding_no_role_sees_everything(db: Session) -> None:
+    """The resolver's one judgement, asserted rather than left implicit.
+
+    A signed-in person with no operator flag and no roster row anywhere is
+    not a reviewer being spared the operator walkthrough — they are someone
+    the app cannot classify, most often because they are about to be added
+    to a roster. An empty Guide serves them nothing, and the whole Guide
+    carries no session data, so too much beats nothing.
+    """
+    viewer = _viewer(db)
+
+    assert visible_audiences(db, viewer) == frozenset(AUDIENCES)
+    assert visible_sections(db, viewer) == frozenset(s.key for s in SECTIONS)
+
+
+def test_an_operator_sees_the_operator_walkthrough_and_not_the_role_cards(
+    db: Session,
+) -> None:
+    viewer = _viewer(db, operator=True)
+
+    assert visible_audiences(db, viewer) == frozenset({OPERATOR})
+    assert "create_and_set_up" in visible_sections(db, viewer)
+    assert "for_reviewers" not in visible_sections(db, viewer)
+
+
+def test_a_sys_admin_counts_as_an_operator(db: Session) -> None:
+    """Mirrors `require_operator`, where sys-admin implies operator (F4).
+
+    Restating that rule instead of deriving it would let the Guide describe
+    a different set of people from the one that can reach the pages it
+    documents.
+    """
+    viewer = _viewer(db, email="admin@example.edu")
+    viewer.is_sys_admin = True
+    db.flush()
+
+    assert OPERATOR in visible_audiences(db, viewer)
+
+
+def test_roles_come_from_roster_rows_in_any_session(
+    client: TestClient, db: Session
+) -> None:
+    """Held-anywhere, not held-here: the Guide is one page for the whole
+    workspace, so a reviewer on one session is a reviewer while reading it."""
+    review_session = _make_session(client, db, code="guide-roles")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Rev",
+            email="rev@example.edu",
+            status="active",
+        )
+    )
+    db.flush()
+
+    viewer = _viewer(db, email="rev@example.edu")
+
+    assert visible_audiences(db, viewer) == frozenset({REVIEWER})
+    assert "for_reviewers" in visible_sections(db, viewer)
+    assert "create_and_set_up" not in visible_sections(db, viewer)
+
+
+def test_an_operator_who_is_also_a_reviewer_sees_both(
+    client: TestClient, db: Session
+) -> None:
+    """The roles are not exclusive, and an operator reviewing on someone
+    else's session is the ordinary case, not an edge one."""
+    review_session = _make_session(client, db, code="guide-both")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Both",
+            email="both@example.edu",
+            status="active",
+        )
+    )
+    db.flush()
+
+    viewer = _viewer(db, email="both@example.edu", operator=True)
+
+    assert visible_audiences(db, viewer) == frozenset({OPERATOR, REVIEWER})
 
 
 def test_the_template_gates_on_the_view_not_on_its_own_logic(
@@ -166,7 +296,7 @@ def test_the_template_gates_on_the_view_not_on_its_own_logic(
     feeds the template.
     """
     monkeypatch.setattr(
-        routes_guide, "visible_sections", lambda user: frozenset({"for_observers"})
+        routes_guide, "visible_sections", lambda db, user: frozenset({"for_observers"})
     )
     body = client.get("/guide").text
     assert "<h2>For observers</h2>" in body

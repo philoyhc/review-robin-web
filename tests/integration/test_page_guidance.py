@@ -9,6 +9,9 @@ just the one page's copy.
 
 from __future__ import annotations
 
+import pathlib
+import re
+
 from html.parser import HTMLParser
 
 from fastapi.testclient import TestClient
@@ -17,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 from app.services.observer_cohort import observer_has_rule
-from app.web.views._guide import SECTIONS
+from app.web.views._guide import OPERATOR, SECTIONS
 
 
 #: Markup-only marker. The bare class name also appears ~9 times in
@@ -100,15 +103,54 @@ def test_the_guidance_links_into_the_guide_and_returns_here(
     assert "Back to Guidance" in guide.text
 
 
-def test_every_guide_section_card_carries_its_anchor(client: TestClient) -> None:
-    """Guidance on the remaining five pages will deep-link to other
-    sections. Each card's id is derived from the same key the view gates
-    on, so a renamed section breaks the anchor here rather than becoming
-    a dead link in production."""
+def test_every_guide_section_an_operator_sees_carries_its_anchor(
+    client: TestClient,
+) -> None:
+    """Guidance on the Setup pages deep-links into the Guide. Each card's
+    id is derived from the same key the view gates on, so a renamed
+    section breaks the anchor here rather than becoming a dead link.
+
+    Scoped to the operator's sections since rung 7: the conftest viewer is
+    an operator, and the three role-addressed cards no longer render for
+    them. Their anchors are covered by the link check below, which is the
+    one that matters — an anchor nothing points at cannot go dead.
+    """
     body = client.get("/guide").text
 
-    missing = [s.key for s in SECTIONS if f'id="guide-{s.key}"' not in body]
+    missing = [
+        s.key
+        for s in SECTIONS
+        if s.audience == OPERATOR and f'id="guide-{s.key}"' not in body
+    ]
     assert not missing, f"guide sections with no anchor: {missing}"
+
+
+def test_no_guide_deep_link_points_at_a_section_its_reader_cannot_see(
+    client: TestClient,
+) -> None:
+    """Rung 7 made this possible, so it is now asserted.
+
+    Filtering the Guide by audience means a deep link can survive as a
+    valid anchor while landing on a page where that card does not render
+    — the reader gets the Guide, scrolled nowhere, with no error to
+    explain it. Every `#guide-...` link in the app today sits on an
+    operator-only page, so every one of them must target a section an
+    operator sees.
+    """
+    templates = pathlib.Path(__file__).resolve().parents[2] / "app/web/templates"
+    linked = {
+        m
+        for path in templates.rglob("*.html")
+        for m in re.findall(r"#guide-([a-z_]+)", path.read_text())
+    }
+    assert linked, "no Guide deep links found — has the anchor form changed?"
+
+    operator_keys = {s.key for s in SECTIONS if s.audience == OPERATOR}
+    unreachable = sorted(linked - operator_keys)
+    assert not unreachable, (
+        f"deep-linked from an operator page but not shown to operators: "
+        f"{unreachable}"
+    )
 
 
 # --------------------------------------------------------------------------- #
