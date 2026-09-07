@@ -1,3 +1,42 @@
+"""Route dependencies — identity resolution and the access gates.
+
+**Session-scoped gates answer 404, never 403** (Segment 19F PR 1). The
+four gates that take a ``session_id`` — ``require_session_operator``,
+``require_reviewer_in_session``, ``require_reviewee_in_session`` and
+``require_observer_in_session`` — raise a bare
+``HTTPException(404)`` on every refusal, byte-identical to the one they
+already raise for a session id that does not exist. Before 19F they
+split it: 404 for "no such session", 403 for "the session exists but you
+are not on it", each 403 carrying a ``detail`` naming the role it was
+refusing. Any signed-in person could therefore **enumerate session ids**
+by reading the status code — content never leaked, but existence and
+count did.
+
+The rule the author set: *if you do not have a role granting visibility,
+you should not be able to infer anything.* One code and one body now
+cover all of: no such session, a session you hold no role on, and a role
+you hold that has been made inactive.
+
+Two gates are deliberately **not** covered, because neither discloses
+anything about a session: ``require_operator`` keeps its 303 to ``/me``
+(the workspace allowlist), and ``require_sys_admin`` keeps its 403 — a
+caller who reaches it is already inside the operator surface.
+
+**One exemption**, in ``require_session_operator``: a **sys-admin**
+(and so a super-admin) who is not an owner of an **existing** session
+gets the old 403 with a message pointing at the adopt door. Workspace
+oversight is their role and ``/operator/sys-admin/sessions`` already
+lists every session, so a 404 conceals nothing from them while breaking
+a link that page renders. It stays behind an existence check, or the
+exemption would answer "you are not an owner" for ids that do not
+exist. The three participant gates have no such exemption: nothing in
+the app routes a sys-admin to ``/results`` or ``/collation``, so there
+is no affordance to keep legible there. See ``spec/permissions.md`` §5.
+
+The gates keep logging what they refuse, with gate, user and session.
+The inference being closed is the caller's, not the operator's.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -177,6 +216,13 @@ def _stash_session_timezone(
     )
 
 
+def _session_exists(db: Session, session_id: int) -> bool:
+    """Does the row exist at all, ignoring who is asking."""
+    return db.execute(
+        select(ReviewSession.id).where(ReviewSession.id == session_id)
+    ).first() is not None
+
+
 def require_session_operator(
     session_id: int,
     request: Request,
@@ -192,10 +238,31 @@ def require_session_operator(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this session",
-        )
+        # Sys-admins are exempt from the uniform 404 (author,
+        # 2026-09-07). Overseeing the workspace as a whole is the role,
+        # and `/operator/sys-admin/sessions` already lists every session
+        # by name — so a 404 here conceals nothing from them and only
+        # turns a link that page itself renders into a dead end. They
+        # get the legible refusal instead, pointing at the adopt door
+        # that is the sanctioned way in (18S Item 3).
+        #
+        # Super-admins need no separate branch: both sign-in paths in
+        # `get_or_create_user` force `is_sys_admin` for them, so the
+        # capability nesting super ⊇ admin holds here for free.
+        #
+        # Existence is still checked first. Without it the exemption
+        # would invent sessions — answering "you do not have access" for
+        # an id that has never existed, which is a worse leak than the
+        # one 19F closed.
+        if user.is_sys_admin and _session_exists(db, session_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "You are not an owner of this session. Adopt it from "
+                    "Sys Admin → Sessions to gain operator access."
+                ),
+            )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     review_session = sessions.get_for_user(db, user, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -243,7 +310,7 @@ def require_reviewer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewer, ReviewSession]:
-    """403 unless the authenticated user has an active Reviewer row in the session.
+    """404 unless the authenticated user has an active Reviewer row in the session.
 
     Identity match is case-insensitive email equality (``casefold()`` both
     sides). Reviewer rows whose ``status`` is anything other than ``active``
@@ -276,10 +343,7 @@ def require_reviewer_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active reviewer in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 
@@ -290,7 +354,7 @@ def require_reviewee_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
-    """403 unless the authenticated user has an active Reviewee row
+    """404 unless the authenticated user has an active Reviewee row
     in the session whose ``email_or_identifier`` parses as an email
     matching the user's email (case-insensitive).
 
@@ -333,10 +397,7 @@ def require_reviewee_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active reviewee in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 
@@ -347,7 +408,7 @@ def require_observer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Observer, ReviewSession]:
-    """403 unless the authenticated user has an active Observer row
+    """404 unless the authenticated user has an active Observer row
     in the session.
 
     Identity match is case-insensitive email equality. Observer rows
@@ -385,10 +446,7 @@ def require_observer_in_session(
                 "session_id": session_id,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not an active observer in this session",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return matched, review_session
 

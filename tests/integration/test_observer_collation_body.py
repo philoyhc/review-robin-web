@@ -937,7 +937,7 @@ def test_collation_renders_after_release_section_when_window_open(
     assert "(Anonymized)" in body
 
 
-def test_collation_csv_403_when_user_is_not_an_observer(
+def test_collation_csv_404_when_user_is_not_an_observer(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="col-csv-nope")
@@ -947,4 +947,4 @@ def test_collation_csv_403_when_user_is_not_an_observer(
         f"/me/sessions/{review_session.id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
-    assert response.status_code == 403
+    assert response.status_code == 404

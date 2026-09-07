@@ -390,7 +390,7 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     assert 'class="card lock"' not in body
 
 
-def test_non_operator_gets_403_on_assignments_hub_and_post(
+def test_non_operator_gets_404_on_assignments_hub_and_post(
     db: Session,
     alice: AuthenticatedUser,
     bob: AuthenticatedUser,
@@ -401,10 +401,10 @@ def test_non_operator_gets_403_on_assignments_hub_and_post(
 
     bob_client = make_client(bob)
     hub = bob_client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert hub.status_code == 403
+    assert hub.status_code == 404
 
     post = generate_via_page_button(bob_client, review_session.id)
-    assert post.status_code == 403
+    assert post.status_code == 404
 
 
 def test_assignments_hub_truncates_large_pair_list(

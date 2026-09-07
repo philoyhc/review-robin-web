@@ -15,7 +15,7 @@ in ``test_operator_allowlist_gate.py``):
    sessions.
 2. Per-session gate (``require_session_operator``) — a
    workspace-allowlisted operator who isn't a SessionOperator
-   member of session X is 403'd from
+   member of session X gets a 404 from
    ``/operator/sessions/{X}/*``; participants alone don't
    confer that membership.
 """
@@ -36,6 +36,8 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    SessionOperator,
+    User,
 )
 from app.db.session import get_db
 from app.main import app
@@ -156,7 +158,7 @@ def test_participant_only_user_redirected_from_per_session_route(
 # ── Per-session gate: workspace operator on someone else's session ───
 
 
-def test_workspace_operator_non_owner_403_on_per_session_route(
+def test_workspace_operator_non_owner_404_on_per_session_route(
     client: TestClient,
     db: Session,
     make_client,
@@ -165,7 +167,8 @@ def test_workspace_operator_non_owner_403_on_per_session_route(
     """Bob is on the workspace operator allowlist (seeded by the
     integration conftest) but is not a SessionOperator on
     Alice's session — even though Alice added him to every
-    roster. Per-session routes 403 him."""
+    roster. Per-session routes answer 404 for him — 19F PR 1 made
+    that indistinguishable from a session id that does not exist."""
     review_session = _alice_session(client, db, "gate-3")
     db.add_all(
         [
@@ -193,7 +196,7 @@ def test_workspace_operator_non_owner_403_on_per_session_route(
         f"/operator/sessions/{review_session.id}",
         follow_redirects=False,
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_workspace_operator_non_owner_lobby_excludes_others_sessions(
@@ -246,12 +249,24 @@ def test_sys_admin_reaches_other_owners_per_session_route(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A sys-admin (here: dave) reaches Alice's session via the
-    sys-admin relaxation — they bypass SessionOperator
-    membership."""
+    sys-admin relaxation — they bypass SessionOperator membership.
+
+    **Rewritten at 19F PR 1, because it was not testing this.** It
+    asserted ``!= 403`` against
+    ``/operator/sessions/{id}/audit-log.csv`` — a URL that has never
+    existed (the real route is ``…/export/audit_log.csv``, and 16C PR 1
+    moved it to plain ``require_sys_admin`` besides). So it 404'd on
+    routing, ``!= 403`` held, and the test passed without exercising a
+    gate at all: it would have passed with the bypass deleted. PR 1
+    surfaced it by strengthening the assertion, since ``!= 403`` stops
+    being falsifiable at all once no refusal is a 403.
+
+    It now hits a route that really does mount
+    ``require_sys_admin_or_session_operator`` — ``owners/add``, the
+    self-add bootstrap — and asserts the gate passed by its effect, not
+    by the absence of one status code.
+    """
     review_session = _alice_session(client, db, "gate-6")
-    # Make sure Alice's session row carries an extract / outbox
-    # surface a sys-admin would land on; we hit the audit-log
-    # CSV which mounts ``require_sys_admin_or_session_operator``.
     monkeypatch.setattr(
         settings, "sys_admin_emails", ["dave@example.edu"]
     )
@@ -265,10 +280,22 @@ def test_sys_admin_reaches_other_owners_per_session_route(
         provider="aad",
     )
     dave_client = make_client(auth_dave)
-    response = dave_client.get(
-        f"/operator/sessions/{review_session.id}/audit-log.csv",
+    response = dave_client.post(
+        f"/operator/sessions/{review_session.id}/owners/add",
+        data={"target_email": "dave@example.edu"},
         follow_redirects=False,
     )
-    # 200 (success) or any non-403 — the sys-admin gate let
-    # them through, that's the contract.
-    assert response.status_code != 403
+    # 303 means the gate let him through to the handler. Had the
+    # relaxation been removed, `require_session_operator` would refuse a
+    # non-member with the 404 that 19F PR 1 made uniform.
+    assert response.status_code == 303
+    # And the effect, so a redirect for some other reason cannot pass:
+    dave = db.execute(
+        select(User).where(User.email == "dave@example.edu")
+    ).scalar_one()
+    assert db.execute(
+        select(SessionOperator).where(
+            SessionOperator.session_id == review_session.id,
+            SessionOperator.user_id == dave.id,
+        )
+    ).first() is not None

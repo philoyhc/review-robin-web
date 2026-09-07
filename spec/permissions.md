@@ -80,12 +80,12 @@ is emitted on every miss.
 | `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email |
 | `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
-| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **403** `You do not have access to this session`; **404** if the session id does not resolve *for this user* (the membership check runs first, so a non-member sees 403, never a 404 that leaks existence) |
+| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable (19F PR 1). **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
 | `require_sys_admin_or_session_operator` | `is_sys_admin`, else falls through to `require_session_operator` | `ReviewSession` | as above; a sys-admin gets **404** on an unknown id |
 | `require_relationships_enabled_session` / `require_observers_enabled_session` | wraps `require_session_operator`, then the per-session feature toggle | `ReviewSession` | **404** when the feature is off — a deep link to a disabled tab misses cleanly rather than rendering an orphan page. The permission check still runs first |
-| `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404** unknown session; **403** `You are not an active reviewer in this session` |
-| `require_reviewee_in_session` | an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above (`… active reviewee …`). A confidential reviewee (non-email identifier) can never reach the surface, by construction |
-| `require_observer_in_session` | an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above (`… active observer …`) |
+| `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically (19F PR 1) |
+| `require_reviewee_in_session` | an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above. A confidential reviewee (non-email identifier) can never reach the surface, by construction |
+| `require_observer_in_session` | an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above |
 
 Two things the table implies and the code relies on:
 
@@ -201,7 +201,9 @@ the operation-level mappings.
 | Cause | Status | Where mapped |
 |---|---|---|
 | Not on the operator allowlist | **303 → `/me`** | `OperatorAllowlistDenied` handler, `app/main.py` |
-| Not a sys-admin; not a session member; not an active participant | **403** with a one-line `detail` | the gate |
+| Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
+| Not a session member; not an active participant | **404**, bare | the four session-scoped gates |
+| Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | Missing email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
@@ -210,6 +212,43 @@ the operation-level mappings.
 | `last_owner` on remove-owner | **409** | `_session_home.session_owners_remove` |
 | every other owner error (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to Session Home with `?owners_error=<code>` | same |
 | Lifecycle refusals (`_require_editable`, `not_draft`, `locked`, …) | **409** (or 400 for missing acknowledgements) | `_shared.py`; contract in `spec/lifecycle.md` |
+
+**Why the session-scoped refusals collapsed into 404** (Segment 19F
+PR 1). They used to split: 404 for "no such session", 403 with a
+one-line `detail` for "the session exists but you are not on it". Any
+signed-in person could therefore enumerate session ids — and count
+them — by reading the status code. Content never leaked; existence and
+count did.
+
+This table previously argued the opposite, and the argument is worth
+keeping as a correction rather than deleting: it read that
+`require_session_operator` runs its membership check first "so a
+non-member sees 403, never a 404 that leaks existence". That has the
+threat model backwards. A 404 discloses nothing; it is the **403** that
+confirms a session is there, and each `detail` string
+(*"You are not an active reviewer in this session"*) confirmed it in
+prose. The gate order was right for a reason that did not hold.
+
+`require_operator` and `require_sys_admin` keep their codes: neither
+takes a session id, so neither discloses anything about one.
+
+**The one exemption, and why it is not a hole** (author, 2026-09-07).
+Overseeing the workspace as a whole *is* the sys-admin role, and
+`/operator/sys-admin/sessions` already lists every session by name —
+linking each one to `/operator/sessions/{id}`, the route this gate
+guards. A 404 therefore conceals nothing from a sys-admin that the app
+does not already hand them on a page of their own, while turning a link
+that page renders into a dead end. They get the legible refusal instead,
+naming the adopt action that is the sanctioned way in (18S Item 3).
+
+Two properties keep it narrow. It is **behind an existence check**:
+without one the exemption would answer *"you are not an owner of this
+session"* for ids that have never existed, turning a refusal into a
+confirmation — a worse leak than the one 19F closed. And it is
+**`require_session_operator` only**: nothing in the app routes a
+sys-admin to `/results` or `/collation`, so there is no affordance to
+keep legible on the three participant gates, and they answer 404 to
+everyone.
 
 ---
 
@@ -233,12 +272,13 @@ a case when a gate changes.
 | Contract | Test file |
 |---|---|
 | allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` (21) |
-| participant-only user bounced from lobby + per-session route; workspace operator non-owner 403 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` (6) |
+| participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` (6) |
+| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` (6) |
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` (19) |
 | the seven Accounts Management actions and every guard code | `tests/integration/test_sys_admin_users.py` (48) |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` (6) |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` (4) |
-| reviewer gate 403s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |
+| reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |
 
 ---
 

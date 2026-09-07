@@ -59,14 +59,14 @@ def test_reviewee_dep_404_when_session_missing(db: Session) -> None:
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_reviewee_dep_403_when_no_matching_row(db: Session) -> None:
+def test_reviewee_dep_404_when_no_matching_row(db: Session) -> None:
     s = _session(db, code="rvd-1")
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_reviewee_in_session(
             session_id=s.id, request=_request(), user=me, db=db
         )
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_reviewee_dep_returns_match_on_email(db: Session) -> None:
@@ -121,7 +121,7 @@ def test_reviewee_dep_rejects_non_email_identifier(db: Session) -> None:
         require_reviewee_in_session(
             session_id=s.id, request=_request(), user=me, db=db
         )
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_reviewee_dep_inactive_status_denied(db: Session) -> None:
@@ -140,7 +140,7 @@ def test_reviewee_dep_inactive_status_denied(db: Session) -> None:
         require_reviewee_in_session(
             session_id=s.id, request=_request(), user=me, db=db
         )
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------- observer
@@ -155,14 +155,14 @@ def test_observer_dep_404_when_session_missing(db: Session) -> None:
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_observer_dep_403_when_no_matching_row(db: Session) -> None:
+def test_observer_dep_404_when_no_matching_row(db: Session) -> None:
     s = _session(db, code="obd-1")
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_observer_in_session(
             session_id=s.id, request=_request(), user=me, db=db
         )
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_observer_dep_returns_match_on_email(db: Session) -> None:
@@ -201,4 +201,4 @@ def test_observer_dep_inactive_status_denied(db: Session) -> None:
         require_observer_in_session(
             session_id=s.id, request=_request(), user=me, db=db
         )
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
