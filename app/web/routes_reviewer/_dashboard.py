@@ -211,10 +211,21 @@ def reviewer_dashboard(
         if "observer" in roles:
             role_links["observer"] = {
                 "target": f"/me/sessions/{review_session.id}/collation",
-                # W17 will gate this similarly to the reviewee
-                # link; today the placeholder accepts any active
-                # observer.
-                "enabled": True,
+                # Live in every lifecycle state except ``archived``
+                # (19F decision 7). Observers are deliberately *not*
+                # grant-gated the way reviewees are — being appointed an
+                # observer is not a disclosure about the observer, so
+                # they may see that they are one before their window
+                # opens. But archive closes every non-operator grant, so
+                # on an archived session the page is empty by
+                # construction and a live link to it is a dead end. The
+                # row stays, reading "not opened", and loses its link —
+                # matching the reviewer row beside it.
+                #
+                # (This comment read "W17 will gate this …" until 19F
+                # PR 5. W17 shipped in PRs #1769–#1808; the marker
+                # outlived it, which is how this segment came to exist.)
+                "enabled": not lifecycle.is_archived(review_session),
             }
 
         link_target: str | None = None

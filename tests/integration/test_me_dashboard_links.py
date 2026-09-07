@@ -306,3 +306,66 @@ def test_session_status_pills_are_visibly_styled(
     # check looks for the class on a rendered element rather
     # than its mere presence in the stylesheet.
     assert 'class="pill pill-lifecycle-archived"' not in body
+
+
+# ── 19F PR 5 — the archived observer row is present but unlinked ──────
+
+
+def test_observer_row_is_linked_in_every_state_but_archived(
+    client: TestClient, db: Session
+) -> None:
+    """Decision 4 and decision 7 together.
+
+    Observers are deliberately not grant-gated — being appointed an
+    observer is not a disclosure *about* the observer — so the link is
+    live even before their window opens, on `draft` as much as on
+    `expired`. Archive is the exception: it closes every non-operator
+    grant, so `/collation` there is empty by construction and a live
+    link to it is a dead end.
+    """
+    for state in ("draft", "validated", "ready", "expired"):
+        review_session = _make_session(client, db, code=f"obs-link-{state}")
+        review_session.status = state
+        db.add(
+            Observer(
+                session_id=review_session.id,
+                email="alice@example.edu",
+                display_name="Alice",
+            )
+        )
+        db.commit()
+        body = client.get("/me").text
+        assert (
+            f'href="/me/sessions/{review_session.id}/collation"' in body
+        ), state
+
+
+def test_an_archived_session_keeps_the_observer_row_but_drops_its_link(
+    client: TestClient, db: Session
+) -> None:
+    """The row stays — the author declined to filter archived sessions
+    off `/me` for reviewers and observers, so they read "not opened"
+    until the session is deleted. Only the link goes."""
+    review_session = _make_session(client, db, code="obs-link-arch")
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email="alice@example.edu",
+            display_name="Alice",
+        )
+    )
+    db.commit()
+    assert (
+        f'href="/me/sessions/{review_session.id}/collation"'
+        in client.get("/me").text
+    )
+
+    review_session.status = "archived"
+    db.commit()
+    body = client.get("/me").text
+    # Row survives...
+    assert 'class="pill pill-role-observer"' in body
+    assert "not opened" in body
+    # ...without its link.
+    assert f'href="/me/sessions/{review_session.id}/collation"' not in body
+
