@@ -73,7 +73,7 @@ the joke it sounds like.
 
 ### 1.4 Prose that describes behaviour, with no document or constant on the other side
 
-- **Written down at** `guide/segment_19G_post_assessment.md` Item 1
+- **Written down at** `guide/archive/segment_19G_post_assessment.md` Item 1
   (class **D**).
 - **The instance.** `spec/permissions.md` stated the session-id
   enumeration threat model **backwards** — found by a human-directed
@@ -86,7 +86,7 @@ the joke it sounds like.
 
 ### 1.5 Prose that summarises another document
 
-- **Written down at** `guide/segment_19G_post_assessment.md` Item 1
+- **Written down at** `guide/archive/segment_19G_post_assessment.md` Item 1
   (class **B**), where the mechanism was **proposed and rejected**.
 - **The instance.** Three files summarising `spec/session_home.md`
   described a page retired three weeks earlier.
@@ -105,7 +105,7 @@ the joke it sounds like.
 
 ### 1.6 A measurement that certifies a corpus must state what it could not see
 
-- **Written down at** `guide/segment_19G_post_assessment.md` Items 5 and
+- **Written down at** `guide/archive/segment_19G_post_assessment.md` Items 5 and
   7, where the rule was learned the expensive way.
 - **The instance.** 19G.5 measured the `§N` cross-reference corpus,
   repointed six broken references and reported **125 references, 0

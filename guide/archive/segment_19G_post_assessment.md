@@ -26,7 +26,11 @@ found while doing Items 1 and 2, none of which was in scope at the time.
 **Close it when the queue is empty**, or at the next assessment
 snapshot, whichever comes first. *(The queue emptied 2026-09-08 with
 19G.3. The segment stays open only for the two carried open questions
-below; if neither is picked up before the next snapshot, close it.)* If 19G.3+ reaches four items, or admits
+below; if neither is picked up before the next snapshot, close it.)*
+**Closed 2026-09-08 at ten items** — both carried questions were
+answered (19G.4 and 19G.7), the queue was empty, and the trigger below
+had not fired: no item was admitted that did not come out of this
+segment's own work. See `## Status — segment close` at the end. If 19G.3+ reaches four items, or admits
 anything that did not come out of this segment's own work, the shape has
 outlived its use and the remaining work gets its own segment — that is
 the trigger 19C never had, and it is the only reason the concession
@@ -49,7 +53,7 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.8** | A cited path is not a commitment — `close_check`'s prefixed-path false positive | **Closed** 2026-09-08. One PR. |
 | **19G.9** | Archived sessions read "not opened" on `/me` for reviewer and observer rows | **Closed** 2026-09-08. One PR, no CSS. |
 | **19G.10** | The three recommendations from the 08sep assessment's §5 weaknesses | **Closed** 2026-09-08. One PR, no code. |
-| 19G.11+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| ~~19G.11+~~ | ~~Admitted only for work arising from this segment's own items.~~ | **Closed 2026-09-08** — the segment closed with this row empty, which is the shape 19C never reached. |
 
 ### Patch queue
 
