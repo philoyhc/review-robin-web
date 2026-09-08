@@ -312,6 +312,7 @@ For the full long-term plan see
 | 19C | Refinements (holding segment), all six items: Item 1 friendly tag labels via roster CSV headers as the sole round-trip carrier (#2005 → #2013); Items 3–4 Danger Zone hardening + button refinements and Item 2 light / dark Display mode (#2014 → #2031); Item 6 two-tier semantic colour tokens — 79 primitives under 103 role-named tokens (#2047 → #2062); Item 5 theme customizer v1, a three-part developer designer in `tools/` (#2032 → #2083), **v1.1** primitive readout + unused-primitive marker + stale-document merge fix + 3:1 contrast gate (#2152 → #2155); Item 7 the first drift sweep's eight findings (#2116 → #2118); Item 8 input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family (#2126 → #2128). The segment stays **open** as a standing home for small refinements. | 2026-08-20 → 2026-09-06 |
 | Practice audit | Development-practice audit + follow-through (not a numbered segment): what gates a merge, measured (`docs/practice-audit-2026-09-04.md`); `tests/unit/test_doc_conventions.py` (lifecycle labels from `DISPLAY_LABELS`, retired button vocabulary, `CLAUDE.md` / `AGENTS.md` twins); `.claude/agents/diff-reviewer.md`; merge policy in `CONTRIBUTING.md`; `new_project_practices_setup.md`; `CLAUDE.md` 266 → 183; `tools/code_metrics.py` duplication + churn (deterministic, full-history); codebase assessment 2026-09-04 + `guide/assessment.json`; `rrw_sdd_in_practice.md`; `spec/permissions.md` + `spec/email_template_editor.md` (19A Part 1). PRs #2085 → #2101. | 2026-09-04 → 2026-09-05 |
 | 19E | **Operator onboarding.** `/guide` — the in-app, audience-filtered operator documentation, in the chrome row beside `/about`; `docs/quickstart.md` retired to `docs/archive/` with its 11 live references repointed. The lobby **first-run card** on zero *visible* sessions, four stepped tiles that are a table of contents for the Guide. Two CSV **template sets** — starter and demo — byte-derived from the four serializers, the demo one proved by a download → Quick Setup → `validated` round-trip rather than a fixture. A `What this page is for` **disclosure** on all six Setup pages, copy contract in `spec/setup_pages.md` §0. **Role-aware sections** (rung 7): `visible_audiences()` unions the operator predicate with `participants.roles_held_anywhere`; a viewer holding nothing sees everything. Plus the author's Guide rewrite — the walkthrough with twelve screencaps, behind the app's first `StaticFiles` mount at `/static`. Planned #2130; rungs 1–7 across #2131 → #2173; closed #2176. Per-rung PR numbers in `guide/todo_master.md`. | 2026-09-07 |
+| 19F | **Reviewee participation disclosure.** A reviewee's `/me` row, role chip and `/results` surface now require a **currently-resolving visibility grant** (`visibility_policies.reviewee_has_current_grant`) rather than roster membership — the row appears and disappears as the windows move, and an archived session closes the grant. Two window corrections behind it: `while_ongoing` is `status = "ready"`, and `after_release` requires `expired` **and** the anchor passed, so a session reverted to draft no longer sits inside an open release window. The wide rung is a security change beyond the theme: **all four session-scoped gates answer 404** with no role-naming detail, so a signed-in stranger cannot enumerate session ids from status codes (sys-admins exempt — 403 on an existing session they do not own, existence checked first). `/guide` closes to a viewer who resolves no audiences and 303s them to `/about`, reversing 19E rung 7's fallback; `roles_held_anywhere` → `disclosable_roles`, grant-aware. Observers keep their rows in every state, unlinked when archived. The same gating reaches the **role-navigator chip strip** (rung 7): the reviewee chip is omitted without a grant, the observer chip greys on an archived session, so the two doors onto a role agree. Planned #2174, replanned #2175 + #2178, rungs across #2179 → #2186, closed #2187. Per-rung PR numbers in `guide/todo_master.md`. | 2026-09-07 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres` job, which also runs the full pytest
@@ -357,9 +358,15 @@ suite against a `postgres:16` service container).
 - **`require_operator`** is a router-level dependency on the whole
   `/operator/*` package (the workspace allowlist; a miss 303s to `/me`),
   and **`require_session_operator`** gates every session-scoped route on
-  a `SessionOperator(user, session)` row — non-members get **403** and
-  never see another owner's session. The full gate catalogue, per-route
-  matrix and failure semantics are `spec/permissions.md`.
+  a `SessionOperator(user, session)` row. Since 19F a non-member gets
+  **404**, not 403, and the body is indistinguishable from an unknown
+  session id — the same refusal all four session-scoped gates give, so a
+  signed-in stranger cannot enumerate session ids from status codes. One
+  exemption: a **sys-admin** gets 403 for a session that exists and they
+  do not own (existence is checked first, so the exemption cannot invent
+  sessions), with the message pointing at Sys Admin → Sessions. The full
+  gate catalogue, per-route matrix and failure semantics are
+  `spec/permissions.md`.
 - **Three-tier role model** (Segment 18S): operator ⊂ admin
   (`is_sys_admin`) ⊂ **super-admin**. Super-admin is derived from
   `SUPER_ADMIN_EMAILS` (config, never stored), self-heals to full admin
@@ -666,7 +673,15 @@ flags this on Setup).
   "active"` rows count.
 - **Dashboard** at `/me` lists the user's sessions across all
   three audiences (Reviewer / Reviewee / Observer) with per-session
-  pill computed from the role's progress state.
+  pill computed from the role's progress state. The three audiences are
+  **not symmetric** since 19F: a reviewer's and an observer's rows follow
+  roster membership, but a **reviewee's row requires a currently-resolving
+  visibility grant** (`visibility_policies.reviewee_has_current_grant`),
+  so it appears and disappears as the windows move and is absent
+  entirely on a session that grants them nothing. A user who is also a
+  reviewer or observer on that session keeps the row; only the
+  `reviewee` chip drops out. An archived session's observer row renders
+  **unlinked**, beside the reviewer's "not opened".
 - **Surface** is a multi-page form — instruments grouped into pages
   per `Instrument.page_number` + `Instrument.starts_new_page`
   (Segments 18L + 18M). Each page renders one instrument's table of
@@ -704,11 +719,14 @@ flags this on Setup).
 
 #### Reviewee at `/me/sessions/{id}/results`
 
-- **Identity gate**: matched to `Reviewee.email_or_identifier`
-  case-insensitively, and additionally guarded by
-  `participants.is_email_identified(reviewee)` — anonymous
-  (non-email) identifiers can't reach the page (Setup's
-  `reviewees.unreachable_for_results` warning calls this out).
+- **Identity gate**: `require_reviewee_with_current_grant` — matched to
+  `Reviewee.email_or_identifier` case-insensitively, guarded by
+  `participants.is_email_identified(reviewee)` (anonymous, non-email
+  identifiers can't reach the page — Setup's
+  `reviewees.unreachable_for_results` warning calls this out), **and**
+  since 19F gated on a currently-resolving visibility grant. Every
+  refusal is a **404**, so "no grant" and "not a reviewee here" are one
+  outcome rather than two a caller could tell apart.
 - **Body**: per-instrument sections, each rendered in one of three
   modes per the operator's per-instrument Band 3 visibility policy
   (`raw` / `anonymized` / `summarized`).
@@ -723,8 +741,11 @@ flags this on Setup).
 #### Observer at `/me/sessions/{id}/collation`
 
 - **Identity gate**: matched to `Observer.email` case-insensitively;
-  only `Observer.status == "active"` rows count. Opted-in
-  per-session via `sessions.observers_enabled`.
+  only `Observer.status == "active"` rows count; refusal is a **404**
+  since 19F. Opted-in per-session via `sessions.observers_enabled`. An
+  **archived** session renders no sections: the archive override closes
+  the grant for every non-operator audience, which 19F made true of the
+  observer view as well as the reviewee one.
 - **Body**: per-instrument 3-row tables. Row 1 is distinct-reviewer
   headcount + shared aggregate over the observer's in-cohort
   assignment pool (partitioned by the observer's
@@ -854,7 +875,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Queue-based batch invitation sending (today: synchronous in-request loop over eligible reviewers; fine with the dev outbox, doesn't survive real SMTP latency + provider rate limits). Picks up workplan §12 work item #7. | **Segment 14B Part C** (bulk-send queue + background worker; plan at `guide/segment_14B_email_infrastructure.md`) |
 | Technical-support contact (global env var, surfaces on app chrome footer + error pages + invalid-link landing). Distinct from the operational help contact on `ReviewSession` (which lives in #24). **Moved out of Segment 20 on 2026-09-05**: an unset env var renders nothing, so the mechanism needs no deployed host — only the address does. | **Segment 19C Item 8** (mechanism; `guide/segment_19C_refinements.md`) + **Segment 20** (the address itself, at deploy) |
 | Operator-facing **documentation of the deployed service** — a single administrator guide for the institutional host, the institutional half of `docs/troubleshooting.md`, and a currency pass over the in-app Guide (canonical since 19E rung 2, formerly `docs/quickstart.md`) + `docs/known_limitations.md`. The other six workplan §18 items are either already shipped (validation explanations, operator guide, developer setup guide, known limitations page) or moved to 19E / 19C Item 8 — see the audit table in the plan. | **Segment 20** — **reserved 2026-09-05, gated on the institutional Azure deployment concluding** (`docs/deployment_nus.md`); plan at `guide/segment_20_operator_polish_and_documentation.md` |
-| **Reviewee participation disclosure.** An active reviewee sees a `/me` row for their session — name, status, a live link to `/results` — from the moment the roster is uploaded, in every lifecycle state, whether or not any instrument grants them a view; recorded 2026-09-07 against a running app (`spec/role_landing_and_visibility.md` §4). The row discloses that someone is the subject of a review before anyone has decided they may see anything about it, and on an archived session after that decision was withdrawn. Never the intent: `_dashboard.py:192` still reads *"W16 will gate this … today the placeholder accepts any active reviewee"*, and W16 shipped in PRs #1737–#1752. The gate is a currently-resolving visibility grant; observers and reviewers are unaffected by author decision, and sign-in itself stays open to the whole tenant. Carries the known observer archive-override gap (`§6`) as its third rung. | **Segment 19F** (`guide/segment_19F_reviewee_participation_disclosure.md`; planned 2026-09-07, not gated) |
+| *(removed)* **Reviewee participation disclosure** — **shipped as Segment 19F on 2026-09-07.** An active reviewee had been getting a `/me` row — name, status, a live link to `/results` — from the moment the roster was uploaded, in every lifecycle state, whether or not any instrument granted them a view, and on an archived session after that decision had been withdrawn. The gate is now a currently-resolving visibility grant; `/results` refuses without one. Observers and reviewers are unaffected by author decision, and sign-in stays open to the whole tenant. The observer archive-override gap (`spec/role_landing_and_visibility.md` §6) closed with it, and the wide rung — all four session-scoped gates answering 404 — closed the session-enumeration vector alongside. Plan archived at `guide/archive/segment_19F_reviewee_participation_disclosure.md`. | Done. |
 
 ---
 

@@ -597,8 +597,14 @@ def release_responses_now(
     Emits ``session.responses_released`` with a snapshot of the
     new ``responses_release_at`` + a ``cleared_until`` flag when
     the prior close-stamp was non-null. The session lifecycle
-    state isn't changed by this call — release windows are
-    orthogonal to ``draft / validated / ready / expired``.
+    state isn't changed by this call.
+
+    **They are no longer orthogonal, though** (19F PR 2a): the
+    window this stamps only *opens* while the session is
+    ``expired``, so stamping an anchor on a ``ready`` session
+    grants nobody anything. The Workflow card only offers the
+    button on an expired session, which is why the anchor and the
+    state agreed before the predicate enforced it.
     """
     now = datetime.now(timezone.utc)
     cleared_until = review_session.responses_release_until is not None

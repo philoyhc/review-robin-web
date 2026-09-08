@@ -369,6 +369,80 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — closed (#2187). Intended versus done.** The ladder was
+planned as five rungs and shipped as **eight**: PR 2a (the window
+correction, folded in at the author's direction), PR 3 renumbered when
+decision 6 arrived, and PR 7 added during the close itself. Every rung
+in the plan shipped; nothing was struck. The scope grew twice, both
+times because probing the running app contradicted the plan — decision 5
+(the uniform 404) and decision 6 (the Guide bounce) were both author
+decisions taken mid-build, and both are recorded above.
+
+**Five specs the plan never named**, against nine it did:
+`spec/reviewer-surface.md`, `spec/architecture.md` and
+`spec/rrw_functional_spec.md` at PR 6; `spec/role_navigator.md` at
+PR 7; `spec/lifecycle.md` at the close. `close_check` caught exactly one
+of the five, and only because `spec_registry.py` maps the module that
+changed. **A manifest is written from the routes a change is expected to
+touch, and a rename travels further than that** — the other four came
+from grepping the retired names and from the close's `spec-writer` pass.
+
+**The `spec-writer` pass found a defect, not a doc slip.** Its four
+confirmed drift items were adjudicated one by one against the code;
+three were prose. The fourth was `build_role_chips` answering from
+roster membership alone, which became **PR 7** — the segment's own
+contract, applied on `/me` and not on the chip strip. A close that only
+reads prose would have missed it, because the prose was describing the
+code correctly.
+
+**Two DoD lines need reading rather than running.**
+
+- *"`grep -rn "roles_held_anywhere" app/` is empty"* — it is **not**
+  empty, and should not be. Two docstrings cite the retired name as
+  history (`participants.py`, `deps.py`). The line's intent — no
+  callable, no definition, no import by that name — holds:
+  `grep -rn "roles_held_anywhere(" app/` is empty. A grep for a bare
+  identifier cannot tell a use from a mention of a use.
+- *"no `W16 will gate` / `W17 will gate` comment remains"* — true of
+  that phrasing. PR 7 found `_shared.py` carrying *"the W16 / W17 gates
+  will land later"*, which says the same thing and passes the grep.
+  **A grep-shaped tripwire only catches the phrasing it was written
+  for**; this is the second time in one segment (PR 5's comment quoting
+  the phrase was the first).
+
+**Two findings out of scope, recorded here rather than fixed.** Both
+came from the close's audit of the chip across twelve reviewee
+conditions, run against rendered pages:
+
+1. **A reviewee `while_ongoing` grant can be imported, and the editor
+   would reject it.** `visibility_policies` validates the
+   `(audience, window)` cell on the editor path and refuses
+   `reviewee` + `while_ongoing` outright; the Settings-CSV importer
+   (`session_config_io/_apply_instrument.py`) writes policy rows
+   straight from the parsed spec with no such check — the parser
+   validates the vocabulary, not the cell. Driven end to end,
+   `apply_session_config` returns `errors == []`, and on a `ready`
+   session the reviewee then gets a `/me` row and a **200 on
+   `/results`** — reading responses mid-flight, the state decision 3
+   exists to prevent. **Not 19F's**: it dates from 18P PR A2 and would
+   have rendered values mid-flight before this segment too; 19F's
+   predicate merely honours the row like any other. The fix is a
+   validation call on the import path plus a decision on what an
+   offending row should do (reject the import, or coerce the cell to
+   `None`) — a choice for the author, and the same door serves clone
+   and rehydrate.
+2. **The archived reviewer surface renders no chip strip.** It serves
+   `reviewer/pre_open.html`, which has never included the partial
+   (unchanged since `f2899b07`), so a multi-role user loses the
+   navigator on that one page. Cosmetic, pre-existing, no disclosure.
+
+**One correction made at close.** `release_responses_now`'s docstring
+said release windows "are orthogonal to `draft / validated / ready /
+expired`". PR 2a made that false — the window it stamps opens only while
+the session is `expired` — so the docstring was corrected. The call
+itself is unchanged, and the Workflow card only ever offered the button
+on an expired session, which is why nothing broke.
+
 **2026-09-07 — PR 7 shipped: the chip strip, found by the close's
 `spec-writer` pass and not by the ladder.** `build_role_chips`
 (`app/web/routes_reviewer/_shared.py`) had been answering from roster
