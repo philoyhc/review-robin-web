@@ -147,3 +147,63 @@ def test_older_item_edit_does_not_honour_a_newer_item_bullet(plan_repo) -> None:
     assert cc.honoured("spec/a.md", base[0], "HEAD")
     item3 = cc.bullet_window_start(plan_repo, base, [3])
     assert cc.honoured("spec/a.md", item3[0], "HEAD") is None
+
+
+# --------------------------------------------------------------------
+# root-level and bare-filename manifest paths (19G.4)
+
+
+def _paths(bullet_text: str) -> list[str]:
+    """The committed paths ``parse_bullets`` extracts from one bullet."""
+    lines = bullet_text.splitlines()
+    bullets = cc.parse_bullets(lines, 0, len(lines))
+    return [path for bullet in bullets for path in bullet["paths"]]
+
+
+def test_a_root_level_document_is_a_committed_path() -> None:
+    """The gap this closed: ``COMMITTED_PATH`` matched ``spec/`` and
+    ``docs/`` only, so a manifest committing to ``constitution.md`` had
+    that bullet silently dropped — not verified, and a waiver on it not
+    counted. 19G.1 committed to a ``constitution.md`` edit and the tool
+    reported four committed paths against a five-bullet manifest.
+    """
+    assert _paths("- `constitution.md` — VI gains a pointer.") == ["constitution.md"]
+
+
+def test_a_bare_filename_resolves_to_the_folder_that_holds_it() -> None:
+    """Two of the 99 plans use a bare name as shorthand for a spec.
+    Resolution reads the filesystem — root, then ``spec/``, then
+    ``docs/`` — so there is no list to maintain."""
+    assert _paths("- `architecture.md` — the module map.") == ["spec/architecture.md"]
+
+
+def test_a_bare_name_after_the_dash_is_prose_not_a_commitment() -> None:
+    """The reason bare names are matched in the leading position only.
+
+    Measured over the 99 plans: matching them anywhere counted five
+    passing mentions as commitments and flipped one archived plan to
+    FAIL — 19E's ``docs/README.md`` bullet *describes* ``quickstart.md``
+    retiring, and the tool would have demanded the retired file still
+    exist.
+    """
+    bullet = "- `docs/README.md` — `quickstart.md` retires to `docs/archive/`."
+    assert _paths(bullet) == ["docs/README.md"]
+
+
+def test_a_prefixed_path_after_the_dash_is_still_a_commitment() -> None:
+    """The asymmetry is deliberate, and this is the half that must not
+    regress: bullets legitimately commit to several specs in their
+    description ("Per-Part spec docs as the scope settles — A, B, C"),
+    and a head-only rule would have dropped seven such commitments
+    across the archived plans."""
+    bullet = (
+        "- Per-Part spec docs as the scope settles — `spec/assignments.md` "
+        "(Part 1), `spec/csv_contracts.md` (Part 2)."
+    )
+    assert _paths(bullet) == ["spec/assignments.md", "spec/csv_contracts.md"]
+
+
+def test_an_unresolvable_bare_name_is_reported_as_written() -> None:
+    """C2 should name the string the author wrote, not a guess at what
+    they meant — otherwise its message points at a file nobody typed."""
+    assert _paths("- `no_such_document.md` — nothing.") == ["no_such_document.md"]
