@@ -60,7 +60,7 @@ Once an operator is **inside a session**, the Control Panel is that session's ho
 
 Most of the operator's time is spent doing **phase work** — configuring setup, then running operations — on the phase pages where that work belongs. But the **transitions between lifecycle states** are session-level commits and the Workflow card on every session-scoped page surfaces the next one explicitly: validating a setup, activating, and reverting to draft all happen via the Workflow card's stepper.
 
-Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The Workflow card itself is specified in **`spec/workflow_card.md`** (same partial renders on Session Home and every Operations-row page). The high-level Home shape: a full-width **Workflow card** above two independent flex columns — left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card's single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden) is the canonical entry point for every lifecycle-advancing action; **Prepare session** runs Generate + Validate in sequence, and the standalone **Activate session** button fires from `validated` (with a warnings-detour link when there are non-blocking findings to acknowledge).
+Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The Workflow card itself is specified in **`spec/workflow_card.md`** (same partial renders on Session Home and every Operations-row page). The high-level Home shape: a full-width **Workflow card**, the in-place `#session-config` card below it, then a `.bottom-grid` of **Quick Setup** (left) + **Danger Zone** (right) — see `spec/session_home.md` §3-4, which is the source of truth this summary follows. The Workflow card's single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden) is the canonical entry point for every lifecycle-advancing action; **Prepare session** runs Generate + Validate in sequence, and the standalone **Activate session** button fires from `validated` (with a warnings-detour link when there are non-blocking findings to acknowledge).
 
 #### Sub-pages of Home
 
@@ -136,7 +136,7 @@ The **cross-session** admin grouping. Shipped in Segment 16A and extended by Seg
 Two surfaces today:
 
 - **Accounts Management** (`/operator/sys-admin/users`, `sys_admin_users.html`) — the workspace allowlist: admit / revoke `is_operator`, promote / demote `is_sys_admin` (super-admin actor only), invite, delete users, and bulk-remove a user from every session. Server-side guards in `app/services/users.py`.
-- **Sessions Diagnostics** (`/operator/sys-admin/sessions`, `sys_admin_sessions.html`) — every session in the workspace, each row exposing Outbox + Audit log (read-only for a non-owner sys-admin since 18S Item 3) and a **Manage** action that self-adds the sys-admin as an owner (`POST …/sessions/{id}/adopt`, audited `session.owner_added`) before opening the session.
+- **Sessions Diagnostics** (`/operator/sys-admin/sessions`, `sys_admin_sessions.html`) — every session in the workspace, each row exposing Outbox + Audit log (read-only for a non-owner sys-admin since 18S Item 3) and a **Manage** action that self-adds the sys-admin as an owner (`POST …/sessions/{id}/adopt`, audited `session.owner_added`) before opening the session. Since **19C Item 10** the page also carries a read-only **Visibility grid audit** card: every stored Band 3 cell whose mode its `(audience, window)` pair does not allow, workspace-wide, live findings first. It writes nothing — clearing a cell is the owning operator's action on the Band 3 editor. It sits here rather than on any per-session page because the query spans every session, which no per-session operator may see (`spec/permissions.md`).
 
 System-wide settings + multi-tenant config remain forward-looking.
 
@@ -229,11 +229,11 @@ A short contract per page: URL + template + role + key affordances. For per-rout
 
 ### `/operator/sessions` — Sessions list
 
-Top-level operator lobby. A table of sessions, one row per session, columns: **Name**, **Code**, **Status**, **Deadline**, **Created**, **Created by**, plus per-row **Access** + **Delete** buttons. Below the table: a **Create new session** button.
+Top-level operator lobby. A table of sessions, one row per session, columns: **Name**, **Code**, **Status**, **Deadline**, **Created**, **Created by**, plus a per-row **expander** (rename / tag / clone / purge-and-archive) — see `spec/sessions_overview.md`. The **Add new session** button sits in the Search card above the table, not below it. *(Corrected 2026-09-08 at 19C's close — this read "per-row Access + Delete buttons" and "Below the table: a Create new session button".)*
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Create invites, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card**, then the in-place `#session-config` card, then a `.bottom-grid` of **Quick Setup** (left) + **Danger Zone** (right). *(Corrected 2026-09-08 at 19C's close — this described Session Details + Danger Zone against Quick Setup + Extract Data, a layout 18R Item 4 replaced.)* The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Create invites, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft.
 
 ### `/operator/sessions/new` — Create new session
 
@@ -241,13 +241,21 @@ Single-page form. No session top nav (the session doesn't exist yet); breadcrumb
 
 Fields: Name (required, max 255), Code (required, max 64; unique per operator), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default; Segment 18B PR 4), Deadline (optional, datetime-local — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). The Schedule sub-grid also surfaces **Release responses from** (`responses_release_at`) and **Release responses until** (`responses_release_until`, an absolute close `datetime-local` — S12 retired the W14 ISO 8601 duration `release_until_offset`). All four `datetime-local` inputs (Start / End / Release-from / Release-until) carry `min` / `max` attributes the browser picker honours — Start ≤ End ≤ Release-from ≤ Release-until — and a small shared partial (`operator/partials/_schedule_ordering_js.html`) live-updates the bounds as the operator types. The server re-runs `scheduled_events.validate_schedule_ordering` as the load-bearing safety net (see `spec/lifecycle.md` §8.2.7). A **User interface settings** card above the Quick Setup card carries two checkboxes: **Enable Relationships tab** (`relationships_enabled`) and **Enable Observers tab** (`observers_enabled`); both default unchecked. Action row: **Create session** (Primary) submits to `POST /operator/sessions` → inserts the session + a `SessionOperator` row + a `session.created` audit event + 303 to `/operator/sessions/{id}`. **Cancel** (Secondary) → `/operator/sessions`.
 
-### `/operator/sessions/{id}/edit` — Edit session
+### `/operator/sessions/{id}/edit` — retired
 
-Same shape as the create form, with pre-populated values; no session top nav (it's a meta-edit, sub-page of Home). Breadcrumb is `Sessions → {session.name} → Edit Session`.
+**There is no Edit session page.** Segment 18R Item 4 moved editing back
+onto Session Home's `#session-config` card, and this route is now a
+**308 redirect** to `…?editing=1#session-config`
+(`app/web/routes_operator/_session_home.py`). The fields, the
+lifecycle gate and the `session.updated` audit event are unchanged; only
+their location is. See `spec/session_home.md` §4.
 
-Same fields as create (Name, Code, Timezone, Deadline, Description, Help contact), pre-filled — the Timezone field was folded in from the former standalone Display timezone card in Segment 18B PR 5, so the display zone is now lifecycle-gated like the rest of the form. The Schedule sub-grid includes **Release responses from** and **Release responses until** (both wired end-to-end since PR #1716). The page also carries a **User interface settings** card with **Enable Relationships tab** and **Enable Observers tab** checkboxes, mirroring the Create Session form (added PR #1705). Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field (plus a `session.display_timezone_set` event when the zone changes), invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
-
-The route returns **HTTP 409** when the session is `ready` — operators must Revert to draft first via the Workflow card.
+*(This section described the retired page in full — its breadcrumb,
+its Save changes / Cancel action row, its 409 when the session is
+`ready` — until 2026-09-08, when 19C's close audit found it. The page
+had been gone for three weeks. A page-by-page concept document names
+pages, so a retired one leaves a section behind that reads exactly like
+a live one.)*
 
 ### Setup pages (Reviewers / Reviewees / Relationships) — shared shape
 

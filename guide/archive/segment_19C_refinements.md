@@ -846,6 +846,43 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — the close's `spec-writer` pass: five files with real drift,
+four fixed and one deliberately not.** Every finding was verified against
+the code before it was acted on. Six of the nineteen manifest files came
+back clean, including `spec/color_tokens.md`, whose 80-primitive /
+107-semantic count still matches `base.html` exactly.
+
+**Three of the five were pre-19C drift that this manifest inherited.**
+Segment 18R Item 4 moved editing back onto Session Home and retired the
+Edit Session Details page three weeks ago; `spec/session_home.md` and
+`spec/sessions_overview.md` recorded it correctly, and three *summaries*
+of them did not — `spec/visual_style_rrw.md`, `spec/operator_ui_concept.md`
+(twice, plus a whole section describing the retired page as live), and
+`spec/operator_button_audit.md`. **A document that summarises another
+document does not fail when the subject changes; it just quietly stops
+agreeing.** Nothing catches that: both files are internally consistent,
+and no test compares them.
+
+**Two were 19C's own, and neither had surfaced until now.**
+`docs/security_posture.md`'s destructive-action table listed the confirm
+token and the permission gate on `/delete-data` and `/delete` but not
+`_require_editable` — the lifecycle gate **Item 3 added**, which is the
+whole of "locked while Activated". And `spec/ui_elements.md` recorded
+input and table borders as the literal `#ddd` against
+`border-default` "(`#D1D5DB`)" — wrong twice, because the rules had
+already been tokenized and `#D1D5DB` was `--border-default`'s
+**pre-Item-8** value. **Item 8 is what made that parenthetical wrong**,
+and Item 8 did not touch the file that carried it.
+
+**`spec/operator_button_audit.md` was flagged and not regenerated.** The
+audit wants §§4–5 re-derived against the current templates — a real
+slice, and absorbing it into a close is exactly the habit that closed
+this segment. It got a **staleness banner naming all three false claims**
+so no reader is misled, and the regeneration is filed in
+`guide/todo_master.md`. Its legend also gained the **Alert** role, which
+row #69 had been using since it shipped while the legend that decodes the
+table never defined it.
+
 **2026-09-08 — closed. Intended versus done, across ten items.** 19C was
 planned as a holding segment for small operator-facing refinements and it
 did that: every item it took on shipped, none was struck, and the two it

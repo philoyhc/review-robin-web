@@ -117,8 +117,10 @@ service writes an `audit_events` row).
 
 | Action | Confirm | Permission | Audit |
 |---|---|---|---|
-| Delete response data (`/delete-data`) | `confirm=true` | `require_session_operator` | ✓ |
-| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true` | `require_session_operator` / per-id check | ✓ |
+| Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` | ✓ |
+| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` / per-id check | ✓ |
+
+**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3, `app/web/routes_operator/_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |

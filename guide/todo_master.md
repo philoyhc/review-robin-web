@@ -2735,6 +2735,21 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
+- **Regenerate `spec/operator_button_audit.md` §§4–5** *(filed 2026-09-08 by
+  19C's close audit)*. The file is a dated snapshot last refreshed
+  2026-05-22, and its Session-Home sections describe a layout that Segment
+  18R Item 4 replaced: they still put the Danger Zone on an Edit Session
+  Details page that no longer exists (`session_edit.html` is gone;
+  `/sessions/{id}/edit` is a 308 redirect), still show an Extract Data card
+  on Home, and §5a's Next-Action state table predates the ten-state Workflow
+  card. A **staleness banner naming all three** was added at the close so no
+  reader is misled meanwhile; the sections themselves want re-deriving
+  against `session_detail.html`, `spec/session_home.md` and
+  `spec/workflow_card.md`. Not done at 19C's close on purpose — it is its own
+  slice, and absorbing it was the habit that closed the segment. The
+  legend's **role vocabulary is current** and unaffected. One PR, no plan
+  doc needed.
+
 - **Theme customizer — a full pass over every element** *(author intent,
   logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C
   closed)*. Item 8 moved two token families and, in doing so, turned up three
