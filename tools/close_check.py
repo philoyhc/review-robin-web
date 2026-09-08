@@ -62,8 +62,18 @@ path. Never `--follow --reverse`, which returns the archive-move commit
 for a renamed file (measured: start = end, 0 of 110 paths "touched").
 End = `HEAD`, or for an archived plan the commit that added the archived
 path. A path is honoured by at least one non-merge commit touching it in
-`(start, end]` — the start commit itself is excluded, so a plan that
-lands its manifest and its spec edit in one commit reads as unhonoured.
+`[start, end]` — the start commit **included**, so a plan that lands its
+manifest and its spec edit in one commit reads as honoured.
+
+That boundary was open until 2026-09-08 (`(start, end]`, from `git log
+A..B` dropping `A`), and the exclusion was arithmetic rather than a
+rule: nowhere else does C3 ask *when* in the window an edit fell, and an
+edit in the commit that recorded the commitment is the same evidence as
+an edit the day after. Measured across all 99 plans it cost 6 of the 22
+C3 failures — 19B's `docs/status.md`, 14B's `spec/email_infra_options.md`
+(twice) and three paths in 19G Item 5 — every one of them a manifest and
+its doc edit landing together. The item-anchor logic is unaffected: an
+edit before its item's heading is still outside that bullet's window.
 
 A **segment-level** manifest spans every item, so that one window let an
 older item's edit satisfy a newer item's bullet. Measured on `19C` at
@@ -416,13 +426,30 @@ def window(
 
 
 def honoured(path: str, start: str, end: str) -> str | None:
-    """Last commit date touching `path` in (start, end], or None."""
+    """Last commit date touching `path` in [start, end], or None.
+
+    The start commit counts. It is the commit that *recorded* the
+    commitment, so an edit inside it is the manifest and the doc edit
+    landing together — the commitment kept in one commit rather than
+    two. Excluding it was range arithmetic (``git log A..B`` drops
+    ``A``), not a rule: nowhere else does C3 ask when in the window an
+    edit fell, and a boundary edit is the same evidence as any other.
+    """
     out = _git(
         "log", "--no-merges", "--format=%ad", "--date=short",
         f"{start}..{end}", "--", path,
     ).split("\n")
     dates = [row for row in out if row.strip()]
-    return dates[0] if dates else None
+    if dates:
+        return dates[0]
+    # `start^!` is the start commit with its parents excluded — the one
+    # commit, whether or not it has a parent. `--no-merges` keeps a merge
+    # start (which the `-G` pickaxe cannot return anyway) reading as it
+    # did before.
+    return _git(
+        "log", "--no-merges", "--format=%ad", "--date=short",
+        f"{start}^!", "--", path,
+    ).strip() or None
 
 
 def last_touched_ever(path: str) -> str | None:

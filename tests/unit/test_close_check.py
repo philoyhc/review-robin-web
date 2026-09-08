@@ -91,7 +91,13 @@ def plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     plan = root / "guide" / "segment_ZZ_demo.md"
     spec = root / "spec" / "a.md"
     spec.write_text("one\n")
-    plan.write_text("# Segment ZZ\n\n## Doc impact\n\n- `spec/a.md` — x (Item 1).\n")
+    # Committed in the same commit as the manifest and never touched
+    # again: the boundary case (19G.6).
+    (root / "spec" / "b.md").write_text("landed with the manifest\n")
+    plan.write_text(
+        "# Segment ZZ\n\n## Doc impact\n\n"
+        "- `spec/a.md` — x (Item 1).\n- `spec/b.md` — y.\n"
+    )
     run("add", "-A")
     run("commit", "-qm", "manifest + Item 1 bullet")
 
@@ -147,6 +153,42 @@ def test_older_item_edit_does_not_honour_a_newer_item_bullet(plan_repo) -> None:
     assert cc.honoured("spec/a.md", base[0], "HEAD")
     item3 = cc.bullet_window_start(plan_repo, base, [3])
     assert cc.honoured("spec/a.md", item3[0], "HEAD") is None
+
+
+def test_the_commit_that_records_the_commitment_can_also_honour_it(
+    plan_repo,
+) -> None:
+    """The boundary the window used to drop (19G.6).
+
+    ``spec/b.md`` is written in the same commit as the manifest and
+    never again — the manifest and the doc edit landing together. Under
+    ``git log start..end`` that commit is excluded and the bullet reads
+    as unhonoured, which is range arithmetic rather than a rule:
+    nowhere else does C3 ask *when* in the window an edit fell. Measured
+    over the 99 plans it cost 6 of 22 C3 failures, every one of them a
+    same-commit landing.
+    """
+    base = cc._first_commit_matching(plan_repo, "^## Doc impact$")
+    assert cc.honoured("spec/b.md", base[0], "HEAD") is not None
+
+
+def test_a_path_the_window_never_touched_is_still_unhonoured(
+    plan_repo,
+) -> None:
+    """The half that must not regress: including the start commit must
+    not make every path pass. ``spec/c.md`` exists in no commit."""
+    base = cc._first_commit_matching(plan_repo, "^## Doc impact$")
+    assert cc.honoured("spec/c.md", base[0], "HEAD") is None
+
+
+def test_an_edit_before_the_window_opens_is_still_outside_it(
+    plan_repo,
+) -> None:
+    """Including the start commit widens the window at its *start* only,
+    by one commit. ``spec/b.md`` was written before Item 3's heading
+    existed, so Item 3's bullet cannot claim it."""
+    item3 = cc.item_heading_start(plan_repo, 3)
+    assert cc.honoured("spec/b.md", item3[0], "HEAD") is None
 
 
 # --------------------------------------------------------------------
