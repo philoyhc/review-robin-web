@@ -23,7 +23,7 @@ Items close independently, so each carries its own `### Doc impact` and
 | Item | Covers | State |
 |---|---|---|
 | **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Decided** 2026-09-08. Rung 1 landed; rungs 2–4 open. |
-| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which describe a Session Home layout replaced 2026-08-19 | **Not started.** Filed in `guide/todo_master.md`; one PR. Plan it when it starts. |
+| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which describe a Session Home layout replaced 2026-08-19 | **Closed** 2026-09-08. One PR. |
 | 19G.3+ | Open. Admitted only for follow-ups that trace to the 08sep assessment. | — |
 
 §8's **move #1** is deliberately *not* an item here: it is Segment 20,
@@ -677,6 +677,161 @@ run over the four doc-impact files; two flags raised, both real, both
 fixed above, none changing a decision. `docs/status.md` row added. The
 plan **stays in `guide/`** — this is an item close, not a segment close,
 and 19G.2 is still open.
+
+
+---
+
+## Item 2 — Regenerate the button audit's Session Home sections
+
+### Opportunity
+
+`spec/operator_button_audit.md` §§4–5 described the Session Home layout
+as it stood on 2026-05-22 and carried a banner naming three false
+claims: that the Danger Zone had moved to an Edit Session Details page,
+that Session Home had an Extract Data card, and a Next-Action state
+table predating the Workflow card. The banner was added at 19C's close
+and the regeneration deferred — correctly, since 19C was closing
+*because* it kept absorbing one more thing.
+
+It matters more than a stale section usually would because `CLAUDE.md`
+points at this file for button vocabulary. A reader sent here for the
+canonical role of a button lands two sections away from three false
+statements about the page they are most likely editing.
+
+### Decision
+
+**Re-derive §§4–5 from the templates, and point rather than copy for the
+state machine.**
+
+`spec/workflow_card.md` already owns which button appears in which of
+the Workflow card's states, across §§240–589. Regenerating §5a as a full
+state table would produce a second copy of that — a class B drift
+instance manufactured by the item that exists to clear one. So §5a
+records the **vocabulary** (fifteen sites, four roles, no inline styles)
+and points at `spec/workflow_card.md` for the cascade.
+
+*Rejected: renumber the button table.* The audit numbers buttons
+1–143 running; the retired page's #16/#17 and the Danger Zone's
+#17a/#17b would all shift. New buttons take #144–#160 and the two
+Danger Zone entries **keep their old numbers**, because those are
+literally the same two buttons that moved and renumbering them loses the
+thread a reader follows.
+
+### Semantics
+
+- **A retired page keeps its section**, marked retired, with a table of
+  where its buttons went. Deleting §4 would leave a reader with a
+  dangling `/edit` bookmark and no explanation.
+- **The audit stays a dated snapshot.** §§4–5 carry a 2026-09-08
+  re-derivation date; every other section keeps its own. The header's
+  refresh history gains a line rather than being rewritten.
+- **Findings elsewhere in the file that describe these surfaces** are
+  annotated as superseded, not deleted — they are dated findings, and
+  the reasoning in them outlives the surface.
+
+### Judgment calls — decided
+
+- **Point at `spec/workflow_card.md` rather than copy its table**
+  (2026-09-08). A duplicated state machine is the drift class this
+  segment exists to reduce.
+- **Two drift findings annotated though they sit outside §§4–5**
+  (2026-09-08). Both describe the surfaces this item re-derived, in the
+  present tense, and both were false. Regenerating §§4–5 while leaving
+  "the current activated-state Next Action surface renders…" three
+  hundred lines down would have moved the falsehood rather than removed
+  it.
+- **The Extract Data page gets a note, not a new section** (2026-09-08).
+  Following the card to `session_extract_data.html` and auditing that
+  page is a new section, not a re-derivation of §5; the gap is recorded
+  where the card used to be.
+
+### Blast radius (measured)
+
+At `ffb1a4a6`, 2026-09-08.
+
+| What | Count |
+|---|---|
+| Sections re-derived | 2 (§4, §5), 5 sub-sections |
+| Button sites enumerated from the templates | 24 across `session_detail.html` (7), `next_action_card.html` (15), `_quick_setup_card.html` (3, minus 2 already numbered) |
+| Templates read | 3 + 2 included partials |
+| Drift findings annotated | 2 |
+| Other files changed | 0 |
+
+### PR ladder
+
+1. **PR 1 — the regeneration.** Lands: §§4–5 re-derived, the banner
+   replaced by a refresh note, the two superseded drift findings
+   annotated. Must not touch: any other section's tables, the role
+   legend, or any file but this one.
+
+### Definition of done
+
+- §§4–5 contain no claim contradicted by the templates at `ffb1a4a6`.
+- The stale-warning banner is gone, replaced by a refresh note that says
+  which sections were re-derived and when.
+- `tests/unit/test_doc_conventions.py` passes — including the
+  path-reference check, which this item's own draft tripped.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Does `spec/ui_elements.md` want the same treatment?** Its
+  inline-styled-buttons section records the Danger Zone's 2026-05-22
+  move to `session_edit.html` as *"Current: migrated"*, which is half a
+  round trip — the buttons came back. Not fixed here: it is a different
+  file and a different section, and this item's scope is the two
+  sections named. **Decides:** the author.
+
+### Out of scope
+
+- **A section for the Extract Data page.** See Judgment calls.
+- **Re-deriving any other section.** Each carries its own date; a
+  whole-file re-audit is the periodic refresh the Maintenance section
+  describes, not this item.
+
+### Doc impact
+
+- `spec/operator_button_audit.md` — §§4–5 re-derived from the templates;
+  the stale banner replaced by a refresh note; two superseded drift
+  findings annotated (PR 1).
+- `docs/status.md` — row at the close.
+
+### Status
+
+**2026-09-08 — landed in one PR, and the rung-2 check caught the author.**
+
+The draft of §4 wrote `` `app/web/templates/operator/session_edit.html`
+no longer exists `` without the `<!-- path-ref-ok -->` marker that rung 1
+had placed on the line it replaced.
+`test_every_path_reference_in_live_prose_resolves` failed, named the
+file and line, and told me which of repoint-or-mark applied. **The check
+built four rungs ago caught a regression introduced by the person who
+built it, in a sentence whose whole subject is a retired file** — which
+is the argument for Article II in one line: the constant does not get
+tired of checking.
+
+**And then the other rung-2 test caught the author too, on a real
+limitation of the check.** The `docs/status.md` row for this item quoted
+the escape marker literally while *describing* it. The check cannot tell
+a marker from a mention of one, so the row read as a marker covering a
+line whose references all resolve —
+`test_no_inline_path_marker_outlives_the_reference_it_covers` fired,
+correctly by its own rule and unhelpfully by intent. Reworded to name
+the marker without spelling it. **Filed, not fixed:** a mention-versus-use
+distinction would need the check to parse markdown code spans, which is
+more machinery than the trap costs. Worth knowing that the plan files
+escape it only by accident — a `segment_*` filename is outside the
+live-prose corpus, so this document may quote the marker freely and
+`docs/` may not.
+
+Everything else went as planned. The one judgment that grew was
+annotating two drift findings outside §§4–5: both described the
+regenerated surfaces in the present tense and both were false, so
+leaving them would have relocated the defect rather than fixed it.
 
 ---
 
