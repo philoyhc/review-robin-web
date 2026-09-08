@@ -2747,6 +2747,24 @@ bounced them.
 
 ---
 
+### Segment 19G — Post-assessment follow-ups — ✅ complete + archived 2026-09-08 (**ten items**, PRs #2197 → #2214, all in one day; plan archived: `guide/archive/segment_19G_post_assessment.md`)
+
+*Four PRs inside that span are **not** 19G items: #2205, #2211 and #2215 are the 08sep assessment's three same-day amendments, and #2216 is the post-Azure checklist's second item. The assessment itself gives the range as starting at #2196; that PR is the participant top-bar Guide link, which shipped just before the segment opened.*
+
+Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md` §8 and ran to ten items, of which **eight were produced by the previous item's findings** rather than planned in advance. Shipped surface: **26 lines** — one companion pill. Everything else is documentation and the tooling that checks it.
+
+- **Item 1 — summary drift, answered per class** (#2197 → #2202). The §8 question assumed one mechanism; the four instances turned out to be **four classes**, and the proposed registry targeted one. **A** prose restating a code constant → *derived* against `_PER_CELL_VALID_MODES`. **B** prose summarising another document → *conceded*, registry rejected on Article VI and recorded so it is not re-proposed. **C** pointers into another document's numbering → deferred to a measurement. **D** prose about behaviour with no source → conceded outright. **A fifth class nobody had counted** — 84 broken path references in live prose — is now enforced. `docs/unenforced_conventions.md` created, which Article VI had promised since it was written.
+- **Item 2 — `spec/operator_button_audit.md` §§4–5 regenerated** (#2203), discharging the stub above.
+- **Item 3 — the patch queue** (#2206): three documentation claims, each stating what it used to say, because a silent fix erases the evidence that the conceded classes exist.
+- **Items 4 → 8 — the tooling repairing itself.** `close_check` gained root-level `.md` (4), the C3 window learned to count the commit that records the commitment (6), and a *cited* path stopped counting as a commitment (8). Item 5 repointed six broken `§N` references and **refused to work the C3 boundary around**, closing with its `exits 0` line struck — that strike is what produced Item 6.
+- **Item 7 — the `§N` heading-validity check**, and the finding that matters most: **19G.5's measurement had certified the corpus clean and was itself wrong.** It read line by line; 7 of 132 references wrap, one was broken, and it had been introduced by 19G.1. Now `docs/unenforced_conventions.md` §1.6 — *vacuity is not coverage*.
+- **Item 9 — the `archived` companion pill** on `/me`. `not opened` is equally true of a draft session for the opposite reason. Kept as a companion, not a fourth status value, because reachability is derived from that string.
+- **Item 10 — the §5 weaknesses answered**: `guide/post_azure_todo_checklist.md` opened, the long-window `close_check` weakness downgraded on measurement (one instance, already mitigated), and the vacuity rule written down.
+
+**Three findings the plan keeps.** *A check satisfied by finding an excuse to write to a file again is a check being worked around* — the sentence that produced Item 6. *The conceded classes bite the people who conceded them*: 19G.1 introduced the broken reference Item 7 found, 19G.2's citation was Item 5's sixth fix, and 19G.7 wrote a miscount that Item 8 corrected before building on it. And **a policy recorded only in an item is a policy recorded nowhere** — the audit card's deploy-time run had been "recorded in the item" since 19C, and that item was archived.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -2759,9 +2777,14 @@ that originated there before the catalog retired.
 
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
-doc — pick one and start when ready. Schedule items:
+doc — pick one and start when ready. **Work that is blocked on the
+deployment *itself* — not merely unscheduled — is not listed here at
+all**: it lives in `guide/post_azure_todo_checklist.md`, opened
+2026-09-08, because an item waiting on a host is a different kind of
+thing from an item waiting for a turn. Schedule items:
 **14B and 20 (both gated on the institutional Azure
-deployment concluding — decision 2026-09-05)** (19F closed
+deployment concluding — decision 2026-09-05)** (19G closed
+2026-09-08; 19F closed
 2026-09-07; 19E closed
 2026-09-07; 19B closed
 2026-08-19; Self-review consolidation closed 2026-05-30;
@@ -2799,6 +2822,16 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
+- ~~**Regenerate `spec/operator_button_audit.md` §§4–5**~~ *(filed 2026-09-08 by
+  19C's close audit)* — **✅ shipped the same day as Segment 19G Item 2
+  (#2203)**, and struck here rather than deleted because the stub's own
+  reasoning is the useful part: it was filed as its own slice precisely so
+  that absorbing it would not repeat the habit that closed 19C. §4 became a
+  retired-page section, §5a records vocabulary and points at
+  `spec/workflow_card.md` for the state cascade rather than copying it, and
+  the regeneration found the Danger Zone had moved **twice** — which neither
+  the banner nor the stale sections said. The original text follows.
+
 - **Regenerate `spec/operator_button_audit.md` §§4–5** *(filed 2026-09-08 by
   19C's close audit)*. The file is a dated snapshot last refreshed
   2026-05-22, and its Session-Home sections describe a layout that Segment
@@ -2815,6 +2848,20 @@ dep chains called out at the bottom of this file.
   doc needed. *(Narrowed 2026-09-08: the file's missing **Sessions
   Diagnostics** section landed as §21 when that page's buttons were
   converted, so this stub is now §§4–5 only.)*
+
+- **Refresh `spec/operator_button_audit.md` §1 (Chrome)** *(filed 2026-09-08 by
+  Segment 19G's close `spec-writer` pass)*. The section states it was last
+  refreshed 2026-05-22 and predates two tabs that exist today: `Observers` in
+  the Setup row and `Extract data` in the Operations row
+  (`app/web/templates/operator/partials/session_top_nav.html:21-22`), and its
+  Operations ordering puts Validate before Assignments where the template has
+  Assignments first. **Pre-existing and outside 19G's scope** — 19G Item 2
+  regenerated §§4–5 only, and Item 5 touched one citation — so it is filed
+  rather than absorbed, which is the same discipline that produced the §§4–5
+  stub above. Also flagged, lower confidence: the legend at §69 abbreviates the
+  page-internal nav wrapper as `.tab-strip` where the template and the file's
+  own §4 note use `.tab-strip.tab-strip-page`; check before changing, it may be
+  deliberate shorthand. One PR, no plan doc needed.
 
 - **Theme customizer — a full pass over every element** *(author intent,
   logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C
