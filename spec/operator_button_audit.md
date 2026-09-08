@@ -180,7 +180,7 @@ four roles, no inline styles.
 | 152 | Stop releasing responses | `<button type="submit">` | `btn secondary` | Secondary |
 | 153 | Archive session | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** — serious but recoverable, per §6 |
 | 154 | Regenerate & prepare | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** |
-| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/visual_style_rrw.md` §5a. Not a lock card: §6's lock-card example is one use of this role, not its definition |
+| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/ui_elements.md` §5a. Not a lock card: §6's lock-card example is one use of this role, not its definition |
 
 Buttons #18–#27 of the 2026-05-22 audit are superseded wholesale: that
 table described a four-state Next Action card ("Validate Setup", "See
