@@ -565,20 +565,20 @@ def test_status_row_reports_instruments_as_configured_over_total(
     # instruments rather than one so the two numbers differ and the order
     # is actually pinned.
     body = " ".join(client.get(url).text.split())
-    assert '<span class="pill pill-warning">0 / 2</span>' in body
+    assert '<span class="pill pill-warning" data-instruments-configured-pill>0 / 2</span>' in body
 
     instrument.band1_touched_links = ["link1", "link2", "link3"]
     db.flush()
 
     body = " ".join(client.get(url).text.split())
-    assert '<span class="pill pill-warning">1 / 2</span>' in body
+    assert '<span class="pill pill-warning" data-instruments-configured-pill>1 / 2</span>' in body
 
     second.band1_touched_links = ["link1", "link2", "link3"]
     db.flush()
 
     # All configured -> blue.
     body = " ".join(client.get(url).text.split())
-    assert '<span class="pill pill-info">2 / 2</span>' in body
+    assert '<span class="pill pill-info" data-instruments-configured-pill>2 / 2</span>' in body
 
 
 def test_status_row_reports_no_instruments_as_none(
@@ -594,4 +594,4 @@ def test_status_row_reports_no_instruments_as_none(
     db.flush()
 
     body = " ".join(client.get(f"/operator/sessions/{review_session.id}").text.split())
-    assert "Instruments: <span class=\"pill pill-warning\">none</span>" in body
+    assert "Instruments: <span class=\"pill pill-warning\" data-instruments-configured-pill>none</span>" in body

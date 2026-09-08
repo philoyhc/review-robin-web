@@ -1225,7 +1225,7 @@ def test_pr6_save_applies_display_field_order_from_snapshot(
         follow_redirects=False,
     )
     assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    assert resp.json()["ok"] is True
     db.refresh(tag_1)
     assert tag_1.order == 2
 
@@ -5644,7 +5644,7 @@ def test_pr3_consolidated_save_wiring_ships(
     # Fetch derives the /save URL from the form action and reports
     # success back to the handler.
     assert "replace('/fields/save', '/save')" in body
-    assert "newModelOnSaveSuccess(instrumentCard)" in body
+    assert "newModelOnSaveSuccess(instrumentCard, data)" in body
     # No-JS fallback: the dfsave form still posts to /fields/save.
     assert (
         f'action="/operator/sessions/{review_session.id}'
@@ -5668,7 +5668,7 @@ def test_pr4_short_label_and_description_commit_via_save(
         follow_redirects=False,
     )
     assert response.status_code == 200
-    assert response.json() == {"ok": True}
+    assert response.json()["ok"] is True
     db.refresh(new_model)
     assert new_model.short_label == "Renamed"
     assert new_model.description == "Fresh description."
@@ -5748,7 +5748,7 @@ def test_pr5b_save_applies_band2_state_from_snapshot(
         follow_redirects=False,
     )
     assert response.status_code == 200
-    assert response.json() == {"ok": True}
+    assert response.json()["ok"] is True
     field = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == new_model.id,
@@ -6913,3 +6913,106 @@ def test_description_edit_box_is_taller(client: TestClient, db: Session):
     ).text
     assert "data-intro-description-input" in body
     assert "min-height: 6.5em" in body
+
+
+def test_19h1_save_returns_setup_state_for_both_pills(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 1 — the reload-free ``/save`` returns the state
+    the two setup pills are rendered from, so the client can repaint
+    them without a page load: ``is_configured`` for the saved card's
+    own pill, and the session's ``configured_counts`` for the aggregate
+    Instruments pill in the setup status row.
+
+    Both directions, because a save can make an instrument configured
+    *or* unconfigured — touching all three Band 1 links sets the gate,
+    submitting with none touched clears it again.
+    """
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19h1-save-pills"
+    )
+    save_url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save"
+    )
+    # The seeded source instrument is never configured here, so the
+    # aggregate is over two instruments and only the new model moves.
+    assert instruments_service.is_configured(db, new_model) is False
+
+    response = client.post(
+        save_url,
+        data={
+            "link1_touched": "true",
+            "link2_touched": "true",
+            "link3_touched": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "is_configured": True,
+        "instruments_configured": 1,
+        "instrument_count": 2,
+    }
+
+    # And back: no touched links in the submit clears the gate.
+    response = client.post(save_url, data={}, follow_redirects=False)
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "is_configured": False,
+        "instruments_configured": 0,
+        "instrument_count": 2,
+    }
+
+
+def test_19h1_failed_save_carries_no_setup_state(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 1 — a 422 carries only ``ok`` + ``errors``.
+    Nothing was committed, so there is no new pill state to send; the
+    client's repaint runs on the success path only and the pills stay
+    where the server last rendered them."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19h1-save-fail"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"display_field_order_snapshot": json.dumps(["not-an-id"])},
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["ok"] is False
+    assert "is_configured" not in body
+    assert "instruments_configured" not in body
+
+
+def test_19h1_setup_pill_repaint_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 1 — the client half: both pills carry the data
+    hooks the repaint needs, and the success handler calls the repaint
+    with the response body."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="19h1-pill-wiring"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # The two hooks — per-card and the page's aggregate. Asserted in
+    # their markup context: the bare attribute name also appears in the
+    # helper's own selector strings, so a substring match on it alone
+    # passes with the attributes stripped from both templates.
+    assert "data-instrument-setup-pill>Not set up</span>" in body
+    assert "data-instruments-configured-pill>" in body
+    # The repaint helper, and its call from the save-success handler.
+    assert "window.newModelRepaintSetupPills" in body
+    assert "window.newModelRepaintSetupPills(card, data)" in body
+    # It paints from the server's answer; the predicate is not
+    # reimplemented in the browser.
+    assert "data.is_configured ? 'Set up' : 'Not set up'" in body

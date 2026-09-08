@@ -67,13 +67,18 @@
        Zero reads `none`, matching Reviewers and Reviewees rather than
        rendering "0 / 0"; instruments are required to validate, so it
        takes the same warning tint those two use. #}
+    {# Segment 19H Item 1 — ``data-instruments-configured-pill`` lets the
+       Instruments page repaint this aggregate after a reload-free card
+       Save, which can flip one instrument and so the whole row. Both
+       numbers come from the server's ``configured_counts``; the three
+       branches below are formatting, and the client mirrors them. #}
     {% if not status_pills.instrument_count %}
-      <span class="pill pill-warning">none</span>
+      <span class="pill pill-warning" data-instruments-configured-pill>none</span>
     {% elif status_pills.instruments_configured == status_pills.instrument_count %}
-      <span class="pill pill-info">{{ status_pills.instruments_configured }} /
+      <span class="pill pill-info" data-instruments-configured-pill>{{ status_pills.instruments_configured }} /
         {{ status_pills.instrument_count }}</span>
     {% else %}
-      <span class="pill pill-warning">{{ status_pills.instruments_configured }} /
+      <span class="pill pill-warning" data-instruments-configured-pill>{{ status_pills.instruments_configured }} /
         {{ status_pills.instrument_count }}</span>
     {% endif %}
     &middot;

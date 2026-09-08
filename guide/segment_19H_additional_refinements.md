@@ -20,7 +20,7 @@ Items close independently, so each carries its own `### Doc impact` and
 
 | Item | Covers | State |
 |---|---|---|
-| **19H.1** | The card's two setup pills go stale after an AJAX Save | Open |
+| **19H.1** | The card's two setup pills go stale after an AJAX Save | **Closed 2026-09-08** |
 | **19H.2** | A locked instrument card must carry no unsaved edits | Open |
 | 19H.3+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
@@ -121,8 +121,71 @@ At `14a3811c`:
 | save endpoint's return | `app/web/routes_operator/_instruments.py:940` (`{"ok": True}`) |
 | save success handler | `instruments_index.html:3554–3570` |
 | predicate + counts | `_instrument_crud.py:596` and `:625` |
-| templates rendering the aggregate partial | 1 (`grep -rln session_setup_status_row app/web/templates`) |
+| templates rendering the aggregate partial | ~~1~~ **15** (`grep -rln session_setup_status_row app/web/templates`) — the planning-time count was wrong; see `### Status` |
 | tests naming `is_configured` / `Not set up` | 3 files / 3 assertions (`grep -rln is_configured tests/`) |
+
+### Status
+
+**2026-09-08 — Item 1 built and landed.** One PR, as the ladder
+intended; no rung struck.
+
+**The blast radius was wrong in one row, and it mattered.** The plan
+recorded **1** template rendering
+`operator/partials/session_setup_status_row.html`. It is **15** — every
+operator session page includes it. The command in the table is right;
+the number written beside it was not what that command returns. The
+consequence is that `data-instruments-configured-pill`, added for the
+Instruments page alone, now ships on fifteen pages. It is inert
+everywhere else (the repaint helper only exists on the Instruments
+page), so the decision stands rather than being reworked into a
+page-scoped hook — but it is a wider surface than the plan bought, and
+the row above is annotated rather than quietly corrected. Two tests in
+`tests/integration/test_band1_not_set_gate.py` assert the aggregate
+pill's exact markup and had to be updated for the new attribute; that
+is the 15-page surface showing up immediately.
+
+**A first cut of the wiring test asserted nothing.** It checked
+`"data-instrument-setup-pill" in body` and
+`"data-instruments-configured-pill" in body`. Both passed with the
+attributes deleted from *both* templates, because the repaint helper's
+own selector strings (`'[data-instrument-setup-pill]'`) put the same
+substring in the page. Found by mutation, not by reading. The
+assertions now pin the markup context
+(`data-instrument-setup-pill>Not set up</span>`,
+`data-instruments-configured-pill>`), and all four mutants die: reverting
+the endpoint to `{"ok": True}`, dropping either hook, and dropping the
+repaint call.
+
+**Decisions confirmed at build:**
+
+- **`configured_counts` unpacked into two keys for the aggregate, not a
+  second boolean** (2026-09-08). The response carries
+  `instruments_configured` and `instrument_count`, not a
+  `configured_counts` field. The aggregate pill *displays* both numbers,
+  so it needs them regardless; sending a separate "all configured" flag
+  would add a value that could disagree with the numbers beside it. The client
+  mirrors the template's three-branch formatting (none / blue / amber)
+  and nothing else.
+- **The `/save` response is now four keys, not one.** Four existing
+  tests asserted `response.json() == {"ok": True}` exactly; each was
+  narrowed to `response.json()["ok"] is True`, since none of them is
+  about the response's shape.
+
+**Verified in a browser** (Chromium 1440×900, seeded SQLite, fake
+auth), one page load throughout — `performance.getEntriesByType(
+'navigation').length === 1` after every save:
+
+| Action | Card pill | Aggregate pill |
+|---|---|---|
+| page load, nothing configured | `Not set up` amber | `0 / 2` amber |
+| the three Band 1 link pills clicked, **not** saved | `Not set up` amber | `0 / 2` amber |
+| Save | **`Set up` blue** | **`1 / 2` amber** |
+| second instrument configured + saved | `Set up` blue | **`2 / 2` blue** |
+| first instrument's touched links cleared + saved | **`Not set up` amber** | **`1 / 2` amber** |
+
+The row that stays amber at `1 / 2` while the card goes blue is the
+point of fixing both together: the aggregate is a different question
+from the card's, and now both answer correctly at the same instant.
 
 ### PR ladder
 

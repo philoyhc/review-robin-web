@@ -937,7 +937,24 @@ async def instrument_consolidated_save(
                 return _fail(str(exc))
 
     db.commit()
-    return JSONResponse({"ok": True})
+    # Segment 19H Item 1 — the card's ``Set up`` / ``Not set up`` pill
+    # and the page's aggregate Instruments pill are both server-rendered
+    # from state this save can flip, and the reload-free Save (18R Item
+    # 2 PR 3) gave the client nothing to re-render them with. Both
+    # values are computed here, after the commit, so they read committed
+    # state; the client swaps the two pills and never re-derives the
+    # predicate itself (see ``is_configured`` — one rule, one place).
+    instrument_total, instruments_configured = (
+        instruments_service.configured_counts(db, review_session.id)
+    )
+    return JSONResponse(
+        {
+            "ok": True,
+            "is_configured": instruments_service.is_configured(db, instrument),
+            "instruments_configured": instruments_configured,
+            "instrument_count": instrument_total,
+        }
+    )
 
 
 

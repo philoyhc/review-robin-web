@@ -848,10 +848,14 @@
                    style="font: inherit; padding: 2px 6px;
                           flex: 0 1 50%; max-width: 50%;
                           min-width: 0; box-sizing: border-box;">
+            {# Segment 19H Item 1 — ``data-instrument-setup-pill`` is the
+               handle the reload-free Save uses to re-render this pill
+               from the ``is_configured`` the server sends back. The
+               server still decides; the client only paints. #}
             {% if is_configured_by_instrument[instrument.id] %}
-              <span class="pill pill-info">Set up</span>
+              <span class="pill pill-info" data-instrument-setup-pill>Set up</span>
             {% else %}
-              <span class="pill pill-warning">Not set up</span>
+              <span class="pill pill-warning" data-instrument-setup-pill>Not set up</span>
             {% endif %}
             {# Segment 18R Item 2 PR 1 — both pills rendered; the
                client lock layer shows the one matching the card's
@@ -3546,14 +3550,43 @@
             window.newModelSetLock(card, false);
             return false;
           };
+          // Segment 19H Item 1 — repaint the two setup pills from the
+          // state ``/save`` sends back. Both are server-decided: the
+          // card pill from ``is_configured``, the row pill from
+          // ``configured_counts``. The client chooses tint and text
+          // only, mirroring the two templates; it never re-derives
+          // whether an instrument is set up.
+          window.newModelRepaintSetupPills = window.newModelRepaintSetupPills || function (card, data) {
+            if (!data) { return; }
+            if (card && typeof data.is_configured === 'boolean') {
+              var pill = card.querySelector('[data-instrument-setup-pill]');
+              if (pill) {
+                pill.className = 'pill ' + (data.is_configured ? 'pill-info' : 'pill-warning');
+                pill.textContent = data.is_configured ? 'Set up' : 'Not set up';
+              }
+            }
+            var total = data.instrument_count;
+            var done = data.instruments_configured;
+            if (typeof total !== 'number' || typeof done !== 'number') { return; }
+            var agg = document.querySelector('[data-instruments-configured-pill]');
+            if (!agg) { return; }
+            if (!total) {
+              agg.className = 'pill pill-warning';
+              agg.textContent = 'none';
+            } else {
+              agg.className = 'pill ' + (done === total ? 'pill-info' : 'pill-warning');
+              agg.textContent = done + ' / ' + total;
+            }
+          };
           // Segment 18R Item 2 PR 3 — on success clear the dirty
           // store and reset Save/Cancel to their clean (disabled)
           // state. The card stays unlocked (Lock owns the gate) and
           // the DOM already holds the just-saved values, so there is
           // no reload. Any prior error banner is cleared.
-          window.newModelOnSaveSuccess = window.newModelOnSaveSuccess || function (card) {
+          window.newModelOnSaveSuccess = window.newModelOnSaveSuccess || function (card, data) {
             if (!card) { return; }
             card.removeAttribute('data-instrument-dirty');
+            window.newModelRepaintSetupPills(card, data);
             // Segment 18R Item 2 PR 5b — the staged un-pin
             // acknowledgement was consumed by this Save; clear it so a
             // later Save doesn't carry a stale acknowledged_drop.
@@ -3623,7 +3656,7 @@
                     return { ok: resp.ok, errors: ['Save failed — please retry.'] };
                   }).then(function (data) {
                     if (resp.ok && data && data.ok) {
-                      window.newModelOnSaveSuccess(instrumentCard);
+                      window.newModelOnSaveSuccess(instrumentCard, data);
                     } else {
                       window.newModelShowSaveErrors(
                         instrumentCard,
