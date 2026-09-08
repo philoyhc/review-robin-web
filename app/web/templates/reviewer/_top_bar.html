@@ -1,7 +1,7 @@
 {# Reviewer-facing top bar variant. Lighter than the operator chrome:
    "Review Robin" identity (no "Web App", no version), no breadcrumb,
-   user menu with "Signed in as …" + optional "My Reviews" + About +
-   Sign out.
+   user menu with "Signed in as …" + optional "My Reviews" + optional
+   Guide + About + Sign out.
 
    Per spec/visual_style_rrw.md "Reviewer-facing pages → Top bar":
    "My Reviews" surfaces only when the reviewer has more than one
@@ -26,6 +26,24 @@
       <div>Signed in as {{ user.display_label }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
       {% if (reviewer_review_count|default(0)) > 1 and request.url.path != "/me" %}
         <a class="chrome-link" href="/me">My Reviews</a>
+      {% endif %}
+      {# Guide, for participants who resolve at least one audience
+         (2026-09-08). This bar had no Guide entry at all, so a reviewer
+         or observer holding rows could reach `/guide` — and saw the link
+         once they were on `/about`, which uses the base chrome — but had
+         no route to it from `/me` itself.
+
+         Same flag and same `is not true` test as `base.html`: a **hide**
+         flag stamped by `get_or_create_user`, which every route
+         rendering this bar depends on (the three participant gates and
+         the invitation-mismatch page all build on it). Failing open is
+         the safe direction — `routes_guide` does the real deciding and
+         bounces a viewer who resolves nothing to `/about`, so a stray
+         link is cosmetic while a missing one hides a page someone is
+         entitled to. #}
+      {% if request.url.path not in ("/guide", "/auth/me/debug")
+            and request.state.guide_hidden is not true %}
+        <a class="chrome-link" href="/guide?return_to={{ request.url.path | urlencode }}">Guide</a>
       {% endif %}
       {% if request.url.path not in ("/about", "/auth/me/debug") %}
         <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>

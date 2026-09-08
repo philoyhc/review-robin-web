@@ -401,11 +401,20 @@ resolves no Guide audiences** (19F PR 3) — they would only be bounced to
 `/about`, and offering the link there would hand them a route straight back to
 the page that bounced them.
 
-The flag is stamped on `request.state` by `get_or_create_user` and read by
-`base.html` as `guide_hidden is not true`, so it **fails open**: a page that
-never reaches that dependency still renders the link, and the route's redirect
-is what actually decides. Failing closed would hide the Guide from operators on
-any page that missed the stamp — a worse error, and a silent one.
+The flag is stamped on `request.state` by `get_or_create_user` and read as
+`guide_hidden is not true`, so it **fails open**: a page that never reaches
+that dependency still renders the link, and the route's redirect is what
+actually decides. Failing closed would hide the Guide from operators on any
+page that missed the stamp — a worse error, and a silent one.
+
+**Two chromes read it**, with the same condition. `base.html` carries the
+operator chrome and `/about`; `reviewer/_top_bar.html` carries the participant
+surfaces (`/me`, the review surface, `/results`, `/collation`), which gained
+their Guide link on 2026-09-08 — until then a reviewer or observer holding
+roster rows could reach `/guide` and saw the link once they were on `/about`,
+but had no route to it from the pages they actually land on. A change to the
+condition has to land in both files; `tests/integration/test_guide_scaffold.py`
+asserts each of them in both directions.
 
 **Canonical since Segment 19E rung 2.** The material from
 `docs/quickstart.md` moved in and that file retired to

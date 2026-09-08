@@ -91,10 +91,16 @@ Top-to-bottom, the page renders:
 1. **Top bar (reviewer chrome variant)** — per
    `spec/visual_style_rrw.md` "Reviewer-facing pages → Top bar". "Review
    Robin" identity (no version, no breadcrumb), user menu with "Signed
-   in as …" + optional "My Reviews" + **About** + "Sign out". The About
-   link (`/about?return_to=<path>`, skipped on `/about` itself) matches
-   the operator chrome's, added 18R Item 6 so `/me` reaches the About /
-   access-help page the same way `/operator/sessions` does.
+   in as …" + optional "My Reviews" + optional **Guide** + **About** +
+   "Sign out". The About link (`/about?return_to=<path>`, skipped on
+   `/about` itself) matches the operator chrome's, added 18R Item 6 so
+   `/me` reaches the About / access-help page the same way
+   `/operator/sessions` does. The Guide link
+   (`/guide?return_to=<path>`) was added 2026-09-08 on the same
+   reasoning and carries the operator chrome's condition — the
+   `request.state.guide_hidden` hide flag, read fail-open — so it
+   renders for a viewer who resolves at least one Guide audience and is
+   absent for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
 3. **Page header** — `.rs-page-header` flex row carrying the session
