@@ -133,9 +133,12 @@ decision not to.
   import only from `_shared.py` and from outside the package.
 - **The check.** Walk the package's import statements; fail on one slice
   importing another. Derivable from the file layout alone.
-- **Verified 2026-09-08.** **21 slices, 0 violations.** The convention is
-  being followed by hand today, which is the best moment to pin it —
-  before the first violation makes the check a cleanup.
+- **Verified 2026-09-08.** **20 slices, 0 violations.** The package holds
+  22 `.py` files: the 20 slices `__init__.py` registers, plus
+  `_shared.py` — which the convention names as the one legal import
+  target and so is not itself a slice — plus `__init__.py`. The
+  convention is being followed by hand today, which is the best moment
+  to pin it: before the first violation makes the check a cleanup.
 
 ---
 
