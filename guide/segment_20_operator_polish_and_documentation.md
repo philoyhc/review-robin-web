@@ -11,7 +11,10 @@ exist produces a guide that has to be rewritten the day it does.
 
 Everything in the original §18 list that does **not** need the host is
 now out of this segment — either already shipped (four items, audited
-below) or moved to **19E** / **19C Item 8**. What is left is
+below) or moved out — three to **19E**, and the technical-support contact to a stub in
+`guide/todo_master.md` *(it was recorded here as "19C Item 8" until 2026-09-08; that
+was never true — Item 8 is 19C's input-boundaries work, and the contact sat unnumbered
+in 19C's Future items, which closed with the segment)*. What is left is
 the part that only the deployment can settle.
 
 > **Renumbered 2026-05-10** from the original
@@ -51,7 +54,7 @@ had already shipped under other segments; three move out; three stay.
 | 8. Developer setup guide | **✅ shipped** as `docs/local_setup.md` (322 lines) | done |
 | 9. Troubleshooting guide | **✅ shipped for the dev slot** as `docs/troubleshooting.md`. Its failure modes are the personal-Azure ones; the institutional host will have its own (tenant, Easy Auth, NUS network policy) | institutional half stays here |
 | 10. Known limitations page | **✅ shipped** as `docs/known_limitations.md` | currency pass stays here |
-| + Technical-support contact (global) | **not built.** Mechanism is an env var + footer + error-page surfaces and needs no host; only the *address* is a deploy-time decision, and an unset var renders nothing | **19C Item 8** (mechanism now, value at deploy) |
+| + Technical-support contact (global) | **not built.** Mechanism is an env var + footer + error-page surfaces and needs no host; only the *address* is a deploy-time decision, and an unset var renders nothing | **`guide/todo_master.md` stub** (mechanism now, value at deploy) *(was "19C Item 8", corrected 2026-09-08)* |
 
 ---
 

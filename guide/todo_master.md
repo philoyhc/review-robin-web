@@ -2257,6 +2257,36 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
+### Guide — "Build the form (Instruments)" rewritten — ✅ done 2026-09-08 (#2190, no segment)
+
+The author supplied the section as a `.docx`; it landed in
+`app/web/templates/guide.html` with its four screencaps, taking the Guide
+from twelve to sixteen. (The "twelve screencaps" in the 19E entry below,
+and in `docs/status.md`, describe what **19E** shipped and stay as
+written — a log is true of its date.)
+
+Content is the author's. Three editorial calls worth recording:
+
+- **Two headings folded into the flow.** `Who reviews whom` became the
+  assignment-rule paragraph beside its screencap; `Optional: visibility,
+  relationships, observers` lost its visibility sentence to the new text
+  and became `Optional: relationships and observers`. Checked before
+  removing: nothing in `spec/`, `docs/` or the suite names either
+  heading, and the six inbound `#guide-…` links from the Setup pages
+  target `#guide-create_and_set_up`, the section, not the h3s.
+- **Three facts kept from the old text** that the draft uses without
+  stating: the response-field / display-field definitions, that pairs are
+  generated at Prepare rather than on the Instruments page, and the tie
+  between "counts as set up" and what the status bar's Instruments pill
+  counts.
+- **One wording change from the draft.** It read "(raw, anonymized, or
+  summarized)"; shipped as raw, `Anonymized`, `Summarized` — the app's
+  own labels — per the `CLAUDE.md` rule that prose naming a control
+  quotes the control.
+
+Verified by rendering `/guide` rather than reading the markup: 200, all
+four images served, section in order.
+
 ### Sys Admin per-row actions → canonical Secondary — ✅ done 2026-09-08 (no segment)
 
 A one-template change, recorded here rather than in a segment because it
