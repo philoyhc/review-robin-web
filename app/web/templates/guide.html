@@ -181,32 +181,96 @@
       instrument carries an assignment rule, <strong>response fields</strong>
       (the questions reviewers answer) and <strong>display fields</strong>
       (read-only context shown to the reviewer, such as the reviewee's name).
+      Click the chevron on the instrument's bar to expand or collapse the
+      whole instrument card.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/instrument-card-collapsed.png"
+           alt="A collapsed instrument bar reading Instrument_1, with NOT SET
+                UP and LOCKED pills and the expand chevron at the right.">
+    </figure>
+    <p>
+      The expanded card has <strong>three main parts</strong>. Unlock the card
+      to make any edits, and don't forget to save. The first part lets you
+      rename the instrument and set its assignment rule:
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/instrument-card-assignment-rule.png"
+           alt="The top of an unlocked instrument card: the rename box with
+                Lock, Save and Cancel buttons, and the Instrument assignment
+                rule band showing Who does the review set to ALL, Who is being
+                reviewed set to FILTER USING TAGS with Group IS THE SAME AS
+                Group, and Unit of review set to INDIVIDUAL.">
+    </figure>
+    <p>
+      Each instrument carries its own assignment rule, set on the
+      <strong>Instrument assignment rule</strong> band: who does the review,
+      who is being reviewed, and whether the unit of review is each reviewee
+      individually or a group. Setting all three to <em>all, all,
+      individual</em> pairs everyone eligible with everyone else. To narrow
+      it, switch a link to <strong>filter</strong> and choose the tags and
+      connectors by clicking the pills. In the screencap above the instrument
+      has a rule where all reviewers are given this form, each reviewing the
+      people who share the same Tag 1 as them (here given the friendly label
+      <em>Group</em>), and they review each subject individually rather than
+      as a group.
+    </p>
+    <p>
+      Pairs are not generated here — that happens when you Prepare the session.
+    </p>
+    <p>
+      The second part is a <strong>preview of what the reviewer will see</strong>.
+      Use the text boxes to fill in a description of the instrument and helping
+      text for the response fields. The display and response fields can be
+      deselected and selected using the pills at the bottom, and reordered by
+      dragging and dropping; column widths can be adjusted by dragging the
+      edges. After changing the assignment rule, use <strong>Refresh
+      sample</strong> to refresh the preview.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/instrument-card-preview.png"
+           alt="The Preview review instrument part of the card, with a Refresh
+                sample button, the description box, the read-only Who can see
+                what you wrote table, a sample reviewer row with Rating and
+                Comments inputs, and the draggable field pills along the
+                bottom.">
+    </figure>
+    <p>
+      The last part lets you add, delete and edit <strong>response
+      fields</strong>. Use the <strong>R</strong> button to make a field
+      required, and the <strong>≡</strong> button to call up a help-text box
+      for that field. Don't forget to save any edits for them to take effect.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/instrument-card-fields-and-visibility.png"
+           alt="The foot of the instrument card: the Visibility table with a
+                row per audience across Session ongoing and Responses
+                released, the Response fields editor with per-field type and
+                bounds, and the Save, Cancel, Replicate, Delete, +Instrument,
+                +Page break and Lock buttons.">
+    </figure>
+    <p>
+      Per instrument you can set <strong>who sees responses and in what
+      form</strong> — raw, <code>Anonymized</code>, or <code>Summarized</code>
+      — for reviewers, reviewees and observers.
+    </p>
+    <p>
+      At the bottom of the card, <strong>Replicate</strong> copies the current
+      instrument as a new one below it, while <strong>+Instrument</strong>
+      creates a new one with the default Rating and Comment fields.
+      <strong>+Page break</strong> inserts a page break in the reviewer's form.
+    </p>
+    <p>
       An instrument counts as set up once it has at least one visible response
       field and all three assignment links have been set — which is what the
       status bar's <strong>Instruments</strong> pill counts.
     </p>
 
-    <h3>Who reviews whom</h3>
+    <h3>Optional: relationships and observers</h3>
     <p>
-      Each instrument carries its own assignment rule, set on the
-      <strong>Instrument assignment rule</strong> band of its card: who does
-      the review, who is being reviewed, and whether the unit of review is
-      each reviewee individually or a group. Setting all three to
-      <em>all, all, individual</em> pairs everyone eligible with everyone
-      else. To narrow it, switch a link to <strong>filter</strong> and choose
-      the tags and connectors.
-    </p>
-    <p>
-      Pairs are not generated here — that happens when you Prepare the session.
-    </p>
-
-    <h3>Optional: visibility, relationships, observers</h3>
-    <p>
-      Per instrument you can set who sees responses and in what form — raw,
-      <code>Anonymized</code>, or <code>Summarized</code> — for reviewers,
-      reviewees and observers. Turn on <strong>Relationships</strong> if your
-      review needs per-pairing context, and <strong>Observers</strong> if some
-      people should view results without reviewing. Both are off by default.
+      Turn on <strong>Relationships</strong> if your review needs per-pairing
+      context, and <strong>Observers</strong> if some people should view
+      results without reviewing. Both are off by default.
     </p>
   </div>
   {% endif %}
