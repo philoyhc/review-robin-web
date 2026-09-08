@@ -3,10 +3,10 @@
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "b9798e72",
+    "head": "7d8e3321",
     "since": "eff2661f",
-    "merge_commits": 88,
-    "non_merge_commits": 120,
+    "merge_commits": 94,
+    "non_merge_commits": 130,
     "pr_numbers": [
       2119,
       2120,
@@ -93,20 +93,26 @@
       2201,
       2202,
       2203,
-      2204
+      2204,
+      2205,
+      2206,
+      2207,
+      2208,
+      2209,
+      2210
     ],
-    "pr_range": "#2119\u2013#2204",
+    "pr_range": "#2119\u2013#2210",
     "first_date": "2026-09-05",
     "last_date": "2026-09-08"
   },
   "areas": {
     "docs": {
       "files": 235,
-      "loc": 125031
+      "loc": 126021
     },
     "production": {
       "files": 203,
-      "loc": 57117
+      "loc": 57122
     },
     "migrations": {
       "files": 77,
@@ -118,11 +124,11 @@
     },
     "tests": {
       "files": 269,
-      "loc": 92708
+      "loc": 92933
     },
     "tooling": {
       "files": 9,
-      "loc": 11481
+      "loc": 11556
     }
   },
   "biggest_production": [
@@ -1147,7 +1153,7 @@
       "production"
     ],
     "app/web/routes_operator/_session_home.py": [
-      695,
+      700,
       "production"
     ],
     "app/web/routes_operator/_settings.py": [
@@ -1639,7 +1645,7 @@
       "docs"
     ],
     "docs/status.md": [
-      964,
+      969,
       "docs"
     ],
     "docs/troubleshooting.md": [
@@ -2247,11 +2253,11 @@
       "docs"
     ],
     "guide/codebase_assessment_08sep.json": [
-      3573,
+      3599,
       "docs"
     ],
     "guide/codebase_assessment_08sep.md": [
-      483,
+      551,
       "docs"
     ],
     "guide/deferred_consolidated.md": [
@@ -2267,7 +2273,7 @@
       "docs"
     ],
     "guide/segment_19G_post_assessment.md": [
-      938,
+      1822,
       "docs"
     ],
     "guide/segment_20_operator_polish_and_documentation.md": [
@@ -2275,7 +2281,7 @@
       "docs"
     ],
     "guide/segment_plan_template.md": [
-      123,
+      125,
       "docs"
     ],
     "guide/sweep_2026-09-05_spec-docs.md": [
@@ -2459,7 +2465,7 @@
       "docs"
     ],
     "spec/ui_elements.md": [
-      783,
+      788,
       "docs"
     ],
     "spec/validate_page.md": [
@@ -3283,7 +3289,7 @@
       "tests"
     ],
     "tests/unit/test_close_check.py": [
-      149,
+      251,
       "tests"
     ],
     "tests/unit/test_cohort_rule_view_helpers.py": [
@@ -3331,7 +3337,7 @@
       "tests"
     ],
     "tests/unit/test_doc_conventions.py": [
-      452,
+      575,
       "tests"
     ],
     "tests/unit/test_email_preview_tabs.py": [
@@ -3567,7 +3573,7 @@
       "tooling"
     ],
     "tools/close_check.py": [
-      863,
+      938,
       "tooling"
     ],
     "tools/code_metrics.py": [
