@@ -63,3 +63,56 @@ Item 10 planned the first real run and recorded it in the item. The item
 then closed and was archived, and the 08sep assessment §5 carried the
 weakness while the instruction itself lived nowhere a deployer would
 look — which is the failure this file exists to stop repeating.
+
+---
+
+## 2. Re-scope the Azure deployment documents once the personal environment is retired
+
+**Status:** open. Blocked on the deployment.
+
+**What.** `docs/deployment_nus.md` §11 retires the personal Azure
+environment as the migration's final step. At that moment several
+documents describe an environment that no longer exists, and two more
+describe a plan that the outcome has either confirmed or replaced. Work
+through them and decide each one's fate.
+
+| Document | Lines | The question it poses at cutover |
+|---|---|---|
+| `docs/deployment_dev.md` | 405 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
+| `docs/operations_runbook.md` | 84 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
+| `docs/troubleshooting.md` | 71 | Opens *"for the deployed dev slot"*. Re-scope. |
+| `docs/backup_restore.md` | 83 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
+| `docs/deployment_nus.md` | 452 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
+| `docs/azure_github_setup.md` | 177 | The forward-looking PRD/NPRD scale-up, a `v0.1 draft` carrying a banner saying it is *not* the current plan. Is it still the shape to grow into, or has the NUS reality superseded it? |
+| `docs/cli_setup.md` | 641 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/`, after `status.md` and the practice audit) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
+| `docs/architecture.md` | 124 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
+| `azure_ask.md` (root) | 244 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
+
+**Why it cannot be done now.** Not for want of scheduling: the correct
+text depends on facts that do not exist yet. What the NUS environment is
+actually called, what IT owns versus what we own, whether backup policy
+is dictated to us, and whether the scale-up topology survives contact
+with the institutional host are all answers the deployment produces.
+Rewriting these documents before then would be guessing, and a confident
+guess in a runbook is worse than a stale sentence that says which
+environment it is about.
+
+**Why it cannot wait long afterwards.** These four are the documents
+someone reaches for when the deployed service misbehaves. A runbook
+describing a retired environment is not merely out of date — it sends a
+person to a resource group that is gone while the service is down.
+
+**Done when.** No live document under `docs/` describes the personal
+Azure environment as current; each of the nine above has been rewritten,
+re-scoped or moved to `docs/archive/`; and **`docs/README.md` has been
+re-taken against the folder**, since that index is hand-maintained and an
+archived file gets a row there rather than a separate archive index (the
+convention `archive/quickstart.md` already follows). A grep for the
+retired resource-group and web-app names should return only archived
+files and this line.
+
+**Where this came from.** A review of `docs/` on 2026-09-08 that set out
+to list the Azure-deployment documents and found that nothing tracked
+what the cutover would do to them — the same shape as item 1: an
+obligation created by a plan, recorded nowhere the person executing that
+plan would look.
