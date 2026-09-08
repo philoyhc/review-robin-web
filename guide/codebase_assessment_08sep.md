@@ -1,5 +1,14 @@
 # Codebase assessment — 2026-09-08
 
+> **Amended end-of-day 2026-09-08, re-measured at `b9798e72`.** The snapshot
+> was first taken at `590993f0`; Segment 19G then ran to completion the same
+> day, which settled two of this document's own recommended moves and made §5's
+> largest weakness partly false. Every table below has been re-taken at the new
+> SHA **in the same pass as the SHA itself** — the failure mode this skill warns
+> about is an amendment that refreshes the numbers and leaves the commit
+> pointer, so anyone checking out the stated SHA finds a different tree. Where a
+> figure describes the pre-amendment state it says so.
+
 **As of** the close of the **participant-disclosure arc** — Segments 19E and 19F
 closed and archived, and Segment 19C closed with them, retiring the standing
 "holding segment" shape it had run under since 2026-08-20. Unlike the previous
@@ -20,6 +29,12 @@ Since the 2026-09-05 snapshot:
   #2187, 2026-09-07 → 2026-09-08) — a reviewee's row, chip and `/results` now
   require a currently-resolving visibility grant, and all four session-scoped
   gates answer a bare 404.
+- **Segment 19G — post-assessment follow-ups** (#2196 → #2204, 2026-09-08) —
+  *after this snapshot was first taken, and the reason it is amended.* Item 1
+  answered §8's summary-drift question per class and shipped two derived checks
+  plus `docs/unenforced_conventions.md`; Item 2 re-derived the button audit's
+  Session Home sections. Both closed the same day; the segment stays open on a
+  three-item patch queue with a close trigger.
 - **Segment 19C Items 9 + 10, then its close** (#2188 → #2193, 2026-09-08) — the
   Settings-CSV import refuses a visibility cell the editor refuses; a Sys Admin
   card audits rows written before that guard; the segment closes.
@@ -27,10 +42,10 @@ Since the 2026-09-05 snapshot:
   walkthrough with screencaps, then the Instruments section rewritten from a
   supplied draft.
 
-All shipped 2026-09-05 → 2026-09-08 (78 merge commits, 106 non-merge, over 4
-calendar days), PRs **#2119 → #2194** (76 numbered; #2119 is the prior snapshot
-itself). Numbers taken on `main` at `590993f0`, which the working branch is level
-with. A single author directing AI agents, pre-deployment, no pilot yet —
+All shipped 2026-09-05 → 2026-09-08 (**88 merge commits, 120 non-merge**, over 4
+calendar days), PRs **#2119 → #2204** (86 numbered; #2119 is the prior snapshot
+itself, #2196 → #2204 the post-snapshot amendment window). Numbers taken on
+`main` at **`b9798e72`**, which the working branch is level with. A single author directing AI agents, pre-deployment, no pilot yet —
 twenty-plus merges in a day is normal here and should not be read against a team
 cadence.
 
@@ -116,20 +131,20 @@ prior snapshot exactly.
 
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
-| `docs` | 231 (225 prior) | **119,775** | +9,785 (+8.9%) |
-| `tests` | 269 (255 prior) | **92,425** | +4,501 (+5.1%) |
+| `docs` | 235 (225 prior) | **125,031** | +15,041 (+13.7%) |
+| `tests` | 269 (255 prior) | **92,708** | +4,784 (+5.4%) |
 | `production` | 203 (198 prior) | **57,117** | +1,413 (+2.5%) |
-| `templates` | 61 (59 prior) | **23,592** | +1,350 (+6.1%) |
+| `templates` | 61 (59 prior) | **23,610** | +1,368 (+6.2%) |
 | `tooling` | 9 (8 prior) | **11,481** | +1,203 (+11.7%) |
 | `migrations` | 77 | **6,772** | unchanged |
 
-**Test-to-production ratio: 1.62** (92,425 / 57,117), up from **1.58** (87,924 /
+**Test-to-production ratio: 1.62** (92,708 / 57,117), up from **1.58** (87,924 /
 55,704). The rise is real but small, and it is not a quality claim on its own —
 it reflects that this window's product work was gate-shaped, and a gate is
 cheap to write and expensive to prove, so each rung carried more assertions than
 lines.
 
-**Suite: 2,936 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
+**Suite: 2,940 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
 (`test` on SQLite and `postgres` on a `postgres:16` service container, the latter
 also round-tripping the Alembic chain). All 16 skips are Wave 5 PR 5.3
 legacy-instrument-card retirements plus one fixture-shape skip in
@@ -247,7 +262,7 @@ modules at the prior snapshot as the two new routers landed and were mapped.
 | Email dispatch / invitations | `guide/segment_14B_email_infrastructure.md` | ⛔ blocked — `email_send.py` has the SMTP backend and writes outbox rows; no live dispatch caller. Gated on institutional Azure provisioning |
 | Blob storage | `spec/blob_storage.md`, `guide/segment_18Q_blob.md` | ⏸ planned — awaiting institutional storage account |
 | **Technical-support contact (global)** | **none — stub in `guide/todo_master.md`** | **⏸ planned; unhomed 2026-09-08 when 19C closed. Was mis-filed in `docs/status.md` as "19C Item 8" and never built** |
-| **Operator button audit §§4–5** | **`spec/operator_button_audit.md`** | **⚠ drift — the spec is behind. Sections 4–5 describe a Session Home layout 18R Item 4 replaced three weeks ago; a staleness banner names all three false claims and the regeneration is filed** |
+| **Operator button audit §§4–5** | **`spec/operator_button_audit.md`** | **✅ resolved 2026-09-08** (19G.2, #2203). Sections 4–5 re-derived from the templates: §4 is now a retired-page section for the 308 `/edit` redirect, §5 covers the Workflow card, the in-place Session details card and the returned Danger Zone. §5a records the button vocabulary and points at `spec/workflow_card.md` for the state cascade rather than copying it. Was ⚠ drift at `590993f0`. |
 
 **Doc-drift work this window.** Three closes ran `spec-writer` over their
 doc-impact files. 19E's found three drift items in two files; 19F's found four
@@ -255,8 +270,11 @@ doc-impact files. 19E's found three drift items in two files; 19F's found four
 files, four fixed. **Three of 19C's five were pre-19C drift it had inherited** —
 18R Item 4 retired the Edit Session Details page on 2026-08-19,
 `spec/session_home.md` recorded it, and three documents that *summarise* that
-file did not. The remaining open item is the `operator_button_audit.md` row
-above, deliberately deferred rather than absorbed into a close.
+file did not. The `operator_button_audit.md` row above was the remaining open
+item at `590993f0`, deliberately deferred rather than absorbed into 19C's close;
+**it closed the same day as 19G.2**, which is the deferral working rather than
+the deferral being forgotten — the distinction the previous sentence could not
+make at the time.
 
 ---
 
@@ -285,7 +303,8 @@ above, deliberately deferred rather than absorbed into a close.
   it is four windows old.
 - **Gate changes shipped without a regression.** Converting every session-scoped
   refusal from 403 to 404 touched 24 assertions across 12 files against a measured
-  ceiling of 47, and the suite went from 2,704 to 2,936 passing with no reverts.
+  ceiling of 47, and the suite went from 2,704 to 2,936 passing with no reverts
+  (2,940 after the day's post-snapshot work).
 
 ---
 
@@ -309,14 +328,28 @@ above, deliberately deferred rather than absorbed into a close.
   summarising `spec/session_home.md` described a page retired three weeks earlier;
   and one wrong cross-file pointer (`"Segment 19C Item 8"`) had three copies. All
   four were found by a human-directed audit, none by a check. **Cost:** each was
-  live for between three weeks and four months. **Plan:** none — the sweep cadence
-  finds these on an 8-week trigger, which is slower than they appear.
-- **`spec/operator_button_audit.md` §§4–5 are knowingly stale.** They describe a
-  Session Home layout replaced on 2026-08-19. A banner names the three false
-  claims and the regeneration is filed in `todo_master`, but the file remains
-  wrong in the meantime, and it is the file `CLAUDE.md` points at for button
-  vocabulary. **Cost:** a reader consulting it for layout gets 2026-05 reality.
-  **Plan:** filed, one PR, unstarted.
+  live for between three weeks and four months. **Plan (amended 2026-09-08):**
+  Segment 19G Item 1 answered this the same day — **per class, because the four
+  instances turned out to be four classes and the mechanism proposed in §8 below
+  targets exactly one of them.** Prose restating a *code constant* is now derived
+  (`spec/visibility_policy.md` §3.1 against `_PER_CELL_VALID_MODES`); prose
+  summarising *another document* is **conceded**, with the registry rejected on
+  Article VI and recorded in `docs/unenforced_conventions.md` so it is not
+  re-proposed; pointers into a document's *internal numbering* are deferred to a
+  measurement (139 live `§N` references); prose about *behaviour* with no source
+  is conceded outright. **A fifth class nobody had counted** — 84 broken path
+  references in live prose — is now enforced by
+  `tests/unit/test_doc_conventions.py`. The honest residue: the two conceded
+  classes are still unchecked, and the item's own close produced two instances of
+  them, caught by the separate reader rather than by anything mechanical.
+- ~~**`spec/operator_button_audit.md` §§4–5 are knowingly stale.**~~
+  **Resolved 2026-09-08** by Segment 19G Item 2 (#2203), which re-derived both
+  sections from the templates. Kept rather than deleted because the shape of the
+  finding still reads: the file was wrong for twenty days *with a banner on it
+  saying so*, which is a weaker mitigation than it feels — `CLAUDE.md` points a
+  reader at this file for button vocabulary, and a reader who lands two sections
+  from the banner does not see it. The regeneration also found the Danger Zone
+  had moved **twice**, which neither the banner nor the stale sections said.
 - **The audit card has never run against real data.** `_visibility_audit.py` is
   proven against fixtures only; the pilot has not deployed, so a green card today
   means "no rows here" and there are almost none. **Cost:** the one check written
@@ -333,12 +366,24 @@ above, deliberately deferred rather than absorbed into a close.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `590993f0`**, and here is what that claim rests on: both
+**No known open bugs at `b9798e72`**, and here is what that claim rests on: both
 CI tracks green on the merged head; `ruff check .` clean; all 16 skips read and
 attributed (15 Wave 5 legacy-card retirements, one fixture shape — none masking a
 defect); no `xfail` markers anywhere in `tests/`; no unresolved review threads on
-any of the window's 76 PRs; and `docs/known_limitations.md` reviewed against the
+any of the window's 86 PRs; and `docs/known_limitations.md` reviewed against the
 window's changes with nothing to add.
+
+**Three documentation defects are known, filed and unfixed** (19G's patch queue,
+added 2026-09-08). None is a code defect and none affects behaviour; all three
+are the class 19G.1 conceded as unmechanizable, which makes them a standing test
+of whether that concession was right. `rrw_sdd_in_practice.md` says spec coverage
+is "Not yet ... deferred" while `constitution.md` II cites the shipped test;
+`spec/ui_elements.md` records the Danger Zone's 2026-05-22 move as "Current:
+migrated" when 18R Item 4 brought the buttons back; and
+`app/web/routes_operator/_session_home.py` ~235 says the `/edit` redirect answers
+403 for a non-owner, which 19F PR 1 changed to 404. **The third is a code
+comment**, and is the one a future check could plausibly derive — a docstring
+naming a status code its gate does not return.
 
 Two things are **known and deliberately not fixed**:
 
@@ -346,7 +391,7 @@ Two things are **known and deliberately not fixed**:
   `reviewer/pre_open.html`, which has never included the partial (unchanged since
   `f2899b07`), so a multi-role user loses the role navigator on that one page.
   Cosmetic, pre-existing, no disclosure consequence. Recorded in 19F's plan.
-- **`spec/operator_button_audit.md` §§4–5** — see §5.
+- ~~**`spec/operator_button_audit.md` §§4–5**~~ — resolved 2026-09-08, see §5.
 
 Caught and fixed this window, worth remembering:
 
@@ -377,13 +422,13 @@ Caught and fixed this window, worth remembering:
 
 ## 7. Estimated size upon completion
 
-Current: **57,117** production, **23,592** templates, **92,425** tests,
+Current: **57,117** production, **23,610** templates, **92,708** tests,
 **11,481** tooling.
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
 | Segment 14B — email dispatch, reminders, invitations | +900–1,400 | +200–400 | institutional Azure provisioning |
-| Segment 20 — operator polish + documentation | +200–500 | +300–600 | nothing (unblocked) |
+| Segment 20 — operator polish + documentation | +200–500 | +300–600 | **institutional Azure deployment concluded** (corrected 2026-09-08 — this cell read "nothing (unblocked)", which is what produced the withdrawn move #1 in §8) |
 | Blob storage (18Q) seam + first consumers | +400–700 | +50–150 | institutional storage account |
 | Operator theming (Stretch) | +150–300 | +100–200 | customizer editor core (shipped) |
 | Technical-support contact (global) | +30–60 | +20–50 | nothing (unblocked) |
@@ -415,29 +460,52 @@ page all hang off one predicate, and every session-scoped refusal returns a bare
 gave the operator surface its first in-app documentation. Structurally the
 window was cheap: 59% of production growth is five new small modules, the
 biggest-file table is a four-window plateau, and no file crossed a tripwire. The
-one live thread is that **the specs' summaries keep drifting from their sources
+one live thread was that **the specs' summaries keep drifting from their sources
 without any check noticing** — four instances this window, found by human-directed
 audit, live for between three weeks and four months.
 
-**Recommended next moves:**
+**Amended 2026-09-08.** That thread was pulled the same day, and what it produced
+is the more useful finding: the four instances were **four different classes**,
+and two of them are now checked by a test that reads a constant rather than a
+person who remembers. The other two are conceded in writing, which is a real
+answer and not a deferral — `docs/unenforced_conventions.md` exists to say so,
+and Article VI had promised such a list since it was written. The residue worth
+carrying to the next snapshot: **the conceded classes bite the people who
+conceded them.** 19G.1's own close shipped a wrong count and a wrong date, and
+19G.2's shipped three more, every one caught by the separate reader rather than
+by anything mechanical. Whether that is Article III working or Article III
+carrying too much is the question the next assessment should ask.
 
-1. **Segment 20 (operator polish + documentation)** — still the only unblocked
-   feature work, and now more clearly the right next thing than at the prior
-   snapshot: 19E built the in-app Guide that Segment 20 would otherwise have
-   written, so what remains is genuinely the institutional-host half. It is also
-   the first segment that will run start to finish under the new one-segment-per-
-   theme rule that replaced 19C's holding shape.
-2. **Regenerate `spec/operator_button_audit.md` §§4–5** before the next UI work,
-   not after. It is filed, it is one PR, and it is the file `CLAUDE.md` points at
-   for button vocabulary — leaving a knowingly-wrong layout section in the
-   reference that governs the next button change is the cheapest way to
-   manufacture a fifth summary-drift instance.
-3. **Decide whether summary drift deserves a mechanism.** Four instances in one
-   window, each live for weeks, all found by hand. A check that compares a
-   prose claim to a constant is hard; a check that lists which documents
-   *summarise* another and flags them when the source changes is not obviously
-   hard. Worth one session of thinking before the sweep cadence's next trigger,
-   because the sweep finds these on an 8-week clock and they are appearing faster.
+**Recommended next moves** *(rewritten in the 2026-09-08 amendment: the original
+three were Segment 20, the button-audit regeneration, and the summary-drift
+question. Two shipped the same day as Segment 19G; the third is withdrawn.)*
+
+1. ~~**Segment 20 (operator polish + documentation).**~~ **Withdrawn, not
+   deferred** (author, 2026-09-08). Naming it a recommended next move was wrong
+   at any point in this window: Segment 20 is **reserved until the institutional
+   Azure deployment has concluded** — provisioned, deployed, serving, verified,
+   with the personal web app retired — and its own plan says so in its first
+   paragraph. Its remaining scope is *documentation of a real deployment*, which
+   cannot be written against a host that does not exist. Recommending it as
+   "the only unblocked feature work" read the gate as a scheduling preference
+   rather than a precondition. **Nothing replaces it at the top of this list**;
+   the honest statement is that feature work is host-blocked and the queue below
+   is maintenance.
+2. ~~**Regenerate `spec/operator_button_audit.md` §§4–5.**~~ **Shipped**
+   2026-09-08 as 19G.2 (#2203). §§4–5 re-derived from the templates, two drift
+   findings elsewhere in the file annotated superseded, three further corrections
+   from the `spec-writer` pass.
+3. ~~**Decide whether summary drift deserves a mechanism.**~~ **Decided**
+   2026-09-08 as 19G.1 (#2197 → #2202) — per class, not as one question; see §5.
+   The mechanism this document proposed was the rejected alternative.
+
+**What is actually next, given the above.** The queue is maintenance and it is
+short: 19G's three filed documentation patches (§6), and its two carried open
+questions — whether the 139 `§N` references deserve a heading-validity check, and
+whether `close_check`'s `COMMITTED_PATH` should widen to root-level `.md` so a
+`constitution.md` commitment stops being invisible to the tool that validates
+commitments. Neither is urgent; both are cheap; and the segment carrying them has
+a close trigger, which is the safeguard the 19C shape lacked.
 
 **Settling 05sep's proposals.** Move #1 (decide whether a stale skip marker
 deserves a mechanism) — **carried, unactioned**; no skip went stale this window
