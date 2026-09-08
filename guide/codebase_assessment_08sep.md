@@ -579,8 +579,12 @@ customizer's element pass — and neither has been raised as a segment. **One
 defect is measured, recorded and deliberately not fixed:** `close_check` counts a
 `spec/`-prefixed path *anywhere* in a Doc-impact bullet as a commitment, so a
 bullet that merely cites a file commits the item to editing it. It has now bitten
-three consecutive manifests (19G.5, 19G.6, 19G.7), each worked around by
-rewording the bullet — which is the same shape as the C3 workaround 19G.6 removed:
+~~three consecutive manifests (19G.5, 19G.6, 19G.7)~~ **two manifests
+(19G.5 and 19G.7) — corrected 2026-09-08 at 19G.8, which checked the claim
+before building on it.** 19G.6's bullets name `tools/` and `.claude/` paths
+under the "for the human" convention, a different mechanism entirely: those
+paths are outside the regex and were never counted. Each of the two was worked
+around by rewording the bullet — which is the same shape as the C3 workaround 19G.6 removed:
 a check satisfied by editing the prose to suit it. 19G.4 measured it and left it
 open on purpose. It is the obvious next item if the segment takes one.
 

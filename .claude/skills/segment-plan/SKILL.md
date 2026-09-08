@@ -81,6 +81,7 @@ Rules:
 
 - Name the spec at **planning time**, even though the edit lands last. Committing to the spec is the point.
 - If a bullet is dropped during the build, do not delete it. Append `<!-- doc-impact-waived: <reason> -->` on the same line. An empty reason fails the close check.
+- A backticked `spec/` or `docs/` path counts as a commitment **anywhere in the bullet**, not just at its head — bullets legitimately commit to several specs after the dash. If a bullet *cites* a path rather than committing to it (naming the target of a pointer it is editing, say), mark it `<!-- cites: spec/x.md -->` — comma-separated for several. Do **not** drop the backticks to hide it from the tool: backticking every path is the convention, and bending the prose to satisfy a checker is how the checker starts lying. A `cites:` naming a path the bullet does not contain fails C7.
 - If the build reveals a spec the plan did not name, add the bullet and note it in `## Status`. Undeclared spec impact is the failure mode this section exists to prevent.
 - Never write the spec's content into the plan. Name the section that will change and what it will say; the words go in the spec on the way out.
 

@@ -46,7 +46,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.5** | The six broken `§N` references the measurement found | **Closed** 2026-09-08. One PR. |
 | **19G.6** | The C3 window boundary — `close_check`'s window excluded its own start commit | **Closed** 2026-09-08. One PR. |
 | **19G.7** | The `§N` heading-validity check — and the seventh broken reference the 19G.5 measurement could not see | **Closed** 2026-09-08. One PR. |
-| 19G.8+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.8** | A cited path is not a commitment — `close_check`'s prefixed-path false positive | **Closed** 2026-09-08. One PR. |
+| 19G.9+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1723,7 +1724,14 @@ bold-paragraph (`**8.2.7 X**`), 3 `## §5.6 X`, 1 `## Section 10 — X`.
   without backticks deliberately: `close_check` counts a prefixed path
   anywhere in a bullet as a commitment, so backticking it would commit
   this item to editing a file it only cites — the false positive 19G.4
-  measured and 19G.5 hit, biting a third manifest in three items.*
+  measured and 19G.5 hit.* ~~biting a third manifest in three items~~ —
+  **wrong, corrected at 19G.8**: it bit **two** manifests, this one and
+  19G.5. Item 6's bullets name `tools/` and `.claude/` paths under the
+  "for the human" convention, which is a different mechanism — those
+  paths are outside the regex entirely and were never counted. The
+  miscount then propagated to the 08sep assessment §8, which is the
+  class this segment has spent two days on, committed by the item that
+  was documenting it.
 - `docs/status.md` — the 19G.5 row gains `<!-- section-ref-ok -->`, the
   corpus's only marker; row at the close (PR 1).
 
@@ -1777,6 +1785,215 @@ A mutant that fails for the wrong reason is a mutant that proved nothing.
 `§4` pointing at a section that exists but says something else still
 passes. That is class B, conceded at 19G.1, and no heading check reaches
 it.
+
+## Item 8 — A cited path is not a commitment
+
+### Opportunity
+
+`close_check`'s `COMMITTED_PATH` matches a backticked `spec/` or `docs/`
+path **anywhere** in a Doc-impact bullet. That is deliberate and
+measured: bullets legitimately commit to several specs after the dash
+("Per-Part spec docs as the scope settles — `spec/assignments.md` (Part
+1), `spec/csv_contracts.md` (Part 2)"), and 19G.4 found a head-only rule
+would lose seven such commitments across the archived plans.
+
+The cost is a bullet that *cites* a path — describing an edit to a
+pointer, whose target it must name — and has the target read as a
+commitment the item never made. It bit **two** manifests in this
+segment:
+
+| Item | Bullet | What it cited |
+|---|---|---|
+| 19G.5 | `spec/operator_button_audit.md` — row #155's citation repointed | the wrong file and the right one, counted as two more commitments |
+| 19G.7 | `docs/unenforced_conventions.md` — §2.1's architecture pointer | `spec/architecture.md`, a file the item only reads |
+
+Both escapes available were bad. **Waiving** is per-bullet, so it would
+waive the bullet's real commitment too. **Dropping the backticks** —
+what I did, twice — distorts the prose to satisfy the checker, against
+`CLAUDE.md`'s and this skill's "backtick every path", and leaves a
+document whose typography encodes a tool's parsing limits. That is the
+same shape as the C3 workaround 19G.6 removed: *a check satisfied by
+editing the prose to suit it is a check being worked around.*
+
+**A correction, made before building on the claim.** The 08sep
+assessment §8 and 19G.7's own bullet said this had bitten **three**
+consecutive manifests, naming 19G.6 among them. It bit two. 19G.6's
+bullets name `tools/README.md` and `.claude/skills/segment-plan/SKILL.md`
+under the "for the human" convention — paths outside the regex entirely,
+never counted, a different mechanism. The wrong count was written in
+19G.7 and propagated to the assessment the same day: class B, in the
+segment that conceded class B, committed by the item documenting it.
+Both copies are corrected rather than quietly restated.
+
+### Decision
+
+**The author says which, once, in the bullet:**
+`<!-- cites: spec/architecture.md -->`, comma-separated for several,
+matched anywhere in the bullet, and the named paths drop out of that
+bullet's committed set. **C7** fails a `cites:` naming a path the bullet
+does not contain, so the escape cannot outlive its reason or quietly
+become a blanket — the same both-directions rule as
+`test_doc_conventions.py`'s two markers.
+
+Rejected: **head-only for prefixed paths, as 19G.4 already does for bare
+names.** Measured over all 99 plans, exactly **two** bullets name a path
+in the head *and* more after the dash — and in both, the after-dash
+paths are **real commitments**: `11J`'s bullet commits to a matching
+edit in `spec/session_home.md` §"Quick Setup card", and `19C`'s is a
+compound bullet committing to four specs separated by semicolons. The
+rule would lose four commitments and gain nothing historically. The
+grammar does not carry the distinction; only the author does.
+
+Rejected: **inferring it from the sentence** — a path followed by "— what
+changes" is a commitment, one inside a noun phrase is a citation. `11J`'s
+genuine second commitment has no dash at all, so the heuristic misreads
+the one case in the corpus that most needs reading right.
+
+### Semantics
+
+- **Opt-in.** No existing plan carries the marker, so no existing verdict
+  moves; verified against the archived report and every live plan.
+- **Scope.** The marker binds its own bullet only. Two bullets naming the
+  same path need two markers, which is correct: one bullet may commit to
+  a file another only cites.
+- **A bullet whose every path is cited** commits to nothing and is legal
+  — that is a prose bullet, the shape the "for the human" convention
+  already uses.
+- **C7 reads the bullet before the filter**, so a marker naming a path
+  that *is* the bullet's only commitment still resolves rather than
+  reading as absent.
+- **Not retroactive.** 19G.5's and 19G.7's bullets keep their
+  backtick-less prose and the notes explaining it. A closed item's
+  manifest is a record of what it committed to; rewriting it to look
+  tidy under the new rule would erase the only evidence the defect had a
+  cost.
+
+### Judgment calls — decided
+
+- **`C7`, not `C5`** (2026-09-08). The C5 slot is free because 19A
+  dropped a vocabulary-rename check, and reusing the number would make
+  that record read as something it is not. The docstring now says so
+  rather than leaving "there is no C5" as a bare fact.
+- **A marker, not a config list** (2026-09-08). A repo-level list of
+  "paths that are usually cited" is the growing allowlist Article VI
+  names; the marker is local, self-documenting, and dies with its bullet.
+- **Comma-separated in one marker** rather than one marker per path
+  (2026-09-08). 19G.5's bullet cites two, and two comments on one bullet
+  reads worse than one comment naming two.
+
+### Blast radius (measured)
+
+At `f506285f`, over all 99 plans (live + archived):
+
+| | count |
+|---|---|
+| bullets carrying a `cites:` marker today | **0** — the feature is opt-in |
+| plan verdicts that change | **0** (`--archived` report byte-identical; eight live plans re-run individually) |
+| bullets with a head path *and* after-dash paths | **2**, both genuine multi-path commitments — the rejected rule's cost |
+| manifests the defect has bitten | **2** (19G.5, 19G.7) |
+
+### PR ladder
+
+1. **PR 1 — the marker, C7, its tests, and the three prose homes.** Must
+   not touch the window logic, the heading regexes, `COMMITTED_PATH`
+   itself, or any archived plan's manifest.
+
+### Definition of done
+
+- A cited path named by `<!-- cites: … -->` is not counted; without the
+  marker it still is.
+- C7 fails a `cites:` naming a path its bullet does not contain.
+- Four mutants, each run: the pre-change parser (three tests fail); a
+  marker that drops every path in its bullet (three fail); `cited_absent`
+  hard-wired empty (C7's test fails); head-only for prefixed paths (the
+  rejected alternative — two fail, including 19G.4's own guard).
+- No existing plan's verdict moves — archived report byte-identical.
+- The three-manifest miscount corrected in both places it reached.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.8` exits 0
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- **Widening `COMMITTED_PATH` to `tools/` and `guide/`.** Still 19G.4's
+  class, still handled by the "for the human" convention, still not
+  bundled here.
+- **Retrofitting the marker onto 19G.5 and 19G.7.** See Semantics — a
+  closed manifest is a record.
+
+### Doc impact
+
+- `docs/status.md` — row at the close. The 19G.7 row does not carry the
+  three-manifest claim (checked), so nothing there needs amending.
+- *(for the human — outside the script's `spec/` + `docs/` regex)*
+  `guide/codebase_assessment_08sep.md` §8's three-manifest claim
+  corrected to two; `tools/README.md`'s `close_check.py` row;
+  `.claude/skills/segment-plan/SKILL.md`'s Doc-impact contract; and
+  `guide/segment_plan_template.md`'s Doc-impact comment — the last three
+  all state what counts as a commitment, and the rule and its guidance
+  move together. *Four real commitments the tool cannot verify, because
+  `guide/`, `tools/` and `.claude/` are outside the regex: the item
+  fixing one blind spot in the manifest pattern writes its own manifest
+  around another, which is 19G.4's class and stays out of scope.*
+
+### Status
+
+**2026-09-08 — landed as planned: one PR, one commit, five tests.**
+
+Intended one PR; shipped one PR. The ladder's "must not touch" held:
+`COMMITTED_PATH` itself, the window logic and the heading regexes are
+unchanged, and no archived manifest was edited.
+
+**The correction came before the build, and changed the item.** The
+Opportunity was drafted from the claim already in the assessment — that
+the defect had bitten three consecutive manifests. Checking it against
+the plan file showed it bit two: 19G.6's bullets name `tools/` and
+`.claude/` paths, which the regex never matched. Had the claim gone
+unchecked, this item would have opened with a false measurement in
+service of a real defect, which is the cheapest way to make a good fix
+untrustworthy. Both copies are corrected and neither is deleted.
+
+**Decisions confirmed at build:**
+
+- **The rejected head-only rule was measured, not assumed.** Exactly two
+  bullets in the 99 plans have a head path plus after-dash paths, and
+  reading both showed the after-dash paths are real commitments in each
+  — `11J` commits to a matching `spec/session_home.md` edit expressed
+  without a dash at all, and `19C` is a compound four-spec bullet. The
+  rule would have cost four commitments. **The one case that most needs
+  reading right is the one a grammar heuristic gets wrong**, which is
+  why the marker is authored rather than inferred.
+- **Opt-in means no verdict moves.** The `--archived` report is
+  byte-identical across the change and eight live plans were re-run
+  individually.
+
+**Four mutants, each run:**
+
+| Mutant | Result |
+|---|---|
+| the pre-change parser | 3 tests **fail** — the marker is doing the work |
+| a marker that empties its whole bullet | 3 **fail** — it removes only what it names |
+| `cited_absent` hard-wired empty | C7's test **fails** — the staleness guard is real |
+| head-only for prefixed paths (the rejected rule) | 2 **fail**, including 19G.4's own guard against exactly this |
+
+**The marker ships with no use in a live manifest, deliberately.** This
+item's own bullets cite nothing — the four paths they name are outside
+the regex, not cited within it — and inventing a use to demonstrate the
+feature would be the vice the item exists to remove. Its end-to-end path
+is the same `parse_bullets` every manifest goes through, exercised by
+five tests; 19G.5's and 19G.7's bullets stay as written, because a closed
+manifest is a record of what it committed to and of what the defect cost.
+
+**What this does not fix.** `guide/`, `tools/` and `.claude/` are still
+outside `COMMITTED_PATH`, so four of this item's five real doc
+commitments are unverifiable — recorded in the Doc impact rather than
+smoothed over. That is 19G.4's class and it stays open.
 
 ## Carried open questions
 

@@ -84,7 +84,10 @@ Each rung: what it lands, and what it must not touch. Strike dropped rungs; do n
 applicable. A spec/ or docs/ path counts anywhere in the bullet; a root-level
 document (constitution.md, CLAUDE.md) or a bare shorthand filename counts only
 before the dash. Waive with <!-- doc-impact-waived: reason --> on the same line
-rather than deleting. -->
+rather than deleting. If a bullet CITES a path rather than committing to it —
+naming the target of a pointer it is editing — mark it
+<!-- cites: spec/x.md --> (comma-separated for several) rather than dropping the
+backticks; a cites: naming a path the bullet does not contain fails C7. -->
 
 - `spec/<file>.md` — 
 - `docs/status.md` — row when the segment lands.

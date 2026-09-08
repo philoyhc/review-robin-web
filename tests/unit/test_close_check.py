@@ -249,3 +249,76 @@ def test_an_unresolvable_bare_name_is_reported_as_written() -> None:
     """C2 should name the string the author wrote, not a guess at what
     they meant — otherwise its message points at a file nobody typed."""
     assert _paths("- `no_such_document.md` — nothing.") == ["no_such_document.md"]
+# --------------------------------------------------------------------
+# cited paths (19G.8)
+
+
+def _bullet(text: str) -> dict:
+    lines = text.splitlines()
+    return cc.parse_bullets(lines, 0, len(lines))[0]
+
+
+def test_a_cited_path_is_not_a_commitment() -> None:
+    """The defect: `COMMITTED_PATH` matches a prefixed path anywhere in
+    the bullet, so a bullet describing an edit *to a pointer* commits the
+    item to editing the pointer's target. It bit two manifests in this
+    segment, each worked around by dropping the backticks — distorting
+    the prose to satisfy the checker, against `CLAUDE.md`'s "backtick
+    every path".
+    """
+    bullet = (
+        "- `docs/unenforced_conventions.md` — §2.1's `spec/architecture.md`\n"
+        "  pointer names the section rather than numbering it.\n"
+        "  <!-- cites: spec/architecture.md -->"
+    )
+    assert _bullet(bullet)["paths"] == ["docs/unenforced_conventions.md"]
+
+
+def test_without_the_marker_the_cited_path_still_counts() -> None:
+    """The half that must not regress. A prefixed path after the dash is
+    a commitment by default — bullets legitimately commit to several
+    specs there, and a head-only rule for every path loses seven such
+    commitments across the archived plans (19G.4). The marker is opt-in
+    precisely because the default is right more often than not."""
+    bullet = (
+        "- `docs/unenforced_conventions.md` — §2.1's `spec/architecture.md`\n"
+        "  pointer names the section rather than numbering it."
+    )
+    assert _bullet(bullet)["paths"] == [
+        "docs/unenforced_conventions.md",
+        "spec/architecture.md",
+    ]
+
+
+def test_cites_takes_several_paths() -> None:
+    """19G.5's bullet cited two: the wrong file and the right one."""
+    bullet = (
+        "- `spec/operator_button_audit.md` — row #155 repointed from\n"
+        "  `spec/visual_style_rrw.md` to `spec/ui_elements.md`.\n"
+        "  <!-- cites: spec/visual_style_rrw.md, spec/ui_elements.md -->"
+    )
+    assert _bullet(bullet)["paths"] == ["spec/operator_button_audit.md"]
+
+
+def test_a_cites_naming_a_path_the_bullet_lacks_is_reported() -> None:
+    """C7's input. An escape that covers nothing is stale in the
+    direction nobody notices: the suite stays green while the marker
+    quietly excuses a path that is no longer in the bullet, and the next
+    path added under that name is silently uncommitted."""
+    bullet = (
+        "- `docs/x.md` — a change.\n"
+        "  <!-- cites: spec/architecture.md -->"
+    )
+    parsed = _bullet(bullet)
+    assert parsed["paths"] == ["docs/x.md"]
+    assert parsed["cited_absent"] == ["spec/architecture.md"]
+
+
+def test_a_cites_that_covers_a_real_path_is_not_reported_as_absent() -> None:
+    """The other direction of C7: a live marker must not read as stale,
+    or the check would fail every correct use of the escape it defines."""
+    bullet = (
+        "- `docs/x.md` — the `spec/architecture.md` pointer moves.\n"
+        "  <!-- cites: spec/architecture.md -->"
+    )
+    assert _bullet(bullet)["cited_absent"] == []
