@@ -399,7 +399,7 @@ confused, layer a `?skipped=N` flash on top.)
   - `delete_session(db, *, review_session, user, correlation_id)` —
     cascades dependent rows + writes the `session.deleted` audit
     event.
-- **Lifecycle gate:** `app/services/session_lifecycle.is_editable`.
+- **Lifecycle gate:** `is_editable` in `app/services/session_lifecycle.py`.
 - **Tests:** `tests/integration/test_operator_sessions.py`,
   `tests/integration/test_chrome_breadcrumbs.py` (header /
   checkbox markup assertions).

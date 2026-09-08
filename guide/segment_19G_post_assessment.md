@@ -382,3 +382,66 @@ the close, by which point the file is there.*
 - `guide/README.md` — the `segment_*.md` row already covers this file;
   no change expected. <!-- doc-impact-waived: generic row already covers a new live plan; revisit only if 19G changes the folder's shape -->
 - `docs/status.md` — row when each rung lands.
+
+### Status
+
+**2026-09-08 — PR 1 landed, and the count it was named for was wrong in
+an instructive way.**
+
+The rung read *"repoint the 84 broken references … but 28 need a
+judgement about what the right target is now."* Both halves needed
+correcting once the 84 were read one at a time rather than counted.
+
+**Only 36 were repointed. 42 are history and were left as written.**
+The discriminator turned out to be grammatical, not structural: a
+reference that says *"Plan: X"*, *"spec: X"*, *"As-built layout: X"*,
+*"Reference implementation: X"* is a pointer a reader is meant to
+follow, and if X has moved the pointer is broken **today** — those were
+repointed, archived plans included. A reference that says *"retired X"*,
+*"formerly X"*, *"renamed SEEDS in X"*, *"split X into a package"* is a
+record of what was true on its date, and repointing it would falsify the
+record.
+
+**This was already the repository's policy and the plan did not know
+it.** `docs/status.md`'s own 19F row says it in as many words —
+*"`docs/status.md`'s historical rows were left as written — a log must
+be true of its date, not of today"* — decided during 19F and never
+carried anywhere a planner would find it. The rung's "28 need a
+judgement" undercounted because it treated the question as *which
+target* rather than *whether to repoint at all*.
+
+**Where the 84 went:**
+
+| Disposition | Count |
+|---|---|
+| Repointed to a live target | 36 |
+| Left as history, covered by a section marker | 36 |
+| Left as history or as a forward reference, covered by an inline marker | 12 |
+| Unaccounted | **0** |
+
+**The section marker is new and is the rung's one design decision.**
+`docs/status.md` §Project timeline, §Segments shipped and
+`guide/todo_master.md` §Done are dated registers inside otherwise-live
+files. Marking 36 lines individually would have been noise; marking the
+two files wholesale would have blinded the check to the live half of the
+two most-referenced documents in the repository (`## Capabilities
+today`, `## What's deliberately not yet there`, `## Upcoming`). So the
+opt-out is scoped to the section: `<!-- path-ref-ok: section -->` under
+the heading, running until the next `##`. It mirrors the existing
+`<!-- retired-term-ok: file -->` idiom one level down. PR 2 reads both
+it and the inline `<!-- path-ref-ok -->`.
+
+**Two references were rewritten rather than repointed**, because the
+path was never the problem:
+`spec/sessions_overview.md` said `` `app/services/session_lifecycle.is_editable` ``,
+a dotted attribute written as a path, now `` `is_editable` in
+`app/services/session_lifecycle.py` ``; and `spec/assignments.md` cited
+`` `spec/archive/.../reconciling_regeneration.md` `` — an elided path
+that was wrong twice over, since the file is live at
+`spec/reconciling_regeneration.md` and never went to an archive. The
+Semantics section's "excluded by shape" list is one item shorter as a
+result: the dotted form is fixed at source rather than tolerated.
+
+**Not done in this rung, and not a surprise:** PR 2's check, which is
+what makes any of this hold. Until it lands, the tree is merely correct
+rather than kept correct.

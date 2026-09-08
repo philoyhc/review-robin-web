@@ -18,6 +18,8 @@ references it without duplicating its PR ladder.
 
 ## Done
 
+<!-- path-ref-ok: section -->
+
 Closed items, dense list. Each line names the catalog item (or a
 named scope) and the date / PR refs that closed it. Segment
 entries are arranged by **first PR number ascending** (oldest
@@ -159,7 +161,7 @@ Segment 11's sub-segments and their catalog items, in first-PR-number order. Eac
   - **"Available rulesets"** sibling card at half page width lists every visible RuleSet with its description and a seed/personal pill; the active row highlights.
   - Locked banner copy + "Combine these rules with:" helper inline (no "Combinator" heading); `+ MATCH/FILTER/QUOTA/COMPOSITE rule` button labels (no "Add"); no "Exclude self-review" affordance on the card (lives on the main Assignments page).
   - 13A's standalone editor surface (`/edit/{rule_set_id}` + companion POSTs `/copy`, `/save`, `/save-as`, `/rename`, `/delete`, `/preview`) and template / partials retired in PR 4b; the reused PR 5b/5c rules-JSON serializer (`_rule_based_editor_js.html`) and shared view-shape helpers (`RuleLine`, `EditableRule`, `_flatten_rule_lines`, `_flatten_editable_rules`, picker option lists) stayed.
-  - Plan archived: `guide/archive/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `spec/rule_based_assignment.md` §7.2 (Rule Builder page). New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
+  - Plan archived: `guide/archive/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `spec/archive/rule_based_assignment.md` §7.2 (Rule Builder page). New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
 
 - **Segment 13A-2 — `session_rule_sets` name uniqueness within session** — done 2026-05-09. PR **#711**. Adds the `uq_session_rule_set_session_name` constraint on `session_rule_sets(session_id, name)`, mirroring the parallel `uq_rtd_session_name` already on `response_type_definitions`. Pure DDL — the table was empty on every deployment running the migration (lands inert from 13D PR 2). Underpins 12A-1's name-based `instruments[N].rule_set_name` reference + 15B's per-instrument selection + 15C's Save-to-library / Add-from-library flows. Service-layer collision check (mirror of `_resolve_save_as_name` for `operator_rule_sets`) deferred to 15C Slice 4 where the editor reroutes to write into `session_rule_sets`; this DB constraint is the safety net behind that future adaptation. Follow-on details appended to `guide/archive/segment_13A_1_rule_based_editor_revamp.md`.
 
@@ -772,7 +774,7 @@ migrations — only one cache-columns migration (`c3a9f1d7b2e8`).
   normal / group instrument-card layout harmonization.
 
 Plan archived: `guide/archive/segment_13C_enhanced_instrument.md`.
-Functional spec: `spec/group_scoped_instruments.md`.
+Functional spec: `spec/archive/group_scoped_instruments.md`.
 
 ---
 
@@ -1242,8 +1244,8 @@ drops it without bespoke attributable-comparison machinery.
   (`spec/extract_data.md` chip vocabulary + Data shaper
   scope row + persistence model + audit envelope;
   `spec/settings_inventory.md` §9.5 + §10 CSV coverage);
-  Q4 flag struck from `guide/codebase_assessment_30may.md`;
-  `guide/self_review_consolidate.md` addendum closed out.
+  Q4 flag struck from `guide/archive/codebase_assessment_30may.md`;
+  `guide/archive/self_review_consolidate.md` addendum closed out.
 - **Polish (#1659)** — Preview-table labels unified across
   saved + edit modes via new
   ``compose_shape_preview_headers``: identity columns
@@ -1320,7 +1322,7 @@ Shipped across **five small PRs in one day** (2026-05-30):
   call-site annotations document why the four remaining
   pair-level callers are intentional (unsaved-pair-candidate
   paths). ``spec/assignments.md`` names the column as
-  source of truth; ``guide/extract_data.md`` drops the
+  source of truth; ``guide/archive/extract_data.md`` drops the
   bug-fix scope from the queued Self-review chip section.
   4 new tests.
 - **PR 5 — Archive + close-out** (this entry). Plan moved
@@ -2846,7 +2848,7 @@ dep chains called out at the bottom of this file.
   same day by an item-by-item audit of workplan §18: four of the ten
   items had already shipped (validation explanations via
   `ValidationRule.why`; operator guide = the in-app Guide at `/guide`
-  since 19E rung 2, formerly `docs/quickstart.md`;
+  since 19E rung 2, formerly `docs/quickstart.md`; <!-- path-ref-ok -->
   developer setup = `docs/local_setup.md`; known limitations =
   `docs/known_limitations.md`), four moved out to 19E / 19C Item 8. What is left: the **administrator guide** for the
   institutional host, the institutional half of **troubleshooting**, a

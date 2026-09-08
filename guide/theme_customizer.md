@@ -1,7 +1,7 @@
 # Theme customizer — plan
 
 **Status:** **First — ✅ v1 shipped 2026-09-04** as **Segment 19C Item 5**
-(`guide/segment_19C_refinements.md`, PRs #2065–#2083): a three-part,
+(`guide/archive/segment_19C_refinements.md`, PRs #2065–#2083): a three-part,
 data-driven `tools/theme_customizer.html` designer — Part A previews the real
 gallery, Part B edits tokens (seeds / primitives / contrast / semantic remaps),
 Part C click-to-reflect + primitive-picker editing, with Save/Undo/Revert and
@@ -73,7 +73,7 @@ Plan A shipping first with Stretch deferred.
 **Known limit, recorded 2026-09-06.** The customizer edits primitive *values*
 but cannot add or delete primitives, which caps the portability kernel at
 whatever palette the build parsed. Cause and scope are in
-`guide/segment_19C_refinements.md` Item 5 → "Add / delete primitives"; not
+`guide/archive/segment_19C_refinements.md` Item 5 → "Add / delete primitives"; not
 repeated here.
 
 ---

@@ -544,11 +544,11 @@ workflow:
   Data card on Session Home (settings, reviewers, reviewees,
   manual assignments, responses). Fully shipped 2026-05-09 across
   PRs #713, #716, #717, #718, #721.
-- **`guide/segment_12A-3_export_import_updates.md`** — Settings
+- **`guide/archive/segment_12A-3_export_import_updates.md`** — Settings
   CSV importer (absorbed from 12A-2) + Relationships per-entity
   export + import (parallel to rosters) + manual-assignments CSV
   adjustments around 15D's "always derived" model. Planned, 4
-  PRs. (The earlier `guide/segment_12A-2_import.md` is kept as a
+  PRs. (The earlier `guide/archive/segment_12A-2_import.md` is kept as a
   historical-reference document for the Settings importer
   contract — the implementation lands as 12A-3 PR 1.)
 
@@ -618,10 +618,10 @@ The five CSVs split the work three ways:
 
 **Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
 CSV shapes + inclusion rule),
-`guide/segment_12A-3_export_import_updates.md` (Settings
+`guide/archive/segment_12A-3_export_import_updates.md` (Settings
 importer + Relationships export + import + post-15D
 assignments-CSV adjustments). The earlier
-`guide/segment_12A-2_import.md` is kept as historical reference
+`guide/archive/segment_12A-2_import.md` is kept as historical reference
 for the Settings importer contract.
 
 ---
@@ -644,9 +644,9 @@ for the Settings importer contract.
   `app/web/routes_operator/_shared.py`).
 - `guide/archive/segment_13D_db_prep.md` — rationale for every §9
   inert table / column.
-- `guide/archive/segment_12A-1_export.md` / `guide/segment_12A-3_export_import_updates.md`
+- `guide/archive/segment_12A-1_export.md` / `guide/archive/segment_12A-3_export_import_updates.md`
   — CSV export / import contract referenced by §10.
-  (`guide/segment_12A-2_import.md` is the superseded importer
+  (`guide/archive/segment_12A-2_import.md` is the superseded importer
   plan, kept as historical reference.)
 - `guide/archive/segment_15F_enhanced_setup_pages.md` —
   inline-editable Setup rows + Add + Inactivate / Reactivate UI

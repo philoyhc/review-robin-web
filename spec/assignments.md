@@ -626,7 +626,7 @@ the session is `is_ready`).
 > **Background.** The pre-Wave-5 "Generate assignments" path
 > wholesale-replaced an instrument's rows on every re-run,
 > deleting saved responses. Segment 13D PRs #1065 → #1069 (also
-> documented in `spec/archive/.../reconciling_regeneration.md`,
+> documented in `spec/reconciling_regeneration.md`,
 > kept) replaced this with a **diff-and-reconcile** path that
 > preserves responses on pairs that survive the re-run.
 

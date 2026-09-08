@@ -165,7 +165,7 @@ operator-controlled page-break layout:
   The migration backfilled `true` on every existing
   instrument so today's one-per-page reviewer behaviour
   was preserved on rollout (locked decision 3 in
-  `guide/segment_18M_instrument_layout.md`); the DB-level
+  `guide/archive/segment_18M_instrument_layout.md`); the DB-level
   `server_default` was then flipped to `false` so new
   instruments default to "continue current page". The
   Mapped column declares `default=False` so ORM creates
@@ -370,7 +370,7 @@ break is cleared.
 A break sits between adjacent instrument cards in
 document order; the loop renders the divider just before
 the per-instrument card whose `starts_new_page=true`.
-Locked decisions (see `guide/segment_18M_instrument_layout.md`):
+Locked decisions (see `guide/archive/segment_18M_instrument_layout.md`):
 
 - Page breaks are **non-movable** — create + delete only.
   Dragging an instrument across a break naturally

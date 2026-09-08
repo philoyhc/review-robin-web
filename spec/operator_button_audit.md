@@ -131,7 +131,7 @@ Source: `app/web/templates/operator/session_new.html`.
 
 ## Section 4 — Edit session (`/operator/sessions/{id}/edit`)
 
-Source: `app/web/templates/operator/session_edit.html`. As of
+Source: `app/web/templates/operator/session_edit.html`. As of <!-- path-ref-ok -->
 2026-05-22 (commit b490825) the page splits as a `.bottom-grid`:
 the edit form on the left, the Danger Zone card on the
 bottom-right.

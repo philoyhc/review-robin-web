@@ -386,7 +386,7 @@ template alongside the existing auto-send captions.
 **Ships.**
 
 - New `_observe_scheduled_archive(session)` in
-  `app/services/scheduled_events.py` modelled on
+  `app/services/scheduled_events/` modelled on
   `_observe_scheduled_activation` — anchored on `deadline`,
   fires `archive_session` (18A's shipped service) at
   `deadline + archive_offset`. Per-session one-shot dedup via
@@ -659,7 +659,7 @@ per-card. No schema change.
 
 - Observability: a counter / log line in
   `evaluate_session_rule_eligibility`
-  (`app/services/session_library.py`) distinguishing cache
+  (`app/services/session_library.py`) distinguishing cache <!-- path-ref-ok -->
   hit vs miss. Confirms post-deploy whether no-op Saves on a
   per-instrument card actually hit the
   `session_rule_sets.cached_eligibility_stamp` cache. If they
@@ -861,7 +861,7 @@ card-collapse (#1914 → #1915) and the lost-column-width-on-save (#1920).
 
 **Ships.**
 
-- A thin **Playwright** smoke layer (`tests/e2e/` or similar) driving the
+- A thin **Playwright** smoke layer (`tests/e2e/` or similar) driving the <!-- path-ref-ok -->
   highest-risk interaction paths in a real browser against `uvicorn` +
   `ALLOW_FAKE_AUTH`: unlock → edit → save on the instrument card; the
   `?editing=1` swap on Session Home; add/remove a Band 1 rule; +Page break;
@@ -892,7 +892,7 @@ instrument-card JS — land a couple of interaction tests alongside the change
 rather than as a standalone project; (c) a deliberate pre-pilot hardening pass
 once 14B email is in and the surface is stable.
 
-**Wire-up.** New `tests/e2e/` dir + a Playwright config pinned to the
+**Wire-up.** New `tests/e2e/` dir + a Playwright config pinned to the <!-- path-ref-ok -->
 provisioned Chromium (`executablePath: '/opt/pw-browsers/chromium'` if a
 project ever pins a different `@playwright/test`; do **not** run
 `playwright install`). A fixture that boots `uvicorn app.main:app` with
@@ -1206,7 +1206,7 @@ progressive-enhancement path is the plan.
 *History: this was briefly a roadmap segment — numbered 17,
 then 17A, then 22 — before being moved here on 2026-05-16. The
 superseded segment plan is recoverable from git history
-(`guide/segment_22_ag_grid_replacement.md`).*
+(`guide/segment_22_ag_grid_replacement.md`).* <!-- path-ref-ok -->
 
 ---
 

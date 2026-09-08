@@ -3,7 +3,7 @@
 The security / compliance posture of Review Robin Web: who can do
 what, what the app trusts, and which hardening items are
 deliberately deferred. Absorbs the identity-subsystem write-up
-(formerly `docs/authentication.md`, retired 2026-08-19); pairs with
+(formerly `docs/authentication.md`, retired 2026-08-19); pairs with <!-- path-ref-ok -->
 `docs/known_limitations.md`.
 
 ## Authorization model
