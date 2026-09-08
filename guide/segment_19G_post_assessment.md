@@ -545,3 +545,60 @@ part is load-bearing (the backticked mode names in each cell). A check
 nobody knows about gets worked around by someone rewording a table in
 good faith.
 
+**2026-09-08 — PR 4 landed. The list needed a second half the plan had
+not imagined, and writing it found two things.**
+
+**The open question is answered: yes, annotate.**
+`docs/practice-audit-2026-09-04.md` gains a dated note at its head and
+its §2 table is left exactly as written, which is what Article V
+prescribes for a dated document. Three of its rows had been overtaken —
+rows 1b and 2 mechanized four days after it was written, row 3's premise
+reversed by the 2026-09-07 spelling entry — and a reader arriving at
+that table cold had no way to know. Reversible: the note is additive and
+the author can strike it.
+
+**The list splits in two, and the split is the point.** The plan
+described one list. Writing it made a distinction impossible to ignore:
+a rule that *cannot* be checked cleanly and a rule that *could* be but
+nobody has written are opposite facts, and filing them together lets the
+second quietly acquire the dignity of a decision. So §1 is Article VI's
+list proper, and **§2 is a revisit queue** — the half VI's trade-off asks
+for ("revisited when a constant appears that would make one derivable")
+and which a single list cannot express.
+
+**Two findings, both from measuring rather than assuming:**
+
+- **"Route handlers stay thin" cannot be checked today because the tree
+  does not obey it.** 17 routing modules contain `select(`. That earns
+  it a place in §1 with an honest reason — a check failing on 17 files
+  the day it lands is exactly VI's argued-with-then-disabled sequence —
+  and a note that it moves to §2 once the SQL moves into services. The
+  entry is about the gate, not a licence on the rule.
+- **"No slice-to-slice imports in `app/web/routes_operator/`" is clean:
+  21 slices, 0 violations.** Mechanizable with no allowlist and green
+  from its first commit — the same shape as rung 2. It goes in §2 as the
+  strongest candidate there, and the best moment to pin a convention is
+  while it is still being followed by hand.
+
+**Every claim in the file was falsified, not carried.** The 2026-09-04
+audit's rows 1c and 4 are quoted by many documents; this list re-ran
+both against the current tree rather than repeating them. Bypassing
+`| lifecycle_label` in a live template: **2940 passed**. A
+`sqlalchemy.dialects.postgresql` import in a model, used as a column
+type so `ruff`'s `F401` cannot fire: **`ruff` clean, 2940 passed**. A
+list of unenforced conventions whose own claims have gone stale would be
+self-refuting.
+
+**One error caught in passing.** The first draft of the audit annotation
+credited `tests/unit/test_doc_conventions.py` to #2092. It shipped in
+**#2086** (`04962397`); #2092 added a third check to the same file four
+days later. Both numbers appear in that audit, which is how the wrong
+one got picked up.
+
+**The ladder is complete.** `close_check 19G.1` C2 now passes. What
+remains before the item closes is the close sequence itself, not a rung:
+the `spec-writer` pass over the doc-impact specs, the `docs/status.md`
+row, and the two open questions above it — the `§N` heading-validity
+measurement, and whether `close_check`'s `COMMITTED_PATH` should widen
+to root-level `.md`.
+

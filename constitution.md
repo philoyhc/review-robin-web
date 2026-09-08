@@ -94,7 +94,9 @@ than the paragraph did.
 
 *Trade-off.* Some real conventions stay unenforced. The list of them
 should be short, written down, and revisited when a constant appears
-that would make one derivable (II).
+that would make one derivable (II). It is
+`docs/unenforced_conventions.md` — written 2026-09-08, having been
+promised by this paragraph and absent until then.
 
 ---
 
