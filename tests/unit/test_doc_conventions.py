@@ -198,3 +198,144 @@ def test_agent_instruction_twins_are_identical() -> None:
         "CLAUDE.md and AGENTS.md have diverged — copy one over the other "
         "(`cp CLAUDE.md AGENTS.md`) before committing."
     )
+
+
+# --- Path references: a backticked repo path in live prose must resolve ---
+#
+# Segment 19G Item 1, class E. The filesystem and git history are the
+# constants, so this needs no registry of its own and cannot go stale
+# independently of the tree it reads (constitution.md Article II).
+#
+# Its own corpus rather than LIVE_DOCS above, for two reasons: it reaches
+# `guide/` and the root-level documents (`constitution.md`,
+# `rrw_sdd_in_practice.md`, `CLAUDE.md`) that nothing else checks, and it
+# excludes dated records by filename rather than by an in-file marker,
+# because a plan or a snapshot names files that did not exist on its date
+# or do not exist yet, and both are correct.
+
+#: A document whose *filename* marks it as a record of a date rather than
+#: a live claim: a snapshot, a sweep, a practice audit, a segment plan.
+#: Excluded wholesale — a reference that was right when it was written is
+#: not a defect now, and a plan legitimately names files not yet built.
+DATED_DOC = re.compile(r"(codebase_assessment_|sweep_|practice-audit-|segment_)")
+
+#: Live prose: top-level `.md` in the three doc folders plus the root.
+#: `archive/` is excluded by not recursing; there are no other nested
+#: documentation directories (checked 2026-09-08).
+LIVE_PROSE = sorted(
+    p
+    for d in (REPO, REPO / "spec", REPO / "docs", REPO / "guide")
+    for p in d.glob("*.md")
+    if not DATED_DOC.search(p.name)
+)
+
+#: A backticked repo-relative path. Anchored on a known top-level
+#: directory: a bare `` `architecture.md` `` is shorthand whose directory
+#: the reader supplies, and resolving those would need a guess per hit —
+#: the kind of growing ambiguity Article VI says not to mechanise.
+PATH_REF = re.compile(r"`((?:spec|docs|guide|app|tests|tools)/[A-Za-z0-9_./-]+)`")
+
+#: One line's reference is deliberate: a forward reference to something
+#: planned, or a historical statement ("retired X", "formerly X").
+PATH_ESCAPE = "<!-- path-ref-ok -->"
+
+#: A whole `##` section is a dated register inside an otherwise-live file
+#: — `docs/status.md`'s timeline, `guide/todo_master.md`'s Done. Placed on
+#: the first non-blank line under the heading, and covers to the next
+#: `##`. Section rather than file, so the live half of those documents
+#: stays checked; section rather than 36 inline markers, so it is not noise.
+PATH_SECTION_ESCAPE = "<!-- path-ref-ok: section -->"
+
+
+def _dated_register_lines(lines: list[str]) -> set[int]:
+    """1-based line numbers inside a section that has opted out.
+
+    The marker is only honoured as the first non-blank line under a `##`
+    heading. Anywhere else it is ignored, so a marker cannot be dropped
+    mid-section to silence one inconvenient line.
+    """
+    opted: set[int] = set()
+    heading: int | None = None
+    seen_body = False
+    covering = False
+    for number, line in enumerate(lines, 1):
+        if line.startswith("## "):
+            heading, seen_body, covering = number, False, False
+            continue
+        if heading is not None and not seen_body and line.strip():
+            seen_body = True
+            covering = line.strip() == PATH_SECTION_ESCAPE
+        if covering:
+            opted.add(number)
+    return opted
+
+
+def _unresolved_path_refs() -> list[tuple[str, int, str, str]]:
+    """Every non-resolving path reference in live prose, with how it is
+    covered: ``""`` (not covered), ``"inline"`` or ``"section"``."""
+    found: list[tuple[str, int, str, str]] = []
+    for doc in LIVE_PROSE:
+        rel = str(doc.relative_to(REPO))
+        lines = doc.read_text().splitlines()
+        opted = _dated_register_lines(lines)
+        for number, line in enumerate(lines, 1):
+            for match in PATH_REF.finditer(line):
+                target = match.group(1)
+                if (REPO / target).exists():
+                    continue
+                cover = (
+                    "inline"
+                    if PATH_ESCAPE in line
+                    else "section"
+                    if number in opted
+                    else ""
+                )
+                found.append((rel, number, target, cover))
+    return found
+
+
+def test_every_path_reference_in_live_prose_resolves() -> None:
+    """A pointer a reader is meant to follow must lead somewhere.
+
+    84 of these were live at `5ab5e2f8`, the oldest four months old and
+    every one found by hand — including five references to a document
+    that a documentation *sweep* had retired while running.
+    """
+    dangling = [
+        f"{rel}:{number}: `{target}`"
+        for rel, number, target, cover in _unresolved_path_refs()
+        if not cover
+    ]
+    assert not dangling, (
+        "path references naming nothing:\n  "
+        + "\n  ".join(dangling)
+        + "\nRepoint it if it is a pointer a reader follows ('Plan: X', "
+        f"'spec: X'). If it is a record of what was true on its date "
+        f"('retired X', 'formerly X', 'split X into a package'), or a "
+        f"forward reference to something planned, leave the words alone "
+        f"and mark the line with {PATH_ESCAPE!r} — repointing a log "
+        f"falsifies it."
+    )
+
+
+def test_no_inline_path_marker_outlives_the_reference_it_covers() -> None:
+    """A marker whose reference now resolves is stale in the same way a
+    dangling reference is, and this is the direction nobody would notice:
+    the suite stays green while the escape quietly covers nothing. Same
+    both-directions rule as ``test_spec_coverage.py``'s registry.
+
+    Section markers are deliberately exempt: they describe what a section
+    *is*, so one covering no broken reference today is still correct.
+    """
+    covered = {(rel, number) for rel, number, _, c in _unresolved_path_refs() if c == "inline"}
+    stale = [
+        f"{doc.relative_to(REPO)}:{number}"
+        for doc in LIVE_PROSE
+        for number, line in enumerate(doc.read_text().splitlines(), 1)
+        if PATH_ESCAPE in line and (str(doc.relative_to(REPO)), number) not in covered
+    ]
+    assert not stale, (
+        f"{PATH_ESCAPE!r} on a line whose path references all resolve:\n  "
+        + "\n  ".join(stale)
+        + "\nThe marker has outlived its reason — drop it."
+    )

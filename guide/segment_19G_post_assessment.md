@@ -382,6 +382,11 @@ the close, by which point the file is there.*
 - `guide/README.md` — the `segment_*.md` row already covers this file;
   no change expected. <!-- doc-impact-waived: generic row already covers a new live plan; revisit only if 19G changes the folder's shape -->
 - `docs/status.md` — row when each rung lands.
+- `rrw_sdd_in_practice.md` — three citation pointers repointed to
+  `guide/archive/` (PR 2). Not a content edit; named here because the
+  file sits outside `close_check`'s `spec/`-and-`docs/` scope and would
+  otherwise go unrecorded — the same blind spot as the `constitution.md`
+  bullet above. <!-- doc-impact-waived: path repoints only, no prose changed; recorded for the manifest's completeness rather than as a spec commitment -->
 
 ### Status
 
@@ -445,3 +450,59 @@ result: the dotted form is fixed at source rather than tolerated.
 **Not done in this rung, and not a surprise:** PR 2's check, which is
 what makes any of this hold. Until it lands, the tree is merely correct
 rather than kept correct.
+
+**2026-09-08 — PR 2 landed. Green from its first commit, and three
+things the plan did not anticipate.**
+
+**The shape-exclusion list is empty.** Semantics committed to excluding
+by shape — a path containing `...`, a `NN` placeholder, a dotted
+attribute tail. None was needed: PR 1 fixed two at source and marked the
+third, so the check has no shape rules at all and one fewer thing to
+argue about. A tolerated exception and a fixed defect look identical from
+a passing suite; only one of them stays fixed.
+
+**The corpus grew to the repository root, and that cost three
+references.** The rung said *"must not touch any `.md` content — if PR 2
+has to edit prose, PR 1 was incomplete."* It touched one file. Scoping
+the check to PR 1's corpus (`spec/`, `docs/`, `guide/`) would have left
+`constitution.md`, `CLAUDE.md` and `rrw_sdd_in_practice.md` unchecked —
+the three most load-bearing documents in the repository, and precisely
+the blind spot this item already filed against `close_check`. Extending
+the corpus found **three broken references in
+`rrw_sdd_in_practice.md`**, all citation pointers to since-archived
+plans, all repointed here. Three lines in one file is not a second
+cleanup; baking a known gap into a coverage check would have been worse
+than the rule the rung wrote to prevent one.
+
+**The section marker needed hardening the plan had not specified.**
+As first written the marker would have been honoured anywhere inside a
+`##` section, which would have let a future editor drop one mid-section
+to silence a single inconvenient line — an opt-out that reads as
+structural but acts as a per-line escape. It is now honoured **only as
+the first non-blank line under the heading**, which is where PR 1 placed
+all three, and a mutation moving one eight lines down fails the check.
+
+**A second test, for the direction nobody would notice.** An inline
+marker whose reference has since started resolving is drift of the same
+kind as a dangling reference, and the suite stays green through it. The
+both-directions rule is `test_spec_coverage.py`'s and it applies here:
+`test_no_inline_path_marker_outlives_the_reference_it_covers` fails on a
+marker covering nothing. Section markers are exempt by design — they
+describe what a section *is*, so one covering no broken reference today
+is still true.
+
+**Mutation-checked in six directions**, each failing exactly one test and
+the right one: a broken reference added to live prose; the same
+reference added to a dated document (passes, correctly); an inline
+marker deleted; a section marker deleted; a section marker moved off its
+first-line position; and an inline marker made stale.
+
+**Found, not fixed, and filed rather than folded in:**
+`rrw_sdd_in_practice.md`'s capability table still reads *"Spec coverage
+enforced — Not yet … deferred"*, while `constitution.md` II cites
+`tests/unit/test_spec_coverage.py` as shipped on 2026-09-05. That is a
+live class B instance — prose disagreeing with another document — in the
+document the constitution is derived from, and it is exactly the class
+this item conceded as unmechanizable. Left for the author: correcting it
+is a content edit, and folding one into the PR that builds the reference
+check would widen a check into an edit.
