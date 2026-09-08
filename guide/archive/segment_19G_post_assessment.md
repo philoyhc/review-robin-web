@@ -2568,3 +2568,103 @@ Item-1-shaped and both would otherwise be buried in a closed item.
   one-line pattern change with an unmeasured blast radius across every
   existing plan's manifest, so it is a slice of its own, not a rung.
 
+---
+
+## Status — segment close
+
+**Closed 2026-09-08 at ten items, PRs #2197 → #2214, all in one calendar
+day.** Every item carries its own `### Status`; this section is the
+account of the segment as a whole, and of the close itself.
+
+### Intended versus done
+
+Intended: settle two recommended moves from
+`guide/codebase_assessment_08sep.md` §8 and close. Done: ten items, of
+which **two were the planned moves and eight came out of the previous
+item's findings.** That is not scope creep in the usual sense — the
+segment's admission rule was "work arising from this segment's own
+items", and every one of the eight qualified. The trigger that would have
+ended it (four patch items, or anything admitted from outside) never
+fired, and the roster closed with `19G.11+` empty. **This is the shape
+19C never reached**, and the reason the concession to stay open was safe
+to make.
+
+**Total shipped surface: 26 lines** — the `archived` companion pill.
+Everything else was documentation and the tooling that checks it.
+
+### The close's own findings
+
+**`spec-writer` had never seen Item 5's specs.** Checking *which items
+recorded a pass* rather than assuming they all had showed that Item 5
+committed to `spec/operator_button_audit.md` and
+`spec/email_template_editor.md` and closed without one — the only item in
+the segment that edited a spec and skipped it. The close ran it against
+exactly those two and found **three real drifts**, each verified against
+the code before fixing:
+
+1. `spec/email_template_editor.md` cited `spec/settings_inventory.md`
+   **§10** for the `?template=` URL-state parameter. §10 is "CSV export /
+   import coverage"; the parameter lives in §7 "URL state". **The
+   reference resolved and was wrong.**
+2. The same file's "Left for a code change" list had **both** items fixed
+   in `0b5caf9f` hours after the section was written, and never noticed.
+3. `spec/operator_button_audit.md` claimed `spec/ui_elements.md`
+   "still records only the first half" of the Danger Zone's round trip.
+   `45a63a6e` corrected `ui_elements.md` **48 minutes after that sentence
+   was written**; two later commits to the same file walked past it.
+
+**Finding 1 is the one worth carrying forward, because it is the limit
+this segment wrote into its own spec and then met.** 19G.7's
+heading-validity check reads *numbers, not meaning* — the spec says so
+explicitly: "`§4` pointing at a section that exists but says something
+else still passes." Here is a live instance, found by a reader and
+invisible to the check by construction. The check is not weaker than
+advertised; the advertisement was accurate, and the residue is real.
+
+Findings 2 and 3 are both **class B** — prose about another document's
+state, conceded at Item 1 with the registry rejected on Article VI.
+Finding 3 was false within an hour of being written, by a commit in the
+same segment. Neither is a case for reopening the concession: a registry
+would have flagged every edit to `ui_elements.md` and `_previews.py` all
+day, and a person still had to read the two documents to know which flag
+mattered.
+
+**Filed, not fixed:** `spec/operator_button_audit.md` §1 (Chrome)
+predates the `Observers` and `Extract data` tabs and mis-orders the
+Operations row. Pre-existing, outside 19G's scope — Item 2 regenerated
+§§4–5 only — so it goes to `guide/todo_master.md` as a stub, the same
+discipline that produced the §§4–5 stub 19G.2 then discharged.
+
+### Close-check adjudication
+
+`python3 tools/close_check.py 19G` exits 0 across all ten manifests.
+Two coverage notes, both adjudicated: `_session_home` was touched in the
+window without `spec/session_home.md` or `spec/permissions.md` in a
+manifest, and the only 19G change to that module is 19G.3's **comment**
+correction (403 → 404). No contract moved, so neither spec belonged in a
+manifest — which is what the note exists to let a human decide.
+
+### What the archival itself demonstrated
+
+Moving this plan to `guide/archive/` broke six references. **Three were
+caught mechanically** — `docs/unenforced_conventions.md`, guarded by the
+path-reference check 19G.1 built; reverting one makes the suite fail, so
+the mechanism caught its own segment's archival. **Three were not**: the
+`docs/status.md` rows sit inside the `path-ref-ok: section` block that
+19G.1 gave dated registers, and had to be repointed by hand because a
+reader following them lands nowhere. That is the cost of the
+section-scoped concession, paid by the segment that made it, on its way
+out.
+
+### One thing deliberately left stale
+
+`guide/codebase_assessment_08sep.md` still says this segment "stays open
+with an empty queue and a close trigger", and gives the PR range as
+starting at #2196 (that PR is the participant top-bar Guide link, which
+shipped just before the segment opened; the range is #2197 → #2214).
+**Not amended a fourth time.** The assessment is a dated snapshot whose
+numbers are pinned to `d9ffdb93`, it names `docs/status.md` as
+authoritative for ship-state, and `docs/status.md` records the close.
+Amending it again would contradict the cadence observation added to its
+own header four hours earlier. The accurate range is in
+`guide/todo_master.md` and in this file's archive index row instead.

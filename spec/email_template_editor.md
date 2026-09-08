@@ -321,20 +321,28 @@ Corrected in the same change as this file:
   preview region"; the right card is the merge-tag reference and
   previews live on the Previews hub.
 
-Left for a code change (not spec):
+~~Left for a code change (not spec):~~ **Both fixed in `0b5caf9f`
+(2026-09-05), hours after this section was written, and this section did
+not notice until Segment 19G's close.** Kept rather than deleted, because
+a list of open code items that quietly became a list of closed ones is
+the drift class this repository concedes it cannot check.
 
-- The right-card description of `$deadline` reads "(YYYY-MM-DD)";
+- ~~The right-card description of `$deadline` reads "(YYYY-MM-DD)";
   the renderer has produced `YYYY-MM-DD HH:MM` with a zone token since
-  Segment 18B.
-- `ReviewSession.email_template_overrides`'s column comment and the
+  Segment 18B.~~ `app/web/views/_previews.py:416` now reads
+  `"Session deadline as YYYY-MM-DD HH:MM (UTC); blank when unset."`
+- ~~`ReviewSession.email_template_overrides`'s column comment and the
   `responses_received_enabled` docstring cite a submit-time consumer
-  that does not exist (§7).
+  that does not exist (§7).~~ Both now say plainly that nothing reads it
+  at submit time and that Segment 14B wires the send
+  (`app/db/models/review_session.py:45`,
+  `app/services/email_templates.py:279`).
 
 ---
 
 ## 13. Cross-references
 
-- `spec/settings_inventory.md` §3 — the key inventory; §10 the
+- `spec/settings_inventory.md` §3 — the key inventory; §7 "URL state" the
   `?template=` UI-state param.
 - `spec/rrw_functional_spec.md` §11 — the subsystem in user terms,
   including what is and is not wired.

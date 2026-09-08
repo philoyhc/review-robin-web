@@ -2849,6 +2849,20 @@ dep chains called out at the bottom of this file.
   Diagnostics** section landed as §21 when that page's buttons were
   converted, so this stub is now §§4–5 only.)*
 
+- **Refresh `spec/operator_button_audit.md` §1 (Chrome)** *(filed 2026-09-08 by
+  Segment 19G's close `spec-writer` pass)*. The section states it was last
+  refreshed 2026-05-22 and predates two tabs that exist today: `Observers` in
+  the Setup row and `Extract data` in the Operations row
+  (`app/web/templates/operator/partials/session_top_nav.html:21-22`), and its
+  Operations ordering puts Validate before Assignments where the template has
+  Assignments first. **Pre-existing and outside 19G's scope** — 19G Item 2
+  regenerated §§4–5 only, and Item 5 touched one citation — so it is filed
+  rather than absorbed, which is the same discipline that produced the §§4–5
+  stub above. Also flagged, lower confidence: the legend at §69 abbreviates the
+  page-internal nav wrapper as `.tab-strip` where the template and the file's
+  own §4 note use `.tab-strip.tab-strip-page`; check before changing, it may be
+  deliberate shorthand. One PR, no plan doc needed.
+
 - **Theme customizer — a full pass over every element** *(author intent,
   logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C
   closed)*. Item 8 moved two token families and, in doing so, turned up three

@@ -145,8 +145,14 @@ The 2026-05-22 audit recorded four here. Where they went:
 
 The Danger Zone therefore moved **twice**: off Session Home on
 2026-05-22 (commit `b490825`) and back onto it when 18R Item 4 retired
-the page it had moved to. `spec/ui_elements.md` §"Inline-style buttons"
-still records only the first half of that round trip.
+the page it had moved to. ~~`spec/ui_elements.md` §"Inline-style buttons"
+still records only the first half of that round trip.~~ **It records both
+halves as of `45a63a6e` (19G.3), 48 minutes after this sentence was
+written** — the sentence was true when committed and false by lunchtime,
+and neither of the two later commits to this file went back to it. A
+claim about *another document's* current state is class B: nothing
+compares them, which is why this one survived two more passes over the
+same file.
 
 ---
 
