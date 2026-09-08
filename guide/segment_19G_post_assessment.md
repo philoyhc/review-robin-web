@@ -40,7 +40,7 @@ Items close independently, so each carries its own `### Doc impact` and
 | Item | Covers | State |
 |---|---|---|
 | **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Closed** 2026-09-08 (PRs #2197 → #2202). Answered per class; all four rungs landed. |
-| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-19 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
+| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-18 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
 | **19G.3** | The patch queue below — three documentation corrections | **Closed** 2026-09-08. One PR; a fourth found beside them. |
 | 19G.4+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
@@ -1019,6 +1019,42 @@ correction names `session_edit.html`, so I marked the line — and
 because a bare filename is not a prefixed path and the marker therefore
 covered nothing. It was right: the marker was noise, and the check
 declined to let me leave decoration behind. Removed.
+
+**`spec-writer` adjudication — two flags, both dates I introduced while
+correcting stale claims, and the second one propagated.**
+
+- **"four days after the gate shipped" was three.** 2026-09-05 to
+  2026-09-08. Arithmetic, inside the sentence explaining how long a
+  claim had been wrong.
+- **"18R Item 4 retired that page on 2026-08-19" was 2026-08-18** —
+  every 18R Item 4 commit is 08-18, and `session_edit.html` was deleted
+  at 10:36 UTC that day. The reader called it a fresh error. It is
+  worse: **the date originated in the 2026-09-08 assessment itself**
+  (`8eb73359`, §3), and from there it went into `spec/operator_button_audit.md`
+  §4's heading at 19G.2, into `spec/ui_elements.md` and `docs/status.md`
+  at 19G.3, and into this file's own roster row. **Five instances of one
+  wrong date, spread by the two items whose subject was stale claims.**
+  All five corrected, and the assessment's §3 with them.
+
+**This is the finding, and it is not a flattering one.** Item 1 conceded
+class D — prose about behaviour with no source to check against — as
+unmechanizable, and argued the separate reader carries it. Three
+consecutive `spec-writer` passes have now returned findings that are
+**entirely** of that class: a slice count, two dates, a section
+reference, a justification, a heading. Not one was substance; every one
+was connective tissue. The concession is holding, but the load it is
+carrying is heavier than §1.4 makes it sound, and a date that
+propagates five ways in one day is evidence that "a person will notice"
+is doing real work rather than nominal work.
+
+**Recorded for the carried `close_check` question.** C3 reported
+`spec/ui_elements.md` and `docs/status.md` "not modified in window" when
+both had been modified in the commit that introduced the `## Item 3`
+heading — the window's own boundary commit. Third occurrence in this
+segment; 19G.1 and 19G.2 cleared it only because a later commit happened
+to touch the same paths, as this adjudication commit does. That makes it
+a property of the tool, not of an item, and it belongs with the
+`COMMITTED_PATH` question rather than being re-diagnosed each time.
 
 ---
 

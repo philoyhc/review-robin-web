@@ -268,7 +268,7 @@ modules at the prior snapshot as the two new routers landed and were mapped.
 doc-impact files. 19E's found three drift items in two files; 19F's found four
 (three prose, one that was a code defect and became rung 7); 19C's found five
 files, four fixed. **Three of 19C's five were pre-19C drift it had inherited** —
-18R Item 4 retired the Edit Session Details page on 2026-08-19,
+18R Item 4 retired the Edit Session Details page on 2026-08-18,
 `spec/session_home.md` recorded it, and three documents that *summarise* that
 file did not. The `operator_button_audit.md` row above was the remaining open
 item at `590993f0`, deliberately deferred rather than absorbed into 19C's close;

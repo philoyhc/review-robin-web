@@ -431,7 +431,7 @@ vocabulary as follows.
 > *Corrected 2026-09-08:* this read that the Delete buttons "relocated
 > to `session_edit.html`'s Danger Zone (2026-05-22)", which was half a
 > round trip. They did move there on 2026-05-22 (commit `b490825`), and
-> **came back** when 18R Item 4 retired that page on 2026-08-19;
+> **came back** when 18R Item 4 retired that page on 2026-08-18;
 > `session_edit.html` no longer exists. The class was right throughout —
 > only the address was stale.
 > *Canonical:* Destructive for the danger-zone forms, `.btn-icon`
