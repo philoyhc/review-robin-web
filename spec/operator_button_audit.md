@@ -1,26 +1,22 @@
 # All buttons — operator surface audit
 
-> **⚠ Sections 4–5 are stale, and knowingly so (2026-09-08).** This file
-> is a **dated snapshot**, not a live contract, and its Session-Home
-> sections still describe the layout as it stood on 2026-05-22. Three
-> claims below are now false: the Danger Zone did **not** stay on an Edit
-> Session Details page — Segment 18R Item 4 reversed that move and
-> retired the page, so `session_edit.html` no longer exists and
-> `/sessions/{id}/edit` is a 308 redirect to Session Home's
-> `#session-config` card; Session Home carries **no Extract Data card**;
-> and §5a's Next-Action state table predates the ten-state Workflow-card
-> cascade. For Session Home as it is, read `spec/session_home.md` and
-> `spec/workflow_card.md`; for the lobby, `spec/sessions_overview.md`.
-> The **role vocabulary** in the legend below is current and is what
-> `CLAUDE.md` points here for.
+> **Sections 4–5 refreshed 2026-09-08 (19G.2).** They had described the
+> Session-Home layout as it stood on 2026-05-22 and were carrying three
+> false claims: that the Danger Zone lived on an Edit Session Details
+> page, that Session Home had an Extract Data card, and a Next-Action
+> state table that predated the Workflow card. All three are corrected
+> below. **Every other section still carries its own refresh date** — this
+> file is a dated snapshot, not a live contract, and §§1–3 and 6–21 were
+> last re-derived on the dates their headers give.
 >
-> Found by 19C's close audit and **deliberately not regenerated there**:
-> re-deriving two sections against the current templates is its own
-> slice, and 19C was closing precisely because it kept absorbing "one
-> more thing". Filed in `guide/todo_master.md` (Upcoming → Stubs).
+> The **role vocabulary** in the legend below is current and is what
+> `CLAUDE.md` points here for. For Session Home's behaviour rather than
+> its buttons, read `spec/session_home.md`; for the Workflow card's state
+> machine, `spec/workflow_card.md`.
 
 Snapshot of every interactive button (and button-styled anchor)
-across the operator-facing templates. Last refreshed 2026-05-22
+across the operator-facing templates. **§§4–5 re-derived from the
+templates 2026-09-08**; the rest last refreshed 2026-05-22
 after the post-18F/18G UI-polish pass: **Danger Zone moved off
 Session Home to Edit Session Details** (commit b490825 — the
 Delete Data + Delete session buttons now live on `session_edit.html`,
@@ -129,57 +125,85 @@ Source: `app/web/templates/operator/session_new.html`.
 
 ---
 
-## Section 4 — Edit session (`/operator/sessions/{id}/edit`)
+## Section 4 — Edit session *(page retired 2026-08-19, Segment 18R Item 4)*
 
-Source: `app/web/templates/operator/session_edit.html`. As of <!-- path-ref-ok -->
-2026-05-22 (commit b490825) the page splits as a `.bottom-grid`:
-the edit form on the left, the Danger Zone card on the
-bottom-right.
+`app/web/templates/operator/session_edit.html` no longer exists. <!-- path-ref-ok -->
+`GET /operator/sessions/{id}/edit` survives only as a **308 permanent
+redirect** to `/operator/sessions/{id}?editing=1#session-config`
+(`app/web/routes_operator/_session_home.py`), keeping the
+`require_session_operator` gate so a stale bookmark from a non-owner is
+refused rather than bounced. **No buttons render on this path.**
 
-| # | Card | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 16 | Form card | Save changes | `<button type="submit">` | `btn` | Primary | |
-| 17 | Form card | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
-| 17a | Danger Zone (bottom-right) | Delete Data | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete-data`; disabled while session is `ready` (confirm checkbox `disabled` + the route's `_require_editable` gate — pause first). Moved from Session Home 2026-05-22 (commit b490825); lifecycle gate added 2026-08-20. |
-| 17b | Danger Zone (bottom-right) | Delete session | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete`; disabled while session is `ready`. Moved from Session Home 2026-05-22 (commit b490825). |
+The 2026-05-22 audit recorded four here. Where they went:
+
+| Was | Label | Now |
+|---|---|---|
+| 16 | Save changes | §5b — Session details card footer, as **Save** |
+| 17 | Cancel | §5b — Session details card footer |
+| 17a | Delete Data | §5e — back on Session Home's Danger Zone |
+| 17b | Delete session | §5e — back on Session Home's Danger Zone |
+
+The Danger Zone therefore moved **twice**: off Session Home on
+2026-05-22 (commit `b490825`) and back onto it when 18R Item 4 retired
+the page it had moved to. `spec/ui_elements.md` §"Inline-style buttons"
+still records only the first half of that round trip.
 
 ---
 
 ## Section 5 — Session Home (`/operator/sessions/{id}`)
 
-Source: `app/web/templates/operator/session_detail.html` + the
-included partials `_quick_setup_card.html`, `_extract_data_card.html`.
+Source: `app/web/templates/operator/session_detail.html` plus the
+included partials `partials/next_action_card.html`,
+`partials/_quick_setup_card.html`, `partials/session_top_nav.html` and
+`partials/session_setup_status_row.html`. Re-derived from the templates
+2026-09-08.
 
-### 5a — Next Action card
+### 5a — Workflow card (the former "Next Action" card)
 
-State-conditional surface; one or two buttons render at a time.
+Source: `partials/next_action_card.html`. **The state cascade is not
+duplicated here** — `spec/workflow_card.md` §"Workflow stepper — single-row
+button layout" owns which button appears in which of the card's states,
+and a second copy of that table is exactly the drift this audit keeps
+finding. What belongs here is the **vocabulary**: fifteen button sites,
+four roles, no inline styles.
+
+| # | Label | Element | CSS class | Canonical |
+|---|---|---|---|---|
+| 144 | Prepare session | `<button type="submit">` | `btn` / `btn secondary` | Primary / Secondary — rendered in both, per state |
+| 145 | Create invites | `<button type="submit">` | `btn` | Primary |
+| 146 | Send invites | `<button type="submit">` | `btn` | Primary |
+| 147 | Activate session | `<a>` or `<button type="submit">` | `btn` | Primary — anchor to `/validate?activate=1` when warnings need acknowledging, otherwise a direct POST |
+| 148 | Send reminders | `<button type="submit">` | `btn` | Primary |
+| 149 | Revert to draft | `<button type="submit">` | `btn secondary` | Secondary — two sites, per state |
+| 150 | Close session | `<button type="submit">` | `btn secondary` | Secondary |
+| 151 | Release responses | `<button type="submit">` | `btn secondary` | Secondary |
+| 152 | Stop releasing responses | `<button type="submit">` | `btn secondary` | Secondary |
+| 153 | Archive session | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** — serious but recoverable, per §6 |
+| 154 | Regenerate & prepare | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** |
+| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/visual_style_rrw.md` §5a. Not a lock card: §6's lock-card example is one use of this role, not its definition |
+
+Buttons #18–#27 of the 2026-05-22 audit are superseded wholesale: that
+table described a four-state Next Action card ("Validate Setup", "See
+validation details", "Monitor responses", "Pause Session"), none of
+which survives under those labels.
+
+### 5b — Session Details card (`#session-config`)
+
+Source: `session_detail.html`, the `.card#session-config` at the top of
+the left column. This card **absorbed the retired Edit page**: the
+session's fields are edited in place, gated by `?editing=1`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 18 | Next Action (draft / pre-validation) | Validate Setup | `<a>` | `btn` | Primary | |
-| 19 | Next Action (draft / pre-validation) | See validation details | `<a>` | `btn secondary` | Secondary | |
-| 20 | Next Action (validated, no errors) | Activate Session | `<a>` or `<button type="submit">` | `btn` | Primary | Links to `/validate?activate=1` if warnings need acknowledging; otherwise direct POST `/activate` |
-| 21 | Next Action (validated, no errors) | See previews | `<a>` | `btn secondary` | Secondary | |
-| 22 | Next Action (validated, no errors) | See validation details | `<a>` | `btn secondary` | Secondary | |
-| 23 | Next Action (validated, no errors) | Revert to draft | `<button type="submit">` | `btn secondary` | Secondary | Posts `/revert` |
-| 24 | Next Action (validated, errors) | See validation details | `<a>` | `btn` | Primary | Promoted to primary when validation has errors |
-| 25 | Next Action (activated, §1) | Manage invitations | `<a>` | `btn` | Primary | |
-| 26 | Next Action (activated, §1) | Monitor responses | `<a>` | `btn secondary` | Secondary | |
-| 27 | Next Action (activated, §2) | Pause Session | `<button type="submit">` | `btn` | Primary | Posts `/revert`; sits below an `<hr class="next-action-divider">` |
+| 156 | Session details footer | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits `form="config-save-{id}"` to the shared `/config` POST |
+| 157 | Session details footer | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `#session-config` unedited |
+| 158 | Session details footer | Lock / Unlock | `<a>` | `btn secondary` | Secondary | Two-state toggle; adds or drops `?editing=1`. Rendered `aria-disabled` with an explanatory `title` once the session is past `validated` — the lock-card recovery path, not a hidden control |
+| 159 | Owners sub-card | Add owner | `<button type="submit">` | `btn` | Primary | The one Primary on this card; the `required` input blocks an empty submit without JavaScript |
 
-### 5b — Danger Zone — relocated
+Button #30 of the 2026-05-22 audit (Session Details → **Edit**, opening
+`session_edit.html`) is superseded by #158's Lock / Unlock toggle.
 
-The Danger Zone card (former buttons #28 / #29) moved off Session
-Home to the bottom-right of Edit Session Details on 2026-05-22
-(commit b490825). See §4 entries 17a / 17b above.
-
-### 5c — Session Details card (left column)
-
-| # | Card | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 30 | Session Details | Edit | `<a>` | `btn secondary` | Secondary | Bottom-right of the card; opens `session_edit.html`. Inert (`aria-disabled`) while session is `ready`. |
-
-### 5d — Quick Setup card (right column, top; partial)
+### 5c — Quick Setup card
 
 Source: `partials/_quick_setup_card.html`. Also rendered inert on
 `session_new.html` as a preview.
@@ -188,18 +212,29 @@ Source: `partials/_quick_setup_card.html`. Also rendered inert on
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
 | 32 | Quick Setup footer | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/quick-setup/lock` |
+| 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155, not a lock card |
 
-### 5e — Extract Data card (right column, bottom; partial)
+### 5d — Extract Data — moved off this page
 
-Source: `partials/_extract_data_card.html`. Five live tiles
-(Reviewers / Settings / Reviewees / Responses / Relationships)
-plus an inert zip-all footer. See `spec/session_home.md` §2 for
-the tile table.
+The Extract Data card (former buttons #33 / #34) is no longer included
+by `session_detail.html`. `partials/_extract_data_card.html` now renders
+only on `session_extract_data.html`
+(`/operator/sessions/{id}/extract-data`). **That page has no section of
+its own in this audit** — a gap this refresh records rather than closes,
+since adding one is a new section rather than a re-derivation of §5.
+
+### 5e — Danger Zone — back on Session Home
+
+Source: `session_detail.html`, `.card.danger-zone#danger-zone`. Returned
+here when 18R Item 4 retired the page it had moved to in 2026-05-22.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 33 | Extract Data (per row, live) | Download | `<a>` | `btn secondary` | Secondary | Wired routes per tile: `/export/{reviewers,reviewees,relationships,responses,settings}.csv`. Greys out (`btn secondary disabled`) when the underlying count is 0 (per 12A-3 polish #781). Settings tile is always clickable. |
-| 34 | Extract Data (zip-all footer) | Download all | `<a>` | `btn secondary disabled` | Secondary (Disabled) | Inert — zip bundle is a future segment. |
+| 17a | Danger Zone | Delete Data | `<button type="submit">` | `btn destructive` | Destructive (outline red) | Ships `disabled aria-disabled="true"`; a confirm checkbox enables it. The checkbox is itself disabled while the session is `ready`, so the button cannot be reached — audit U3 |
+| 17b | Danger Zone | Delete session | `<button type="submit">` | `btn destructive` | Destructive (outline red) | Same gating. Session-delete subsumes data-delete: ticking it shows the data checkbox selected but inert |
+
+Numbers retained from §4 deliberately — these are the same two buttons
+that moved, and renumbering them would lose the thread.
 
 ---
 
@@ -629,14 +664,21 @@ inline link rendered as
 {{ return_to_label }}</a>` at the top of the body, above the
 working cards. Documented in `spec/ui_elements.md` §6.
 
-**Edit Session (`session_edit.html`)** is a remaining outlier —
-it carries a `Cancel` anchor (#17) instead of a back-link. The
+**Edit Session (`session_edit.html`)** was a remaining outlier —
+it carried a `Cancel` anchor (#17) instead of a back-link. The
 Cancel and a back-link would do roughly the same thing today
 (both navigate to Session Home), but the form-editor pattern
 reads coherently as Save+Cancel. Migrating to a back-link would
 either drop Cancel entirely or change Cancel's semantics to
 "revert the form in place"; either is a design call deferred to
 a follow-up.
+
+> **Superseded 2026-09-08 (19G.2).** 18R Item 4 retired the page,
+> and the design call was answered by the retirement rather than
+> taken: the Save+Cancel pair now sits in Session Home's own
+> `#session-config` card (§5b), where "back-link versus Cancel"
+> does not arise because the operator never left the page. The
+> finding is kept for the reasoning, not as an open item.
 
 ### 2. Send → Primary, generate → Secondary (resolved)
 
@@ -655,17 +697,22 @@ pages as part of the follow-up sweep:
 Per-row Send / Remind (#86, #87) stay Secondary — per-row context
 overrides the role-based convention.
 
-### 3. Next Action card during Activated state (flagged for follow-up)
+### 3. Next Action card during Activated state (superseded)
 
-The current activated-state Next Action surface renders Manage
+The activated-state Next Action surface rendered Manage
 invitations (Primary) + Monitor responses (Secondary) +
 Pause Session (separate confirm-step Primary). The proposed
-direction is for the activated-state Primary action to be a
+direction was for the activated-state Primary action to be a
 single **Generate + send invitations** flow, with the existing
 Manage / Monitor anchors demoted to Secondary supporting actions.
 
-Flagged here for a future Next-Action-card segment; the current
-treatment ships unchanged.
+> **Superseded 2026-09-08 (19G.2).** The Workflow card replaced
+> the Next Action card entirely, and with it all three of the
+> buttons this finding is about — see §5a and
+> `spec/workflow_card.md`. The proposal was not implemented as
+> stated; it was overtaken. Kept because the reasoning about which
+> action earns Primary in an activated session still reads, and
+> the card it now applies to is the Workflow card.
 
 ### 4. Active-tab styling harmonised (resolved)
 
