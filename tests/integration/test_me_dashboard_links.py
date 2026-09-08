@@ -369,3 +369,114 @@ def test_an_archived_session_keeps_the_observer_row_but_drops_its_link(
     # ...without its link.
     assert f'href="/me/sessions/{review_session.id}/collation"' not in body
 
+
+
+# ── The archived companion pill (19G.9) ──────────────────────────────
+
+ARCHIVED_PILL = '<span class="pill pill-lifecycle-archived">archived</span>'
+
+
+def test_an_archived_row_carries_the_companion_pill_for_a_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """``not opened`` is true of an archived session and of a draft
+    one, for opposite reasons: a draft is not open *yet*, an archived
+    session is not open *any more*. One label for both leaves the
+    reader unable to tell whether waiting is worth anything, so the
+    archived case carries a second pill naming the reason.
+    """
+    review_session = _make_session(client, db, code="arch-pill-rev")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alice",
+            email="alice@example.edu",
+        )
+    )
+    review_session.status = "archived"
+    db.commit()
+    body = client.get("/me").text
+    assert "not opened" in body
+    assert ARCHIVED_PILL in body
+
+
+def test_an_archived_row_carries_the_companion_pill_for_an_observer(
+    client: TestClient, db: Session
+) -> None:
+    """The observer path reaches the cell through
+    ``_non_reviewer_session_status`` rather than
+    ``session_status_for_reviewer``. Both must render it, and neither
+    is asked which role it is serving — the template branches on the
+    session, not on the viewer."""
+    review_session = _make_session(client, db, code="arch-pill-obs")
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email="alice@example.edu",
+            display_name="Alice",
+        )
+    )
+    review_session.status = "archived"
+    db.commit()
+    body = client.get("/me").text
+    assert "not opened" in body
+    assert ARCHIVED_PILL in body
+
+
+def test_no_other_lifecycle_state_carries_the_companion_pill(
+    client: TestClient, db: Session
+) -> None:
+    """The half that would fail silently. A pill rendered on every row
+    tells a reader nothing, and the suite would stay green — the two
+    tests above pass either way. ``draft`` is the case that matters
+    most: it is the other state reading ``not opened``, and the whole
+    point is that the two are now distinguishable."""
+    for code, state in (
+        ("arch-none-draft", "draft"),
+        ("arch-none-validated", "validated"),
+        ("arch-none-ready", "ready"),
+        ("arch-none-expired", "expired"),
+    ):
+        review_session = _make_session(client, db, code=code)
+        db.add(
+            Observer(
+                session_id=review_session.id,
+                email="alice@example.edu",
+                display_name="Alice",
+            )
+        )
+        review_session.status = state
+        db.commit()
+        assert ARCHIVED_PILL not in client.get("/me").text, state
+
+
+def test_the_companion_pill_does_not_relink_an_archived_row(
+    client: TestClient, db: Session
+) -> None:
+    """The reason the status string was left alone. Reachability is
+    derived from it — ``session_status != "not opened"`` in
+    ``_dashboard.py`` and ``_shared.py`` — so a fourth status value
+    would have re-enabled the reviewer link on an archived session.
+    Asserted directly rather than inferred from the string being
+    unchanged: this is the property the design protects, and it should
+    fail loudly if a later change reaches for the label again."""
+    review_session = _make_session(client, db, code="arch-pill-nolink")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+            ),
+            Observer(
+                session_id=review_session.id,
+                email="alice@example.edu",
+                display_name="Alice",
+            ),
+        ]
+    )
+    review_session.status = "archived"
+    db.commit()
+    body = client.get("/me").text
+    assert ARCHIVED_PILL in body
+    assert f'href="/me/sessions/{review_session.id}' not in body

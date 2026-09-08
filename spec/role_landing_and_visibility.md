@@ -118,11 +118,21 @@ Recorded per state with an active roster row in each.
 | `validated` | listed, "not opened" | no | — |
 | `ready` | listed, "open" | **yes** | opens |
 | `expired` | listed, "closed" | **yes** | **opens** |
-| `archived` | listed, "not opened" | no | — |
+| `archived` | listed, "not opened" **+ an `archived` companion pill** | no | — |
 
 The surface route admits `is_ready` **or `is_expired`** — a **closed**
 session's review surface still opens. Draft, validated and archived
 render the not-open page instead.
+
+**Why `archived` carries a second pill.** `not opened` is true of a draft
+session and of an archived one, for opposite reasons: a draft is not open
+*yet*, an archived session is not open *any more* and will not be again.
+One label for both leaves the reader unable to tell whether waiting is
+worth anything, so archived rows render a muted `archived` pill beside
+the status. It is a **companion, not a fourth status value**: the
+`session_status` string is unchanged, because reachability is derived
+from it (`!= "not opened"`) and a new value would re-link the reviewer
+surface on an archived session.
 
 ### Reviewee
 
@@ -180,7 +190,7 @@ the Reviewee pill is missing.
 | `validated` | listed, "not opened" | **yes** | **200** |
 | `ready` | listed, "open" | yes | 200 |
 | `expired` | listed, "closed" | yes | 200 |
-| `archived` | listed, "not opened" | **no — unlinked** | 200, empty |
+| `archived` | listed, "not opened" **+ an `archived` companion pill** | **no — unlinked** | 200, empty |
 
 **Observers are deliberately not grant-gated** (19F decision 4): being
 appointed an observer is not a disclosure *about* the observer, so the

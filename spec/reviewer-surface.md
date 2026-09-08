@@ -866,7 +866,16 @@ reviewee-/observer-only rows show `—` in those cells.
     GMT-offset (e.g. `GMT+8`) with the raw IANA id (e.g.
     `Asia/Singapore`) on hover via `<abbr title="...">`.
   - **Session status** — pill (`not opened` / `open` /
-    `closed`) — see vocabulary below. For reviewer rows:
+    `closed`) — see vocabulary below. An **archived** session
+    additionally renders a muted `archived` pill beside the
+    status: `not opened` is true of a draft session and of an
+    archived one for opposite reasons, and the companion says
+    which. A companion, **not a fourth value** — the
+    `session_status` string is what link enablement tests
+    (`!= "not opened"`), so a new value would re-link the
+    reviewer surface on an archived session. It sits inline and
+    wraps below the status on its own when the column narrows
+    (measured: side by side at 1440px, stacked at 1024px). For reviewer rows:
     computed via `lifecycle.session_status_for_reviewer`.
     For reviewee / observer-only rows: computed from session
     lifecycle alone (no reviewer-assignment check).

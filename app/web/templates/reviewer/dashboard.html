@@ -123,6 +123,32 @@
               {% else %}
                 <span class="pill pill-info">not opened</span>
               {% endif %}
+              {# Archived sessions read ``not opened`` like a draft one,
+                 which is true and incomplete: a draft is not open *yet*,
+                 an archived session is not open *any more* and will not
+                 be again. One label for two reasons, and the reader
+                 cannot tell whether to keep waiting. The companion pill
+                 supplies the missing half (19G.9).
+
+                 Deliberately a second pill rather than a fourth status
+                 value: ``session_status`` is what ``_dashboard.py`` and
+                 ``_shared.py`` test for link enablement
+                 (``!= "not opened"``), so renaming it here would re-link
+                 the reviewer surface on an archived session. Leaving the
+                 string alone keeps that behaviour unchanged by
+                 construction.
+
+                 Reviewer and observer rows only — not by a role test but
+                 because a reviewee-only row cannot exist on an archived
+                 session: ``reviewee_has_current_grant`` is False there,
+                 and ``_dashboard.py`` filters the role on it (19F).
+
+                 ``.pill`` is ``inline-block`` with a right margin, so
+                 the two sit side by side and wrap to the next line on
+                 their own when the column narrows. #}
+              {% if item.session.status == "archived" %}
+                <span class="pill pill-lifecycle-archived">archived</span>
+              {% endif %}
             </td>
             <td>
               {# Pair the (N/M) counter's colour with the reviewer
