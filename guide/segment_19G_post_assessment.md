@@ -1,21 +1,37 @@
 # Segment 19G — Post-assessment follow-ups
 
-**Opened:** 2026-09-08 · **Theme:** the recommended moves from
-`guide/codebase_assessment_08sep.md` §8, one item each · **Related:**
+**Opened:** 2026-09-08 · **Theme:** settling the recommended moves from
+`guide/codebase_assessment_08sep.md` §8 · **Related:**
 `guide/codebase_assessment_08sep.md`, `constitution.md`,
 `tests/unit/test_doc_conventions.py`
 
 **Bounded, not a standing home.** 19C closed on 2026-09-08 because a
 segment kept open as a home for whatever came next accreted ten items
 over nineteen days and produced a plan nobody read. This segment is a
-different shape on purpose: its scope is the three recommended moves in
-one dated assessment, which is a finite list written before the segment
+different shape on purpose: its scope is the recommended moves in one
+dated assessment, which is a finite list written before the segment
 opened. It closes when they are settled — settled including "decided
 against", which is what Item 1 mostly is. Work that is not one of those
-three moves gets its own segment.
+moves gets its own segment; that is the guard, and it is the whole
+reason this file is allowed more than one item.
 
 Items close independently, so each carries its own `### Doc impact` and
 `### Status` and there is no segment-level `## Doc impact`.
+
+### Items
+
+| Item | Covers | State |
+|---|---|---|
+| **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Decided** 2026-09-08. Rung 1 landed; rungs 2–4 open. |
+| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which describe a Session Home layout replaced 2026-08-19 | **Not started.** Filed in `guide/todo_master.md`; one PR. Plan it when it starts. |
+| 19G.3+ | Open. Admitted only for follow-ups that trace to the 08sep assessment. | — |
+
+§8's **move #1** is deliberately *not* an item here: it is Segment 20,
+which has its own plan (`guide/segment_20_operator_polish_and_documentation.md`)
+and is reserved until the institutional Azure deployment concludes.
+Naming it here as well would give one piece of work two homes, which is
+the failure `docs/status.md` and `guide/todo_master.md` between them
+already make easy enough.
 
 ---
 
@@ -245,13 +261,14 @@ grep -rhoE '`(spec|docs|guide)/[^`]+\.md` §[0-9]' \
 | Existing derived doc checks to extend | 5 tests, 200 LOC | `wc -l tests/unit/test_doc_conventions.py` |
 
 † Taken at `5ab5e2f8`, before this plan existed. C1 and C3 scan every
-`.md` including dated ones, so both rise once this file lands — to 2,072
-and 147, because the plan carries 41 path references and eight `§N`
-references of its own. That is the smallest available demonstration of why
-a count belongs to a SHA and not to a document. The live-prose numbers
-are unaffected in either direction: a `segment_*` filename is a dated
-record and opts out of that set, so the 84 is measured on the same corpus
-before and after.
+`.md` including dated ones, so both rise once this file lands, and rise
+again with every edit to it — this plan cites paths and sections of its
+own. Deliberately not pinned to a post-landing figure: quoting one would
+make the footnote stale on the next revision of the paragraph above it,
+which is the failure this whole item is about. Re-run C1 and C3 for a
+current value. The live-prose numbers are unaffected in either
+direction — a `segment_*` filename is a dated record and opts out of that
+set — so the 84 is measured on the same corpus before and after.
 
 ### PR ladder
 
