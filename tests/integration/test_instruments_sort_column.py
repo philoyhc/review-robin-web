@@ -434,7 +434,7 @@ def test_consolidated_save_returns_ok_json_and_persists(
         follow_redirects=False,
     )
     assert response.status_code == 200
-    assert response.json() == {"ok": True}
+    assert response.json()["ok"] is True
     db.refresh(instrument)
     assert instrument.sort_display_fields == [
         {"display_field_id": f1.id, "dir": "asc"}

@@ -294,7 +294,24 @@ The `<summary>` carries, in document order:
     instrument)` predicate. `pill-info` for set up;
     `pill-warning` for not set up. Computed in
     `views.build_instruments_context` as
-    `is_configured_by_instrument[instrument.id]`.
+    `is_configured_by_instrument[instrument.id]`, and
+    **repainted on Save without a reload**: the
+    consolidated `/save` returns the freshly computed
+    `is_configured` for the saved instrument alongside
+    `ok`, and the client swaps this pill's text and tint
+    from it (`data-instrument-setup-pill`). The same
+    response carries `instruments_configured` and
+    `instrument_count` (the session's `configured_counts`
+    tuple, unpacked into two top-level JSON keys), which
+    repaints the setup status row's aggregate
+    Instruments pill (`data-instruments-configured-pill`)
+    — one card's save can flip that too, and the two
+    disagreeing on one screen would be worse than both
+    being stale. The predicate itself stays server-side;
+    the client picks text and tint only, never re-deriving
+    whether an instrument is set up. A failed (422) save
+    moves neither pill. The no-JS `/fields/save` fallback
+    redirects, so both pills are correct there by reload.
   - **Locked / Unlocked** — mirrors `is_editing`. The
     "Unlock" button enters edit mode (pill says
     "Unlocked", `pill-warning`); "Lock" exits (pill
@@ -778,7 +795,12 @@ Bottom row of the card, right-aligned, in this order:
   and fetch-POSTs the consolidated JSON `/save` (Segment 18R
   Item 2 PR 3); on success the card stays unlocked with **no
   reload** and the dirty tracker resets in place, re-disabling
-  Save. On a 422 the summary banner renders with edits intact.
+  Save. The success response also carries the state the two
+  setup pills are drawn from — `is_configured` for this
+  instrument, and `instruments_configured` / `instrument_count`
+  for the session — which the client repaints (see **Status
+  pills** above). On a 422 the summary banner renders with
+  edits intact and no pill moves.
   The `/fields/save` 303-redirect form action stays as the
   no-JS fallback.
 - **Cancel** — only in edit mode. Reloads the same edit-mode
