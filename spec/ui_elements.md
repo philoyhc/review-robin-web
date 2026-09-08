@@ -12,7 +12,7 @@
 > `guide/archive/ui_elements_parts_2_3_restyle_history.md` on
 > 2026-05-11.
 >
-> **Reference implementation.** `app/web/templates/operator/session_reviewers1.html`
+> **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
 > together show every primitive in this catalogue in working form.
 > When porting a page to v2, mirror that template's class usage.

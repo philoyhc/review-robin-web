@@ -417,7 +417,7 @@ condition has to land in both files; `tests/integration/test_guide_scaffold.py`
 asserts each of them in both directions.
 
 **Canonical since Segment 19E rung 2.** The material from
-`docs/quickstart.md` moved in and that file retired to
+`docs/quickstart.md` moved in and that file retired to <!-- path-ref-ok -->
 `docs/archive/quickstart.md`; corrections belong here, not there.
 
 **Two sections retired at Segment 19E**, on the author's reading of what the

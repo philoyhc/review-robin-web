@@ -120,7 +120,7 @@ that isn't itself one of them, and two of them share plumbing.
 
 ### Phase 0 — the prerequisite (gates everything)
 Provision the storage account + build the thin
-`app/services/blob_store.py` seam (`put` / `get` / `signed_url` /
+`app/services/blob_store.py` seam (`put` / `get` / `signed_url` / <!-- path-ref-ok -->
 `delete` / `sweep`, same shape as `rehydrate_stash`) + the optional
 `blob_*` config that degrades to today's `bytea` / streaming paths. Not
 one of the six, but nothing below ships without it — so it is the real
@@ -201,7 +201,7 @@ the current stack lacks:
   `guide/deferred_consolidated.md` §1). Keep it **optional** — a `None` config
   falls back to today's `bytea` / streaming paths so SQLite tests and
   no-blob deployments keep working.
-- **A thin `app/services/blob_store.py` seam.** `put(key, bytes) -> url`,
+- **A thin `app/services/blob_store.py` seam.** `put(key, bytes) -> url`, <!-- path-ref-ok -->
   `get(key) -> bytes`, `signed_url(key, ttl)`, `delete(key)`, `sweep()` —
   the same shape as `rehydrate_stash`, so a payload can be swapped from
   `bytea` to blob behind the service without touching callers.

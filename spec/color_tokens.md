@@ -167,7 +167,7 @@ the worse of the two. `--slate-dim` is the one existing primitive that clears
 3:1 in both themes near-symmetrically (**4.29:1** light, **4.31:1** dark), so a
 single primitive serves both columns. Changed in Segment 19C Item 8; the
 options weighed, including per-theme primitives at an exact 3:1, are in
-`guide/segment_19C_refinements.md`.
+`guide/archive/segment_19C_refinements.md`.
 
 Two consequences worth knowing. `--text-dim` also resolves to `--slate-dim` in
 dark, so border and dim text share a value there — they are independently

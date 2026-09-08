@@ -1,21 +1,37 @@
 # Segment 19G — Post-assessment follow-ups
 
-**Opened:** 2026-09-08 · **Theme:** the recommended moves from
-`guide/codebase_assessment_08sep.md` §8, one item each · **Related:**
+**Opened:** 2026-09-08 · **Theme:** settling the recommended moves from
+`guide/codebase_assessment_08sep.md` §8 · **Related:**
 `guide/codebase_assessment_08sep.md`, `constitution.md`,
 `tests/unit/test_doc_conventions.py`
 
 **Bounded, not a standing home.** 19C closed on 2026-09-08 because a
 segment kept open as a home for whatever came next accreted ten items
 over nineteen days and produced a plan nobody read. This segment is a
-different shape on purpose: its scope is the three recommended moves in
-one dated assessment, which is a finite list written before the segment
+different shape on purpose: its scope is the recommended moves in one
+dated assessment, which is a finite list written before the segment
 opened. It closes when they are settled — settled including "decided
 against", which is what Item 1 mostly is. Work that is not one of those
-three moves gets its own segment.
+moves gets its own segment; that is the guard, and it is the whole
+reason this file is allowed more than one item.
 
 Items close independently, so each carries its own `### Doc impact` and
 `### Status` and there is no segment-level `## Doc impact`.
+
+### Items
+
+| Item | Covers | State |
+|---|---|---|
+| **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Decided** 2026-09-08. Rung 1 landed; rungs 2–4 open. |
+| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which describe a Session Home layout replaced 2026-08-19 | **Not started.** Filed in `guide/todo_master.md`; one PR. Plan it when it starts. |
+| 19G.3+ | Open. Admitted only for follow-ups that trace to the 08sep assessment. | — |
+
+§8's **move #1** is deliberately *not* an item here: it is Segment 20,
+which has its own plan (`guide/segment_20_operator_polish_and_documentation.md`)
+and is reserved until the institutional Azure deployment concludes.
+Naming it here as well would give one piece of work two homes, which is
+the failure `docs/status.md` and `guide/todo_master.md` between them
+already make easy enough.
 
 ---
 
@@ -245,13 +261,14 @@ grep -rhoE '`(spec|docs|guide)/[^`]+\.md` §[0-9]' \
 | Existing derived doc checks to extend | 5 tests, 200 LOC | `wc -l tests/unit/test_doc_conventions.py` |
 
 † Taken at `5ab5e2f8`, before this plan existed. C1 and C3 scan every
-`.md` including dated ones, so both rise once this file lands — to 2,072
-and 147, because the plan carries 41 path references and eight `§N`
-references of its own. That is the smallest available demonstration of why
-a count belongs to a SHA and not to a document. The live-prose numbers
-are unaffected in either direction: a `segment_*` filename is a dated
-record and opts out of that set, so the 84 is measured on the same corpus
-before and after.
+`.md` including dated ones, so both rise once this file lands, and rise
+again with every edit to it — this plan cites paths and sections of its
+own. Deliberately not pinned to a post-landing figure: quoting one would
+make the footnote stale on the next revision of the paragraph above it,
+which is the failure this whole item is about. Re-run C1 and C3 for a
+current value. The live-prose numbers are unaffected in either
+direction — a `segment_*` filename is a dated record and opts out of that
+set — so the 84 is measured on the same corpus before and after.
 
 ### PR ladder
 
@@ -365,3 +382,66 @@ the close, by which point the file is there.*
 - `guide/README.md` — the `segment_*.md` row already covers this file;
   no change expected. <!-- doc-impact-waived: generic row already covers a new live plan; revisit only if 19G changes the folder's shape -->
 - `docs/status.md` — row when each rung lands.
+
+### Status
+
+**2026-09-08 — PR 1 landed, and the count it was named for was wrong in
+an instructive way.**
+
+The rung read *"repoint the 84 broken references … but 28 need a
+judgement about what the right target is now."* Both halves needed
+correcting once the 84 were read one at a time rather than counted.
+
+**Only 36 were repointed. 42 are history and were left as written.**
+The discriminator turned out to be grammatical, not structural: a
+reference that says *"Plan: X"*, *"spec: X"*, *"As-built layout: X"*,
+*"Reference implementation: X"* is a pointer a reader is meant to
+follow, and if X has moved the pointer is broken **today** — those were
+repointed, archived plans included. A reference that says *"retired X"*,
+*"formerly X"*, *"renamed SEEDS in X"*, *"split X into a package"* is a
+record of what was true on its date, and repointing it would falsify the
+record.
+
+**This was already the repository's policy and the plan did not know
+it.** `docs/status.md`'s own 19F row says it in as many words —
+*"`docs/status.md`'s historical rows were left as written — a log must
+be true of its date, not of today"* — decided during 19F and never
+carried anywhere a planner would find it. The rung's "28 need a
+judgement" undercounted because it treated the question as *which
+target* rather than *whether to repoint at all*.
+
+**Where the 84 went:**
+
+| Disposition | Count |
+|---|---|
+| Repointed to a live target | 36 |
+| Left as history, covered by a section marker | 36 |
+| Left as history or as a forward reference, covered by an inline marker | 12 |
+| Unaccounted | **0** |
+
+**The section marker is new and is the rung's one design decision.**
+`docs/status.md` §Project timeline, §Segments shipped and
+`guide/todo_master.md` §Done are dated registers inside otherwise-live
+files. Marking 36 lines individually would have been noise; marking the
+two files wholesale would have blinded the check to the live half of the
+two most-referenced documents in the repository (`## Capabilities
+today`, `## What's deliberately not yet there`, `## Upcoming`). So the
+opt-out is scoped to the section: `<!-- path-ref-ok: section -->` under
+the heading, running until the next `##`. It mirrors the existing
+`<!-- retired-term-ok: file -->` idiom one level down. PR 2 reads both
+it and the inline `<!-- path-ref-ok -->`.
+
+**Two references were rewritten rather than repointed**, because the
+path was never the problem:
+`spec/sessions_overview.md` said `` `app/services/session_lifecycle.is_editable` ``,
+a dotted attribute written as a path, now `` `is_editable` in
+`app/services/session_lifecycle.py` ``; and `spec/assignments.md` cited
+`` `spec/archive/.../reconciling_regeneration.md` `` — an elided path
+that was wrong twice over, since the file is live at
+`spec/reconciling_regeneration.md` and never went to an archive. The
+Semantics section's "excluded by shape" list is one item shorter as a
+result: the dotted form is fixed at source rather than tolerated.
+
+**Not done in this rung, and not a surprise:** PR 2's check, which is
+what makes any of this hold. Until it lands, the tree is merely correct
+rather than kept correct.
