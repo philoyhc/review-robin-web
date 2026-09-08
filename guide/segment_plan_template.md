@@ -80,9 +80,11 @@ Each rung: what it lands, and what it must not touch. Strike dropped rungs; do n
 
 ## Doc impact
 
-<!-- One bullet per file. Backticked path under spec/ or docs/, dash, what changes,
-(Item n) tag if applicable. Waive with <!-- doc-impact-waived: reason --> on the
-same line rather than deleting. -->
+<!-- One bullet per file. Backticked path, dash, what changes, (Item n) tag if
+applicable. A spec/ or docs/ path counts anywhere in the bullet; a root-level
+document (constitution.md, CLAUDE.md) or a bare shorthand filename counts only
+before the dash. Waive with <!-- doc-impact-waived: reason --> on the same line
+rather than deleting. -->
 
 - `spec/<file>.md` — 
 - `docs/status.md` — row when the segment lands.

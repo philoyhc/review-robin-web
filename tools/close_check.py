@@ -102,10 +102,56 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# A committed path: backticked, under spec/ or docs/, ending .md. The
+# A committed path: backticked, ending .md, under spec/ or docs/. The
 # trailing [^`]* absorbs a section reference written inside the ticks
-# (`docs/setup.md §4c`, `spec/x.md#anchor`).
+# (`docs/setup.md §4c`, `spec/x.md#anchor`). Matched anywhere in the
+# bullet, because bullets legitimately commit to several specs in their
+# description ("Per-Part spec docs as the scope settles — A, B, C").
 COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
+
+# A bare filename, matched **only in the bullet's leading position** —
+# before the em-dash that separates the path from its description.
+#
+# Root-level documents were invisible to this tool until 2026-09-08
+# (19G.4): a manifest committing to `constitution.md`, `CLAUDE.md` or
+# `rrw_sdd_in_practice.md` had that bullet silently dropped, so the
+# check that asks whether promised doc edits happened had a scope
+# narrower than the manifests it validated. 19G.1 committed to a
+# `constitution.md` edit and this tool reported four committed paths
+# against a five-bullet manifest.
+#
+# Leading position only, because a bare name is ambiguous in a way a
+# prefixed path is not, and the description half is where prose mentions
+# live. Measured over the 99 plans: matching bare names anywhere would
+# have counted five passing mentions as commitments and flipped one
+# archived plan to FAIL on a `quickstart.md` that its bullet merely
+# described retiring. Restricted to the head, it counts six names, five
+# of them real commitments no previous run could see.
+COMMITTED_BARE = re.compile(r"`([A-Za-z0-9._-]+\.md)[^`]*`")
+
+# The em-dash (or en-dash) that ends a manifest bullet's path list.
+BULLET_HEAD = re.compile(r"\s[\u2014\u2013]\s")
+
+
+def resolve_committed(path: str) -> str:
+    """Resolve a bare filename to a repo-relative path.
+
+    A bullet may name a root-level document, or use a bare filename as
+    shorthand for one under ``spec/`` or ``docs/``. Resolution order is
+    root, then ``spec/``, then ``docs/``, read from the filesystem so
+    there is no list to maintain and no way for it to go stale.
+
+    An unresolvable name is returned unchanged, so C2 reports the string
+    the author actually wrote rather than a guess about what they meant.
+    """
+    if "/" in path:
+        return path
+    for candidate in (path, f"spec/{path}", f"docs/{path}"):
+        if (REPO / candidate).is_file():
+            return candidate
+    return path
+
+
 WAIVER = re.compile(r"<!--\s*doc-impact-waived:(.*?)-->", re.DOTALL)
 ITEM_HEADING = re.compile(r"^## Item (\d+)\b")
 # An "(Item n)" ownership tag on a segment-level manifest bullet. The
@@ -248,7 +294,9 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
         bullet["waived"] = waiver is not None
         bullet["reason"] = waiver.group(1).strip() if waiver else None
         seen: list[str] = []
-        for path in COMMITTED_PATH.findall(bullet["text"]):
+        head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
+        for raw in COMMITTED_PATH.findall(bullet["text"]) + COMMITTED_BARE.findall(head):
+            path = resolve_committed(raw)
             if path not in seen:
                 seen.append(path)
         bullet["paths"] = seen

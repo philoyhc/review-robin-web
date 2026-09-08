@@ -67,7 +67,7 @@ Record the numbers and the commands in the plan. A blast radius that turns out w
 
 ## Doc impact contract
 
-One bullet per file that the segment commits to changing. Each bullet: a backticked repo-relative path under `spec/` or `docs/`, a dash, what changes in it, and the item tag if the segment has items.
+One bullet per file that the segment commits to changing. Each bullet: a backticked repo-relative path, a dash, what changes in it, and the item tag if the segment has items. A path under `spec/` or `docs/` counts anywhere in the bullet — several specs may share one bullet's description. A **root-level** document (`constitution.md`, `CLAUDE.md`, `rrw_sdd_in_practice.md`) or a bare filename used as shorthand for a folder counts **only in the leading position**, before the dash, because a bare name is ambiguous where a prefixed path is not (19G.4, 2026-09-08 — root files were invisible to `close_check` until then).
 
 ```
 ## Doc impact

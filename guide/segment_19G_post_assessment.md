@@ -42,7 +42,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Closed** 2026-09-08 (PRs #2197 → #2202). Answered per class; all four rungs landed. |
 | **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-18 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
 | **19G.3** | The patch queue below — three documentation corrections | **Closed** 2026-09-08. One PR; a fourth found beside them. |
-| 19G.4+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.4** | `close_check` sees root-level `.md` — the first of the two carried open questions | **Closed** 2026-09-08. One PR. |
+| 19G.5+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1056,6 +1057,151 @@ to touch the same paths, as this adjudication commit does. That makes it
 a property of the tool, not of an item, and it belongs with the
 `COMMITTED_PATH` question rather than being re-diagnosed each time.
 
+
+---
+
+## Item 4 — `close_check` sees root-level `.md`
+
+### Opportunity
+
+`COMMITTED_PATH` matched `spec/` and `docs/` only, so a Doc-impact
+bullet naming a root-level document was silently dropped: not verified,
+and a waiver on it not counted either. 19G.1 committed to a
+`constitution.md` edit and the tool reported **four committed paths
+against a five-bullet manifest**. The check that asks whether promised
+doc edits happened had a scope narrower than the manifests it validates,
+and the files it dropped — `constitution.md`, `CLAUDE.md`,
+`rrw_sdd_in_practice.md` — are the repository's most load-bearing.
+
+### Decision
+
+**Widen, but asymmetrically.** A path under `spec/` or `docs/` keeps
+today's behaviour and counts anywhere in the bullet. A **bare filename**
+counts **only in the leading position**, before the em-dash. Bare names
+resolve root → `spec/` → `docs/`, read from the filesystem, so there is
+no list to maintain.
+
+*Rejected: match bare names anywhere.* Measured over the 99 plans, that
+counts **five passing mentions as commitments** and flips one archived
+plan to FAIL — 19E's `docs/README.md` bullet *describes* `quickstart.md`
+retiring, and the tool would then have demanded the retired file still
+exist. The false positive is not hypothetical; it is what the first
+implementation did.
+
+*Rejected: count only the bullet head, for every path.* That loses
+**seven real commitments** across the archived plans, because bullets
+here legitimately commit to several specs in their description
+("Per-Part spec docs as the scope settles — A, B, C"). The asymmetry is
+the price of keeping both halves right.
+
+### Semantics
+
+- **A bare name that resolves nowhere** is reported unchanged, so C2
+  names the string the author wrote rather than a guess at what they
+  meant.
+- **`guide/` stays out of scope**, as the skill has always defined the
+  manifest. `guide/README.md` bullets remain uncounted; 19G.1's waiver
+  on one is therefore still decorative, which is now a stated fact
+  rather than a silent one.
+- **Duplicate paths across bullets** still count once per bullet — a
+  pre-existing behaviour this item neither introduces nor fixes.
+
+### Judgment calls — decided
+
+- **The first implementation was wrong and the measurement caught it**
+  (2026-09-08). Matching bare names anywhere looked obviously right and
+  was checked against the 99 plans only afterwards; the check is what
+  turned up the 19E flip. Recorded because the plan's own rule — measure
+  the blast radius before cutting the first slice — is what saved it.
+- **The skill and the template were updated with the tool** (2026-09-08).
+  Both said "under `spec/` or `docs/`"; leaving them would have made the
+  guidance disagree with the gate on the day the gate changed.
+
+### Blast radius (measured)
+
+Over all 99 plans (live + archived), Doc-impact bullets only, with
+continuation lines accumulated as `parse_bullets` does:
+
+| What | Count |
+|---|---|
+| Newly-counted paths, bare-anywhere rule | 13 — of which 5 passing mentions |
+| Newly-counted paths, **head-only bare rule (shipped)** | 6 — of which 5 real commitments |
+| Real commitments a head-only-for-everything rule would lose | 7 |
+| Plans whose PASS/FAIL outcome changes | **0** |
+
+### PR ladder
+
+1. **PR 1 — the widening, its tests, and the guidance.** Must not touch:
+   any plan's manifest, or `close_check`'s window logic.
+
+### Definition of done
+
+- `close_check 19G.1` counts the `constitution.md` bullet.
+- No plan's outcome changes — verified by running the before/after set.
+- Five tests cover the four new behaviours and the no-regression half,
+  each mutation-checked.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.4` exits 0; any warning adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None of this item's own. The **C3 window-boundary** behaviour recorded
+  at 19G.3 is untouched here and stays with the segment.
+
+### Out of scope
+
+- **The C3 window boundary.** Same tool, different defect: a path whose
+  only edit lands in the commit that introduces the item heading reads
+  as unmodified. **Four occurrences this segment** — it fired on this
+  item too, on `docs/status.md`, while the item was fixing the *other*
+  `close_check` defect. Not folded in, because the fix is to the window
+  logic rather than the path pattern and it deserves its own
+  measurement; but four for four is no longer a coincidence, and any
+  item that adds a heading and edits its manifest paths in one commit
+  will hit it.
+
+### Doc impact
+
+- `guide/segment_plan_template.md` — the Doc-impact prompt states the
+  new rule (PR 1). <!-- doc-impact-waived: guide/ is outside the manifest scope this item just defined; named for completeness -->
+- `docs/status.md` — row at the close.
+
+### Status
+
+**2026-09-08 — shipped, and the first implementation was wrong.**
+
+Widening the pattern to match bare names anywhere is the obvious change
+and it is what I wrote first. Running it over the 99 plans showed it
+counting five passing mentions as commitments and flipping **19E** from
+PASS to FAIL on a `quickstart.md` that its bullet merely described
+retiring. The asymmetric rule — prefixed paths anywhere, bare names in
+the leading position only — keeps every real commitment, drops every
+false positive measured, and changes **no plan's outcome**.
+
+The order matters and is the transferable part: the blast radius was
+measured *before* the change was believed, and the first measurement was
+itself wrong — it read only bullet first lines, while the tool
+accumulates continuations, so it reported 5 newly-matched paths where
+there were 13. The second measurement is the one that found the 19E
+flip. **A measurement that does not model the thing it measures is worse
+than none, because it is believed.**
+
+`.claude/skills/segment-plan/SKILL.md` and
+`guide/segment_plan_template.md` both said "under `spec/` or `docs/`"
+and were updated in the same change — the gate and its guidance
+disagreeing on the day the gate moves is how the next reader learns the
+wrong rule.
+
+**One advisory note, adjudicated.** C3 reports `_session_home` touched
+with `spec/session_home.md` and `spec/permissions.md` absent from the
+manifest. That touch is 19G.3's correction to the `/edit` redirect's
+**comment** — no route, no gate, no behaviour — so neither spec has
+anything to say about it. The note firing on a comment-only edit is the
+check working as designed and owing nothing, the same adjudication 19C's
+close made on a docstring.
+
 ---
 
 ## Carried open questions
@@ -1073,6 +1219,10 @@ Item-1-shaped and both would otherwise be buried in a closed item.
   this becomes **19G.3**; if it needs a section-numbering convention to
   hold repo-wide first, it goes to `docs/unenforced_conventions.md` §1
   with that as its reason.
+
+- ~~**Should `close_check`'s `COMMITTED_PATH` widen to root-level `.md`?**~~
+  **Answered 2026-09-08 as 19G.4: yes, asymmetrically.** See Item 4.
+  The original text follows.
 
 - **Should `close_check`'s `COMMITTED_PATH` widen to root-level `.md`?**
   It matches backticked `.md` paths under `spec/` or `docs/` only, so
