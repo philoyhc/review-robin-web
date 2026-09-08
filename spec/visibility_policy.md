@@ -81,7 +81,16 @@ The peer-reviewer audience is constrained per window:
 
 ## 3. Window axis (when they see)
 
-One nullable column on `instrument_view_policies` encodes the window:
+**The `visible_when` column is retired** — it went with the rest of the
+legacy single-mode encoding in the S14 contract step (§4), and the window
+is now carried by the two per-window `(granularity, identification)`
+pairs: a pair that decodes to a mode is a grant in that window, NULL in
+both members is "off". The table below is kept because it defines what
+each window *means*, which the pairs do not restate; read
+`while_ongoing` / `after_release` as the names of the two pairs, and
+`throughout` as "both pairs set" rather than as a stored value.
+*(Framing corrected 2026-09-08 — the section had described the retired
+column as current.)*
 
 | `visible_when` | Window |
 |---|---|
@@ -90,13 +99,40 @@ One nullable column on `instrument_view_policies` encodes the window:
 | `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
 | `always` | **Reserved.** Today this value is only meaningful for the operator (who is not a row in this table). The column accepts it for forward-compatibility. |
 
-### 3.1 Per-audience valid `visible_when` values
+### 3.1 Per-cell valid modes
 
-| Audience | UI cycle | Stored values |
+*(Rewritten 2026-09-08, 19C Item 9. This section described the retired
+`visible_when` column — see the note under §3 — and its Reviewee row read
+"All three are valid", which is the opposite of the live rule. The table
+below is `_PER_CELL_VALID_MODES` in `app/services/visibility_policies.py`,
+the constant both writers read.)*
+
+Each `(audience, window)` cell accepts only these modes. `None` means
+"off in this window" and is stored as NULL in both members of the pair.
+
+| Audience | `while_ongoing` | `after_release` |
 |---|---|---|
-| Peer reviewer | `while_ongoing` ⇄ `throughout` (2-step toggle). | `while_ongoing` is the default. `after_release` and `always` are not exposed: a reviewer reading their own work after release is well-served by `throughout`. |
-| Reviewee | `while_ongoing` → `after_release` → `throughout` (3-step cycle). | All three are valid. Default: `after_release`. |
-| Observer | `while_ongoing` accepts only `None` (off) or `summarized` (Anonymized summaries). Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk that the summary view dodges. `after_release` accepts all three modes + off. | `None` / `summarized` for `while_ongoing`; all four for `after_release`. Default: `after_release`. |
+| `peer_reviewer` | `raw` only — a reviewer sees their own work in full while writing it. | `None`, `raw`, `summarized`. |
+| `reviewee` | **`None` only.** A reviewee may never read responses while the review is running: the two windows mean literally *as data is coming in* and *after the review has closed*, and the second is the only one that is theirs. | `None`, `raw`, `anonymized`, `summarized`. Default `after_release`. |
+| `observer` | `None` or `summarized`. Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk the summary view dodges. | `None`, `raw`, `anonymized`, `summarized`. |
+
+**Both writers enforce it, since 19C Item 9.** The Band 3 editor refuses
+an illegal cell in `upsert_policy` → `_validate_per_window`; the
+**Settings-CSV import** refuses it in the parse phase
+(`session_config_io/_apply_parse._view_policy_cell_errors`), naming the
+field and the legal modes, before any row is written. Until then the
+import checked only the vocabulary — that a value was one of `row` /
+`aggregated` / `identified` / `deidentified` — never the cell it landed
+in, so a hand-edited or hand-built bundle could persist a `reviewee`
+`while_ongoing` grant the editor would have rejected, and the resolver
+honoured it like any other row. Rehydrate applies its settings bundle
+through the same call and inherits the check. (Clone copies no
+view-policy rows at all — `spec/roundtrip_coverage.md`.)
+
+Two shapes that are not modes are refused by the same pass, each with
+its own message: a **half-set** cell (one member of the pair set, the
+other empty), which would otherwise read as "off"; and the
+**reserved-incoherent** `aggregated` + `identified` pair.
 
 ### 3.2 Anchor-null inertness
 

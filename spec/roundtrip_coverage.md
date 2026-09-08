@@ -83,7 +83,7 @@ first two columns below plus responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification`, `observer_tag` | ✅ | ❌ | Settings-CSV carries the Band 3 grid as of **18P PR A2** (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone still doesn't copy it — a clone reverts to default visibility |
+| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification`, `observer_tag` | ✅ | ❌ | Settings-CSV carries the Band 3 grid as of **18P PR A2** (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone still doesn't copy it — a clone reverts to default visibility. **Since 19C Item 9 the import validates the `(audience, window)` cell** against the same table the editor uses and rejects the whole apply on an illegal one (`spec/visibility_policy.md` §3.1). A round-trip of an editor-authored session is unaffected: the serializer emits all four cells for every audience, so a forbidden cell exports as two empty strings and parses back to `None`, which is that cell's legal mode |
 
 ### Rule sets (`session_rule_sets`)
 

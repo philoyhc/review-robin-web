@@ -846,6 +846,42 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — Item 9 shipped in one PR, as planned, plus a spec
+correction the plan did not anticipate.** The guard went where the plan
+said — `_cross_row_errors`, before `_apply_plan` — and the ladder's one
+rung carried it, its ten tests and the four doc-impact specs.
+
+**The plan under-counted the failure modes.** It named the illegal-cell
+case and, in Semantics, the half-set pair. Writing the check turned up a
+third: `decode_pair_to_mode` also swallows the reserved-incoherent
+`aggregated` + `identified` pair as `None`, so a bundle carrying it would
+have imported as "off" rather than being named. Three distinct messages
+now, deliberately not collapsed — an operator whose file is wrong needs
+to know *how* it is wrong.
+
+**A stale section in a file the manifest already named.**
+`spec/visibility_policy.md` §3 documented the `visible_when` column as
+current; it was retired in the S14 contract step, and §4 of the same file
+says so. Worse, §3.1's per-audience table read *"Reviewee — all three are
+valid"*, which is the exact opposite of the rule this item enforces: the
+constant has allowed `reviewee` `while_ongoing` only `None` since it was
+written. So the file that documents the rule stated it backwards, one
+section away from stating it correctly. §3.1 was rewritten from
+`_PER_CELL_VALID_MODES` and §3's framing corrected; the rest of §3's
+window definitions are still right and were left. **A spec can hold both
+answers at once and pass every check** — nothing greps prose against a
+constant, which is the same shape of gap 19F kept finding.
+
+**Verified by re-running 19F's reproduction, not by reading.** The
+import that persisted a mid-flight reviewee grant now returns the named
+error, writes **zero** rows, leaves `reviewee_has_current_grant` False,
+and `/results` 404s. Both halves of the guard were mutation-checked:
+removing it fails seven of the ten tests, and the three that survive are
+the positive controls — the round-trip, the legal `after_release` cell,
+and the legal `observer` `summarized` cell.
+
+`ruff check .` clean; 2,915 passed / 16 skipped (2,905 before).
+
 **2026-09-05 — Item 7 PR 1.** Two of the sweep's own findings did not
 survive re-verification at build. Both were filed by the mechanical
 dead-reference pass, which can see that a path does not exist but not
