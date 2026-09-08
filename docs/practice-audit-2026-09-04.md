@@ -6,6 +6,26 @@
 
 <!-- retired-term-ok: file -->
 
+> **Annotated 2026-09-08 (19G.1 rung 4). §2's table is not rewritten —
+> this document records what was true on 2026-09-04 — but three of its
+> rows have since been overtaken, and a reader arriving here should know
+> which:**
+>
+> - **Row 1b** (*the specs state the mapping correctly*) and **row 2**
+>   (*retired button terminology*), both marked "Unenforced — and
+>   currently violated", were **mechanised four days later** by
+>   `tests/unit/test_doc_conventions.py` (#2086). This audit is what
+>   prompted that file.
+> - **Row 3** recorded British spelling as "not a convention the
+>   repository states". It became a stated convention on 2026-09-07 —
+>   **US**, not British — and is still deliberately unenforced, for the
+>   reason this audit's own falsification implies.
+> - **Rows 1c and 4 stand**, re-verified 2026-09-08 against a suite of
+>   2,940 tests rather than the 2,697 quoted below.
+>
+> The live view of which conventions are deliberately unenforced is now
+> `docs/unenforced_conventions.md`; §2 below is its ancestor.
+
 > **Status (updated 2026-09-04).** Both recommendations are implemented and
 > the withdrawn one stays withdrawn. R1 (documentation-drift test) shipped in
 > **#2086** as `tests/unit/test_doc_conventions.py`, together with the six
