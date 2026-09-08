@@ -91,8 +91,10 @@ short, written down, and revisited when a constant appears that would
 make one derivable."* **No such live list exists.** The nearest thing is
 `docs/practice-audit-2026-09-04.md` §2, a dated audit table — and it has
 itself drifted: rows 1b and 2 are marked "currently violated" and both
-were mechanized four days later by `tests/unit/test_doc_conventions.py`
-(#2092), and row 3 records British spelling as "not a convention the
+were mechanized the same morning by `tests/unit/test_doc_conventions.py`
+(#2086, 37 minutes after that audit was committed — this read "#2092,
+four days later" until the close; #2092 added a third check to the same
+file later the same day), and row 3 records British spelling as "not a convention the
 repository states", which stopped being true on 2026-09-07. A document
 summarizing the state of another quietly stopped agreeing with it —
 class B, in the document that catalogues the classes.
@@ -338,10 +340,19 @@ set — so the 84 is measured on the same corpus before and after.
   Not folded into the ladder: it changes a tool every open plan is
   measured by, which is its own slice.
 
-- **Does `docs/practice-audit-2026-09-04.md` §2 want a dated correction
-  now** that two of its rows have been mechanized and one has been
-  overtaken? Rule V says a dated document is annotated, never silently
-  rewritten. **Decides:** the author, at PR 4.
+**Both of the above outlived Item 1 and are promoted to
+`## Carried open questions` at the end of this file** (2026-09-08).
+Neither is Item-1-shaped: the `close_check` scope affects every plan in
+the repository, and the `§N` question is a candidate for a later item
+rather than a loose end of this one. Left here as well, struck through
+nowhere, because the reasoning that produced them belongs with the item
+that found them.
+
+- ~~**Does `docs/practice-audit-2026-09-04.md` §2 want a dated
+  correction now** that two of its rows have been mechanized and one has
+  been overtaken?~~ **Answered at PR 4: yes, as an annotation.** The
+  table is untouched and a dated note at the head says which three rows
+  have been overtaken and by what. Additive and reversible.
 
 ### Out of scope
 
@@ -362,7 +373,8 @@ set — so the 84 is measured on the same corpus before and after.
 `docs/unenforced_conventions.md` does not exist yet. That is the check
 working: C2 asks whether a committed path exists, which is a question for
 the close, not for the plan. The Definition of done requires exit 0 at
-the close, by which point the file is there.*
+the close, by which point the file is there.* — **Resolved 2026-09-08:
+PR 4 landed the file and `close_check 19G.1` exits 0 on C1–C6.**
 
 - `docs/unenforced_conventions.md` — **new.** The live list Article VI
   promises: one row per convention deliberately left unenforced, what it
@@ -373,15 +385,20 @@ the close, by which point the file is there.*
 - `constitution.md` — VI gains a pointer to that file (PR 4). Not
   counted by `close_check` — see Open questions.
 - `docs/practice-audit-2026-09-04.md` — a dated annotation recording
-  that rows 1b and 2 were mechanized by #2092 and row 3 overtaken by the
-  2026-09-07 spelling entry; the table itself is not rewritten (PR 4,
-  pending the open question).
+  that rows 1b and 2 were mechanized by **#2086** (this bullet said
+  #2092 when written; the annotation itself was corrected before it
+  landed — #2092 added a third check to the same file later the same
+  day) and row 3 overtaken by the 2026-09-07 spelling entry; the table itself
+  is not rewritten. **Done** (PR 4); the open question it was pending on
+  is answered in `## Carried open questions`.
 - `spec/visibility_policy.md` — §3.1 gains one sentence recording that
   the table is now derived from the constant by a test, not merely
   transcribed from it (PR 3).
 - `guide/README.md` — the `segment_*.md` row already covers this file;
   no change expected. <!-- doc-impact-waived: generic row already covers a new live plan; revisit only if 19G changes the folder's shape -->
-- `docs/status.md` — row when each rung lands.
+- `docs/status.md` — **one row at the close**, not one per rung: four
+  rungs in a day describing one decision reads better as a single entry,
+  and the plan carries the per-rung detail.
 - `rrw_sdd_in_practice.md` — three citation pointers repointed to
   `guide/archive/` (PR 2). Not a content edit; named here because the
   file sits outside `close_check`'s `spec/`-and-`docs/` scope and would
@@ -552,7 +569,7 @@ not imagined, and writing it found two things.**
 `docs/practice-audit-2026-09-04.md` gains a dated note at its head and
 its §2 table is left exactly as written, which is what Article V
 prescribes for a dated document. Three of its rows had been overtaken —
-rows 1b and 2 mechanized four days after it was written, row 3's premise
+rows 1b and 2 mechanized 37 minutes after it was written, row 3's premise
 reversed by the 2026-09-07 spelling entry — and a reader arriving at
 that table cold had no way to know. Reversible: the note is additive and
 the author can strike it.
@@ -575,7 +592,7 @@ and which a single list cannot express.
   and a note that it moves to §2 once the SQL moves into services. The
   entry is about the gate, not a licence on the rule.
 - **"No slice-to-slice imports in `app/web/routes_operator/`" is clean:
-  21 slices, 0 violations.** Mechanizable with no allowlist and green
+  20 slices, 0 violations.** Mechanizable with no allowlist and green
   from its first commit — the same shape as rung 2. It goes in §2 as the
   strongest candidate there, and the best moment to pin a convention is
   while it is still being followed by hand.
@@ -601,4 +618,90 @@ the `spec-writer` pass over the doc-impact specs, the `docs/status.md`
 row, and the two open questions above it — the `§N` heading-validity
 measurement, and whether `close_check`'s `COMMITTED_PATH` should widen
 to root-level `.md`.
+
+
+**2026-09-08 — CLOSED. The `spec-writer` pass found two wrong numbers,
+both mine, in the item about documents that stop agreeing with their
+sources.**
+
+Neither was caught by a check. Both were caught by a reader that had not
+written the thing — Article III, doing the job it exists for, on the one
+item least entitled to need it.
+
+**Flag 1 — "21 slices, 0 violations" was 20.** The verification script
+globbed `_*.py`, which matches `__init__.py`. The reader put it at 20 by
+counting `include_router` calls; checking both ways confirms **20 slices,
+one `_shared.py` the convention names as the legal import target, and
+`__init__.py` — 22 files, 20 slices.** The reader's diagnosis was right
+and its cause was worse than it guessed: not `_shared.py` miscounted,
+but the package initialiser counted as a slice. The "0 violations" half
+was independently confirmed and stands. Corrected in
+`docs/unenforced_conventions.md` §2.2, this file, and `docs/status.md`.
+
+**Flag 2 — "mechanised four days later" was 37 minutes.**
+`docs/practice-audit-2026-09-04.md` was committed at 09:12:37 UTC and
+`tests/unit/test_doc_conventions.py` at 09:49:43 UTC — the same morning,
+not four days apart. The error started in this item's Opportunity, was
+carried into the Doc impact bullet, into PR 4's Status entry, and out of
+the plan into a **shipped annotation on the audit itself**, where it
+misinformed the exact reader that annotation exists to serve. Four
+sites, all corrected; #2092's "four days" is likewise "later the same
+day" (11:57 UTC).
+
+**What that says, and it is the item's own thesis turned inward.** The
+class this item conceded — prose disagreeing with a source, with no
+constant to derive from — is exactly what both flags were. A date and a
+count are the *most* checkable kind of claim, and neither had anything
+checking it. The concession in §1.4 is therefore not a corner case: it
+covers the failure mode that this item, with its subject matter fresh in
+mind, committed twice in a day. The list is right that no cheap
+mechanism exists; it is also evidence that the human-or-agent reader is
+carrying real load, not ceremony.
+
+**Intended versus done.**
+
+| Rung | Intended | Done |
+|---|---|---|
+| 1 | Repoint 84 broken references | 36 repointed, 48 marked, 0 unaccounted — only 36 *should* be repointed, and the repository had already decided that in 19F |
+| 2 | The path-reference check | Landed, plus a second test for stale markers, plus a corpus widened to root-level docs at the cost of 3 more repoints |
+| 3 | Derive §3.1 from the constant | Landed, with parseability split from content so the plan's accepted weakness did not have to be accepted |
+| 4 | The list Article VI promises | Landed, split into "unenforced by decision" and "unenforced by nobody having written it" |
+
+Three of the four rungs came in *larger* than planned and one weakness
+came in smaller. The blast radius was right about the count (84) and
+wrong about its meaning, which is the failure a measured blast radius is
+least protected against: it counts instances, not what they are.
+
+**Close sequence.** `close_check 19G.1` exits 0 on C1–C6. `spec-writer`
+run over the four doc-impact files; two flags raised, both real, both
+fixed above, none changing a decision. `docs/status.md` row added. The
+plan **stays in `guide/`** — this is an item close, not a segment close,
+and 19G.2 is still open.
+
+---
+
+## Carried open questions
+
+Promoted from Item 1 at its close (2026-09-08) because neither is
+Item-1-shaped and both would otherwise be buried in a closed item.
+
+- **Does the `§N` reference form deserve a heading-validity check?**
+  139 live references name a numbered section of another file
+  (`` `spec/permissions.md` §4 ``). That is class C's surface — the class
+  neither rung 2's path check nor anything else reaches, and the class
+  `"Segment 19C Item 8"` belonged to. Whether a check is cheap depends on
+  how consistently the *targets* number their sections, which is still
+  unmeasured. **Decides:** a measurement first. If it turns out cheap,
+  this becomes **19G.3**; if it needs a section-numbering convention to
+  hold repo-wide first, it goes to `docs/unenforced_conventions.md` §1
+  with that as its reason.
+
+- **Should `close_check`'s `COMMITTED_PATH` widen to root-level `.md`?**
+  It matches backticked `.md` paths under `spec/` or `docs/` only, so
+  Item 1's `constitution.md` and `rrw_sdd_in_practice.md` bullets were
+  never counted — the tool that checks whether committed doc edits
+  happened has a scope narrower than the manifests it validates, which is
+  this segment's own subject one level up. **Decides:** the author. A
+  one-line pattern change with an unmeasured blast radius across every
+  existing plan's manifest, so it is a slice of its own, not a rung.
 

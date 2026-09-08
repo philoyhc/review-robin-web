@@ -13,9 +13,9 @@
 >
 > - **Row 1b** (*the specs state the mapping correctly*) and **row 2**
 >   (*retired button terminology*), both marked "Unenforced — and
->   currently violated", were **mechanised four days later** by
->   `tests/unit/test_doc_conventions.py` (#2086). This audit is what
->   prompted that file.
+>   currently violated", were **mechanised the same morning** by
+>   `tests/unit/test_doc_conventions.py` (#2086) — 37 minutes after this
+>   document was committed. This audit is what prompted that file.
 > - **Row 3** recorded British spelling as "not a convention the
 >   repository states". It became a stated convention on 2026-09-07 —
 >   **US**, not British — and is still deliberately unenforced, for the
