@@ -3383,10 +3383,14 @@
           // a click is destructive. Hand-rolled instead of a
           // simple ``<a href="...">`` so the confirm can guard the
           // navigation.
-          window.newModelCancelEdits = window.newModelCancelEdits || function (btn) {
-            if (!btn || btn.disabled) { return; }
-            var ok = window.confirm('Discard unsaved changes?');
-            if (!ok) { return; }
+          // Segment 19H Item 2 — the discard itself, shared by Cancel
+          // (which comes back unlocked, ``keepEditingId`` = the card)
+          // and by locking a dirty card (which comes back locked,
+          // ``keepEditingId`` = null). The reload IS the discard: the
+          // server re-renders every control from persisted state, so
+          // there is no list of inputs to revert by hand and nothing
+          // to drift out of step with what the server sends.
+          window.newModelDiscardReload = window.newModelDiscardReload || function (keepEditingId) {
             // Segment 18R Item 2 PR 2 — this reload IS the discard, so
             // suppress the nav-away guard it would otherwise trip.
             window._newModelIntentionalNav = true;
@@ -3400,22 +3404,32 @@
             if (window.newModelCaptureOpenState) {
               window.newModelCaptureOpenState();
             }
-            // Segment 18R Item 2 — keep the card UNLOCKED after Cancel:
-            // reload with ?editing=<id> so the server re-renders this
-            // card in edit mode (discarding the client edits from
-            // persisted state) rather than dropping it back to the
-            // locked view. Strip any stale hash so the openHashTarget
-            // IIFE doesn't fight the open-state restore.
-            var instrumentId = btn.getAttribute('data-new-model-cancel');
             var url = new URL(window.location.href);
             url.hash = '';
             url.searchParams.delete('saved');
-            if (instrumentId) { url.searchParams.set('editing', instrumentId); }
+            if (keepEditingId) {
+              url.searchParams.set('editing', keepEditingId);
+            } else {
+              url.searchParams.delete('editing');
+            }
             if (url.href === window.location.href) {
               window.location.reload();
             } else {
               window.location.href = url.href;
             }
+          };
+          window.newModelCancelEdits = window.newModelCancelEdits || function (btn) {
+            if (!btn || btn.disabled) { return; }
+            var ok = window.confirm('Discard unsaved changes?');
+            if (!ok) { return; }
+            // Segment 18R Item 2 — keep the card UNLOCKED after Cancel:
+            // reload with ?editing=<id> so the server re-renders this
+            // card in edit mode (discarding the client edits from
+            // persisted state) rather than dropping it back to the
+            // locked view.
+            window.newModelDiscardReload(
+              btn.getAttribute('data-new-model-cancel')
+            );
           };
           // Segment 18R Item 2 PR 1 — client lock-state machine.
           // newModelSetLock flips data-instrument-locked on the card
@@ -3506,6 +3520,17 @@
               )) {
                 return false;
               }
+              // Segment 19H Item 2 — honour the promise just made.
+              // ``newModelSetLock(card, true)`` neither reverts nor
+              // saves, and syncs the edited values into the read-only
+              // view, so a locked card would sit there displaying
+              // state the database does not have. Discard instead, via
+              // Cancel's reload with no ``?editing`` so the card comes
+              // back locked *and* clean. Returns true: the operator
+              // confirmed, and the card is locked once the reload
+              // lands.
+              window.newModelDiscardReload(null);
+              return true;
             }
             window.newModelSetLock(card, true);
             return true;

@@ -5999,14 +5999,24 @@ def test_cancel_keeps_card_unlocked_via_editing_reload(
     """Segment 18R Item 2 — Cancel reloads with ?editing=<id> so the
     card stays unlocked (edits discarded from persisted state) rather
     than dropping back to the locked view. Browser-only; pin the
-    wiring."""
+    wiring.
+
+    Segment 19H Item 2 moved the reload itself into the shared
+    ``newModelDiscardReload(keepEditingId)``; Cancel is the caller that
+    passes an id, so ``?editing`` is set and the card comes back
+    unlocked."""
     review_session, _new_model = _new_model_with_tags(
         client, db, code="cancel-keeps-unlocked"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "searchParams.set('editing', instrumentId)" in body
+    flat = " ".join(body.split())
+    assert "searchParams.set('editing', keepEditingId)" in body
+    assert (
+        "window.newModelDiscardReload( "
+        "btn.getAttribute('data-new-model-cancel') )"
+    ) in flat
 
 
 def test_title_input_click_does_not_toggle_card_when_unlocked(
@@ -7016,3 +7026,74 @@ def test_19h1_setup_pill_repaint_wiring_ships(
     # It paints from the server's answer; the predicate is not
     # reimplemented in the browser.
     assert "data.is_configured ? 'Set up' : 'Not set up'" in body
+
+
+def test_19h2_dirty_lock_discards_instead_of_carrying_edits(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 2 — locking a card with unsaved edits now
+    honours its own warning.
+
+    Before: the confirm said "Your changes will be lost", then
+    ``newModelSetLock(card, true)`` neither reverted nor saved and
+    synced the edited values into the read-only view — a locked card
+    displaying state the database does not have. Now the confirmed
+    path discards through the shared reload with **no** ``?editing``,
+    so the card comes back locked *and* clean.
+
+    Browser-only behaviour; pin the wiring."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="19h2-dirty-lock"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # The dirty branch discards rather than locking in place.
+    assert (
+        "'You have unsaved changes. Lock anyway? Your changes will be lost.' "
+        ")) { return false; } "
+    ) in flat
+    assert "window.newModelDiscardReload(null);" in body
+    # Dropping ?editing is what brings the card back locked.
+    assert "url.searchParams.delete('editing');" in body
+
+
+def test_19h2_clean_lock_still_locks_in_page(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 2 — the discard is the *dirty* path only. A
+    clean card still locks in place with no confirm and no reload, so
+    collapsing an untouched card costs nothing."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="19h2-clean-lock"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # The in-page lock survives as the fall-through after the dirty
+    # branch returns.
+    assert "window.newModelSetLock(card, true); return true; };" in flat
+
+
+def test_19h2_discard_reload_is_shared_by_cancel_and_lock(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19H Item 2 — one discard path, not two that must agree.
+    ``newModelDiscardReload(keepEditingId)`` carries the nav-away
+    suppression and the open-state capture for both callers; the only
+    difference is whether ``?editing`` survives."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="19h2-shared-discard"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "window.newModelDiscardReload = window.newModelDiscardReload" in body
+    # Both branches live in the one helper.
+    assert "url.searchParams.set('editing', keepEditingId);" in body
+    assert "url.searchParams.delete('editing');" in body
+    # And the two behaviours the discard must not lose.
+    assert "window._newModelIntentionalNav = true;" in body
+    assert "window.newModelCaptureOpenState();" in body
