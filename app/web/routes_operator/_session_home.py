@@ -232,7 +232,12 @@ def session_detail(
 # caller (UI links + tests) moved to Session Home's in-place config card
 # (#session-config, edited via ?editing=1) and the shared /config POST route.
 # This thin GET redirect preserves any stale ``/edit`` bookmarks; it keeps the
-# ``require_session_operator`` gate so a non-owner still gets 403, not a bounce.
+# ``require_session_operator`` gate so a non-owner is refused rather than
+# bounced. Since 19F PR 1 that refusal is a **404** for an ordinary non-owner —
+# the uniform answer that stops session ids being enumerable — and a 403 only
+# for a sys-admin, who is exempt because the Sessions Diagnostics page already
+# lists every session by name. (This comment said "still gets 403" until
+# 2026-09-08.)
 @router.get("/sessions/{session_id}/edit")
 def session_edit_redirect(
     review_session: ReviewSession = Depends(require_session_operator),

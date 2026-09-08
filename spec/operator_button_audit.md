@@ -125,7 +125,7 @@ Source: `app/web/templates/operator/session_new.html`.
 
 ---
 
-## Section 4 — Edit session *(page retired 2026-08-19, Segment 18R Item 4)*
+## Section 4 — Edit session *(page retired 2026-08-18, Segment 18R Item 4)*
 
 `app/web/templates/operator/session_edit.html` no longer exists. <!-- path-ref-ok -->
 `GET /operator/sessions/{id}/edit` survives only as a **308 permanent
