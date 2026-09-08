@@ -2765,6 +2765,47 @@ Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md`
 
 ---
 
+### Segment 19H — Additional refinements — 🔵 **live** (both opened items closed 2026-09-08; plan stays in `guide/segment_19H_additional_refinements.md`, **not archived**)
+
+**A named scope, not a standing home.** Items are admitted only from
+**operator-facing refinements found by using the app**, each carrying
+its own evidence; the segment closes when the queue empties or at the
+next assessment snapshot, whichever comes first. Items close
+independently, so each carries its own `Doc impact` / `Status` and
+there is no segment-level manifest. Work that is not an
+operator-facing refinement found by use gets its own segment.
+
+- **Item 1 — the two setup pills repaint on Save** (#2219). The card's
+  `Set up` / `Not set up` pill and the page's aggregate Instruments
+  pill both went stale after the reload-free Save 18R Item 2 built:
+  the predicate behind them reads exactly what that card edits, and
+  nothing re-read it. `/save` now returns `is_configured` plus the
+  session's counts and the client repaints both. **Live client-side
+  evaluation was rejected** — it needs the predicate reimplemented in
+  the browser, which is the drift class 19G spent ten items conceding
+  it cannot check.
+- **Item 2 — a locked card carries no unsaved edits** (#2220). The
+  Lock confirm promised the edits would be lost; the code neither
+  reverted nor saved, and copied them into the read-only view. Made
+  the warning true rather than reworded it. **Refusing to lock a dirty
+  card was rejected**: it satisfies the invariant but removes a
+  legitimate exit.
+
+**Three findings.** *A test can assert nothing and still pass* — Item
+1's first wiring assertion was satisfied by the JS helper's own
+selector string, found by mutation rather than by reading, which is
+`docs/unenforced_conventions.md` §1.6 arriving one segment after it was
+written. *A plan's measured blast radius is a measurement and can be
+wrong* — Item 1's said one template renders the setup-status partial
+where fifteen do, annotated rather than quietly corrected. And *a
+consequence-hunt by resemblance misses the paragraphs sharing the
+mechanism* — Item 2 corrected three stale spec passages by looking for
+paragraphs like the one it edited; the `spec-writer` pass found a
+fourth, stale for the identical reason because it names the same
+shared function.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
