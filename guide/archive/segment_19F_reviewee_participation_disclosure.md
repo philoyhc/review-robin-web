@@ -429,8 +429,19 @@ conditions, run against rendered pages:
    predicate merely honours the row like any other. The fix is a
    validation call on the import path plus a decision on what an
    offending row should do (reject the import, or coerce the cell to
-   `None`) — a choice for the author, and the same door serves clone
-   and rehydrate.
+   `None`) — a choice for the author, and **rehydrate** applies its
+   settings bundle through the same call.
+
+   *(Corrected 2026-09-08. This read "and the same door serves clone
+   and rehydrate". Rehydrate yes — `session_rehydrate.py:515` calls
+   `apply_session_config`. **Clone no**: `clone_session` copies no
+   view-policy rows at all, which `spec/roundtrip_coverage.md` already
+   recorded — "Clone still doesn't copy it — a clone reverts to default
+   visibility". The claim was wrong when written, not made wrong later,
+   which is why it is corrected here rather than left standing as a
+   dated record. **Resolved 2026-09-08 as 19C Item 9** (#2188): the
+   author chose reject-with-a-named-error, and the guard landed in the
+   parse phase.)*
 2. **The archived reviewer surface renders no chip strip.** It serves
    `reviewer/pre_open.html`, which has never included the partial
    (unchanged since `f2899b07`), so a multi-role user loses the

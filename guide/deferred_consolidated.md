@@ -794,6 +794,58 @@ database).
 
 ---
 
+#### 19C Item 9 — Audit existing visibility rows that predate the import guard (~30 LOC, one query)
+
+> Carved from `guide/segment_19C_refinements.md` Item 9 on
+> 2026-09-08, at the author's decision, when the guard shipped
+> in PR #2188. The behavioural half is done; this is the
+> retrospective half.
+
+**Ships.**
+
+- One read-only query over `instrument_view_policies`, checking
+  each row's two `(granularity, identification)` pairs against
+  `visibility_policies._PER_CELL_VALID_MODES` for its audience —
+  the same table the editor and (since #2188) the Settings-CSV
+  import both validate against.
+- Reported per row: session code, instrument, audience, the
+  offending cell, and its decoded mode. Reviewee
+  `while_ongoing` is the row that matters: it is a grant to read
+  responses mid-flight, which no editor path can author.
+- A decision per hit — clear the cell, or leave it — belongs to
+  the operator who owns the session, not to the script. The
+  query reports; it does not write.
+
+**Why deferred.** The guard is prospective: since #2188 no path
+can create such a row, and the only writer that ever could was
+the Settings-CSV import (`session_config_io`), reached from
+Quick Setup, the Session-Home config card and rehydrate. Clone
+never copied view-policy rows at all. So the population at risk
+is *sessions whose config was imported from a hand-edited or
+hand-built bundle before 2026-09-08* — and the pilot has not
+deployed, so that population is very likely empty. Running an
+audit against a database with no such rows in it proves nothing
+and has to be re-run later anyway. **The honest position is that
+nobody has checked, because there is not yet anything to
+check.**
+
+**Lift trigger.** The first real deployment carrying imported
+sessions — i.e. as soon as `instrument_view_policies` holds rows
+whose provenance is a CSV rather than the Band 3 editor. Run it
+once against the pilot database before any reviewee-facing
+window opens; a hit is a disclosure, so it wants answering
+before `after_release` rather than after.
+
+**Wire-up.** A script under `tools/`, not a route: it is a
+one-off with no operator-facing surface, and it reads a table
+whose rows span every session in the workspace, which no
+per-session operator is entitled to see. Reuse
+`valid_modes_for_cell` and `decode_pair_to_mode` from
+`app/services/visibility_policies.py` rather than restating the
+table — the same rule the import guard follows.
+
+---
+
 #### Codex Slice E — Carve down the three large templates
 
 > Carved from
