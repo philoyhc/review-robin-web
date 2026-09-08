@@ -24,7 +24,9 @@ is **finite, named, and already written down**: three one-line fixes
 found while doing Items 1 and 2, none of which was in scope at the time.
 
 **Close it when the queue is empty**, or at the next assessment
-snapshot, whichever comes first. If 19G.3+ reaches four items, or admits
+snapshot, whichever comes first. *(The queue emptied 2026-09-08 with
+19G.3. The segment stays open only for the two carried open questions
+below; if neither is picked up before the next snapshot, close it.)* If 19G.3+ reaches four items, or admits
 anything that did not come out of this segment's own work, the shape has
 outlived its use and the remaining work gets its own segment — that is
 the trigger 19C never had, and it is the only reason the concession
@@ -39,7 +41,8 @@ Items close independently, so each carries its own `### Doc impact` and
 |---|---|---|
 | **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Closed** 2026-09-08 (PRs #2197 → #2202). Answered per class; all four rungs landed. |
 | **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-19 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
-| 19G.3+ | The patch queue below. Admitted only for work arising from this segment's own items. | Open |
+| **19G.3** | The patch queue below — three documentation corrections | **Closed** 2026-09-08. One PR; a fourth found beside them. |
+| 19G.4+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -908,6 +911,114 @@ superseded-annotation claims were re-derived independently and matched.
 The three flags were all in the connective tissue — a section number, a
 justification, a heading — which is where a document that reads fluently
 hides its errors.
+
+
+---
+
+## Item 3 — The patch queue
+
+### Opportunity
+
+Three documentation corrections, each found while doing Items 1 and 2,
+each out of scope where it was found, and each an instance of the class
+Item 1 conceded as unmechanizable: prose disagreeing with a source, with
+no constant to derive from. Listed in "Patch queue" above with where
+they came from.
+
+They are worth doing together rather than singly because they are one
+finding repeated: **a claim that was true when written, in a document
+nobody re-read when the thing it described changed.**
+
+### Decision
+
+Fix all three in one PR, and in each case **say what the claim used to
+be**. A silent correction loses the only evidence that the class exists;
+these three are the standing test of whether Item 1's concession was
+right, and a test whose failures are quietly erased proves nothing.
+
+*Rejected: fix the two prose ones and leave the code comment.* It is the
+one of the three a future check could plausibly derive — a docstring
+naming a status code its gate does not return — so leaving it would have
+kept the most mechanizable instance as the unfixed one.
+
+### Judgment calls — decided
+
+- **A fourth was fixed alongside** (2026-09-08). The same table as patch
+  (a) said `tests/unit/test_doc_conventions.py` had **3 checks**; it has
+  **9**. Found while correcting the row above it, same table, same
+  class, one line. Leaving a number I had just read to be wrong would
+  have been a choice, not a scope boundary.
+- **Each correction is dated in place** (2026-09-08), not silently
+  applied — Article V, and the evidence argument above.
+
+### Blast radius (measured)
+
+| What | Count |
+|---|---|
+| Files changed | 3 (`rrw_sdd_in_practice.md`, `spec/ui_elements.md`, `app/web/routes_operator/_session_home.py`) |
+| Claims corrected | 4 (three queued + one found beside them) |
+| Code changed | none — the third is a comment |
+| Tests changed | none |
+
+### PR ladder
+
+1. **PR 1 — the four corrections.** Must not touch: anything but the
+   claims named, and no behaviour.
+
+### Definition of done
+
+- Each of the three queued claims is true, and says what it used to say.
+- `pytest -q -n auto` green with no test edited — this item changes no
+  behaviour, so a changed test would mean it did.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The two the segment carries are above and are not this item's.
+
+### Out of scope
+
+- **Any mechanism for this class.** Item 1 settled that; these are the
+  instances, not a reopening of the decision.
+
+### Doc impact
+
+- `spec/ui_elements.md` — the inline-style-buttons entry corrected: the
+  Delete buttons came back to Session Home when 18R Item 4 retired the
+  page they had moved to (PR 1).
+- `rrw_sdd_in_practice.md` — the "Spec coverage enforced" row flipped
+  from "Not yet … deferred" to enforced-since-2026-09-05, and the
+  doc-conventions check count corrected 3 → 9 (PR 1). Outside
+  `close_check`'s scope; recorded for the manifest's completeness.
+  <!-- doc-impact-waived: root-level file, invisible to COMMITTED_PATH — the segment's own carried open question -->
+- `docs/status.md` — row at the close.
+
+### Status
+
+**2026-09-08 — all four corrected; the check caught a pointless marker.**
+
+The three queued claims were each verified false against the code before
+being touched, not taken from the queue on faith: the spec-coverage gate
+exists with three assertions and an empty declared-debt baseline; the
+Delete buttons are in a `.card.danger-zone` on Session Home and
+`session_edit.html` is gone; `require_session_operator` answers 404 for
+an ordinary non-owner and 403 only for a sys-admin.
+
+**A fourth turned up in the same table as the first** — a check count of
+3 where the file now has 9 — which is the pattern worth naming: patch
+(a)'s row and this one sit four lines apart in a table titled "Evidence
+(re-takeable)", and neither had been re-taken.
+
+**The marker check earned its place again.** The `spec/ui_elements.md`
+correction names `session_edit.html`, so I marked the line — and
+`test_no_inline_path_marker_outlives_the_reference_it_covers` failed,
+because a bare filename is not a prefixed path and the marker therefore
+covered nothing. It was right: the marker was noise, and the check
+declined to let me leave decoration behind. Removed.
 
 ---
 

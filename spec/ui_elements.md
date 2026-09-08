@@ -424,11 +424,16 @@ vocabulary as follows.
 > *Current:* migrated. The row-level rf-delete / rf-add buttons in
 > `instruments_index.html` now use `.btn-icon.danger` /
 > `.btn-icon.action` (rules in `base.html`); the `session_detail.html`
-> Delete Data / Delete session buttons relocated to
-> `session_edit.html`'s Danger Zone as `.btn.destructive`
-> (2026-05-22); `review_surface.html`'s "Clear all" is
-> `.btn.destructive`. No inline-styled buttons remain in these
-> templates.
+> Delete Data / Delete session buttons are `.btn.destructive` in a
+> `.card.danger-zone` **on Session Home**; `review_surface.html`'s
+> "Clear all" is `.btn.destructive`. No inline-styled buttons remain in
+> these templates.
+> *Corrected 2026-09-08:* this read that the Delete buttons "relocated
+> to `session_edit.html`'s Danger Zone (2026-05-22)", which was half a
+> round trip. They did move there on 2026-05-22 (commit `b490825`), and
+> **came back** when 18R Item 4 retired that page on 2026-08-19;
+> `session_edit.html` no longer exists. The class was right throughout —
+> only the address was stale.
 > *Canonical:* Destructive for the danger-zone forms, `.btn-icon`
 > variants (`.danger` / `.action`) for the row-level rf-delete /
 > rf-add.
