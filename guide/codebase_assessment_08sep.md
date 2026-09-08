@@ -344,8 +344,24 @@ make at the time.
   are unchanged and would behave identically on the next long-lived segment; that
   is filed here, not planned. **Amended 2026-09-08 (second):** a *different*
   window defect was fixed — 19G.6 made C3 count the commit that records the
-  commitment, which had cost 6 of 22 failures across the 99 plans. The
-  long-window problem named above is untouched and still filed.
+  commitment, which had cost 6 of 22 failures across the 99 plans. ~~The
+  long-window problem named above is untouched and still filed.~~
+  **Amended 2026-09-08 (third) — measured, and it is smaller than this entry
+  reads.** Across all 99 plans: 38 carry a segment-level manifest, and only
+  **3** have a window of 14 days or more. Of those, `19C` is the instance
+  this entry was written from and **24 of its 25 bullets are item-tagged**,
+  so they anchor to their own headings rather than the segment's; the other
+  two, `14B` (120 days) and `18Q` (24 days), are **dormant host-blocked
+  plans** whose manifests read "when Parts ship" and "Update on Phase 0" —
+  nothing has been built, so C3 has nothing to check and its silence is
+  correct rather than misleading. The defect is real and has **one**
+  instance, already mitigated by tagging, and `close_check` already prints
+  the span (`window 2026-05-11 .. HEAD`) so a reader can see when C3 is
+  answering a stale question. **No mechanism is recommended** — this is
+  Article VI's "retire rather than mechanise badly" applied to a weakness
+  entry rather than to a check. What stays true: an untagged bullet on a
+  long-lived segment-level manifest inherits the whole window, so a future
+  long segment should use item-level manifests, as 19G does.
 - **Summaries stop agreeing with their sources, silently, and nothing compares
   them.** Four separate instances this window: `spec/permissions.md` had the
   enumeration threat model backwards; `spec/visibility_policy.md` §3.1 stated the

@@ -48,7 +48,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.7** | The `§N` heading-validity check — and the seventh broken reference the 19G.5 measurement could not see | **Closed** 2026-09-08. One PR. |
 | **19G.8** | A cited path is not a commitment — `close_check`'s prefixed-path false positive | **Closed** 2026-09-08. One PR. |
 | **19G.9** | Archived sessions read "not opened" on `/me` for reviewer and observer rows | **Closed** 2026-09-08. One PR, no CSS. |
-| 19G.10+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.10** | The three recommendations from the 08sep assessment's §5 weaknesses | **Closed** 2026-09-08. One PR, no code. |
+| 19G.11+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -2293,6 +2294,233 @@ above. The layout note gained its third measured width.
 exclusion, the two `enabled` expressions, the role-blind template
 condition and the measurement framing were all re-derived from the code
 independently and matched.
+
+## Item 10 — The three recommendations from §5's weaknesses
+
+### Opportunity
+
+The 08sep assessment's §5 lists five weaknesses. Two are resolved, one is
+filed as an observation with no cost yet, and the remaining two were read
+against the code rather than against the document's account of itself.
+Both turned out to say something other than what they appeared to say.
+
+**The audit card's plan lives nowhere a deployer will look.** §5 records
+it as *"its first real run is at deploy, before any reviewee-facing
+window opens — recorded in the item, not automated."* Measured:
+`grep -rl "visibility_audit\|visibility audit" docs/ spec/` returns
+**nothing**. The card exists in code (`app/web/views/_visibility_audit.py`,
+surfaced at `/operator/sys-admin/sessions`), and the instruction to run it
+exists only in `guide/archive/segment_19C_refinements.md` Item 10 — which
+has since been **archived**, making it less visible than when the
+assessment was written. This is the failure 19G.1 named as its central
+finding: a policy carried nowhere the person who needs it will look. It
+is also the only weakness with a deadline, because the check's whole
+value is spent once a reviewee-facing window opens.
+
+**The long-window `close_check` defect reads as a live structural risk
+and is not one.** Measured across all 99 plans (`window_spans` walk over
+`close_check`'s own parser): 38 carry a segment-level manifest and only
+**3** have a window of 14 days or more. `19C` — the instance the entry
+was written from — has **24 of 25 bullets item-tagged**, so they anchor
+to their own headings. The other two, `14B` (120 days) and `18Q` (24
+days), are dormant host-blocked plans whose manifests read *"when Parts
+ship"* and *"Update on Phase 0"*: nothing has been built, so C3 has
+nothing to check and its silence is correct rather than misleading.
+
+**And one lesson from this segment has no home.** 19G.5 certified the
+`§N` corpus clean at **125 references, 0 unresolved**, and checked the
+zero for vacuity by injecting a bad reference and watching it get caught.
+The corpus was still not clean: the scan read line by line, 7 of the 132
+references wrap, and one of those seven was broken. Passing a vacuity
+check proves a measurement *can* fail. It says nothing about whether it
+*looked everywhere*.
+
+### Decision
+
+Three changes, each the smallest thing that settles its weakness.
+
+1. **A new `guide/post_azure_todo_checklist.md`**, carrying the audit
+   card's first run as its item 1.
+2. **Amend §5's long-window entry with the measurement** and recommend
+   no mechanism.
+3. **`docs/unenforced_conventions.md` §1.6** — *vacuity is not
+   coverage*.
+
+Rejected for (1): **`docs/deployment_nus.md` §10**, whose heading is
+literally "Verification checklist (on NUS, before flipping the trigger)"
+and which was the obvious home. The author's reason, and it is the
+better one: that runbook will be rewritten repeatedly as details are
+settled with IT, and an item parked in a section about to be rewritten is
+an item about to be lost. A small stable file with one job outlives a
+large moving one. Its items migrate into the runbook when the runbook
+stops moving.
+
+Rejected for (2): **a mechanism** — a warning when a segment-level window
+exceeds some span, or when it contains other plans' commits. One
+instance, already mitigated by item tagging, and `close_check` already
+prints the span (`window 2026-05-11 .. HEAD`) so the information is on
+screen. A threshold invented for one historical case is
+`constitution.md` Article VI's shape exactly.
+
+Rejected for (3): **a check**. The rule is about the shape of an
+instrument written fresh for each measurement. A check would have to
+understand what the measurement was trying to see, which is the
+judgement being asked for.
+
+### Semantics
+
+- **What earns a place in the checklist.** Blocked on the deployment
+  *itself*, not merely unscheduled — that is `guide/todo_master.md` and
+  `guide/deferred_consolidated.md`. Stated in the file so the next writer
+  does not have to guess.
+- **Every item names how to tell it is done.** A checklist item nobody
+  can settle is a note. Item 1's completion test is explicit that a green
+  card over three instruments proves little, because that is exactly the
+  reading the weakness warns about.
+- **Items leave.** Into the runbook, a spec, or a segment plan when done
+  — or when the runbook stops moving and can hold them. The file is a
+  waiting room, not a second roadmap.
+- **Not a runbook.** It says what is owed *after* deploying, not how to
+  deploy, and does not compete with `docs/deployment_nus.md`.
+
+### Judgment calls — decided
+
+- **`guide/`, not `docs/`** (2026-09-08). It is forward-looking work
+  waiting on an event, which is `guide/`'s remit; `docs/` describes the
+  running system.
+- **The §5 amendment strikes rather than rewrites** (2026-09-08). The
+  sentence "untouched and still filed" was true when written and is the
+  reason the measurement was made.
+- **§1.6 goes in §1, not §2** (2026-09-08). §2 is the revisit queue —
+  rules nobody has written a check for *yet*. This one is unenforceable
+  in principle, which is §1's meaning.
+
+### Blast radius (measured)
+
+At `14162870`:
+
+| What | Result | Command |
+|---|---|---|
+| mentions of the audit card in `docs/` + `spec/` | **0** | `grep -rl "visibility_audit\|visibility audit" docs/ spec/` |
+| where the first-run instruction actually lives | one archived plan | `grep -rn "first real run" guide/` |
+| plans with a segment-level manifest | **38** of 99 | walk over `close_check.parse_bullets` / `window` |
+| of those, windows ≥ 14 days | **3** — `14B` 120d, `18Q` 24d, `19C` 19d | same |
+| `19C`'s untagged bullets | **1 of 25** | same |
+| new files | 1 (`guide/post_azure_todo_checklist.md`) | — |
+| code touched | **0** | — |
+
+*(The walk also returns `segment_plan_template.md`; it is the template,
+not a plan, and is excluded from the three counts above.)*
+
+### PR ladder
+
+1. **PR 1 — all three.** They share no code and no file, but they are one
+   reading of one section and splitting them would produce three PRs a
+   reviewer must hold together anyway. Must not touch:
+   `docs/deployment_nus.md`, any spec, or any code.
+
+### Definition of done
+
+- `guide/post_azure_todo_checklist.md` exists, states its admission rule
+  and its relationship to the runbook, and carries item 1 with a
+  completion test a reader can apply without asking the author.
+- `guide/README.md` has its index row — the folder's index is
+  hand-maintained, and a new file it does not list is the same class of
+  invisible as the instruction this item is rescuing.
+- §5's long-window entry carries the measurement and recommends no
+  mechanism.
+- `docs/unenforced_conventions.md` §1.6 states the vacuity/coverage
+  distinction with the instance that produced it.
+- `ruff check .` and `pytest -q -n auto` pass — including the path- and
+  section-reference checks against the new file, which is live prose from
+  the moment it lands.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.10` exits 0; any warning adjudicated
+- `spec-writer` **not** run: no spec is touched, and the doc-impact files
+  are `docs/` and `guide/` prose it does not own.
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **When does the checklist retire?** When its last item is done, or when
+  `docs/deployment_nus.md` stops churning and can absorb them.
+  **Decides:** the author, at the deployment. Not a blocker.
+
+### Out of scope
+
+- **`app/services` at 96 modules**, §5's fifth weakness. Cost recorded as
+  "none yet"; a ceiling invented now would be a guess dressed as
+  governance, and the growing-rule shape Article VI warns about. Left
+  filed.
+- **Reopening the two conceded drift classes.** They are conceded
+  deliberately and in writing (`docs/unenforced_conventions.md` §1.4,
+  §1.5); reopening needs new evidence, not another pass.
+- **Anything in `docs/deployment_nus.md`.** See Decision.
+
+### Doc impact
+
+- `docs/unenforced_conventions.md` — new §1.6, the vacuity/coverage rule
+  with the 19G.5 instance (PR 1).
+- `docs/status.md` — row at the close (PR 1).
+- *(for the human — outside the script's `spec/` + `docs/` regex)*
+  `guide/post_azure_todo_checklist.md` (new, with item 1);
+  `guide/README.md`'s index row for it; and
+  `guide/codebase_assessment_08sep.md` §5's long-window entry amended
+  with the measurement.
+
+### Status
+
+**2026-09-08 — landed as planned: one PR, one commit, three documents,
+no code.**
+
+Intended one PR; shipped one PR. The ladder's "must not touch" held —
+`docs/deployment_nus.md`, the specs and `app/` are untouched.
+
+**Decisions confirmed at build:**
+
+- **The runbook was the obvious home and the wrong one** (author,
+  2026-09-08). `docs/deployment_nus.md` §10 is literally the
+  pre-cutover verification checklist, which is why the recommendation
+  named it. The author's objection is the better argument: that file is
+  about to be rewritten repeatedly as details settle with IT, and an
+  item parked in a section about to be rewritten is an item about to be
+  lost. The recommendation optimised for *topical fit*; the decision
+  optimised for *survival*, which is the whole point of an item whose
+  failure mode is being forgotten.
+- **The index row is part of the fix, not housekeeping.** `guide/README.md`
+  is hand-maintained, and a new file it does not list is invisible in
+  exactly the way the archived instruction was. Leaving it out would have
+  reproduced the defect while fixing it.
+
+**Two of the three weaknesses turned out to say something other than
+they appeared to.** The audit-card entry read as "planned, awaiting
+deploy" and was in fact "recorded in a file that has since been
+archived". The long-window entry read as an open structural risk and is
+one historical instance, already mitigated, in a corpus where the two
+remaining long windows belong to dormant plans with nothing to check.
+Neither was visible without going to the code and the plans; both were
+stated confidently in the assessment. That is the more general finding
+of this item, and it is why §5 now carries the measurement rather than
+the impression.
+
+**What was not done, deliberately.** No mechanism for the long window —
+one instance and the span is already printed. No `app/services` ceiling
+— no cost yet, and a threshold invented now would be a guess. No
+reopening of the two conceded drift classes. Each is recorded in Out of
+scope with its reason, so the next reader knows they were considered.
+
+**`spec-writer` was not run**, and that is a departure from the standard
+close sequence rather than an oversight: this item touches no `spec/`
+file. Its doc-impact files are a `docs/` conventions page and a `guide/`
+checklist, which are not surface specifications and not what that agent
+reads.
+
+**The new file is live prose from the moment it lands** — the path- and
+section-reference checks apply to `guide/post_azure_todo_checklist.md`
+immediately, and its one path reference
+(`guide/archive/segment_19C_refinements.md`) resolves. That is the
+mechanism from 19G.1 rung 2 doing its job on a file created after it.
 
 ## Carried open questions
 

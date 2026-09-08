@@ -103,6 +103,39 @@ the joke it sounds like.
   `tests/unit/test_doc_conventions.py` fails on a path reference naming
   nothing (19G.1 rung 2). The section-level half is not.
 
+### 1.6 A measurement that certifies a corpus must state what it could not see
+
+- **Written down at** `guide/segment_19G_post_assessment.md` Items 5 and
+  7, where the rule was learned the expensive way.
+- **The instance.** 19G.5 measured the `§N` cross-reference corpus,
+  repointed six broken references and reported **125 references, 0
+  unresolved**. The zero was checked for vacuity — a deliberately bad
+  reference was injected and the measurement caught it — and the corpus
+  was still not clean. The scan read **line by line**, and 7 of the 132
+  references wrap across a line break. One of those seven was broken,
+  had been introduced by 19G.1 three items earlier, and was invisible to
+  the very pass built to find it. It surfaced two items later, while
+  building the check.
+- **Why not.** The rule is about the *shape* of an instrument, and the
+  instrument is written fresh each time for whatever is being measured.
+  There is no artefact to compare against and nothing stable to grep
+  for: a check would have to understand what the measurement was trying
+  to see, which is the judgement being asked for in the first place.
+- **The distinction that matters, and the reason this is written down
+  rather than assumed.** *Vacuity* and *coverage* are different
+  questions, and passing the first says nothing about the second.
+  Injecting a bad case proves the measurement **can** fail. It does not
+  prove the measurement **looked everywhere**. A scan that never sees a
+  region reports zero findings there and passes every vacuity check ever
+  devised.
+- **What covers it instead.** A habit: when a measurement reports a
+  clean corpus, state the population it scanned and the shape it would
+  miss — "132 references, line-local scan, wrapped ones not counted" —
+  and prefer a whole-text scan to a line-local one wherever a construct
+  can wrap. Article III's cold reader is the only backstop, and this is
+  precisely the kind of claim a cold reader takes at face value, because
+  the number looks like evidence.
+
 ---
 
 ## 2. Enforceable but not enforced — the revisit queue
