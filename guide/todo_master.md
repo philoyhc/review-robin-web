@@ -2257,6 +2257,38 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
+### Sys Admin per-row actions → canonical Secondary — ✅ done 2026-09-08 (no segment)
+
+A one-template change, recorded here rather than in a segment because it
+is one PR touching no schema, no route and no contract — the
+`segment-plan` skill's own line for when a plan is the wrong artefact,
+and the first change after 19C closed the holding segment that would
+have absorbed it.
+
+The Sessions Diagnostics **Manage** action was a
+`<button class="chrome-link">` carrying five inline properties to
+un-style itself into a link, which `CLAUDE.md`'s button convention says
+to migrate. Flagged during 19C Item 10 and **not** converted then,
+because no canonical role fits a button deliberately styled to match the
+two link-styled anchors beside it — the convention says ask rather than
+invent. The author's answer (2026-09-08) was to convert.
+
+All three actions became **Secondary** (`btn secondary`) in a
+`.btn-pair`: converting Manage alone would have created the very
+inconsistency its link styling was hiding. `.btn-pair`'s
+`> form { margin: 0 }` rule let the form wrapper drop its inline style
+too, so the page now carries **no inline styles at all**. Secondary
+rather than Alert because adopting a session is reversible, audited and
+routine — per `spec/ui_elements.md` §6 gravity belongs to context, and
+filled amber in every row of a diagnostics table spends the alarm on the
+normal case.
+
+`spec/operator_button_audit.md` gained **§21** for the page, which had
+never had a section of its own although Sections 19 and 20 both
+catalogue its children. A test now pins the three roles: the existing
+assertions checked href and label only, so a revert to link styling
+would have passed every other test on the page.
+
 ### Segment 19C — Refinements — ✅ complete + archived 2026-09-08 (ten items, 2026-08-20 → 2026-09-08; plan archived: `guide/archive/segment_19C_refinements.md`) — Item 1 friendly tag labels via roster CSV headers (#2005 → #2013); Items 3–4 Danger Zone hardening + button refinements and Item 2 light / dark Display mode (#2014 → #2031); Item 6 two-tier semantic colour tokens — 79 primitives under 103 role-named tokens (#2047 → #2062); Item 5 theme customizer v1, a three-part developer designer in `tools/` (#2032 → #2083), **v1.1** primitive readout + unused-primitive marker + stale-document merge fix + 3:1 contrast gate (#2152 → #2155); Item 7 the first drift sweep's eight findings (#2116 → #2118); Item 8 input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family (#2126 → #2128); **Item 9** the Settings-CSV import refuses a visibility cell the Band 3 editor refuses (#2188); **Item 10** the Sys Admin Visibility grid audit card, scaffold then wiring (#2191 + #2192)
 
 Holding segment for small operator-facing behaviour / contract refinements —
@@ -2748,7 +2780,9 @@ dep chains called out at the bottom of this file.
   `spec/workflow_card.md`. Not done at 19C's close on purpose — it is its own
   slice, and absorbing it was the habit that closed the segment. The
   legend's **role vocabulary is current** and unaffected. One PR, no plan
-  doc needed.
+  doc needed. *(Narrowed 2026-09-08: the file's missing **Sessions
+  Diagnostics** section landed as §21 when that page's buttons were
+  converted, so this stub is now §§4–5 only.)*
 
 - **Theme customizer — a full pass over every element** *(author intent,
   logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C

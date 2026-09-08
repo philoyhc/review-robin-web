@@ -503,6 +503,44 @@ canonical home is the `.back-link` row in `spec/ui_elements.md` §6.
 
 ---
 
+## Section 21 — Sessions Diagnostics (`/operator/sys-admin/sessions`)
+
+Source: `app/web/templates/operator/sys_admin_sessions.html`.
+Sys-admin-gated. **Added 2026-09-08** — the page had no section of its
+own, though Sections 19 and 20 both catalogue its children and link back
+to it. It is numbered 21 rather than slotted before 19 so the existing
+numbers keep their meaning; `spec/email_template_editor.md` cites §10 by
+number, and renumbering to tidy the order would break that for a gain
+nobody asked for.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 123 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. The sanctioned door since 18S Item 3 replaced the back-door link to `/edit`. |
+| 124 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin since 18S Item 3. |
+| 125 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). |
+
+Notes:
+
+- **All three converted 2026-09-08** (author). Manage had been a
+  `<button class="chrome-link">` carrying five inline properties to
+  un-style itself into a link, and the two anchors were link-styled to
+  match it — so converting Manage alone would have created the
+  inconsistency the link styling had been hiding. They now sit in a
+  `.btn-pair`, whose `> form { margin: 0 }` rule let the form wrapper
+  drop its own inline style; the page carries **no inline styles at
+  all** afterwards.
+- **Why Secondary and not Alert.** Adopting a session grants yourself
+  ownership, which is consequential — but it is reversible, audited, and
+  the routine way a sys-admin opens someone else's session. Per
+  `spec/ui_elements.md` §6, gravity belongs to the surrounding context,
+  not the button colour; filled amber in every row of a diagnostics table
+  would spend the alarm on the normal case.
+- **The page also carries the read-only Visibility grid audit card**
+  (19C Item 10) — prose and a table, no buttons, so it contributes no
+  rows here.
+
+---
+
 ## Section 19 — Accounts Management (`/operator/sys-admin/users`)
 
 Source: `app/web/templates/operator/sys_admin_users.html`. Sys-

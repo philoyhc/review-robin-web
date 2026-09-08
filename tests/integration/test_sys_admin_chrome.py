@@ -123,6 +123,19 @@ def test_sessions_diagnostics_renders_for_sys_admin(
         in response.text
     )
     assert ">Manage</button>" in response.text
+    # 2026-09-08 — the three per-row actions are canonical Secondary
+    # buttons in a `.btn-pair`, not link-styled ones. Pinned because the
+    # assertions around them check href and label only, so a revert to
+    # `chrome-link` plus inline un-styling would pass every other test on
+    # this page (`spec/operator_button_audit.md` §21).
+    actions = response.text.split('<td class="col-shrink">')[1].split("</td>")[0]
+    assert actions.count('class="btn secondary"') == 3
+    assert '<div class="btn-pair">' in actions
+    # Whitespace-independent: the template wraps these across lines, and an
+    # assertion coupled to that indentation breaks on a re-wrap while
+    # telling you nothing about the roles.
+    assert "chrome-link" not in actions
+    assert "style=" not in actions
     # Status renders as a lifecycle-coloured pill matching the
     # session_setup_status_row partial used on session-home pages.
     assert (
