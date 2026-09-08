@@ -846,6 +846,44 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — Item 10 rung 2 shipped: the card is wired, and the audit
+found nothing, which is the expected result and not a verification.**
+`app/web/views/_visibility_audit.py` reads every
+`instrument_view_policies` row, decodes each window's pair, and reports
+any cell whose mode `valid_modes_for_cell` does not allow — the same
+table the editor and Item 9's import guard read, so a change to a cell's
+rules cannot leave the audit checking an old copy.
+
+**A bug the template would have hidden.** The reviewer audience is
+stored as `peer_reviewer`, and `base.html` styles `.pill-role-reviewer`;
+`pill-role-{{ row.audience }}` would have rendered a class that does not
+exist and a pill with no styling — invisible in a review of the markup
+and visible only on the page. The slug is mapped in the view, where the
+fourth-seam rule puts it. Found by writing the template against the real
+column values rather than against the audience names in prose.
+
+**Three mutations, three different tests.** Making the cell check always
+pass fails the three findings tests; dropping the live-first sort fails
+only the ordering test; collapsing the half-set branch fails only its
+own. Each mutation is caught by exactly the test that should catch it,
+which is the property that says the suite is measuring three things and
+not one thing three times. The ordering test picks session codes so that
+alphabetical order would put the *closed* session first — otherwise it
+would pass on the code alone and say nothing about liveness.
+
+**Rendered with seeded findings rather than read.** Two findings on a
+`ready` session sort above a `draft` and an `archived` one, each row
+naming session, instrument, audience, cell, stored value and reason, and
+the live rows carrying **Reachable now**. The empty case says "No
+findings" in a sentence, because an empty table reads as *not
+implemented*.
+
+**What this item cannot claim.** It ran against a test database. The
+deferral's premise still holds — the pilot has not deployed — so a green
+card today means "no rows here", and there are almost no rows here. What
+shipped is a check that is ready and proven against fixtures. The first
+real run is the one at deploy, before any reviewee-facing window opens.
+
 **2026-09-08 — Item 10 opened, and the deferral it lifts was wrong about
 where the check should live.** The author lifted the audit ahead of its
 trigger, hours after deferring it. The ledger entry is **removed**, not
@@ -1504,7 +1542,7 @@ safe to land in one.
 
 ---
 
-## Item 10 — Audit visibility rows that predate the import guard
+## Item 10 — Audit visibility rows that predate the import guard — ✅ shipped 2026-09-08
 
 ### Opportunity
 
