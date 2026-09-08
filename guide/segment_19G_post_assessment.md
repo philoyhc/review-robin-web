@@ -47,7 +47,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.6** | The C3 window boundary — `close_check`'s window excluded its own start commit | **Closed** 2026-09-08. One PR. |
 | **19G.7** | The `§N` heading-validity check — and the seventh broken reference the 19G.5 measurement could not see | **Closed** 2026-09-08. One PR. |
 | **19G.8** | A cited path is not a commitment — `close_check`'s prefixed-path false positive | **Closed** 2026-09-08. One PR. |
-| 19G.9+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.9** | Archived sessions read "not opened" on `/me` for reviewer and observer rows | **Planned** 2026-09-08, not started. |
+| 19G.10+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1994,6 +1995,188 @@ manifest is a record of what it committed to and of what the defect cost.
 outside `COMMITTED_PATH`, so four of this item's five real doc
 commitments are unverifiable — recorded in the Doc impact rather than
 smoothed over. That is 19G.4's class and it stays open.
+
+## Item 9 — Archived sessions read "not opened" on `/me`
+
+### Opportunity
+
+An archived session still lists a row on `/me` for reviewer and observer
+participants, and its Session-status pill reads **`not opened`**.
+
+`can_archive` (`app/services/session_lifecycle.py:80`) admits **draft,
+validated and expired** — a `ready` session must be paused first. So an
+archived session was one of three things, and the label is only true for
+two of them. A session archived from `expired` **ran**: reviewers opened
+it, worked in it and submitted. Telling them it was never opened is
+false, and it is false precisely for the participants who did the work.
+
+The current behaviour is deliberate and documented — but the recorded
+reason covers the *link*, not the *label*.
+`session_status_for_reviewer`'s docstring says `archived → "not opened"
+(by design — archive retires a session out of reviewer reach; the
+dashboard hides its link)`. Hiding the link is right and is not in
+question here. Nothing in the record defends the word.
+
+Two paths reach it, and both fall through the same `else`:
+`session_status_for_reviewer` (`session_lifecycle.py:924`) for reviewer
+rows, and `_non_reviewer_session_status`
+(`app/web/routes_reviewer/_dashboard.py:60`) for observer rows.
+
+### Decision
+
+**Keep the `session_status` string exactly as it is, and render a second
+grey `archived` pill beside it** in the Session-status cell of
+`/me`, on reviewer and observer rows.
+
+The pill is `pill-lifecycle-archived` — already defined at
+`app/web/templates/base.html:3057` and already the operator lobby's
+vocabulary for archived sessions (`operator/sessions_list.html:40`,
+`operator/sessions_archived.html:15`). A participant meeting it is
+meeting a word the product already uses, not a new one.
+
+**Rejected: relabelling the status to `archived`.** Reachability is
+derived from the label string in two places —
+`"enabled": session_status != "not opened"` at `_dashboard.py:196` and
+`_shared.py:227`. Renaming the archived status flips both to `True` and
+re-links the reviewer surface on an archived session. Not a disclosure
+(the route still renders the not-open page) but a live link to a dead
+end, which is the thing the current design avoids. Relabelling therefore
+means decoupling `enabled` from the label *first* — a behaviour change,
+in service of a copy change. Keeping the string makes the link
+behaviour unchanged **by construction** rather than by careful editing.
+
+**Rejected: an `(a)` marker appended to `not opened`.** Same blast
+radius as the second pill, but it is a private code: nothing on the page
+expands it, so it needs a `title` or a legend, and `title` alone is
+invisible on touch. At equal cost the pill is legible without
+decoding. (Author, 2026-09-08.)
+
+**Rejected: applying the same treatment to reviewee rows.** Not needed
+and not possible: `reviewee_has_current_grant` returns `False` on an
+archived session (`app/services/visibility_policies.py:280`), and
+`_dashboard.py:144` filters the reviewee role on that predicate, so a
+reviewee-only row cannot exist on an archived session. 19F's disclosure
+rule stands untouched, and the scoping to reviewer/observer is enforced
+upstream rather than by a new condition here.
+
+### Semantics
+
+- **Which rows.** Only rows where `session.status == "archived"`. Every
+  other state renders exactly as today.
+- **Which participants.** Reviewer and observer. The reviewee case is
+  structurally unreachable (see Decision), so no role test is written
+  into the template — the row's existence already implies the role.
+- **Layout.** Side by side with the status pill if the column takes it;
+  wrapping to a line below it if not. **The fallback is pre-authorized**
+  (author, 2026-09-08) — it does not need a second decision at build.
+- **No new route field.** The item dict already carries
+  `"session": review_session` (`_dashboard.py:246`), used for
+  `item.session.name` at `dashboard.html:29`, so the template branches on
+  `item.session.status` directly. A raw enum comparison, not user-visible
+  copy, which is what `lifecycle_display.py`'s docstring reserves the
+  filter for.
+- **Not the role chips.** `_shared.py`'s chips grey out on an archived
+  session and carry no status word at all, so there is nothing there for
+  a second pill to sit beside. Unchanged.
+- **Not `review_surface.html`.** That template's `session_status`
+  variable is the per-reviewer response state (`submitted` / `saved` /
+  `Draft`), a name collision with the lifecycle-derived one. It must not
+  be touched.
+
+### Judgment calls — decided
+
+- **Pill, not a suffix or a tooltip** (2026-09-08). See Decision — same
+  cost, nothing to decode.
+- **Grey, not amber or red** (2026-09-08). `pill-lifecycle-archived` is
+  the muted token the operator lobby uses for archived. Archive is not
+  an alarm; it is a retirement.
+- **Lowercase `archived`** (2026-09-08). The pill vocabulary on this page
+  is lowercase — `open`, `closed`, `not opened` — and mixing cases in one
+  cell would read as two different kinds of thing.
+- **The status string stays wrong, and that is the trade** (2026-09-08).
+  This annotates the falsehood rather than removing it: a reader who
+  ignores the second pill still reads `not opened`. Accepted because the
+  alternative costs a behaviour change; recorded here so the residue is
+  not mistaken for a complete fix.
+
+### Blast radius (measured)
+
+At `4affd7d4`:
+
+| What | Count | Command |
+|---|---|---|
+| templates rendering the lifecycle `session_status` | **1** of 4 hits — `reviewer/dashboard.html`; the other three are the operator setup row, sys-admin sessions, and the response-state collision above | `grep -rln "session_status" app/web/templates` |
+| callers of the two status functions | **3** — `_dashboard.py:166`, `_dashboard.py:175`, `_shared.py:218` | `grep -rn "session_status_for_reviewer(\|_non_reviewer_session_status(" app/` |
+| status functions edited | **0** — the string is unchanged | — |
+| `enabled` couplings edited | **0** — `_dashboard.py:196`, `_shared.py:227` untouched | — |
+| specs naming the archived row's label | **3** — `role_landing_and_visibility.md` (lines 121, 183), `participant_model.md` (lines 118, 130), `reviewer-surface.md` (line 868) | `grep -rln "not opened" spec/` |
+| specs naming the *rule* and needing no edit | **1** — `role_navigator.md:64` quotes `!= "not opened"`, which does not move | same |
+| tests asserting `not opened` on `/me` | **10** across 2 files, all expected to keep passing | `grep -c "not opened" tests/integration/test_me_dashboard_*.py` |
+
+### PR ladder
+
+1. **PR 1 — the pill, its test, and the three specs.** One rung: this is
+   a pill inside an existing cell, not a new page, card or navigation
+   affordance, so `CLAUDE.md`'s scaffold-first rule does not apply and a
+   placeholder slice would land nothing a reviewer could react to. Must
+   not touch: `session_status_for_reviewer`,
+   `_non_reviewer_session_status`, either `enabled` condition, the
+   `_shared.py` chips, or `review_surface.html`.
+
+### Definition of done
+
+- An archived session's `/me` row renders both pills for a reviewer and
+  for an observer; every other lifecycle state renders one, unchanged.
+- The reviewer and observer links on an archived row stay **disabled** —
+  asserted directly, not inferred from the string being unchanged.
+- The ten existing `not opened` assertions still pass untouched. If any
+  needs editing, the string moved and the Decision was violated.
+- **The squeeze question is answered by observation, not guess**: `/me`
+  rendered with a seeded archived row and captured with the
+  pre-installed Chromium at a stated viewport width, with the screenshot
+  and the width in the PR body. If it is crowded, the pill wraps below —
+  pre-authorized above.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The one variable — side by side or stacked — has its decision
+  rule and its fallback recorded above, and the observation that settles
+  it is a Definition-of-done line.
+
+### Out of scope
+
+- **Fixing the `enabled`-couples-to-the-label design.** Two call sites
+  derive reachability from a display string, which is fragile
+  independently of this item. Naming it here so the next reader knows it
+  was seen and left; it belongs with a relabelling, if one ever happens.
+- **Reviewee rows.** See Decision — structurally unreachable, and 19F's
+  rule is deliberate.
+- **The archived state on any other participant surface.** `/results`,
+  `/collation` and the not-open page each handle archive already; this
+  item is the `/me` row only.
+
+### Doc impact
+
+- `spec/role_landing_and_visibility.md` — §4's Reviewer and Observer
+  tables: the `archived` row's `/me` cell gains the companion pill
+  (PR 1).
+- `spec/participant_model.md` — the reviewer/observer asymmetry paragraph
+  and the observer row of the audience table both say the row "reads
+  'not opened'"; both gain the second pill (PR 1).
+- `spec/reviewer-surface.md` — the Session-status pill vocabulary gains
+  the archived companion, stated as a companion rather than a fourth
+  value (PR 1).
+- `spec/role_navigator.md` — **deliberately unchanged**: its reachability
+  rule quotes `!= "not opened"`, and this item leaves that string alone.
+  Named so a reader auditing the change knows it was checked, not missed.
+  <!-- cites: spec/role_navigator.md -->
+- `docs/status.md` — row at the close (PR 1).
 
 ## Carried open questions
 
