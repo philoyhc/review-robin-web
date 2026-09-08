@@ -1295,12 +1295,15 @@ is older than 19F: the unvalidated writer arrived with **18P PR A2**
 anyway. 19F neither caused it nor widened it — its predicate honours the
 row like any other — but its audit is what found it.
 
-**Correction to 19F's record.** The archived plan's `## Status` and
-PR #2187 both say "the same door serves clone and rehydrate". Rehydrate
-yes — `session_rehydrate.py:515` calls `apply_session_config`. **Clone
-no**: `clone_session` copies no view-policy rows at all, which
+**Correction to 19F's record.** Its `## Status` and PR #2187 both said
+"the same door serves clone and rehydrate". Rehydrate yes —
+`session_rehydrate.py:515` calls `apply_session_config`. **Clone no**:
+`clone_session` copies no view-policy rows at all, which
 `spec/roundtrip_coverage.md` line 86 already records ("Clone still
-doesn't copy it — a clone reverts to default visibility").
+doesn't copy it — a clone reverts to default visibility"). The archived
+plan was **amended 2026-09-08** to carry the correction; the merged PR
+body cannot be, so this is the only other place the wrong claim is
+answered.
 
 ### Decision
 
