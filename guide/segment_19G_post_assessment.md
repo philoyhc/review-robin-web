@@ -10,10 +10,25 @@ segment kept open as a home for whatever came next accreted ten items
 over nineteen days and produced a plan nobody read. This segment is a
 different shape on purpose: its scope is the recommended moves in one
 dated assessment, which is a finite list written before the segment
-opened. It closes when they are settled — settled including "decided
-against", which is what Item 1 mostly is. Work that is not one of those
-moves gets its own segment; that is the guard, and it is the whole
+opened. Work that is not one of those moves, or a patch arising from
+them, gets its own segment; that is the guard, and it is the whole
 reason this file is allowed more than one item.
+
+**Both moves are settled as of 2026-09-08, and the segment is
+deliberately kept open** (author, 2026-09-08) for the patches this work
+turned up — see "Patch queue" below. The original framing said the
+segment closes once the moves are settled; that is amended rather than
+quietly ignored, because "we'll leave it open a bit" is the exact
+sentence 19C died of. What keeps this from being 19C is that the queue
+is **finite, named, and already written down**: three one-line fixes
+found while doing Items 1 and 2, none of which was in scope at the time.
+
+**Close it when the queue is empty**, or at the next assessment
+snapshot, whichever comes first. If 19G.3+ reaches four items, or admits
+anything that did not come out of this segment's own work, the shape has
+outlived its use and the remaining work gets its own segment — that is
+the trigger 19C never had, and it is the only reason the concession
+above is safe to make.
 
 Items close independently, so each carries its own `### Doc impact` and
 `### Status` and there is no segment-level `## Doc impact`.
@@ -22,9 +37,30 @@ Items close independently, so each carries its own `### Doc impact` and
 
 | Item | Covers | State |
 |---|---|---|
-| **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Decided** 2026-09-08. Rung 1 landed; rungs 2–4 open. |
-| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which describe a Session Home layout replaced 2026-08-19 | **Closed** 2026-09-08. One PR. |
-| 19G.3+ | Open. Admitted only for follow-ups that trace to the 08sep assessment. | — |
+| **19G.1** | §8 move #3 — whether summary drift deserves a mechanism | **Closed** 2026-09-08 (PRs #2197 → #2202). Answered per class; all four rungs landed. |
+| **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-19 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
+| 19G.3+ | The patch queue below. Admitted only for work arising from this segment's own items. | Open |
+
+### Patch queue
+
+Three one-line corrections found while doing Items 1 and 2, each out of
+scope where it was found and each an instance of the class Item 1
+conceded as unmechanizable — prose disagreeing with a source, with no
+constant to derive from. Whether they are worth a shared item or one
+PR is a judgment for whoever picks them up; they are listed together
+because they were found together and share a cause.
+
+| # | Where | What is wrong | Found by |
+|---|---|---|---|
+| a | `rrw_sdd_in_practice.md`, capability table | "Spec coverage enforced — **Not yet** … deferred", while `constitution.md` II cites `tests/unit/test_spec_coverage.py` as shipped 2026-09-05 | 19G.1 rung 2, extending the check's corpus to root-level docs |
+| b | `spec/ui_elements.md` §"Inline-style buttons" | Records the Danger Zone's 2026-05-22 move to the Edit page as *"Current: migrated"* — half a round trip; 18R Item 4 brought the buttons back to Session Home | 19G.2, re-deriving §§4–5 |
+| c | `app/web/routes_operator/_session_home.py` ~line 235 | The `/edit` redirect's comment says a non-owner "still gets **403**, not a bounce"; 19F PR 1 made that gate answer **404**, reserving 403 for the sys-admin exemption | 19G.2's `spec-writer` pass |
+
+Entry **c** is code rather than prose, and is the one of the three that a
+future check could plausibly catch — a docstring naming a status code
+the gate does not return is derivable from the gate. Filed here rather
+than in `docs/unenforced_conventions.md` §2 because nobody has measured
+how many such comments exist.
 
 §8's **move #1** is deliberately *not* an item here: it is Segment 20,
 which has its own plan (`guide/segment_20_operator_polish_and_documentation.md`)
