@@ -435,16 +435,47 @@ def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
     assert "Signed in as Nul" in stranger_body
 
 
-def test_the_participant_chrome_offers_no_guide_link_to_anyone(
+def test_the_participant_chrome_gates_its_guide_link_like_base(
     client: TestClient, db: Session, make_client, bob
 ) -> None:
-    """Pins the fact the test above was written against.
+    """**Inverted 2026-09-08**, by the condition its previous version
+    named.
 
-    ``reviewer/_top_bar.html`` offers "My Reviews", "About" and "Sign
-    out" — never the Guide. If a Guide link is ever added there it must
-    carry the same condition as the one in ``base.html``, and this test
-    is what will say so.
+    Until then `reviewer/_top_bar.html` offered "My Reviews", "About"
+    and "Sign out" and never the Guide, and this test pinned that
+    absence — closing with *"if a Guide link is ever added there it must
+    carry the same condition as the one in `base.html`, and this test is
+    what will say so."* A link was added, this test failed, and the
+    condition is what it now asserts.
+
+    The gap it closed: a reviewer or observer holding rows could reach
+    `/guide` and saw the link once they were on `/about` (base chrome),
+    but had no route to it from `/me` — the surface they land on.
     """
-    body = make_client(bob).get("/me").text
-    assert 'href="/about' in body
-    assert 'href="/guide' not in body
+    review_session = _make_session(client, db, code="topbar")
+    db.add(
+        Reviewer(
+            session_id=review_session.id, name="Bob", email="bob@example.edu"
+        )
+    )
+    db.commit()
+
+    # Resolves the reviewer audience → the link renders, with the same
+    # `?return_to=` round-trip `base.html` gives it.
+    holder = make_client(bob).get("/me").text
+    assert 'href="/about' in holder
+    assert 'class="chrome-link" href="/guide?return_to=/me"' in holder
+
+    # Resolves nothing → no link, exactly as before. This is the half
+    # that must not regress: `/guide` bounces such a viewer to `/about`,
+    # so a link here would offer them the page that turns them away.
+    stranger = make_client(
+        AuthenticatedUser(
+            principal_id="topbar-oid",
+            email="topbar-stranger@example.edu",
+            name="Nul",
+            provider="aad",
+        )
+    ).get("/me").text
+    assert 'href="/about' in stranger
+    assert 'href="/guide' not in stranger

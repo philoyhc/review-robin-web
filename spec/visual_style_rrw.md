@@ -370,6 +370,7 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
 - **Right:** A small **user menu** containing:
   - "Signed in as [Reviewer Name]" — informational. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
   - "My Reviews" — link back to the reviewer's review list (only rendered when the reviewer has more than one review pending or completed; suppressed when there's just one).
+  - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself), rendered only for a viewer who resolves at least one Guide audience. Added 2026-09-08; before that the participant bar had no Guide entry at all, so a reviewer or observer holding roster rows could reach `/guide` and saw the link once they were on `/about` (which uses the operator chrome) but had no route to it from `/me`. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, with the same fail-open test: unset renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
   - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link (added 18R Item 6).
   - "Sign out" — ends the reviewer's session.
 
@@ -498,7 +499,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts About / Settings / Sign out; reviewer's user menu hosts My Reviews / About / Sign out. Same shape, different contents.
+- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Guide / About / Settings / Sign out; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 
