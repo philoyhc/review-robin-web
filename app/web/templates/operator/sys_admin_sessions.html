@@ -54,19 +54,30 @@
               {# Segment 18S Item 3 — editing a session now requires
                  ownership. This "Manage" action self-adds the sys-admin as
                  an owner (audited) and opens the session, replacing the old
-                 back-door link straight to /edit. #}
-              <form method="post"
-                    action="/operator/sys-admin/sessions/{{ s.id }}/adopt"
-                    style="display:inline; margin:0;">
-                <button type="submit" class="chrome-link"
-                        title="Adds you as an owner of this session, then opens it"
-                        style="background:none; border:none; padding:0;
-                               font:inherit; cursor:pointer;">Manage</button>
-              </form>
-              <a class="chrome-link"
-                 href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
-              <a class="chrome-link"
-                 href="/operator/sys-admin/sessions/{{ s.id }}/audit-log">Audit log</a>
+                 back-door link straight to /edit.
+
+                 The three actions are canonical **Secondary** buttons in a
+                 `.btn-pair` (2026-09-08). Manage was a `<button
+                 class="chrome-link">` carrying five inline properties to
+                 un-style itself into a link, and its two siblings were
+                 link-styled anchors to match it. `.btn-pair`'s own
+                 `> form { margin: 0 }` rule is what lets the form wrapper
+                 drop its inline style too. Secondary is the role for
+                 routine submits and View-detail actions per
+                 `spec/ui_elements.md` §6; the gravity of adopting a session
+                 is carried by the confirm-free audit trail and the title,
+                 not by button colour. #}
+              <div class="btn-pair">
+                <form method="post"
+                      action="/operator/sys-admin/sessions/{{ s.id }}/adopt">
+                  <button type="submit" class="btn secondary"
+                          title="Adds you as an owner of this session, then opens it">Manage</button>
+                </form>
+                <a class="btn secondary"
+                   href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
+                <a class="btn secondary"
+                   href="/operator/sys-admin/sessions/{{ s.id }}/audit-log">Audit log</a>
+              </div>
             </td>
           </tr>
         {% endfor %}
