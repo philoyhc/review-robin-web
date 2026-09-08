@@ -1305,8 +1305,12 @@ contract those files never agreed to.
 
 ### Doc impact
 
-- `spec/operator_button_audit.md` — row #155's citation repointed from
-  `spec/visual_style_rrw.md` to `spec/ui_elements.md` (PR 1).
+- `spec/operator_button_audit.md` — row #155's citation repointed to the
+  file that actually carries §5a (PR 1). *Named without backticked paths
+  deliberately: the first draft of this bullet cited both the wrong and
+  the right file as paths, and `close_check` counted all three as
+  commitments — the prefixed-path false-positive 19G.4 measured and left
+  open, biting the manifest that documents it.*
 - `spec/email_template_editor.md` — two `roundtrip_coverage` pointers
   named rather than numbered (PR 1).
 - `docs/status.md` — two `setup_pages` pointers named; row at the close.
