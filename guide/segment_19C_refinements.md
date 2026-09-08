@@ -846,6 +846,42 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — Item 9 shipped in one PR, as planned, plus a spec
+correction the plan did not anticipate.** The guard went where the plan
+said — `_cross_row_errors`, before `_apply_plan` — and the ladder's one
+rung carried it, its ten tests and the four doc-impact specs.
+
+**The plan under-counted the failure modes.** It named the illegal-cell
+case and, in Semantics, the half-set pair. Writing the check turned up a
+third: `decode_pair_to_mode` also swallows the reserved-incoherent
+`aggregated` + `identified` pair as `None`, so a bundle carrying it would
+have imported as "off" rather than being named. Three distinct messages
+now, deliberately not collapsed — an operator whose file is wrong needs
+to know *how* it is wrong.
+
+**A stale section in a file the manifest already named.**
+`spec/visibility_policy.md` §3 documented the `visible_when` column as
+current; it was retired in the S14 contract step, and §4 of the same file
+says so. Worse, §3.1's per-audience table read *"Reviewee — all three are
+valid"*, which is the exact opposite of the rule this item enforces: the
+constant has allowed `reviewee` `while_ongoing` only `None` since it was
+written. So the file that documents the rule stated it backwards, one
+section away from stating it correctly. §3.1 was rewritten from
+`_PER_CELL_VALID_MODES` and §3's framing corrected; the rest of §3's
+window definitions are still right and were left. **A spec can hold both
+answers at once and pass every check** — nothing greps prose against a
+constant, which is the same shape of gap 19F kept finding.
+
+**Verified by re-running 19F's reproduction, not by reading.** The
+import that persisted a mid-flight reviewee grant now returns the named
+error, writes **zero** rows, leaves `reviewee_has_current_grant` False,
+and `/results` 404s. Both halves of the guard were mutation-checked:
+removing it fails seven of the ten tests, and the three that survive are
+the positive controls — the round-trip, the legal `after_release` cell,
+and the legal `observer` `summarized` cell.
+
+`ruff check .` clean; 2,915 passed / 16 skipped (2,905 before).
+
 **2026-09-05 — Item 7 PR 1.** Two of the sweep's own findings did not
 survive re-verification at build. Both were filed by the mechanical
 dead-reference pass, which can see that a path does not exist but not
@@ -1225,6 +1261,198 @@ problem:
 
 ---
 
+## Item 9 — The Settings-CSV import writes visibility cells the editor forbids
+
+### Opportunity
+
+Two writers create `instrument_view_policies` rows and only one of them
+validates. `visibility_policies.upsert_policy` runs
+`_validate_per_window` and refuses a `(audience, window)` cell outside
+`_PER_CELL_VALID_MODES`; `session_config_io/_apply_instrument.py:403`
+builds the row straight from the parsed spec and checks nothing. The
+parser validates the **vocabulary** — granularity in `{row, aggregated}`,
+identification in `{identified, deidentified}` — never the cell those
+values land in.
+
+The cell that matters is `("reviewee", "while_ongoing")`, whose only
+legal mode is `None`: a reviewee may never see responses while the review
+is running. Driven end to end during Segment 19F's close, on a session
+whose only oddity is an imported Settings CSV:
+
+```
+apply_session_config errors : []
+persisted row: while_ongoing=(row,identified) after_release=(None,None)
+editor validation: REJECTS -> VisibilityPolicyError: audience 'reviewee'
+  while_ongoing cell only accepts modes in ['None']; got 'raw'.
+session status: ready -> has_current_grant: True | GET /results: 200
+```
+
+A reviewee reading responses **mid-flight** — the state 19F decision 3
+exists to prevent, reachable through a door that never asked. The leak
+is older than 19F: the unvalidated writer arrived with **18P PR A2**
+(2026-06-05), when the Settings CSV gained the Band 3 grid, and before
+19F `/results` would have rendered those values to any active reviewee
+anyway. 19F neither caused it nor widened it — its predicate honours the
+row like any other — but its audit is what found it.
+
+**Correction to 19F's record.** The archived plan's `## Status` and
+PR #2187 both say "the same door serves clone and rehydrate". Rehydrate
+yes — `session_rehydrate.py:515` calls `apply_session_config`. **Clone
+no**: `clone_session` copies no view-policy rows at all, which
+`spec/roundtrip_coverage.md` line 86 already records ("Clone still
+doesn't copy it — a clone reverts to default visibility").
+
+### Decision
+
+**Reject the import with a named error** (author, 2026-09-08). An
+offending row fails the whole apply in the parse phase, before anything
+is written, with an `ApplyError` naming the field and the legal modes —
+the same shape and the same wording the editor already refuses with.
+
+The check belongs in **`_cross_row_errors`**, not in the row router: a
+cell is a *pair* of rows (`…_granularity` + `…_identification`) and is
+only complete once both are parsed. That hook already exists, already
+emits `ApplyError(row_number=0, …)` for exactly this class of
+cross-row invariant, and runs before `_apply_plan`, so rejection is free
+of a partial write.
+
+**Rejected: coerce the offending cell to `None` and import the rest.**
+It is the friendlier failure and the wrong one. A visibility grid is a
+permission document; silently downgrading one cell of it hands the
+operator a session that does *not* say what their file said, with
+nothing in the UI to show which cell moved. The same bundle would import
+differently depending on a rule the file never mentions. An import that
+stops and names the row leaves the operator with a file to fix and a
+session unchanged — and the editor already treats this shape as an
+error, so rejecting keeps one answer to "is this legal?" instead of two.
+
+### Semantics
+
+- **A valid round-trip must stay valid.** `_serialize.py:485` emits all
+  four cells for every audience, so a legitimately authored session
+  exports `reviewee.while_ongoing_granularity` as an **empty string**.
+  Empty parses to `None`, `None` is the legal mode for that cell, so
+  export → import of any session the editor produced is unaffected. This
+  is the property to assert first; without it the item breaks backup and
+  restore for everyone to close a hole almost nobody has.
+- **A half-authored cell.** Granularity set, identification empty (or
+  the reverse) is not a mode at all. `decode_pair_to_mode` is what turns
+  a pair into a mode; a pair it cannot decode is its own error, distinct
+  from a legal-mode-in-the-wrong-cell, and is reported as such rather
+  than being coerced to `None` and passing.
+- **Every offending cell is reported, not just the first.** The parse
+  phase's contract is "collect every error before reporting; one bad row
+  doesn't mask the next", and this check follows it.
+- **Other audiences, same rule.** `peer_reviewer.while_ongoing` accepts
+  only `raw` and `observer.while_ongoing` only `{None, summarized}`; the
+  check reads `_PER_CELL_VALID_MODES` rather than special-casing the
+  reviewee, so all six cells are covered by construction. The reviewee
+  cell is the one with a disclosure behind it, not the only one wrong.
+- **Rows already in the database are not touched.** This closes the
+  door; it does not sweep the room. See Open questions.
+- **The error is the editor's sentence.** `_validate_per_window` already
+  produces "audience 'reviewee' while_ongoing cell only accepts modes in
+  ['None']; got 'raw'." Reusing it — rather than writing a second
+  wording — is what keeps the two writers answerable to one rule.
+
+### Judgment calls — decided
+
+- **Reuse `_PER_CELL_VALID_MODES` by import, don't restate it**
+  (2026-09-08). A second copy of the table in the parser is a second
+  thing to forget when a cell's rules change.
+- **Report at `row_number=0`** (2026-09-08), like every other cross-row
+  error, with `field` naming the offending path
+  (`instruments[1].view_policies[reviewee].while_ongoing_granularity`).
+  The operator needs the field far more than the line, and a cell spans
+  two lines anyway.
+- **No new error class.** `ApplyError` carries `field` + `message`,
+  which is what the import surface renders; a code adds nothing a
+  caller reads today.
+
+### Blast radius (measured)
+
+Commands run at `bc3a30bf`, 2026-09-08:
+
+- `grep -rn "InstrumentViewPolicy(" app/ --include=*.py | wc -l` → **3**:
+  the model class, the validating writer
+  (`visibility_policies.py:419`), and the unvalidated one
+  (`_apply_instrument.py:403`).
+- `grep -rn "apply_session_config(" app/ --include=*.py` → **3 real
+  call sites** plus the definition: `_quick_setup.py:930`,
+  `session_rehydrate.py:515`, and the Session-Home config card via
+  `_session_home.py:432` → `_apply_session_config_form`. Those are every
+  door onto the unvalidated writer. **Clone is not one** — `grep -n
+  "view_policies\|ViewPolicy" app/services/session_clone.py` is empty.
+- `grep -c "ApplyError(" app/services/session_config_io/_apply_parse.py`
+  → **10** existing emitters to match in shape.
+- `grep -rln "view_policies" tests/ --include=*.py | wc -l` → **4**:
+  `tests/unit/test_apply_session_config.py`,
+  `tests/unit/test_instrument_view_policy_model.py`,
+  `tests/integration/test_instrument_view_policy_routes.py`,
+  `tests/integration/conftest.py`.
+- `grep -rln "view_policies" spec/ docs/ | wc -l` → **7**, of which the
+  ones this changes are named under Doc impact.
+
+One PR. No migration, no route shape, no template.
+
+### PR ladder
+
+1. **The guard, its tests, and the specs.** `_cross_row_errors` gains
+   the per-cell check reading `_PER_CELL_VALID_MODES`; tests assert (a)
+   a `reviewee` + `while_ongoing` bundle is rejected with the field
+   named and **nothing written**, (b) a real export → import round-trip
+   of an editor-authored session still applies clean, (c) an
+   undecodable pair reports its own error, and (d) the other two
+   audiences' illegal cells are caught by the same code path. **Must not
+   touch** `upsert_policy`, the resolver, or any existing row.
+
+Small enough to be one slice; the round-trip assertion is what makes it
+safe to land in one.
+
+### Definition of done
+
+- A Settings CSV carrying `instruments[n].view_policies[reviewee]
+  .while_ongoing_*` fails `apply_session_config` with an `ApplyError`
+  naming that field, and `counts` is empty — asserted.
+- The same CSV writes **no** `instrument_view_policies` row — asserted
+  by querying after the failed apply, not inferred from `errors`.
+- `serialize_session_config` → `apply_session_config` on an
+  editor-authored session with a reviewee `after_release` grant still
+  applies with `errors == []` — asserted, and it is the regression that
+  matters most.
+- The illegal `peer_reviewer` and `observer` `while_ongoing` cells are
+  rejected by the same path — asserted.
+- A granularity without its identification reports a distinct error —
+  asserted.
+- `python3 tools/close_check.py 19C` exits 0.
+- `ruff check .` and the full suite pass.
+
+### Open questions
+
+- **Rows already persisted through the old door.** The guard is
+  prospective. Whether any live session carries an illegal cell today is
+  unknown from here and unmeasurable in the sandbox — the pilot has not
+  deployed, so the honest answer is "probably none, and nobody has
+  checked". Decides: the author, on whether this item also ships a
+  one-off audit query (a `SELECT` over `instrument_view_policies`
+  against `_PER_CELL_VALID_MODES`) or leaves it until there is a
+  database worth auditing.
+
+### Out of scope
+
+- **The editor path.** `upsert_policy` already validates; nothing to do.
+- **Clone.** It copies no view-policy rows at all, by design recorded in
+  `spec/roundtrip_coverage.md` — a separate gap with its own decision,
+  untouched here.
+- **The resolver.** `resolve_mode` honouring whatever row it finds is
+  correct behaviour for a resolver; the fix belongs at the write, not
+  the read. Making the resolver second-guess its own table would put the
+  rule in two places and hide bad data rather than refuse it.
+- **19F's shipped behaviour.** Unchanged. This closes the door 19F's
+  audit found open; it revisits none of its decisions.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
@@ -1297,6 +1525,18 @@ refinements are identified.
 - `docs/security_posture.md` — drop the pointer to the retired
   authentication doc, whose content this file absorbed (Item 7).
   <!-- doc-impact-waived: finding 2.7 declined at PR 1 — the reference is a dated provenance note ("formerly ..., retired 2026-08-19"), not a live pointer; see Status -->
+- `spec/visibility_policy.md` — the per-cell validity table is a rule the
+  **import** honours too, not only the Band 3 editor; an illegal cell in a
+  Settings CSV rejects the apply (Item 9).
+- `spec/settings_inventory.md` — the `instruments[n].view_policies[<audience>].*`
+  entries gain the per-cell constraint, so the inventory says which values a
+  cell may carry and not merely which words parse (Item 9).
+- `spec/roundtrip_coverage.md` — the instrument-visibility row records that a
+  round-trip of an editor-authored session is unaffected (empty cells serialize
+  to empty and parse to `None`), and that the import now refuses what the editor
+  refuses (Item 9).
+- `spec/rehydrate.md` — a settings bundle carrying an illegal cell fails
+  rehydrate at the settings step, with the named error surfaced (Item 9).
 - `spec/visual_style_rrw.md` — repoint the two references to specs
   consolidated into the instruments spec in 2026-05 (Item 7).
 - `spec/lifecycle.md` — §1 state diagram to show all five states, plus the

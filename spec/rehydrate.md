@@ -305,6 +305,16 @@ no rehydrate-specific handling. (Defensive fallback for a legacy extract
 taken before the prerequisite: infer the toggles from file presence and
 leave view policies at defaults.)
 
+**A bundle carrying an illegal visibility cell fails here.** Since 19C
+Item 9 `apply_session_config` validates each
+`instruments[n].view_policies[<audience>].*` cell against the same table
+the Band 3 editor uses (`spec/visibility_policy.md` §3.1) and returns an
+`ApplyError` naming the field. Rehydrate treats that like any other
+settings failure — `RehydrateError("settings.csv failed to apply: …")`,
+the whole rehydrate rolls back, and the operator gets the message. An
+extract taken from a session the editor authored cannot trip this: the
+forbidden cells serialize as empty and parse back to "off".
+
 ### 6.3 Import populations and regenerate assignments
 
 1. **Reviewers / Reviewees / Observers** via `csv_imports.save_reviewers`

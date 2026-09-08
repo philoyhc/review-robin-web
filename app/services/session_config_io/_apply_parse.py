@@ -19,6 +19,15 @@ from ._apply_shared import (
 )
 from ._rows import Row
 
+# The Band 3 per-cell rules live with the editor's validator; the import
+# borrows them rather than keeping a second copy. `_PER_CELL_VALID_MODES`
+# is the single table both writers answer to (19C Item 9).
+from app.services.visibility_policies import (
+    VisibilityPolicyError,
+    decode_mode,
+    valid_modes_for_cell,
+)
+
 
 # ApplyError is used by both this module (cross-row errors) and the
 # orchestrator ``_apply.py``; defined here to keep the dependency
@@ -75,7 +84,100 @@ def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:
     # Cross-row validations. These run after row parsing so the
     # error list orders parse errors first.
     errors.extend(_cross_row_errors(plan))
+    errors.extend(_view_policy_cell_errors(plan))
     return plan, errors
+
+_VP_WINDOWS: tuple[str, ...] = ("while_ongoing", "after_release")
+
+
+def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
+    """Refuse a visibility cell the Band 3 editor would refuse.
+
+    Two writers create ``instrument_view_policies`` rows.
+    ``visibility_policies.upsert_policy`` validates the
+    ``(audience, window)`` cell against ``_PER_CELL_VALID_MODES``;
+    the import writer (``_apply_instrument``) builds the row from
+    this plan. Until 19C Item 9 only the *vocabulary* was checked
+    here — ``row`` / ``aggregated``, ``identified`` /
+    ``deidentified`` — never the cell the values landed in, so a
+    Settings CSV could persist what the editor refuses. The one
+    that mattered is ``("reviewee", "while_ongoing")``, whose only
+    legal mode is ``None``: a reviewee may never read responses
+    while the review is running, and an imported row saying
+    otherwise was honoured by the resolver like any other.
+
+    A cell is a **pair** of rows, so this cannot live in the row
+    router — it runs here, once both rows are parsed, and before
+    ``_apply_plan`` writes anything.
+
+    Three distinct failures, deliberately not collapsed:
+
+    * one half of the pair set and the other empty — not a mode at
+      all. ``decode_pair_to_mode`` reads that as "off", which would
+      let a half-authored cell pass as ``None``;
+    * both set but not a stored pair (the reserved-incoherent
+      ``aggregated`` + ``identified``); and
+    * a real mode in a cell that does not accept it.
+    """
+    errors: list[ApplyError] = []
+    for n, instrument in sorted(plan.instruments.items()):
+        for audience in sorted(instrument.view_policies):
+            vp = instrument.view_policies[audience]
+            for window in _VP_WINDOWS:
+                granularity = getattr(vp, f"{window}_granularity")
+                identification = getattr(vp, f"{window}_identification")
+                field = (
+                    f"instruments[{n}].view_policies[{audience}]"
+                    f".{window}_granularity"
+                )
+                if (granularity is None) != (identification is None):
+                    errors.append(
+                        ApplyError(
+                            row_number=0,
+                            field=field,
+                            message=(
+                                f"view-policy cell {audience!r} "
+                                f"{window} is half-set "
+                                f"(granularity={granularity!r}, "
+                                f"identification={identification!r}); "
+                                "set both or neither"
+                            ),
+                        )
+                    )
+                    continue
+                if granularity is None:
+                    mode: str | None = None
+                else:
+                    try:
+                        mode = decode_mode(granularity, identification)
+                    except VisibilityPolicyError as exc:
+                        errors.append(
+                            ApplyError(
+                                row_number=0,
+                                field=field,
+                                message=(
+                                    f"view-policy cell {audience!r} "
+                                    f"{window}: {exc.message}"
+                                ),
+                            )
+                        )
+                        continue
+                allowed = valid_modes_for_cell(audience, window)
+                if mode not in allowed:
+                    errors.append(
+                        ApplyError(
+                            row_number=0,
+                            field=field,
+                            message=(
+                                f"audience {audience!r} {window} cell "
+                                f"only accepts modes in "
+                                f"{sorted(repr(v) for v in allowed)}; "
+                                f"got {mode!r}"
+                            ),
+                        )
+                    )
+    return errors
+
 
 
 def _route_row(
