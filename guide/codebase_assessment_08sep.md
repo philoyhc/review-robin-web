@@ -1,13 +1,15 @@
 # Codebase assessment — 2026-09-08
 
-> **Amended end-of-day 2026-09-08, re-measured at `b9798e72`.** The snapshot
-> was first taken at `590993f0`; Segment 19G then ran to completion the same
-> day, which settled two of this document's own recommended moves and made §5's
-> largest weakness partly false. Every table below has been re-taken at the new
-> SHA **in the same pass as the SHA itself** — the failure mode this skill warns
-> about is an amendment that refreshes the numbers and leaves the commit
-> pointer, so anyone checking out the stated SHA finds a different tree. Where a
-> figure describes the pre-amendment state it says so.
+> **Amended twice on 2026-09-08. Numbers below are taken at `7d8e3321`.** The
+> snapshot was first taken at `590993f0`, amended at `b9798e72` when Segment
+> 19G's first two items closed, and amended again here at `7d8e3321` when Items
+> 3 → 7 closed as well — five more PRs the same day, which settled **both** of
+> the carried open questions this document listed as "what is actually next".
+> Every table has been re-taken at the new SHA **in the same pass as the SHA
+> itself**, both times — the failure mode this skill warns about is an amendment
+> that refreshes the numbers and leaves the commit pointer, so anyone checking
+> out the stated SHA finds a different tree. Where a figure describes an earlier
+> state it says which.
 
 **As of** the close of the **participant-disclosure arc** — Segments 19E and 19F
 closed and archived, and Segment 19C closed with them, retiring the standing
@@ -29,12 +31,17 @@ Since the 2026-09-05 snapshot:
   #2187, 2026-09-07 → 2026-09-08) — a reviewee's row, chip and `/results` now
   require a currently-resolving visibility grant, and all four session-scoped
   gates answer a bare 404.
-- **Segment 19G — post-assessment follow-ups** (#2196 → #2204, 2026-09-08) —
-  *after this snapshot was first taken, and the reason it is amended.* Item 1
-  answered §8's summary-drift question per class and shipped two derived checks
-  plus `docs/unenforced_conventions.md`; Item 2 re-derived the button audit's
-  Session Home sections. Both closed the same day; the segment stays open on a
-  three-item patch queue with a close trigger.
+- **Segment 19G — post-assessment follow-ups** (#2196 → #2210, seven items,
+  2026-09-08) — *after this snapshot was first taken, and the reason it is
+  amended twice.* Item 1 answered §8's summary-drift question per class and
+  shipped two derived checks plus `docs/unenforced_conventions.md`; Item 2
+  re-derived the button audit's Session Home sections; Item 3 cleared the
+  three-item patch queue and found a fourth beside it; Items 4 → 7 are
+  **tooling repairing itself** — `close_check` widened to root-level `.md`,
+  six broken `§N` references repointed, the C3 window's boundary corrected, and
+  the `§N` heading-validity check built, which found a seventh broken reference
+  the measurement that certified the corpus could not see. All seven closed the
+  same day. The segment stays open with an empty queue and a close trigger.
 - **Segment 19C Items 9 + 10, then its close** (#2188 → #2193, 2026-09-08) — the
   Settings-CSV import refuses a visibility cell the editor refuses; a Sys Admin
   card audits rows written before that guard; the segment closes.
@@ -42,10 +49,11 @@ Since the 2026-09-05 snapshot:
   walkthrough with screencaps, then the Instruments section rewritten from a
   supplied draft.
 
-All shipped 2026-09-05 → 2026-09-08 (**88 merge commits, 120 non-merge**, over 4
-calendar days), PRs **#2119 → #2204** (86 numbered; #2119 is the prior snapshot
-itself, #2196 → #2204 the post-snapshot amendment window). Numbers taken on
-`main` at **`b9798e72`**, which the working branch is level with. A single author directing AI agents, pre-deployment, no pilot yet —
+All shipped 2026-09-05 → 2026-09-08 (**94 merge commits, 130 non-merge**, over 4
+calendar days), PRs **#2119 → #2210** (92 numbered; #2119 is the prior snapshot
+itself, #2196 → #2210 the post-snapshot amendment window, of which #2205 is this
+document's first amendment). Numbers taken on `main` at **`7d8e3321`**, which the
+working branch is level with. A single author directing AI agents, pre-deployment, no pilot yet —
 twenty-plus merges in a day is normal here and should not be read against a team
 cadence.
 
@@ -131,20 +139,29 @@ prior snapshot exactly.
 
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
-| `docs` | 235 (225 prior) | **125,031** | +15,041 (+13.7%) |
-| `tests` | 269 (255 prior) | **92,708** | +4,784 (+5.4%) |
-| `production` | 203 (198 prior) | **57,117** | +1,413 (+2.5%) |
+| `docs` | 235 (225 prior) | **126,021** | +16,031 (+14.6%) |
+| `tests` | 269 (255 prior) | **92,933** | +5,009 (+5.7%) |
+| `production` | 203 (198 prior) | **57,122** | +1,418 (+2.5%) |
 | `templates` | 61 (59 prior) | **23,610** | +1,368 (+6.2%) |
-| `tooling` | 9 (8 prior) | **11,481** | +1,203 (+11.7%) |
+| `tooling` | 9 (8 prior) | **11,556** | +1,278 (+12.4%) |
 | `migrations` | 77 | **6,772** | unchanged |
 
-**Test-to-production ratio: 1.62** (92,708 / 57,117), up from **1.58** (87,924 /
+**Test-to-production ratio: 1.63** (92,933 / 57,122), up from **1.58** (87,924 /
 55,704). The rise is real but small, and it is not a quality claim on its own —
 it reflects that this window's product work was gate-shaped, and a gate is
 cheap to write and expensive to prove, so each rung carried more assertions than
 lines.
 
-**Suite: 2,940 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
+**The second amendment moved four of the six rows, and every line of it is
+documentation or tooling.** Between `b9798e72` and `7d8e3321`, `docs` +990,
+`tests` +225, `tooling` +75, `production` **+5** — and the five production lines
+are a corrected comment in `_session_home.py`, not behaviour. Five PRs that
+touched no route, no template, no model and no migration. That is what a
+tooling-repair window looks like in this table, and it is worth naming because
+the percentages in the `Δ` column above are dominated by the product work of
+19E/19F and say nothing about these five.
+
+**Suite: 2,950 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
 (`test` on SQLite and `postgres` on a `postgres:16` service container, the latter
 also round-tripping the Alembic chain). All 16 skips are Wave 5 PR 5.3
 legacy-instrument-card retirements plus one fixture-shape skip in
@@ -176,7 +193,7 @@ queued** — see §9.
 
 ### Where the window's growth landed
 
-**Production grew by 1,413 LOC, and 838 of it (59%) is five new modules**:
+**Production grew by 1,418 LOC, and 838 of it (59%) is five new modules**:
 `setup_templates.py` (337), `_visibility_audit.py` (186), `_guide.py` (150),
 `routes_guide.py` (90), `routes_templates.py` (65). The remaining 575 landed as
 small additions on existing seams — `deps.py` +134 (the four gates and the
@@ -188,8 +205,11 @@ meant to produce, and it held under a window with two new user-facing surfaces:
 new behaviour arrives as new small modules, and existing modules absorb only the
 lines that genuinely belong to them.
 
-**`docs` grew 8.9%, the largest movement of any area, and that is this window's
-real signature.** The two biggest single files are the archived segment plans —
+**`docs` grew 14.6%, the largest movement of any area, and that is this window's
+real signature.** *(This sentence read "8.9%" through both earlier takes, against
+a table that said 13.7% four lines above it — a figure disagreeing with its own
+source, in the document whose §5 names that class. Corrected here from the
+measurement, not from the earlier prose.)* The two biggest single files are the archived segment plans —
 `segment_19E_operator_onboarding.md` (1,224) and
 `segment_19F_reviewee_participation_disclosure.md` (1,194) — with 913 more lines
 of net movement inside `guide/` and 374 in `todo_master.md`. One new spec landed
@@ -198,11 +218,12 @@ describe by a wide margin**, which is the intended trade of the "plan in, spec
 out" rule and is worth naming as a cost as well as a discipline: a 1,200-line
 plan is not read end to end, which is one of the three reasons 19C closed (§5).
 
-**`templates` +1,350**, of which `guide.html` is 501 and `base.html` 298; the
+**`templates` +1,368**, of which `guide.html` is 501 and `base.html` 298; the
 rest is the Setup-page guidance partial and the lobby/sys-admin cards.
-**`tooling` +1,203 (+11.7%)** is almost entirely regenerated customizer HTML, not
-hand-written logic — the generators themselves moved by far less. That percentage
-should not be read as tooling complexity growing.
+**`tooling` +1,278 (+12.4%)** is almost entirely regenerated customizer HTML, not
+hand-written logic — the generators themselves moved by far less, and the +75 the
+second amendment added is `tools/close_check.py` growing a window fix and its
+docstring. That percentage should not be read as tooling complexity growing.
 
 ### Package shape
 
@@ -304,7 +325,8 @@ make at the time.
 - **Gate changes shipped without a regression.** Converting every session-scoped
   refusal from 403 to 404 touched 24 assertions across 12 files against a measured
   ceiling of 47, and the suite went from 2,704 to 2,936 passing with no reverts
-  (2,940 after the day's post-snapshot work).
+  (2,940 after 19G Items 1–2, **2,950** after Items 3–7 — the last ten assertions
+  are the two tooling checks repairing themselves, not product).
 
 ---
 
@@ -320,7 +342,10 @@ make at the time.
   was effectively meaningless. **Plan:** the shape is retired — new refinements
   get their own segments (author, 2026-09-08). The `close_check` window semantics
   are unchanged and would behave identically on the next long-lived segment; that
-  is filed here, not planned.
+  is filed here, not planned. **Amended 2026-09-08 (second):** a *different*
+  window defect was fixed — 19G.6 made C3 count the commit that records the
+  commitment, which had cost 6 of 22 failures across the 99 plans. The
+  long-window problem named above is untouched and still filed.
 - **Summaries stop agreeing with their sources, silently, and nothing compares
   them.** Four separate instances this window: `spec/permissions.md` had the
   enumeration threat model backwards; `spec/visibility_policy.md` §3.1 stated the
@@ -339,9 +364,16 @@ make at the time.
   measurement (139 live `§N` references); prose about *behaviour* with no source
   is conceded outright. **A fifth class nobody had counted** — 84 broken path
   references in live prose — is now enforced by
-  `tests/unit/test_doc_conventions.py`. The honest residue: the two conceded
-  classes are still unchecked, and the item's own close produced two instances of
-  them, caught by the separate reader rather than by anything mechanical.
+  `tests/unit/test_doc_conventions.py`. **Amended 2026-09-08 (second): the
+  deferred class is no longer deferred.** 19G.5 repointed six broken `§N`
+  references and 19G.7 built the check, so three of the five classes are now
+  mechanical and only the two conceded ones remain. The honest residue is
+  sharper than it was: **the measurement that certified the corpus clean was
+  itself wrong**. It read line by line, and 7 of the 132 references wrap across a
+  line break — one of them broken, introduced by 19G.1, and invisible to the very
+  pass built to find it. It was found by re-measuring on the way to building the
+  check, not by the pass that reported zero. A hand audit that reports a clean
+  corpus is a claim about the audit, and this one was over-claimed by seven.
 - ~~**`spec/operator_button_audit.md` §§4–5 are knowingly stale.**~~
   **Resolved 2026-09-08** by Segment 19G Item 2 (#2203), which re-derived both
   sections from the templates. Kept rather than deleted because the shape of the
@@ -366,24 +398,33 @@ make at the time.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `b9798e72`**, and here is what that claim rests on: both
+**No known open bugs at `7d8e3321`**, and here is what that claim rests on: both
 CI tracks green on the merged head; `ruff check .` clean; all 16 skips read and
 attributed (15 Wave 5 legacy-card retirements, one fixture shape — none masking a
 defect); no `xfail` markers anywhere in `tests/`; no unresolved review threads on
-any of the window's 86 PRs; and `docs/known_limitations.md` reviewed against the
+any of the window's 92 PRs; and `docs/known_limitations.md` reviewed against the
 window's changes with nothing to add.
 
-**Three documentation defects are known, filed and unfixed** (19G's patch queue,
-added 2026-09-08). None is a code defect and none affects behaviour; all three
-are the class 19G.1 conceded as unmechanizable, which makes them a standing test
-of whether that concession was right. `rrw_sdd_in_practice.md` says spec coverage
-is "Not yet ... deferred" while `constitution.md` II cites the shipped test;
-`spec/ui_elements.md` records the Danger Zone's 2026-05-22 move as "Current:
-migrated" when 18R Item 4 brought the buttons back; and
-`app/web/routes_operator/_session_home.py` ~235 says the `/edit` redirect answers
-403 for a non-owner, which 19F PR 1 changed to 404. **The third is a code
-comment**, and is the one a future check could plausibly derive — a docstring
-naming a status code its gate does not return.
+~~**Three documentation defects are known, filed and unfixed**~~ — **all three
+fixed 2026-09-08 as 19G.3 (#2206)**, with a fourth found beside them. The
+original finding is kept because the class is the point, not the three
+instances. `rrw_sdd_in_practice.md` said spec coverage was "Not yet ...
+deferred" while `constitution.md` II cited the shipped test; `spec/ui_elements.md`
+recorded the Danger Zone's 2026-05-22 move as "Current: migrated" when 18R Item 4
+brought the buttons back; and `app/web/routes_operator/_session_home.py` said the
+`/edit` redirect answers 403 for a non-owner, which 19F PR 1 changed to 404 — the
+one a future check could plausibly derive, a comment naming a status code its
+gate does not return. Each correction states what the claim used to be, so the
+class stays visible after the instances are gone.
+
+**Two documentation defects were found and fixed *after* that queue closed**, and
+both are the same class: `spec/operator_button_audit.md` row #155 cited the wrong
+file for §5a (19G.2's own, eleven hours old, fixed by 19G.5), and
+`docs/unenforced_conventions.md` §2.1 pointed at a section number
+`spec/architecture.md` does not carry (19G.1's own, fixed by 19G.7). Neither was
+found by a person re-reading; both fell out of building a check. That is the
+useful evidence about the concession: the conceded classes are not being caught
+by the human pass that was supposed to catch them.
 
 Two things are **known and deliberately not fixed**:
 
@@ -422,8 +463,8 @@ Caught and fixed this window, worth remembering:
 
 ## 7. Estimated size upon completion
 
-Current: **57,117** production, **23,610** templates, **92,708** tests,
-**11,481** tooling.
+Current: **57,122** production, **23,610** templates, **92,933** tests,
+**11,556** tooling.
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
@@ -438,9 +479,9 @@ Current: **57,117** production, **23,610** templates, **92,708** tests,
 **Reconcile against 05sep.** That snapshot projected **~57.4–58.6k production,
 ~22.9–23.6k templates**. This one projects **+1.4k production and +1.4k
 templates** higher — and **the movement is almost entirely current totals, not
-new scope**: production grew 1,413 LOC and templates 1,350 because 19E and 19F
+new scope**: production grew 1,418 LOC and templates 1,368 because 19E and 19F
 shipped real surface, which the prior projection had not modelled as arriving in
-this window. Production is now **57,117**, already inside the range 05sep
+this window. Production is now **57,122**, already inside the range 05sep
 projected for *feature-complete v1* with four work items still outstanding; that
 projection was too low, and the honest reading is that it under-weighted how much
 surface 19E would add. **One item of scope was discovered** (the technical-support
@@ -476,6 +517,27 @@ conceded them.** 19G.1's own close shipped a wrong count and a wrong date, and
 by anything mechanical. Whether that is Article III working or Article III
 carrying too much is the question the next assessment should ask.
 
+**Amended again 2026-09-08 (second), and it answers that question early.** Items
+3 → 7 ran the same day: five PRs, no route, no template, no model, no migration —
+**+5 production lines, all of them a corrected comment**. What they did was
+repair the tooling that checks the documentation, and each repair was found by
+the previous one. 19G.4 widened `close_check` to see root-level `.md` and, in
+measuring that, found the C3 window's boundary defect; 19G.5 repointed six broken
+`§N` references and refused to work the boundary around, closing with its
+`exits 0` line **struck**; that strike produced 19G.6, which fixed the boundary;
+and 19G.7 built the `§N` check, which found a seventh broken reference — one that
+19G.5's own measurement had certified clean, because it read line by line and 7
+of 132 references wrap.
+
+So the answer to "is Article III carrying too much" is **partly, and the evidence
+is that the separate reader missed two**. Both post-queue defects (§6) were found
+by building a mechanism, not by reading. The three classes now checked are the
+three that turned out to be checkable; the two conceded ones remain conceded, and
+`docs/unenforced_conventions.md` is where that is written down rather than
+forgotten. The cost worth carrying forward: **a day of tooling repair produced
+five lines of product**, which is the right trade exactly once and would be a
+warning sign twice.
+
 **Recommended next moves** *(rewritten in the 2026-09-08 amendment: the original
 three were Segment 20, the button-audit regeneration, and the summary-drift
 question. Two shipped the same day as Segment 19G; the third is withdrawn.)*
@@ -499,13 +561,28 @@ question. Two shipped the same day as Segment 19G; the third is withdrawn.)*
    2026-09-08 as 19G.1 (#2197 → #2202) — per class, not as one question; see §5.
    The mechanism this document proposed was the rejected alternative.
 
-**What is actually next, given the above.** The queue is maintenance and it is
+~~**What is actually next, given the above.** The queue is maintenance and it is
 short: 19G's three filed documentation patches (§6), and its two carried open
 questions — whether the 139 `§N` references deserve a heading-validity check, and
 whether `close_check`'s `COMMITTED_PATH` should widen to root-level `.md` so a
 `constitution.md` commitment stops being invisible to the tool that validates
-commitments. Neither is urgent; both are cheap; and the segment carrying them has
-a close trigger, which is the safeguard the 19C shape lacked.
+commitments.~~ **All five shipped the same day** (#2206 → #2210): the patches as
+19G.3, the `COMMITTED_PATH` widening as 19G.4, and the heading check as 19G.7 —
+with 19G.5 and 19G.6 falling out of them. Both carried questions are answered and
+struck in the plan.
+
+**What is actually next, then (second amendment).** Nothing is queued, and that
+is the honest state rather than a gap to fill. Feature work stays host-blocked
+until the institutional Azure deployment concludes. Two small unblocked items sit
+in §7's table — the global technical-support contact (+30–60) and the theme
+customizer's element pass — and neither has been raised as a segment. **One
+defect is measured, recorded and deliberately not fixed:** `close_check` counts a
+`spec/`-prefixed path *anywhere* in a Doc-impact bullet as a commitment, so a
+bullet that merely cites a file commits the item to editing it. It has now bitten
+three consecutive manifests (19G.5, 19G.6, 19G.7), each worked around by
+rewording the bullet — which is the same shape as the C3 workaround 19G.6 removed:
+a check satisfied by editing the prose to suit it. 19G.4 measured it and left it
+open on purpose. It is the obvious next item if the segment takes one.
 
 **Settling 05sep's proposals.** Move #1 (decide whether a stale skip marker
 deserves a mechanism) — **carried, unactioned**; no skip went stale this window
