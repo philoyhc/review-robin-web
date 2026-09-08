@@ -1154,9 +1154,13 @@ continuation lines accumulated as `parse_bullets` does:
 
 - **The C3 window boundary.** Same tool, different defect: a path whose
   only edit lands in the commit that introduces the item heading reads
-  as unmodified. Three occurrences this segment. Not folded in, because
-  the fix is to the window logic rather than the path pattern and it
-  deserves its own measurement.
+  as unmodified. **Four occurrences this segment** — it fired on this
+  item too, on `docs/status.md`, while the item was fixing the *other*
+  `close_check` defect. Not folded in, because the fix is to the window
+  logic rather than the path pattern and it deserves its own
+  measurement; but four for four is no longer a coincidence, and any
+  item that adds a heading and edits its manifest paths in one commit
+  will hit it.
 
 ### Doc impact
 
