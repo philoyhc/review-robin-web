@@ -1285,7 +1285,9 @@ contract those files never agreed to.
   measurement still catches an injected bad reference (checked, so the
   zero is not vacuous).
 - `### Doc impact` section present and current
-- `python3 tools/close_check.py 19G.5` exits 0; any warning adjudicated
+- ~~`python3 tools/close_check.py 19G.5` exits 0~~ — **not met, and
+  deliberately not forced.** See Status: C3 reports the known
+  window-boundary artifact, fifth occurrence.
 - `### Status` records intended vs done
 - `docs/status.md` row added
 
@@ -1336,6 +1338,30 @@ checked the button role mapping — the substance — and did not check the
 cross-file citation, which is the fourth consecutive pass whose findings
 were entirely connective tissue and the first where the tissue was a
 pointer rather than a number or a date.
+
+**C3 fails, and this time I did not work around it.**
+`spec/operator_button_audit.md` and `spec/email_template_editor.md` are
+reported "not modified in window" when both were modified in the commit
+that introduced the `## Item 5` heading — the window's own boundary,
+**fifth occurrence in this segment**.
+
+Three times before this I cleared it by finding another reason to touch
+the same file in a later commit. Each of those edits was real, but the
+pattern is not: *a check satisfied by finding an excuse to write to a
+file again is a check being worked around, not passed*, and it is the
+same shape as the empty commit that the PR rules forbid for kicking CI.
+There is no further honest edit to make to those two specs here, so the
+Definition of done's `exits 0` line is **struck rather than met**, with
+the reason recorded.
+
+**One more thing this item exposed, before the boundary.** The first
+draft of the Doc-impact bullet above backticked both the wrong file and
+the right one, and `close_check` counted three commitments where there
+is one change — the *prefixed-path* false positive 19G.4 measured and
+deliberately left open, biting the manifest of the item that documents
+it, two items later. Reworded to name one path. The tool's rule is still
+the one the repo wants; the manifest adapted, which is the right
+direction.
 ---
 
 ## Carried open questions
