@@ -846,6 +846,38 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — Item 10 opened, and the deferral it lifts was wrong about
+where the check should live.** The author lifted the audit ahead of its
+trigger, hours after deferring it. The ledger entry is **removed**, not
+copied, per the ledger's own rule for a lifted item.
+
+**The wire-up in that entry said `tools/`. Building it showed why that
+was wrong.** Every script in `tools/` is stdlib + `git` and operates on
+the repo; none opens a database. More decisively, `CLAUDE.md` says the
+author runs no Python, alembic or database locally, and an agent sandbox
+cannot reach Azure Postgres — so a `tools/` script would have been a
+deliverable **nobody could run against the data it audits**. The check
+moved to a card on Sys Admin → Sessions Diagnostics: the deployed app is
+the only thing holding a connection to that database, and Sys Admin is
+the only surface whose audience may read across every session. **A
+deferral records a decision at the moment its cost is lowest and its
+information is thinnest** — the wire-up line was written before anyone
+tried to write the code, and it did not survive contact.
+
+**Rung 1 is the scaffold**, per `CLAUDE.md`'s rule for a new card: real
+copy and layout, sample rows, wired to nothing. Its placeholder banner is
+**pinned by a test that will fail when rung 2 lands** — the banner and
+that assertion come out in the same diff that makes the rows real, so the
+scaffold cannot be left in place by forgetting.
+
+**One thing the scaffold is careful about.** Sample rows that look like
+findings, on a page a sys-admin visits to check on a workspace, are a
+false alarm waiting to happen. The card carries an explicit
+placeholder banner, and a third test asserts the card renders
+*identically* whether or not the database holds an offending policy row —
+which is what proves rung 1 queries nothing, rather than trusting that it
+doesn't.
+
 **2026-09-08 — Item 9's open question closed: the audit is deferred,
 not dropped.** The author's call — leave it until there is a database
 worth auditing. Moved to `guide/deferred_consolidated.md` with a lift
@@ -1472,6 +1504,178 @@ safe to land in one.
 
 ---
 
+## Item 10 — Audit visibility rows that predate the import guard
+
+### Opportunity
+
+Item 9 closed the door: since PR #2188 the Settings-CSV import refuses a
+`(audience, window)` cell outside `_PER_CELL_VALID_MODES`, the same table
+the Band 3 editor enforces. That guard is **prospective**. Any row
+written before it — through Quick Setup, the Session-Home config card or
+rehydrate, the three doors onto the old unvalidated writer — is still
+sitting in `instrument_view_policies`, and `resolve_mode` honours it.
+
+The row that matters is a `reviewee` grant on `while_ongoing`, whose only
+legal mode is `None`. One of those is a reviewee reading responses while
+the review is still running.
+
+**The deferral is lifted, not reversed.** Item 9's open question was
+answered on 2026-09-08 with "leave it until there is a database worth
+auditing", and the entry went to `guide/deferred_consolidated.md` with a
+lift trigger. The author lifted it on 2026-09-08 ahead of that trigger.
+Per the ledger's own rule — *"When one fires, lift the section into a
+fresh segment plan (or fold it into a related in-flight segment) and
+delete its entry here"* — the entry is removed there rather than
+duplicated here.
+
+**What that means for the definition of done.** The premise of the
+deferral has not changed: the pilot has not deployed, so this cannot be
+verified by finding anything. What ships is a check that is **ready and
+proven against fixtures**, not an audit result. A green run today says
+"no rows in this database", and this database has almost no rows.
+
+### Decision
+
+**A read-only card on Sys Admin → Sessions Diagnostics**, not a script.
+The plan Item 9 carried said `tools/` — that was wrong, and building it
+is what showed why:
+
+- every script in `tools/` is stdlib + `git` and operates **on the
+  repo**; none opens a database;
+- `CLAUDE.md` is explicit that the author runs no Python, alembic or
+  database locally — there is no laptop dev loop;
+- an agent sandbox cannot reach Azure Postgres.
+
+So a `tools/` script would have been a deliverable **nobody could run
+against the data it audits**. The deployed app is the only thing holding
+a connection to that database, and Sys Admin is the only surface whose
+audience is entitled to a workspace-wide read: the query spans every
+session, which no per-session operator may see.
+
+**Rejected: a Validate-page finding per session.** It puts the answer in
+front of the operator who owns the session, which is the right person to
+act — but it only fires for sessions somebody re-validates, and a session
+already past validation is exactly the one nobody will touch again. The
+question here is retrospective and workspace-wide; the surface should be
+too. Worth revisiting as a *second* home if a hit is ever found.
+
+**Rejected: run it on deploy and log.** Findings in a log nobody reads
+are findings nobody has. Failing the deploy over pre-existing data would
+be worse — it would block a release to report a condition the release did
+not cause.
+
+### Semantics
+
+- **Read-only, always.** The card reports; it never clears a cell.
+  Deciding what an offending grant should become is a judgment about a
+  live review — whether the operator meant `after_release`, or meant
+  nothing — and belongs to the operator who owns that session, not to a
+  sweep run by an admin who does not know the review.
+- **Empty is the expected state, and must read as reassurance.** The card
+  says so in words rather than rendering a bare empty table, which reads
+  as "not implemented yet".
+- **All six cells, not just the reviewee's.** The check asks
+  `_PER_CELL_VALID_MODES` for every `(audience, window)` pair, exactly as
+  the import guard does. The reviewee's `while_ongoing` is the one with a
+  disclosure behind it, not the only one that can be wrong.
+- **The three not-a-mode shapes count as findings too**, matching the
+  guard: a half-set pair, the reserved-incoherent `aggregated` +
+  `identified`, and a legal mode in the wrong cell. A half-set pair is
+  reported because `decode_pair_to_mode` reads it as "off" — it is
+  currently harmless and still not what anybody authored.
+- **Ordering is by exposure, not by id.** A hit on a `ready` or
+  `expired` session is live; one on a `draft` or `archived` session is
+  not. The live ones sort first, because the card's reader is deciding
+  what to do this morning.
+- **Cost is bounded by instrument count, not session count.** One query
+  over `instrument_view_policies` joined to instruments and sessions;
+  the decode is in Python against a six-entry table.
+
+### Judgment calls — decided
+
+- **On Sessions Diagnostics, not a third nav page** (2026-09-08). The
+  Sys Admin nav has two entries and this is a diagnostic about sessions.
+  A third page for one card would make the nav the feature.
+- **No count in the nav or a badge** (2026-09-08). A badge implies
+  something to clear on every visit; the expected steady state is zero,
+  and a permanent "0" is noise.
+- **Reuse `valid_modes_for_cell` and `decode_mode`, do not restate the
+  table** (2026-09-08) — the same rule Item 9's guard follows, so a
+  change to a cell's rules cannot leave the audit reading an old copy.
+
+### Blast radius (measured)
+
+Commands run at `6d6840c0`, 2026-09-08:
+
+- `grep -n "sys-admin" app/web/routes_operator/_sys_admin.py | wc -l` →
+  the module owns every `/operator/sys-admin/*` route; the card hangs off
+  the existing `sys_admin_sessions` handler, so **no new route**.
+- `grep -n "_sys_admin" app/web/spec_registry.py` → **1** —
+  `spec/permissions.md` governs the module, so that is the spec the
+  coverage test will look at.
+- `grep -c "href" app/web/templates/operator/partials/sys_admin_top_nav.html`
+  → **2** nav entries, unchanged by this item.
+- Templates touched: **1** (`sys_admin_sessions.html`). New view module:
+  **1** (`app/web/views/`, per the fourth-seam rule — a status label
+  computed from instrument state is view shape, not business logic).
+
+Two PRs. No migration, no new route, no model change.
+
+### PR ladder
+
+1. **Scaffold.** The card on `sys_admin_sessions.html` with its real copy
+   and layout, rendering a **static placeholder** row set and the
+   empty-state text, wired to nothing. Per `CLAUDE.md`'s scaffold-first
+   rule for a new card. **Must not** query
+   `instrument_view_policies` or touch `visibility_policies`.
+2. **The wiring.** The view builder that runs the real check, the
+   handler passing it, and the tests — including a seeded offending row
+   per shape, and the empty-database case. **Must not** change the card's
+   shape agreed in rung 1.
+
+### Definition of done
+
+- The card renders on `/operator/sys-admin/sessions` for a sys-admin and
+  is unreachable for everyone else — asserted through the existing
+  `require_sys_admin` gate, not by reading it.
+- With no offending rows, the card says so in words — asserted.
+- A seeded `reviewee` + `while_ongoing` grant appears, naming session,
+  instrument, audience, cell and decoded mode — asserted.
+- A seeded illegal `peer_reviewer` cell and a seeded illegal `observer`
+  cell appear by the same code path — asserted.
+- A half-set pair and the reserved-incoherent pair each appear with their
+  own reason — asserted.
+- A legal grid produces no findings — asserted, so the check cannot pass
+  by finding everything.
+- Rows on `ready` / `expired` sessions sort above `draft` / `archived` —
+  asserted.
+- Nothing writes: the card issues no POST and the view calls no mutating
+  service — asserted by the absence of an audit event after a render.
+- `python3 tools/close_check.py 19C` exits 0.
+- `ruff check .` and the full suite pass.
+
+### Open questions
+
+- None. The one that mattered — whether to audit at all — was Item 9's,
+  and the author answered it twice: defer (2026-09-08), then lift
+  (2026-09-08).
+
+### Out of scope
+
+- **Clearing an offending cell.** Read-only by decision above. If a hit
+  is ever found, the fix is the operator's, on the Band 3 editor, which
+  already refuses to author the bad value.
+- **The Validate page.** Rejected above as the primary home; revisit only
+  if a hit is found.
+- **Item 9's guard.** Unchanged. This item is the retrospective half of
+  the same finding, not a second look at the prospective half.
+- **Any other integrity check.** The card is named for this one question.
+  A general "workspace integrity" surface is a different item with a
+  different scope, and inventing it here would mean designing for checks
+  nobody has asked for.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
@@ -1544,6 +1748,10 @@ refinements are identified.
 - `docs/security_posture.md` — drop the pointer to the retired
   authentication doc, whose content this file absorbed (Item 7).
   <!-- doc-impact-waived: finding 2.7 declined at PR 1 — the reference is a dated provenance note ("formerly ..., retired 2026-08-19"), not a live pointer; see Status -->
+- `spec/permissions.md` — the Sys Admin Sessions Diagnostics page gains the
+  read-only visibility-audit card; it is workspace-wide by construction, which
+  is why it sits behind `require_sys_admin` rather than on any per-session
+  operator surface (Item 10).
 - `spec/visibility_policy.md` — the per-cell validity table is a rule the
   **import** honours too, not only the Band 3 editor; an illegal cell in a
   Settings CSV rejects the apply (Item 9).
