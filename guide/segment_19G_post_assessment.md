@@ -2268,6 +2268,32 @@ and the new guard test now pins the consequence so a future reach for
 the label fails loudly instead of silently re-linking. Named in Out of
 scope, unchanged.
 
+**`spec-writer` found one, and it was the same mistake in a new place.**
+The sentence I appended to `spec/participant_model.md`'s **observer**
+row said the companion is not a fourth value "since the link enablement
+in the same table tests it (`!= "not opened"`)". That is the *reviewer's*
+gate. The observer's is `not lifecycle.is_archived(...)`
+(`_dashboard.py:231`, `_shared.py:248`) and never touches the string.
+The two agree on an archived session, so the claim is invisible in
+behaviour and wrong in cause — and my own commit message had already
+said so ("the hazard lives only on the reviewer path"), which is the
+uncomfortable part: the finding contradicts a sentence I wrote correctly
+somewhere else the same hour. Reworded to give the observer its own
+mechanism.
+
+Two smaller flags taken as well. `spec/role_landing_and_visibility.md`'s
+header dated the file to 19F PR 2 while §4 had just changed — corrected,
+and scoped, since only §4's archived rows were re-observed. And the
+tables described the companion per role while the template branches on
+`session.status` alone; a sentence now states the row-level condition
+once, because the per-role framing is what produced the observer error
+above. The layout note gained its third measured width.
+
+**What it did not find**, and this is the useful half: the reviewee
+exclusion, the two `enabled` expressions, the role-blind template
+condition and the measurement framing were all re-derived from the code
+independently and matched.
+
 ## Carried open questions
 
 Promoted from Item 1 at its close (2026-09-08) because neither is

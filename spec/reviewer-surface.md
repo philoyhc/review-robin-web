@@ -875,7 +875,10 @@ reviewee-/observer-only rows show `—` in those cells.
     (`!= "not opened"`), so a new value would re-link the
     reviewer surface on an archived session. It sits inline and
     wraps below the status on its own when the column narrows
-    (measured: side by side at 1440px, stacked at 1024px). For reviewer rows:
+    (measured 2026-09-08: side by side at 1440px, stacked at
+    1024px and 820px). No CSS was added for this — `.pill` is
+    `inline-block` with a right margin, so the wrap is the
+    browser's, not a breakpoint the app defines. For reviewer rows:
     computed via `lifecycle.session_status_for_reviewer`.
     For reviewee / observer-only rows: computed from session
     lifecycle alone (no reviewer-assignment check).

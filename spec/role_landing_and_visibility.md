@@ -1,6 +1,7 @@
 # Role landing and visibility
 
-**Current as of 2026-09-07 (Segment 19F PR 2).** Answers one question from
+**Current as of 2026-09-08 (Segment 19G Item 9; §4's archived rows
+re-observed then, the rest as of Segment 19F PR 2, 2026-09-07).** Answers one question from
 the reader's side: **given my role — or my lack of one — can I sign in,
 where do I land, and what do I see?**
 
@@ -130,9 +131,19 @@ session and of an archived one, for opposite reasons: a draft is not open
 One label for both leaves the reader unable to tell whether waiting is
 worth anything, so archived rows render a muted `archived` pill beside
 the status. It is a **companion, not a fourth status value**: the
-`session_status` string is unchanged, because reachability is derived
-from it (`!= "not opened"`) and a new value would re-link the reviewer
-surface on an archived session.
+`session_status` string is unchanged, because the **reviewer's**
+reachability is derived from it (`!= "not opened"`) and a new value
+would re-link the reviewer surface on an archived session. The
+observer's link is gated independently, on `is_archived` directly; the
+two agree here but by different routes.
+
+**The render condition is on the session, not the role.** The template
+tests `session.status == "archived"` once per row, so the tables below
+list the companion under both Reviewer and Observer for the reader's
+convenience, not because two rules exist. Only reviewer and observer
+rows can reach an archived session at all — a reviewee-only row cannot,
+since `reviewee_has_current_grant` is false there — so a row-level
+condition and a per-role one cannot be told apart from the outside.
 
 ### Reviewee
 
