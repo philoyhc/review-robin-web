@@ -44,7 +44,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.3** | The patch queue below — three documentation corrections | **Closed** 2026-09-08. One PR; a fourth found beside them. |
 | **19G.4** | `close_check` sees root-level `.md` — the first of the two carried open questions | **Closed** 2026-09-08. One PR. |
 | **19G.5** | The six broken `§N` references the measurement found | **Closed** 2026-09-08. One PR. |
-| 19G.6+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.6** | The C3 window boundary — `close_check`'s window excluded its own start commit | **Closed** 2026-09-08. One PR. |
+| 19G.7+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1362,7 +1363,213 @@ deliberately left open, biting the manifest of the item that documents
 it, two items later. Reworded to name one path. The tool's rule is still
 the one the repo wants; the manifest adapted, which is the right
 direction.
+
+**2026-09-08, later — the struck line is now met, by the check changing.**
+19G.6 makes the window `[start, end]`, and `close_check 19G.5` exits 0
+with no file edited to make it do so. The Definition of done above keeps
+its strike: it records what was true at the close, and the reason it was
+struck is what produced Item 6.
 ---
+
+## Item 6 — The C3 window boundary
+
+### Opportunity
+
+`close_check`'s C3 asks whether every path a manifest committed to was
+edited inside the plan's window. The window ran `git log start..end`,
+which **excludes `start` itself** — so a plan that landed its `Doc
+impact` manifest and the doc edit it commits to in one commit read as
+having dropped the commitment.
+
+That is not a rule anyone chose. It is the arithmetic of `A..B`, and the
+module's docstring recorded it as a consequence ("a plan that lands its
+manifest and its spec edit in one commit reads as unhonoured") rather
+than as a reason. Nowhere else does C3 ask *when* in the window an edit
+fell; its evidence standard is "a non-merge commit touched this path",
+and the docstring is explicit that it does not judge whether the edit
+was *correct* — "a one-character change to a committed path passes C3".
+By that standard an edit in the boundary commit is the same evidence as
+an edit the day after.
+
+It bit this segment four times, and 19G.5 stopped clearing it: three
+times before, C3 was made to pass by finding another reason to touch the
+same file in a later commit, and Item 5 recorded why that is not a pass —
+*a check satisfied by finding an excuse to write to a file again is a
+check being worked around*. Item 5 therefore closed with its
+`exits 0` line struck. A check whose standard close move is a manufactured
+edit is on `constitution.md` Article VI's road: retired by attrition,
+one waiver at a time.
+
+### Decision
+
+**The window becomes `[start, end]`** — the commit that records the
+commitment can also honour it.
+
+Rejected: **downgrade the boundary case to a WARN**, as the item-anchor
+ambiguity already is. That warn exists because two readings of the
+timestamps are equally consistent — the item was logged after its work
+landed, *or* this is another item's edit — and a person resolves it in
+one `git log`. Here there is nothing to resolve: the file was edited, in
+this plan's own commit, at the moment the commitment was written. A warn
+would ask a reader to adjudicate a fact, and would still leave the
+`exits 0` line unmeetable.
+
+Rejected: **leave it and waive each occurrence.** Five occurrences in
+three plans across four months is a recurring shape, not an accident,
+and Article VI is explicit that a check routinely waived is worse than
+no check.
+
+### Semantics
+
+- **Root commit.** `start^!` is the commit with its parents excluded, so
+  it resolves to the one commit whether or not it has a parent. Verified
+  against this repo's root commit.
+- **Merge start.** `-G` cannot return a merge (default `git log` shows no
+  diff for merges), and `--no-merges` is kept on the fallback, so a merge
+  start reads exactly as it did before.
+- **Backwards.** The window widens at its start by one commit and no
+  further; an edit before the window opens — including one before a
+  tagged bullet's `## Item n` heading — is still outside it. The
+  item-anchor logic and its warn are untouched.
+- **Cost.** One extra `git log` per path, and only when the ordinary
+  range came back empty.
+
+### Judgment calls — decided
+
+- **Two `git log` calls, not one clever range** (2026-09-08). `git log
+  A^! A..B -- path` expresses the same set in one call. Two calls put
+  the boundary case in the code where a reader meets it, and this is a
+  check whose semantics are the entire point.
+- **The count of prior occurrences stays at five in the prose, six in
+  the measurement** (2026-09-08). Five is the number of *situations* the
+  segment recorded; six is path-instances, because 14B commits to
+  `spec/email_infra_options.md` in two separate bullets. Both are stated
+  rather than reconciled into one number that means neither.
+
+### Blast radius (measured)
+
+Across all 99 plans (live + archived), at `bf611798`. The archived half
+is reproducible with `python3 tools/close_check.py --archived` on either
+side of this commit; the live half needed a throwaway walker over
+`close_check`'s own `parse_bullets` / `window` / `honoured`, because
+nothing in the tool reports across *live* plans. Per-plan figures are
+reproducible one at a time with `python3 tools/close_check.py <id>`.
+
+- **22** committed paths currently fail C3; **6** of them are honoured
+  by the window's own start commit and nothing else. After the change,
+  **16** fail and **0** are boundary cases.
+- Every one of the six was read: `19B` `docs/status.md` (`53d867dc`),
+  `14B` `spec/email_infra_options.md` twice (`27d7081e`), and Item 5's
+  three paths (`87ae5a05`). In each, the commit that added the manifest
+  or the item heading also carried the doc edit. **No false pass is
+  introduced in the corpus** — the change turns exactly these six.
+- Verdicts that flip **FAIL → PASS**: three. `14B` (live), `19B`
+  (archived), `19G.5`. `python3 tools/close_check.py --archived` moves
+  from 132/148 (89%) to 133/148 (90%), and 25 → 26 plans fully honoured.
+- Callers: `honoured()` has two, both inside `check_manifest`
+  (`grep -n "honoured(" tools/close_check.py`).
+
+### PR ladder
+
+1. **PR 1 — the boundary, its tests, and the two prose homes.** One PR:
+   the code change is four lines and the docstring that mis-states the
+   rule sits in the same file. Must not touch the item-anchor logic, the
+   heading regexes, or any archived plan.
+
+### Definition of done
+
+- `honoured()` counts the start commit; `tools/close_check.py 19G.5`
+  exits 0 **without any file being edited to make it do so** — the
+  struck line in Item 5's Definition of done is now met by the check
+  changing, not by the corpus being made to fit it.
+- Three new tests in `tests/unit/test_close_check.py`, each shown to
+  fail against a mutant: the boundary case fails on the pre-change
+  `honoured`; the never-touched guard fails when the fallback always
+  returns a date; the before-the-window guard fails when the fallback
+  drops its anchor.
+- The archived-corpus numbers above are reproducible with
+  `python3 tools/close_check.py --archived`, and each named plan's
+  verdict with `python3 tools/close_check.py <id>`.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.6` exits 0
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The remaining 16 C3 failures are the check working: archived
+  plans that dropped a commitment. They are a reading task for whoever
+  wants it, not a defect in the tool.
+
+### Out of scope
+
+- **The other 16 failures.** Each is a real unhonoured commitment on a
+  plan that has already closed. Recorded here so the number is not read
+  as a regression.
+- **Widening `COMMITTED_PATH` to `tools/` and `guide/`.** The manifests
+  that name `tools/README.md` already mark themselves *"for the human —
+  outside the script's regex"*, so the convention holds; changing the
+  regex is 19G.4's class, not this one, and bundling it here would put
+  two independent changes in one PR.
+
+### Doc impact
+
+- `docs/status.md` — row at the close.
+- *(for the human — outside the script's regex)* `tools/README.md`'s
+  `close_check.py` row and `.claude/skills/segment-plan/SKILL.md` step 2,
+  both of which state the window rule; the check and its guidance move
+  together, which is 19G.1 rung 2's lesson.
+
+### Status
+
+**2026-09-08 — landed as planned: one PR, four lines of behaviour, three
+tests.**
+
+Intended one PR; shipped one PR. The ladder's "must not touch" held —
+the item-anchor logic, the heading regexes and the archived plans are
+untouched, and the diff outside the boundary is docstring, README, skill
+and this plan.
+
+**Decisions confirmed at build:**
+
+- **`start^!` rather than `start^..end`** (2026-09-08). `start^` breaks
+  on a root commit; `^!` resolves to the one commit whether or not it has
+  a parent, verified against this repo's root commit `2420f8e6`.
+- **The fallback runs only when the ordinary range came back empty**, so
+  the common path costs nothing.
+
+**Every one of the six boundary cases was read before the change, not
+after.** That was the check on the decision: if any of the six had been
+a mass restructure that merely happened to touch a committed path, the
+change would have manufactured a false pass. All six are a manifest or
+an item heading landing in the same commit as the doc edit it names —
+`19B` `53d867dc` (a one-line `docs/status.md` row), `14B` `27d7081e`
+(the Segment 14 → 14A/B/C split, renaming 34 lines of
+`spec/email_infra_options.md`), and Item 5's `87ae5a05`.
+
+**The three tests were each shown to fail against a mutant**, because a
+guard that cannot fail is not a guard:
+
+| Test | Mutant it fails against |
+|---|---|
+| the boundary case | the pre-change `honoured` |
+| a path no commit touched | the fallback always returning a date |
+| an edit before the window opens | the fallback dropping its `start` anchor |
+
+The second and third exist because this change *widens* a check, and the
+cheap way to make a boundary case pass is to stop checking. The
+never-touched guard is the one that would catch that.
+
+**This item's own close is the case it fixes.** Item 6's `docs/status.md`
+row lands in the commit that introduces the `## Item 6` heading — so
+under the old window `close_check 19G.6` would have failed C3 on its own
+manifest, and under the new one it passes. That is not a coincidence to
+smile at: it is why the boundary recurs. A one-item documentation change
+has no second commit to spend, and the check was asking for one.
+
+**What did not change.** The remaining 16 C3 failures across the archived
+plans are real dropped commitments, and this change does not touch them.
+The `--archived` figure moving 89% → 90% is one plan, not a trend.
 
 ## Carried open questions
 
