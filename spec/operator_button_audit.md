@@ -138,14 +138,14 @@ The 2026-05-22 audit recorded four here. Where they went:
 
 | Was | Label | Now |
 |---|---|---|
-| 16 | Save changes | §5c — Session details card footer, as **Save** |
-| 17 | Cancel | §5c — Session details card footer |
+| 16 | Save changes | §5b — Session details card footer, as **Save** |
+| 17 | Cancel | §5b — Session details card footer |
 | 17a | Delete Data | §5e — back on Session Home's Danger Zone |
 | 17b | Delete session | §5e — back on Session Home's Danger Zone |
 
 The Danger Zone therefore moved **twice**: off Session Home on
 2026-05-22 (commit `b490825`) and back onto it when 18R Item 4 retired
-the page it had moved to. `spec/ui_elements.md` §"Inline-styled buttons"
+the page it had moved to. `spec/ui_elements.md` §"Inline-style buttons"
 still records only the first half of that round trip.
 
 ---
@@ -180,7 +180,7 @@ four roles, no inline styles.
 | 152 | Stop releasing responses | `<button type="submit">` | `btn secondary` | Secondary |
 | 153 | Archive session | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** — serious but recoverable, per §6 |
 | 154 | Regenerate & prepare | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** |
-| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — recovery inside a lock card, per §6 |
+| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/visual_style_rrw.md` §5a. Not a lock card: §6's lock-card example is one use of this role, not its definition |
 
 Buttons #18–#27 of the 2026-05-22 audit are superseded wholesale: that
 table described a four-state Next Action card ("Validate Setup", "See
@@ -212,7 +212,7 @@ Source: `partials/_quick_setup_card.html`. Also rendered inert on
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
 | 32 | Quick Setup footer | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/quick-setup/lock` |
-| 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel; recovery inside the lock card, per §6 |
+| 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155, not a lock card |
 
 ### 5d — Extract Data — moved off this page
 

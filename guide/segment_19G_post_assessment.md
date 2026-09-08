@@ -833,6 +833,46 @@ annotating two drift findings outside §§4–5: both described the
 regenerated surfaces in the present tense and both were false, so
 leaving them would have relocated the defect rather than fixed it.
 
+**`spec-writer` adjudication — three flags in the spec, all real, all
+mine; one in code, filed.**
+
+- **A cross-reference to the wrong section.** §4's "Was → Now" table
+  sent buttons #16 and #17 to **§5c** (Quick Setup) instead of **§5b**
+  (Session Details). The two rows beside them, #17a and #17b, point at
+  §5e correctly — so the table was half right, which is the version a
+  reader trusts. Corrected.
+- **A justification I inferred rather than checked.** Rows #155 and
+  #160 described their `.btn.alert` Cancels as *"recovery inside a lock
+  card, per §6"*. Neither is in a lock card: #155 sits on a
+  `.banner.banner-warning` and #160 on a `.banner.banner-error`, and
+  `.card.lock` appears in neither template. §6 offers the lock card as
+  an **example** of Outline-amber, and I read the example as the
+  definition. The role was right and the reason was wrong — which is
+  the more durable error, because a reader copies the reason. Both rows
+  now cite the inline-banner convention in `spec/visual_style_rrw.md`
+  §5a, and say plainly that §6's lock card is one use of the role, not
+  its definition.
+- **A misquoted heading.** The file cited `spec/ui_elements.md`
+  §"Inline-styled buttons"; the heading is "Inline-style buttons". The
+  substance of the citation — that the entry records only the first half
+  of the Danger Zone's round trip — was confirmed correct.
+
+**Filed, not fixed — a stale code comment.**
+`app/web/routes_operator/_session_home.py:235` says the `/edit` redirect
+keeps its gate *"so a non-owner still gets 403, not a bounce"*. Since
+19F PR 1 that gate answers **404** for an ordinary non-owner, reserving
+403 for the sys-admin exemption. It is one line in a file this item's
+ladder says not to touch, and it is code rather than spec. Recorded here
+and in the PR for the author.
+
+**Worth noting what the pass did *not* find.** The fifteen button sites,
+every label and class, the counter-intuitive role mapping
+(`danger-solid` = Alert filled amber, `alert` = Outline-amber), and both
+superseded-annotation claims were re-derived independently and matched.
+The three flags were all in the connective tissue — a section number, a
+justification, a heading — which is where a document that reads fluently
+hides its errors.
+
 ---
 
 ## Carried open questions
