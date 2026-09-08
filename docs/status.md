@@ -1,6 +1,28 @@
 # Implementation status
 
-**As of:** 2026-09-07. Latest shipped — **Segment 19F PR 6**: the specs
+**As of:** 2026-09-08. Latest shipped — **Segment 19H Item 2**: locking
+an instrument card with unsaved edits now honours its own warning. The
+confirm said *"Your changes will be lost"* and then neither reverted nor
+saved, copying the edited values into the locked read-only view — a
+locked card displaying state the database did not have. It now discards
+and reloads without `?editing`, so the card comes back locked **and**
+clean. The pre-fix template was run through the same browser scenario
+before being replaced, which produced the sharpest statement of the
+defect and one the write-up did not have: the confirmed lock left the
+card locked *and* dirty, **with Save still enabled on it**. Before it —
+**19H Item 1**: the card's `Set up` / `Not set up` pill and the page's
+aggregate Instruments pill both went stale after the reload-free Save,
+because the predicate behind them reads exactly what the card edits and
+nothing re-read it; `/save` now returns that state and the client
+repaints both. Its first wiring test **asserted nothing** — the
+attribute name it grepped for also appears in the repaint helper's own
+selector string — which is `docs/unenforced_conventions.md` §1.6 biting
+the segment after the one that wrote it. Before them — **Segment 19G**,
+ten items in one day, **26 lines of shipped surface** and everything
+else documentation and the tooling that checks it: `close_check`
+repaired three times by its own findings, the `§N` heading-validity
+check, `docs/unenforced_conventions.md` opened, and the `archived`
+companion pill on `/me`. Before it — **Segment 19F PR 6**: the specs
 pass, which found **three specs the plan never named**.
 `spec/reviewer-surface.md` carried six stale claims about the surfaces
 19F rewrote (`close_check` flagged it, since `spec_registry.py` maps
