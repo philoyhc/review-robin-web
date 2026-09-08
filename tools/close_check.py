@@ -42,7 +42,15 @@ at close, and the human's. The script reports; the human acts.
 - **C4** every waiver carries a reason.
 - **C6** a `Status` block exists at the closing level — **warn only** in
   v1, promoted to a failure once the template has been in force for a
-  few closes. There is no C5 (see the plan's judgment calls).
+  few closes.
+- **C7** every `<!-- cites: … -->` names a path its bullet contains. The
+  marker says a path is *cited*, not committed to — see `CITES`. Both
+  directions, so an escape covering nothing fails rather than quietly
+  becoming a blanket.
+
+There is no C5: the draft's vocabulary-rename check was dropped at 19A
+(see that plan's judgment calls), and the number stays retired rather
+than reused, so the record keeps meaning what it said.
 
 ## Heading matching, and why it is asymmetric
 
@@ -163,6 +171,25 @@ def resolve_committed(path: str) -> str:
 
 
 WAIVER = re.compile(r"<!--\s*doc-impact-waived:(.*?)-->", re.DOTALL)
+
+# A path a bullet *cites* rather than commits to. `COMMITTED_PATH` matches
+# a prefixed path anywhere in the bullet, deliberately — bullets
+# legitimately commit to several specs after the dash, and a head-only
+# rule loses seven such commitments (19G.4's measurement). The cost is
+# that a bullet describing an edit *to a pointer* names its target, and
+# the target reads as a commitment the item never made. Both escapes were
+# bad: waive it (the waiver is per-bullet and would waive the real
+# commitment too) or drop the backticks (which distorts the prose to
+# satisfy the checker, against `CLAUDE.md`'s "backtick every path").
+# So the author says which, once, in the bullet:
+#
+#     - `docs/x.md` — §2.1's `spec/architecture.md` pointer is renamed.
+#       <!-- cites: spec/architecture.md -->
+#
+# Comma-separated, repo-relative, matched anywhere in the bullet. C7
+# fails a `cites:` naming a path the bullet does not contain, so the
+# escape cannot outlive its reason or quietly become a blanket.
+CITES = re.compile(r"<!--\s*cites:(.*?)-->", re.DOTALL)
 ITEM_HEADING = re.compile(r"^## Item (\d+)\b")
 # An "(Item n)" ownership tag on a segment-level manifest bullet. The
 # parenthetical must *begin* with the item reference (after an optional
@@ -288,6 +315,16 @@ def find_manifests(text: str) -> dict[str, object]:
     }
 
 
+def _all_paths(bullet: dict) -> list[str]:
+    """Every path the bullet names, before `cites:` removes any."""
+    head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
+    return [
+        resolve_committed(raw)
+        for raw in COMMITTED_PATH.findall(bullet["text"])
+        + COMMITTED_BARE.findall(head)
+    ]
+
+
 def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
     """Split a manifest body into bullets; a bullet may wrap over lines."""
     bullets: list[dict] = []
@@ -303,13 +340,23 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
         waiver = WAIVER.search(bullet["text"])
         bullet["waived"] = waiver is not None
         bullet["reason"] = waiver.group(1).strip() if waiver else None
+        cited = [
+            name.strip()
+            for marker in CITES.findall(bullet["text"])
+            for name in marker.split(",")
+            if name.strip()
+        ]
+        bullet["cites"] = cited
         seen: list[str] = []
         head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
         for raw in COMMITTED_PATH.findall(bullet["text"]) + COMMITTED_BARE.findall(head):
             path = resolve_committed(raw)
-            if path not in seen:
+            if path not in seen and path not in cited:
                 seen.append(path)
         bullet["paths"] = seen
+        bullet["cited_absent"] = [
+            name for name in cited if name not in seen and name not in _all_paths(bullet)
+        ]
         bullet["items"] = sorted({
             int(number)
             for tag in ITEM_TAG.findall(bullet["text"])
@@ -604,6 +651,21 @@ def check_manifest(
         "id": "C6", "what": "Status block present",
         "status": PASS if status_present else WARN,
         "detail": [] if status_present else [f"no Status block at {label} level"],
+    })
+
+    # C7 — every `cites:` names a path its bullet actually contains.
+    # Both directions, like the doc-conventions markers: an escape that
+    # covers nothing is stale in the way nobody notices, because the
+    # suite stays green while the marker quietly excuses a path that is
+    # no longer there.
+    c7 = [
+        f"line {bullet['line']}: cites `{name}`, which the bullet does not name"
+        for bullet in bullets
+        for name in bullet["cited_absent"]
+    ]
+    checks.append({
+        "id": "C7", "what": "every cites: names a path in its bullet",
+        "status": FAIL if c7 else PASS, "detail": c7,
     })
 
     return {
