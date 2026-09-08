@@ -846,6 +846,16 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — Item 9's open question closed: the audit is deferred,
+not dropped.** The author's call — leave it until there is a database
+worth auditing. Moved to `guide/deferred_consolidated.md` with a lift
+trigger rather than left in a plan that will eventually archive, because
+a deferral nobody can find at the moment it matters is indistinguishable
+from having forgotten. The trigger is the first deployment carrying
+imported sessions, and the entry says to run it *before* any
+reviewee-facing window opens: a hit would be a live disclosure, and
+finding one after release answers the question too late to act on it.
+
 **2026-09-08 — Item 9 shipped in one PR, as planned, plus a spec
 correction the plan did not anticipate.** The guard went where the plan
 said — `_cross_row_errors`, before `_apply_plan` — and the ladder's one
@@ -1261,7 +1271,7 @@ problem:
 
 ---
 
-## Item 9 — The Settings-CSV import writes visibility cells the editor forbids
+## Item 9 — The Settings-CSV import writes visibility cells the editor forbids — ✅ shipped 2026-09-08
 
 ### Opportunity
 
@@ -1432,14 +1442,20 @@ safe to land in one.
 
 ### Open questions
 
-- **Rows already persisted through the old door.** The guard is
-  prospective. Whether any live session carries an illegal cell today is
-  unknown from here and unmeasurable in the sandbox — the pilot has not
-  deployed, so the honest answer is "probably none, and nobody has
-  checked". Decides: the author, on whether this item also ships a
-  one-off audit query (a `SELECT` over `instrument_view_policies`
-  against `_PER_CELL_VALID_MODES`) or leaves it until there is a
-  database worth auditing.
+- ~~**Rows already persisted through the old door.**~~ **Resolved
+  2026-09-08 — deferred, by the author: leave the audit until there is a
+  database worth auditing.** The guard is prospective, and the
+  population at risk is only *sessions whose config was imported from a
+  hand-edited bundle before 2026-09-08*; the pilot has not deployed, so
+  that population is very likely empty. An audit run against a database
+  with no such rows proves nothing and has to be re-run later anyway.
+  Recorded in `guide/deferred_consolidated.md` (Part A, "Data integrity
+  & template maintainability") with its lift trigger — **the first real
+  deployment carrying imported sessions**, run before any
+  reviewee-facing window opens, since a hit is a disclosure. Kept here
+  rather than deleted because the question is what makes the deferral a
+  decision rather than an oversight: nobody has checked, because there
+  is not yet anything to check.
 
 ### Out of scope
 
