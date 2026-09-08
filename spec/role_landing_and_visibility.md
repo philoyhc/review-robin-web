@@ -1,6 +1,7 @@
 # Role landing and visibility
 
-**Current as of 2026-09-07 (Segment 19F PR 2).** Answers one question from
+**Current as of 2026-09-08 (Segment 19G Item 9; §4's archived rows
+re-observed then, the rest as of Segment 19F PR 2, 2026-09-07).** Answers one question from
 the reader's side: **given my role — or my lack of one — can I sign in,
 where do I land, and what do I see?**
 
@@ -118,11 +119,31 @@ Recorded per state with an active roster row in each.
 | `validated` | listed, "not opened" | no | — |
 | `ready` | listed, "open" | **yes** | opens |
 | `expired` | listed, "closed" | **yes** | **opens** |
-| `archived` | listed, "not opened" | no | — |
+| `archived` | listed, "not opened" **+ an `archived` companion pill** | no | — |
 
 The surface route admits `is_ready` **or `is_expired`** — a **closed**
 session's review surface still opens. Draft, validated and archived
 render the not-open page instead.
+
+**Why `archived` carries a second pill.** `not opened` is true of a draft
+session and of an archived one, for opposite reasons: a draft is not open
+*yet*, an archived session is not open *any more* and will not be again.
+One label for both leaves the reader unable to tell whether waiting is
+worth anything, so archived rows render a muted `archived` pill beside
+the status. It is a **companion, not a fourth status value**: the
+`session_status` string is unchanged, because the **reviewer's**
+reachability is derived from it (`!= "not opened"`) and a new value
+would re-link the reviewer surface on an archived session. The
+observer's link is gated independently, on `is_archived` directly; the
+two agree here but by different routes.
+
+**The render condition is on the session, not the role.** The template
+tests `session.status == "archived"` once per row, so the tables below
+list the companion under both Reviewer and Observer for the reader's
+convenience, not because two rules exist. Only reviewer and observer
+rows can reach an archived session at all — a reviewee-only row cannot,
+since `reviewee_has_current_grant` is false there — so a row-level
+condition and a per-role one cannot be told apart from the outside.
 
 ### Reviewee
 
@@ -180,7 +201,7 @@ the Reviewee pill is missing.
 | `validated` | listed, "not opened" | **yes** | **200** |
 | `ready` | listed, "open" | yes | 200 |
 | `expired` | listed, "closed" | yes | 200 |
-| `archived` | listed, "not opened" | **no — unlinked** | 200, empty |
+| `archived` | listed, "not opened" **+ an `archived` companion pill** | **no — unlinked** | 200, empty |
 
 **Observers are deliberately not grant-gated** (19F decision 4): being
 appointed an observer is not a disclosure *about* the observer, so the
