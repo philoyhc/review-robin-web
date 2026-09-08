@@ -2257,7 +2257,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — **open** (a standing home for small refinements; all eight items shipped) — Item 8 (input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family) ✅ shipped 2026-09-06; Item 7 (the first drift sweep's eight findings) ✅ shipped 2026-09-05; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083), **v1.1 2026-09-06** (primitive readout, unused-primitive marker, stale-document merge fix, 3:1 contrast gate; the `beyond-*` variant set retired); detailed plan: `guide/segment_19C_refinements.md`
+### Segment 19C — Refinements — ✅ complete + archived 2026-09-08 (ten items, 2026-08-20 → 2026-09-08; plan archived: `guide/archive/segment_19C_refinements.md`) — Item 1 friendly tag labels via roster CSV headers (#2005 → #2013); Items 3–4 Danger Zone hardening + button refinements and Item 2 light / dark Display mode (#2014 → #2031); Item 6 two-tier semantic colour tokens — 79 primitives under 103 role-named tokens (#2047 → #2062); Item 5 theme customizer v1, a three-part developer designer in `tools/` (#2032 → #2083), **v1.1** primitive readout + unused-primitive marker + stale-document merge fix + 3:1 contrast gate (#2152 → #2155); Item 7 the first drift sweep's eight findings (#2116 → #2118); Item 8 input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family (#2126 → #2128); **Item 9** the Settings-CSV import refuses a visibility cell the Band 3 editor refuses (#2188); **Item 10** the Sys Admin Visibility grid audit card, scaffold then wiring (#2191 + #2192)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2483,6 +2483,17 @@ on* rather than what it does. Brief and findings:
   reminders are the real gap). Recorded in the 14B plan, the deferred
   ledger, `status.md`, `known_limitations.md`, the 04sep assessment (dated
   notes) and the queue entry below.
+
+
+**Closed 2026-09-08 because the holding shape had outlived its use.** 19C
+was opened as a standing home for small refinements and accreted ten items
+over nineteen days — a plan long enough that reading it end to end stopped
+being how anyone used it, and `close_check`'s window spanned three other
+segments' work. **New refinements get their own segments** (author,
+2026-09-08). Two items parked in its Future-items list and never built
+moved to **Upcoming → Stubs** below rather than archiving with the plan:
+the theme-customizer element pass, and the global technical-support
+contact.
 
 ### Segment 19E — Operator onboarding — ✅ complete + archived 2026-09-07 (PRs #2130 → #2173, with eight interleaved PRs from other work, + close #2176; plan archived: `guide/archive/segment_19E_operator_onboarding.md`)
 
@@ -2723,6 +2734,44 @@ dep chains called out at the bottom of this file.
    in the plan's Status section.
 
 #### Stubs
+
+- **Regenerate `spec/operator_button_audit.md` §§4–5** *(filed 2026-09-08 by
+  19C's close audit)*. The file is a dated snapshot last refreshed
+  2026-05-22, and its Session-Home sections describe a layout that Segment
+  18R Item 4 replaced: they still put the Danger Zone on an Edit Session
+  Details page that no longer exists (`session_edit.html` is gone;
+  `/sessions/{id}/edit` is a 308 redirect), still show an Extract Data card
+  on Home, and §5a's Next-Action state table predates the ten-state Workflow
+  card. A **staleness banner naming all three** was added at the close so no
+  reader is misled meanwhile; the sections themselves want re-deriving
+  against `session_detail.html`, `spec/session_home.md` and
+  `spec/workflow_card.md`. Not done at 19C's close on purpose — it is its own
+  slice, and absorbing it was the habit that closed the segment. The
+  legend's **role vocabulary is current** and unaffected. One PR, no plan
+  doc needed.
+
+- **Theme customizer — a full pass over every element** *(author intent,
+  logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C
+  closed)*. Item 8 moved two token families and, in doing so, turned up three
+  things reading the code would not have: the help card's inherited 2px
+  border, a stale facet in the pick-list, and an edit box that had never had a
+  visible edge. All three were found by **looking**. The harness now covers
+  the elements those touched; the intent is to work through the rest the same
+  way rather than element-by-element as defects surface. Unscoped on purpose —
+  it will produce its own findings, and each is likely its own small slice.
+  **No plan doc**; open one when the pass starts.
+
+- **Technical-support contact (global)** *(filed 2026-05-03 from the Segment 11
+  Tier 2 §24 reframe; moved out of Segment 20 2026-09-05; **unhomed
+  2026-09-08** when 19C closed)*. A deployment-wide "something looks broken"
+  address, distinct from the per-session operational help contact on
+  `ReviewSession` (`app/schemas/sessions.py`). Reached by a reviewer hitting an
+  auth failure, a 500, or an invalid link. New env var read through
+  `app/config.py`, surfaced on the chrome footer, the error pages and the
+  invalid-link landing; **unset renders nothing**, which is why the mechanism
+  does not wait for the institutional Azure deployment — only the address does,
+  and setting it is Segment 20's job. Small, isolated, `[chrome]`.
+  **No plan doc**; it is one slice and its reasoning fits a PR body.
 
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does

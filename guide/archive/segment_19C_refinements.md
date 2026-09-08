@@ -846,6 +846,93 @@ would be perverse.
 
 ## Status
 
+**2026-09-08 — the close's `spec-writer` pass: five files with real drift,
+four fixed and one deliberately not.** Every finding was verified against
+the code before it was acted on. Six of the nineteen manifest files came
+back clean, including `spec/color_tokens.md`, whose 80-primitive /
+107-semantic count still matches `base.html` exactly.
+
+**Three of the five were pre-19C drift that this manifest inherited.**
+Segment 18R Item 4 moved editing back onto Session Home and retired the
+Edit Session Details page three weeks ago; `spec/session_home.md` and
+`spec/sessions_overview.md` recorded it correctly, and three *summaries*
+of them did not — `spec/visual_style_rrw.md`, `spec/operator_ui_concept.md`
+(twice, plus a whole section describing the retired page as live), and
+`spec/operator_button_audit.md`. **A document that summarises another
+document does not fail when the subject changes; it just quietly stops
+agreeing.** Nothing catches that: both files are internally consistent,
+and no test compares them.
+
+**Two were 19C's own, and neither had surfaced until now.**
+`docs/security_posture.md`'s destructive-action table listed the confirm
+token and the permission gate on `/delete-data` and `/delete` but not
+`_require_editable` — the lifecycle gate **Item 3 added**, which is the
+whole of "locked while Activated". And `spec/ui_elements.md` recorded
+input and table borders as the literal `#ddd` against
+`border-default` "(`#D1D5DB`)" — wrong twice, because the rules had
+already been tokenized and `#D1D5DB` was `--border-default`'s
+**pre-Item-8** value. **Item 8 is what made that parenthetical wrong**,
+and Item 8 did not touch the file that carried it.
+
+**`spec/operator_button_audit.md` was flagged and not regenerated.** The
+audit wants §§4–5 re-derived against the current templates — a real
+slice, and absorbing it into a close is exactly the habit that closed
+this segment. It got a **staleness banner naming all three false claims**
+so no reader is misled, and the regeneration is filed in
+`guide/todo_master.md`. Its legend also gained the **Alert** role, which
+row #69 had been using since it shipped while the legend that decodes the
+table never defined it.
+
+**2026-09-08 — closed. Intended versus done, across ten items.** 19C was
+planned as a holding segment for small operator-facing refinements and it
+did that: every item it took on shipped, none was struck, and the two it
+never started are rehomed rather than dropped. What it also did — and
+this is the reason it is closing rather than continuing — is **grow past
+the shape that made it useful**.
+
+**The holding shape has three costs, and 19C paid all of them.**
+
+1. **A plan nobody reads end to end.** Ten items over nineteen days is
+   long enough that a reader looking for one decision scrolls past nine
+   others. The items are self-contained, which is what made adding
+   "just one more" cheap each time.
+2. **A `close_check` window that means almost nothing.** The window runs
+   from the manifest's first commit to the close, so 19C's spanned the
+   whole of 19A, 19E and 19F. Both of its advisory notes pointed at other
+   segments' work — the check cannot distinguish "touched during this
+   segment" from "touched by this segment" when a segment lasts long
+   enough to contain others.
+3. **Pointers that rot.** `docs/status.md` promised the technical-support
+   contact as *"Segment 19C Item 8"*. Item 8 is the input-boundaries
+   work; the contact sat unnumbered in Future items, unbuilt. The
+   reference was wrong the day it was written and nothing checks a
+   cross-file pointer against a plan's numbering. A segment that keeps
+   gaining items keeps inviting that error.
+
+**Both notes were adjudicated, not actioned.** `_results.py` was touched
+by 19F PR 4, which declared `spec/participant_model.md` in its own
+manifest. `_preview_surface.py` was touched by 19C Item 7 PR 1 — and
+there the change was a **docstring corrected to match**
+`spec/preview_hub.md`, which was already right. A note firing on a
+code→spec correction is the check doing its job and owing nothing: the
+direction of the fix is what the note cannot see.
+
+**Two items leave alive.** The theme-customizer element pass (author
+intent, logged at Item 8's close) and the global technical-support
+contact (moved out of Segment 20 on 2026-09-05) moved to
+`guide/todo_master.md` under Upcoming → Stubs. The ledger
+(`deferred_consolidated.md`) would have been the wrong home for both:
+that file is explicitly work *not* intended to ship, and these are
+intended — just not scheduled, and no longer parked anywhere that was
+about to be archived.
+
+**What the segment produced, in one line each:** the roster-CSV header as
+the sole friendly-label carrier (1); light / dark mode (2); Danger Zone
+gating and button treatments (3, 4); the theme customizer and the
+two-tier token reorg it reports on (5, 6); the first drift sweep's
+follow-through (7); input boundaries at 3:1 (8); and, from 19F's close
+audit, the import guard and the retrospective audit card (9, 10).
+
 **2026-09-08 — Item 10 rung 2 shipped: the card is wired, and the audit
 found nothing, which is the expected result and not a verification.**
 `app/web/views/_visibility_audit.py` reads every
@@ -1714,34 +1801,27 @@ Two PRs. No migration, no new route, no model change.
 
 ---
 
-## Future items (add as they come up)
+## Future items — retired at close
 
-Landing place for further small operator-facing refinements. Log new ones
-here as `Item N` with the same problem / decision / scope / done-when shape,
-and keep each a self-contained slice. The user will populate this list as
-refinements are identified.
+This section was the segment's landing place for further refinements, and
+it is why 19C stayed open for nineteen days. **It is closed with the
+segment** (author, 2026-09-08): new refinements get their own segments
+rather than accreting here.
 
-- **A full pass over every element in the customizer** *(author intent, logged
-  2026-09-06 at Item 8's close)*. Item 8 moved two token families and, in doing
-  so, turned up three things reading only the code would not have: the help
-  card's inherited 2px border, a stale facet in the pick-list, and an edit box
-  that had never had a visible edge. All three were found by **looking**. The
-  harness now covers the elements those touched; the intent is to work through
-  the rest the same way rather than element-by-element as defects surface.
-  Not scoped here — it will produce its own findings, and each is likely its own
-  small item.
+Two items were parked here and unbuilt when the segment closed. Neither
+is dropped — both moved to `guide/todo_master.md` (Upcoming → Stubs) on
+2026-09-08, because that file is the committed sequence and this one is
+about to be archived:
 
-- **Technical-support contact (global) — moved here from Segment 20
-  2026-09-05.** A deployment-wide "something looks broken" address, distinct
-  from the per-session operational help contact on `ReviewSession`
-  (`app/schemas/sessions.py`). Reached by a reviewer hitting an auth failure,
-  a 500, or an invalid link. New env var read through `app/config.py`, surfaced
-  on the chrome footer, the error pages and the invalid-link landing; **unset
-  renders nothing**, which is why the mechanism does not wait for the
-  institutional Azure deployment — only the address does, and setting it is
-  Segment 20's job. Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe;
-  small, isolated, `[chrome]`.
+- **Theme customizer — a full pass over every element** (author intent,
+  logged 2026-09-06 at Item 8's close).
+- **Technical-support contact (global)**, moved out of Segment 20 on
+  2026-09-05 because the mechanism needs no deployed host.
 
+`docs/status.md`'s "not yet there" row for the support contact pointed at
+*"Segment 19C Item 8"*, which was never true — Item 8 is the
+input-boundaries work, and the contact sat here, unnumbered. Corrected at
+close to name its actual home.
 
 ---
 

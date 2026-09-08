@@ -443,10 +443,14 @@ vocabulary as follows.
 > hover tint.
 > *Current:* global `table` rule in `base.html` uses
 > `border-collapse: collapse; width: 100%`; `th, td { border: 1px
-> solid #ddd; padding: 4px 8px; }` (full grid, every cell
-> bordered); `th { background: #f4f4f4; }`. Two divergences from
-> visual_style_general.md: full grid lines (spec calls for row-only) and
-> tight `4px 8px` cell padding (spec calls for `12px 16px`).
+> solid var(--border-default); padding: 4px 8px; }` (full grid, every
+> cell bordered). **The border is tokenized** — that half of the
+> migration delta below is done, and since 19C Item 8
+> `--border-default` resolves to `--slate-dim` in both themes. What
+> remains divergent from visual_style_general.md is the shape, not the
+> colour: full grid lines (spec calls for row-only) and tight `4px 8px`
+> cell padding (spec calls for `12px 16px`). *(Corrected 2026-09-08 at
+> 19C's close — this read `#ddd`, a literal the file stopped using.)*
 > *Canonical:* row-only borders, generous cell padding, hover tint.
 > *Migration delta:* rewrite global `th, td` rules; some dense
 > tables (Display Fields, Response Fields, RTD on instruments
@@ -486,10 +490,15 @@ vocabulary as follows.
 > `8px / 12px` padding.
 > *Current:* global `input[type="text"], textarea,
 > input[type="datetime-local"]` rule in `base.html` uses
-> `border: 1px solid #ddd; border-radius: 6px; padding: 8px;
-> font-size: 1em; width: 100%`. Close to spec; padding is even
-> 8px instead of 8/12; border color is `#ddd` rather than
-> `border-default` (`#D1D5DB`).
+> `border: 1px solid var(--border-default); border-radius: 6px;
+> padding: 8px; font-size: 1em; width: 100%`. Close to spec; padding is
+> even 8px instead of 8/12. **The border is tokenized**, so the colour
+> divergence this entry recorded is closed. *(Corrected 2026-09-08 at
+> 19C's close — this read "border color is `#ddd` rather than
+> `border-default` (`#D1D5DB`)", wrong twice over: the rule had been
+> tokenized, and `#D1D5DB` was `--border-default`'s **pre-Item-8**
+> value. Item 8 repointed it to `--slate-dim` for 3:1 contrast, so a hex
+> written here would go stale again — see `spec/color_tokens.md`.)*
 > *Canonical:* asymmetric padding `8px 12px`; tokenize border.
 > *Migration delta:* small.
 > *PR:* F (forms).

@@ -1,5 +1,24 @@
 # All buttons — operator surface audit
 
+> **⚠ Sections 4–5 are stale, and knowingly so (2026-09-08).** This file
+> is a **dated snapshot**, not a live contract, and its Session-Home
+> sections still describe the layout as it stood on 2026-05-22. Three
+> claims below are now false: the Danger Zone did **not** stay on an Edit
+> Session Details page — Segment 18R Item 4 reversed that move and
+> retired the page, so `session_edit.html` no longer exists and
+> `/sessions/{id}/edit` is a 308 redirect to Session Home's
+> `#session-config` card; Session Home carries **no Extract Data card**;
+> and §5a's Next-Action state table predates the ten-state Workflow-card
+> cascade. For Session Home as it is, read `spec/session_home.md` and
+> `spec/workflow_card.md`; for the lobby, `spec/sessions_overview.md`.
+> The **role vocabulary** in the legend below is current and is what
+> `CLAUDE.md` points here for.
+>
+> Found by 19C's close audit and **deliberately not regenerated there**:
+> re-deriving two sections against the current templates is its own
+> slice, and 19C was closing precisely because it kept absorbing "one
+> more thing". Filed in `guide/todo_master.md` (Upcoming → Stubs).
+
 Snapshot of every interactive button (and button-styled anchor)
 across the operator-facing templates. Last refreshed 2026-05-22
 after the post-18F/18G UI-polish pass: **Danger Zone moved off
@@ -48,6 +67,7 @@ shorthand:
 | **Primary** | Solid `accent-blue`. The page's single main affirmative action. |
 | **Secondary** | White bg + `border-default` outline. The default button — routine submits, Cancel, View detail, etc. |
 | **Destructive** | Outline `accent-red`. Confirm-step inside `.card.danger-zone`. |
+| **Alert** | Filled `accent-amber`, label on `--text-on-amber`. The attention-seeking affirmative — used where an action is safe but consequential. Added to this legend 2026-09-08: row #69 already used the tag and the legend never defined it, so the one table a reader consults to decode the rest was missing an entry. (See `spec/ui_elements.md` §6.) |
 | **Outline-amber** | Outline `accent-amber-dark`. Recovery action inside a `.card.lock`. |
 | **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. **No current users** since the lobby empty-state CTA was retired (2026-09-07). |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
