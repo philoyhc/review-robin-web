@@ -110,6 +110,15 @@ the constant both writers read.)*
 Each `(audience, window)` cell accepts only these modes. `None` means
 "off in this window" and is stored as NULL in both members of the pair.
 
+**The table below is derived, not transcribed** (19G.1 rung 3).
+`tests/unit/test_doc_conventions.py` parses it — audiences from the row
+labels, windows from the column headers, modes from the backticked
+tokens in each cell — and fails if it disagrees with
+`_PER_CELL_VALID_MODES`. Edit the constant and this table goes red until
+it is corrected; edit the table wrongly and it goes red immediately. The
+prose around the values is free text and is not checked, so keep the
+cells' backticked mode names intact when rewording.
+
 | Audience | `while_ongoing` | `after_release` |
 |---|---|---|
 | `peer_reviewer` | `raw` only — a reviewer sees their own work in full while writing it. | `None`, `raw`, `summarized`. |

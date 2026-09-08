@@ -506,3 +506,42 @@ document the constitution is derived from, and it is exactly the class
 this item conceded as unmechanizable. Left for the author: correcting it
 is a content edit, and folding one into the PR that builds the reference
 check would widen a check into an edit.
+
+**2026-09-08 — PR 3 landed. The accepted weakness turned out not to be
+necessary.**
+
+Semantics conceded that the grid check would be *"coupled to the table's
+shape, not only its content"*, and that **"its message on a restructure
+is less useful than on a wrong value"** — a restructured table would
+report every cell as drifted rather than saying the table had moved.
+That was accepted at planning time and did not survive contact: the
+check now asserts **parseability separately from content**, so a
+restructure fails `test_the_visibility_grid_table_is_still_a_grid` with
+"no longer yields a table of `audience` rows against `window` columns",
+and only a genuinely wrong value reaches the per-cell comparison. Run
+against the pre-`0acbcd2e` text — the real defect, whose heading and
+columns were different entirely — it fails with exactly that message.
+
+**Nothing about the grid is hardcoded in the test.** The prototype in
+the Decision carried a literal mode vocabulary. The built version reads
+the audiences and windows from `_PER_CELL_VALID_MODES`'s own keys and
+the vocabulary from `MODE_LABELS`, so a fourth mode added to the label
+map fails here until §3.1 documents it. **Windows come from the table's
+header row rather than from column order**, which was not in the plan
+and matters: a swapped pair of columns now reads as swapped values and
+fails, where positional parsing would have passed it.
+
+**Mutation-checked in seven directions**, each failing the right test: a
+mode added to a cell; a mode dropped from a cell; the two column headers
+swapped; a row deleted; the heading renamed; the **constant** changed
+rather than the doc; and the historical pre-fix section spliced back in.
+The last three fail the shape test first, which is the point of
+separating it.
+
+**One sentence added to the spec**, as the manifest committed: §3.1 now
+says the table is derived rather than transcribed, names the parser, and
+tells a future editor which part is free prose (all of it) and which
+part is load-bearing (the backticked mode names in each cell). A check
+nobody knows about gets worked around by someone rewording a table in
+good faith.
+

@@ -15,6 +15,10 @@ import re
 from pathlib import Path
 
 from app.services.lifecycle_display import DISPLAY_LABELS
+from app.services.visibility_policies import (
+    MODE_LABELS,
+    _PER_CELL_VALID_MODES,
+)
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -338,4 +342,111 @@ def test_no_inline_path_marker_outlives_the_reference_it_covers() -> None:
         f"{PATH_ESCAPE!r} on a line whose path references all resolve:\n  "
         + "\n  ".join(stale)
         + "\nThe marker has outlived its reason — drop it."
+    )
+
+
+# --- Visibility grid: the constant is the source, spec 3.1 the transcript ---
+#
+# Segment 19G Item 1, class A. `spec/visibility_policy.md` 3.1 transcribes
+# `_PER_CELL_VALID_MODES` into a table, and on 2026-09-08 the Reviewee row
+# had said "All three are valid" — the opposite of the rule — for long
+# enough to survive a whole-folder sweep. A constant exists, so Article II
+# says derive it rather than watch it.
+#
+# Everything below is read from the constant: the audiences and windows
+# from its keys, the mode vocabulary from MODE_LABELS. The only things
+# hardcoded are where the table lives and how a markdown row is shaped.
+
+VISIBILITY_SPEC = REPO / "spec" / "visibility_policy.md"
+
+#: The heading whose table transcribes the constant.
+GRID_HEADING = "### 3.1 Per-cell valid modes"
+
+#: `None` is spelled out in prose; the three real modes come from the
+#: label map, so a fourth mode added there fails here until documented.
+GRID_VOCABULARY = frozenset(MODE_LABELS) | {"None"}
+
+
+def _grid_rows() -> list[list[str]]:
+    """The cells of 3.1's table: the header row first, then one row per
+    audience. Empty when the table is not where or how it is expected."""
+    lines = VISIBILITY_SPEC.read_text().splitlines()
+    try:
+        start = lines.index(GRID_HEADING)
+    except ValueError:
+        return []
+    rows: list[list[str]] = []
+    for line in lines[start + 1 :]:
+        if line.startswith("#"):
+            break
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if set("".join(cells)) <= set("-: "):  # the |---|---| separator
+            continue
+        rows.append(cells)
+    return rows
+
+
+def _documented_grid() -> dict[tuple[str, str], frozenset[str | None]]:
+    """3.1's table as a grid, keyed like the constant.
+
+    Windows come from the header rather than from column order, so a
+    swapped pair of columns reads as swapped values rather than passing.
+    Each cell's modes are its backticked tokens filtered to the
+    vocabulary, which is what lets the cells carry prose as well.
+    """
+    rows = _grid_rows()
+    if len(rows) < 2:
+        return {}
+    windows = [w.strip("`*") for w in rows[0][1:]]
+    grid: dict[tuple[str, str], frozenset[str | None]] = {}
+    for cells in rows[1:]:
+        audience = cells[0].strip("`*")
+        for window, cell in zip(windows, cells[1:]):
+            modes = {t for t in re.findall(r"`([A-Za-z_]+)`", cell) if t in GRID_VOCABULARY}
+            grid[(audience, window)] = frozenset(
+                None if m == "None" else m for m in modes
+            )
+    return grid
+
+
+def test_the_visibility_grid_table_is_still_a_grid() -> None:
+    """Parseability first, and separately, so a restructured table says
+    "the table moved" rather than "every cell drifted" — the difference
+    between a message that points at the edit and one that buries it.
+    """
+    documented = _documented_grid()
+    expected = set(_PER_CELL_VALID_MODES)
+    assert documented, (
+        f"{GRID_HEADING!r} in spec/visibility_policy.md no longer yields a "
+        "table of `audience` rows against `window` columns. It transcribes "
+        "_PER_CELL_VALID_MODES in app/services/visibility_policies.py; keep "
+        "the shape or update this parser alongside the rewrite."
+    )
+    assert set(documented) == expected, (
+        "the grid's cells do not match the constant's:\n"
+        f"  documented only: {sorted(map(str, set(documented) - expected))}\n"
+        f"  constant only:   {sorted(map(str, expected - set(documented)))}"
+    )
+
+
+def test_every_documented_cell_matches_the_constant() -> None:
+    """The failure this exists for: a cell stating the opposite of the
+    rule it documents, in a table that reads perfectly well."""
+    documented = _documented_grid()
+    wrong = [
+        f"  ({audience}, {window}): documented "
+        f"{sorted(str(m) for m in documented[(audience, window)])}, "
+        f"constant says {sorted(str(m) for m in modes)}"
+        for (audience, window), modes in sorted(_PER_CELL_VALID_MODES.items())
+        if documented.get((audience, window)) != modes
+    ]
+    assert not wrong, (
+        "spec/visibility_policy.md 3.1 disagrees with "
+        "_PER_CELL_VALID_MODES:\n"
+        + "\n".join(wrong)
+        + "\nThe constant in app/services/visibility_policies.py is the "
+        "source — both writers read it. Correct the table, unless the "
+        "constant itself is what changed."
     )
