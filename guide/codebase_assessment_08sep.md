@@ -1,15 +1,26 @@
 # Codebase assessment — 2026-09-08
 
-> **Amended twice on 2026-09-08. Numbers below are taken at `7d8e3321`.** The
-> snapshot was first taken at `590993f0`, amended at `b9798e72` when Segment
-> 19G's first two items closed, and amended again here at `7d8e3321` when Items
-> 3 → 7 closed as well — five more PRs the same day, which settled **both** of
-> the carried open questions this document listed as "what is actually next".
-> Every table has been re-taken at the new SHA **in the same pass as the SHA
-> itself**, both times — the failure mode this skill warns about is an amendment
-> that refreshes the numbers and leaves the commit pointer, so anyone checking
-> out the stated SHA finds a different tree. Where a figure describes an earlier
-> state it says which.
+> **Amended three times on 2026-09-08. Numbers below are taken at `d9ffdb93`.**
+> First taken at `590993f0`; amended at `b9798e72` (Segment 19G Items 1–2), at
+> `7d8e3321` (Items 3–7, which settled **both** carried open questions this
+> document had listed as "what is actually next"), and here at `d9ffdb93` (Items
+> 8–10, which answered this document's own §5 recommendations). Every table has
+> been re-taken at the new SHA **in the same pass as the SHA itself**, all three
+> times — the failure mode this skill warns about is an amendment that refreshes
+> the numbers and leaves the commit pointer, so anyone checking out the stated
+> SHA finds a different tree. Where a figure describes an earlier state it says
+> which.
+>
+> **Three amendments to one dated snapshot in a single day is a signal, and it
+> is about cadence rather than about this document.** The snapshot's unit is the
+> calendar date; the work's unit turned out to be the arc, and on 2026-09-08 one
+> arc ran from a §8 recommendation through ten items to a rewrite of that same
+> §8. A snapshot taken at the *start* of the day would have been wrong by
+> evening; one taken at the end would have described a codebase nobody had yet
+> worked in. **Recorded as an open question for the next snapshot to settle, and
+> deliberately not acted on** — changing the cadence mid-arc would make this
+> document incomparable with the four before it, and comparability is most of
+> what a dated series is for.
 
 **As of** the close of the **participant-disclosure arc** — Segments 19E and 19F
 closed and archived, and Segment 19C closed with them, retiring the standing
@@ -31,7 +42,7 @@ Since the 2026-09-05 snapshot:
   #2187, 2026-09-07 → 2026-09-08) — a reviewee's row, chip and `/results` now
   require a currently-resolving visibility grant, and all four session-scoped
   gates answer a bare 404.
-- **Segment 19G — post-assessment follow-ups** (#2196 → #2210, seven items,
+- **Segment 19G — post-assessment follow-ups** (#2196 → #2214, **ten items**,
   2026-09-08) — *after this snapshot was first taken, and the reason it is
   amended twice.* Item 1 answered §8's summary-drift question per class and
   shipped two derived checks plus `docs/unenforced_conventions.md`; Item 2
@@ -41,7 +52,14 @@ Since the 2026-09-05 snapshot:
   six broken `§N` references repointed, the C3 window's boundary corrected, and
   the `§N` heading-validity check built, which found a seventh broken reference
   the measurement that certified the corpus could not see. All seven closed the
-  same day. The segment stays open with an empty queue and a close trigger.
+  same day. **Items 8 → 10 then closed too**: 8 stopped `close_check` counting a
+  *cited* path as a commitment — the last defect the tool's own users were
+  working around; 9 gave an archived session's `/me` row an `archived` companion
+  pill, since `not opened` is equally true of a draft one for the opposite
+  reason; and 10 answered this document's own §5 with a new
+  `guide/post_azure_todo_checklist.md`, a weakness downgraded on measurement,
+  and a *vacuity is not coverage* rule. The segment stays open with an empty
+  queue and a close trigger.
 - **Segment 19C Items 9 + 10, then its close** (#2188 → #2193, 2026-09-08) — the
   Settings-CSV import refuses a visibility cell the editor refuses; a Sys Admin
   card audits rows written before that guard; the segment closes.
@@ -49,11 +67,11 @@ Since the 2026-09-05 snapshot:
   walkthrough with screencaps, then the Instruments section rewritten from a
   supplied draft.
 
-All shipped 2026-09-05 → 2026-09-08 (**94 merge commits, 130 non-merge**, over 4
-calendar days), PRs **#2119 → #2210** (92 numbered; #2119 is the prior snapshot
-itself, #2196 → #2210 the post-snapshot amendment window, of which #2205 is this
-document's first amendment). Numbers taken on `main` at **`7d8e3321`**, which the
-working branch is level with. A single author directing AI agents, pre-deployment, no pilot yet —
+All shipped 2026-09-05 → 2026-09-08 (**98 merge commits, 136 non-merge**, over 4
+calendar days), PRs **#2119 → #2214** (96 numbered; #2119 is the prior snapshot
+itself, #2196 → #2214 the post-snapshot amendment window, of which #2205 and
+#2211 are this document's own first two amendments). Numbers taken on `main` at
+**`d9ffdb93`**, which the working branch is level with. A single author directing AI agents, pre-deployment, no pilot yet —
 twenty-plus merges in a day is normal here and should not be read against a team
 cadence.
 
@@ -139,29 +157,32 @@ prior snapshot exactly.
 
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
-| `docs` | 235 (225 prior) | **126,021** | +16,031 (+14.6%) |
-| `tests` | 269 (255 prior) | **92,933** | +5,009 (+5.7%) |
+| `docs` | 236 (225 prior) | **127,007** | +17,017 (+15.5%) |
+| `tests` | 269 (255 prior) | **93,117** | +5,193 (+5.9%) |
 | `production` | 203 (198 prior) | **57,122** | +1,418 (+2.5%) |
-| `templates` | 61 (59 prior) | **23,610** | +1,368 (+6.2%) |
-| `tooling` | 9 (8 prior) | **11,556** | +1,278 (+12.4%) |
+| `templates` | 61 (59 prior) | **23,636** | +1,394 (+6.3%) |
+| `tooling` | 9 (8 prior) | **11,618** | +1,340 (+13.0%) |
 | `migrations` | 77 | **6,772** | unchanged |
 
-**Test-to-production ratio: 1.63** (92,933 / 57,122), up from **1.58** (87,924 /
+**Test-to-production ratio: 1.63** (93,117 / 57,122), up from **1.58** (87,924 /
 55,704). The rise is real but small, and it is not a quality claim on its own —
 it reflects that this window's product work was gate-shaped, and a gate is
 cheap to write and expensive to prove, so each rung carried more assertions than
 lines.
 
-**The second amendment moved four of the six rows, and every line of it is
-documentation or tooling.** Between `b9798e72` and `7d8e3321`, `docs` +990,
-`tests` +225, `tooling` +75, `production` **+5** — and the five production lines
-are a corrected comment in `_session_home.py`, not behaviour. Five PRs that
-touched no route, no template, no model and no migration. That is what a
-tooling-repair window looks like in this table, and it is worth naming because
-the percentages in the `Δ` column above are dominated by the product work of
-19E/19F and say nothing about these five.
+**The two post-snapshot amendments moved four of the six rows, and almost every
+line of them is documentation or tooling.** Between `b9798e72` and `7d8e3321`,
+`docs` +990, `tests` +225, `tooling` +75, `production` **+5** — the five being a
+corrected comment in `_session_home.py`, not behaviour. Between `7d8e3321` and
+`d9ffdb93`, `docs` +986, `tests` +184, `tooling` +62, `templates` **+26**,
+`production` **0**. Across **eight** PRs the only line of shipped surface is the
+26-line `archived` companion pill in `reviewer/dashboard.html`; no route, model
+or migration was touched at all. That is what a tooling-and-documentation window
+looks like in this table, and it is worth naming because the percentages in the
+`Δ` column above are dominated by 19E/19F's product work and say nothing about
+these eight.
 
-**Suite: 2,950 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
+**Suite: 2,959 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
 (`test` on SQLite and `postgres` on a `postgres:16` service container, the latter
 also round-tripping the Alembic chain). All 16 skips are Wave 5 PR 5.3
 legacy-instrument-card retirements plus one fixture-shape skip in
@@ -218,12 +239,12 @@ describe by a wide margin**, which is the intended trade of the "plan in, spec
 out" rule and is worth naming as a cost as well as a discipline: a 1,200-line
 plan is not read end to end, which is one of the three reasons 19C closed (§5).
 
-**`templates` +1,368**, of which `guide.html` is 501 and `base.html` 298; the
+**`templates` +1,394**, of which `guide.html` is 501 and `base.html` 298; the
 rest is the Setup-page guidance partial and the lobby/sys-admin cards.
-**`tooling` +1,278 (+12.4%)** is almost entirely regenerated customizer HTML, not
-hand-written logic — the generators themselves moved by far less, and the +75 the
-second amendment added is `tools/close_check.py` growing a window fix and its
-docstring. That percentage should not be read as tooling complexity growing.
+**`tooling` +1,340 (+13.0%)** is almost entirely regenerated customizer HTML, not
+hand-written logic — the generators themselves moved by far less, and the +137
+the two amendments added is `tools/close_check.py` growing a window fix, a
+`cites:` escape and their docstrings. That percentage should not be read as tooling complexity growing.
 
 ### Package shape
 
@@ -325,8 +346,10 @@ make at the time.
 - **Gate changes shipped without a regression.** Converting every session-scoped
   refusal from 403 to 404 touched 24 assertions across 12 files against a measured
   ceiling of 47, and the suite went from 2,704 to 2,936 passing with no reverts
-  (2,940 after 19G Items 1–2, **2,950** after Items 3–7 — the last ten assertions
-  are the two tooling checks repairing themselves, not product).
+  (2,940 after 19G Items 1–2, 2,950 after Items 3–7, **2,959** after Items 8–10 —
+  the last nineteen assertions are the tooling checks repairing themselves plus
+  four on the `archived` companion pill, which is the window's only shipped
+  surface after 19F).
 
 ---
 
@@ -402,8 +425,20 @@ make at the time.
   proven against fixtures only; the pilot has not deployed, so a green card today
   means "no rows here" and there are almost none. **Cost:** the one check written
   specifically to find pre-existing bad data has produced no evidence about
-  pre-existing bad data. **Plan:** its first real run is at deploy, before any
-  reviewee-facing window opens — recorded in the item, not automated.
+  pre-existing bad data. ~~**Plan:** its first real run is at deploy, before any
+  reviewee-facing window opens — recorded in the item, not automated.~~
+  **Amended 2026-09-08 (third): the weakness stands, but the plan for it did
+  not, and that was the more serious half.** "Recorded in the item" was measured
+  at 19G.10 and found to mean *recorded in an item that has since been
+  archived*: `grep -rl "visibility_audit\|visibility audit" docs/ spec/`
+  returned **nothing**, so the only instruction to run the card lived in
+  `guide/archive/segment_19C_refinements.md` — less visible than when this
+  sentence was written, and the exact failure 19G.1 had named as its central
+  finding. It now has a home that outlives the segment:
+  `guide/post_azure_todo_checklist.md` item 1, with what to do, where, and a
+  completion test that says a green card over three instruments proves little.
+  **The weakness itself is unchanged and stays open** — it closes only when the
+  card has been read on deployed data.
 - **`app/services` at 96 modules is the largest package and has no stated
   ceiling.** 56 of those sit in sub-packages, which is the 18O carve working, but
   the top-level 40 have accreted without a rule for when a concern earns a
@@ -414,11 +449,11 @@ make at the time.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `7d8e3321`**, and here is what that claim rests on: both
+**No known open bugs at `d9ffdb93`**, and here is what that claim rests on: both
 CI tracks green on the merged head; `ruff check .` clean; all 16 skips read and
 attributed (15 Wave 5 legacy-card retirements, one fixture shape — none masking a
 defect); no `xfail` markers anywhere in `tests/`; no unresolved review threads on
-any of the window's 92 PRs; and `docs/known_limitations.md` reviewed against the
+any of the window's 96 PRs; and `docs/known_limitations.md` reviewed against the
 window's changes with nothing to add.
 
 ~~**Three documentation defects are known, filed and unfixed**~~ — **all three
@@ -479,8 +514,8 @@ Caught and fixed this window, worth remembering:
 
 ## 7. Estimated size upon completion
 
-Current: **57,122** production, **23,610** templates, **92,933** tests,
-**11,556** tooling.
+Current: **57,122** production, **23,636** templates, **93,117** tests,
+**11,618** tooling.
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
@@ -587,22 +622,31 @@ commitments.~~ **All five shipped the same day** (#2206 → #2210): the patches 
 with 19G.5 and 19G.6 falling out of them. Both carried questions are answered and
 struck in the plan.
 
-**What is actually next, then (second amendment).** Nothing is queued, and that
-is the honest state rather than a gap to fill. Feature work stays host-blocked
-until the institutional Azure deployment concludes. Two small unblocked items sit
-in §7's table — the global technical-support contact (+30–60) and the theme
-customizer's element pass — and neither has been raised as a segment. **One
-defect is measured, recorded and deliberately not fixed:** `close_check` counts a
-`spec/`-prefixed path *anywhere* in a Doc-impact bullet as a commitment, so a
-bullet that merely cites a file commits the item to editing it. It has now bitten
-~~three consecutive manifests (19G.5, 19G.6, 19G.7)~~ **two manifests
-(19G.5 and 19G.7) — corrected 2026-09-08 at 19G.8, which checked the claim
-before building on it.** 19G.6's bullets name `tools/` and `.claude/` paths
-under the "for the human" convention, a different mechanism entirely: those
-paths are outside the regex and were never counted. Each of the two was worked
-around by rewording the bullet — which is the same shape as the C3 workaround 19G.6 removed:
-a check satisfied by editing the prose to suit it. 19G.4 measured it and left it
-open on purpose. It is the obvious next item if the segment takes one.
+~~**What is actually next, then (second amendment).**~~ That paragraph named one
+measured, unfixed defect — `close_check` counting a *cited* path as a commitment
+— and called it "the obvious next item if the segment takes one". **The segment
+took it: 19G.8 shipped the `cites:` escape and C7 the same day**, along with a
+correction to this document's own claim that the defect had bitten *three*
+consecutive manifests. It bit **two** (19G.5 and 19G.7); 19G.6's bullets name
+`tools/` and `.claude/` paths under the "for the human" convention, outside the
+regex and never counted. That miscount was written by 19G.7 and propagated here
+within the hour, which is worth keeping visible: it is class B, in the segment
+that conceded class B, committed by the item documenting it.
+
+**What is actually next (third amendment).** Nothing is queued, and that remains
+the honest state rather than a gap to fill. Feature work stays host-blocked until
+the institutional Azure deployment concludes; the two small unblocked items in
+§7's table — the global technical-support contact (+30–60) and the theme
+customizer's element pass — are still unraised. **Three things are named,
+measured and deliberately left alone**, each with its reason recorded rather than
+its absence: `COMMITTED_PATH` still does not see `guide/`, `tools/` or
+`.claude/`, so four of 19G.10's own five doc commitments were unverifiable
+(19G.4's class, still open); `app/services` still has no module ceiling, because
+the cost is still nil and a threshold invented now is a guess; and the two
+conceded drift classes stay conceded, because reopening them needs new evidence
+rather than another pass. **The one dated obligation is not in this document at
+all** — it is `guide/post_azure_todo_checklist.md` item 1, and that is the
+point of the file.
 
 **Settling 05sep's proposals.** Move #1 (decide whether a stale skip marker
 deserves a mechanism) — **carried, unactioned**; no skip went stale this window
