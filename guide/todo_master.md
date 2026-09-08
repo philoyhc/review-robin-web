@@ -2604,7 +2604,7 @@ What a first-time operator now meets:
   **rung 5 — #2137**).
 - **A `What this page is for` disclosure** on all six Setup pages, each
   carrying the one fact its page is otherwise silent about, with the copy
-  contract in `spec/setup_pages.md` §0. **Rung 6a — #2138** built the
+  contract in `spec/setup_pages.md` §"Shared body shape" item 0. **Rung 6a — #2138** built the
   scaffold and piloted it on Email Template; **rung 6b — #2139** (the
   drafts), **#2140 → #2145**, **#2147**, **#2148** (inline notes on
   Assignments and Invitations rather than a help card) and **#2149** (the

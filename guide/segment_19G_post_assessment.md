@@ -43,7 +43,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.2** | §8 move #2 — regenerate `spec/operator_button_audit.md` §§4–5, which described a Session Home layout replaced 2026-08-18 | **Closed** 2026-09-08 (PR #2203). One PR, three `spec-writer` corrections. |
 | **19G.3** | The patch queue below — three documentation corrections | **Closed** 2026-09-08. One PR; a fourth found beside them. |
 | **19G.4** | `close_check` sees root-level `.md` — the first of the two carried open questions | **Closed** 2026-09-08. One PR. |
-| 19G.5+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.5** | The six broken `§N` references the measurement found | **Closed** 2026-09-08. One PR. |
+| 19G.6+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1202,12 +1203,147 @@ anything to say about it. The note firing on a comment-only edit is the
 check working as designed and owing nothing, the same adjudication 19C's
 close made on a docstring.
 
+
+---
+
+## Item 5 — The six broken `§N` references
+
+### Opportunity
+
+The measurement this segment carried as an open question was run on
+2026-09-08. **130 `§N` references in live prose, 26 target files, no
+missing files, and six that named a number the target does not carry as
+a section.** One of the six was a wrong *file*, introduced by 19G.2
+eleven hours earlier and missed by that item's own `spec-writer` pass.
+
+The measurement's harder finding was that the repository numbers
+sections **five different ways**, and a naive heading-only parser flags
+twelve — twice as many false as true. So the six could not be read off a
+grep; each needed its intended target established from the citing
+sentence.
+
+### Decision
+
+**Fix all six by making the pointer unambiguous, not by inventing
+section numbers in the targets.**
+
+Five of the six were not dangling so much as *unresolvable without
+guessing a convention*: `§0` meant item 0 of a numbered list inside a
+named section, and `§3` meant the third `##` by ordinal position.
+Neither convention is stated anywhere. Rewriting them as
+`§"Shared body shape" item 0` and `§"Coverage matrix — configuration"`
+uses the idiom the repo already has for named sections
+(`spec/session_home.md` §"Lifecycle state vocabulary") and needs no
+convention to decode.
+
+*Rejected: number the targets' sections instead.* That is a change to
+four specs to satisfy six citations, and it would make the numbering a
+contract those files never agreed to.
+
+### Semantics
+
+- **Archived documents keep their references.** `guide/archive/` copies
+  of the same `§0` pointer stay as written; a closed plan is a record.
+- **The current assessment was included** even though its filename marks
+  it dated. It carried the same wrong pointer twice, it is the live
+  snapshot, and it had already been amended earlier the same day —
+  leaving two known-wrong pointers in it while fixing three identical
+  ones elsewhere would have been arbitrary.
+
+### Judgment calls — decided
+
+- **Each intended target was read from the citing sentence** (2026-09-08),
+  not inferred from the number. `spec/roundtrip_coverage.md` §3 resolves
+  to "Coverage matrix — configuration" because both citations are about a
+  coverage row and the Settings-CSV carrier, which is what that section
+  holds — the ordinal arithmetic only confirmed it.
+- **The 19G.2 error is named as mine in the record** (2026-09-08). It is
+  the only one of the six that was flatly wrong rather than ambiguous,
+  and the item that produced it ran a `spec-writer` pass that verified
+  the button role mapping and did not check the cross-file citation.
+
+### Blast radius (measured)
+
+| What | Count |
+|---|---|
+| `§N` references in live prose, before | 130 |
+| Unresolved under the three heading conventions | 6 |
+| References edited | 8 (the six, plus the same pointer twice in the current assessment) |
+| Files changed | 5 |
+| `§N` references after (five became `§"name"`) | 125, **0 unresolved** |
+
+### PR ladder
+
+1. **PR 1 — the eight corrections.** Must not touch: the targets'
+   headings, or any archived document.
+
+### Definition of done
+
+- Every corrected pointer names something that exists — verified by
+  grepping each new target.
+- Re-running the measurement returns **0 unresolved**, and the
+  measurement still catches an injected bad reference (checked, so the
+  zero is not vacuous).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.5` exits 0; any warning adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Build the check now?** The corpus is clean, so it would be green
+  from its first commit — the rung-2 shape. Against: it must encode
+  three numbering conventions to avoid the 2:1 noise the measurement
+  found, and a check carrying three conventions is closer to VI's
+  "mechanise it badly" line than the path check was. **Decides:** the
+  author. Recorded on the segment's carried question rather than here.
+
+### Out of scope
+
+- **Numbering the four unnumbered specs.** See Decision.
+- **The C3 window boundary.** Still open, five occurrences now.
+
+### Doc impact
+
+- `spec/operator_button_audit.md` — row #155's citation repointed from
+  `spec/visual_style_rrw.md` to `spec/ui_elements.md` (PR 1).
+- `spec/email_template_editor.md` — two `roundtrip_coverage` pointers
+  named rather than numbered (PR 1).
+- `docs/status.md` — two `setup_pages` pointers named; row at the close.
+
+### Status
+
+**2026-09-08 — six fixed, eight edited, and the corpus is now clean.**
+
+The measurement reported 130 references and 6 unresolved. After the
+corrections it reports **125 and 0** — 125 rather than 130 because five
+citations became named-section references, which the `§N` form no longer
+counts.
+
+**The zero was checked for vacuity.** Injecting `spec/lifecycle.md §99`
+into a live document brings the count back to 1, so the parser is still
+reading what it claims to read. A measurement that returns zero because
+it stopped looking is the failure this segment has spent all day on.
+
+**One of the six was mine, from eleven hours earlier.** 19G.2 cited
+`spec/visual_style_rrw.md` §5a for the inline-banner convention; the
+section is `spec/ui_elements.md` §5a. That item's `spec-writer` pass
+checked the button role mapping — the substance — and did not check the
+cross-file citation, which is the fourth consecutive pass whose findings
+were entirely connective tissue and the first where the tissue was a
+pointer rather than a number or a date.
 ---
 
 ## Carried open questions
 
 Promoted from Item 1 at its close (2026-09-08) because neither is
 Item-1-shaped and both would otherwise be buried in a closed item.
+
+- ~~**Does the `§N` reference form deserve a heading-validity check?**~~
+  **Measured 2026-09-08 (see Item 5), and the corpus is now clean** — a
+  check built today would be green from its first commit. Whether to
+  build it is still open; the measurement changed its cost, not the
+  decision. The original text follows.
 
 - **Does the `§N` reference form deserve a heading-validity check?**
   139 live references name a numbered section of another file

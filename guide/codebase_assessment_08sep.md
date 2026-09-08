@@ -87,7 +87,7 @@ FastAPI + Jinja monolith on SQLAlchemy 2.x and Postgres.
   recording — a hand-maintained CSV would be a second source of truth for
   `spec/csv_contracts.md`. A `What this page is for` disclosure lands on six Setup
   pages via `operator/partials/_page_guidance.html`, contract in
-  `spec/setup_pages.md` §0. The Guide carries the author's walkthrough with
+  `spec/setup_pages.md` §"Shared body shape" item 0. The Guide carries the author's walkthrough with
   **sixteen screencaps** behind the app's first `StaticFiles` mount at `/static`
   (twelve at 19E's close, four added by #2190).
 - **Segment 19F — reviewee participation disclosure** (#2174 → #2186, closed
@@ -238,7 +238,7 @@ modules at the prior snapshot as the two new routers landed and were mapped.
 | Sessions lobby + Session Home | `spec/sessions_overview.md`, `spec/session_home.md` | ✓ shipped |
 | Quick Setup card | `spec/quick_setup_card_spec.md` | ✓ shipped — `_quick_setup.py` |
 | Setup pages (5) | `spec/setup_pages.md` | ✓ shipped |
-| **Setup-page guidance disclosure** | **`spec/setup_pages.md` §0** | **✓ shipped 2026-09-06 (19E rung 6) — `partials/_page_guidance.html` on six pages** |
+| **Setup-page guidance disclosure** | **`spec/setup_pages.md` §"Shared body shape" item 0** | **✓ shipped 2026-09-06 (19E rung 6) — `partials/_page_guidance.html` on six pages** |
 | Roster CSV + friendly tag labels | `spec/csv_contracts.md` | ✓ shipped 2026-08-20 |
 | **CSV template sets (starter + demo)** | **`spec/csv_contracts.md`** | **✓ shipped 2026-09-06 (19E rungs 4–5) — `setup_templates.py`, `/templates/{starter,demo}.zip`, byte-derived from the serialisers** |
 | Assignment engine | `spec/assignments.md` | ✓ shipped — `app/services/assignments/` |

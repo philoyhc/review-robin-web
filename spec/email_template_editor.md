@@ -238,7 +238,7 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 ## 8. Round-trip and clone
 
 **Settings CSV** (`spec/csv_contracts.md`; coverage row
-`spec/roundtrip_coverage.md` §3 — "✅ All"). Field paths use a
+`spec/roundtrip_coverage.md` §"Coverage matrix — configuration" — "✅ All"). Field paths use a
 **three-segment dotted grammar that differs from the JSON keys**:
 
 ```
@@ -342,7 +342,7 @@ Left for a code change (not spec):
 - `spec/operator_ui_concept.md` "Email Template" — the page in the
   Setup-row taxonomy; `spec/operator_button_audit.md` §10 — its
   buttons (#63–#67).
-- `spec/csv_contracts.md`, `spec/roundtrip_coverage.md` §3 — the
+- `spec/csv_contracts.md`, `spec/roundtrip_coverage.md` §"Coverage matrix — configuration" — the
   Settings-CSV carrier.
 - `spec/email_infra_options.md`, `guide/segment_14B_email_infrastructure.md`
   — the dispatch leg this editor feeds.
