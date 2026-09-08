@@ -242,8 +242,9 @@ state exactly.
 **Collapse ⇒ lock invariant (Segment 18R Item 2).** There is
 no unlocked-but-collapsed state. Collapsing an **unlocked**
 card first triggers a Lock (running the usual dirty-change
-confirm); if the operator declines the confirm the collapse is
-cancelled and the card stays open and unlocked. Expanding a card
+confirm, and since 19H Item 2 its discard on accept); if the
+operator declines the confirm the collapse is cancelled and the
+card stays open and unlocked. Expanding a card
 never changes its lock state. Because a rename / description /
 help-text edit is only ever visible while the card is open and
 unlocked, this keeps a collapsed card's rendered title and body
@@ -284,8 +285,10 @@ The `<summary>` carries, in document order:
   Save commits it through the consolidated `/save`
   endpoint — no separate `/identity` POST. `newModelSetLock`
   syncs the view span from the input's live value when the
-  card locks, so the collapsed title reflects an
-  unsaved-then-locked rename without a reload. An empty
+  card locks, so the collapsed title matches the input the
+  card was showing. Since 19H Item 2 a *dirty* card cannot
+  reach that path — it discards and reloads instead — so the
+  sync now only ever copies persisted values. An empty
   value clears the label and reverts the view to the muted
   `Instrument_{id}` fallback.
 - **Status pills:**
@@ -624,7 +627,11 @@ Top-of-band intro card carrying:
   (`name="description"`), so its value commits with the bulk Save
   through the consolidated `/save` endpoint. `newModelSetLock`
   syncs the read-only paragraph from the textarea when the card
-  locks.
+  locks (the same `newModelSyncTextViews` call the card title
+  uses — see that bullet above). Since 19H Item 2 a *dirty* card
+  cannot reach that path — it discards and reloads instead — so
+  this sync, like the title's, now only ever copies persisted
+  values.
 
 Since Segment 18R Item 2 identity edits **do** ride the bulk-save
 form — one Save commits identity together with Band 1 and Band 3.
@@ -839,7 +846,17 @@ Bottom row of the card, right-aligned, in this order:
 - **Lock-with-unsaved-edits.** When the Lock button is clicked
   on a dirty card, a `confirm()` prompt asks the operator to
   acknowledge that unsaved edits will be discarded. Declining
-  cancels the navigation.
+  cancels the navigation. **Accepting discards them** (Segment
+  19H Item 2): the page reloads with `?editing` dropped, so the
+  card comes back **locked and showing persisted state**. The
+  discard is Cancel's — one shared `newModelDiscardReload`,
+  which differs between the two callers only in whether
+  `?editing` survives, so there is no second copy of "what the
+  server rendered" to drift. **A locked card therefore never
+  displays unsaved values.** Before 19H Item 2 the confirmed
+  lock neither reverted nor saved and copied the edited values
+  into the read-only view, which left a locked card displaying
+  state the database did not have.
 - **Save-when-dirty.** Both Save and Cancel start disabled.
   Every editable input on the card is bound to a dirty-tracker
   that enables them on first change. On a successful JSON

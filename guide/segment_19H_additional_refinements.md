@@ -21,7 +21,7 @@ Items close independently, so each carries its own `### Doc impact` and
 | Item | Covers | State |
 |---|---|---|
 | **19H.1** | The card's two setup pills go stale after an AJAX Save | **Closed 2026-09-08** |
-| **19H.2** | A locked instrument card must carry no unsaved edits | Open |
+| **19H.2** | A locked instrument card must carry no unsaved edits | **Closed 2026-09-08** |
 | 19H.3+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
@@ -342,6 +342,80 @@ Client-side surface for the fix itself:
 | what lock does today | `newModelSetLock`, syncs text views on lock |
 | the discard to reuse | `newModelCancelEdits`, `:3382` |
 | other callers of the lock path | collapse ⇒ lock, and `newModelLockClick` |
+
+### Status
+
+**2026-09-08 — Item 2 built and landed.** One PR, as the ladder
+intended; no rung struck, and the blast radius held (unlike Item 1's).
+
+**The old behaviour was reproduced before it was replaced.** Rather
+than trust the reading of `newModelSetLock`, the pre-fix template was
+run in the browser through the same scenario. Accepting *"Your changes
+will be lost"* left the card `data-instrument-locked="true"` **and**
+`data-instrument-dirty="true"`, with the flipped `All` pill on display
+and **Save still enabled on a locked card** — that last part was not in
+the plan's account of the defect and is the sharpest statement of it: a
+locked card was carrying a live, enabled Save for edits it claimed to
+have discarded. After the fix the same scenario ends locked, clean, and
+showing `Not set`.
+
+**"No reload" needed a different instrument than Item 1's.** A
+navigation counter cannot prove a page did *not* reload, because the new
+document's counter starts at 1 too. A `window.__survives_reload` marker
+set before the click answers it directly: it survives the clean-card
+lock (in-page, as before) and is gone after the dirty-card discard
+(reloaded, as intended).
+
+**Decisions confirmed at build:**
+
+- **The discard is factored out, not duplicated** (2026-09-08).
+  `newModelDiscardReload(keepEditingId)` now holds the nav-away
+  suppression, the open-state capture, the hash and `saved` stripping,
+  and the reload; Cancel passes the card id, the dirty lock passes
+  `null`. The plan said "reuse Cancel's reload" and this is what reuse
+  had to mean — the alternative, calling `newModelCancelEdits` from the
+  lock path, would have fired Cancel's *own* second confirm.
+- **`newModelTryLock` still returns `true` on the discard path**
+  (2026-09-08). Its contract is "did the card end up locked", and it
+  did — after the reload. Returning `false` would make collapse ⇒ lock
+  re-expand the card a moment before the page went away.
+- **A dirty card's URL may not carry `?editing` at all.** Unlock is
+  in-page and does not rewrite the URL, so the discard has to handle
+  "already absent": `url.href === window.location.href` then falls
+  through to `location.reload()`, which re-renders the card locked
+  because the server has no `editing` param to honour. Verified in the
+  browser, not only read.
+
+**Three spec passages went stale on this change and are fixed with it**
+— found by re-reading `spec/instruments.md` for the *consequences* of
+the fix rather than for the paragraph it obviously touched:
+
+- The card-title bullet said `newModelSetLock` syncs the view span "so
+  the collapsed title reflects an **unsaved-then-locked rename**". That
+  state no longer exists; the sync now only ever copies persisted
+  values.
+- The collapse ⇒ lock invariant said collapsing runs "the usual
+  dirty-change confirm" without saying what accepting does, which was
+  survivable while accepting did nothing and is not now.
+- **The third was found by `spec-writer`, not by me**: Band 2's
+  **Description** bullet carried the *identical* staleness the title
+  bullet had, and for the identical reason — `newModelSyncTextViews` is
+  one function serving both views, so a passage describing either
+  described both. I corrected the copy I had gone looking for and
+  missed its twin nine sections away. That is the value of the pass
+  being a separate reader rather than the same one twice: a
+  consequence-hunt anchored on the paragraph you edited finds the
+  paragraphs like it, not the paragraphs sharing its mechanism.
+
+**Verified in a browser** (Chromium 1440×900, seeded SQLite, fake auth),
+each row a separate run:
+
+| Scenario | Result |
+|---|---|
+| clean card, Lock | no confirm, locks in place, marker survives — no reload |
+| dirty card, Lock, **decline** | unchanged: unlocked, dirty, `All` still shown |
+| dirty card, Lock, **accept** | locked, dirty flag cleared, links back to `Not set`, `?editing` dropped, marker gone |
+| the same on the **pre-fix** template | locked **and** dirty, `All` on display, Save still enabled |
 
 ### PR ladder
 
