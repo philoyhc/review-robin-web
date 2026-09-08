@@ -45,7 +45,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19G.4** | `close_check` sees root-level `.md` — the first of the two carried open questions | **Closed** 2026-09-08. One PR. |
 | **19G.5** | The six broken `§N` references the measurement found | **Closed** 2026-09-08. One PR. |
 | **19G.6** | The C3 window boundary — `close_check`'s window excluded its own start commit | **Closed** 2026-09-08. One PR. |
-| 19G.7+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
+| **19G.7** | The `§N` heading-validity check — and the seventh broken reference the 19G.5 measurement could not see | **Closed** 2026-09-08. One PR. |
+| 19G.8+ | Admitted only for work arising from this segment's own items. | Open — **empty** |
 
 ### Patch queue
 
@@ -1571,10 +1572,223 @@ has no second commit to spend, and the check was asking for one.
 plans are real dropped commitments, and this change does not touch them.
 The `--archived` figure moving 89% → 90% is one plan, not a trend.
 
+## Item 7 — The `§N` heading-validity check
+
+### Opportunity
+
+19G.5 fixed six broken `§N` references and reported the corpus clean:
+**125 references, 0 unresolved**, with the zero checked for vacuity by
+injecting a bad reference and seeing it caught.
+
+The zero was true of what the measurement could see. Re-measured
+2026-09-08 at `61300c06` with a whole-text scan, live prose carries
+**132** `§N` references, not 125: **7 wrap across a line break**, and the
+19G.5 scan read line by line. It never saw them. Six of the seven
+resolve. The seventh does not —
+
+```
+docs/unenforced_conventions.md §2.1  ->  `spec/architecture.md`
+                                          §3
+```
+
+— and `spec/architecture.md` carries no numbered sections at all; every
+`##` in it is a name. `§3` means **layer 3 of the numbered list inside
+"Three-layer split"**, which is where the `sqlalchemy.dialects.postgresql`
+rule actually sits (line 89). That is the same unresolvable-without-
+guessing form 19G.5 rewrote elsewhere as `§"Shared body shape" item 0`,
+and it is mine, from 19G.1, three items and eleven hours before the
+measurement that was supposed to find it.
+
+So the carried question — *does the `§N` form deserve a check?* — arrives
+with its own answer attached. A hand measurement certified a corpus it
+could not fully read, and a broken reference of the exact class survived
+the item that existed to remove it. That is not an argument that the
+class is cheap to check; it is an argument that a human pass over 132
+references is not the instrument.
+
+### Decision
+
+**Build it**, in `tests/unit/test_doc_conventions.py`, alongside the path
+check it is the sibling of. Scan the **whole text**, not line by line.
+
+Rejected: **`docs/unenforced_conventions.md` §1**, the file the carried
+question named as the other outcome. It was the right destination while
+the cost was unmeasured — a check needing an unstated section-numbering
+convention to hold repo-wide would have been Article VI's "mechanise it
+badly". The measurement removed that: **46 of 50 (file, §N) pairs use one
+form**, and the whole corpus needs four, each of which is load-bearing on
+real references. Four fixed forms is not a convention the repo must first
+adopt; it is a description of what it already does.
+
+Rejected: **a section-scoped opt-out**, the shape the path check uses.
+Measured, the section form would excuse **31 of 132 references** to cover
+the **one** historical citation that needs excusing — 30 working pointers
+going unchecked to save one marker. The path check earned its section
+form at 36 references; this one has not. An escape hatch is sized to what
+it must excuse.
+
+### Semantics
+
+- **Corpus.** `LIVE_PROSE`, the same as the path check: top-level `.md`
+  in root, `spec/`, `docs/`, `guide/`, minus dated documents.
+- **Multiline.** The whitespace between the backticked path and `§` may
+  include a newline. The line reported is where the reference *starts*;
+  the marker is honoured on any line the reference spans.
+- **A target that does not exist** is the path check's finding, not this
+  one — the reference is skipped here rather than reported twice.
+- **Named-section references** (`§"Route conventions"`) are outside the
+  pattern by construction: it requires digits. The repo's answer to an
+  unnumberable pointer is to name the section, and naming it is how a
+  reference leaves this check's scope.
+- **`§N.M`** resolves against the exact number only. `§5.6` does not
+  match a `## 5.` heading; the reference names a subsection or it does
+  not.
+
+### Judgment calls — decided
+
+- **Period optional in the plain form** (2026-09-08). `### 1.1 X` numbers
+  without one, and 198 headings across live prose take that shape.
+  Requiring the period drops resolution from 130 to 100.
+- **A distinct marker, `<!-- section-ref-ok -->`** (2026-09-08), rather
+  than reusing `<!-- path-ref-ok -->`. The two checks honour scope
+  differently — this one has no section form — and one marker name
+  meaning two scopes is a trap for the next reader.
+- **The four heading forms are exactly the four in use** (2026-09-08). A
+  fifth would be dead code, and dead code in a check is where the next
+  allowlist starts.
+
+### Blast radius (measured)
+
+At `61300c06`, whole-text scan over `LIVE_PROSE`:
+
+| | count |
+|---|---|
+| `§N` references in live prose | **132** |
+| of those, wrapped across a line break | **7** |
+| seen by the 19G.5 line-local scan | 125 |
+| distinct (file, §N) pairs | 50 across 26 target files |
+| unresolved before this item | **1** |
+| references the rejected section-marker form would have excused | 31 |
+
+Heading forms carrying the 132: 123 plain (`## 3. X`, `### 1.1 X`), 3
+bold-paragraph (`**8.2.7 X**`), 3 `## §5.6 X`, 1 `## Section 10 — X`.
+
+### PR ladder
+
+1. **PR 1 — the correction, then the check**, as two commits so the
+   history shows the check added to a corpus already clean. Must not
+   touch the path check, its markers, or any archived document.
+   ~~Two commits~~ — **one**; see Status.
+
+### Definition of done
+
+- `docs/unenforced_conventions.md` §2.1 names the section instead of
+  numbering it.
+- The check is green, and green is not vacuous: reverting the correction
+  makes it fail on that exact reference.
+- Four mutants, each run: the reverted correction (the check catches it);
+  a line-local scan (green with the defect present — the 19G.5 blind spot
+  demonstrated rather than asserted); a resolving `§5a` (the stale-marker
+  guard fires); numbers scraped from anywhere rather than headings (green
+  with the defect present — anchoring is load-bearing).
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19G.7` exits 0
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The carried question this item answers is struck below.
+
+### Out of scope
+
+- **A check for named-section references** (`§"Route conventions"`).
+  Resolving one means matching heading text, which drifts on every
+  rewording — the class the repo conceded as B, not a gap this item
+  leaves.
+- **Re-auditing the path check for the same multiline blind spot.** It
+  scans line by line too, but a path reference is a single backticked
+  token with no separator inviting a break. **Measured rather than
+  assumed:** a scan for a backticked span made of path characters and a
+  line break returns 29 hits across live prose, every one a
+  backtick-pairing artefact across unrelated inline-code spans or a
+  wrapped UI label (`` `Reviewer\n  Email` ``, `` `Data\nshaper` ``), and
+  **zero** wrapped paths. The failure mode does not exist there.
+
+### Doc impact
+
+- `docs/unenforced_conventions.md` — §2.1's architecture pointer names
+  the section rather than numbering it (PR 1). *The target is named
+  without backticks deliberately: `close_check` counts a prefixed path
+  anywhere in a bullet as a commitment, so backticking it would commit
+  this item to editing a file it only cites — the false positive 19G.4
+  measured and 19G.5 hit, biting a third manifest in three items.*
+- `docs/status.md` — the 19G.5 row gains `<!-- section-ref-ok -->`, the
+  corpus's only marker; row at the close (PR 1).
+
+### Status
+
+**2026-09-08 — landed as one PR and, after a false start, one commit.**
+
+Intended one PR; shipped one PR. The ladder said two commits — the
+correction, then the check — so the history would show the check added to
+a corpus already clean. **It was built that way and collapsed**, because
+the ordering put the correction one commit *before* the window its own
+item opens: `close_check 19G.7` failed C3 on
+`docs/unenforced_conventions.md`, edited in commit 1, with the window
+opening at commit 2 where the `## Item 7` heading landed.
+
+**That is 19G.6 working, not 19G.6 falling short.** The boundary fix
+widened the window by exactly one commit — the one that records the
+commitment — and deliberately not backwards. An edit made *before* the
+item existed is outside the window by design; that property has its own
+guard test, added the same day. The honest orders are the plan heading
+first, or everything together. Squashed to one commit rather than
+reshuffling the plan file across two, and the ladder rung is struck with
+this reason instead of quietly rewritten.
+
+**Decisions confirmed at build:**
+
+- **Period optional** in the plain heading form. Confirmed by
+  measurement: requiring it drops resolution from 130 of 132 to 100.
+- **No section-scoped marker.** Confirmed by measurement: the section
+  form would have excused 31 references to cover 1.
+- **Four heading forms, all load-bearing.** A fifth was drafted (a bare
+  `### 4 X` with no period and no dot) and dropped when it matched
+  nothing the other four had not already matched.
+
+**Four mutants, each run, and one of them changed what this item claims.**
+
+| Mutant | Result |
+|---|---|
+| the correction reverted | check **fails** on `docs/unenforced_conventions.md:117` — it catches the real one |
+| the scan made line-local | **green with the defect present** — the 19G.5 blind spot, demonstrated |
+| `§5a` made to resolve | stale-marker guard **fires** |
+| numbers scraped from anywhere, not headings | **green with the defect present** — anchoring is load-bearing |
+
+The fourth was wrong on its first run and said so: the mutant scraped
+bare integers, which broke `§5.6` and `§8.2.7` elsewhere and failed for a
+reason that had nothing to do with anchoring. Re-run with dotted numbers
+preserved, it passes green with the defect standing, which is the claim.
+A mutant that fails for the wrong reason is a mutant that proved nothing.
+
+**What this item does not claim.** The check reads numbers, not meaning:
+`§4` pointing at a section that exists but says something else still
+passes. That is class B, conceded at 19G.1, and no heading check reaches
+it.
+
 ## Carried open questions
 
 Promoted from Item 1 at its close (2026-09-08) because neither is
 Item-1-shaped and both would otherwise be buried in a closed item.
+
+- ~~**Does the `§N` reference form deserve a heading-validity check?**~~
+  **Answered 2026-09-08 as 19G.7: yes, built.** See Item 7 — and note
+  that the corpus was *not* clean when this line said it was: the 19G.5
+  measurement read line by line and never saw the 7 references that wrap,
+  one of which was broken. The intermediate note follows, then the
+  original text.
 
 - ~~**Does the `§N` reference form deserve a heading-validity check?**~~
   **Measured 2026-09-08 (see Item 5), and the corpus is now clean** — a

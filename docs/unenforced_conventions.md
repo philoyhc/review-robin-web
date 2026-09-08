@@ -115,8 +115,8 @@ decision not to.
 ### 2.1 No `sqlalchemy.dialects.postgresql` imports in `app/db/models/`
 
 - **Written down at** `CLAUDE.md`, three times; `spec/architecture.md`
-  §3; `guide/deferred_consolidated.md` (Postgres-native types are
-  deferred infrastructure).
+  §"Three-layer split" item 3; `guide/deferred_consolidated.md`
+  (Postgres-native types are deferred infrastructure).
 - **The check.** A grep over `app/db/models/*.py` for the module path.
   No judgement, no allowlist, no ambiguity.
 - **Why it matters that nothing checks it.** `ruff` catches only an
