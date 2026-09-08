@@ -76,6 +76,10 @@ from ._filters import (
     reviewees_search_options,
     reviewers_search_options,
 )
+from ._visibility_audit import (
+    VisibilityAuditRow,
+    build_visibility_audit_rows,
+)
 from ._observer_collation import (
     InstrumentCollationSection,
     ObserverCollationContext,
@@ -238,6 +242,8 @@ __all__ = [
     "build_instruments_context",
     "build_invitations_rows",
     "build_observer_collation_context",
+    "build_visibility_audit_rows",
+    "VisibilityAuditRow",
     "build_reviewer_visibility_rows",
     "build_new_session_quick_setup_context",
     "build_preview_picker_context",

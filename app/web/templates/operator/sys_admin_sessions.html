@@ -76,11 +76,10 @@
     <p class="muted">No sessions in this workspace yet.</p>
   {% endif %}
 
-  {# Segment 19C Item 10 rung 1 — scaffold only. Real copy and layout,
-     placeholder rows, wired to nothing; rung 2 replaces the placeholder
-     block with the real finding set. The card is deliberately
-     workspace-wide and therefore sys-admin-only: it reads across every
-     session, which no per-session operator may see. #}
+  {# Segment 19C Item 10 — the workspace-wide visibility-grid audit.
+     Read-only by decision: clearing an offending cell is the owning
+     operator's call on that instrument's Band 3 editor. Sys-admin-only
+     because the query spans every session in the workspace. #}
   <div class="card">
     <h2>Visibility grid audit</h2>
     <p>
@@ -99,45 +98,44 @@
       value.
     </p>
 
-    <div class="banner banner-warning" style="margin: 0 0 1rem;">
-      <p class="banner-headline">Placeholder — not yet wired.</p>
+    {% if visibility_audit_rows %}
+      <table>
+        <tr>
+          <th>Session</th>
+          <th>Instrument</th>
+          <th>Audience</th>
+          <th>Cell</th>
+          <th>Stored as</th>
+          <th>Why it is a finding</th>
+        </tr>
+        {% for row in visibility_audit_rows %}
+          <tr>
+            <td>
+              <a href="/operator/sessions/{{ row.session_id }}">{{ row.session_name }}</a>
+              <code>{{ row.session_code }}</code>
+              <span class="pill pill-lifecycle-{{ row.session_status }}">
+                {{ row.session_status | lifecycle_label }}</span>
+              {% if row.live %}
+                {# The lifecycle is not closing this grant, so somebody
+                   can reach it now. #}
+                <span class="pill pill-warning">Reachable now</span>
+              {% endif %}
+            </td>
+            <td>{{ row.instrument_label }}</td>
+            <td>
+              <span class="pill pill-role-{{ row.audience_slug }}">{{ row.audience_label }}</span>
+            </td>
+            <td>{{ row.window_label }}</td>
+            <td><code>{{ row.stored }}</code></td>
+            <td>{{ row.reason }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
       <p>
-        The rows below are fixed sample text illustrating the layout, not
-        findings from this workspace. Item 10 rung 2 replaces them with the
-        real check.
+        <strong>No findings.</strong> Every stored visibility cell in this
+        workspace carries a mode its audience and window allow.
       </p>
-    </div>
-
-    <table>
-      <tr>
-        <th>Session</th>
-        <th>Instrument</th>
-        <th>Audience</th>
-        <th>Cell</th>
-        <th>Stored as</th>
-        <th>Why it is a finding</th>
-      </tr>
-      <tr>
-        <td><span class="muted">Sample session</span></td>
-        <td><span class="muted">Instrument #1</span></td>
-        <td><span class="pill pill-role-reviewee">Reviewee</span></td>
-        <td><span class="muted">Session ongoing</span></td>
-        <td><code>raw</code></td>
-        <td>Cell accepts only <code>None</code></td>
-      </tr>
-      <tr>
-        <td><span class="muted">Sample session</span></td>
-        <td><span class="muted">Instrument #2</span></td>
-        <td><span class="pill pill-role-observer">Observer</span></td>
-        <td><span class="muted">Responses released</span></td>
-        <td><span class="muted">granularity only</span></td>
-        <td>Half-set pair — set both or neither</td>
-      </tr>
-    </table>
-
-    <p class="muted">
-      When the check runs and finds nothing, this card will say so in words
-      rather than showing an empty table.
-    </p>
+    {% endif %}
   </div>
 {% endblock %}
