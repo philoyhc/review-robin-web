@@ -1070,6 +1070,32 @@ unresolvable-without-guessing form 19G.5 rewrote elsewhere. Repointed
 to `§"Shared body shape" item 3`, the idiom the repo already uses. The
 check built two items ago earning its keep on the item that came after.
 
+**The `spec-writer` pass found one drift and one regression of mine.**
+The drift: `spec/setup_pages.md`'s "Implementation pointers" still
+described the mapping as swapping renamable-slot columns for their
+label, one file below the corrected account — fixed to name the
+required `surface` and point at the three-source order rather than
+restate it.
+
+The regression is the same misconception a third time, and this time I
+put it into a spec that had been right. The passage I rewrote said "one
+of the **nine** renamable tag field-label slots"; I wrote "one of the
+**12** renamable slots", taking the count from `_FIELD_LABEL_SLOTS`.
+Twelve slots *resolve*; only **nine** are operator-renamable —
+`_VALID_SOURCE_FIELDS` allows three reviewer tags, three reviewee tags
+and three pair-context slots, and the three reviewee-identity slots
+were retired as renamable on 2026-05-31, which `spec/csv_contracts.md`
+and `spec/settings_inventory.md` both say correctly. So a correct
+number was replaced with a wrong one in the same document that had it
+right. Corrected in the spec and in the code comment, which now says
+which nine and why that is exactly the reason `_SURFACE_LABELS` has to
+exist: `RevieweeEmail` cannot be given a second word by renaming it.
+
+**Three encounters with one fact in one item** — the impossible test
+premise, the code comment, and the slot count — each caught by a
+different reader: the test run, the test run again, and the
+`spec-writer` pass. None by re-reading.
+
 **Decisions confirmed at build:**
 
 - **`surface=kind` on the CSV-error path** (2026-09-09). That handler

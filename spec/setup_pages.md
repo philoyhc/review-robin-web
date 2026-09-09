@@ -221,8 +221,12 @@ Every Setup Page renders, top-to-bottom:
    column**. Three sources, in order (Segment 19H Item 5, 2026-09-09):
    a **per-page** label for a column the renamable slots cannot name
    correctly; then the session's field-label config for one of the 12
-   renamable slots (operator override → builtin default — the same
-   label the preview header and the `Show columns:` chip render); then
+   in-scope field-label slots — **nine of them operator-renamable**,
+   with the three reviewee-identity slots (`RevieweeName`,
+   `RevieweeEmail`, `PhotoLink`) resolving to a fixed builtin default
+   since renaming them was retired 2026-05-31 (`spec/settings_inventory.md`
+   `field_label_overrides`) — which is the same label the preview header
+   and the `Show columns:` chip render; then
    the canonical CSV name for anything else (`Status` on
    Relationships, whose preview header is also `Status`).
 
@@ -787,8 +791,9 @@ above.
   (`fields_with_data`) — keep them in sync with any new optional
   column added to the model + CSV importer. The route then runs
   the raw list through `views.friendly_fields_with_data`
-  (`app/web/views/_setup.py`) to swap renamable-slot columns for
-  their friendly label before the pills render.
+  (`app/web/views/_setup.py`), passing the page's own required
+  `surface` keyword, to resolve each column through the three-source
+  order in "Shared body shape" item 3 before the pills render.
 - Lifecycle gating is the existing pattern: a `card lock` at the
   top of the body when `is_ready`, and the Upload + Danger Zone
   cards conditionally rendered behind `{% if not is_ready %}`. The

@@ -327,7 +327,11 @@ def friendly_fields_with_data(
        which is a different question from what the reviewee page calls
        its identifier column.
     2. the session's field-label config (operator override → builtin
-       default) for one of the 12 renamable slots.
+       default) for one of the 12 in-scope field-label slots. Nine of
+       those are operator-renamable; the three reviewee-identity slots
+       resolve to a fixed builtin default and reject an override, which
+       is why `_SURFACE_LABELS` is the only way to give `RevieweeEmail`
+       a different word on a different page.
     3. the canonical CSV name, for anything else — ``Status`` on
        Relationships, whose preview header is also ``Status``.
 
