@@ -1714,6 +1714,16 @@ measured, not as first supposed.
 **Measured after:** the suite went 3257 → **3267** (+10, the new
 `test_setup_import_response_loss.py`).
 
+**`spec-writer` (2026-09-09): no drift found**, every claim in the new
+section checked against the templates, `_shared.py`, both route
+modules and the tests. **One flag it did not raise, adjudicated
+against myself.** Its own summary described the error path as one
+that *repeats* `roster_response_count`; my sentence said the page
+re-renders "from the same context". "Same" implies a shared build,
+which is exactly the impression that made Item 3's omission feel
+impossible — the handler builds that context itself, key by key.
+Rewritten to say so, and to name the omission as the evidence.
+
 **Not verified here:** the Azure dev slot. The browser pass on the
 sandbox covered the reported flow end to end — a `draft` session with
 3 reviewers, 1 assignment and 2 responses, the label reading *"Yes,

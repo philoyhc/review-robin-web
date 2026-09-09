@@ -632,8 +632,14 @@ that roster destroys no assignment and no response. It keeps its
 `confirm_replace` tick, which guards the observer roster itself.
 Relationships' import never had the gate.
 
-A parse-blocked upload re-renders the page from the same context, so
-the label survives the error rather than losing its clause.
+A parse-blocked upload re-renders the page from a context the import
+handler **builds itself**, key by key, rather than from the one the
+GET route builds. So the label survives the error only because that
+second builder repeats `roster_response_count` — which is a thing to
+check when adding a key, not a thing the structure guarantees. It did
+not repeat `delete_discards_responses` when Item 2 added it, and
+nothing failed: Jinja's `Undefined` is falsy in `{% if %}`, so the
+label silently took its no-loss branch on that path alone.
 
 ### Search matching and suggestions (Segment 19I)
 
