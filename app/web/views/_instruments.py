@@ -714,11 +714,31 @@ def build_instruments_context(
     db.expire_all()
 
     is_ready = lifecycle.is_ready(review_session)
-    can_edit = not is_ready
+    # Segment 19I Item 6 — the page's half of the route gate. This
+    # was ``not is_ready``, which left every mutation control live on
+    # ``expired`` and ``archived``, where the routes then permitted
+    # the delete. Both halves now read ``is_editable`` so page and
+    # route agree by construction rather than by two lists kept in
+    # step. ``is_ready`` stays for the things it actually guards —
+    # the lock card and the per-instrument Open / Close controls,
+    # which are collection-phase actions, not setup mutations.
+    can_edit = lifecycle.is_editable(review_session)
+    # The recovery path out of each locked state, for the disabled
+    # controls' titles. ``revert_session_to_draft`` accepts ``ready``
+    # and ``expired``; ``archived`` leaves through
+    # ``unarchive_session``, surfaced as bulk-unarchive in the
+    # archived-sessions lobby. Empty while editable — nothing is
+    # locked, so nothing needs a way out.
+    if can_edit:
+        lock_action = ""
+    elif lifecycle.is_archived(review_session):
+        lock_action = "Unarchive this session"
+    else:
+        lock_action = "Revert to draft"
     # State machine: ``?editing={instrument_id}`` opens that card for
-    # editing. The yellow lock card on a ``ready`` session overrides
+    # editing. The lock card on a non-editable session overrides
     # everything — every per-instrument card stays locked.
-    editing_instrument_id = None if is_ready else editing
+    editing_instrument_id = editing if can_edit else None
 
     # "Saved" / "not saved" pill on each per-instrument card's status
     # sub-card. An instrument is "saved" if it has at least one audit
@@ -746,6 +766,7 @@ def build_instruments_context(
         "instruments": instruments,
         "is_ready": is_ready,
         "can_edit": can_edit,
+        "lock_action": lock_action,
         "editing_instrument_id": editing_instrument_id,
         "instrument_saved_state": instrument_saved_state,
         "is_configured_by_instrument": is_configured_by_instrument,
