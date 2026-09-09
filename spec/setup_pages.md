@@ -399,14 +399,17 @@ on the left). It is the per-row authoring surface — operators no
 longer round-trip a CSV bulk-replace to fix one name, retire one
 person, or add one row. Top-to-bottom:
 
-1. **Search + filter strip.** A search box (name / email
-   typeahead, backed by a `<datalist>` of the unfiltered
-   roster's distinct values) plus, on Reviewers / Reviewees, a
-   **Status** filter (`all` / `active` / `inactive`). Relationships
-   substitutes a **Search by** dropdown (Reviewer / Reviewee —
-   picks which side of the pair the search box matches) since a
-   relationship has no single status-vs-roster distinction worth
-   a filter.
+1. **Search + filter strip.** One shape on all four pages
+   (Segment 19I): a **Status** filter (`all` / `active` /
+   `inactive`) and a search box backed by a `<datalist>`
+   typeahead. Relationships carried a **Search by** dropdown
+   (Reviewer / Reviewee) instead of the Status filter until 19I;
+   it is retired — the page has had a row `status` since 15D and
+   ships the Inactivate / Activate buttons that set it, so the
+   filter was missing rather than unwarranted, and the search now
+   reaches both sides of the pair without being told which. What
+   the search matches and what the typeahead offers is the
+   "Search matching and suggestions" contract below.
 2. **Single inline action row** (`filter-actions`) — the
    "Showing N of M" hint, an optional **Clear** link, a
    selected-count pill, the selection-driven **Edit**,
@@ -424,6 +427,80 @@ search or status filter is applied) — the cap is applied after
 sort, so the visible window matches the operator's chosen order.
 A "Showing N of M" hint renders when the cap or filter trims the
 list.
+
+### Search matching and suggestions (Segment 19I)
+
+**What the search box matches — per column, unioned.** A row is
+kept when *any* of its columns matches:
+
+| Column | Rule |
+|---|---|
+| Name — Reviewers / Reviewees `name`, Observers `display_name` (blank when unset) | substring, case-insensitive |
+| Handle — Reviewers / Observers `email`, Reviewees `email_or_identifier` | substring, case-insensitive |
+| Tag slots — `tag_1..3`; Observers have `tag_1` only | **whole value**, case- and surrounding-whitespace-insensitive |
+
+Relationships applies the name and handle rules to **both sides**
+of the pair, and the tag rule to the *row's own* pair-context
+tags. Pair-context tags belong to the relationship rather than to
+either member, so there is no side to attribute them to; matching
+both removes the question rather than answering it. A row whose
+reviewer or reviewee FK does not resolve is matched on the side
+that does.
+
+The rule is stated per column rather than per input on purpose.
+An input-level rule ("exact if the input equals some tag value,
+else substring") makes one input mean different things on
+different rosters: searching `Ethan` would stop returning every
+Ethan-by-name the moment any row acquired a tag of exactly
+`Ethan`. Whole-value on tags is what keeps `Team A` from dragging
+in `Team A2`; substring on names is what makes a partial name
+useful. Prefix matching is not a middle ground, since `Team A` is
+a prefix of `Team A2`.
+
+**Picking a person from the typeahead.** When the input is
+*exactly* one of the `"Name (handle)"` labels the page offered,
+the parenthesized handle is exact-matched instead — otherwise
+picking `Ana Lim (ana@example.edu)` would also return
+`ana2@example.edu`. On Relationships that exact match is checked
+against **either** side of the pair, as the substring rules are.
+The trigger is "equals an offered label", not "ends in
+parentheses": punctuation cannot tell a label from a tag value
+like `Group (B)`, and a reviewee handle need not contain `@`. The
+check runs against the **uncapped** label set, so a label past
+the suggestion cap that an operator types from memory is still
+recognized.
+
+**What the typeahead offers.** The distinct **tag values** first,
+then the `"Name (handle)"` people labels sorted
+case-insensitively:
+
+- One option per distinct *value*, not per row — a 1,000-row
+  roster across 55 groups contributes 55 options.
+- Built from the **unfiltered, uncapped** roster, so the list can
+  name a partition whose rows currently fall past the display
+  cap; picking it brings them into the window. This is the
+  large-roster case the strip exists for.
+- Tags lead because browsers filter a `<datalist>` in document
+  order, so the partition values stay visible when both halves
+  match.
+- Two caps, kept separate so a long roster cannot crowd the tags
+  out: `SEARCH_TAG_OPTIONS_CAP` (200) on the tag half,
+  `REVIEWERS_DATALIST_CAP` (200) on the people half.
+
+Relationships ships **one** merged list carrying both sides'
+people and the pair-context tag values, not one list per
+dimension. (The Edit / Add row's reviewer and reviewee pickers
+are separate datalists with their own contract — see
+"Relationships pickers" below.)
+
+Status counts as a filter everywhere it appears: it lifts the cap
+to 500 and it makes the **Clear** link render, so an operator who
+narrows to Inactive has a one-click way back.
+
+Predicates and option builders: `app/web/views/_filters.py`
+(`filter_reviewers_rows` / `filter_reviewees_rows` /
+`filter_observers_rows` / `filter_relationships_rows` and the
+matching `*_search_options`).
 
 ## Per-row Edit / Add / bulk actions (Segment 15F)
 
@@ -626,8 +703,10 @@ The Observers page renders, top-to-bottom:
      (looser gate than the Operator actions card so the
      editor stays live mid-session). Hidden by default;
      the JS reveals it when ≥1 observer is checked.
-   - **Operator actions card**: search box + status filter
-     (`all` / `active` / `inactive`) + selection-driven
+   - **Operator actions card**: the shared search + filter
+     strip — status filter (`all` / `active` / `inactive`) plus
+     the tag-aware search box, over Observers' single `tag_1`
+     slot — and the selection-driven
      Edit / Inactivate / Activate / Add-new-row button row.
      Same 200-row (500-when-filtered) cap. Same
      selection-preservation post-action redirect contract.

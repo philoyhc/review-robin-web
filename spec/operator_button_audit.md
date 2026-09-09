@@ -304,7 +304,7 @@ Reviewees Setup shape (Upload + Danger Zone + preview table).
 | 137 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection. |
 | 138 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection. |
 | 139 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. |
-| 140 | Operator actions (15F) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" + search GET. Sits last in the single inline `filter-actions` row, after the selection-driven buttons + pill. |
+| 140 | Operator actions (15F) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the Status + search GET (the "Search by" side-picker it submitted until Segment 19I is retired). Sits last in the single inline `filter-actions` row, after the selection-driven buttons + pill. |
 | 141 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 142 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. |
 | 143 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |

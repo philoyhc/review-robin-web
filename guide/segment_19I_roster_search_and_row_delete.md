@@ -358,6 +358,56 @@ pair, and only a test seeding a colliding pair sees it.
 `filter_relationships_rows` and `relationships_search_options`, and
 `test_relationships_page_filter.py` 9 → 13).
 
+**2026-09-09 — PR 3 landed; Item 1 closes.** `spec/setup_pages.md`
+gains a "Search matching and suggestions" subsection under the
+Operator actions card: the per-column matching table, the
+both-sides-plus-row-tags rule for Relationships, the pick-an-offered-
+label trigger, and the suggestion contract (distinct values, built
+from the unfiltered roster, tags first, two separate caps). The strip
+bullet now states one shape for four pages. The stale justification —
+"a relationship has no single status-vs-roster distinction worth a
+filter" — is replaced by what the evidence actually showed: the filter
+was missing rather than unwarranted, since the page has had a row
+`status` since 15D and ships the buttons that set it.
+
+**Two specs the plan did not name.** Grepping `Search by|search_by`
+across `spec/` and `docs/` after the strip section was rewritten found
+`spec/settings_inventory.md`'s URL-param row still documenting
+`?search_by=` as a live Relationships parameter, and
+`spec/operator_button_audit.md` row 140 still describing the
+Relationships **Search** button as submitting a "Search by" dropdown.
+Both are drift this item caused, so both are now `### Doc impact`
+bullets rather than a later sweep's problem. Two further hits are
+Assignments (`spec/operator_button_audit.md` row 71i,
+`spec/archive/rule_based_assignment.md`), which keeps its side-picker
+and is Out of scope, and one is a `docs/status.md` history row for 13C
+that describes what shipped then and stays as written.
+
+**The spec is written from the code, not from the plan.** Four claims
+were checked against `app/` rather than carried over from this
+document: Observers match on `display_name` (which may be unset) and
+`email`, not `name`; Reviewees match on `email_or_identifier`;
+Observers carry one tag slot where the others carry three; and
+`is_filtered` includes status on all four routes, which is what makes
+"status lifts the cap to 500" true rather than plausible. The first
+two would have been wrong if written from the plan's prose.
+
+**The `spec-writer` pass, adjudicated.** It verified every factual
+claim in the new subsection against the code — the per-column table,
+the both-sides rule, the dangling-FK behavior, the uncapped label set,
+the ordering and both cap values, and `is_filtered` on all four routes
+— and found no drift left live. Three flags, all accepted:
+
+- Two British forms in prose written this morning (`parenthesised`,
+  `recognised`), fixed. New prose is US per `CLAUDE.md`; the no-sweep
+  rule protects *existing* prose, not text I wrote an hour ago.
+- The pick path's paragraph never said, for Relationships, that the
+  exact match is checked against **either** side — true in the code and
+  one of the six mutants PR 2 killed, but a reader could take "both
+  sides" as scoped to the substring table above it. One clause added.
+  Filed as a completeness gap rather than an error, which is what it
+  was, but the mutant it corresponds to is why it was worth closing.
+
 ### PR ladder
 
 **Amended 2026-09-09** by `### Decision — revised`: tag values now
@@ -438,6 +488,13 @@ visible rather than edited away.
   one strip shape for all four pages: a Status filter and a search box
   matching names, handles and tag contents, with the Relationships
   `Search by` dropdown and its justification retired (PR 3).
+- `spec/settings_inventory.md` — the `?status=` / `?q=` URL-param row
+  drops `?search_by=`, names all four pages, and renames the carried
+  hidden field to `filter_status` (PR 3, added at build — see
+  `### Status`).
+- `spec/operator_button_audit.md` — row 140, the Relationships
+  operator-actions **Search** button, no longer submits a "Search by"
+  dropdown (PR 3, added at build).
 - `docs/status.md` — row at the close (PR 3).
 
 ---
