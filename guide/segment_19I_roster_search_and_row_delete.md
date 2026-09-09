@@ -1466,7 +1466,9 @@ nothing back.
 ### Blast radius (measured)
 
 At `e6462def`: 4 templates (the hint in two places each, plus one JS
-line), 1 `base.html` rule, 2 spec passages. No route or service change
+line), 1 `base.html` rule, 3 spec passages — the status-row item, the
+"Preview tables" opener and the select-all caveat; I wrote 2 and the
+diff has 3. No route or service change
 — both numbers were already in the render context.
 
 ### PR ladder
@@ -1511,6 +1513,32 @@ checked and select-all fires.
 **Measured after:** the suite went 3241 → **3257** (+16, the new
 `test_setup_showing_hint.py`).
 
+**2026-09-09 — `spec-writer` flags adjudicated, all four accepted.**
+
+**Both stale passages were prose I wrote earlier in this same
+segment.** `spec/rrw_functional_spec.md` still put the hint in the
+status row — a sentence I added in **Item 2's** adjudication, false one
+item later. `spec/lifecycle.md` §5 listed `Showing N of M` among "the
+read-only half of the strip" — mine from **Item 3**, false the moment
+Item 4 moved it to a different card. Every item in this segment has
+found undeclared stale spec text; this is the first time the stale text
+was recent enough to be my own, which sharpens the pattern from "the
+plan under-names files" to "a location claim goes stale the next time
+anything moves, and prose that names a location is the prose to grep
+for."
+
+**The plan's own blast radius was wrong.** It said 2 spec passages; the
+diff touches 3. Corrected in place rather than left, since the count is
+the thing the section exists to be trusted on.
+
+**And the caveat paragraph changed scale mid-sentence.** It opened on
+the 600-matching/500-rendered case and then illustrated the two-number
+pairing with a fresh `4 of 12`. Both are producible, so it was not
+wrong — just a re-orientation the reader has to do for no reason. Now
+one scale throughout: `Showing 500 of 600` against `500 of 500
+selected`. The same edit removed a "this row" that named a row the
+passage no longer sits in.
+
 ### Open questions
 
 - None.
@@ -1526,4 +1554,9 @@ checked and select-all fires.
 - `spec/setup_pages.md` — the status-row description loses the hint and
   gains the pill's `N of M` format; "Preview tables" gains the hint's
   new home; the select-all caveat is rewritten around the two numbers.
+- `spec/rrw_functional_spec.md` — the operator-actions bullet stops
+  putting the hint in the status row and names the pill's format
+  (added at build — see `### Status`).
+- `spec/lifecycle.md` — §5's read-only-half list drops the hint, which
+  now lives in the preview-table card (added at build).
 - `docs/status.md` — row at the close.
