@@ -638,6 +638,22 @@ were the *stylesheet* matching: the CSS contains the selectors and
 search over a document that contains its own CSS is not a search over
 the markup.
 
+**The `spec-writer` pass found a stale count this item did not
+create.** `spec/ui_elements.md` said the captures arrive "six 1× shots
+at ~830px and six 2× at ~1680px" and pinned "the wide **six**" at
+1200px. Measured: **6 narrow, 10 wide**. Checked against history rather
+than assumed — twelve captures landed 2026-09-07 in a genuine 6/6
+split, and the four `instrument-card-*` captures added 2026-09-08 are
+all wide (1753–1758px), so the sentence went stale the day after it was
+written and stayed that way through two segments. Corrected with the
+date the split moved, since six-and-six was true when written. Nothing
+derives from the number — the test splits on measured pixel width —
+which is exactly why nothing caught it. **The same sentence appears
+twice more**, in the test file's own header comment and, for the mat's
+second job, in `base.html`; both are corrected here, because a spec
+fixed while the two comments it was written from still say the old
+thing is half a fix.
+
 **Decisions confirmed at build:**
 
 - **`loading="lazy"` on both copies** (2026-09-09). Both are fetched
