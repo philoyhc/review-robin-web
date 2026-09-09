@@ -408,6 +408,28 @@ the ordering and both cap values, and `is_filtered` on all four routes
   Filed as a completeness gap rather than an error, which is what it
   was, but the mutant it corresponds to is why it was worth closing.
 
+**2026-09-09 — post-close follow-up: the help text.** Reported from
+use the same day: the search boxes' placeholders still read "Reviewer
+name or email" on three pages, which is the one line of the page that
+tells an operator what to type. The item taught the boxes to read tag
+columns and left the sign over them wrong — **no test could have caught
+it**, because every assertion the item added is about what the search
+*does*. Placeholders now read "<Entity> name, email or tag"
+(Relationships already read "Name, email or tag" from rung 2), and a
+new `tests/integration/test_setup_search_placeholders.py` pins the
+search input's own placeholder on all four pages, located by the
+`list=` that binds it to the page's datalist — a bare `"tag" in body`
+would pass on the tag chips, the column headers and the label editor.
+The Relationships Edit / Add pickers keep "Search name or email": they
+resolve one person and do not search tags, which the same file pins so
+a future sweep does not "fix" them into agreement.
+
+**Left as reported, not widened** (2026-09-09): the Reviewees box says
+"email" where the column is `email_or_identifier`, so an analysis-only
+roster of anonymous identifiers is under-described. That predates this
+item and is a copy question of its own; noted here rather than folded
+into a placeholder fix.
+
 ### PR ladder
 
 **Amended 2026-09-09** by `### Decision — revised`: tag values now
