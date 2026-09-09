@@ -729,9 +729,10 @@ def build_instruments_context(
     # ``unarchive_session``, surfaced as bulk-unarchive in the
     # archived-sessions lobby. Empty while editable — nothing is
     # locked, so nothing needs a way out.
+    is_archived = lifecycle.is_archived(review_session)
     if can_edit:
         lock_action = ""
-    elif lifecycle.is_archived(review_session):
+    elif is_archived:
         lock_action = "Unarchive this session"
     else:
         lock_action = "Revert to draft"
@@ -767,6 +768,12 @@ def build_instruments_context(
         "is_ready": is_ready,
         "can_edit": can_edit,
         "lock_action": lock_action,
+        # Segment 19I Item 6 PR 2 — the lock card branches on this.
+        # `revert_session_to_draft` accepts `ready` and `expired`, so
+        # those two carry the inline revert form; `archived` answers
+        # 409 there and leaves through `unarchive_session` in the
+        # lobby instead.
+        "is_archived": is_archived,
         "editing_instrument_id": editing_instrument_id,
         "instrument_saved_state": instrument_saved_state,
         "is_configured_by_instrument": is_configured_by_instrument,

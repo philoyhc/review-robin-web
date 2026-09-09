@@ -346,12 +346,37 @@
     </div>
   </div>
 
-  {% if is_ready %}
+  {# Segment 19I Item 6 PR 2 — the card covers every state the page
+     locks, not just `ready`. PR 1 gated `expired` and `archived` and
+     left them silent: controls correctly absent, nothing saying why,
+     which is the shape Item 3 named on the roster pages.
+
+     Each branch names the way out that its own state actually has.
+     `revert_session_to_draft` accepts `ready` and `expired`, so both
+     carry the inline form below; from `archived` that route answers
+     409, so its branch points at the lobby's Unarchive and offers no
+     control — a revert button there would be the dead control Item 3
+     removed.
+
+     `expired` reads **Closed** to an operator
+     (`app/services/lifecycle_display.py`), so the copy says closed. #}
+  {% if not can_edit %}
     <div class="card lock">
       <p style="margin: 0 0 12px 0;">
-        The instruments cannot be modified while the session is ongoing.
-        Revert the session to draft if you wish to modify anything.
+        {% if is_ready %}
+          The instruments cannot be modified while the session is ongoing.
+          Revert the session to draft if you wish to modify anything.
+        {% elif is_archived %}
+          The instruments cannot be modified because the session is archived.
+          Unarchive it from
+          <a href="/operator/sessions/archived">Archived sessions</a>
+          if you wish to modify anything.
+        {% else %}
+          The instruments cannot be modified because the session is closed.
+          Revert the session to draft if you wish to modify anything.
+        {% endif %}
       </p>
+      {% if not is_archived %}
       <form method="post" action="/operator/sessions/{{ session.id }}/revert">
         <input type="hidden" name="return_to" value="instruments">
         <p>
@@ -367,6 +392,7 @@
                   disabled aria-disabled="true">Revert to draft</button>
         </p>
       </form>
+      {% endif %}
     </div>
   {% endif %}
 
