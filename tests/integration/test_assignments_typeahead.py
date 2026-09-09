@@ -69,7 +69,7 @@ def _datalist_options(body: str) -> list[str]:
 
 
 def _showing(body: str) -> str | None:
-    m = re.search(r"Showing (\d+) of (\d+)\.", body)
+    m = re.search(r"Showing (\d+) of (\d+) assignments\.", body)
     return m.group(0) if m else None
 
 
@@ -96,7 +96,9 @@ def test_a_picked_label_returns_that_person_and_not_the_lookalike(
     ).text
 
     assert _showing(by_name) is None, "both Anas — all three pairs, so no hint"
-    assert _showing(by_pick) == "Showing 2 of 3.", "only the picked handle's pairs"
+    assert (
+        _showing(by_pick) == "Showing 2 of 3 assignments."
+    ), "only the picked handle's pairs"
 
 
 def test_the_service_matches_a_resolved_handle_by_equality(
@@ -146,7 +148,9 @@ def test_a_picked_label_scopes_to_the_side(
     ).text
 
     assert _showing(reviewer) is None, "both pairs — she reviews on each"
-    assert _showing(reviewee) == "Showing 1 of 2.", "only the self-review row"
+    assert (
+        _showing(reviewee) == "Showing 1 of 2 assignments."
+    ), "only the self-review row"
 
 
 def test_an_unpicked_term_still_matches_as_item_7_left_it(
@@ -220,4 +224,4 @@ def test_the_page_renders_the_pick(
         f"?q=Ana+Lim+%28ana%40example.edu%29&search_by=reviewer"
     ).text
 
-    assert "Showing 2 of 3." in body
+    assert "Showing 2 of 3 assignments." in body

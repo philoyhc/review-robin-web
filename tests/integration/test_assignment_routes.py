@@ -407,6 +407,54 @@ def test_non_operator_gets_404_on_assignments_hub_and_post(
     assert post.status_code == 404
 
 
+def test_the_count_line_uses_the_shared_partial_and_class(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19I Item 10 — the page carried three separate
+    notices: a filter count flush right in the actions row, a
+    `Showing first N of M unique pairs.` line in `.form-help`, and
+    a `…and X more not shown.` line below the table. They are one
+    sentence now, in the rosters' class.
+
+    `.form-help` sets `--fs-small`, so the old line rendered a size
+    smaller than the same sentence on the four roster pages. That
+    difference is what this test exists to keep from coming back.
+    """
+    review_session = _make_session(client, db)
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=[f"r{i}@example.edu" for i in range(3)],
+        reviewee_idents=[f"e{i}@example.edu" for i in range(4)],
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    # A search that matches some but not all pairs, so the filter
+    # branch has something to say.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
+    ).text
+
+    preview = body[body.index("Assignments preview") :]
+    assert '<p class="muted table-showing-hint">' in preview
+    # The class the page used to use, and the wording that went with
+    # it. `.form-help` survives elsewhere in the app, so this is
+    # scoped to the preview card.
+    assert "form-help" not in preview[: preview.index('id="assignments-table"')]
+    assert "unique pairs" not in body
+
+    # The count has left the actions row: it now sits with the rows
+    # it counts, as on the rosters. Scoped to the rendered row, not
+    # to everything above the preview — `base.html` inlines a CSS
+    # comment naming the counter, and an unscoped assertion matches
+    # that instead of any markup.
+    start = body.index('<div class="filter-actions">')
+    actions = body[start : body.index("</form>", start)]
+    assert "Showing" not in actions
+    assert '<span class="muted">Showing' not in body
+
+
 def test_assignments_hub_truncates_large_pair_list(
     client: TestClient, db: Session
 ) -> None:
@@ -423,8 +471,13 @@ def test_assignments_hub_truncates_large_pair_list(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert "Showing first 200 of 217" in body
-    assert "and 17 more" in body
+    # Segment 19I Item 10 — one sentence, not a top line plus a
+    # second `…and 17 more not shown.` below the table.
+    assert (
+        "Showing first 200 of 217 assignments; 17 more not shown." in body
+    )
+    assert "unique pairs" not in body
+    assert "…and 17 more not shown." not in body
 
 
 def test_hub_renders_current_pairs_card_when_assignments_exist(
