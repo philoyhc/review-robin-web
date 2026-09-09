@@ -143,3 +143,28 @@ def test_the_page_renders_tag_matches(
     ).text
 
     assert "Showing 1 of 2." in body
+
+
+def test_a_blank_term_yields_no_tag_predicates() -> None:
+    """A whitespace-only term must add **no** tag predicate.
+
+    Without the guard, `lower(trim(tag)) == ''` is true for a row
+    whose tag slot holds an empty string rather than NULL — which CSV
+    import can produce — so a stray space would "match" every
+    untagged row on its tags.
+
+    Asserted on `_tag_matches` rather than through `count_pairs`,
+    because an empty term also makes the *name* predicate
+    `ILIKE '%%'`, which matches every row whatever the tags do. At
+    that level the guard is invisible, which is exactly why dropping
+    it passed the whole file.
+    """
+    from app.db.models import Reviewer
+    from app.services.assignments._coverage import _tag_matches
+
+    columns = (Reviewer.tag_1, Reviewer.tag_2, Reviewer.tag_3)
+
+    for term in ("", "   ", "\t", "\n "):
+        assert _tag_matches(term, *columns) == [], repr(term)
+
+    assert len(_tag_matches("Team A", *columns)) == 3
