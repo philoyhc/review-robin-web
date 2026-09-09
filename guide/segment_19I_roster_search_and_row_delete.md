@@ -1701,15 +1701,45 @@ gate put back, and `roster_response_count` zeroed on the error
 render. No vacuous assertion this round, the first clean run in four
 days.
 
-**The Quick Setup finding was half wrong when first written down.**
-The two `acknowledge_response_loss=None` call sites in
-`_quick_setup.py` looked like the defect and are not: they are in the
-create-session handler, where the session was made in the same
+**The Quick Setup finding was wrong twice, and is withdrawn.**
+
+First pass: the two `acknowledge_response_loss=None` call sites in
+`_quick_setup.py` looked like the defect. They are not — they sit in
+the create-session handler, where the session is made in the same
 request, so `existing > 0` is false and the gate is never reached.
-Reproducing it moved the finding to the real place — the Session Home
-card, whose form omits the field — and changed the symptom from a 400
-to a `needs_confirm` redirect. Recorded under "Open questions" as
-measured, not as first supposed.
+
+Second pass (recorded here at the time as the *real* finding): the
+Session Home card's form omits `acknowledge_response_loss`, and a
+POST to `/quick-setup/reviewers` on a session with responses
+redirects to `quick_setup_reason=needs_confirm`. **That is also
+wrong, and wrong in the way this item exists to warn about.** I
+posted directly to the route. The card cannot make that request:
+`views.build_quick_setup_context` sets
+`is_available = is_draft(...) and not has_responses`, and
+`is_locked = True if not is_available else not is_unlocked` — so on
+a session with responses the body renders `.locked`, **every file
+input carries `disabled`**, the Lock / Unlock toggle is suppressed
+so the lock cannot be lifted, and the description reads *"Quick
+Setup is locked because this session already holds reviewer
+responses from a prior activation. Use the individual Setup pages
+to make changes."* Measured on a rendered page at `acf74a85`, with
+the unlock cookie set, so the cookie path is covered too. The
+behaviour is deliberate and has been tested since Segment 11J
+(`test_quick_setup_unavailable_when_responses_exist_even_on_draft`).
+
+**Item 5's own test docstring names the mistake I then made.** It
+says the tests post *exactly what the rendered form carries*, because
+inventing a field the page does not offer proves the route works
+while leaving the operator stuck. The inverse is just as false:
+posting a request the page cannot make proves a defect that no
+operator can reach. I applied the rule to the fix and not to the
+finding.
+
+**One thing the retraction turns up in Item 5's favour.** That lock
+copy tells the operator to *"use the individual Setup pages"* — which,
+until Item 5 landed, was advice to a dead end: those pages returned
+400 on precisely this session. Item 5 made the card's own instruction
+true.
 
 **Measured after:** the suite went 3257 → **3267** (+10, the new
 `test_setup_import_response_loss.py`).
@@ -1750,24 +1780,16 @@ error.
 
 ### Open questions
 
-- **The Quick Setup card on Session Home is a fourth surface**, found
-  while following this defect and left for the author to rule on. Its
-  per-slot import routes accept `acknowledge_response_loss` and
-  `_quick_setup_card.html` does not send it, so on a session carrying
-  responses the card redirects to
-  `?quick_setup_error=reviewers&quick_setup_reason=needs_confirm`
-  **after the operator has ticked confirm** — the error tells them to
-  do the thing they just did, and no tick on the card can clear it.
-  Reproduced at `9e0e8f9e`. It is out of this item because the fix is a
-  copy decision on a different page's card, not the same one-line
-  mirror: the card's single tick currently says nothing about
-  responses, and auto-sending the acknowledgement would replace a
-  wrong error with a silent loss. See "Out of scope".
+- ~~**The Quick Setup card on Session Home is a fourth surface**~~ —
+  **withdrawn 2026-09-09, it is not.** See the retraction in
+  `## Status`. The card is force-locked whenever the session carries
+  responses, in `draft` as much as anywhere else, and says so; the
+  route gate I reproduced is defense-in-depth the card cannot reach.
 
 ### Out of scope
 
-- **The Quick Setup card's replace** (above) — same defect class,
-  different page, and its fix is a decision rather than a mirror.
+- ~~**The Quick Setup card's replace**~~ — struck 2026-09-09: there
+  is no defect there to scope in or out. See `## Status`.
 - **Relationships' import**, which has no response-loss gate to fix.
 - **`_quick_setup.py`'s two `acknowledge_response_loss=None` call
   sites** in the create-session handler. Checked and correct: the
