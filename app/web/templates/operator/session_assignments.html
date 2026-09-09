@@ -214,6 +214,20 @@
               action="/operator/sessions/{{ session.id }}/assignments"
               class="operator-actions-filter">
           <div class="filter-row">
+            {# Segment 19I Item 9 — the status filter, in the roster
+               pages' shape. It reads `Assignment.include`, the
+               boolean this card's own Inactivate / Activate buttons
+               flip: the state was visible (dimmed rows) and
+               unfilterable. #}
+            <label class="filter-status">
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
             <label class="filter-status">
               Search by:
               <select name="search_by">
@@ -228,9 +242,20 @@
             </label>
             <label class="filter-search">
               Search:
+              {# Segment 19I Item 9 — name / handle labels only, both
+                 sides in one list. Picking one submits the whole
+                 label, which the route resolves to that side's handle
+                 and matches by equality; without that it would match
+                 nothing, being a substring of no name and no email. #}
               <input type="text" name="q" value="{{ filter_q }}"
+                     list="assignments-search-options"
                      autocomplete="off"
                      placeholder="Name, email or tag">
+              <datalist id="assignments-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
             </label>
           </div>
           {# One action row: the filter count / Clear, the
@@ -273,6 +298,7 @@
     <form id="assignments-bulk-form" method="post"
           action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate">
       <input type="hidden" name="filter_q" value="{{ filter_q }}">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_search_by"
              value="{{ filter_search_by }}">
     </form>

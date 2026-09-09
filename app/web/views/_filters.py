@@ -324,6 +324,65 @@ def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
     return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
+
+def assignments_search_options(
+    reviewers: list[Reviewer], reviewees: list[Reviewee]
+) -> list[str]:
+    """Typeahead options for the Assignments page: both sides'
+    ``"Name (handle)"`` labels, one list (Segment 19I Item 9).
+
+    **No tag values**, unlike the roster pages'. The author's
+    measurement on a large mock roster is that a tag identifies too
+    many pairs to partition by here, where on a roster of people it
+    partitions usefully. Tag *matching* (Item 7) is untouched.
+
+    One list rather than one per side because ``search_by`` is a
+    select the operator can change without a reload — a per-side list
+    would need JS, and the picked handle resolves against whichever
+    side the scope allows anyway. Sorted case-insensitively and capped
+    for display only; :func:`assignments_picked_handles` checks the
+    **uncapped** sets, so a label past the cap that the operator types
+    from memory is still recognised.
+    """
+    labels = sorted(
+        set(_reviewer_labels(reviewers)) | set(_reviewee_labels(reviewees)),
+        key=str.casefold,
+    )
+    return labels[:REVIEWERS_DATALIST_CAP]
+
+
+def assignments_picked_handles(
+    needle: str, reviewers: list[Reviewer], reviewees: list[Reviewee]
+) -> tuple[str | None, str | None]:
+    """``(reviewer_handle, reviewee_handle)`` when ``needle`` is
+    exactly one of that side's offered labels, else ``None`` per side.
+
+    Resolved per side because the two carry different rules, and both
+    are the roster pages' own: a **reviewer** tail must contain ``@``
+    (their handle is always an email, and the guard also keeps a tag
+    like ``Group (B)`` from reading as a pick), a **reviewee** tail
+    need not (``email_or_identifier`` may be an anonymous ID in the
+    asymmetric mode). Mirroring them here beats inventing a third
+    rule for the page that joins the two.
+    """
+    reviewer_tail = _picked_label_handle(needle, _reviewer_labels(reviewers))
+    reviewee_tail = _picked_label_handle(needle, _reviewee_labels(reviewees))
+    return (
+        reviewer_tail if (reviewer_tail and "@" in reviewer_tail) else None,
+        reviewee_tail,
+    )
+
+
+# Status filter options for the Assignments page (Segment 19I Item
+# 9). Backed by ``Assignment.include`` rather than a status column —
+# the vocabulary is the strip's own **Inactivate** / **Activate**
+# buttons, and dimmed rows already show the state.
+ASSIGNMENTS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+)
+
+
 # Status filter options for the Reviewees Setup page. Order matters
 # (dropdown order operators see). ``"all"`` is implicit. Segment 15F
 # PR 4 — same shape as ``REVIEWERS_STATUS_OPTIONS``.

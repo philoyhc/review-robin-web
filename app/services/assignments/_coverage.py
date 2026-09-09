@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import false as sa_false, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
@@ -285,7 +285,35 @@ def _tag_matches(term: str, *columns):
     return [func.lower(func.trim(column)) == folded for column in columns]
 
 
-def _apply_pair_search(stmt, search: str, search_by: str = "all"):
+def _apply_status(stmt, status: str):
+    """Filter a pairs query by `Assignment.include` (Segment 19I Item
+    9).
+
+    `include` is the boolean the Assignments strip's **Inactivate** /
+    **Activate** buttons flip, and dimmed rows already show it — it
+    was visible and unfilterable, so an operator could inactivate in
+    bulk and have no way to list the result back.
+
+    `all`, and anything unrecognised, falls through to everything —
+    the roster pages' own rule (`views/_filters.py`). `is_(True)`
+    rather than `== True` keeps the SQL portable: `IS true` is what
+    Postgres wants, and `CLAUDE.md` records `= 1` as one of the
+    SQLite-permissive forms that has bitten this repo.
+    """
+    if status == "active":
+        return stmt.where(Assignment.include.is_(True))
+    if status == "inactive":
+        return stmt.where(Assignment.include.is_(False))
+    return stmt
+
+
+def _apply_pair_search(
+    stmt,
+    search: str,
+    search_by: str = "all",
+    picked_reviewer_handle: str | None = None,
+    picked_reviewee_handle: str | None = None,
+):
     """Add the reviewer / reviewee free-text filter to a pairs query.
 
     Name and handle match by **case-insensitive substring** (Segment
@@ -304,6 +332,42 @@ def _apply_pair_search(stmt, search: str, search_by: str = "all"):
     stmt = stmt.join(
         Reviewer, Assignment.reviewer_id == Reviewer.id
     ).join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+
+    # Segment 19I Item 9 — a typeahead label the operator picked
+    # resolves to that side's handle, matched by **equality**. Without
+    # this the pick returns nothing at all: `%Ana Lim
+    # (ana@example.edu)%` is a substring of no name and no email, so
+    # the substring path below yields zero rows. Equality is also what
+    # separates `ana@example.edu` from `ana2@example.edu`, which a
+    # name substring cannot.
+    if picked_reviewer_handle or picked_reviewee_handle:
+        sides = []
+        if picked_reviewer_handle:
+            sides.append(
+                (
+                    "reviewer",
+                    func.lower(func.trim(Reviewer.email))
+                    == picked_reviewer_handle.strip().casefold(),
+                )
+            )
+        if picked_reviewee_handle:
+            sides.append(
+                (
+                    "reviewee",
+                    func.lower(func.trim(Reviewee.email_or_identifier))
+                    == picked_reviewee_handle.strip().casefold(),
+                )
+            )
+        allowed = [
+            clause for side, clause in sides if search_by in ("all", side)
+        ]
+        if not allowed:
+            # The pick names a side the scope excludes — nothing
+            # matches, rather than falling back to a substring search
+            # that would ignore the operator's scope.
+            return stmt.where(sa_false())
+        return stmt.where(or_(*allowed))
+
     reviewer_match = or_(
         Reviewer.name.ilike(term),
         Reviewer.email.ilike(term),
@@ -332,6 +396,9 @@ def list_pairs(
     limit: int = PAIR_PREVIEW_LIMIT,
     search: str | None = None,
     search_by: str = "all",
+    status: str = "all",
+    picked_reviewer_handle: str | None = None,
+    picked_reviewee_handle: str | None = None,
 ) -> list[Assignment]:
     """Return saved Assignment rows with reviewer + reviewee + instrument
     eagerly loaded.
@@ -349,7 +416,14 @@ def list_pairs(
         joinedload(Assignment.instrument),
     )
     if search and search.strip():
-        stmt = _apply_pair_search(stmt, search, search_by)
+        stmt = _apply_pair_search(
+            stmt,
+            search,
+            search_by,
+            picked_reviewer_handle,
+            picked_reviewee_handle,
+        )
+    stmt = _apply_status(stmt, status)
     stmt = stmt.order_by(
         Assignment.reviewer_id,
         Assignment.reviewee_id,
@@ -364,13 +438,23 @@ def count_pairs(
     *,
     search: str | None = None,
     search_by: str = "all",
+    status: str = "all",
+    picked_reviewer_handle: str | None = None,
+    picked_reviewee_handle: str | None = None,
 ) -> int:
     """Count saved Assignment rows for the session, optionally
     filtered by the reviewer / reviewee free-text ``search``
     (scoped by ``search_by``)."""
     stmt = session_scoped(Assignment.id, session_id)
     if search and search.strip():
-        stmt = _apply_pair_search(stmt, search, search_by)
+        stmt = _apply_pair_search(
+            stmt,
+            search,
+            search_by,
+            picked_reviewer_handle,
+            picked_reviewee_handle,
+        )
+    stmt = _apply_status(stmt, status)
     return len(db.execute(stmt).all())
 
 
