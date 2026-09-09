@@ -206,7 +206,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert "Showing 200 of 250" in body
+    assert "Showing first 200 of 250 relationships; 50 more not shown." in body
 
 
 def test_clear_link_only_when_filtered(

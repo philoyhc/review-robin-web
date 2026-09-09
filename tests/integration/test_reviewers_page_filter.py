@@ -174,7 +174,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     assert "R0199" in table
     assert "R0200" not in table  # past the cap
     # "Showing N of M" message present.
-    assert "Showing 200 of 250" in body
+    assert "Showing first 200 of 250 reviewers; 50 more not shown." in body
 
 
 def test_filtered_cap_lifts_to_500(
@@ -192,7 +192,47 @@ def test_filtered_cap_lifts_to_500(
     assert "R0000" in table
     assert "R0499" in table
     assert "R0500" not in table
-    assert "Showing 500 of 600" in body
+    assert "Showing first 500 of 600 reviewers; 100 more not shown." in body
+
+
+def test_capped_and_filtered_counts_against_the_matching_set(
+    db: Session, client: TestClient
+) -> None:
+    """The state nothing covered before Segment 19I Item 10.
+
+    `test_filtered_cap_lifts_to_500` above looks like it covers it,
+    but every one of its 600 rows matches `status=active`, so the
+    matching set and the whole roster are the same number and the
+    two readings of the denominator coincide. Here they differ: 600
+    reviewers, 550 matching, 500 rendered.
+
+    The denominator must be 550, not 600 — the cap withheld 50 rows,
+    not 100. Counting the 50 the *filter* excluded would overstate
+    what lifting the cap would reveal.
+    """
+    review_session = _make_session(client, db, code="rev-cap-and-filter")
+    for i in range(600):
+        db.add(
+            Reviewer(
+                session_id=review_session.id,
+                name=f"R{i:04d}",
+                email=f"r{i:04d}@example.edu",
+                tag_1="Keep" if i < 550 else "Drop",
+            )
+        )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?q=Keep"
+    ).text
+
+    assert (
+        "Showing first 500 of 550 matching reviewers; 50 more not shown."
+        in body
+    )
+    # The two numbers a wrong denominator would produce.
+    assert "of 600 matching" not in body
+    assert "100 more not shown" not in body
 
 
 # --------------------------------------------------------------------------- #

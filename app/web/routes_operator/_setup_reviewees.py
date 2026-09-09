@@ -207,6 +207,16 @@ def _render_reviewees_page(
                 lifecycle.session_has_responses(db, review_session)
             ),
             "displayed_row_count": displayed_row_count,
+            # Segment 19I Item 10 — the one preview-count
+            # sentence the seven table pages share. The
+            # branching lives in the view helper; the
+            # template renders whatever string it returns.
+            "preview_count_line": views.preview_count_line(
+                shown=displayed_row_count,
+                matching=len(filtered),
+                total=len(all_reviewees),
+                noun="reviewees",
+            ),
             "filter_status": status_filter,
             "filter_search": search,
             "filter_status_options": views.REVIEWEES_STATUS_OPTIONS,

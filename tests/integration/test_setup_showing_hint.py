@@ -114,7 +114,30 @@ def test_the_hint_renders_above_the_table_it_describes(
 
     body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
 
-    assert "Showing 3 of 6." in _table_card(body, page)
+    # Filter branch (3 of 6 match, nothing capped): no "first", no
+    # withheld clause — the three excluded rows are not being kept
+    # back, they do not match. The noun is the page's own, which is
+    # what makes this assertion page-specific rather than shared
+    # boilerplate (Segment 19I Item 10).
+    assert f"Showing 3 of 6 {page}." in _table_card(body, page)
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_the_hint_carries_the_shared_class(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """All four pages render the line through the same partial, so
+    they cannot drift apart in styling the way Assignments did — it
+    used `.form-help`, which sets `--fs-small`, and so rendered a
+    size smaller than these four (Segment 19I Item 10)."""
+    s = _make_session(client, db, code=f"sh-cls-{page}")
+    _seed(db, s, n=6)
+
+    body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
+
+    card = _table_card(body, page)
+    assert '<p class="muted table-showing-hint">' in card
+    assert "form-help" not in card
 
 
 @pytest.mark.parametrize("page", PAGES)

@@ -115,7 +115,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     table = body[body.find('id="reviewees-table"') :]
     assert "E0199" in table
     assert "E0200" not in table
-    assert "Showing 200 of 250" in body
+    assert "Showing first 200 of 250 reviewees; 50 more not shown." in body
 
 
 # --------------------------------------------------------------------------- #
