@@ -22,6 +22,7 @@ Source range in pre-PR-4 ``_legacy.py``: lines 1269-1423.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
@@ -57,6 +58,74 @@ RESPONSES_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
 
 def _matches_search(haystack: str, needle: str) -> bool:
     return needle.casefold() in haystack.casefold()
+
+
+# Cap for the tag half of a page's `<datalist>`, kept separate from
+# ``REVIEWERS_DATALIST_CAP`` so a long roster cannot crowd the tag
+# values out of the list (Segment 19I Item 1). Tag values are the
+# partition an operator filters by, and there are normally few — this
+# cap exists only for a slot that has been used as free text.
+SEARCH_TAG_OPTIONS_CAP: int = 200
+
+
+def _distinct_tag_options(
+    values: Iterable[str | None], *, cap: int = SEARCH_TAG_OPTIONS_CAP
+) -> list[str]:
+    """The distinct, non-empty tag values in ``values``, sorted.
+
+    One option per *value*, not per row: a roster of 1,000 rows across
+    55 groups contributes 55 options. Segment 19I Item 1.
+    """
+    seen = {v.strip() for v in values if v and v.strip()}
+    return sorted(seen, key=str.casefold)[:cap]
+
+
+def _matches_row(
+    needle: str, *, text: tuple[str, ...], tags: tuple[str | None, ...]
+) -> bool:
+    """Per-column search matching, unioned (Segment 19I Item 1).
+
+    ``text`` (name, email / identifier) matches by **substring**;
+    ``tags`` match **whole value**, case-insensitively. A row matches
+    if any column does.
+
+    The rule is per column rather than per input on purpose. An
+    earlier draft switched the whole input between exact and substring
+    depending on whether it happened to equal some tag value, which
+    made one input mean different things on different rosters:
+    searching ``Ethan`` would have dropped every Ethan-by-name the
+    moment any row carried a tag of exactly ``Ethan``. Whole-value on
+    tags is what keeps ``Team A`` from dragging in ``Team A2``;
+    substring on names is what makes a partial name useful. Prefix
+    matching is not a middle ground — ``Team A`` is a prefix of
+    ``Team A2``.
+    """
+    if any(_matches_search(value, needle) for value in text):
+        return True
+    folded = needle.strip().casefold()
+    return any(
+        (tag or "").strip().casefold() == folded
+        for tag in tags
+        if (tag or "").strip()
+    )
+
+
+def _picked_label_handle(needle: str, offered: Iterable[str]) -> str | None:
+    """The bracketed handle of ``needle`` when it is one of the labels
+    the page offered, else ``None`` (Segment 19I Item 1).
+
+    The pick path used to fire on *any* input ending in ``(...)``,
+    which cannot tell a typeahead label from a tag value like
+    ``Group (B)``. The app knows what it put in the list, so it checks
+    that instead of inferring from punctuation. Matched against the
+    full roster's labels rather than the capped list, so a label past
+    ``REVIEWERS_DATALIST_CAP`` that the operator types from memory is
+    still recognised.
+    """
+    folded = needle.strip().casefold()
+    if not any(folded == label.strip().casefold() for label in offered):
+        return None
+    return _extract_filter_label_tail(needle)
 
 
 _FILTER_LABEL_TAIL_RE = re.compile(r"\(([^()]+)\)\s*$")
@@ -198,18 +267,18 @@ def filter_reviewers_rows(
 
     ``status`` is one of ``REVIEWERS_STATUS_OPTIONS`` keys
     (``"active"`` / ``"inactive"``) or ``"all"`` (anything else
-    falls through to ``"all"``). ``search`` is matched
-    case-insensitively against the reviewer's name or email; when
-    the value looks like a ``"Name (email)"`` typeahead pick, the
-    bracketed email is used for an exact match instead. Empty
-    ``search`` is a no-op."""
+    falls through to ``"all"``). ``search`` matches per column
+    (Segment 19I Item 1): name and email by substring, ``tag_1..3``
+    by whole value. When the input is exactly one of the page's
+    ``"Name (email)"`` labels, the bracketed email exact-matches
+    instead. Empty ``search`` is a no-op."""
     out = list(rows)
     valid_status = {key for key, _ in REVIEWERS_STATUS_OPTIONS}
     if status in valid_status:
         out = [r for r in out if r.status == status]
     needle = search.strip()
     if needle:
-        tail = _extract_filter_label_tail(needle)
+        tail = _picked_label_handle(needle, _reviewer_labels(rows))
         if tail is not None and "@" in tail:
             picked = tail.casefold()
             out = [r for r in out if r.email.casefold() == picked]
@@ -217,25 +286,42 @@ def filter_reviewers_rows(
             out = [
                 r
                 for r in out
-                if _matches_search(r.name, needle)
-                or _matches_search(r.email, needle)
+                if _matches_row(
+                    needle,
+                    text=(r.name, r.email),
+                    tags=(r.tag_1, r.tag_2, r.tag_3),
+                )
             ]
     return out
 
 
-def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
-    """``"Name (email)"`` labels for the Reviewers page typeahead.
+def _reviewer_labels(rows: list[Reviewer]) -> list[str]:
+    """Every ``"Name (email)"`` label, uncapped — the set a typed
+    input is checked against by :func:`_picked_label_handle`."""
+    return [f"{r.name} ({r.email})" for r in rows]
 
-    Sorted alphabetically (case-insensitive); capped at
-    ``REVIEWERS_DATALIST_CAP`` per decision 14 in
+
+def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
+    """Typeahead options for the Reviewers page: the distinct tag
+    values, then the ``"Name (email)"`` labels.
+
+    Tag values lead because they are what an operator partitions a
+    large roster by, and because the list is built from the **whole**
+    roster it can offer a group whose rows currently fall past the
+    display cap — the operator picks the group and the rows come into
+    the window (Segment 19I Item 1).
+
+    People labels are sorted alphabetically (case-insensitive) and
+    capped at ``REVIEWERS_DATALIST_CAP`` per decision 14 in
     ``guide/segment_15F_enhanced_setup_pages.md`` — the autocomplete
     suggestions are a convenience, the server-side filter handles
-    anything the operator types beyond the first N matches."""
-    labels = sorted(
-        (f"{r.name} ({r.email})" for r in rows),
-        key=str.casefold,
+    anything the operator types beyond the first N matches. Tags
+    carry their own cap."""
+    tags = _distinct_tag_options(
+        value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3)
     )
-    return labels[:REVIEWERS_DATALIST_CAP]
+    labels = sorted(_reviewer_labels(rows), key=str.casefold)
+    return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
 # Status filter options for the Reviewees Setup page. Order matters
@@ -253,18 +339,24 @@ def filter_reviewees_rows(
     """Apply status + search filters to a Reviewee list.
 
     ``status`` is one of ``REVIEWEES_STATUS_OPTIONS`` keys
-    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` is
-    matched case-insensitively against the reviewee's name or
-    ``email_or_identifier``; when the value looks like a
-    ``"Name (identifier)"`` typeahead pick, the bracketed handle is
-    used for an exact match instead. Empty ``search`` is a no-op."""
+    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` matches
+    per column (Segment 19I Item 1): name and ``email_or_identifier``
+    by substring, ``tag_1..3`` by whole value. When the input is
+    exactly one of the page's ``"Name (identifier)"`` labels, the
+    bracketed handle exact-matches instead. Empty ``search`` is a
+    no-op.
+
+    This page had no ``"@" in tail`` guard on the old pick path — a
+    reviewee handle may be a bare identifier — so it was the page most
+    exposed to a tag value ending in parentheses being read as a
+    handle. Checking against the offered labels closes that."""
     out = list(rows)
     valid_status = {key for key, _ in REVIEWEES_STATUS_OPTIONS}
     if status in valid_status:
         out = [r for r in out if r.status == status]
     needle = search.strip()
     if needle:
-        tail = _extract_filter_label_tail(needle)
+        tail = _picked_label_handle(needle, _reviewee_labels(rows))
         if tail is not None:
             picked = tail.casefold()
             out = [
@@ -276,21 +368,30 @@ def filter_reviewees_rows(
             out = [
                 r
                 for r in out
-                if _matches_search(r.name, needle)
-                or _matches_search(r.email_or_identifier, needle)
+                if _matches_row(
+                    needle,
+                    text=(r.name, r.email_or_identifier),
+                    tags=(r.tag_1, r.tag_2, r.tag_3),
+                )
             ]
     return out
 
 
+def _reviewee_labels(rows: list[Reviewee]) -> list[str]:
+    """Every ``"Name (identifier)"`` label, uncapped."""
+    return [f"{r.name} ({r.email_or_identifier})" for r in rows]
+
+
 def reviewees_search_options(rows: list[Reviewee]) -> list[str]:
-    """``"Name (identifier)"`` labels for the Reviewees page
-    typeahead. Sorted alphabetically; capped at
-    ``REVIEWERS_DATALIST_CAP`` per decision 14."""
-    labels = sorted(
-        (f"{r.name} ({r.email_or_identifier})" for r in rows),
-        key=str.casefold,
+    """Distinct tag values, then ``"Name (identifier)"`` labels, for
+    the Reviewees page typeahead. Tags lead and carry their own cap;
+    people labels are sorted alphabetically and capped at
+    ``REVIEWERS_DATALIST_CAP`` per decision 14. Segment 19I Item 1."""
+    tags = _distinct_tag_options(
+        value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3)
     )
-    return labels[:REVIEWERS_DATALIST_CAP]
+    labels = sorted(_reviewee_labels(rows), key=str.casefold)
+    return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
 # Status filter options for the Observers Setup page. Mirrors the
@@ -308,18 +409,21 @@ def filter_observers_rows(
     """Apply status + search filters to an Observer list.
 
     ``status`` is one of ``OBSERVERS_STATUS_OPTIONS`` keys
-    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` is
-    matched case-insensitively against the observer's display
-    name or email; when the value looks like a
-    ``"Name (email)"`` typeahead pick, the bracketed email is
-    used for an exact match instead."""
+    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` matches
+    per column (Segment 19I Item 1): display name and email by
+    substring, ``tag_1`` by whole value. When the input is exactly
+    one of the page's labels, the bracketed email exact-matches
+    instead.
+
+    Observers carry **one** tag slot, not three — the predicate reads
+    the column the model has rather than assuming the roster shape."""
     out = list(rows)
     valid_status = {key for key, _ in OBSERVERS_STATUS_OPTIONS}
     if status in valid_status:
         out = [o for o in out if o.status == status]
     needle = search.strip()
     if needle:
-        tail = _extract_filter_label_tail(needle)
+        tail = _picked_label_handle(needle, _observer_labels(rows))
         if tail is not None and "@" in tail:
             picked = tail.casefold()
             out = [o for o in out if o.email.casefold() == picked]
@@ -327,25 +431,34 @@ def filter_observers_rows(
             out = [
                 o
                 for o in out
-                if _matches_search(o.display_name or "", needle)
-                or _matches_search(o.email, needle)
+                if _matches_row(
+                    needle,
+                    text=(o.display_name or "", o.email),
+                    tags=(o.tag_1,),
+                )
             ]
     return out
 
 
+def _observer_labels(rows: list[Observer]) -> list[str]:
+    """Every observer label, uncapped. Falls back to the bare email
+    when no display name is set — that label carries no parenthesised
+    tail, so a pick on it resolves by the email itself."""
+    return [
+        f"{o.display_name} ({o.email})" if o.display_name else o.email
+        for o in rows
+    ]
+
+
 def observers_search_options(rows: list[Observer]) -> list[str]:
-    """``"Name (email)"`` labels for the Observers page
-    typeahead. Sorted alphabetically; capped at
+    """Distinct ``tag_1`` values, then the observer labels, for the
+    Observers page typeahead. Tags lead and carry their own cap;
+    labels are sorted alphabetically and capped at
     ``REVIEWERS_DATALIST_CAP``. Falls back to bare email when no
-    display name is set."""
-    labels = sorted(
-        (
-            f"{o.display_name} ({o.email})" if o.display_name else o.email
-            for o in rows
-        ),
-        key=str.casefold,
-    )
-    return labels[:REVIEWERS_DATALIST_CAP]
+    display name is set. Segment 19I Item 1."""
+    tags = _distinct_tag_options(o.tag_1 for o in rows)
+    labels = sorted(_observer_labels(rows), key=str.casefold)
+    return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
 # Relationships Setup page (Segment 15F PR 5). The dropdown picks

@@ -253,6 +253,52 @@ the filter predicates directly. Every existing assertion about
 filtering goes through a rendered page, so the unit-level behavior of
 these four functions is currently unpinned.
 
+### Status
+
+**2026-09-09 — PR 1 landed** (Reviewers, Reviewees, Observers). Rungs
+2 and 3 are open; the item does not close until the spec lands with
+PR 3, so `close_check 19I.1` fails C3 until then and that is the
+expected reading, not a drop.
+
+**The ladder held.** Per-column matching, distinct tag values in each
+page's suggestions, and the narrowed pick trigger, all inside the
+three pages whose dropdown is already a status filter.
+`filter_relationships_rows` and the templates' strip markup are
+untouched — checked, not assumed: the diff contains no relationship
+line and no template.
+
+**A mutant proved nothing and had to be rebuilt.** The `Ethan` test
+exists to reject one specific design — an *input-level* rule where an
+input matching some tag value flips the whole search into exact mode.
+The first mutant written against it merely reordered the union inside
+`_matches_row` (tags checked before names), which is the same function
+either way, and all fourteen tests passed. That is a mutant that
+tested the test's patience rather than its substance. Rebuilt at the
+right level — the filter deciding, before the row loop, whether the
+needle is a known tag value and restricting to exact matches if so —
+and the `Ethan` test fails, as it must.
+
+**Fourth time in two days that an assertion or a mutant addressed the
+wrong text**: 19H.1's wiring assertion satisfied by a JS selector
+string, 19H.3's forbidding a substring that appeared in a comment,
+19H.5's test premise that could not happen, and now this. The common
+shape is that all four looked right when read and only failed when
+run. Nothing here is a new lesson; the frequency is the finding.
+
+**Decisions confirmed at build:**
+
+- **The pick path checks the uncapped label set** (2026-09-09). The
+  offered list is capped at 200 people, but an operator typing a label
+  from memory is doing the same thing as picking it, so the check runs
+  against every label the roster could have produced.
+- **Tag options lead the list** (2026-09-09). Browsers filter a
+  `<datalist>` and preserve document order, so leading with tags keeps
+  the partition values visible when both halves match — and keeps them
+  clear of the people cap entirely.
+
+**Measured after:** the suite went 3054 → 3071 (14 unit tests on
+predicates that had none, 3 page-level).
+
 ### PR ladder
 
 **Amended 2026-09-09** by `### Decision — revised`: tag values now
