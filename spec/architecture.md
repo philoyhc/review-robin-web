@@ -108,7 +108,15 @@ artefact (`.github/workflows/deploy_nus.yml`), so this directory needs no
 workflow change — and equally, anything left in it is shipped.
 `tests/integration/test_guide_screencaps.py` fails both ways: on a file a
 template references but which is not committed, and on a committed file
-no template references.
+no template references. Since Segment 19H Item 3 (2026-09-09) every
+capture is a **light/dark pair** — `x.png` beside `x-dark.png` in the
+same flat directory, the theme picking one (`spec/ui_elements.md`
+§`.guide-figure`) — so the directory carries thirty-two files for
+sixteen figures. The suffix rather than a `dark/` subdirectory is what
+keeps every check above running over both halves unchanged: the test
+collects committed files from a non-recursive `iterdir()`. A third
+failure joins the two: a capture with no twin, which would render an
+empty figure in one theme while every per-file check still passed.
 
 ### Route conventions
 
