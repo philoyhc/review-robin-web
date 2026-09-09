@@ -248,6 +248,16 @@ that moved, and renumbering them would lose the thread.
 
 Source: `app/web/templates/operator/session_reviewers.html`.
 
+> **Lifecycle (Segment 19I Item 3).** Every `Operator actions` row
+> in the four roster sections renders only while the session is
+> `is_editable` (`draft` / `validated`). Outside those states the
+> controls — and the Upload and Danger Zone buttons — are
+> **absent**, not disabled; the enable/disable rules in the Notes
+> column describe behavior *within* an editable session. Clear and
+> Search render in every state. Observers' row checkboxes keep a
+> looser `not is_archived` gate because they drive the cohort rule
+> editor. See `spec/lifecycle.md` §5.
+
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 105 | Reviewer tag labels (15A Slice 3) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Hidden when `is_ready`. |

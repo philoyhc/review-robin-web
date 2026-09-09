@@ -266,11 +266,16 @@ Every Setup Page renders, top-to-bottom:
      authoring surface — search / status filter strip + a
      selection-driven button row (Edit · Inactivate · Activate ·
      Add · Delete). See "Operator actions card" below.
-   - Both are gated by `is_ready`: when the session is Activated
-     the friendly-label inputs render `disabled`, the
-     Save/Cancel pair is suppressed, and the operator-actions
-     button row renders inert; the lifecycle-gate card above
-     carries the "revert to draft" prompt for that state.
+   - The **friendly-label editor** is gated by `is_ready`: when
+     the session is Activated its inputs render `disabled` and
+     the Save/Cancel pair is suppressed; the lifecycle-gate card
+     above carries the "revert to draft" prompt for that state.
+   - The **operator-actions button row** is gated by
+     `is_editable` (Segment 19I Item 3) and is **absent**, not
+     inert, outside `draft` / `validated`. It used to render
+     always and merely ship `disabled`, which is why the earlier
+     wording said "inert"; it is now not rendered at all. See
+     `spec/lifecycle.md` §5.
 6. **Preview table card** — Reviewers / Reviewees / Relationships.
    Always renders when the entity is non-empty (or when Add mode
    is active), regardless of lifecycle state. A **leftmost
@@ -536,8 +541,10 @@ operator the two differ.
 ### The Danger Zone's `delete-all` (Segment 19I Item 3)
 
 `POST /operator/sessions/{id}/{roster}/delete-all` deletes the whole
-roster. It carries the **same two gates and the same sentence** as the
-selected-rows delete, and the same single tick: `confirm` plus, where
+roster. It carries the **same two gates and the same three-state rule** as
+the selected-rows delete — the wording differs, since this one names
+counts ("the existing 12 reviewers and their associated…") where the
+strip says "these" — and the same single tick: `confirm` plus, where
 the roster's rows carry responses, a hidden
 `acknowledge_response_loss`.
 
@@ -850,8 +857,11 @@ The Observers page renders, top-to-bottom:
      Edit / Inactivate / Activate / Add-new-row button row.
      Same 200-row (500-when-filtered) cap. Same
      selection-preservation post-action redirect contract.
-     Hidden during `is_ready` (lock-card pattern) so the
-     bulk roster actions can't fire mid-session.
+     Hidden whenever the session is not `is_editable` (Segment
+     19I Item 3; `is_ready` until then) so the bulk roster
+     actions can't fire once setup is closed. Its **checkboxes**
+     keep the looser `not is_archived` gate — they drive the
+     cohort rule editor.
    - When only one of the two should render (e.g. during
      `ready` only the cohort editor stays live), the other
      slot is an empty spacer so the grid stays half-and-half.
@@ -859,7 +869,8 @@ The Observers page renders, top-to-bottom:
    when Add mode is active).
 6. **Upload card (left) + Danger Zone (right)** — a
    `.bottom-grid` pair below the table, mirroring the
-   Reviewers / Reviewees layout. Hidden during `is_ready` or
+   Reviewers / Reviewees layout. Hidden whenever the session is
+   not `is_editable` (Segment 19I Item 3; `is_ready` until then) or
    while a row is being edited / added.
    - **Upload card** (`#upload-csv`): CSV file in UTF-8, max
      5 000 rows. Required column: `ObserverEmail`. Optional
@@ -1017,6 +1028,11 @@ above.
   order in "Shared body shape" item 3 before the pills render.
 - Lifecycle gating is the existing pattern: a `card lock` at the
   top of the body when `is_ready`, and the Upload + Danger Zone
-  cards conditionally rendered behind `{% if not is_ready %}`. The
+  cards conditionally rendered behind `{% if is_editable %}` on the
+  four roster pages — `{% if not is_ready %}` until Segment 19I Item
+  3, which is what left them rendering on `expired` and `archived`
+  where both routes answered 409. The lock card itself is still keyed
+  to `is_ready` alone, which is the known gap recorded in
+  `spec/lifecycle.md` §5. The
   preview table renders unconditionally so the operator can read
   the current rows even while the session is Activated.

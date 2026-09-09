@@ -1292,6 +1292,49 @@ talkative to correct and silent. Recorded in `spec/lifecycle.md` §5 as
 a known gap and in Out of scope above, rather than quietly widening
 this item into a copy surface nobody asked for.
 
+**2026-09-09 — `spec-writer` flags adjudicated, all seven accepted.**
+The pass ran after the item's PR had merged, so they land as a
+follow-up.
+
+**The worst was mine, and it was a sentence I widened rather than
+wrote.** `spec/lifecycle.md` §5 has always opened "On Setup pages
+(Reviewers / Reviewees / Relationships / **Instruments**)…", and I
+rewrote the paragraph under that heading to say the gate is
+`is_editable` and the page "now offers what `_require_editable` will
+accept and nothing else". False for Instruments in **both**
+directions: it has no Upload or Danger Zone card to hide (zero matches
+in `instruments_index.html`), and its mutations gate on
+`_can_edit_instrument`, which is `not is_ready`. I inherited a
+slightly loose list and made a precise false claim out of it — the
+failure mode is editing a paragraph without re-reading the sentence
+that scopes it.
+
+**And that is a finding, not just a correction:** instrument structure
+is still mutable on `expired` and `archived`, which is exactly the gap
+this item closed for the roster pages. Recorded in §5 and reported;
+not fixed, because it is a different surface with its own gate and
+nobody has reported it.
+
+**Three more passages stated the fixed defect as current fact**, none
+of them touched by the item's own spec pass: `setup_pages.md`'s
+"Shared body shape" still said the button row "renders inert" on
+`is_ready` — it is now *absent*, which is a different claim, not a
+looser one; the Observers body-layout bullets still said `is_ready`;
+and the Implementation pointers still described the Upload / Danger
+Zone conditional as `{% if not is_ready %}`, three sections below the
+account of why that was wrong.
+
+**Two more undeclared spec files**, the segment's fifth and sixth:
+`spec/operator_ui_concept.md` and `spec/operator_button_audit.md`, now
+`### Doc impact` bullets. Every item in this segment has found at least
+one, always the same way — a term-grep after the named files are done,
+never the named files themselves.
+
+**One overstatement corrected**: the Danger Zone and the strip share
+the three-state *rule*, not the sentence — one names counts, the other
+says "these". "The same sentence" is the kind of claim a reader goes
+to verify word-for-word and does not find.
+
 ### Definition of done
 
 - Row checkboxes, the selection buttons and the Delete gate render on
@@ -1351,4 +1394,10 @@ this item into a copy surface nobody asked for.
   and the copy rule for both confirmations (PR 3).
 - `spec/lifecycle.md` — the five-state table records that the
   selection surface is offered only in the two editable states (PR 3).
+- `spec/operator_ui_concept.md` — the Upload and Danger Zone bullets
+  drop the lock-card gate for `is_editable` (PR 3 follow-up, added at
+  build — see `### Status`).
+- `spec/operator_button_audit.md` — a lifecycle note above the roster
+  button tables: outside the editable states these controls are absent,
+  not disabled (PR 3 follow-up, added at build).
 - `docs/status.md` — row at the close (PR 3).
