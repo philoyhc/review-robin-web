@@ -22,7 +22,8 @@ Items close independently, so each carries its own `### Doc impact` and
 |---|---|---|
 | **19H.1** | The card's two setup pills go stale after an AJAX Save | **Closed 2026-09-08** |
 | **19H.2** | A locked instrument card must carry no unsaved edits | **Closed 2026-09-08** |
-| 19H.3+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
+| **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | Open — **planned** |
+| 19H.4+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
 
@@ -456,4 +457,200 @@ each row a separate run:
 - `spec/instruments.md` — the card's lock contract states that locking
   a card with unsaved edits discards them, so a locked card never
   displays unpersisted state (PR 1).
+- `docs/status.md` — row at the close (PR 1).
+
+---
+
+## Item 3 — A night-mode Guide
+
+### Opportunity
+
+The Guide's sixteen screencaps are light-theme images on a page that
+has a dark theme. The app's theme is two-state and explicit —
+`data-theme="dark"` on `<html>`, Light being the bare `:root`,
+persisted in `localStorage["rrw-theme"]`, with **no OS-follow**
+(`spec/settings_inventory.md`, and `base.html`'s own comment: "Two-state
+model: Light is the bare `:root`; there is no `prefers-color-scheme`
+block") — so a reader who chooses Dark gets a dark page carrying
+sixteen bright rectangles.
+
+**The current design already concedes this in writing.**
+`spec/ui_elements.md` §`.guide-figure` says: *"Dark theme is where the
+mat earns its keep twice over. The captures are light-theme images, so
+on a dark page they are bright blocks whatever their border does; the
+dark mat frames them instead of letting them glare off the ground."*
+The mat is a mitigation for a defect the spec names and could not then
+fix, because there was one capture set. There are now two: the author
+has supplied a complete dark set of all sixteen, in the Guide's own
+figure order.
+
+Measured at `cf96319a`: sixteen figures, **607,530 bytes** of light
+captures (`du -sb app/web/static/guide/`); the dark set is **603,913
+bytes**, so the static directory roughly doubles to ~1.18 MB.
+
+### Decision
+
+**Two `<img>` per figure, one hidden by CSS keyed on
+`:root[data-theme="dark"]`, both `loading="lazy"`, dark files in the
+same flat directory under a `-dark.png` suffix.**
+
+Four CSS rules against the existing `.guide-figure img` and a second
+`<img>` per `<figure>`. It is correct at first paint (the no-FOUC head
+script sets `data-theme` **before** the body is parsed) and correct on
+live toggle (the toggle flips the attribute; CSS re-evaluates), with no
+JavaScript of its own.
+
+Rejected: **`<picture>` with `prefers-color-scheme`**, the textbook
+answer. It reads the OS, and this app deliberately does not — a reader
+in the app's Dark theme on a light OS would be served the light
+captures, which is the defect with extra machinery. The signal the page
+uses is an attribute, and only a selector can read it.
+
+Rejected: **choosing server-side from a cookie.** The toggle flips the
+theme *without a reload*, so a server-chosen `src` is stale the instant
+anyone toggles; and it would end the "browser-local only — never synced
+to the server" property the theme was given on purpose.
+
+Rejected: **CSS `background-image` on the figure**, which fetches only
+the applied image and so avoids the double download. It costs real
+`alt` text (`role="img"` + `aria-label` is equivalent for a screen
+reader but not for a broken image or for find-in-page), and it forces a
+rewrite of `test_guide_screencaps.py`'s literal-`src` grep — whose own
+guard, `assert len(REFERENCED) >= 12`, exists precisely because "if the
+paths are ever templated rather than literal, the regex silently finds
+nothing and every case below passes vacuously". Paying the transfer is
+cheaper than trading a real check for a nominal one.
+
+Rejected: **swapping `src` in JavaScript** from the existing `apply()`.
+The images are parsed after the head script runs, so a dark reader gets
+a flash of light captures before the swap, and a no-JS reader gets
+whichever set the markup happened to name.
+
+### Semantics
+
+- **First paint.** The no-FOUC script is synchronous in `<head>`, so
+  `data-theme` is already on `<html>` when the `<img>`s are parsed. The
+  correct one is visible from the first frame; there is no flash.
+- **Live toggle.** `apply()` sets or removes the attribute; the CSS
+  re-evaluates. No hook, no listener, nothing to keep in step.
+- **No JS, or storage blocked.** Stays light, because light is the copy
+  with no hiding rule — the same default the whole theme system takes.
+- **Both copies carry the same `alt`.** They are pictures of the same
+  UI; the theme is not a fact about the app's behavior. Only one is in
+  the accessibility tree at a time (`display: none` removes the other),
+  so there is no double announcement.
+- **A missing dark twin** shows an empty figure in Dark. That is
+  prevented by the pairing check below, not by a runtime fallback: a
+  fallback would hide exactly the mistake worth failing on.
+- **Transfer cost.** Both copies are fetched where they render.
+  `loading="lazy"` on both means a reader who stops after the third
+  figure fetches six images, not thirty-two.
+
+### Judgment calls — decided
+
+- **`-dark.png` suffix in the flat directory, not a `dark/`
+  subdirectory** (2026-09-09). The suffix makes **every existing check
+  extend to the dark set for free**: `test_guide_screencaps.py` collects
+  from `STATIC_GUIDE.iterdir()` filtered by `p.is_file()`, so a
+  subdirectory's contents are invisible to `committed` while
+  `src="/static/guide/dark/x.png"` *is* captured by `REFERENCED` — the
+  `committed == set(REFERENCED)` equality would fail and have to be
+  rewritten. Flat and suffixed, the served / unreferenced / alt-text /
+  capture-family cases all run over 32 files instead of 16 with no
+  change at all.
+- **Keep the mat** (2026-09-09). Its second job goes away; its first —
+  *"these are pictures of this app rendered inside it"* — does not, and
+  is the reason it exists. `spec/ui_elements.md` loses the paragraph
+  about glare, not the mat.
+- **No `figcaption` changes.** Out of scope; the figures caption
+  nothing today.
+
+### Blast radius (measured)
+
+At `cf96319a`:
+
+| What | Measured | Command |
+|---|---|---|
+| figures in the Guide | 16 | `grep -c 'src="/static/guide/' app/web/templates/guide.html` |
+| of those, narrow-family | 6 | `grep -c 'guide-figure-narrow' app/web/templates/guide.html` |
+| CSS rules to extend | 4 (`base.html:1197`, `:1207`, `:1228`, `:1240`) | `grep -n "guide-figure" app/web/templates/base.html` |
+| light captures on disk | 607,530 bytes | `du -sb app/web/static/guide/` |
+| dark captures supplied | 603,913 bytes, 16 files | measured from the docx |
+| screencap test cases today | 52 | `pytest --collect-only tests/integration/test_guide_screencaps.py` |
+| specs naming the captures | 2 (`spec/ui_elements.md` ×3 lines, `spec/architecture.md` static-assets ¶) | `grep -rn "static/guide\|screencap" spec/` |
+
+**The capture-family check already covers the dark set, and it passes.**
+`test_narrow_captures_carry_the_narrow_figure_class` splits on actual
+pixel width at `NARROW_MAX_WIDTH = 1000`, so a dark twin shot at the
+other scale fails rather than rendering wrong. Measured across all
+sixteen pairs: **every dark twin lands in its light twin's family** —
+6 narrow / 10 wide on both sides — and every height matches within
+±4px, consistent with a pure re-shoot.
+
+**One pair is not a like-for-like re-shoot**, and the height outlier is
+what found it: `instrument-card-preview` is 1758×893 light against
+1756×**777** dark. Read side by side, the dark capture is missing the
+`↻ Refresh sample` button, the `Pair context 1` column, the column sort
+arrows, and the Rating / Comments input boxes. It is a different app
+state, not a different theme. See Open questions.
+
+### PR ladder
+
+1. **PR 1 — the sixteen dark captures, the markup, the CSS, and the
+   pairing test.** One rung: the files are unreferenced dead weight
+   until the markup points at them (and the existing test fails on
+   exactly that), and the markup is broken until they exist. Must not
+   touch: the mat's own rules, the two family widths, the capture
+   filenames of the light set, or `NARROW_MAX_WIDTH`.
+
+### Definition of done
+
+- In Dark, every figure shows its dark capture; in Light, its light
+  one; toggling flips all sixteen with no reload and no flash.
+- With JavaScript disabled the page renders the light set.
+- `tests/integration/test_guide_screencaps.py` runs its existing cases
+  over 32 files, plus a new case asserting every light capture has a
+  `-dark` twin and vice versa.
+- Verified in a browser at both themes against a running app —
+  every assertion above is a rendering property the suite cannot see.
+  Screenshots of one figure in each theme in the PR body.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19H.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **The `instrument-card-preview` dark capture is of a different app
+  state** (see Blast radius). Ship the pair as-is and that one figure
+  shows different UI depending on the theme — the same drift Item 1's
+  first light/dark pair had, caught here before it landed rather than
+  after. **Decided by the author**: re-shoot it against the same state
+  as the light capture, or replace both with a matched pair. Everything
+  else in the set is ready.
+
+### Out of scope
+
+- **Retiring the mat.** Its second job ends; its first does not. See
+  Judgment calls.
+- **A print stylesheet.** The app has none; dark captures in a printout
+  are a question that arrives with printing, not with this.
+- **Dark captures anywhere else.** The Guide is the only page with
+  screencaps — `app/web/static/guide/` is the whole static surface.
+
+### Doc impact
+
+- `spec/ui_elements.md` — the `.guide-figure` section states that the
+  captures ship as light/dark pairs selected by `data-theme`, and the
+  paragraph justifying the mat as glare protection is replaced by the
+  reason the mat survives without that job (PR 1).
+- `spec/architecture.md` — the static-assets paragraph records that the
+  directory now carries paired captures and that the screencap test
+  checks the pairing, alongside the two failure modes it already names
+  (PR 1). The theme mechanism itself is unchanged, so
+  `spec/settings_inventory.md`'s `rrw-theme` entry is not edited — it is
+  named here only as the contract this item reads
+  <!-- cites: spec/settings_inventory.md -->.
 - `docs/status.md` — row at the close (PR 1).
