@@ -346,3 +346,92 @@ def test_delete_all_button_gated_by_confirm_checkbox(
     assert 'data-delete-confirm="delete-all"' in body
     button = body[body.find('data-delete-btn="delete-all"') :][:200]
     assert "disabled" in button
+
+
+# --------------------------------------------------------------------------- #
+# Tag search + tag suggestions — Segment 19I Item 1.
+#
+# The predicates are unit-tested in tests/unit/test_roster_search_filters.py;
+# these pin that the route hands them the whole roster and renders both
+# halves of the suggestion list, which a correct predicate cannot do alone.
+# --------------------------------------------------------------------------- #
+
+
+def _tagged(session_id: int, name: str, tag: str) -> Reviewer:
+    return Reviewer(
+        session_id=session_id,
+        name=name,
+        email=f"{name.lower()}@example.edu",
+        tag_1=tag,
+    )
+
+
+def test_searching_a_tag_value_narrows_the_table(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-f-tag")
+    db.add_all(
+        [
+            _tagged(review_session.id, "Ana", "TW01"),
+            _tagged(review_session.id, "Ben", "TW02"),
+        ]
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?q=TW01"
+    ).text
+    table = body[body.find('id="reviewers-table"') :]
+
+    assert "Ana" in table
+    assert "Ben" not in table
+
+
+def test_the_datalist_offers_distinct_tag_values(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-f-tag-list")
+    db.add_all(
+        [
+            _tagged(review_session.id, "Ana", "TW01"),
+            _tagged(review_session.id, "Ben", "TW01"),
+            _tagged(review_session.id, "Cai", "TW02"),
+        ]
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    datalist = body[body.find('id="reviewers-search-options"') :]
+    datalist = datalist[: datalist.find("</datalist>")]
+
+    assert datalist.count('<option value="TW01">') == 1, "one option per value"
+    assert '<option value="TW02">' in datalist
+    assert '<option value="Ana (ana@example.edu)">' in datalist
+
+
+def test_a_tag_is_offered_even_when_its_rows_fall_past_the_cap(
+    db: Session, client: TestClient
+) -> None:
+    """The reachability case at page level: 600 rows exceed the 500
+    filtered cap and the 200 unfiltered one, so the operator cannot
+    scroll to the rare row — but its group is in the list, and picking
+    it brings the row into the window."""
+    review_session = _make_session(client, db, code="rev-f-tag-cap")
+    _seed_reviewers_via_orm(db, review_session.id, 600)
+    db.add(_tagged(review_session.id, "Zed", "Rare"))
+    db.commit()
+
+    unfiltered = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    datalist = unfiltered[unfiltered.find('id="reviewers-search-options"') :]
+    datalist = datalist[: datalist.find("</datalist>")]
+    assert '<option value="Rare">' in datalist
+
+    picked = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?q=Rare"
+    ).text
+    table = picked[picked.find('id="reviewers-table"') :]
+    assert "Zed" in table
