@@ -689,11 +689,30 @@
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm_replace" value="true" required
                      data-delete-confirm="replace-roster">
+              {# Names what the replace destroys, like the
+                 Danger Zone and the selected-rows delete
+                 (Segment 19I Item 5). The response clause is
+                 what was missing: the import discards every
+                 saved answer under this roster and said
+                 nothing. #}
               Yes, replace the existing
               <span class="pill pill-empty">{{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
               and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+              and
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
             </label>
+            {# The acknowledgement rides with this tick, as it
+               does on the delete gates. Without it the route's
+               `_require_response_loss_ack` returned 400 and no
+               upload form sent the field — so replacing a
+               roster was impossible on any session that had
+               collected an answer, which is exactly when an
+               operator reverts to draft to fix it. #}
+            {% if roster_response_count > 0 %}
+              <input type="hidden" id="reviewers-import-ack"
+                     name="acknowledge_response_loss" value="true">
+            {% endif %}
           </p>
         {% endif %}
 

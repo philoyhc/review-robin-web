@@ -1560,3 +1560,224 @@ passage no longer sits in.
 - `spec/lifecycle.md` — §5's read-only-half list drops the hint, which
   now lives in the preview-table card (added at build).
 - `docs/status.md` — row at the close.
+
+## Item 5 — The replace an operator could not make
+
+### Opportunity
+
+Reported from use (2026-09-09): *"I tried uploading a new roster to
+replace an existing one, in a session with assignments already, though
+back in draft mode"* — and got **400 Bad request**, "Existing reviewer
+responses will be discarded; tick 'acknowledge response loss' to
+proceed". There is no such tick on the page, and never has been.
+
+This is the **third surface** carrying the same defect, and the second
+found by an operator rather than by a sweep. Item 3 fixed it on the
+Danger Zone's `delete-all`: the route had required
+`acknowledge_response_loss` since it was written and no template ever
+sent it. The Upload card's replace is the same route-side requirement
+against the same silent form. Measured — `_require_response_loss_ack`
+has 7 call sites; the import path accounted for 3 of them
+(`_setup_reviewers.py`, `_setup_reviewees.py` via the shared handler,
+`_setup_observers.py` with its own), and **not one of their forms
+carried the field**.
+
+The route an operator takes to get here is the *documented* one.
+Editing a started session means reverting it to `draft`; the roster is
+then editable and the Upload card is on screen. So the block lands
+exactly where the workflow sends them, and offers nothing to do about
+it — a dead end, not a warning.
+
+### Decision
+
+**Send the acknowledgement from the tick that is already there, and
+make that tick name the responses.** The Upload card's confirmation is
+one checkbox; where the roster carries responses, a hidden
+`acknowledge_response_loss` field rides with it and the label gains a
+third clause:
+
+> Yes, replace the existing `3 reviewers` and delete the
+> `1 assignment` and `2 reviewer responses`.
+
+Identical in mechanism to the Danger Zone fix (Item 3) and to the
+selected-rows delete (Item 2) — one tick, hidden field, label naming
+what goes. Three surfaces with one confirmation idea between them is
+the point; a fourth variation would not be.
+
+**Observers' import loses the gate outright**, as its `delete-all` did
+in Item 3. Nothing references an observer, so replacing that roster
+destroys no assignment and no response. Requiring the operator to
+accept a loss that cannot occur was the wrong requirement, not a
+missing field, and Relationships never had it.
+
+Rejected: **a second checkbox for the response loss.** It is the
+alternative Item 2 already rejected on the strip, for the same reason —
+two ticks to say one thing, on a card sized for one.
+
+Rejected: **dropping the requirement on the import path** and letting
+the replace proceed silently. The loss is real and irreversible (a
+submitted response is deleted, not soft-deleted — measured in Item 2),
+and the Danger Zone had just been fixed the other way. Making the same
+loss loud on one card and silent on the one beside it is worse than
+either choice made twice.
+
+### Semantics
+
+- The clause and the hidden field are both conditional on
+  `roster_response_count > 0`, so a session with no answers sees the
+  label it saw before and posts the fields it posted before.
+- The count is the **session's** responses, not the roster's, because
+  that is what the route's gate asks: `_require_response_loss_ack`
+  calls `lifecycle.session_has_responses`. The replace clears the whole
+  roster, so on Reviewers and Reviewees the two counts coincide.
+- Observers' card keeps its `confirm_replace` tick — a replace still
+  destroys the observer roster — and never names a response, because
+  its import cannot reach one.
+- The parse-error re-render is the same context, so a blocked upload
+  redisplays the same label rather than losing the clause.
+
+### Judgment calls — decided
+
+- **The clause reads "reviewer responses" on both pages** (2026-09-09),
+  including Reviewees, matching the Danger Zone and the Instruments
+  card. The answers are the reviewers' whichever roster is being
+  replaced; "reviewee responses" would name a thing that does not
+  exist.
+- **`roster_response_count` is reused, not renamed** (2026-09-09).
+  Item 3 added it to the page context for the Danger Zone; the Upload
+  card sits on the same page and asks the same question.
+
+### Blast radius (measured)
+
+At `9e0e8f9e`: 2 templates (the Reviewers and Reviewees upload
+labels), 1 route module (`_setup_observers.py`, losing its gate and
+the now-dead parameter and import), 1 spec section, 1 new test file.
+No service change and no new context key — `roster_response_count`
+has been in all four pages' context since Item 3.
+
+- `grep -rn "_require_response_loss_ack(" app/ | wc -l` → 7 call
+  sites; 3 on the import path.
+- `grep -rn 'name="acknowledge_response_loss"' app/web/templates/` →
+  before: 7 hits — the four selected-rows strips (Item 2), the two
+  Danger Zones (Item 3) and `next_action_card.html` — and **none in an
+  upload form**.
+- Relationships' import was checked and has no gate to remove.
+
+### PR ladder
+
+1. **One PR.** The templates and the observers route are one
+   correction; landing the label without the hidden field would
+   describe a loss the operator still cannot accept, and landing the
+   field without the label would let the replace through unannounced.
+
+**No scaffold slice.** `CLAUDE.md`'s scaffold-first rule is for a new
+page, card or navigation affordance. This adds a clause to a label on
+a card that has been there since Segment 09.
+
+### Status
+
+**2026-09-09 — landed in one PR, as planned.**
+
+**The blast radius held**, with one addition the plan did not name:
+the parse-error re-render. `_shared.py`'s import handler builds its
+own context, and Item 3 had already been bitten there —
+`delete_discards_responses` was missing from it and **nothing failed**,
+because Jinja's `Undefined` is falsy in `{% if %}`. So the new tests
+pin the label on that path too, not only on the GET.
+
+**A test helper that worked on the GET page and not on the error
+page.** `_upload_form` located the Upload card by seeking
+`/reviewers/import"` in the body. On the error render the page chrome
+carries `?return_to=/operator/sessions/1/reviewers/import` in a
+header link, which precedes every `<form>` on the page — so the seek
+landed in the header and found no form before it. Rewritten to walk
+the forms and take the one whose *opening tag* posts to the import
+route. Worth recording because the helper was not wrong on the case
+it was written for; it was wrong on the case the new test added.
+
+**Five mutations, five kills** — the hidden field removed, the
+response clause removed, the clause made unconditional, the Observers
+gate put back, and `roster_response_count` zeroed on the error
+render. No vacuous assertion this round, the first clean run in four
+days.
+
+**The Quick Setup finding was half wrong when first written down.**
+The two `acknowledge_response_loss=None` call sites in
+`_quick_setup.py` looked like the defect and are not: they are in the
+create-session handler, where the session was made in the same
+request, so `existing > 0` is false and the gate is never reached.
+Reproducing it moved the finding to the real place — the Session Home
+card, whose form omits the field — and changed the symptom from a 400
+to a `needs_confirm` redirect. Recorded under "Open questions" as
+measured, not as first supposed.
+
+**Measured after:** the suite went 3257 → **3267** (+10, the new
+`test_setup_import_response_loss.py`).
+
+**`spec-writer` (2026-09-09): no drift found**, every claim in the new
+section checked against the templates, `_shared.py`, both route
+modules and the tests. **One flag it did not raise, adjudicated
+against myself.** Its own summary described the error path as one
+that *repeats* `roster_response_count`; my sentence said the page
+re-renders "from the same context". "Same" implies a shared build,
+which is exactly the impression that made Item 3's omission feel
+impossible — the handler builds that context itself, key by key.
+Rewritten to say so, and to name the omission as the evidence.
+
+**Not verified here:** the Azure dev slot. The browser pass on the
+sandbox covered the reported flow end to end — a `draft` session with
+3 reviewers, 1 assignment and 2 responses, the label reading *"Yes,
+replace the existing 3 reviewers and delete the 1 assignment and 2
+reviewer responses"*, and the upload replacing the roster without an
+error.
+
+### Definition of done
+
+- The reported flow succeeds: a session with responses, reverted to
+  `draft`, replaces its Reviewers roster from the page's own form —
+  asserted by posting **exactly the fields the rendered form carries**.
+- The label names the response count when there is one and says
+  nothing about responses when there is not, asserted both ways.
+- Observers' import replaces its roster on a session full of responses
+  and destroys none of them.
+- Every new assertion mutation-checked.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **The Quick Setup card on Session Home is a fourth surface**, found
+  while following this defect and left for the author to rule on. Its
+  per-slot import routes accept `acknowledge_response_loss` and
+  `_quick_setup_card.html` does not send it, so on a session carrying
+  responses the card redirects to
+  `?quick_setup_error=reviewers&quick_setup_reason=needs_confirm`
+  **after the operator has ticked confirm** — the error tells them to
+  do the thing they just did, and no tick on the card can clear it.
+  Reproduced at `9e0e8f9e`. It is out of this item because the fix is a
+  copy decision on a different page's card, not the same one-line
+  mirror: the card's single tick currently says nothing about
+  responses, and auto-sending the acknowledgement would replace a
+  wrong error with a silent loss. See "Out of scope".
+
+### Out of scope
+
+- **The Quick Setup card's replace** (above) — same defect class,
+  different page, and its fix is a decision rather than a mirror.
+- **Relationships' import**, which has no response-loss gate to fix.
+- **`_quick_setup.py`'s two `acknowledge_response_loss=None` call
+  sites** in the create-session handler. Checked and correct: the
+  session is created in the same request, so `existing > 0` is false
+  and the gate is never reached.
+
+### Doc impact
+
+- `spec/setup_pages.md` — new section for the Upload card's replace
+  gate beside the Danger Zone's, recording the same two gates, the
+  label's response clause, and Observers' import losing the
+  requirement (Item 5).
+- `docs/status.md` — row at the close (Item 5).
