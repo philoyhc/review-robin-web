@@ -898,6 +898,50 @@ went through.
 **Measured after:** the suite went 3120 → 3152 (+32: 32 route tests,
 with the scaffold file's 18 unchanged in count).
 
+**The `spec-writer` pass found six things, all accepted — and the
+sharpest was mine contradicting itself.**
+`spec/operator_button_audit.md`'s three `Delete` rows carried
+`` `<button type="button">` `` in the Element column while their own
+Notes cell, which PR 3 rewrote, said the button "posts the bulk form
+via `form=` + `formaction`" — something only a `type="submit"` does. I
+updated the prose of a row and left its structured field at the PR 1
+value, so the row disagreed with itself in adjacent cells. That is the
+class of defect a reader trusts a table not to have.
+
+The other five:
+
+- **`§7` was an unresolvable pointer.** I wrote "the §7 pairing"
+  meaning the audit's `### 7. Confirm-checkbox-gates-button standard`
+  — but the same file also has `## Section 7 — Reviewees Setup`, and
+  the reviewer read it that way. Two numbering schemes, one number:
+  exactly the ambiguity 19G.5 rewrote elsewhere. Now named rather
+  than numbered.
+- **The audit's legend still defined Destructive as the confirm step
+  inside `.card.danger-zone`** — false the moment this item put the
+  role on a filter strip. `spec/ui_elements.md` was updated for that
+  and the legend that decodes it was not.
+- **The plan's own sharp edge never reached the spec.** Semantics said
+  the select-all-versus-cap undercount was "worth stating in the spec
+  rather than discovering", and I did not state it. A filtered set of
+  600 renders 500, so select-all takes 500 and a delete leaves 100
+  behind having looked complete. Now in the spec, with the
+  `Showing N of M` hint named as what reveals the difference.
+- **Three stale `Add new row` labels and a button-state table without
+  `Delete`**, in passages neither PR's diff touched. Two of them —
+  `spec/rrw_functional_spec.md` and `spec/operator_ui_concept.md` —
+  are further specs the plan never named, now `### Doc impact`
+  bullets. That makes **five** undeclared spec files across this
+  segment; the pattern is that a rename or a new control ripples
+  further than the section being edited, and only a term-grep finds
+  the rest.
+- **The Out-of-scope bullet the item falsified.**
+  `spec/setup_pages.md` still listed "Per-row hard Delete" as a
+  separate ask "if it surfaces in pilot feedback" — three sections
+  above the account of the delete that shipped. Rewritten to what
+  actually remains out of scope: a **row-local** ✕ affordance, which
+  is the distinction the plan's own Out-of-scope section drew and the
+  spec's did not.
+
 ### Definition of done
 
 - Selecting rows, ticking the box and pressing Delete removes exactly
@@ -951,7 +995,13 @@ with the scaffold file's 18 unchanged in count).
   response-loss gate are stated beside the existing Danger Zone
   account (PR 1, PR 3).
 - `spec/ui_elements.md` — the Destructive role's site list gains the
-  roster Delete (PR 1).
+  roster Delete (PR 1); the disabled-anchor callout's `Add new row`
+  label follows the rename (PR 3).
+- `spec/rrw_functional_spec.md` — the operator-actions card's button
+  list gains `Delete` and the status row, and drops the old `Add new
+  row` label (PR 3, added at build).
+- `spec/operator_ui_concept.md` — the 15F shipped-surface paragraph
+  names `Add` and the new `Delete` (PR 3, added at build).
 - `spec/operator_button_audit.md` — the three roster sections' `Add new
   row` rows become `Add`, each gains a `Delete` row, and the `Search`
   rows stop describing a pill that has moved (PR 1, added at build —

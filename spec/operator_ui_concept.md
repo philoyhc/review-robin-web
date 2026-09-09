@@ -276,7 +276,7 @@ All three setup-roster pages share an identical chrome shape:
 6. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden when the lock card is shown or a row is being edited / added.
 7. **Danger Zone** card with the **Delete all** confirm-checkbox form. Hidden when the lock card is shown or a row is being edited / added.
 
-Per-row inline **Edit**, **Add new row**, and bulk **Inactivate / Reactivate** on these three pages shipped in Segment 15F (2026-05-15) — the Operator actions card is the surface; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
+Per-row inline **Edit**, **Add** (`Add new row` until Segment 19I), and bulk **Inactivate / Reactivate** on these three pages shipped in Segment 15F (2026-05-15), joined by a selection-driven **Delete** in Segment 19I — the Operator actions card is the surface; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
 
 The Operations Assignments page (§5 above) used to carry a wired **Rule Based Assignment** card with a RuleSet dropdown + Generate button + inline link to a standalone **Rule Builder** page. That card and the Rule Builder page retired in Wave 5 PR 5.1; Band 1 of each instrument card now owns the rule, and the Assignments page focuses on materialisation + reconciliation. See `spec/assignments.md` for the engine contract and the post-Wave-5 page, and `spec/instruments.md` § Band 1 for the rule-authoring surface.
 

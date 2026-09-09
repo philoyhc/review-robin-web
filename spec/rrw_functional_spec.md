@@ -1051,7 +1051,9 @@ Each page offers:
   display labels of this entity's tag and identity slots.
 - **Operator-actions card** — a search + status-filter strip
   and a selection-driven row of bulk and per-row actions
-  (Edit, Inactivate, Activate, Add new row, Search, Clear).
+  (Edit, Inactivate, Activate, Add, Delete, Search, Clear),
+  with a status row beneath it carrying "Showing N of M", the
+  selected-count and the delete confirmation (Segment 19I).
   In Edit / Add mode an inline Save + Cancel pair replaces the
   row of selection-driven buttons.
 - **Preview table** — every row in the roster (paginated by
