@@ -24,7 +24,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19H.2** | A locked instrument card must carry no unsaved edits | **Closed 2026-09-08** |
 | **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | **Closed 2026-09-09** |
 | **19H.4** | A screencap replaced under the same name never reaches a cached reader | **Closed 2026-09-09** |
-| 19H.5+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
+| **19H.5** | A "Fields with data" pill that names a CSV column instead of the column | **Closed 2026-09-09** |
+| 19H.6+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
 
@@ -941,4 +942,191 @@ now recorded under `### Open questions`.
 - `spec/architecture.md` — the static-assets paragraph records that the
   mount sends `Cache-Control: no-cache`, why (a replaced file under an
   unchanged name), and that fingerprinting stays refused (PR 1).
+- `docs/status.md` — row at the close (PR 1).
+
+---
+
+## Item 5 — A pill that names a CSV column instead of the column
+
+### Opportunity
+
+Reported from use, 2026-09-09. The "Fields with data" pills on the
+three Setup pages are supposed to read what the page's own preview
+table heads that column — `views.friendly_fields_with_data`'s docstring
+says so. Measured against a seeded session, two of the three pages
+disagree with their own tables:
+
+| Page | pills today | preview headers |
+|---|---|---|
+| Reviewers | `ReviewerName`, `ReviewerEmail`, `Tag 1` | `Name`, `Email`, `Tag 1` |
+| Reviewees | `Name`, `Email`, `Tag 1` | same — correct |
+| Relationships | `ReviewerEmail`, `Email`, `Pair context 1` | `Reviewer`, `Reviewee`, `Pair context 1` |
+
+**One gap with two faces.** The mapping can only reach the 12
+*renamable* field-label slots. `ReviewerName` / `ReviewerEmail` have no
+slot, so they fall through to the raw CSV name beside columns headed
+`Name` and `Email` — behaviour the spec currently documents as intended,
+naming those two columns explicitly. `RevieweeEmail` *does* have a slot,
+and on Relationships resolves to the reviewee page's `Email` beside a
+column headed `Reviewee` — the right label resolved on the wrong page.
+
+So the same CSV column has **two correct pill texts** depending on which
+page is asking, which the mapping's signature cannot express.
+
+### Decision
+
+**Give the mapping the page.** A per-surface label table, consulted
+*before* the renamable slots, keyed by a required keyword-only
+`surface`.
+
+Before, not after, because the per-page label mirrors a **fixed**
+preview header: Relationships heads its identifier columns `Reviewer`
+and `Reviewee`, which is a different question from what the reviewee
+page calls its identifier column.
+
+Required and indexed (`_SURFACE_LABELS[surface]`, not `.get`), because
+a page that forgets the argument or misspells it should raise rather
+than quietly render CSV column names — which is this defect, and the
+way a silent default would re-introduce it one page at a time.
+
+Rejected: **making reviewer name / email renamable** so they resolve
+like the rest. It grows the field-label surface to fix a display
+string, and `spec/setup_pages.md` records the identity slots as
+deliberately not overridable — the Reviewees page already resolves
+`RevieweeName` / `RevieweeEmail` to builtin defaults that no operator
+may change.
+
+Rejected: **having each service return page-ready labels.** The
+services return CSV column names on purpose — that is the CSV contract,
+consumed by extracts and imports as well. Presentation belongs at the
+view seam.
+
+### Semantics
+
+- **Reviewers** — `ReviewerName` → `Name`, `ReviewerEmail` → `Email`.
+- **Relationships** — `ReviewerEmail` → `Reviewer`, `RevieweeEmail` →
+  `Reviewee`. `Status` keeps its CSV name because the preview header is
+  also `Status`.
+- **Reviewees** — empty map; nothing changes, and the page is listed
+  explicitly rather than omitted so the set of surfaces is closed.
+- **Unknown surface** — `KeyError`, at the call site, on the first
+  request.
+- **Renamable slots are untouched.** A renamed tag still resolves
+  through the field-label config on every page.
+
+### Judgment calls — decided
+
+- **`surface` names the page, not the entity** (2026-09-09). The CSV
+  import error path serves reviewers *or* reviewees and already carries
+  a `kind` that is exactly the page; passing it through needed no new
+  concept.
+- **The map is a module constant beside `_FIELD_LABEL_SLOTS`**
+  (2026-09-09), because the two are read together and a reader who
+  finds one needs the other.
+
+### Blast radius (measured)
+
+At `2e019030`:
+
+| What | Measured | Command |
+|---|---|---|
+| callers of `friendly_fields_with_data` | 4 (3 page routes + the CSV-error path) | `grep -rn "friendly_fields_with_data" app/` |
+| templates rendering the pill row | 3 | `grep -rln "Fields with data" app/web/templates` |
+| tests asserting pill text | 3, all tag-slot or reviewee (none assert the two raw names) | `grep -rn 'pill pill-count' tests/` |
+| specs describing the pills | 2 (`spec/setup_pages.md`, `spec/operator_ui_concept.md`) | `grep -rn "Fields with data" spec/` |
+| `ReviewerName`/`ReviewerEmail` in tests | 230 occurrences, all CSV-contract | `grep -rn "ReviewerName\|ReviewerEmail" tests/` |
+
+**Found and left alone:** the Assignments page builds a
+`fields_with_data` context key that **no template reads**
+(`grep -rn "fields_with_data" app/web/templates/operator/session_assignments.html`
+returns nothing). Dead context, and a separate question — see Out of
+scope.
+
+### Status
+
+**2026-09-09 — Item 5 built and landed.** One PR, as the ladder
+intended. The blast radius held: four call sites, three templates
+untouched, and **no existing test needed changing** — the three that
+assert pill text all assert tag slots or the reviewee identity labels,
+none the two raw names this item retires.
+
+**A test I wrote described something that cannot happen, and failed for
+that reason.** It claimed the per-page label protects the Relationships
+pill from an operator renaming the reviewee email slot. `field_labels.
+upsert` rejects that slot outright — the reviewee identity labels are
+resolvable to builtin defaults but **not** overridable, which
+`test_upsert_rejects_retired_reviewee_identity_slots` has pinned all
+along. So the scenario was impossible and the test's premise was
+fiction. Replaced with the invariant that is actually load-bearing —
+one raw column, two surfaces, two answers — and **the same wrong claim
+was corrected in the code comment**, which had said the header holds
+"whatever the reviewee email slot has been renamed to". Caught by
+running it, not by reading it.
+
+**The `§N` check from 19G.7 caught the spec edit.** A first draft
+pointed at `spec/setup_pages.md` §3, which is a numbered *list item*
+inside `## Shared body shape`, not a section — the exact
+unresolvable-without-guessing form 19G.5 rewrote elsewhere. Repointed
+to `§"Shared body shape" item 3`, the idiom the repo already uses. The
+check built two items ago earning its keep on the item that came after.
+
+**Decisions confirmed at build:**
+
+- **`surface=kind` on the CSV-error path** (2026-09-09). That handler
+  already branches on a `kind` that is literally the page name, so the
+  fourth call site needed no new plumbing.
+- **Reviewees keeps an explicit empty map** (2026-09-09) rather than
+  being absent, so the set of surfaces is closed and a typo raises.
+
+**Verified against rendered pages**, since the pills are markup:
+
+| Page | before | after |
+|---|---|---|
+| Reviewers | `ReviewerName`, `ReviewerEmail`, `Tag 1` | **`Name`, `Email`**, `Tag 1` |
+| Reviewees | `Name`, `Email`, `Tag 1` | unchanged |
+| Relationships | `ReviewerEmail`, `Email`, `Pair context 1` | **`Reviewer`, `Reviewee`**, `Pair context 1` |
+
+Four mutants, each run and each killing a test: the reviewers map
+emptied, the relationships map emptied, the surface consulted *after*
+the renamable slots (which puts `Email` back on Relationships), and
+`_SURFACE_LABELS.get(surface, {})` in place of the index.
+
+### PR ladder
+
+1. **PR 1 — the per-surface map, its four call sites, the tests and the
+   two specs.** One rung: the parameter is required, so the call sites
+   move with it. Must not touch: the services' CSV column names, the
+   field-label config, or the preview-table headers.
+
+### Definition of done
+
+- Reviewers reads `Name`, `Email`; Relationships reads `Reviewer`,
+  `Reviewee`; Reviewees is unchanged — asserted against rendered pages.
+- A misspelled surface raises rather than falling back.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19H.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- **The Assignments page's dead `fields_with_data` context.** Whether
+  it should render a pill row or drop the key is a design question with
+  its own evidence, and nothing renders wrong today.
+- **Making the identity slots renamable.** See Decision.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the "Fields with data" item states the
+  three-source resolution and the per-page layer, replacing the
+  sentence that documented the raw-CSV fall-through as intended
+  (PR 1).
+- `spec/operator_ui_concept.md` — the Info-card bullet stops saying the
+  pills list CSV column names (PR 1).
 - `docs/status.md` — row at the close (PR 1).

@@ -217,12 +217,27 @@ Every Setup Page renders, top-to-bottom:
    `app/services/relationships.py`). Drives operator awareness of
    which optional fields the latest import populated. The raw CSV
    column names are mapped through `views.friendly_fields_with_data`
-   so that a column corresponding to one of the nine renamable
-   tag field-label slots shows its **friendly label** (operator
-   override → builtin default — the same label the preview-table
-   header and the `Show columns:` chip render); columns with no
-   renamable slot (`ReviewerName`, `ReviewerEmail`,
-   `IncludeAssignment`) keep their canonical CSV name.
+   so that **a pill reads what this page's preview table heads that
+   column**. Three sources, in order (Segment 19H Item 5, 2026-09-09):
+   a **per-page** label for a column the renamable slots cannot name
+   correctly; then the session's field-label config for one of the 12
+   renamable slots (operator override → builtin default — the same
+   label the preview header and the `Show columns:` chip render); then
+   the canonical CSV name for anything else (`Status` on
+   Relationships, whose preview header is also `Status`).
+
+   The per-page layer exists because two columns fall outside the
+   slots in opposite ways. `ReviewerName` / `ReviewerEmail` have no
+   slot at all, and rendered as raw CSV names beside preview columns
+   headed `Name` and `Email`; they now read **`Name`** and **`Email`**.
+   `RevieweeEmail` does have a slot, and on Relationships resolved to
+   the reviewee page's `Email` beside a column headed `Reviewee`; on
+   that page the two identifier pills now read **`Reviewer`** and
+   **`Reviewee`**, matching its fixed headers. So one CSV column has
+   two correct pill texts depending on the page, which is why the
+   surface is a required parameter rather than a global map — and why
+   it indexes rather than defaults: a page that omits it raises instead
+   of quietly rendering CSV column names again.
 4. **Lifecycle gate cards** (when the session is Activated): a
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to

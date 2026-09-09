@@ -197,6 +197,7 @@ def _render_reviewees_page(
             "fields_with_data": views.friendly_fields_with_data(
                 review_session,
                 assignments.reviewee_fields_with_data(db, review_session.id),
+                surface="reviewees",
             ),
             "edit_id": edit_id,
             "add_mode": add_mode,

@@ -546,7 +546,7 @@ async def _handle_import(
                     db, review_session.id
                 )
             fields_with_data = views.friendly_fields_with_data(
-                review_session, raw_fields
+                review_session, raw_fields, surface=kind
             )
             context.update(
                 {

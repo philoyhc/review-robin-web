@@ -430,3 +430,109 @@ def test_relationships_fields_with_data_pill_uses_friendly_override(
     assert (
         '<span class="pill pill-count">PairContextTag1</span>' not in body
     )
+
+
+# ── The pill reads the page's own column header (Segment 19H Item 5) ───
+#
+# `friendly_fields_with_data` maps a raw CSV column name to what the
+# preview table heads that column, and could only do so through the 12
+# renamable slots. Two columns fell outside that, in opposite ways.
+# `ReviewerName` / `ReviewerEmail` are not renamable, so they rendered
+# as raw CSV names beside preview columns headed `Name` and `Email`.
+# `RevieweeEmail` is renamable, so on Relationships it rendered the
+# reviewee page's label beside a column headed `Reviewee`.
+
+
+def _seed_roster_and_pair(client: TestClient, review_session: ReviewSession) -> None:
+    for path, payload in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
+        ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+        (
+            "relationships",
+            b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n",
+        ),
+    ):
+        client.post(
+            f"/operator/sessions/{review_session.id}/{path}/import",
+            files={"file": (f"{path}.csv", payload, "text/csv")},
+            follow_redirects=False,
+        )
+
+
+def test_reviewers_pills_read_the_preview_headers_not_csv_names(
+    client: TestClient, db: Session
+) -> None:
+    """The Reviewers preview heads its two columns `Name` and `Email`,
+    and neither is renamable, so before 19H.5 the pills beside them read
+    `ReviewerName` and `ReviewerEmail`."""
+    review_session = _make_session(client, db, "fl-rvr-hdr")
+    _seed_roster_and_pair(client, review_session)
+
+    body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
+
+    assert '<span class="pill pill-count">Name</span>' in body
+    assert '<span class="pill pill-count">Email</span>' in body
+    assert '<span class="pill pill-count">ReviewerName</span>' not in body
+    assert '<span class="pill pill-count">ReviewerEmail</span>' not in body
+
+
+def test_relationships_pills_read_reviewer_and_reviewee(
+    client: TestClient, db: Session
+) -> None:
+    """Relationships heads its two identifier columns `Reviewer` and
+    `Reviewee`. Both hold an email, and before 19H.5 the pills read
+    `ReviewerEmail` (no renamable slot) and `Email` (the reviewee page's
+    label, resolved on the wrong page)."""
+    review_session = _make_session(client, db, "fl-rel-hdr")
+    _seed_roster_and_pair(client, review_session)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+
+    assert '<span class="pill pill-count">Reviewer</span>' in body
+    assert '<span class="pill pill-count">Reviewee</span>' in body
+    assert '<span class="pill pill-count">ReviewerEmail</span>' not in body
+    assert '<span class="pill pill-count">Email</span>' not in body
+
+
+def test_one_raw_column_resolves_differently_per_surface(
+    client: TestClient, db: Session
+) -> None:
+    """The invariant the per-surface map exists for, stated directly.
+
+    `RevieweeEmail` is one CSV column with two correct pill texts: the
+    Reviewees preview heads it `Email`, the Relationships preview heads
+    it `Reviewee`. A single global mapping cannot say both, which is
+    why the surface is a parameter and why it is consulted before the
+    renamable slots.
+    """
+    from app.web import views
+
+    review_session = _make_session(client, db, "fl-two-surfaces")
+
+    assert views.friendly_fields_with_data(
+        review_session, ["RevieweeEmail"], surface="reviewees"
+    ) == ["Email"]
+    assert views.friendly_fields_with_data(
+        review_session, ["RevieweeEmail"], surface="relationships"
+    ) == ["Reviewee"]
+    # And a column no page overrides still reaches its renamable slot.
+    assert views.friendly_fields_with_data(
+        review_session, ["PairContextTag1"], surface="relationships"
+    ) == ["Pair context 1"]
+
+
+def test_an_unknown_surface_fails_loudly(db: Session) -> None:
+    """`surface` indexes rather than `get`s, so a page that misspells it
+    raises instead of quietly rendering CSV column names again — which
+    is the defect this item fixed and the one a silent default would
+    re-introduce one page at a time."""
+    from app.web import views
+
+    review_session = db.execute(select(ReviewSession)).scalars().first()
+
+    with pytest.raises(KeyError):
+        views.friendly_fields_with_data(
+            review_session, ["ReviewerName"], surface="reviewer"
+        )
