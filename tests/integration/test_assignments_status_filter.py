@@ -171,3 +171,24 @@ def test_the_column_chips_ignore_the_status_filter(
 
     assert unfiltered, "fixture must leave some chip enabled or this proves nothing"
     assert active_only == unfiltered
+
+
+def test_an_unrecognised_status_is_normalised_before_it_round_trips(
+    db: Session, client: TestClient
+) -> None:
+    """The service falls through on an unknown status, so filtering is
+    safe either way — but the value also rides the bulk form's hidden
+    `filter_status` field and comes back on the next request. Without
+    the route-level normalisation the junk persists in the form.
+
+    Pinned because removing that normalisation changed nothing else:
+    the whole file passed with it gone.
+    """
+    s = _seed(client, db, code="asf-junk")
+
+    body = client.get(
+        f"/operator/sessions/{s.id}/assignments?status=nonsense"
+    ).text
+
+    assert '<input type="hidden" name="filter_status" value="all">' in body
+    assert "nonsense" not in body
