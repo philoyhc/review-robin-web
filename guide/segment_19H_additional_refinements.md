@@ -965,7 +965,7 @@ disagree with their own tables:
 **One gap with two faces.** The mapping can only reach the 12
 *renamable* field-label slots. `ReviewerName` / `ReviewerEmail` have no
 slot, so they fall through to the raw CSV name beside columns headed
-`Name` and `Email` — behaviour the spec currently documents as intended,
+`Name` and `Email` — behavior the spec currently documents as intended,
 naming those two columns explicitly. `RevieweeEmail` *does* have a slot,
 and on Relationships resolves to the reviewee page's `Email` beside a
 column headed `Reviewee` — the right label resolved on the wrong page.
