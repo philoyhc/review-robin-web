@@ -583,8 +583,20 @@ where a test can see it.
 
 ### Semantics
 
-- **Nothing selected** — Delete stays disabled, like the other
-  selection buttons.
+- **Nothing selected** — **both** the confirmation checkbox and the
+  Delete button are inactive (per the author, 2026-09-09), not the
+  button alone. The gate is therefore two-stage: a selection enables
+  the checkbox, ticking the checkbox enables the button. A tickable
+  box with nothing to confirm invites the operator to confirm first
+  and select second, which is the order that makes the count in
+  "3 selected · ☐ Yes, delete these" arrive after its own
+  confirmation.
+- **Deselecting everything clears the tick**, it does not merely
+  disable it (2026-09-09). A tick that survives deselection would
+  re-arm the button the moment a *different* selection is made, so
+  the operator's confirmation would attach to rows they never
+  confirmed. Disable **and** uncheck; re-selecting starts the gate
+  over.
 - **Selected but unconfirmed** — the route rejects with 400, the same
   shape `delete-all` uses for its missing confirm. The client also
   keeps the button disabled until the box is ticked; the server check
@@ -627,6 +639,15 @@ where a test can see it.
 - **`Add`, not `+ Add` or `Add row`** (2026-09-09). The author asked
   for `Add`; the adjacent buttons are single verbs (`Edit`,
   `Activate`) and this joins them.
+- **The app-wide `data-delete-confirm` gate is extended, not
+  bypassed** (2026-09-09). `base.html`'s script already pairs a
+  checkbox to a button by key and is what the three existing
+  destructive controls use. The selection stage goes in front of it —
+  the page's existing selection-sync code, which already enables Edit
+  / Inactivate / Activate, also drives the checkbox's `disabled` and
+  clears it on empty — rather than a second, parallel gate. Two
+  scripts deciding one button's `disabled` is the drift class this
+  repo keeps paying for.
 
 ### Blast radius (measured)
 
