@@ -265,7 +265,7 @@ Every Setup Page renders, top-to-bottom:
    - The **Operator actions card** (Segment 15F) is the per-row
      authoring surface — search / status filter strip + a
      selection-driven button row (Edit · Inactivate · Activate ·
-     Add new row). See "Operator actions card" below.
+     Add · Delete). See "Operator actions card" below.
    - Both are gated by `is_ready`: when the session is Activated
      the friendly-label inputs render `disabled`, the
      Save/Cancel pair is suppressed, and the operator-actions
@@ -496,6 +496,15 @@ exist. Services: `delete_selected` on each roster service, over
 `relationship.*`, one event per call carrying `deleted`,
 `cascaded_assignments` and `cascaded_responses`.
 
+**Select-all takes the rendered window, not the match.** The header
+checkbox toggles the rows on the page, and the page is capped at
+200 / 500. A tag matching 600 rows renders 500 of them, so select-all
+takes 500 and a delete leaves 100 behind **having looked complete** —
+the sharp edge of the partition workflow the search exists to enable.
+The confirmation therefore states the **selected** count and never the
+match count, and the `Showing N of M` hint beside it is what tells the
+operator the two differ.
+
 The **Danger Zone's** roster-wide `delete-all` is untouched and stays
 where it is.
 
@@ -584,11 +593,15 @@ matching `*_search_options`).
 **Selection.** The leftmost checkbox column is the sole selection
 mechanism — rows carry no per-row action buttons. Button state:
 
-| Selection | Edit | Inactivate / Activate | Add new row |
-|---|---|---|---|
-| 0 rows | disabled | disabled | enabled |
-| 1 row | enabled | enabled | disabled |
-| ≥2 rows | disabled | enabled | disabled |
+| Selection | Edit | Inactivate / Activate | Add | Delete |
+|---|---|---|---|---|
+| 0 rows | disabled | disabled | enabled | disabled |
+| 1 row | enabled | enabled | disabled | gated |
+| ≥2 rows | disabled | enabled | disabled | gated |
+
+**gated** = enabled only once the confirmation checkbox on the status
+row is ticked, which the selection itself enables (Segment 19I). It is
+the one button on this row that a selection alone does not light up.
 
 **Edit** (`?edit_id=<id>`) and **Add** (`?add=1`) are
 server-rendered states — no client-side DOM surgery. The target
@@ -918,10 +931,12 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
 
 ## Out of scope for these pages
 
-- **Per-row hard Delete.** Inactivate-via-edit covers the
-  single-row retire case; the Danger Zone Delete-all flow covers
-  the bulk-clear case. A per-row Delete is a separate ask if it
-  surfaces in pilot feedback.
+- **A row-local delete affordance (a ✕ on the row itself).**
+  Superseded in part by Segment 19I: deleting one or several
+  **selected** rows is no longer out of scope and is documented under
+  "Deleting the selected rows" above. What remains out of scope is a
+  *second*, row-local affordance for the same act, which would need
+  its own justification now that the selection mechanism carries it.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
 - **Paging.** The 200-row (500-when-filtered) cap + the search /
