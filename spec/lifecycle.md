@@ -362,9 +362,11 @@ predicate.
 checkboxes, the selection-driven Edit / Inactivate / Activate /
 Add / Delete controls, the selected-count pill and the delete
 confirmation render only while editable. The read-only half of
-the strip — the Status filter, the search box, `Showing N of M`
-and Clear — renders in every state, because reading a finished
-session's roster is legitimate. **Observers is the one exception,
+the strip — the Status filter, the search box and Clear —
+renders in every state, because reading a finished session's
+roster is legitimate. So does the `Showing N of M` hint, which
+since Item 4 sits above the **preview table** rather than in the
+strip (`spec/setup_pages.md`, "Preview tables"). **Observers is the one exception,
 on checkboxes only**: theirs stay live until `archived` because
 they drive the cohort rule editor (`spec/setup_pages.md`), which
 is deliberately usable mid-session; its bulk *card* follows the
