@@ -594,6 +594,46 @@ sort, so the visible window matches the operator's chosen order.
 A "Showing N of M" hint renders when the cap or filter trims the
 list.
 
+### The Upload card's replace (Segment 19I Item 5)
+
+`POST /operator/sessions/{id}/{roster}/import` replaces the whole
+roster from a CSV. Where a roster already exists it carries the **same
+two gates** as the two deletes above — `confirm_replace` must be
+`"true"`, and on Reviewers and Reviewees an
+`acknowledge_response_loss` where the session carries responses — and
+the same single tick, with the acknowledgement riding as a hidden
+field beside it.
+
+**The confirmation names what the replace destroys**, in the same
+three states and the same order as `delete-all`:
+
+> Yes, replace the existing `3 reviewers` and delete the
+> `1 assignment` and `2 reviewer responses`.
+
+The assignment clause appears when the roster's rows carry
+assignments, the response clause when the session carries responses;
+with neither, the label is the bare "Yes, replace the existing
+3 reviewers." Both pages say **reviewer responses**, Reviewees
+included: the answers are the reviewers' whichever roster is being
+replaced.
+
+**The response clause and its hidden field are the fix, not a
+convenience.** As with `delete-all`, the route had required the
+acknowledgement since it was written and **no upload form ever sent
+it**, so on any session carrying a response the replace returned
+**400 with no path forward from the page** — reached by the documented
+workflow, since editing a started session means reverting it to
+`draft`, which is precisely where the Upload card reappears.
+
+**Observers' import has no response-loss gate**, for the reason its
+`delete-all` has none: nothing references an observer, so replacing
+that roster destroys no assignment and no response. It keeps its
+`confirm_replace` tick, which guards the observer roster itself.
+Relationships' import never had the gate.
+
+A parse-blocked upload re-renders the page from the same context, so
+the label survives the error rather than losing its clause.
+
 ### Search matching and suggestions (Segment 19I)
 
 **What the search box matches — per column, unioned.** A row is

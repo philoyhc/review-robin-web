@@ -53,7 +53,6 @@ from app.web.routes_operator._shared import (
     _require_editable,
     _require_selected_response_loss_ack,
     _require_not_archived,
-    _require_response_loss_ack,
     _templates,
     require_observers_enabled_session,
 )
@@ -563,7 +562,6 @@ async def observers_import_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -597,8 +595,12 @@ async def observers_import_submit(
     if existing > 0 and confirm_replace != "true":
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
-    if existing > 0:
-        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    # No response-loss gate here (Segment 19I Item 5), for the same
+    # reason `delete-all` lost its in Item 3: nothing references an
+    # observer, so replacing the roster destroys no assignment and no
+    # response. The requirement asked the operator to accept a loss
+    # that cannot occur, and 400d when they could not — the `if
+    # existing > 0:` block it guarded went with it.
 
     csv_imports.save_observers(
         db,
