@@ -383,19 +383,35 @@ async def require_json_object(request: Request, *, label: str) -> dict:
 
 
 def _can_edit_instrument(review_session: ReviewSession) -> bool:
-    """Setup-side instrument / RTD mutations are blocked while the
-    session is ready."""
-    return not lifecycle.is_ready(review_session)
+    """Setup-side instrument / RTD mutations follow the same
+    lifecycle rule as every other setup surface: ``draft`` or
+    ``validated``.
+
+    Segment 19I Item 6. This was ``not is_ready``, which protected
+    the instrument surface exactly while the session was *collecting*
+    and stopped protecting it the moment collection **ended** — so on
+    ``expired`` and ``archived`` a delete succeeded and took the
+    instrument's assignments and their submitted responses with it
+    (``Instrument`` cascades both, ``delete-orphan``). Those are the
+    states where the data has become the record.
+
+    Changing the predicate here rather than at the ~24
+    ``_require_instrument_editable`` call sites is deliberate: the
+    call sites already ask "is this editable"; the helper answered
+    the wrong question.
+    """
+    return lifecycle.is_editable(review_session)
 
 
 def _require_instrument_editable(review_session: ReviewSession) -> None:
     """Guard shared by the Instruments and Response-Type slices —
-    reject structure mutations on a ready session."""
+    reject structure mutations on a session that is not editable."""
     if not _can_edit_instrument(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Instrument structure is locked while the session is ready"
+                "Instrument structure is locked while the session is "
+                f"{review_session.status}"
             ),
         )
 
