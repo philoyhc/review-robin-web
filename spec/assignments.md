@@ -644,14 +644,20 @@ left → right:
 
 Rows with `include=False` render dimmed. The (select) column
 enables bulk-set Include via a checkbox column header + a
-per-row checkbox; the action row above the table carries
-`Include selected` / `Exclude selected` buttons.
+per-row checkbox; the operator-actions card carries the
+**`Inactivate`** / **`Activate`** buttons the selection drives.
 
 #### Bulk-set Include
 
-`POST /assignments/include` with the selected
-`assignment_id`s + `include=true|false`. Service helper
-`assignments.bulk_set_assignment_include`. Lifecycle-aware
+Two routes, `POST /assignments/bulk-inactivate` and
+`POST /assignments/bulk-activate`, both over the service helper
+`assignments.bulk_set_assignment_include`. **Corrected 2026-09-09**
+(Segment 19I Item 8): this section named a single
+`POST /assignments/include` taking `include=true|false`, and
+buttons labelled `Include selected` / `Exclude selected`. Neither
+the route nor those labels exists anywhere in the app — only the
+helper name was right. `spec/operator_button_audit.md` has carried
+the correct labels throughout. Lifecycle-aware
 (the same `_require_editable` guard as the self-review toggle —
 `draft` or `validated`).
 

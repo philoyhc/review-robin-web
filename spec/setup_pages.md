@@ -248,7 +248,11 @@ Every Setup Page renders, top-to-bottom:
    modify anything." with an inline Revert form. Sits **above**
    the friendly-label editor so the yellow card immediately
    follows the status info card — the same status-info-then-
-   yellow-lock pattern the Instruments and Assignments pages use.
+   yellow-lock pattern the Instruments page uses. **Not
+   Assignments**: its yellow `.card.lock` retired with the
+   Workflow-card-as-Operations-chrome rollout, as
+   `spec/operator_ui_concept.md` P4 says and the template's own
+   comment records (Segment 19I Item 8).
 5. **Friendly-label editor (left) + Operator actions card
    (right)** — a half-width `bottom-grid` pair.
    - The **friendly-label editor** (Segment 15A Slice 3) is the

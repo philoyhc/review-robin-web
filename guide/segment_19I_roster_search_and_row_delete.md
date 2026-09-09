@@ -2490,6 +2490,44 @@ Clear → 2 rows.
 
 **Measured after:** the suite went 3310 → **3338**.
 
+**`spec-writer`: six confirmations and three findings, each verified
+before acting.**
+
+1. **My own new prose was loose.** `spec/lifecycle.md` said the
+   self-review toggle "moves with the mutating half" — behaviourally
+   right, structurally misleading: it **disables in place** where the
+   bulk controls **disappear**, because the row it sits in is a status
+   table that reads in every state. Rewritten to say which manner.
+2. **Undeclared doc impact — two files.** `spec/setup_pages.md` and
+   `spec/operator_ui_concept.md` both described the roster lock card
+   as "the same pattern the Instruments **and Assignments** pages
+   use". Item 8's new text says Assignments has no lock card, so
+   those lines now contradicted it — and `operator_ui_concept.md`
+   already contradicted *itself*, since its P4 records that the three
+   post-Operations pages retired their `.card.lock` notices.
+   `session_assignments.html` carries a comment saying the same. Both
+   corrected; bullets added to `### Doc impact` per the plan
+   convention.
+3. **A false route and false button labels, one paragraph below the
+   text this item edited.** `spec/assignments.md`'s "Bulk-set
+   Include" named `POST /assignments/include` taking
+   `include=true|false`, with buttons `Include selected` /
+   `Exclude selected`. Verified: **no such route exists**, and
+   neither label appears in any template — the real routes are
+   `bulk-inactivate` / `bulk-activate` over the helper the section
+   correctly named. Corrected, since the section describes the very
+   card this item changed.
+
+**One thing `spec-writer` reported that measurement overturned.** It
+flagged that `spec/setup_pages.md` and `operator_ui_concept.md`
+contradict the "no lock card" claim — which is right — but the
+underlying question is whether Assignments renders one, and
+`grep -c "card lock" session_assignments.html` returns **1**. That
+single match is inside a comment recording the card's *retirement*.
+The claim stands; the check that looked like it disproved it was
+counting a comment. Recorded because it is the same shape as this
+item's own vacuous-check finding, one layer up.
+
 **Not verified here:** the Azure dev slot.
 
 ### Definition of done
@@ -2529,4 +2567,9 @@ Clear → 2 rows.
   half renders in every state (Item 8).
 - `spec/lifecycle.md` — §5's surface list gains Assignments alongside
   the rosters and Instruments (Item 8).
+- `spec/setup_pages.md` and `spec/operator_ui_concept.md` — **added
+  at build**, not named at planning time: both said the roster lock
+  card follows "the same pattern the Instruments **and Assignments**
+  pages use", which this item's new prose contradicts. See
+  `### Status` (Item 8).
 - `docs/status.md` — row at the close (Item 8).

@@ -439,9 +439,11 @@ selected-count pill, `Inactivate` / `Activate` — renders only
 while `is_editable`, which is what its five mutating routes
 enforce; the read-only half — the `Search by:` select, the search
 box, `Clear`, `Showing N of M` — renders in every state. Its
-per-instrument self-review toggle moves with the mutating half and
-its disabled title names each state's own way out, as the
-Instruments page's do.
+per-instrument self-review toggle answers to the same predicate but
+in the other manner: it **stays on the page and disables**, where
+the bulk controls disappear — the row it sits in is a status table
+that reads in every state. Its disabled title names each state's own
+way out, as the Instruments page's do.
 
 It was gated whole on `not is_ready`, which disagreed with those
 routes on **three of five** states in both directions: `expired`
