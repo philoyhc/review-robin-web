@@ -898,6 +898,52 @@ def _strip_datalist(body: str) -> str:
     return re.sub(r"<datalist[^>]*>.*?</datalist>", "", body, flags=re.DOTALL)
 
 
+def test_the_count_line_sits_with_the_table_not_the_filter_row(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19I Item 10 — the count moved out of `.filter-actions`
+    to the top-left of the table card, in the rosters' class, so all
+    seven preview pages report the same way in the same place.
+
+    `Clear` and `Apply` stay in the actions row: they are actions,
+    and the count is a report about the rows below.
+    """
+    session = _ready_session_with_two_reviewers(client, db, "inv-count-line")
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations?q=rae"
+    ).text
+
+    # In the table card, in the shared class.
+    card = body[body.index("</form>") :]
+    assert '<p class="muted table-showing-hint">' in card
+    assert "Showing 1 of 2 reviewers." in card
+
+    # Gone from the actions row, which keeps Clear and Apply. Scoped
+    # to the rendered row: `base.html` inlines a CSS comment about
+    # this strip, so an unscoped search matches prose, not markup.
+    start = body.index('<div class="filter-actions">')
+    actions = body[start : body.index("</div>", start)]
+    assert "Showing" not in actions
+    assert ">Clear</a>" in actions
+    assert ">Apply</button>" in actions
+
+
+def test_the_count_line_is_absent_when_no_filter_narrows(
+    client: TestClient, db: Session
+) -> None:
+    """`Showing 2 of 2` is noise — the rule Item 4 set for the
+    rosters, now shared. Note this page is **uncapped** by decision
+    (19I Item 10), so the cap branch can never fire here: absent or
+    the plain filter count are its only two states."""
+    session = _ready_session_with_two_reviewers(client, db, "inv-count-quiet")
+
+    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+
+    assert '<p class="muted table-showing-hint">' not in body
+    assert "more not shown" not in body
+
+
 def test_invitations_filter_status_narrows_rows(
     client: TestClient, db: Session
 ) -> None:
@@ -921,8 +967,10 @@ def test_invitations_filter_status_narrows_rows(
     assert "rae@example.edu" not in body
     # Clear link surfaces when filter is active.
     assert ">Clear</a>" in body
-    # Showing-N-of-M counter renders.
-    assert "Showing 1 of 2." in body
+    # The count line renders — with the noun this page is organised
+    # around. Invitations is one row per *reviewer*, so it says
+    # "reviewers" even though the rows are invitations (19I Item 10).
+    assert "Showing 1 of 2 reviewers." in body
 
 
 def test_invitations_filter_search_narrows_rows(

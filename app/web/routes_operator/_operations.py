@@ -365,6 +365,19 @@ def invitations_index(
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
             "total_row_count": len(all_rows),
+            # Segment 19I Item 10 — the shared preview-count
+            # sentence, moved out of the filter row to sit with
+            # the rows it counts. These two pages are uncapped by
+            # decision, so `shown` and `matching` are the same
+            # number and only the filter branch ever fires. The
+            # noun is the page's subject, not its row type: one
+            # row per reviewer here, per reviewee on Responses.
+            "preview_count_line": views.preview_count_line(
+                shown=len(rows),
+                matching=len(rows),
+                total=len(all_rows),
+                noun="reviewers",
+            ),
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.INVITATIONS_STATUS_OPTIONS,
@@ -657,6 +670,19 @@ def session_responses(
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
             "total_row_count": len(all_rows),
+            # Segment 19I Item 10 — the shared preview-count
+            # sentence, moved out of the filter row to sit with
+            # the rows it counts. These two pages are uncapped by
+            # decision, so `shown` and `matching` are the same
+            # number and only the filter branch ever fires. The
+            # noun is the page's subject, not its row type: one
+            # row per reviewer here, per reviewee on Responses.
+            "preview_count_line": views.preview_count_line(
+                shown=len(rows),
+                matching=len(rows),
+                total=len(all_rows),
+                noun="reviewees",
+            ),
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
