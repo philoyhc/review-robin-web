@@ -62,6 +62,11 @@ def assignments_hub(
     prepare_confirm: str | None = Query(default=None),
     q: str = Query(default=""),
     search_by: str = Query(default="all"),
+    # `filter_status` rather than `status`: the module-level
+    # `status` import (`status.HTTP_200_OK`) is in scope here, and a
+    # parameter of that name shadows it. The alias keeps the URL
+    # parameter `?status=`.
+    filter_status: str = Query(default="all", alias="status"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -84,6 +89,7 @@ def assignments_hub(
         prepare_confirm=prepare_confirm,
         search=q,
         search_by=search_by,
+        filter_status=filter_status,
     )
 
 
@@ -105,20 +111,29 @@ _ASSIGNMENT_SORT_KEYS = {
 
 
 _SEARCH_BY_VALUES = {"all", "reviewer", "reviewee"}
+# Segment 19I Item 9 — the `Assignment.include` filter. "all" and
+# anything unrecognised fall through to everything, as the roster
+# pages do.
+_STATUS_VALUES = {key for key, _ in views.ASSIGNMENTS_STATUS_OPTIONS}
 
 
 def _assignments_url(
-    session_id: int, filter_q: str = "", search_by: str = "all"
+    session_id: int,
+    filter_q: str = "",
+    search_by: str = "all",
+    status: str = "all",
 ) -> str:
     """The Assignments-page URL, carrying the active search term /
-    dimension so a bulk action redirects back to the same filtered
-    view."""
+    dimension / status so a bulk action redirects back to the same
+    filtered view."""
     url = f"/operator/sessions/{session_id}/assignments"
     params: dict[str, str] = {}
     if filter_q:
         params["q"] = filter_q
     if search_by in _SEARCH_BY_VALUES and search_by != "all":
         params["search_by"] = search_by
+    if status in _STATUS_VALUES:
+        params["status"] = status
     if params:
         url += "?" + urlencode(params)
     return url
@@ -138,24 +153,44 @@ def _render_assignments_hub(
     prepare_confirm: str | None = None,
     search: str = "",
     search_by: str = "all",
+    # `filter_status`, not `status`: the module-level `status` import
+    # (`status.HTTP_200_OK`, used below) is in scope here and a
+    # parameter of that name shadows it — caught by an
+    # `AttributeError: 'str' object has no attribute 'HTTP_200_OK'`
+    # the first time this rendered.
+    filter_status: str = "all",
 ) -> HTMLResponse:
     q = search.strip()
     if search_by not in _SEARCH_BY_VALUES:
         search_by = "all"
+    if filter_status not in _STATUS_VALUES:
+        filter_status = "all"
     assignment_count = assignments.existing_count(db, review_session.id)
-    if q:
+    # Segment 19I Item 9 — the status filter joins the search here.
+    # The `col_data_sample` alias below is only safe while *neither*
+    # filter is active: it exists to skip a second query, and a
+    # filtered sample would flip the column chips.
+    if q or filter_status in _STATUS_VALUES:
         matching_count = assignments.count_pairs(
-            db, review_session.id, search=q, search_by=search_by
+            db,
+            review_session.id,
+            search=q,
+            search_by=search_by,
+            status=filter_status,
         )
         pair_sample = (
             assignments.list_pairs(
-                db, review_session.id, search=q, search_by=search_by
+                db,
+                review_session.id,
+                search=q,
+                search_by=search_by,
+                status=filter_status,
             )
             if matching_count
             else []
         )
         # The column chips' enabled state is computed from an
-        # unfiltered sample so a search never flips a chip.
+        # unfiltered sample so neither filter ever flips a chip.
         col_data_sample = assignments.list_pairs(db, review_session.id)
     else:
         matching_count = assignment_count
@@ -256,6 +291,8 @@ def _render_assignments_hub(
             "matching_count": matching_count,
             "filter_q": q,
             "filter_search_by": search_by,
+            "filter_status": filter_status,
+            "filter_status_options": views.ASSIGNMENTS_STATUS_OPTIONS,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
             "issues": issues,
@@ -429,6 +466,7 @@ def assignments_bulk_inactivate(
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
+    filter_status: str = Form(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -445,7 +483,9 @@ def assignments_bulk_inactivate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_assignments_url(review_session.id, filter_q, filter_search_by),
+        url=_assignments_url(
+            review_session.id, filter_q, filter_search_by, filter_status
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -460,6 +500,7 @@ def assignments_bulk_activate(
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
+    filter_status: str = Form(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -476,6 +517,8 @@ def assignments_bulk_activate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_assignments_url(review_session.id, filter_q, filter_search_by),
+        url=_assignments_url(
+            review_session.id, filter_q, filter_search_by, filter_status
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

@@ -285,6 +285,28 @@ def _tag_matches(term: str, *columns):
     return [func.lower(func.trim(column)) == folded for column in columns]
 
 
+def _apply_status(stmt, status: str):
+    """Filter a pairs query by `Assignment.include` (Segment 19I Item
+    9).
+
+    `include` is the boolean the Assignments strip's **Inactivate** /
+    **Activate** buttons flip, and dimmed rows already show it — it
+    was visible and unfilterable, so an operator could inactivate in
+    bulk and have no way to list the result back.
+
+    `all`, and anything unrecognised, falls through to everything —
+    the roster pages' own rule (`views/_filters.py`). `is_(True)`
+    rather than `== True` keeps the SQL portable: `IS true` is what
+    Postgres wants, and `CLAUDE.md` records `= 1` as one of the
+    SQLite-permissive forms that has bitten this repo.
+    """
+    if status == "active":
+        return stmt.where(Assignment.include.is_(True))
+    if status == "inactive":
+        return stmt.where(Assignment.include.is_(False))
+    return stmt
+
+
 def _apply_pair_search(stmt, search: str, search_by: str = "all"):
     """Add the reviewer / reviewee free-text filter to a pairs query.
 
@@ -332,6 +354,7 @@ def list_pairs(
     limit: int = PAIR_PREVIEW_LIMIT,
     search: str | None = None,
     search_by: str = "all",
+    status: str = "all",
 ) -> list[Assignment]:
     """Return saved Assignment rows with reviewer + reviewee + instrument
     eagerly loaded.
@@ -350,6 +373,7 @@ def list_pairs(
     )
     if search and search.strip():
         stmt = _apply_pair_search(stmt, search, search_by)
+    stmt = _apply_status(stmt, status)
     stmt = stmt.order_by(
         Assignment.reviewer_id,
         Assignment.reviewee_id,
@@ -364,6 +388,7 @@ def count_pairs(
     *,
     search: str | None = None,
     search_by: str = "all",
+    status: str = "all",
 ) -> int:
     """Count saved Assignment rows for the session, optionally
     filtered by the reviewer / reviewee free-text ``search``
@@ -371,6 +396,7 @@ def count_pairs(
     stmt = session_scoped(Assignment.id, session_id)
     if search and search.strip():
         stmt = _apply_pair_search(stmt, search, search_by)
+    stmt = _apply_status(stmt, status)
     return len(db.execute(stmt).all())
 
 

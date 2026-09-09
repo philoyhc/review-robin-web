@@ -2636,3 +2636,191 @@ item's own vacuous-check finding, one layer up.
   pages use", which this item's new prose contradicts. See
   `### Status` (Item 8).
 - `docs/status.md` — row at the close (Item 8).
+
+## Item 9 — The Assignments strip finishes the job
+
+### Opportunity
+
+The author, after exercising Item 7's search against a large mock
+roster: *"my sense is that the search/partition is most useful for
+isolating the assignments attached to an individual, whether reviewer
+or reviewee; less so for the tags (too many rows identified)"*.
+
+Two gaps follow from that use, and a third was found measuring them.
+
+**1. No typeahead, and the search cannot be completed without one.**
+The four roster pages gained a `<datalist>` in Item 1; this page has
+none (`grep -c "<datalist>"`: reviewers 1, reviewees 1,
+relationships 4, observers 1, **assignments 0**). Isolating *this*
+Ana rather than every Ana is exactly what a completed handle does and
+partial substring cannot.
+
+**2. No status filter, on the page whose own buttons set the status.**
+`Assignment.include` is the boolean the strip's **Inactivate** /
+**Activate** buttons flip, and rows with `include=False` already
+render dimmed — the state is visible and **unfilterable**. Measured:
+no `filter_status`, no `include=` filter anywhere in
+`session_assignments.html`. So an operator can bulk-inactivate fifty
+rows and have no way to list them back.
+
+**3. A typeahead cannot ship without the picked-label rule.**
+Measured at `b4724e16` — submitting a label as-is returns **nothing**:
+
+| term | `search_by` | rows |
+|---|---|---|
+| `Ana Lim (ana@example.edu)` | `reviewer` | **0** |
+| `Ana Lim (ana@example.edu)` | `all` | **0** |
+| `Ana Lim` | `reviewer` | 2 |
+
+`%Ana Lim (ana@example.edu)%` is a substring of no name and no
+email. So the rule that turns a picked label into an exact handle
+match is not polish — without it, clicking a suggestion empties the
+table.
+
+### Decision
+
+**Three controls in the roster's own shape: `Status:`, `Search by:`,
+`Search:` with a typeahead.**
+
+The status filter is `Assignment.include`, offered as All / Active /
+Inactive — the vocabulary the page's buttons already use.
+
+**The `Search by:` select stays.** It was proposed for replacement on
+the reasoning that a typeahead makes the reviewer/reviewee partition
+redundant. It does not:
+`csv_imports.check_cross_table_identity` documents that *"the person
+is both reviewer and reviewee, common in peer review"*, so a picked
+label under `all` returns **both** the reviews that person must write
+and the reviews written about them. Those are different operational
+questions — chasing a late reviewer, versus checking a reviewee's
+coverage — and only the select separates them. Confirmed with the
+author 2026-09-09.
+
+The typeahead offers **name / handle labels only, both sides in one
+list**. Tags are excluded from the list (not from matching): the
+author's measurement is that a tag identifies too many rows to be a
+useful partition here, where the roster pages' tags partition a
+roster of people. **Tag *matching* is untouched** — it costs three
+ORed comparisons per side and the Item 7 conformance table already
+protects it; removing it would be churn with a regression risk and no
+gain.
+
+One list rather than one per side, because `search_by` is a select
+the operator can change without a reload — a per-side list would need
+JS, and the picked handle resolves against whichever side
+`search_by` allows anyway.
+
+Rejected: **swapping the select for the status filter**, the author's
+first proposal, for the both-sides reason above.
+
+Rejected: **tags in the datalist**, per the measurement that prompted
+this item.
+
+### Semantics
+
+- Status is `all` (anything unrecognised falls through, as the
+  rosters do), `active` → `include is True`, `inactive` →
+  `include is False`.
+- **Status composes into `Showing N of M`**, as it does on the roster
+  pages (`views/_filters.py` header: *"Filters compose: status +
+  search"*). `N` becomes the pairs matching **both** filters; `M`
+  stays every pair in the session. This is the one place the item
+  touches the count, and it is the rosters' own reading of the same
+  sentence rather than a new one — flagged because the author's Item
+  7 constraint was that the count keep its meaning.
+- **The column chips stay unfiltered.** `col_data_sample` is built
+  from an unfiltered `list_pairs` precisely so a search never flips a
+  chip; the status filter must not reach it either.
+- A picked label exact-matches the **handle**, case-insensitively, on
+  whichever side `search_by` allows. Detection is
+  `_picked_label_handle` against the **uncapped** label set, so a
+  label past the display cap that the operator types from memory is
+  still recognised, and it requires an `@` in the tail — a tag value
+  like `Group (B)` is not a handle.
+- An unpicked term matches as Item 7 left it: name / handle by
+  substring, tags by whole value.
+
+### Judgment calls — decided
+
+- **The pick rule runs in Python, not SQL** (2026-09-09).
+  `_picked_label_handle` is pure string work over a list of labels
+  and touches no database, so it runs in the route before the query
+  and only the resulting *predicate* differs. Unlike the tags, there
+  is no second copy of the rule to keep in step.
+- **Labels come from the whole roster, capped only for display**
+  (2026-09-09), matching Item 1: the detection set is uncapped, the
+  rendered list is not.
+
+### Blast radius (measured)
+
+At `b4724e16`:
+
+- `count_pairs` / `list_pairs` — **4 call sites**, all in
+  `_assignments.py`; **2 of them deliberately unfiltered** (the chip
+  sample) and must stay so.
+- `_apply_pair_search` — 1 definition, 2 call sites.
+- `_filters.py` — `_picked_label_handle`,
+  `_extract_filter_label_tail`, `_reviewer_labels`,
+  `_reviewee_labels` all exist and are reused; one new builder.
+- The page loads **counts only** today
+  (`existing_reviewer_count` / `existing_reviewee_count`), so the
+  labels need `list_reviewers` / `list_reviewees` — both already in
+  `_coverage.py`.
+- 1 template (`filter-row` gains a select and a `<datalist>`), 1
+  spec.
+
+### PR ladder
+
+1. **PR 1 — the status filter.** `include` filtering through
+   `count_pairs` / `list_pairs`, the `Status:` select, the chip
+   sample left unfiltered. Self-contained and useful alone. Must not
+   touch: the search.
+2. **PR 2 — the typeahead and the picked-label rule.** The label
+   builder, the `<datalist>`, and the exact-handle predicate. Must
+   not touch: the status filter, tag matching.
+3. **PR 3 — the spec.**
+
+### Definition of done
+
+- Status filters to exactly the `include` value, asserted for all
+  three options, and `all` returns everything.
+- The chip sample is **not** filtered by status or search, asserted —
+  the reason it exists.
+- A picked label returns that person's rows and **not** a
+  same-prefix handle's (`ana@` vs `ana2@`), asserted both ways.
+- A picked label scoped to `reviewer` returns only the pairs that
+  person reviews, asserted against a session where they are on both
+  sides.
+- A tag value in the search box still matches (Item 7 untouched), and
+  is **absent** from the datalist.
+- `Showing N of M` reflects both filters, asserted.
+- Every new assertion mutation-checked.
+- `ruff check .` and the **bare** `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The swap question was put to the author and settled: the
+  select stays.
+
+### Out of scope
+
+- **Invitations and Responses**, which `_filters.py` already has
+  builders for (`invitations_search_options` /
+  `responses_search_options`) and whose templates may have the same
+  gap. The author is taking those next as their own work; this item
+  does not pre-empt it.
+- **Retiring tag matching here.** Kept deliberately — see Decision.
+- **The filtered cap** (200, unlifted) — Item 7's "Out of scope",
+  unchanged.
+
+### Doc impact
+
+- `spec/assignments.md` — the Search matching section gains the
+  typeahead and the picked-label rule; a new note records the status
+  filter and that the chip sample stays unfiltered (Item 9).
+- `docs/status.md` — row at the close (Item 9).

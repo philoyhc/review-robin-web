@@ -324,6 +324,16 @@ def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
     return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
+# Status filter options for the Assignments page (Segment 19I Item
+# 9). Backed by ``Assignment.include`` rather than a status column —
+# the vocabulary is the strip's own **Inactivate** / **Activate**
+# buttons, and dimmed rows already show the state.
+ASSIGNMENTS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+)
+
+
 # Status filter options for the Reviewees Setup page. Order matters
 # (dropdown order operators see). ``"all"`` is implicit. Segment 15F
 # PR 4 — same shape as ``REVIEWERS_STATUS_OPTIONS``.
