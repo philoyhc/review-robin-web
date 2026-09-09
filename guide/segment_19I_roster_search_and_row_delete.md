@@ -618,8 +618,14 @@ where a test can see it.
   sentence.
 - **A validated session** is invalidated, via
   `lifecycle.invalidate_if_validated`, as `_delete_all` does.
-- **Ids not in this session** are ignored, not errors — the same
-  posture `bulk_inactivate` takes.
+- ~~**Ids not in this session** are ignored, not errors — the same
+  posture `bulk_inactivate` takes.~~ **Wrong on both halves, corrected
+  2026-09-09 at PR 2.** `bulk_inactivate` delegates to
+  `roster_bulk.bulk_set_status`, which **raises** `not_in_session` —
+  the plan cited a function as precedent for the opposite of what it
+  does. `bulk_delete` raises too, and a delete has the stronger case
+  for it: a silently skipped id is a row the operator asked to remove
+  that is still there, unremarked.
 - **After deleting**, the operator returns to the page with the active
   filters preserved and the selection empty (the deleted rows cannot
   be re-selected).
@@ -782,6 +788,56 @@ before `Add`; the new CSS rule unscoped so it reaches all seven
 **Measured after:** the suite went 3088 → 3106 (+18: the scaffold
 file's 18 tests, of which 16 are the four-page parametrisation).
 
+**2026-09-09 — PR 2 landed** (the service). `delete_selected` on all
+four roster services, each a thin caller of a new
+`roster_bulk.bulk_delete` beside the existing `bulk_set_status` — the
+same consolidation 19B's S5 made for the status flips, taken at the
+point the second copy would have been written rather than after the
+fourth. Nothing calls it yet; the route is PR 3.
+
+**The plan cited a function as precedent for the opposite of what it
+does.** Semantics said unknown ids are "ignored, not errors — the same
+posture `bulk_inactivate` takes", and `bulk_inactivate` delegates to
+`bulk_set_status`, which **raises** `not_in_session`. Struck and
+corrected rather than quietly followed: `bulk_delete` raises too, and a
+delete has the stronger case, since a silently skipped id is a row the
+operator asked to remove that is still there and unremarked. A test
+pins that the valid ids in a refused call are **not** deleted, and
+deliberately does not roll back first — rolling back would make the
+assertion pass whatever the code did.
+
+**The open question is answered from the model graph, then from
+behavior.** `Assignment` carries FKs to `reviewers` and `reviewees` and
+nothing else; `Observer` and `Relationship` have no ORM children. So
+Reviewers and Reviewees cascade to assignments and their responses
+(and a reviewer's invitations) by `delete-orphan`, and Observers and
+Relationships destroy nothing — which is the answer to whether
+Relationships needs the response-loss gate. Asserted rather than
+reasoned: a test deletes an observer and a pair-context row beside a
+live assignment carrying four responses and finds all four intact.
+
+**The exact counts are real.** `cascade_counts` counts assignments and
+responses for *the selected rows*, not the session, so the PR 3
+confirmation can name a number `delete_all` could never produce. A
+mutant that counted session-wide kills two tests.
+
+**A vacuous assertion of my own, caught by mutation.** The audit test
+asserted "one event per call, not one per row" while deleting **one**
+row — where the two are the same number, so the sentence pinned
+nothing, and a per-row mutant passed. Rewritten to delete two rows with
+different cascade sizes; it now also pins that the counts are summed
+across the selection rather than the last row's. That is the fifth
+assertion in three days that read correctly and tested nothing.
+
+**Seven mutants, seven kills** (after the rebuild above): unknown ids
+skipped rather than refused; the refusal moved after the deletes;
+the cascade counted session-wide; a phantom cascade column on
+`Relationship`; session scoping dropped from the row query; lifecycle
+invalidation skipped; and one audit event per row.
+
+**Measured after:** the suite went 3106 → 3120 (+14, all in
+`tests/unit/test_roster_bulk_delete.py`).
+
 ### Definition of done
 
 - Selecting rows, ticking the box and pressing Delete removes exactly
@@ -804,10 +860,18 @@ file's 18 tests, of which 16 are the four-page parametrisation).
 
 ### Open questions
 
-- **Whether Relationships needs the response-loss gate at all.**
-  Deleting a relationship row removes pair context, not a response.
-  Decided at PR 2, from what the cascade actually reaches — not
-  assumed either way here.
+- ~~**Whether Relationships needs the response-loss gate at all.**~~
+  **Answered at PR 2, 2026-09-09: it does not — and neither do
+  Observers.** From the model graph rather than intuition: `Assignment`
+  carries FKs to `reviewers` and `reviewees` and to nothing else, and
+  `Observer` and `Relationship` have no ORM children at all. So
+  `Reviewer` / `Reviewee` → `assignments` → `responses` cascade by
+  `delete-orphan` (plus a reviewer's `invitations`), while deleting an
+  observer or a pair-context row destroys no assignment and no
+  response. Asserted from behaviour rather than read off the model
+  file: a test deletes an observer and a relationship beside a live
+  assignment carrying four responses and finds all four intact.
+- None outstanding.
 
 ### Out of scope
 

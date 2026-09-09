@@ -32,7 +32,7 @@ from app.db.models import Reviewer, ReviewSession, User
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
-from app.services.roster_bulk import bulk_set_status
+from app.services.roster_bulk import bulk_delete, bulk_set_status
 from app.services.roster_status import normalise_status
 
 
@@ -346,3 +346,32 @@ __all__ = [
     "bulk_inactivate",
     "bulk_reactivate",
 ]
+
+
+def delete_selected(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    reviewer_ids: list[int],
+    user: User,
+    correlation_id: str | None = None,
+) -> tuple[int, int, int]:
+    """Delete the selected reviewers. Returns
+    ``(deleted, cascaded_assignments, cascaded_responses)``.
+
+    The selection-driven sibling of :func:`bulk_inactivate` — same
+    id list, same session scoping, same ``not_in_session`` refusal —
+    and of ``delete_all_reviewers``, whose cascade semantics it
+    inherits rather than reinvents. Segment 19I Item 2.
+    """
+    return bulk_delete(
+        db,
+        review_session=review_session,
+        model=Reviewer,
+        ids=reviewer_ids,
+        error_cls=ReviewerOperationError,
+        event_type="reviewer.bulk_deleted",
+        entity_noun="reviewer",
+        user=user,
+        correlation_id=correlation_id,
+    )
