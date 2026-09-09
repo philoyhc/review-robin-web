@@ -2806,6 +2806,46 @@ shared function.
 
 ---
 
+### Segment 19I — Roster search and row deletion — 🔵 **live** (both items **planned, not built**, 2026-09-09; plan at `guide/segment_19I_roster_search_and_row_delete.md`)
+
+Two refinements the author raised together, both about working with
+roster rows once they are in the app. Opened as their own segment
+rather than as 19H items: 19H is a finite queue of small refinements,
+and each of these is multi-PR work across services, routes, templates
+and live specs.
+
+- **Item 1 — the filter strip rationalized, and search over tag
+  contents.** The search box matches only name and handle, so the tag
+  columns an operator most often selects on are unsearchable. **At
+  roster scale that is reachability, not convenience**: the preview
+  caps at 200 rows (500 filtered), so on a 1,000-row roster the
+  operator cannot see half of it, and tags are how such a roster is
+  partitioned — cohort, tutor group, class. Searching them is what
+  brings one partition into the window. And the
+  four pages disagree about the dropdown beside it: three carry a
+  Status filter, Relationships carries a `Search by` side-picker and
+  **no status filter at all** — on the one page that can produce
+  inactive rows, since it ships `bulk-inactivate` and surfaces a
+  `Status` pill. `spec/setup_pages.md` justifies that with a claim the
+  page contradicts. Decision: one strip shape on all four, `search_by`
+  retires, tags join the search, typeahead stays people-only.
+- **Item 2 — delete selected rows.** Selection already exists and
+  eight bulk routes already use it; what is missing underneath is any
+  per-entity delete service at all. Decision: `bulk-delete` per page
+  narrowing the existing `_delete_all` helper, so cascade semantics
+  are inherited; `Delete` in the Destructive role after a shortened
+  `Add`, with the selected-count and its confirmation checkbox moved
+  to a second row.
+
+**Two measurements shape the plans.** Retiring `search_by` touches
+**22 test references**, and **no test calls the four filter
+predicates directly** — the unit-level behavior is unpinned today.
+`.filter-actions` is shared by **seven** templates, only four of them
+in scope, so the second row wants its own class rather than a change
+to the shared one.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
