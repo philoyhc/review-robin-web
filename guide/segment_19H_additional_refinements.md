@@ -871,6 +871,15 @@ is worth having precisely because that half was doubted. The other two
 die under all three mutants (subclass reverted, header set only on the
 200 branch, `no-cache` swapped for a long `max-age`).
 
+**The `spec-writer` pass changed nothing and confirmed one thing worth
+having.** It re-derived the header's placement, the literal `no-cache`,
+the unchanged mount and directory, and that "nothing here is compiled,
+fingerprinted, or versioned" still holds of a change that adds a
+response header rather than a build step. It also read the deployment
+docs against this item's open question and found no claim anywhere that
+the change falsifies — plus the topology line that narrows the question,
+now recorded under `### Open questions`.
+
 **Decisions confirmed at build:**
 
 - **The whole `/static` mount, not just `guide/`** (2026-09-09). One
@@ -907,7 +916,12 @@ die under all three mutants (subclass reverted, header set only on the
   path is outside this sandbox's reach and outside this item. If a
   replaced capture is still stale on the dev slot after this ships,
   that is the next thing to look at, and it is a deployment question
-  rather than an application one.
+  rather than an application one. **Narrowed at the close** (the
+  `spec-writer` pass, 2026-09-09): the deployment docs record "No Front
+  Door / CDN, no Static Web App", so on the documented topology nothing
+  sits between App Service and the browser to cache independently. The
+  question stays open rather than answered, because the topology is a
+  document and the dev slot is the check.
 
 ### Out of scope
 
