@@ -26,8 +26,8 @@ and `### Status` and there is no segment-level `## Doc impact`.
 
 | Item | Covers | State |
 |---|---|---|
-| **19I.1** | The filter strip rationalized, and search extended to tag contents | Open — **planned** |
-| **19I.2** | Delete selected rows from the Operator actions card | Open — **planned** |
+| **19I.1** | The filter strip rationalized, and search extended to tag contents | **Closed 2026-09-09** (3 PRs) |
+| **19I.2** | Delete selected rows from the Operator actions card | **Closed 2026-09-09** (3 PRs, scaffold-first) |
 | 19I.3+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
 
 ---
@@ -837,6 +837,66 @@ invalidation skipped; and one audit event per row.
 
 **Measured after:** the suite went 3106 → 3120 (+14, all in
 `tests/unit/test_roster_bulk_delete.py`).
+
+**2026-09-09 — PR 3 landed; Item 2 closes.** Four `bulk-delete`
+routes, both gates, the button wired. The scaffold's inert assertions
+were **moved forward rather than deleted**: the test that pinned
+`Delete` as having no route behind it now pins the `formaction` that
+does, and the four 404 tests became one that pins the checkbox
+actually posting with the bulk form — a `name`/`form` pair whose
+absence would look identical and submit nothing.
+
+**One checkbox, not two — a departure from the plan's reading of its
+own gate, and the reason is layout.** Semantics said
+`_require_response_loss_ack` applies "exactly as it does to
+`delete-all`", which on that surface means a *second* checkbox. The
+strip the author confirmed at PR 1 has room for one. So the
+acknowledgement rides with the single tick: where the selected page's
+rows can carry responses, the label reads "Yes, delete these and
+discard their saved responses" and a hidden
+`acknowledge_response_loss` accompanies it. The route still requires
+both fields and still refuses without the tick that carries them.
+**Flagged to the author** — the alternative (a second box, gated
+behind the first) is a layout change to a strip they had just signed
+off, which is not a change to make silently.
+
+**A pre-existing defect found while wiring this, and deliberately not
+fixed.** `delete-all` requires `acknowledge_response_loss`, and **no
+roster template ever sends it** — one match across `app/web/templates`,
+in `next_action_card.html`. So on a session with responses, the Danger
+Zone's "Delete all reviewers" returns 400 with no path forward from
+that page. The Danger Zone is explicitly Out of scope for this item and
+the fix is not a line of this diff, so it is reported rather than
+folded in.
+
+**The gate says something false unless it is scoped twice.** The
+acknowledgement is rendered from a session-wide answer, because the
+page cannot know the selection at render time. Rendered on *all four*
+pages that read "and discard their saved responses" beside an
+Observers or Relationships delete, which destroys no response — the
+placeholder defect again, one item later. The context key is now
+`delete_discards_responses`, literal `False` on those two pages, and a
+test asserts the copy never appears there **even on a session full of
+responses**.
+
+**Eight mutants, eight kills**: the confirm gate accepting anything
+truthy; the confirm gate removed; the response gate asking the session
+instead of the selection; the response gate skipped; the redirect
+carrying the deleted ids back; the checkbox losing its `form=` so the
+tick never posts; the response-aware label shipped unconditionally;
+and the lifecycle gate dropped.
+
+**Driven end to end in Chromium.** Filtered to a tag, selected rows 1
+and 3 of 3, ticked, pressed Delete: landed back on
+`?status=all&q=Shared` with **no** `selected=`, those two rows gone and
+the third still there — and the whole roster confirmed the other two
+untouched. Then, with a saved response present, the label read "Yes,
+delete these and discard their saved responses" on Reviewers and
+Reviewees, read plain on Observers and Relationships, and the delete
+went through.
+
+**Measured after:** the suite went 3120 → 3152 (+32: 32 route tests,
+with the scaffold file's 18 unchanged in count).
 
 ### Definition of done
 

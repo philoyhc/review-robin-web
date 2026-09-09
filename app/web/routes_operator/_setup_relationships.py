@@ -39,7 +39,9 @@ from app.web.routes_operator._shared import (
     _SETUP_DEFAULT_CAP,
     _SETUP_FILTERED_CAP,
     _redirect_keeping_selection,
+    _require_delete_confirm,
     _require_editable,
+    _require_selected_response_loss_ack,
     _save_field_labels,
     require_relationships_enabled_session,
     _templates,
@@ -584,6 +586,14 @@ def _render_relationships_page(
             "reviewee_by_id": reviewee_by_id,
             "existing_count": len(all_rows),
             "total_row_count": len(all_rows),
+            # Always ``False`` (Segment 19I Item 2). Deleting a
+            # relationship destroys no response — nothing references
+            # one, measured from the model graph at PR 2 — so the
+            # strip must not offer an acknowledgement for a loss
+            # that cannot happen. The route's gate reaches the
+            # same answer on its own via ``cascade_counts``; this
+            # keeps the page from saying otherwise.
+            "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
             "is_ready": is_ready,
             "edit_id": edit_id,
@@ -666,4 +676,50 @@ async def relationships_save_field_labels(
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/relationships",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/relationships/bulk-delete")
+def relationships_bulk_delete(
+    relationship_ids: list[int] = Form(default=[]),
+    confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Delete the checkbox-selected rows (Segment 19I Item 2).
+
+    Sibling of ``bulk-inactivate`` — same id list, same filter
+    round-trip — with the Danger Zone's two gates in front of it,
+    narrowed to the selection. The redirect carries the filters but
+    **not** the ids: the rows are gone, so re-checking them is not a
+    thing the page can do.
+    """
+    _require_editable(review_session)
+    _require_delete_confirm(confirm)
+    _require_selected_response_loss_ack(
+        db,
+        model=Relationship,
+        ids=relationship_ids,
+        ack=acknowledge_response_loss,
+    )
+    try:
+        relationships_service.delete_selected(
+            db,
+            review_session=review_session,
+            relationship_ids=relationship_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RelationshipOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/relationships",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
