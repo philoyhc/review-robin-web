@@ -2816,7 +2816,12 @@ and live specs.
 
 - **Item 1 — the filter strip rationalized, and search over tag
   contents.** The search box matches only name and handle, so the tag
-  columns an operator most often selects on are unsearchable. And the
+  columns an operator most often selects on are unsearchable. **At
+  roster scale that is reachability, not convenience**: the preview
+  caps at 200 rows (500 filtered), so on a 1,000-row roster the
+  operator cannot see half of it, and tags are how such a roster is
+  partitioned — cohort, tutor group, class. Searching them is what
+  brings one partition into the window. And the
   four pages disagree about the dropdown beside it: three carry a
   Status filter, Relationships carries a `Search by` side-picker and
   **no status filter at all** — on the one page that can produce

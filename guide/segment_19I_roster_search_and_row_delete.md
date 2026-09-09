@@ -45,6 +45,18 @@ data an operator most often wants to select on — a cohort, a tutor
 group, a mentorship kind — and none of them is searchable. The pages
 already *show* those columns and already let the operator rename them.
 
+**At roster scale this is reachability, not convenience** (author's
+motivation, 2026-09-09). The preview table is **capped at 200 rows,
+lifted to 500 when a filter is applied** (`_SETUP_DEFAULT_CAP` /
+`_SETUP_FILTERED_CAP`, `spec/setup_pages.md`). On a 1,000-row roster
+the operator therefore *cannot see half of it*, and the only filters
+that narrow the window are status — which does not partition anything
+an operator thinks in — and a name they would have to already know.
+**Tags are how such a roster is partitioned**: cohort, tutor group,
+class. Searching them is what lets an operator bring one partition
+into the window and work on it. Without it, rows past the cap are not
+merely inconvenient to find; for a bulk action they are unreachable.
+
 **And the four pages disagree about what the dropdown beside the box
 is for.** Reviewers, Reviewees and Observers put a **Status** filter
 there (`all` / `active` / `inactive`). Relationships puts a **Search
@@ -117,6 +129,10 @@ would silently be read as a handle pick.
   same `active` / `inactive` values `bulk_inactivate` writes.
 - **Filters compose** — status and search both apply, as they do on
   the three pages that have both today.
+- **Substring, as today** — a tag search matches any row whose tag
+  *contains* the needle, the same rule name and handle already use.
+  This is the consistent choice and it has a cost at partition scale;
+  see Open questions.
 - **The two Relationships datalists merge into one.** `search_by`
   currently swaps the input's `list=` between a reviewer list and a
   reviewee list; one list carries both. The
@@ -191,8 +207,21 @@ these four functions is currently unpinned.
 
 ### Open questions
 
-- None. The dropdown rationalization and the people-only typeahead
-  were both settled by the author on 2026-09-09.
+- **Substring or whole-value match on tags?** The dropdown
+  rationalization and the people-only typeahead are settled (author,
+  2026-09-09). This one is opened *by* the partition motivation and is
+  not settled. Substring is what name and handle do, so it is the
+  consistent answer — but partitions are exactly where it misleads:
+  searching `Team A` also brings in `Team A2` and `Team AB`, and an
+  operator who believes they have isolated a partition has not. That
+  matters most in combination with Item 2, where the next act may be
+  a delete. Three candidates, none free: keep substring and rely on
+  the `Showing N of M` hint; match a tag **whole-value**
+  case-insensitively while names stay substring (precise, but two
+  rules in one box); or offer the distinct values of a tag slot as a
+  picker, which is the exact tool for partitioning and a larger change
+  than this item. **Decided by the author before PR 1** — it changes
+  what the operator gets, not just how it is built.
 
 ### Out of scope
 
@@ -297,6 +326,17 @@ where a test can see it.
   be re-selected).
 - **Lifecycle** — gated by `_require_editable`, as every mutating
   roster route is.
+- **Select-all selects the *rendered* rows**, not the whole roster:
+  the JS reads `document.querySelectorAll(".reviewer-select")`, which
+  is the filtered-and-capped window. That is the right behavior for
+  the partition workflow Item 1 exists to enable — filter to a tag,
+  select all, act — and it carries one sharp edge worth stating in the
+  spec rather than discovering: **the cap can be smaller than the
+  partition.** A tag matching 600 rows renders 500 (the filtered cap),
+  so select-all takes 500 and a delete leaves 100 behind, having
+  looked complete. The confirmation therefore states the **selected**
+  count, never the match count, and the existing `Showing N of M`
+  hint is what tells the operator the two differ.
 
 ### Judgment calls — decided
 
