@@ -622,6 +622,7 @@ def _render_relationships_page(
                 relationships_service.fields_with_data(
                     db, review_session.id
                 ),
+                surface="relationships",
             ),
             "issues": issues,
             "missing_confirm": missing_confirm,
