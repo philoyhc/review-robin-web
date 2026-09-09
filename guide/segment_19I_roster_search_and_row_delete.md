@@ -3086,6 +3086,63 @@ of the word.
    the datalists (both already render them).
 4. **Spec + `docs/status.md` row.**
 
+### Status
+
+**2026-09-09 — rungs 1 and 2 landed as laid out; 3 and 4 open.**
+
+- **PR 1** (#2254) — `views.preview_count_line`,
+  `partials/_preview_count_line.html`, the four roster pages.
+- **PR 2** (#2255) — Assignments: the three notices become one.
+
+**The plan's blast radius held.** Seven templates, six route
+modules, ~30 test sites; nothing outside that list needed touching.
+
+**Two findings from the build, both about tests rather than code.**
+
+1. **The capped-and-filtered branch was untested, as the plan
+   predicted, and the gap was invisible.**
+   `test_filtered_cap_lifts_to_500` reads as though it covers it,
+   but `status=active` matches all 600 of its rows, so the matching
+   set and the roster are the same number. Any wrong-denominator
+   bug would have shipped green. PR 1 adds a 600/550/500 case and
+   asserts the two *wrong* numbers are absent, not merely that the
+   right one is present.
+2. **An assertion of mine matched a CSS comment, not markup.**
+   `"Showing" not in actions`, scoped to everything above the
+   Assignments preview card, failed — because `base.html` inlines
+   `Apply (with optional Clear + "Showing N of M" counter)` in a
+   comment. Scoped to the rendered `.filter-actions` row now. The
+   same trap as Item 9's `operator-actions-card` assertion, in a
+   different disguise: a substring search over a whole rendered
+   document matches the app's own prose about itself.
+
+**Decisions confirmed at build:**
+
+- **`truncated_count` retired outright** (2026-09-09). Once the
+  below-table line went, nothing read it; the helper derives the
+  withheld count. `matching_count` left the Assignments template
+  context for the same reason, though the local stays — it feeds
+  the helper.
+- **The no-match branch renders no count line** (2026-09-09). The
+  Assignments preview card gates the table on `pair_sample`, and
+  the count line sits inside that gate, so a search matching
+  nothing shows only `No assignments match the search.` The
+  assertion that pinned `Showing 0 of 1` now pins the line's
+  absence. This is a real behaviour change, not just copy.
+- **`base.html`'s `.filter-card` comment is left for PR 3**
+  (2026-09-09). It names the counter that Invitations and
+  Responses still render in their filter row; it goes stale when
+  rung 3 moves theirs, not before.
+
+**Mutations:** 10 on PR 1, 6 on PR 2, all killed. Both PRs
+committed before their mutation run — the guard Item 9 established
+after `git checkout -- app/` deleted uncommitted work twice.
+
+**Measured:** the suite went 3403 → 3425 (PR 1) → 3426 (PR 2).
+
+**Not verified here:** the Azure dev slot. Five templates changed
+across the two rungs.
+
 ### Definition of done
 
 - One helper composes all four branches, unit-tested at each
@@ -3120,6 +3177,32 @@ of the word.
   `guide/deferred_consolidated.md` if it survives review.
 - **The four roster pages' missing lock card** on `expired` /
   `archived` — Item 3's open gap, untouched.
+- **Tags columns and column sort on Invitations / Responses** —
+  raised by the author 2026-09-09 while rung 3 was pending, and
+  measured rather than estimated, but **not decided**. If it goes
+  ahead it is its own item, not a widening of this one.
+  - *Tags are free.* `InvitationsRow.reviewer` and
+    `ResponsesRow.reviewee` are the full ORM objects, so `tag_1/2/3`
+    are already in the template's hands: no service, query or view
+    change, just columns.
+  - *Sort is nearly free to build.* The `data-rrw-sortable`
+    primitive is declarative — the roster route wiring is a key
+    set, a `getattr` resolver and one
+    `decode_cookie_sort_spec` + `apply_cookie_sort` pair, ~15
+    lines. The wrapper rows need a resolver that reaches
+    `row.reviewer.name` rather than the rosters' one-liner.
+  - *Sort is cheap to run.* Timed in Chromium against the shipped
+    JS: **1,000 rows ≈ 22-26 ms**, 2,000 ≈ 43-61 ms, 5,000 ≈
+    102-227 ms per click.
+  - *The page is the expensive part, and already is.* Uncapped
+    render, measured on SQLite in the agent container: **1,000
+    rows → 669 ms / 1.1 MB (Invitations), 840 ms / 0.86 MB
+    (Responses)**; 2,000 rows → 1,207 ms / 2.1 MB and 1,463 ms /
+    1.5 MB. Sort adds ~3% to what the page already pays. The open
+    question these numbers raise is not sort but **whether these
+    two pages should stay uncapped at all** — which Item 10 asked
+    and the author answered "yes" for the count line's sake, on a
+    page that was not then known to cost a second and a megabyte.
 
 ### Doc impact
 
