@@ -557,7 +557,7 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | `block.instrument_label` — Short label or full name. |
+| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers"). Corrected 2026-09-09 — this read "Short label or full name", and `name` has not participated in the label chain for some time. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count, plus a `stale` pill when the current rule + roster pass would produce a different set. "Not generated yet" when zero. |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |

@@ -2333,7 +2333,17 @@ and appears **nowhere** on the page, so the obvious implementation
 can see. Also found: the per-instrument `Show` checkboxes already
 filter by instrument, **client-side over the rendered window**, so
 they show a partial view on a session past the 200-row cap and
-never move the count. Both recorded in `spec/assignments.md`.
+never move the count.
+
+`spec-writer` caught that only *one* of those two was recorded. The
+`Show`-checkbox finding went into the new Search-matching section;
+the label finding did not, and this Status claimed both had. It is
+now recorded where it belongs — the status table's Instrument-column
+row, which read *"Short label or full name"* and was itself stale,
+since `name` has not been in the label chain for some time. The
+false claim is the thing worth keeping here: a Status entry
+asserting a doc edit that was never made is the same defect class as
+a page offering a control its route refuses.
 
 **Mutation testing found the empty-term guard unpinned**, and then
 found my first attempt to pin it *also* passed with the guard gone:
