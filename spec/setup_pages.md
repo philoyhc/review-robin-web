@@ -299,6 +299,14 @@ Every Setup Page renders, top-to-bottom:
 
 ## Preview tables (shared toggle pattern)
 
+**The "Showing N of M" hint** renders at the **top-left of the
+preview-table card**, above the table, whenever the cap or a filter
+has trimmed the list (`.table-showing-hint`; Segment 19I Item 4). It
+lived flush right in the operator-actions strip until then, roughly
+950px from the rows it describes; here it reads left-to-right with the
+page and sits with what it counts. An untrimmed list renders no hint —
+"Showing 6 of 6" is noise. It appears on all four roster pages.
+
 The Reviewers, Reviewees, and Relationships preview tables share
 a **column-visibility chip row** that lets the operator hide
 optional columns. The pattern (Segment 18E Part 1):
@@ -429,15 +437,26 @@ person, or add one row. Top-to-bottom:
    for `Delete`, which carries the **Destructive** role
    (outline red, `spec/ui_elements.md` §6) and sits between
    `Add` and `Search`.
-3. **Status row** (`filter-confirm`) — the **"Showing N of M"**
-   hint, the **selected-count pill**, and the delete
-   **confirmation checkbox** (`Yes, delete these`), inline and
-   flush right beneath the controls (Segment 19I). The three
-   are one kind of thing — what the page is showing and what is
-   picked — and the gate sits with the count because it is
-   *about* the count: "3 selected · ☐ Yes, delete these" is a
-   sentence, where the same checkbox on the button row would be
+3. **Status row** (`filter-confirm`) — the **selected-count
+   pill** and the delete **confirmation checkbox** (`Yes, delete
+   these`), inline and flush right beneath the controls
+   (Segment 19I). The gate sits with the count because it is
+   *about* the count: "3 of 4 selected · ☐ Yes, delete these" is
+   a sentence, where the same checkbox on the button row would be
    a control with no stated object.
+
+   The **"Showing N of M"** hint shared this row until Item 4 and
+   now sits at the top-left of the preview-table card instead —
+   with the rows it counts rather than ~950px to their right. See
+   "Preview tables" below.
+
+   **The pill reads `N of M selected`**, where `M` is the
+   **rendered window**, not the roster. It gained that denominator
+   with the hint's move (Item 4): the two numbers are what make
+   the cap-versus-match gap visible, and the pill now carries half
+   of it on its own. `M` is the window because that is what
+   select-all can reach — see the caveat under "Deleting the
+   selected rows".
 
    **The delete gate is two-stage.** A selection enables the
    checkbox; ticking the checkbox enables `Delete`, through the
@@ -535,8 +554,12 @@ checkbox toggles the rows on the page, and the page is capped at
 takes 500 and a delete leaves 100 behind **having looked complete** —
 the sharp edge of the partition workflow the search exists to enable.
 The confirmation therefore states the **selected** count and never the
-match count, and the `Showing N of M` hint beside it is what tells the
-operator the two differ.
+match count. Two numbers say the rest: the pill's own denominator
+(`4 of 4 selected` — every rendered row picked) read against the
+`Showing N of M` hint above the table (`Showing 4 of 12` — the window
+is not the roster). Before Item 4 the hint sat inside this row and
+carried that job alone; it now sits with the table and the pill states
+its own window, so the pairing survives the move.
 
 ### The Danger Zone's `delete-all` (Segment 19I Item 3)
 

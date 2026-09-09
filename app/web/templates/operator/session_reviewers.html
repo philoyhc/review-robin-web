@@ -221,12 +221,9 @@
              sits with the count because it is about the
              count. #}
           <div class="filter-confirm">
-            {% if displayed_row_count != total_row_count %}
-              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
-            {% endif %}
             {% if is_editable %}
             <span class="pill pill-count"
-                  id="reviewers-selected-count" hidden>0 selected</span>
+                  id="reviewers-selected-count" hidden>0 of 0 selected</span>
             <label class="delete-confirm-label">
               <input type="checkbox"
                      id="reviewers-delete-confirm"
@@ -319,6 +316,15 @@
        Mirrors the Reviewees Setup page. #}
     {% set show_profile_link = edit_mode or has_photo %}
     <div class="card">
+      {# The "Showing N of M" hint sits with the rows it counts
+         (Segment 19I Item 4). It was flush right in the
+         operator-actions strip, ~950px from the table it
+         describes; here it reads left-to-right with the page. #}
+      {% if displayed_row_count != total_row_count %}
+        <p class="muted table-showing-hint">
+          Showing {{ displayed_row_count }} of {{ total_row_count }}.
+        </p>
+      {% endif %}
       <table id="reviewers-table"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}"{% endif %}>
         <thead>
@@ -585,7 +591,12 @@
           setBtn(editBtn, n !== 1);
           setBtn(inactivateBtn, n === 0);
           setBtn(reactivateBtn, n === 0);
-          countPill.textContent = n + " selected";
+          // "N of M selected" (Segment 19I Item 4). M is the
+          // *rendered* window — the rows select-all can reach —
+          // not the whole roster, which is the number that makes
+          // the cap-versus-match gap visible next to the
+          // "Showing N of M" hint above the table.
+          countPill.textContent = n + " of " + all.length + " selected";
           countPill.hidden = (n === 0);
           // Delete gate, stage 1 (Segment 19I Item 2). A
           // selection enables the checkbox; base.html's

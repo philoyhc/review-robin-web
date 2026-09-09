@@ -85,21 +85,23 @@ def _strip(body: str) -> tuple[str, str]:
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)
-def test_the_status_row_carries_all_three_and_the_button_row_none(
+def test_the_status_row_carries_the_count_and_the_gate(
     db: Session, client: TestClient, page: str
 ) -> None:
-    """The author's layout: `Showing N of M`, the selected count and
-    the gate move off the button row and sit inline together."""
+    """The status row holds the selected count and the delete gate.
+
+    It held `Showing N of M` too until Segment 19I Item 4 moved that to
+    the preview table — and **this test did not notice**, because the
+    version that named all three only ever asserted the hint's absence
+    from the button row, never its presence here. A test whose name
+    claims three and pins two. The hint's new home is pinned in
+    `test_setup_showing_hint.py`."""
     review_session = _make_session(client, db, code=f"sc-{page}")
     _seed(db, review_session)
 
-    # A cap-trimmed list is what makes "Showing N of M" render at all.
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/{page}?q=zzz-no-match"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.id}/{page}").text
     buttons, status = _strip(body)
 
-    assert "Showing" not in buttons, "the hint belongs on the status row"
     assert f'id="{page}-selected-count"' not in buttons
     assert f'id="{page}-delete-confirm"' not in buttons
 
