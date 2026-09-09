@@ -4,7 +4,7 @@ import re
 from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 
 from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
@@ -39,6 +39,39 @@ _QUICK_SETUP_KEEP_COOKIE_RE = re.compile(
 _QUICK_SETUP_COOKIE_RE = re.compile(r"^qsu_(\d+)$")
 
 
+class _RevalidatingStaticFiles(StaticFiles):
+    """`StaticFiles` plus `Cache-Control: no-cache` (Segment 19H Item 4).
+
+    Starlette sends `etag` and `last-modified` but no `Cache-Control`, so
+    freshness is left to the browser's heuristic: with no explicit
+    lifetime a stored copy may be reused for a fraction of its age
+    without asking the server, and a capture replaced under the same
+    filename then keeps showing the old picture until that window
+    lapses. Found on 2026-09-09, when two refreshed Guide screencaps
+    stayed stale for a reader while the dark set — new URLs, never
+    cached — appeared at once; `?v=2` on the same path returned the new
+    bytes, which is the cache and nothing else.
+
+    `no-cache` does not mean "do not store". It means store, and
+    revalidate before use: the browser still sends `If-None-Match` and
+    still gets a 304 with no body when nothing changed, so the saving
+    that matters is kept and only the staleness goes. The alternative,
+    fingerprinted filenames, is ruled out by `spec/architecture.md` —
+    this directory is deliberately a directory of files, and nothing in
+    it is compiled, fingerprinted, or versioned.
+
+    Set after `super()` so it lands on both branches: `file_response`
+    builds the 200 and then swaps in a `NotModifiedResponse` for a 304,
+    and `cache-control` is one of the headers that response carries
+    through.
+    """
+
+    def file_response(self, *args: object, **kwargs: object) -> Response:
+        response = super().file_response(*args, **kwargs)  # type: ignore[arg-type]
+        response.headers["cache-control"] = "no-cache"
+        return response
+
+
 def create_app() -> FastAPI:
     configure_logging()
     validate_critical_settings(settings)
@@ -63,7 +96,9 @@ def create_app() -> FastAPI:
     # a smaller commitment than a general asset pipeline.
     app.mount(
         "/static",
-        StaticFiles(directory=pathlib.Path(__file__).parent / "web" / "static"),
+        _RevalidatingStaticFiles(
+            directory=pathlib.Path(__file__).parent / "web" / "static"
+        ),
         name="static",
     )
     app.include_router(health_router)

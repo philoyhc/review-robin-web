@@ -215,3 +215,64 @@ def test_the_theme_swap_is_keyed_on_the_attribute_not_the_os() -> None:
     # and an assertion that fails on prose explaining a rule is an
     # assertion that gets deleted.
     assert not re.search(r"@media[^{]*prefers-color-scheme", css)
+
+
+# ── Revalidation (Segment 19H Item 4) ──────────────────────────────────
+#
+# A capture replaced under the same filename must reach a reader who has
+# the old one cached. Starlette sends `etag` and `last-modified` and no
+# `Cache-Control`, which leaves freshness to the browser's heuristic —
+# a stored copy may be reused for a fraction of its age with no request
+# at all. Found on 2026-09-09: two refreshed screencaps stayed stale
+# while the dark set, being new URLs, appeared at once.
+
+
+def test_screencaps_are_served_with_cache_control_no_cache(
+    client: TestClient,
+) -> None:
+    response = client.get(f"/static/guide/{REFERENCED[0]}")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
+    # `no-cache` is store-and-revalidate, not do-not-store: the
+    # validators must still be there or every visit refetches the body.
+    assert response.headers["etag"]
+    assert response.headers["last-modified"]
+
+
+def test_an_unchanged_screencap_still_answers_304(client: TestClient) -> None:
+    """The revalidation the header forces has to stay cheap, or the fix
+    costs a full re-download of every capture on every visit."""
+    name = REFERENCED[0]
+    etag = client.get(f"/static/guide/{name}").headers["etag"]
+
+    response = client.get(f"/static/guide/{name}", headers={"If-None-Match": etag})
+
+    assert response.status_code == 304
+    assert not response.content
+    assert response.headers["cache-control"] == "no-cache"
+
+
+def test_a_replaced_screencap_is_served_fresh(client: TestClient) -> None:
+    """The defect itself: same URL, new bytes. The old validator must
+    stop matching, so the conditional request comes back 200 with the
+    new file rather than 304 with nothing."""
+    name = REFERENCED[0]
+    path = STATIC_GUIDE / name
+    original = path.read_bytes()
+    stale_etag = client.get(f"/static/guide/{name}").headers["etag"]
+    # Any other capture will do — it only has to differ in size, which is
+    # half of what the validator is built from.
+    replacement = (STATIC_GUIDE / REFERENCED[1]).read_bytes()
+    assert replacement != original
+
+    try:
+        path.write_bytes(replacement)
+        response = client.get(
+            f"/static/guide/{name}", headers={"If-None-Match": stale_etag}
+        )
+    finally:
+        path.write_bytes(original)
+
+    assert response.status_code == 200
+    assert response.content == replacement
