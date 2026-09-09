@@ -1,0 +1,197 @@
+"""Delete-selected-rows scaffold — Segment 19I Item 2 PR 1.
+
+The layout and the gate's *states*, with nothing behind the button.
+`Delete` is a `type="button"` no-op: there is no `bulk-delete` route
+and no delete service yet, both of which arrive in PRs 2 and 3. What
+this slice has to get right is the shape the author confirms on the
+dev slot before any of that is wired.
+
+Two things are pinned here that a later slice could plausibly undo:
+the second row carries all three status items (`Showing N of M`, the
+selected-count pill, the gate) and the button row carries none of
+them; and the three non-roster pages sharing `.filter-actions` did not
+gain any of it.
+"""
+from __future__ import annotations
+
+import pathlib
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import Observer, Relationship, Reviewee, Reviewer, ReviewSession
+
+TEMPLATES = pathlib.Path("app/web/templates/operator")
+ROSTER_PAGES = ("reviewers", "reviewees", "observers", "relationships")
+
+
+def _make_session(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": code},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+
+
+def _seed(db: Session, review_session: ReviewSession) -> None:
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Ali", email="ali@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Carol",
+        email_or_identifier="carol@example.edu",
+    )
+    db.add_all([reviewer, reviewee])
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email="obs@example.edu",
+            display_name="Obs",
+        )
+    )
+    db.flush()
+    db.add(
+        Relationship(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+        )
+    )
+    db.commit()
+
+
+def _strip(body: str) -> tuple[str, str]:
+    """The button row and the status row, as separate slices."""
+    buttons_at = body.find('class="filter-actions"')
+    confirm_at = body.find('class="filter-confirm"')
+    assert buttons_at != -1, "no button row"
+    assert confirm_at != -1, "no status row"
+    assert buttons_at < confirm_at, "status row must follow the buttons"
+    return (
+        body[buttons_at:confirm_at],
+        body[confirm_at : body.index("</form>", confirm_at)],
+    )
+
+
+@pytest.mark.parametrize("page", ROSTER_PAGES)
+def test_the_status_row_carries_all_three_and_the_button_row_none(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """The author's layout: `Showing N of M`, the selected count and
+    the gate move off the button row and sit inline together."""
+    review_session = _make_session(client, db, code=f"sc-{page}")
+    _seed(db, review_session)
+
+    # A cap-trimmed list is what makes "Showing N of M" render at all.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/{page}?q=zzz-no-match"
+    ).text
+    buttons, status = _strip(body)
+
+    assert "Showing" not in buttons, "the hint belongs on the status row"
+    assert f'id="{page}-selected-count"' not in buttons
+    assert f'id="{page}-delete-confirm"' not in buttons
+
+    assert f'id="{page}-selected-count"' in status
+    assert f'id="{page}-delete-confirm"' in status
+    assert "Yes, delete these" in status
+
+
+@pytest.mark.parametrize("page", ROSTER_PAGES)
+def test_delete_renders_destructive_and_inert(
+    db: Session, client: TestClient, page: str
+) -> None:
+    review_session = _make_session(client, db, code=f"sc-del-{page}")
+    _seed(db, review_session)
+
+    body = client.get(f"/operator/sessions/{review_session.id}/{page}").text
+    buttons, _status = _strip(body)
+
+    start = buttons.find(f'id="{page}-delete-btn"')
+    assert start != -1, "no Delete button"
+    element = buttons[buttons.rfind("<button", 0, start) : buttons.index(">", start) + 1]
+
+    assert "btn destructive" in element, "Destructive role per ui_elements §6"
+    assert 'type="button"' in element, "inert: no form submit behind it"
+    assert "formaction" not in element, "inert: no route behind it"
+    assert "disabled" in element
+
+    # Ordering: after Add, before Search.
+    assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
+
+
+@pytest.mark.parametrize("page", ROSTER_PAGES)
+def test_the_gate_starts_inactive_and_is_paired_to_the_button(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """Stage 1 of the gate ships disabled — nothing is selected on a
+    fresh render — and is bound to the button by the app-wide
+    `data-delete-confirm` key rather than a second bespoke script."""
+    review_session = _make_session(client, db, code=f"sc-gate-{page}")
+    _seed(db, review_session)
+
+    body = client.get(f"/operator/sessions/{review_session.id}/{page}").text
+    _buttons, status = _strip(body)
+
+    start = status.find(f'id="{page}-delete-confirm"')
+    element = status[status.rfind("<input", 0, start) : status.index(">", start) + 1]
+    assert "disabled" in element, "no selection yet, so no gate"
+    assert f'data-delete-confirm="{page}-bulk-delete"' in element
+    assert f'data-delete-btn="{page}-bulk-delete"' in body, "unpaired key"
+
+
+@pytest.mark.parametrize("page", ROSTER_PAGES)
+def test_no_bulk_delete_route_exists_yet(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """The scaffold cannot delete anything, asserted rather than
+    assumed — the route arrives in PR 3."""
+    review_session = _make_session(client, db, code=f"sc-route-{page}")
+    _seed(db, review_session)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/{page}/bulk-delete",
+        data={},
+        follow_redirects=False,
+    )
+    assert response.status_code == 404, response.status_code
+
+
+def test_the_other_filter_actions_pages_did_not_gain_the_row() -> None:
+    """`.filter-actions` is shared by seven templates; only the four
+    roster pages get the second row. Read from source rather than
+    rendered, because Invitations and Responses need a validated
+    session to render at all and their *absence* is the claim."""
+    sharing = sorted(
+        p.name
+        for p in TEMPLATES.glob("session_*.html")
+        if 'class="filter-actions"' in p.read_text()
+    )
+    assert len(sharing) == 7, sharing
+
+    gained = sorted(
+        p.name
+        for p in TEMPLATES.glob("session_*.html")
+        if 'class="filter-confirm"' in p.read_text()
+    )
+    assert gained == sorted(f"session_{p}.html" for p in ROSTER_PAGES)
+
+
+def test_the_new_row_style_cannot_reach_the_other_pages() -> None:
+    """The CSS is scoped under `.operator-actions-card` rather than
+    added to `.filter-actions`, so the three non-roster users of that
+    class cannot be reflowed by it."""
+    base = (TEMPLATES.parent / "base.html").read_text()
+    assert ".operator-actions-card .filter-confirm {" in base
+    assert "\n      .filter-confirm {" not in base, "unscoped rule"

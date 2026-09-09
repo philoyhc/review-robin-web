@@ -563,6 +563,13 @@ this shape over a fresh service.
   across the four templates.
 - The **selected-count moves to a second row**, and an inline
   **confirmation checkbox** joins it there.
+- **Amended 2026-09-09, by the author**: the `Showing N of M` hint
+  moves down with it. The second row carries all three inline and
+  flush right — `Showing 22 of 154.` · `22 SELECTED` ·
+  `☐ Yes, delete these` — leaving the first row to the controls
+  alone. The three are one kind of thing (what the page is currently
+  showing and what is currently picked); the buttons are another, and
+  at a filtered width the mixed row was already wrapping mid-group.
 
 That last part is the design, not decoration. The count and the gate
 belong together because the gate is *about* the count: "3 selected"
@@ -583,8 +590,20 @@ where a test can see it.
 
 ### Semantics
 
-- **Nothing selected** — Delete stays disabled, like the other
-  selection buttons.
+- **Nothing selected** — **both** the confirmation checkbox and the
+  Delete button are inactive (per the author, 2026-09-09), not the
+  button alone. The gate is therefore two-stage: a selection enables
+  the checkbox, ticking the checkbox enables the button. A tickable
+  box with nothing to confirm invites the operator to confirm first
+  and select second, which is the order that makes the count in
+  "3 selected · ☐ Yes, delete these" arrive after its own
+  confirmation.
+- **Deselecting everything clears the tick**, it does not merely
+  disable it (2026-09-09). A tick that survives deselection would
+  re-arm the button the moment a *different* selection is made, so
+  the operator's confirmation would attach to rows they never
+  confirmed. Disable **and** uncheck; re-selecting starts the gate
+  over.
 - **Selected but unconfirmed** — the route rejects with 400, the same
   shape `delete-all` uses for its missing confirm. The client also
   keeps the button disabled until the box is ticked; the server check
@@ -627,6 +646,24 @@ where a test can see it.
 - **`Add`, not `+ Add` or `Add row`** (2026-09-09). The author asked
   for `Add`; the adjacent buttons are single verbs (`Edit`,
   `Activate`) and this joins them.
+- **The tick clears on *any* change of selection, not only on
+  reaching zero** (2026-09-09). The author's rule is that the gate is
+  inactive with nothing selected; this is that rule one step out.
+  "Yes, delete these" names the selection as it stood when the box was
+  ticked, so a selection that changes underneath a live tick has the
+  operator confirming a set they did not confirm. Adding a fourth row
+  to a ticked three is the cheap case, and the box simply re-ticks.
+  **Flagged for confirmation on the PR 1 scaffold**, since it costs a
+  click and the scaffold exists to settle exactly this.
+- **The app-wide `data-delete-confirm` gate is extended, not
+  bypassed** (2026-09-09). `base.html`'s script already pairs a
+  checkbox to a button by key and is what the three existing
+  destructive controls use. The selection stage goes in front of it —
+  the page's existing selection-sync code, which already enables Edit
+  / Inactivate / Activate, also drives the checkbox's `disabled` and
+  clears it on empty — rather than a second, parallel gate. Two
+  scripts deciding one button's `disabled` is the drift class this
+  repo keeps paying for.
 
 ### Blast radius (measured)
 
@@ -649,6 +686,22 @@ argues for a new class for the second row rather than a change to
 
 ### PR ladder
 
+**Amended 2026-09-09**, at the author's instruction: PR 1 is not just
+first in sequence, it is a **hold point**. The ladder stops after it
+until the author has looked at the strip on the dev slot and confirmed
+the shape. PR 2 does not start on a scaffold that has only been
+asserted in tests — that is what scaffold-first is for, and a
+destructive control is the last place to discover a layout argument
+with the wiring already in.
+
+To make that confirmation possible, PR 1 carries the **interaction**
+as well as the layout: the selection → checkbox → button gate is live,
+so the author can see the states they specified. What PR 1 does not
+carry is any way to delete anything — no route, no service, and a
+`Delete` that is a `type="button"` no-op. Inert means *cannot mutate*,
+not *cannot move*; a permanently-disabled checkbox would show none of
+what there is to confirm.
+
 1. **PR 1 — the layout, inert.** `Add new row` → `Add`; a disabled
    `Delete` in the Destructive role after it; the selected-count moved
    to its own second row with the confirmation checkbox beside it. No
@@ -663,6 +716,71 @@ argues for a new class for the second row rather than a change to
 3. **PR 3 — the route and the wiring.** `bulk-delete` per page, the
    confirm and response-loss gates, the button enabled. Must not
    touch: the Danger Zone, or Item 1's filters.
+
+### Status
+
+**2026-09-09 — PR 1 landed. The ladder is now held** at the author's
+instruction until they have looked at the strip on the dev slot. PRs 2
+and 3 do not start before that.
+
+**What shipped:** the second row, carrying `Showing N of M`, the
+selected-count pill and `☐ Yes, delete these` inline and flush right;
+`Add new row` → `Add` (all 12 occurrences, including the three
+comments that named the old label); a Destructive `Delete` between
+`Add` and `Search`; and the two-stage gate, live. What did not ship is
+any way to delete: no route (a POST to `/bulk-delete` 404s on all four
+pages, asserted), no service, and a `Delete` that is a `type="button"`
+with no `formaction`.
+
+**Driven in Chromium rather than asserted only.** The five gate states
+were walked through on a seeded page: nothing selected (pill hidden,
+box disabled, button disabled) → one row (pill `1 selected`, box
+enabled, button still disabled) → ticked (button enabled) → a second
+row selected (**tick cleared, button disabled again** — the judgment
+call above, seen working) → all deselected (back to the start).
+Clicking the armed `Delete` changed no URL and issued no POST.
+
+**The browser found a defect the tests could not.** The three items
+were on one line but the checkbox label's centre sat **4px** below the
+other two. The first fix — zeroing the checkbox's UA margin — changed
+nothing, because that margin was already `0`. Measuring computed
+styles instead of guessing found the cause: the app's global
+`label { margin-top: 12px }` gives the label a lopsided margin box
+(12 over, 4 under), and a flex row centres the **margin box**. Zeroing
+the label's margin closed it to 0px. No test would have caught this
+and none reasonably could; it is exactly the class of thing a
+scaffold-first slice exists to surface, one PR before anything
+destructive is wired to it.
+
+**Also measured:** the button row is one line at a 1440px viewport and
+wraps to two at 1280px. Recorded rather than fixed — six controls in a
+half-width card will wrap somewhere, and where is a question for the
+author looking at it, not for me.
+
+**A spec the plan did not name, and a gap it revealed.**
+`spec/operator_button_audit.md` enumerates every operator button per
+page: its three roster sections still said `Add new row`, described the
+`Search` button as sitting "after the selection-driven buttons + pill",
+and had no `Delete`. All three are drift this slice caused, so the file
+is now a `### Doc impact` bullet. Recording it turned up a **pre-existing
+gap that is not this item's to close**: the Observers page is absent
+from that audit entirely — zero mentions — because the file is a dated
+snapshot last re-derived before Observers shipped. So the Observers
+`Delete` is real in the app and unrecorded there, and saying so is
+better than quietly adding a fourth section under this item's name.
+
+**A stale label assertion, updated not worked around**:
+`test_operator_actions_card_renders_inert_buttons` (15F PR 2) pinned
+`>Add new row</a>`; it now pins `>Add</a>` and `>Delete</button>`.
+
+**Seven mutants, seven kills** — the hint left on the button row; the
+Delete in the Secondary role; the Delete turned into a live submit
+with a `formaction`; the gate shipped enabled; the Delete placed
+before `Add`; the new CSS rule unscoped so it reaches all seven
+`.filter-actions` templates; and a non-roster page gaining the row.
+
+**Measured after:** the suite went 3088 → 3106 (+18: the scaffold
+file's 18 tests, of which 16 are the four-page parametrisation).
 
 ### Definition of done
 
@@ -710,4 +828,8 @@ argues for a new class for the second row rather than a change to
   account (PR 1, PR 3).
 - `spec/ui_elements.md` — the Destructive role's site list gains the
   roster Delete (PR 1).
+- `spec/operator_button_audit.md` — the three roster sections' `Add new
+  row` rows become `Add`, each gains a `Delete` row, and the `Search`
+  rows stop describing a pill that has moved (PR 1, added at build —
+  see `### Status`).
 - `docs/status.md` — row at the close (PR 3).

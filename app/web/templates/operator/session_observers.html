@@ -211,15 +211,10 @@
             </label>
           </div>
           <div class="filter-actions">
-            {% if displayed_row_count != total_row_count %}
-              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
-            {% endif %}
             {% if filter_status != "all" or filter_search %}
               <a class="btn secondary"
                  href="{{ observers_base_url }}">Clear</a>
             {% endif %}
-            <span class="pill pill-count"
-                  id="observers-selected-count" hidden>0 selected</span>
             <button class="btn secondary" type="button"
                     id="observers-edit-btn"
                     disabled aria-disabled="true">Edit</button>
@@ -234,12 +229,40 @@
                     formaction="{{ observers_base_url }}/bulk-reactivate"
                     disabled aria-disabled="true">Activate</button>
             {% if edit_mode %}
-              <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+              <a class="btn secondary disabled" aria-disabled="true">Add</a>
             {% else %}
               <a class="btn secondary"
-                 href="{{ observers_base_url }}?add=1">Add new row</a>
+                 href="{{ observers_base_url }}?add=1">Add</a>
             {% endif %}
+            {# Segment 19I Item 2 — inert in this slice: a
+               no-op ``type="button"`` with no route behind it.
+               Enabled by the confirmation checkbox below via
+               base.html's ``data-delete-confirm`` pairing. #}
+            <button class="btn destructive" type="button"
+                    id="observers-delete-btn"
+                    data-delete-btn="observers-bulk-delete"
+                    disabled aria-disabled="true">Delete</button>
             <button class="btn secondary" type="submit">Search</button>
+          </div>
+          {# Second action row (Segment 19I Item 2): what the
+             page is showing, what is selected, and the delete
+             gate — one kind of thing, inline and flush right,
+             leaving the row above to the controls. The gate
+             sits with the count because it is about the
+             count. #}
+          <div class="filter-confirm">
+            {% if displayed_row_count != total_row_count %}
+              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+            {% endif %}
+            <span class="pill pill-count"
+                  id="observers-selected-count" hidden>0 selected</span>
+            <label class="delete-confirm-label">
+              <input type="checkbox"
+                     id="observers-delete-confirm"
+                     data-delete-confirm="observers-bulk-delete"
+                     disabled>
+              <span>Yes, delete these</span>
+            </label>
           </div>
         </form>
       </div>
@@ -415,6 +438,7 @@
         var inactivateBtn = document.getElementById("observers-inactivate-btn");
         var reactivateBtn = document.getElementById("observers-reactivate-btn");
         var countPill = document.getElementById("observers-selected-count");
+        var deleteConfirm = document.getElementById("observers-delete-confirm");
         var selectAll = document.getElementById("observers-select-all");
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortEmpty = document.getElementById("observers-cohort-empty");
@@ -537,6 +561,24 @@
           if (countPill) {
             countPill.textContent = n + " selected";
             countPill.hidden = (n === 0);
+          // Delete gate, stage 1 (Segment 19I Item 2). A
+          // selection enables the checkbox; base.html's
+          // ``data-delete-confirm`` pairing then drives the
+          // button off the checkbox, so one script owns the
+          // button's ``disabled`` rather than two.
+          if (deleteConfirm) {
+            deleteConfirm.disabled = (n === 0);
+            if (deleteConfirm.checked) {
+              // The tick clears on *any* change of selection:
+              // "Yes, delete these" names the selection as it
+              // stood when it was ticked. A programmatic
+              // uncheck fires no ``change`` of its own, so the
+              // gate is re-run by hand or the button would
+              // stay enabled.
+              deleteConfirm.checked = false;
+              deleteConfirm.dispatchEvent(new Event("change"));
+            }
+          }
           }
           if (selectAll) {
             selectAll.checked = (n > 0 && n === all.length);

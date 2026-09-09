@@ -1386,6 +1386,45 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
+      /* Second action row: the selected-count pill and the
+         delete-confirmation checkbox, together and flush right
+         (Segment 19I Item 2). Its own class rather than a change to
+         `.filter-actions`, which seven templates share — the three
+         non-roster users of that class must not feel this. The count
+         and the gate sit together because the gate is about the
+         count: "3 selected  Yes, delete these" is a sentence. */
+      .operator-actions-card .filter-confirm {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .operator-actions-card .filter-confirm .delete-confirm-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9em;
+      }
+      /* The global `label { margin-top: 12px }` (above) leaves this
+         label's *margin box* lopsided — 12px over, 4px under — and a
+         flex row centres the margin box, so the visible label sat 4px
+         below the two items beside it. Measured in Chromium, not
+         guessed: the first fix tried was the checkbox's UA margin,
+         which was already zero. On a row whose whole point is that
+         three things read as one line, 4px is the difference between
+         a sentence and three neighbours. */
+      .operator-actions-card .filter-confirm .delete-confirm-label {
+        margin: 0;
+      }
+      /* Greyed while nothing is selected — the gate has no object
+         yet, and a tickable box with nothing to confirm invites
+         confirming before selecting. */
+      .operator-actions-card .filter-confirm
+        input[type="checkbox"]:disabled + span {
+        color: var(--text-subtle);
+      }
       /* The selected-count pill + action-button row sits flush
          right (Segment 15F PR 3 follow-up). */
       .operator-actions-card .operator-actions-buttons {
