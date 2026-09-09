@@ -461,13 +461,16 @@ def observers_search_options(rows: list[Observer]) -> list[str]:
     return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
-# Relationships Setup page (Segment 15F PR 5). The dropdown picks
-# which side of the pair the search box matches — a relationship
-# row has two identity columns, so the operator says which one.
-# ``"all"`` is *not* offered: a search always targets one side.
-RELATIONSHIPS_SEARCH_BY_OPTIONS: tuple[tuple[str, str], ...] = (
-    ("reviewer", "Reviewer"),
-    ("reviewee", "Reviewee"),
+# Status filter options for the Relationships Setup page (Segment 19I
+# Item 1). The page has carried an ``active`` / ``inactive`` status
+# since 15D and has shipped bulk-inactivate / bulk-reactivate buttons
+# that set it, but had no filter for it — it spent the dropdown slot on
+# a "Search by" side-picker instead. `spec/setup_pages.md` justified
+# that by saying a relationship has no status distinction worth a
+# filter, which the page's own Status pill contradicts.
+RELATIONSHIPS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
 )
 
 
@@ -493,39 +496,97 @@ def filter_relationships_rows(
     *,
     reviewer_by_id: dict[int, Reviewer],
     reviewee_by_id: dict[int, Reviewee],
-    search_by: str,
+    status: str,
     search: str,
 ) -> list[Relationship]:
-    """Filter relationship rows by one side of the pair.
+    """Apply status + search filters to a Relationship list.
 
-    ``search_by`` is ``"reviewer"`` or ``"reviewee"`` (anything else
-    falls through to ``"reviewer"``). ``search`` matches
-    case-insensitively against that side's name or handle; a
-    ``"Name (handle)"`` typeahead pick exact-matches the handle.
-    Empty ``search`` is a no-op."""
+    Rewritten in Segment 19I Item 1 to the shape the other three
+    roster pages use. ``status`` is one of
+    ``RELATIONSHIPS_STATUS_OPTIONS`` keys or ``"all"``. ``search``
+    matches per column across **both** sides — each side's name and
+    handle by substring, the row's own ``tag_1..3`` by whole value —
+    rather than one operator-chosen side. When the input is exactly
+    one of the page's offered labels, that person's handle
+    exact-matches on either side. Empty ``search`` is a no-op.
+
+    The old ``search_by`` parameter is gone. Pair-context tags belong
+    to the relationship, not to either side, so there was no honest
+    answer to which dimension they sat on; matching both sides removes
+    the question rather than adding a third dropdown value."""
+    out = list(rows)
+    valid_status = {key for key, _ in RELATIONSHIPS_STATUS_OPTIONS}
+    if status in valid_status:
+        out = [r for r in out if r.status == status]
     needle = search.strip()
     if not needle:
-        return list(rows)
-    dimension = search_by if search_by == "reviewee" else "reviewer"
-    tail = _extract_filter_label_tail(needle)
-    out: list[Relationship] = []
-    for row in rows:
-        person, handle = _relationship_person(
-            row,
-            dimension=dimension,
+        return out
+    tail = _picked_label_handle(
+        needle,
+        _relationship_labels(
+            rows,
             reviewer_by_id=reviewer_by_id,
             reviewee_by_id=reviewee_by_id,
-        )
-        if person is None or handle is None:
-            continue
+        ),
+    )
+    kept: list[Relationship] = []
+    for row in out:
+        sides = [
+            _relationship_person(
+                row,
+                dimension=dimension,
+                reviewer_by_id=reviewer_by_id,
+                reviewee_by_id=reviewee_by_id,
+            )
+            for dimension in ("reviewer", "reviewee")
+        ]
+        present = [
+            (person, handle)
+            for person, handle in sides
+            if person is not None and handle is not None
+        ]
         if tail is not None:
-            if handle.casefold() == tail.casefold():
-                out.append(row)
-        elif _matches_search(person.name, needle) or _matches_search(
-            handle, needle
+            folded = tail.casefold()
+            if any(handle.casefold() == folded for _, handle in present):
+                kept.append(row)
+            continue
+        text: tuple[str, ...] = tuple(
+            value
+            for person, handle in present
+            for value in (person.name, handle)
+        )
+        if _matches_row(
+            needle, text=text, tags=(row.tag_1, row.tag_2, row.tag_3)
         ):
-            out.append(row)
-    return out
+            kept.append(row)
+    return kept
+
+
+def _relationship_labels(
+    rows: list[Relationship],
+    *,
+    reviewer_by_id: dict[int, Reviewer],
+    reviewee_by_id: dict[int, Reviewee],
+) -> list[str]:
+    """Every ``"Name (handle)"`` label across **both** sides, uncapped.
+
+    Keyed per side before merging: a reviewer and a reviewee can share
+    a primary key, so a single ``{person.id: label}`` map would drop
+    one of them (Segment 19I Item 1).
+    """
+    seen: dict[tuple[str, int], str] = {}
+    for row in rows:
+        for dimension in ("reviewer", "reviewee"):
+            person, handle = _relationship_person(
+                row,
+                dimension=dimension,
+                reviewer_by_id=reviewer_by_id,
+                reviewee_by_id=reviewee_by_id,
+            )
+            if person is None or handle is None:
+                continue
+            seen[(dimension, person.id)] = f"{person.name} ({handle})"
+    return list(seen.values())
 
 
 def relationships_search_options(
@@ -533,22 +594,27 @@ def relationships_search_options(
     *,
     reviewer_by_id: dict[int, Reviewer],
     reviewee_by_id: dict[int, Reviewee],
-    search_by: str,
 ) -> list[str]:
-    """``"Name (handle)"`` labels for the Relationships typeahead,
-    built for the currently-selected ``search_by`` dimension. One
-    entry per distinct individual appearing in ``rows``; sorted,
-    capped at ``REVIEWERS_DATALIST_CAP``."""
-    dimension = search_by if search_by == "reviewee" else "reviewer"
-    seen: dict[int, str] = {}
-    for row in rows:
-        person, handle = _relationship_person(
-            row,
-            dimension=dimension,
+    """Typeahead options for the Relationships page: the distinct
+    pair-context tag values, then one ``"Name (handle)"`` label per
+    distinct individual on **either** side.
+
+    One list, not two. The page used to ship a reviewer list and a
+    reviewee list and swap the input's ``list=`` from the ``Search
+    by`` dropdown; with that dropdown retired the search matches both
+    sides, so the suggestions do too (Segment 19I Item 1). People
+    labels sorted and capped at ``REVIEWERS_DATALIST_CAP``; tags carry
+    their own cap.
+    """
+    tags = _distinct_tag_options(
+        value for row in rows for value in (row.tag_1, row.tag_2, row.tag_3)
+    )
+    labels = sorted(
+        _relationship_labels(
+            rows,
             reviewer_by_id=reviewer_by_id,
             reviewee_by_id=reviewee_by_id,
-        )
-        if person is None or handle is None:
-            continue
-        seen[person.id] = f"{person.name} ({handle})"
-    return sorted(seen.values(), key=str.casefold)[:REVIEWERS_DATALIST_CAP]
+        ),
+        key=str.casefold,
+    )
+    return tags + labels[:REVIEWERS_DATALIST_CAP]

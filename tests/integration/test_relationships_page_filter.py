@@ -1,9 +1,12 @@
-"""Relationships Setup page — locate-a-pair search/filter strip —
-Segment 15F PR 5 stage 1.
+"""Relationships Setup page — search/filter strip — Segment 15F PR 5
+stage 1, rationalized in Segment 19I Item 1.
 
-Pins the operator-actions card's search-by-dimension dropdown +
-search box + 200/500 cap. Per-row mutation (Edit / Add / bulk
-with reviewer / reviewee pickers) lands in a later stage.
+Pins the operator-actions card's Status dropdown + search box +
+200/500 cap. The ``Search by`` side-picker the page shipped from 15F
+to 19I is gone: the search now matches both sides of the pair plus
+the row's own pair-context tags, which is the shape the other three
+roster pages use. Per-row mutation (Edit / Add / bulk with reviewer /
+reviewee pickers) lives in ``test_relationships_page_mutate.py``.
 """
 from __future__ import annotations
 
@@ -70,7 +73,7 @@ def _seed(
     return rv, re_, rels
 
 
-def test_plain_render_has_search_by_dropdown(
+def test_plain_render_has_status_dropdown(
     db: Session, client: TestClient
 ) -> None:
     review_session = _make_session(client, db, code="rel-f-plain")
@@ -85,14 +88,15 @@ def test_plain_render_has_search_by_dropdown(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
     assert 'class="card operator-actions-card"' in body
-    assert 'name="search_by"' in body
-    assert '<option value="reviewer"' in body
-    assert '<option value="reviewee"' in body
-    # No active/inactive "All" status option on this page.
-    assert '<option value="all"' not in body
+    assert '<select name="status">' in body
+    assert '<option value="all"' in body
+    assert '<option value="active"' in body
+    assert '<option value="inactive"' in body
+    # The retired side-picker leaves nothing behind (19I Item 1).
+    assert "search_by" not in body
 
 
-def test_search_by_reviewer_dimension(
+def test_search_matches_the_reviewer_side(
     db: Session, client: TestClient
 ) -> None:
     review_session = _make_session(client, db, code="rel-f-rev")
@@ -104,15 +108,14 @@ def test_search_by_reviewer_dimension(
         pairs=[(0, 0), (1, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
-        "?search_by=reviewer&q=alice"
+        f"/operator/sessions/{review_session.id}/relationships?q=alice"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
     assert "bob@example.edu" not in table
 
 
-def test_search_by_reviewee_dimension(
+def test_search_matches_the_reviewee_side(
     db: Session, client: TestClient
 ) -> None:
     review_session = _make_session(client, db, code="rel-f-ree")
@@ -124,33 +127,34 @@ def test_search_by_reviewee_dimension(
         pairs=[(0, 0), (0, 1)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
-        "?search_by=reviewee&q=dan"
+        f"/operator/sessions/{review_session.id}/relationships?q=dan"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "dan@example.edu" in table
     assert "carol@example.edu" not in table
 
 
-def test_search_by_reviewer_does_not_match_reviewee_side(
+def test_one_needle_matches_either_side(
     db: Session, client: TestClient
 ) -> None:
-    """A reviewee named like a reviewer is not matched when the
-    dropdown is set to the reviewer dimension."""
+    """The 15F behavior this replaces: searching "zeta" with the
+    dropdown on the reviewer dimension found nothing, because Zeta is
+    a reviewee. With the side-picker gone one needle reaches both
+    sides, and a row whose *reviewee* alone matches is kept."""
     review_session = _make_session(client, db, code="rel-f-dim")
     _seed(
         db,
         review_session.id,
-        reviewers=["Alice"],
-        reviewees=["Zeta"],
-        pairs=[(0, 0)],
+        reviewers=["Alice", "Bob"],
+        reviewees=["Zeta", "Yara"],
+        pairs=[(0, 0), (1, 1)],
     )
-    # Search the reviewer dimension for "zeta" — no reviewer matches.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
-        "?search_by=reviewer&q=zeta"
+        f"/operator/sessions/{review_session.id}/relationships?q=zeta"
     ).text
-    assert "No relationships match the current filter." in body
+    table = body[body.find('id="relationships-table"') :]
+    assert "zeta@example.edu" in table
+    assert "yara@example.edu" not in table
 
 
 def test_empty_search_shows_all(db: Session, client: TestClient) -> None:
@@ -163,7 +167,7 @@ def test_empty_search_shows_all(db: Session, client: TestClient) -> None:
         pairs=[(0, 0), (1, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?search_by=reviewer"
+        f"/operator/sessions/{review_session.id}/relationships?q="
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
@@ -226,13 +230,13 @@ def test_clear_link_only_when_filtered(
     assert ">Clear</a>" in filtered
 
 
-def test_both_dimension_datalists_render_with_correct_options(
+def test_one_datalist_carries_both_sides(
     db: Session, client: TestClient
 ) -> None:
-    """Both datalists ship every render — the dropdown swaps the
-    input's ``list`` so autocomplete tracks Search-by without a
-    reload. The reviewer datalist holds only reviewers; the
-    reviewee datalist only reviewees."""
+    """One suggestion list, not two. The page used to ship a reviewer
+    datalist and a reviewee datalist and swap the input's ``list=``
+    from the dropdown; with the search matching both sides the
+    suggestions do too (19I Item 1)."""
     review_session = _make_session(client, db, code="rel-f-datalist")
     _seed(
         db,
@@ -245,21 +249,130 @@ def test_both_dimension_datalists_render_with_correct_options(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
 
-    rev_start = body.find('id="relationships-search-reviewer"')
-    rev_block = body[rev_start : body.find("</datalist>", rev_start)]
-    assert "Alice (alice@example.edu)" in rev_block
-    assert "Carol (carol@example.edu)" not in rev_block
+    assert 'list="relationships-search-options"' in body
+    assert 'id="relationships-search-reviewer"' not in body
+    assert 'id="relationships-search-reviewee"' not in body
 
-    ree_start = body.find('id="relationships-search-reviewee"')
-    ree_block = body[ree_start : body.find("</datalist>", ree_start)]
-    assert "Carol (carol@example.edu)" in ree_block
-    assert "Alice (alice@example.edu)" not in ree_block
+    start = body.find('id="relationships-search-options"')
+    block = body[start : body.find("</datalist>", start)]
+    assert "Alice (alice@example.edu)" in block
+    assert "Carol (carol@example.edu)" in block
 
 
-def test_search_input_list_tracks_search_by(
+# --------------------------------------------------------------------------- #
+# Status filter + pair-context tag search — Segment 19I Item 1.
+#
+# The predicate is unit-tested in tests/unit/test_roster_search_filters.py;
+# these pin that the route hands it the whole roster, the status the
+# operator picked, and renders both halves of the suggestion list.
+# --------------------------------------------------------------------------- #
+
+
+def test_status_filter_hides_the_other_status(
     db: Session, client: TestClient
 ) -> None:
-    review_session = _make_session(client, db, code="rel-f-listattr")
+    review_session = _make_session(client, db, code="rel-f-status")
+    _, _, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Alice", "Bob"],
+        reviewees=["Carol"],
+        pairs=[(0, 0), (1, 0)],
+    )
+    rels[1].status = "inactive"
+    db.commit()
+
+    active = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?status=active"
+    ).text
+    table = active[active.find('id="relationships-table"') :]
+    assert "alice@example.edu" in table
+    assert "bob@example.edu" not in table
+
+    inactive = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?status=inactive"
+    ).text
+    table = inactive[inactive.find('id="relationships-table"') :]
+    assert "bob@example.edu" in table
+    assert "alice@example.edu" not in table
+
+
+def test_status_all_shows_both(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rel-f-status-all")
+    _, _, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Alice", "Bob"],
+        reviewees=["Carol"],
+        pairs=[(0, 0), (1, 0)],
+    )
+    rels[1].status = "inactive"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?status=all"
+    ).text
+    table = body[body.find('id="relationships-table"') :]
+    assert "alice@example.edu" in table
+    assert "bob@example.edu" in table
+
+
+def test_searching_a_pair_context_tag_narrows_the_table(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-f-tag")
+    _, _, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Alice", "Bob"],
+        reviewees=["Carol"],
+        pairs=[(0, 0), (1, 0)],
+    )
+    rels[0].tag_1 = "TW01"
+    rels[1].tag_1 = "TW02"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?q=TW01"
+    ).text
+    table = body[body.find('id="relationships-table"') :]
+    assert "alice@example.edu" in table
+    assert "bob@example.edu" not in table
+
+
+def test_the_datalist_offers_pair_context_tag_values(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-f-tag-list")
+    _, _, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Alice", "Bob"],
+        reviewees=["Carol"],
+        pairs=[(0, 0), (1, 0)],
+    )
+    rels[0].tag_1 = "TW01"
+    rels[1].tag_1 = "TW01"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    start = body.find('id="relationships-search-options"')
+    block = body[start : body.find("</datalist>", start)]
+
+    assert block.count('<option value="TW01">') == 1, "one option per value"
+    assert '<option value="Alice (alice@example.edu)">' in block
+    # Tags lead the list, people follow.
+    assert block.find('value="TW01"') < block.find("Alice (alice@example.edu)")
+
+
+def test_clear_link_appears_for_a_status_only_filter(
+    db: Session, client: TestClient
+) -> None:
+    """Status joins ``q`` in what counts as filtered — without this
+    the operator could narrow to Inactive with no way back."""
+    review_session = _make_session(client, db, code="rel-f-clear-status")
     _seed(
         db,
         review_session.id,
@@ -267,11 +380,7 @@ def test_search_input_list_tracks_search_by(
         reviewees=["Carol"],
         pairs=[(0, 0)],
     )
-    rev = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?search_by=reviewer"
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?status=inactive"
     ).text
-    assert 'list="relationships-search-reviewer"' in rev
-    ree = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?search_by=reviewee"
-    ).text
-    assert 'list="relationships-search-reviewee"' in ree
+    assert ">Clear</a>" in body

@@ -133,40 +133,33 @@
          row is being edited; the Edit form below the divider stays
          interactive. #}
       <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        {# Locate a specific pair — the ``Search by`` dropdown picks
-           which side of the pair the Search box matches. #}
+        {# Same filter strip as the other three roster pages: a Status
+           dropdown, and one Search box matching both sides of the
+           pair plus the row's own pair-context tags. #}
         <form method="get"
               action="{{ relationships_base_url }}"
               class="operator-actions-filter">
           <div class="filter-row">
             <label class="filter-status">
-              Search by:
-              <select name="search_by" id="relationships-search-by">
-                {% for value, label in filter_search_by_options %}
-                  <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </label>
             <label class="filter-search">
               Search:
-              {# Two datalists — one per dimension. The Search-by
-                 `<select>` swaps the input's `list=` (inline JS
-                 below) so the autocomplete tracks the dropdown
-                 without a reload. #}
               <input type="text"
                      name="q"
                      id="relationships-search-input"
-                     list="relationships-search-{{ filter_search_by }}"
+                     list="relationships-search-options"
                      value="{{ filter_search }}"
                      autocomplete="off"
-                     placeholder="Name or email">
-              <datalist id="relationships-search-reviewer">
-                {% for label in filter_search_options_reviewer %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-              <datalist id="relationships-search-reviewee">
-                {% for label in filter_search_options_reviewee %}
+                     placeholder="Name, email or tag">
+              <datalist id="relationships-search-options">
+                {% for label in filter_search_options %}
                   <option value="{{ label }}"></option>
                 {% endfor %}
               </datalist>
@@ -182,7 +175,7 @@
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
             {% endif %}
-            {% if filter_search %}
+            {% if filter_status != "all" or filter_search %}
               <a class="btn secondary"
                  href="{{ relationships_base_url }}">Clear</a>
             {% endif %}
@@ -255,8 +248,7 @@
           else relationships_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="relationship-edit-form" method="post"
           action="{{ edit_action }}">
-      <input type="hidden" name="filter_search_by"
-             value="{{ filter_search_by }}">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
     </form>
     {# Name-or-email-searchable pickers for the edit row. A
@@ -276,25 +268,10 @@
   {% elif not is_ready %}
     <form id="relationships-bulk-form" method="post"
           action="{{ relationships_base_url }}/bulk-inactivate">
-      <input type="hidden" name="filter_search_by"
-             value="{{ filter_search_by }}">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
     </form>
   {% endif %}
-
-  {# Keep the search autocomplete in sync with the Search-by
-     dropdown — swap the input's ``list`` to the matching
-     datalist the moment the operator changes the dimension. #}
-  <script>
-    (function () {
-      var sel = document.getElementById("relationships-search-by");
-      var input = document.getElementById("relationships-search-input");
-      if (!sel || !input) return;
-      sel.addEventListener("change", function () {
-        input.setAttribute("list", "relationships-search-" + sel.value);
-      });
-    })();
-  </script>
 
   {% if relationships or add_mode %}
     {% set selectable = not edit_mode and not is_ready %}
