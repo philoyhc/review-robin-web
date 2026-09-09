@@ -63,6 +63,8 @@ from ._filters import (
     REVIEWEES_STATUS_OPTIONS,
     REVIEWERS_DATALIST_CAP,
     ASSIGNMENTS_STATUS_OPTIONS,
+    assignments_picked_handles,
+    assignments_search_options,
     REVIEWERS_STATUS_OPTIONS,
     filter_invitations_rows,
     filter_observers_rows,
@@ -213,6 +215,8 @@ __all__ = [
     "REVIEWEES_STATUS_OPTIONS",
     "REVIEWERS_DATALIST_CAP",
     "ASSIGNMENTS_STATUS_OPTIONS",
+    "assignments_picked_handles",
+    "assignments_search_options",
     "REVIEWERS_STATUS_OPTIONS",
     # Dataclasses / context shapes.
     "EmailBody",

@@ -242,9 +242,20 @@
             </label>
             <label class="filter-search">
               Search:
+              {# Segment 19I Item 9 — name / handle labels only, both
+                 sides in one list. Picking one submits the whole
+                 label, which the route resolves to that side's handle
+                 and matches by equality; without that it would match
+                 nothing, being a substring of no name and no email. #}
               <input type="text" name="q" value="{{ filter_q }}"
+                     list="assignments-search-options"
                      autocomplete="off"
                      placeholder="Name, email or tag">
+              <datalist id="assignments-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
             </label>
           </div>
           {# One action row: the filter count / Clear, the

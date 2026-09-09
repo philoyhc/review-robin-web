@@ -165,6 +165,18 @@ def _render_assignments_hub(
         search_by = "all"
     if filter_status not in _STATUS_VALUES:
         filter_status = "all"
+    # Segment 19I Item 9 — the typeahead's labels, and the handle a
+    # picked one resolves to. Both sides' rosters are loaded here; the
+    # page carried only counts before. Detection runs against the
+    # **uncapped** label sets, the rendered list is capped.
+    roster_reviewers = assignments.list_reviewers(db, review_session.id)
+    roster_reviewees = assignments.list_reviewees(db, review_session.id)
+    search_options = views.assignments_search_options(
+        roster_reviewers, roster_reviewees
+    )
+    picked_reviewer, picked_reviewee = views.assignments_picked_handles(
+        q, roster_reviewers, roster_reviewees
+    )
     assignment_count = assignments.existing_count(db, review_session.id)
     # Segment 19I Item 9 — the status filter joins the search here.
     # The `col_data_sample` alias below is only safe while *neither*
@@ -177,6 +189,8 @@ def _render_assignments_hub(
             search=q,
             search_by=search_by,
             status=filter_status,
+            picked_reviewer_handle=picked_reviewer,
+            picked_reviewee_handle=picked_reviewee,
         )
         pair_sample = (
             assignments.list_pairs(
@@ -185,6 +199,8 @@ def _render_assignments_hub(
                 search=q,
                 search_by=search_by,
                 status=filter_status,
+                picked_reviewer_handle=picked_reviewer,
+                picked_reviewee_handle=picked_reviewee,
             )
             if matching_count
             else []
@@ -292,6 +308,7 @@ def _render_assignments_hub(
             "filter_q": q,
             "filter_search_by": search_by,
             "filter_status": filter_status,
+            "filter_search_options": search_options,
             "filter_status_options": views.ASSIGNMENTS_STATUS_OPTIONS,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
