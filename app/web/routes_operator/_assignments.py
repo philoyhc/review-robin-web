@@ -216,7 +216,6 @@ def _render_assignments_hub(
             else []
         )
         col_data_sample = pair_sample
-    truncated_count = max(0, matching_count - len(pair_sample))
     # Pair-context lookup is built up-front so the cookie-backed
     # sort (Segment 13B Part 2 PR 8) can resolve ``pair_tag_*``
     # keys without a second pass through the relationships table.
@@ -304,13 +303,22 @@ def _render_assignments_hub(
             ),
             "pair_sample": pair_sample,
             "col_data_sample": col_data_sample,
-            "matching_count": matching_count,
+            # Segment 19I Item 10 — the page's three separate
+            # notices (this filter count, a `Showing first N of M
+            # unique pairs.` line, and a `…and X more not shown.`
+            # line below the table) collapse into the one
+            # sentence the seven table pages share.
+            "preview_count_line": views.preview_count_line(
+                shown=len(pair_sample),
+                matching=matching_count,
+                total=assignment_count,
+                noun="assignments",
+            ),
             "filter_q": q,
             "filter_search_by": search_by,
             "filter_status": filter_status,
             "filter_search_options": search_options,
             "filter_status_options": views.ASSIGNMENTS_STATUS_OPTIONS,
-            "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
             "issues": issues,
             "missing_confirm": missing_confirm,

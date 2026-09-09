@@ -232,12 +232,15 @@ def test_assignment_search_filters_the_preview_table(
     assert "carol@example.edu" in body
     assert "No assignments match" not in body
 
-    # A non-matching term → no-match message + "Showing 0 of 1";
-    # the search box retains the term so it can be cleared.
+    # A non-matching term → the no-match message alone; the search
+    # box retains the term so it can be cleared. Until Segment 19I
+    # Item 10 a `Showing 0 of 1.` also rendered in the filter row;
+    # the count line now lives with the table and there is no table,
+    # so the no-match message owns this state by itself.
     body = client.get(base + "?q=nosuchterm").text
     assert "No assignments match the search." in body
     assert 'value="nosuchterm"' in body
-    assert "Showing 0 of 1" in body
+    assert '<p class="muted table-showing-hint">' not in body
 
 
 def test_assignment_search_by_scopes_the_match(

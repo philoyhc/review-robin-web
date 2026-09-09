@@ -133,7 +133,7 @@ def test_the_hint_counts_both_filters(
         f"/operator/sessions/{s.id}/assignments?status=active"
     ).text
 
-    assert "Showing 1 of 2." in body
+    assert "Showing 1 of 2 assignments." in body
 
 
 def test_the_column_chips_ignore_the_status_filter(
