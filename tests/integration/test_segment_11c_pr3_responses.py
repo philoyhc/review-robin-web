@@ -386,6 +386,52 @@ def test_responses_filter_status_narrows_rows(
     assert ">Clear</a>" in body
 
 
+def test_the_count_line_sits_with_the_table_not_the_filter_row(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19I Item 10 — see the twin in `test_invitations.py`.
+    This page counts reviewees, one row each."""
+    session = _ready_session(
+        client,
+        db,
+        "resp-count-line",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu", "dave@example.edu"],
+    )
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/responses?q=carol"
+    ).text
+
+    card = body[body.index("</form>") :]
+    assert '<p class="muted table-showing-hint">' in card
+    assert "Showing 1 of 2 reviewees." in card
+
+    start = body.index('<div class="filter-actions">')
+    actions = body[start : body.index("</div>", start)]
+    assert "Showing" not in actions
+    assert ">Clear</a>" in actions
+
+
+def test_the_count_line_is_absent_when_no_filter_narrows(
+    client: TestClient, db: Session
+) -> None:
+    """Uncapped page: absent, or the plain filter count. Never the
+    `first N of M … more not shown` branch (19I Item 10)."""
+    session = _ready_session(
+        client,
+        db,
+        "resp-count-quiet",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu", "dave@example.edu"],
+    )
+
+    body = client.get(f"/operator/sessions/{session.id}/responses").text
+
+    assert '<p class="muted table-showing-hint">' not in body
+    assert "more not shown" not in body
+
+
 def test_responses_filter_search_narrows_rows(
     client: TestClient, db: Session
 ) -> None:
@@ -401,5 +447,6 @@ def test_responses_filter_search_narrows_rows(
     ).text)
     assert "carol@example.edu" in body
     assert "dave@example.edu" not in body
-    # Showing-N-of-M counter renders.
-    assert "Showing 1 of 2." in body
+    # One row per *reviewee* on this page, so that is the noun
+    # (19I Item 10).
+    assert "Showing 1 of 2 reviewees." in body

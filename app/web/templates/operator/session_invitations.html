@@ -91,7 +91,6 @@
         </div>
         <div class="filter-actions">
           {% if filter_status != "all" or filter_search %}
-            <span class="muted">Showing {{ rows | length }} of {{ total_row_count }}.</span>
             <a class="btn secondary"
                href="/operator/sessions/{{ session.id }}/invitations">Clear</a>
           {% endif %}
@@ -103,6 +102,7 @@
 
   {% if rows %}
     <div class="card">
+      {% include "operator/partials/_preview_count_line.html" %}
       <table>
         <tr>
           <th>Reviewer</th>
