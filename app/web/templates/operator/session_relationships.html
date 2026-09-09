@@ -198,12 +198,16 @@
               <a class="btn secondary"
                  href="{{ relationships_base_url }}?add=1">Add</a>
             {% endif %}
-            {# Segment 19I Item 2 — inert in this slice: a
-               no-op ``type="button"`` with no route behind it.
-               Enabled by the confirmation checkbox below via
-               base.html's ``data-delete-confirm`` pairing. #}
-            <button class="btn destructive" type="button"
+            {# Segment 19I Item 2 — posts the bulk form to
+               ``/bulk-delete`` via ``form=`` + ``formaction``,
+               like Inactivate / Activate beside it. Enabled by
+               the confirmation checkbox below through
+               base.html's ``data-delete-confirm`` pairing; the
+               server re-checks both gates regardless. #}
+            <button class="btn destructive" type="submit"
                     id="relationships-delete-btn"
+                    form="relationships-bulk-form"
+                    formaction="{{ relationships_base_url }}/bulk-delete"
                     data-delete-btn="relationships-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
             <button class="btn secondary" type="submit">Search</button>
@@ -223,9 +227,29 @@
             <label class="delete-confirm-label">
               <input type="checkbox"
                      id="relationships-delete-confirm"
+                     name="confirm" value="true"
+                     form="relationships-bulk-form"
                      data-delete-confirm="relationships-bulk-delete"
                      disabled>
-              <span>Yes, delete these</span>
+              {# Response-aware copy (Segment 19I Item 2). One
+                 checkbox, not two: the strip's confirmed shape
+                 has a single gate, so the acknowledgement rides
+                 with the tick as a hidden field and the label
+                 says what is being agreed to. The route still
+                 requires both fields, and refuses without the
+                 tick that carries them. #}
+              <span>
+                {%- if delete_discards_responses -%}
+                  Yes, delete these and discard their saved responses
+                {%- else -%}
+                  Yes, delete these
+                {%- endif -%}
+              </span>
+              {% if delete_discards_responses %}
+                <input type="hidden" form="relationships-bulk-form"
+                       id="relationships-delete-ack"
+                       name="acknowledge_response_loss" value="true">
+              {% endif %}
             </label>
           </div>
         </form>

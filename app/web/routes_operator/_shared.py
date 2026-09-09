@@ -29,7 +29,8 @@ from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
-from app.services import lifecycle_display, session_lifecycle as lifecycle
+from app.services import lifecycle_display, roster_bulk
+from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.web import breadcrumbs, views
 from app.web.date_filters import (
@@ -224,6 +225,49 @@ def _require_response_loss_ack(
                 "'acknowledge response loss' to proceed"
             ),
         )
+
+
+def _require_delete_confirm(confirm: str | None) -> None:
+    """The server half of the strip's confirmation checkbox.
+
+    The client gate (a selection enables the box, the box enables the
+    button) is a convenience; this is the check that counts, and it is
+    the same ``confirm != "true"`` refusal the Danger Zone's
+    ``delete-all`` uses (Segment 19I Item 2).
+    """
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+
+
+def _require_selected_response_loss_ack(
+    db: Session, *, model: type, ids: list[int], ack: str | None
+) -> int:
+    """``_require_response_loss_ack`` narrowed to the rows going.
+
+    That function asks whether the *session* has responses, which is
+    the only question ``delete-all`` can ask. A selected delete knows
+    which rows it is taking, so it asks whether **those** rows carry
+    responses and can name the number — the same gate with a true
+    sentence instead of a categorical one. Returns the count, which is
+    zero (and the gate a no-op) for Observers and Relationships, since
+    nothing references them.
+    """
+    _assignments, responses = roster_bulk.cascade_counts(
+        db, model=model, ids=ids
+    )
+    if responses and ack != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Deleting the selected rows will discard {responses} saved "
+                f"response{'' if responses == 1 else 's'}; tick "
+                "'acknowledge response loss' to proceed"
+            ),
+        )
+    return responses
 
 
 def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:

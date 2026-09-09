@@ -41,7 +41,9 @@ from app.web.routes_operator._shared import (
     _SETUP_FILTERED_CAP,
     _handle_import,
     _redirect_keeping_selection,
+    _require_delete_confirm,
     _require_editable,
+    _require_selected_response_loss_ack,
     _require_response_loss_ack,
     _save_field_labels,
     _templates,
@@ -183,6 +185,16 @@ def _render_reviewees_page(
             "reviewees": reviewees,
             "selected_ids": selected_ids or set(),
             "total_row_count": len(all_reviewees),
+            # Segment 19I Item 2 — decides whether the strip renders
+            # the response-loss acknowledgement beside its confirm
+            # checkbox. Session-wide, because at render time the
+            # page cannot know which rows will be selected; the
+            # route then gates on the *selected* rows' exact
+            # count, so a tick on a selection that carries no
+            # responses costs nothing.
+            "delete_discards_responses": (
+                lifecycle.session_has_responses(db, review_session)
+            ),
             "displayed_row_count": displayed_row_count,
             "filter_status": status_filter,
             "filter_search": search,
@@ -500,4 +512,50 @@ async def reviewees_save_field_labels(
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/reviewees",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewees/bulk-delete")
+def reviewees_bulk_delete(
+    reviewee_ids: list[int] = Form(default=[]),
+    confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Delete the checkbox-selected rows (Segment 19I Item 2).
+
+    Sibling of ``bulk-inactivate`` — same id list, same filter
+    round-trip — with the Danger Zone's two gates in front of it,
+    narrowed to the selection. The redirect carries the filters but
+    **not** the ids: the rows are gone, so re-checking them is not a
+    thing the page can do.
+    """
+    _require_editable(review_session)
+    _require_delete_confirm(confirm)
+    _require_selected_response_loss_ack(
+        db,
+        model=Reviewee,
+        ids=reviewee_ids,
+        ack=acknowledge_response_loss,
+    )
+    try:
+        reviewees_service.delete_selected(
+            db,
+            review_session=review_session,
+            reviewee_ids=reviewee_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RevieweeOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewees",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )

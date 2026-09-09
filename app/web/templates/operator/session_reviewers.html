@@ -194,12 +194,16 @@
               <a class="btn secondary"
                  href="{{ reviewers_base_url }}?add=1">Add</a>
             {% endif %}
-            {# Segment 19I Item 2 — inert in this slice: a
-               no-op ``type="button"`` with no route behind it.
-               Enabled by the confirmation checkbox below via
-               base.html's ``data-delete-confirm`` pairing. #}
-            <button class="btn destructive" type="button"
+            {# Segment 19I Item 2 — posts the bulk form to
+               ``/bulk-delete`` via ``form=`` + ``formaction``,
+               like Inactivate / Activate beside it. Enabled by
+               the confirmation checkbox below through
+               base.html's ``data-delete-confirm`` pairing; the
+               server re-checks both gates regardless. #}
+            <button class="btn destructive" type="submit"
                     id="reviewers-delete-btn"
+                    form="reviewers-bulk-form"
+                    formaction="{{ reviewers_base_url }}/bulk-delete"
                     data-delete-btn="reviewers-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
             <button class="btn secondary" type="submit">Search</button>
@@ -219,9 +223,29 @@
             <label class="delete-confirm-label">
               <input type="checkbox"
                      id="reviewers-delete-confirm"
+                     name="confirm" value="true"
+                     form="reviewers-bulk-form"
                      data-delete-confirm="reviewers-bulk-delete"
                      disabled>
-              <span>Yes, delete these</span>
+              {# Response-aware copy (Segment 19I Item 2). One
+                 checkbox, not two: the strip's confirmed shape
+                 has a single gate, so the acknowledgement rides
+                 with the tick as a hidden field and the label
+                 says what is being agreed to. The route still
+                 requires both fields, and refuses without the
+                 tick that carries them. #}
+              <span>
+                {%- if delete_discards_responses -%}
+                  Yes, delete these and discard their saved responses
+                {%- else -%}
+                  Yes, delete these
+                {%- endif -%}
+              </span>
+              {% if delete_discards_responses %}
+                <input type="hidden" form="reviewers-bulk-form"
+                       id="reviewers-delete-ack"
+                       name="acknowledge_response_loss" value="true">
+              {% endif %}
             </label>
           </div>
         </form>

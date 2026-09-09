@@ -448,6 +448,57 @@ person, or add one row. Top-to-bottom:
    (Assignments, Invitations, Responses) keep the single-row
    shape.
 
+### Deleting the selected rows (Segment 19I)
+
+`POST /operator/sessions/{id}/{reviewers|reviewees|observers|relationships}/bulk-delete`
+— the selection-driven sibling of `bulk-inactivate`, one route per
+page, taking the same `<entity>_ids` list and the same `filter_status`
+/ `filter_q` round-trip.
+
+**Two gates, both re-checked server-side.** The strip's checkbox is a
+convenience; these decide:
+
+1. `confirm` must be exactly `"true"`, or **400** — the same refusal
+   the Danger Zone's `delete-all` uses.
+2. When the **selected rows** carry saved responses,
+   `acknowledge_response_loss` must be `"true"`, or **400** naming the
+   exact number. `delete-all` can only ask whether the *session* has
+   responses; a selected delete knows which rows are going, so it
+   counts theirs. Selecting a reviewer with no answers therefore
+   deletes without an acknowledgement even on a session full of them.
+
+**What a delete takes with it** is inherited from the ORM cascade, not
+reimplemented: `Reviewer` / `Reviewee` → their `assignments` → those
+assignments' `responses`, plus a reviewer's `invitations`. **Observers
+and Relationships cascade to nothing** — no table references them — so
+their delete can never lose a response, their gate never fires, and
+their strip never offers the acknowledgement. A page that offered it
+would be describing a loss that cannot happen.
+
+**The acknowledgement rides with the tick.** The strip has one
+checkbox, so where responses exist its label reads *"Yes, delete these
+and discard their saved responses"* and a hidden
+`acknowledge_response_loss` field accompanies it, rather than a second
+box appearing on a row sized for one. The route still requires both
+fields and still refuses without the tick that carries them.
+
+An id from another session is a **400** and deletes nothing, including
+the valid ids in the same request — `roster_bulk.bulk_delete` raises
+before it deletes, matching `bulk_set_status`. A validated session is
+invalidated first, as every roster mutation does; a non-editable one
+refuses.
+
+**The redirect keeps the filters and carries no `selected=`.** Every
+other bulk action re-checks the rows it acted on; these rows no longer
+exist. Services: `delete_selected` on each roster service, over
+`app/services/roster_bulk.py`'s `bulk_delete`. Audit:
+`reviewer.bulk_deleted` / `reviewee.*` / `observer.*` /
+`relationship.*`, one event per call carrying `deleted`,
+`cascaded_assignments` and `cascaded_responses`.
+
+The **Danger Zone's** roster-wide `delete-all` is untouched and stays
+where it is.
+
 The list is **capped at 200 rows** (lifted to **500** when a
 search or status filter is applied) — the cap is applied after
 sort, so the visible window matches the operator's chosen order.

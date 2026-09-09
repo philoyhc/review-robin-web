@@ -1,16 +1,16 @@
-"""Delete-selected-rows scaffold — Segment 19I Item 2 PR 1.
+"""Delete-selected-rows strip — Segment 19I Item 2, PRs 1 and 3.
 
-The layout and the gate's *states*, with nothing behind the button.
-`Delete` is a `type="button"` no-op: there is no `bulk-delete` route
-and no delete service yet, both of which arrive in PRs 2 and 3. What
-this slice has to get right is the shape the author confirms on the
-dev slot before any of that is wired.
+The layout and the gate's *states*. PR 1 landed this with nothing
+behind the button; PR 3 wired it, so the assertions that pinned
+`Delete` as inert now pin it as wired — the same tests, moved forward
+with the code rather than deleted and re-invented.
 
-Two things are pinned here that a later slice could plausibly undo:
+Behaviour of the route itself lives in
+`test_setup_bulk_delete_routes.py`. What stays here is the shape:
 the second row carries all three status items (`Showing N of M`, the
 selected-count pill, the gate) and the button row carries none of
-them; and the three non-roster pages sharing `.filter-actions` did not
-gain any of it.
+them; the three non-roster pages sharing `.filter-actions` gained
+none of it.
 """
 from __future__ import annotations
 
@@ -109,9 +109,11 @@ def test_the_status_row_carries_all_three_and_the_button_row_none(
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)
-def test_delete_renders_destructive_and_inert(
+def test_delete_renders_destructive_and_wired(
     db: Session, client: TestClient, page: str
 ) -> None:
+    """PR 1 asserted the opposite of the `formaction` line below —
+    that there was no route behind the button. PR 3 put one there."""
     review_session = _make_session(client, db, code=f"sc-del-{page}")
     _seed(db, review_session)
 
@@ -123,9 +125,11 @@ def test_delete_renders_destructive_and_inert(
     element = buttons[buttons.rfind("<button", 0, start) : buttons.index(">", start) + 1]
 
     assert "btn destructive" in element, "Destructive role per ui_elements §6"
-    assert 'type="button"' in element, "inert: no form submit behind it"
-    assert "formaction" not in element, "inert: no route behind it"
-    assert "disabled" in element
+    assert 'type="submit"' in element
+    assert f'form="{page}-bulk-form"' in element, "posts the selection form"
+    assert 'formaction="/operator/sessions/' in element
+    assert f"/{page}/bulk-delete" in element
+    assert "disabled" in element, "ships disabled; the gate enables it"
 
     # Ordering: after Add, before Search.
     assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
@@ -152,20 +156,24 @@ def test_the_gate_starts_inactive_and_is_paired_to_the_button(
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)
-def test_no_bulk_delete_route_exists_yet(
+def test_the_checkbox_submits_with_the_selection_form(
     db: Session, client: TestClient, page: str
 ) -> None:
-    """The scaffold cannot delete anything, asserted rather than
-    assumed — the route arrives in PR 3."""
-    review_session = _make_session(client, db, code=f"sc-route-{page}")
+    """The gate is only a gate if its tick reaches the server. The
+    checkbox lives inside the GET filter form, so it needs `form=` to
+    post with the bulk form — without the `name`/`form` pair it would
+    look identical and submit nothing."""
+    review_session = _make_session(client, db, code=f"sc-name-{page}")
     _seed(db, review_session)
 
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/{page}/bulk-delete",
-        data={},
-        follow_redirects=False,
-    )
-    assert response.status_code == 404, response.status_code
+    body = client.get(f"/operator/sessions/{review_session.id}/{page}").text
+    _buttons, status = _strip(body)
+
+    start = status.find(f'id="{page}-delete-confirm"')
+    element = status[status.rfind("<input", 0, start) : status.index(">", start) + 1]
+    assert 'name="confirm"' in element
+    assert 'value="true"' in element
+    assert f'form="{page}-bulk-form"' in element
 
 
 def test_the_other_filter_actions_pages_did_not_gain_the_row() -> None:
