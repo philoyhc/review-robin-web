@@ -682,22 +682,42 @@ uses are all solid offset markers and focus rings, so a blurred one would
 be the first soft shadow in the codebase and would read as a different
 design language.
 
-Dark theme is where the mat earns its keep twice over. The captures are
-light-theme images, so on a dark page they are bright blocks whatever
-their border does; the dark mat frames them instead of letting them glare
-off the ground.
+**Each capture ships twice** (Segment 19H Item 3, 2026-09-09): `x.png`
+and `x-dark.png`, both rendered inside the one `<figure>`, with the
+theme choosing which is shown — `img[data-theme-variant="dark"]` is
+hidden by default and the pair swaps under `:root[data-theme="dark"]`.
+The selector reads the **`data-theme` attribute the toggle writes**, not
+`prefers-color-scheme`: this app is two-state with no OS-follow
+(`spec/settings_inventory.md`), so a media query would serve a light
+capture to a reader sitting in Dark. Because the no-FOUC script stamps
+the attribute in `<head>` before the `<img>`s are parsed, the right
+capture is up from the first frame; because it is CSS, the live toggle
+flips all sixteen with no reload and no JavaScript of its own. Light is
+the copy with no hiding rule, so a page with JavaScript off or storage
+blocked shows the light set — the same default the rest of the theme
+system takes. Both copies carry the **same** `alt`: they are pictures of
+one UI, and only one is in the accessibility tree at a time.
+
+Until then the captures were light-only, and **the mat did a second job
+this retires**: on a dark page they were bright blocks whatever their
+border did, and the dark mat framed them rather than letting them glare
+off the ground. The mat stays for its first job, which is the reason it
+exists — these are pictures *of* this app rendered *inside* it, so a
+bordered image alone reads as more page.
 
 `fit-content` makes the mat hug its picture rather than run to the column
 edge past a 600px capture, and `box-sizing: border-box` keeps the padding
 inside `max-width` so a narrow column cannot overflow.
 
-The captures arrive at **two scales**: six 1× shots at ~830px and six 2×
-at ~1680px. Left to fill the prose column they read at two different
-apparent scales, so each family gets a **fixed display width** — the base
-rule pins the wide six at **1200px**, `.guide-figure-narrow` pins the
-narrow six at **600px**. Both are author's numbers, set from looking at
-the rendered page rather than derived from the pixel dimensions; treat
-them as presentation, not as a rule with a formula behind it.
+The captures arrive at **two scales**: six 1× shots at ~830px and ten 2×
+at ~1680px (the split started six-and-six at 2026-09-07 introduction and
+moved to six-and-ten as later screencaps landed at the wide scale). Left
+to fill the prose column they read at two different apparent scales, so
+each family gets a **fixed display width** — the base rule pins the wide
+ten at **1200px**, `.guide-figure-narrow` pins the narrow six at
+**600px**. Both are author's numbers, set from looking at the rendered
+page rather than derived from the pixel dimensions; treat them as
+presentation, not as a rule with a formula behind it.
 
 They set `width`, not `max-width` — only `width` pins an image below its
 natural size — and the base `max-width: 100%` still takes over on a
@@ -708,7 +728,9 @@ source order is what makes it win.
 Which family a capture belongs to is asserted from its **actual pixel
 width** in `tests/integration/test_guide_screencaps.py`, not from a
 hand-kept list, so a capture retaken at the other scale fails rather
-than quietly rendering wrong.
+than quietly rendering wrong. The same file checks the two halves of a
+pair against **each other** — same family, same `alt`, same `<figure>` —
+which is the part the markup cannot state.
 
 In-card headings on `/guide` take a `--space-6` top margin
 (`body.ui-v2 .card[id^="guide-"] h3`): its cards run long enough that

@@ -22,7 +22,7 @@ Items close independently, so each carries its own `### Doc impact` and
 |---|---|---|
 | **19H.1** | The card's two setup pills go stale after an AJAX Save | **Closed 2026-09-08** |
 | **19H.2** | A locked instrument card must carry no unsaved edits | **Closed 2026-09-08** |
-| **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | Open — **planned** |
+| **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | **Closed 2026-09-09** |
 | 19H.4+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
@@ -594,6 +594,88 @@ what found it: `instrument-card-preview` is 1758×893 light against
 arrows, and the Rating / Comments input boxes. It is a different app
 state, not a different theme. See Open questions.
 
+### Status
+
+**2026-09-09 — Item 3 built and landed.** One PR, as the ladder
+intended; no rung struck, and the blast radius held.
+
+**The open question was answered before the build started.** The dark
+`instrument-card-preview` capture arrived re-shot: 1756×**890** against
+its light twin's 1758×893, with the `↻ Refresh sample` button, the
+`Pair context 1` column, the sort arrows and the input boxes all
+present. Every one of the sixteen pairs is now within ±4px of height
+and in its light twin's capture family. One residual difference, noted
+and not acted on: the dark preview's card title reads `#1: Group Peer
+Review` where the light one reads `#1`, because the instrument is named
+now — the *light* capture is the older of the two, and the difference
+is one line of a title rather than a missing control.
+
+**The `-dark.png` suffix paid exactly what the plan said it would.**
+Adding sixteen files and thirty-two `<img>` tags took the screencap
+suite from **52 cases to 100 with no change to the test file at all** —
+served, unreferenced, alt-text and capture-family all re-ran over both
+halves. Only then were the new pair checks added, taking it to 134.
+
+**A first cut of the CSS wiring test asserted the wrong thing.** It
+ended with `assert "prefers-color-scheme" not in css`, and failed —
+because `base.html` names the string twice in **comments**, once in the
+pre-existing note saying the app deliberately has no such block and
+once in the comment this item added saying the same. An assertion that
+fails on prose explaining the rule is an assertion someone deletes, so
+it now matches `@media[^{]*prefers-color-scheme` — the thing actually
+forbidden. Second time in this segment that a first-cut assertion was
+about the wrong text (Item 1's was satisfied by a JS selector string).
+
+**And a verification probe measured the wrong thing too**, which is
+worth recording because the number looked plausible. The no-JS check
+counted `data-theme-variant="light"` / `"dark"` substrings in the served
+document and reported **17 and 18** for sixteen figures, and read
+`data-theme="dark"` as present on a page with JavaScript disabled. Both
+were the *stylesheet* matching: the CSS contains the selectors and
+`:root[data-theme="dark"]`. Re-done against the `<html>` open tag and
+`<img>` tags only: root carries no `data-theme`, 16 light and 16 dark
+`<img>`s. The lesson is Item 1's, in a third costume — a substring
+search over a document that contains its own CSS is not a search over
+the markup.
+
+**The `spec-writer` pass found a stale count this item did not
+create.** `spec/ui_elements.md` said the captures arrive "six 1× shots
+at ~830px and six 2× at ~1680px" and pinned "the wide **six**" at
+1200px. Measured: **6 narrow, 10 wide**. Checked against history rather
+than assumed — twelve captures landed 2026-09-07 in a genuine 6/6
+split, and the four `instrument-card-*` captures added 2026-09-08 are
+all wide (1753–1758px), so the sentence went stale the day after it was
+written and stayed that way through two segments. Corrected with the
+date the split moved, since six-and-six was true when written. Nothing
+derives from the number — the test splits on measured pixel width —
+which is exactly why nothing caught it. **The same sentence appears
+twice more**, in the test file's own header comment and, for the mat's
+second job, in `base.html`; both are corrected here, because a spec
+fixed while the two comments it was written from still say the old
+thing is half a fix.
+
+**Decisions confirmed at build:**
+
+- **`loading="lazy"` on both copies** (2026-09-09). Both are fetched
+  where they render, so the offscreen fourteen figures cost nothing
+  until scrolled to.
+- **The new CSS sits between the base `img` rule and the
+  `.guide-figure-narrow` modifier** (2026-09-09). `spec/ui_elements.md`
+  requires the modifier to stay *after* the base rule, since equal
+  specificity makes source order decide; the swap rules set `display`
+  and the modifier sets `width`, so they do not compete, but the order
+  the spec names is preserved rather than relied on not to matter.
+
+**Verified in a browser** (Chromium 1440×1000, the real `/guide` page):
+
+| Scenario | Result |
+|---|---|
+| fresh viewer, no stored choice | 32 `<img>`, 16 visible, all `light` |
+| toggle to Dark, no reload | 16 visible, all `dark`; a `window` marker set before the click survives |
+| fresh load with `rrw-theme=dark` stored | 16 visible, all `dark` from the first frame |
+| JavaScript disabled | `<html>` carries no `data-theme`; 16 light + 16 dark `<img>` tags served; the unconditional dark-hide rule applies, so the light set shows |
+| all 32 files requested | no non-200 response under `/static/guide/`, no visible image failed to decode |
+
 ### PR ladder
 
 1. **PR 1 — the sixteen dark captures, the markup, the CSS, and the
@@ -623,13 +705,14 @@ state, not a different theme. See Open questions.
 
 ### Open questions
 
-- **The `instrument-card-preview` dark capture is of a different app
+- ~~**The `instrument-card-preview` dark capture is of a different app
   state** (see Blast radius). Ship the pair as-is and that one figure
   shows different UI depending on the theme — the same drift Item 1's
   first light/dark pair had, caught here before it landed rather than
   after. **Decided by the author**: re-shoot it against the same state
   as the light capture, or replace both with a matched pair. Everything
-  else in the set is ready.
+  else in the set is ready.~~ **Answered 2026-09-09** — re-shot, and
+  the pair now matches within 3px of height. See `### Status`.
 
 ### Out of scope
 

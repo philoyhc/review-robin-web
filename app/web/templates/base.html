@@ -1181,10 +1181,13 @@
          its edge against the mat, and thickening it would fight the mat
          rather than help it.
 
-         Dark theme is where this earns its keep twice over: the captures
-         are light-theme images, so on a dark page they are bright blocks
-         whatever the border does, and the dark mat frames them instead
-         of letting them glare off the ground.
+         Dark theme used to make it earn its keep twice over: the
+         captures were light-theme images, so on a dark page they were
+         bright blocks whatever the border did, and the dark mat framed
+         them instead of letting them glare off the ground. Segment 19H
+         Item 3 retired that second job — every capture now ships as a
+         light/dark pair (see the swap rules below) — and the mat stays
+         for the first one, which is the reason it exists.
 
          Not a drop shadow, which is the other common answer: the app's
          eight `box-shadow` uses are all solid offset markers and focus
@@ -1211,6 +1214,26 @@
         height: auto;
         border: 1px solid var(--border-default);
         border-radius: 4px;
+      }
+      /* Segment 19H Item 3 — each figure carries both a light and a dark
+         capture; the theme picks one. Keyed on the same `data-theme`
+         attribute the toggle writes, NOT on `prefers-color-scheme`: this
+         app is two-state and does not follow the OS, so a media query
+         would serve a light capture to a reader sitting in Dark. The
+         no-FOUC script in <head> stamps the attribute before the <img>s
+         are parsed, so the right one is up from the first frame, and the
+         toggle flipping the attribute re-runs these rules with no JS of
+         their own. Light is the copy with no hiding rule, so a page with
+         storage blocked shows the light set — the same default the rest
+         of the theme system takes. */
+      body.ui-v2 .guide-figure img[data-theme-variant="dark"] {
+        display: none;
+      }
+      :root[data-theme="dark"] body.ui-v2 .guide-figure img[data-theme-variant="light"] {
+        display: none;
+      }
+      :root[data-theme="dark"] body.ui-v2 .guide-figure img[data-theme-variant="dark"] {
+        display: block;
       }
       /* The captures arrive in two families — six at ~830px and six at
          ~1680px, 1x and 2x shots of the same app. Left to fill the prose
