@@ -200,7 +200,13 @@ def test_the_card_lock_toggle_is_disabled_on_every_locked_state(
     unlocks = re.findall(r"<a[^>]*data-instrument-unlock-toggle[^>]*>", page, re.S)
 
     assert unlocks, state
-    assert all("disabled" in a for a in unlocks), state
+    # Both gates, asserted apart. A bare `"disabled" in anchor` is
+    # satisfied by `aria-disabled` alone, so it cannot tell the class
+    # gate from the ARIA one — reverting the class changed nothing and
+    # the test still passed. Caught by mutation, not by reading.
+    for anchor in unlocks:
+        assert 'class="btn secondary disabled"' in anchor, (state, anchor)
+        assert 'aria-disabled="true"' in anchor, (state, anchor)
 
 
 @pytest.mark.parametrize("state", ALL_STATES)
@@ -225,3 +231,46 @@ def test_editing_query_param_cannot_open_a_card_on_a_locked_session(
     )
 
     assert bool(unlocked_cards) is (state in EDITABLE), (state, unlocked_cards)
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    (
+        ("ready", "Revert to draft to add or delete instruments."),
+        ("expired", "Revert to draft to add or delete instruments."),
+        ("archived", "Unarchive this session to add or delete instruments."),
+    ),
+)
+def test_the_disabled_title_names_a_way_out_that_exists(
+    db: Session, client: TestClient, state: str, expected: str
+) -> None:
+    """Widening the gate without this would have left the tooltips
+    telling an `archived` operator to "revert to draft" — a path
+    `revert_session_to_draft` refuses, since it accepts only `ready`
+    and `expired`. `archived` leaves through `unarchive_session`.
+
+    Pinned because it was not: blanking `lock_action` passed the
+    whole suite.
+    """
+    s, _ = _seed(client, db, code=f"ilg-title-{state}")
+    s.status = state
+    db.commit()
+
+    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+
+    assert f'title="{expected}"' in page, state
+    if state == "archived":
+        assert "Revert to draft to add or delete" not in page
+
+
+@pytest.mark.parametrize("state", EDITABLE)
+def test_no_lifecycle_disabled_title_while_editable(
+    db: Session, client: TestClient, state: str
+) -> None:
+    s, _ = _seed(client, db, code=f"ilg-notitle-{state}")
+    s.status = state
+    db.commit()
+
+    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+
+    assert "to add or delete instruments." not in page, state

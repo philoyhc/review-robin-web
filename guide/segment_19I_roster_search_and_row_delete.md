@@ -1956,6 +1956,66 @@ already renders on `ready` to two more states; the shape is agreed
 because it is already on screen. Recorded here because the rule was
 considered rather than skipped.
 
+### Status
+
+**2026-09-09 — PR 1 landed. PRs 2 and 3 outstanding.**
+
+**The ladder held**, with one boundary adjustment. PR 1 was scoped to
+"must not touch the copy", and could not keep to it: the disabled
+controls' `title` attributes read *"Revert to draft to add or delete
+instruments."* under an `is_ready` branch. Widening the gate without
+touching them would have left an `archived` operator told to revert —
+a path `revert_session_to_draft` refuses, since it accepts only
+`ready` and `expired`. So PR 1 adds `lock_action` to the view (the
+recovery path out of each locked state) and composes the same
+sentences from it. Shipping a knowingly false tooltip to protect a
+slice boundary is the wrong trade; the lock **card** copy is
+untouched and stays PR 2's.
+
+**Eighth vacuous assertion, and the second caught by mutation rather
+than by reading.** `test_the_card_lock_toggle_is_disabled_on_every_locked_state`
+asserted `"disabled" in anchor` — satisfied by `aria-disabled="true"`
+alone, so reverting the *class* gate changed nothing and the test
+still passed. Now asserts the two gates apart. The related
+near-miss: an earlier draft of the `?editing=` test checked
+`'data-instrument-locked="false"' in page`, which `base.html`'s
+inline CSS selectors make true on every page; it failed on `ready`
+(where the behaviour was already correct), which is what exposed it.
+**Both were mine, written this session, in the item whose whole
+subject is a control that says one thing and does another.**
+
+**`lock_action` was unpinned when first written** — blanking it
+passed all 3290 tests. Two tests now hold it, including that
+`archived` is never told to revert.
+
+**Eight mutations, eight kills** after the two test fixes: the route
+gate, the view's `can_edit`, the template's add/delete gate, the
+Lock/Unlock class gate, its `aria-disabled` gate,
+`editing_instrument_id`, a blanked `lock_action`, and `archived`
+given the revert wording.
+
+**No existing test broke** — 3267 → 3295, every new test additive.
+That is the finding, not a convenience: nothing pinned the permissive
+behaviour, which is why the gap survived Item 3's sweep of the same
+class.
+
+**Verified in Chromium** across four seeded sessions (two instruments,
+an assignment and a submitted response each):
+
+| state | live Delete buttons | Unlock | lock card | disabled title |
+|---|---|---|---|---|
+| `draft` | 2 | enabled | no | none |
+| `ready` | 0 | disabled | **yes** | "Revert to draft…" |
+| `expired` | 0 | disabled | **no** | "Revert to draft…" |
+| `archived` | 0 | disabled | **no** | "Unarchive this session…" |
+
+The two `no`s in the lock-card column are **PR 2's deliverable**: the
+page now correctly offers nothing on those states and does not yet
+say why. That silence is the gap Item 3 named on the roster pages,
+and it is deliberate for one slice, not an oversight.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - The per-status matrix asserts, for all five states, the route's
