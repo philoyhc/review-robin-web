@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -1019,6 +1019,24 @@ def session_has_responses(db: Session, review_session: ReviewSession) -> bool:
     return row is not None
 
 
+def session_response_count(db: Session, review_session: ReviewSession) -> int:
+    """How many ``Response`` rows sit under this session's assignments.
+
+    ``session_has_responses`` answers the yes/no a gate needs;
+    ``delete-all`` also has to *say* what it will destroy, and a count
+    is what makes that sentence true rather than categorical
+    (Segment 19I Item 3).
+    """
+    return int(
+        db.execute(
+            select(func.count())
+            .select_from(Response)
+            .join(Assignment, Assignment.id == Response.assignment_id)
+            .where(Assignment.session_id == review_session.id)
+        ).scalar_one()
+    )
+
+
 def needs_regeneration_after_revert(db: Session, session_id: int) -> bool:
     """True iff the session's most recent ``session.invalidated`` or
     ``session.reverted_to_draft`` audit event is newer than its most
@@ -1083,5 +1101,6 @@ __all__ = [
     "session_accepts_responses",
     "observe_deadline",
     "session_has_responses",
+    "session_response_count",
     "assert_status_draft",
 ]

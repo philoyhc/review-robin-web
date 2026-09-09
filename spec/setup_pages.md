@@ -475,10 +475,26 @@ their delete can never lose a response, their gate never fires, and
 their strip never offers the acknowledgement. A page that offered it
 would be describing a loss that cannot happen.
 
+**The confirmation names what goes**, modelled on the Instruments
+page's *"Yes, delete Instrument #1 and its associated assignments and
+reviewer responses."* (Segment 19I Item 3). Three states, because a
+roster whose rows carry assignments loses them even when nothing has
+been answered:
+
+| what the delete reaches | the label reads |
+|---|---|
+| assignments **and** responses | "Yes, delete these and their associated assignments and reviewer responses" |
+| assignments only | "Yes, delete these and their associated assignments" |
+| neither | "Yes, delete these" |
+
+Observers and Relationships are always the third row: nothing
+references them, so neither delete can reach an assignment or a
+response, and a label implying otherwise would be describing a loss
+that cannot happen.
+
 **The acknowledgement rides with the tick.** The strip has one
-checkbox, so where responses exist its label reads *"Yes, delete these
-and discard their saved responses"* and a hidden
-`acknowledge_response_loss` field accompanies it, rather than a second
+checkbox, so where responses exist a hidden
+`acknowledge_response_loss` field accompanies it rather than a second
 box appearing on a row sized for one. The route still requires both
 fields and still refuses without the tick that carries them.
 
@@ -496,6 +512,18 @@ exist. Services: `delete_selected` on each roster service, over
 `relationship.*`, one event per call carrying `deleted`,
 `cascaded_assignments` and `cascaded_responses`.
 
+**The whole selection surface is gated on `is_editable`**
+(Segment 19I Item 3) — `draft` or `validated`, which is what
+`_require_editable` enforces on every route behind it. On `ready`,
+`expired` and `archived` the row checkboxes, the selection-driven
+buttons, the selected-count pill, the delete confirmation and the
+bulk form they post to are all absent; the Status filter, the search
+box, `Showing N of M` and Clear remain, because reading a finished
+roster is legitimate. `ready` is open for receiving responses;
+`expired` and `archived` are over. The route still answers 409 either
+way — the page is a courtesy, not the guarantee. See
+`spec/lifecycle.md` §5.
+
 **Select-all takes the rendered window, not the match.** The header
 checkbox toggles the rows on the page, and the page is capped at
 200 / 500. A tag matching 600 rows renders 500 of them, so select-all
@@ -505,8 +533,30 @@ The confirmation therefore states the **selected** count and never the
 match count, and the `Showing N of M` hint beside it is what tells the
 operator the two differ.
 
-The **Danger Zone's** roster-wide `delete-all` is untouched and stays
-where it is.
+### The Danger Zone's `delete-all` (Segment 19I Item 3)
+
+`POST /operator/sessions/{id}/{roster}/delete-all` deletes the whole
+roster. It carries the **same two gates and the same sentence** as the
+selected-rows delete, and the same single tick: `confirm` plus, where
+the roster's rows carry responses, a hidden
+`acknowledge_response_loss`.
+
+**That hidden field is a fix, not a convenience.** The route has
+required the acknowledgement since it was written and **no roster
+template ever sent it**, so on any session carrying a response
+`delete-all` returned **400 with no path forward from the page**. The
+Danger Zone must be able to delete a roster that has responses; it now
+can.
+
+**Observers' `delete-all` has no response-loss gate at all.** Nothing
+references an observer, so the delete destroys no assignment and no
+response — requiring an acknowledgement asked the operator to accept a
+loss that cannot occur. Relationships never had the gate. The
+requirement stands only where the cascade does, on Reviewers and
+Reviewees.
+
+The card itself is hidden whenever the session is not editable, with
+the Upload card beside it — `spec/lifecycle.md` §5.
 
 The list is **capped at 200 rows** (lifted to **500** when a
 search or status filter is applied) — the cap is applied after

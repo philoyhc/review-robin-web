@@ -174,6 +174,11 @@ def _render_observers_page(
             # that cannot happen. The route's gate reaches the
             # same answer on its own via ``cascade_counts``; this
             # keeps the page from saying otherwise.
+            # Always ``False`` / ``0``: deleting a observer reaches
+            # no assignment and no response (Segment 19I Item 2,
+            # measured from the model graph).
+            "delete_discards_assignments": False,
+            "roster_response_count": 0,
             "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
             "filter_status": status_filter,
@@ -186,6 +191,13 @@ def _render_observers_page(
             "issues": issues or [],
             "filename": filename,
             "is_ready": is_ready,
+            # Segment 19I Item 3 — the gate on the selection surface.
+            # ``is_ready`` is only ``status == "ready"``, so gating on it
+            # left `expired` and `archived` sessions rendering checkboxes
+            # and a live Delete while every mutation 409d. This is what
+            # ``_require_editable`` enforces, so page and route agree by
+            # construction rather than by two lists kept in step.
+            "is_editable": lifecycle.is_editable(review_session),
             "is_archived": lifecycle.is_archived(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
@@ -513,7 +525,6 @@ async def observers_cohort_rule_save(
 @router.post("/sessions/{session_id}/observers/delete-all")
 def observers_delete_all(
     confirm: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -526,7 +537,11 @@ def observers_delete_all(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    # No response-loss gate (Segment 19I Item 3). Nothing references an
+    # observer, so deleting the roster destroys no assignment and no
+    # response — measured from the model graph at Item 2. Requiring an
+    # acknowledgement here asked the operator to accept a loss that
+    # cannot occur, and returned 400 when they could not.
     csv_imports.delete_all_observers(
         db,
         review_session=review_session,

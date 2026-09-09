@@ -28,7 +28,8 @@ and `### Status` and there is no segment-level `## Doc impact`.
 |---|---|---|
 | **19I.1** | The filter strip rationalized, and search extended to tag contents | **Closed 2026-09-09** (3 PRs) |
 | **19I.2** | Delete selected rows from the Operator actions card | **Closed 2026-09-09** (3 PRs, scaffold-first) |
-| 19I.3+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
+| **19I.3** | The delete surface told straight: lifecycle gate, copy that names what goes, and a Danger Zone that works | **Closed 2026-09-09** (3 PRs + a 2b) |
+| 19I.4+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
 
 ---
 
@@ -1006,4 +1007,348 @@ The other five:
   row` rows become `Add`, each gains a `Delete` row, and the `Search`
   rows stop describing a pill that has moved (PR 1, added at build —
   see `### Status`).
+- `docs/status.md` — row at the close (PR 3).
+
+
+---
+
+## Item 3 — The delete surface told straight
+
+### Opportunity
+
+Three findings from the author on 2026-09-09, the day Item 2 closed. All
+three are the same shape: the delete surface says something the app does
+not do.
+
+**1. Selection is offered where every mutation is refused.** The
+templates gate row selection on `is_ready`, which is *only*
+`status == "ready"`. Measured by rendering each status against a seeded
+session and posting to `/bulk-delete`:
+
+| status | actions card | row checkboxes | Delete button | POST |
+|---|---|---|---|---|
+| `draft` | yes | yes | yes | **303** |
+| `validated` | yes | yes | yes | **303** |
+| `ready` | yes | none | yes (dead) | 409 |
+| `expired` | yes | **yes** | yes | **409** |
+| `archived` | yes | **yes** | yes | **409** |
+
+So an `expired` or `archived` session renders checkboxes and a live
+Delete, and every action 409s. On `ready` the checkboxes are correctly
+gone but the Delete button still renders — a control that can never
+enable, because nothing can ever be selected.
+
+**2. The confirmation does not name what it destroys.** The
+selected-rows gate reads "Yes, delete these and discard their saved
+responses"; the Danger Zone's reads "Yes, delete the existing
+{N reviewers} and {M assignments}." Neither matches the Instruments
+page, which has said the whole sentence since 13C: *"Yes, delete
+**Instrument #1** and its associated assignments and reviewer
+responses."* The author's instruction is to model both on that.
+
+**3. The Danger Zone cannot delete a roster that has responses.**
+`delete-all` calls `_require_response_loss_ack`, and **no roster
+template sends `acknowledge_response_loss`** — the only match in
+`app/web/templates` is `next_action_card.html`. So on a session with
+any response the Danger Zone returns **400 with no path forward from
+that page**. Found while wiring Item 2 PR 3 and reported rather than
+fixed, since the Danger Zone was Out of scope there; the author has now
+directed the change, and states the requirement plainly: the Danger
+Zone must be able to delete a roster that has responses.
+
+### Decision
+
+**Gate the selection surface on `is_editable`, give both confirmations
+the Instruments sentence, and let the Danger Zone's single tick carry
+the acknowledgement.**
+
+- **Lifecycle.** Row checkboxes, the selection-driven buttons and the
+  Delete gate render only when `lifecycle.is_editable(...)` — `draft`
+  or `validated`. `ready`, `expired` and `archived` get none of them.
+  The author's rule, in their words: a `ready` session "is open for
+  receiving responses and so the rows should not be editable", and
+  `expired` / `archived` should not be either "since the thing is
+  over".
+- **Copy.** Where the delete will destroy assignments or responses,
+  both confirmations name them, modelled on Instruments.
+- **Danger Zone.** One tick, carrying `acknowledge_response_loss` as a
+  hidden field where responses exist — the same shape Item 2 PR 3
+  settled for the strip, and which the author has confirmed ("one tick
+  to cover both acknowledgements is fine").
+
+Rejected: **gating on `draft` alone**, which is how the author first
+put finding 1. `validated` is editable — `_require_editable` allows it,
+`invalidate_if_validated` exists precisely to handle a roster edit
+there, and eight bulk routes already work on it. Draft-only would
+disable a surface that works today, on all five buttons rather than
+just Delete. Put to the author, who confirmed draft and validated are
+both fine.
+
+Rejected: **leaving the Danger Zone's 400 as a separate item.** It is a
+one-line template fix on the surface this item is already rewriting the
+copy of, and leaving a destructive control unreachable while editing
+its label would be the worse trade.
+
+Rejected: **a second acknowledgement checkbox** on either surface,
+settled in Item 2 and re-confirmed here.
+
+### Semantics
+
+- **`is_editable` is the single gate**, replacing `not is_ready` at
+  every selection-surface site. It is what the server enforces
+  (`_require_editable`), so UI and route agree by construction rather
+  than by two lists being kept in step.
+- **The Danger Zone keeps its own gate.** It is already hidden on
+  `ready` — correct, per the author — and this item does not widen it
+  to `expired` / `archived` beyond what the lifecycle gate implies;
+  see Out of scope.
+- **Copy is conditional on what exists, not on the entity.** A delete
+  that takes assignments says assignments; one that takes responses
+  says both. A roster with neither says neither. The counts come from
+  the session for the Danger Zone (which deletes everything) and from
+  `cascade_counts` for the strip (which knows its selection) — the
+  strip cannot know its selection at render time, so it renders from
+  the session-wide answer and the route holds the exact gate, as
+  Item 2 established.
+- **Observers and Relationships never name responses**, on either
+  surface: nothing references them, so neither delete can reach one.
+  Item 2 proved this from the model graph; this item must not
+  re-introduce the claim through the Danger Zone's copy.
+- **The `ready` Delete button goes** with the rest of the selection
+  surface, rather than being left as a permanently disabled control.
+
+### Judgment calls — decided
+
+- **`is_editable`, not a new predicate** (2026-09-09). The rule the
+  author described *is* `is_editable`; inventing
+  `is_selection_enabled` would be a second name for one idea and a
+  second thing to keep in step.
+- **The Danger Zone's hidden ack mirrors the strip's** (2026-09-09).
+  Same mechanism, same reasoning, and a reader who has seen one
+  recognises the other.
+
+### Blast radius (measured)
+
+At `c03f279f`:
+
+| What | Measured | Command |
+|---|---|---|
+| `is_ready` uses in the four roster templates | 6 / 6 / 7 / 6 = **25** | `grep -c is_ready app/web/templates/operator/session_{reviewers,reviewees,observers,relationships}.html` |
+| templates using `is_ready` at all | **11** | `grep -rln "is_ready" app/web/templates/ \| wc -l` |
+| routes passing `is_ready` to a template | **7** | `grep -rn '"is_ready"' app/web/routes_operator/*.py \| wc -l` |
+| existing `is_editable` callers | **9** | `grep -rn "is_editable" app/ --include=*.py --include=*.html \| wc -l` |
+| Danger Zone confirm labels to rewrite | **4** | `grep -rn 'data-delete-confirm="delete-all"' app/web/templates/operator/session_*.html` |
+| tests naming `delete-all` | **7 files** | `grep -rln "delete-all" tests/ --include=*.py` |
+| tests touching `is_ready` / `"ready"` | **28 files** | `grep -rln 'is_ready\|status = "ready"' tests/ --include=*.py` |
+
+**The 11-versus-4 gap is the number to respect.** `is_ready` gates far
+more than selection — lock cards, label editors, upload forms — and on
+seven of those templates it is the *right* gate. This item changes it
+only where it guards the selection surface on the four roster pages,
+and must not sweep.
+
+**`assignment_count` is already in context on Reviewers and Reviewees
+only** (`grep -rn '"assignment_count"' app/web/routes_operator/_setup_*.py`
+→ 2). Observers and Relationships would need it added, or their copy
+written without an assignment clause — decided at build from what
+their deletes actually cascade to, which per Item 2 is nothing.
+
+### PR ladder
+
+1. **PR 1 — the lifecycle gate.** `is_editable` replaces `not is_ready`
+   at the selection sites on the four roster pages; the `ready` Delete
+   button goes with them. A per-status test matrix replaces the
+   measurement above. Must not touch: the confirm copy, the Danger
+   Zone, or `is_ready` anywhere it guards something else.
+2. **PR 2 — the copy, both surfaces, and the Danger Zone's
+   acknowledgement.** The Instruments sentence on the strip and the
+   Danger Zone; the hidden `acknowledge_response_loss` that makes
+   `delete-all` reachable on a session with responses. Must not touch:
+   the lifecycle gate, or the routes' own contracts.
+3. **PR 3 — the spec.** `spec/setup_pages.md`'s delete and
+   Danger Zone accounts state the lifecycle gate and the copy rule;
+   `spec/lifecycle.md` gains the editable-surface consequence if it
+   does not already carry it.
+
+### Status
+
+**2026-09-09 — PR 1 landed** (the lifecycle gate). `is_editable`
+replaces `not is_ready` at the selection sites on all four roster
+pages, and the mutating controls — Edit, Inactivate, Activate, Add,
+Delete, the selected-count pill and the delete gate — render only where
+they can act. Clear, Search and the `Showing N of M` hint stay: reading
+a finished session's roster is legitimate and hiding it would be a
+safety gain of nothing.
+
+**Observers turned out to be a deliberate exception, and the plan did
+not know it.** Its checkboxes are gated `not is_archived` rather than
+`not is_ready`, with a comment at the site saying why: they **drive the
+cohort rule editor**, which `spec/setup_pages.md` documents as
+intentionally living past `ready` so it stays usable mid-session. A
+blanket sweep to `is_editable` would have broken that surface to fix a
+different one. So Observers changed only where the plan's argument
+applies — the bulk *card* — and its checkboxes keep their looser gate.
+
+**No existing test needed changing**, on any of the four pages, which
+is the reassuring half of a 28-file blast radius.
+
+**Seven mutants; six died and the seventh exposed my own assertion.**
+Narrowing Observers' checkboxes to `is_editable` — the exact mistake
+the paragraph above avoids — passed everything, because the test
+asserted the bare string `observer-select`, which also appears in the
+page's own `querySelectorAll(".observer-select")`. That is **19H.1's
+trap verbatim**, four items later: an assertion satisfied by a JS
+selector rather than by markup. Re-pinned on
+`<input type="checkbox" class="observer-select"` and the mutant now
+dies. The frozen-page assertions had the same hazard in the other
+direction and were tightened with it.
+
+**Sixth vacuous assertion in four days.** The tally is not the point;
+the shape is, and it is always the same one — a substring that reads
+like the thing but also occurs somewhere the change does not touch.
+
+**Measured after:** the suite went 3152 → 3193 (+41, all in
+`tests/integration/test_setup_selection_lifecycle.py`, five statuses ×
+four pages plus the exceptions).
+
+**2026-09-09 — PR 2 landed** (the copy, and the Danger Zone made
+reachable). Both confirmations now name what goes, modelled on the
+Instruments sentence: the strip reads "Yes, delete these and their
+associated assignments and reviewer responses", the Danger Zone names
+the counts. `delete-all` carries the acknowledgement on the same single
+tick, so **the defect that opened finding 3 is closed**: a session with
+responses can have its roster deleted, asserted by posting exactly what
+the rendered form carries rather than fields invented by the test.
+
+**The copy needed a third state the finding did not name.** A roster
+whose rows carry assignments loses them even with no response saved,
+and the old label said nothing. Two flags rather than one, so the
+sentence is true in all three cases.
+
+**Observers' gate was dropped, not satisfied.** `delete_all_observers`
+required `acknowledge_response_loss` for a loss that cannot happen —
+nothing references an observer. Feeding it a hidden field would have
+made the button work while leaving the operator agreeing to a fiction;
+the requirement is gone and the now-dead parameter with it.
+Relationships never had the gate, so it needed nothing.
+
+**A latent bug of my own, found by a comparison rather than a test.**
+`_shared.py` builds its **own** context for the CSV-import error
+render — a second render path this plan's blast radius missed — and it
+never carried `delete_discards_responses`, which Item 2 PR 3 added. No
+test failed, because **Jinja's `Undefined` is falsy in `{% if %}`**: the
+label silently took its no-loss branch on that page for as long as the
+key had existed. Only `roster_response_count`, which is *compared*
+rather than tested, raised an error and exposed the older omission. A
+test now pins that page. The lesson is not "add the key" — it is that a
+missing context flag is invisible to every boolean the template makes
+of it, so the render path count is the thing to measure, and I measured
+templates instead.
+
+**Seven mutants, seven kills**: the hidden ack removed; the ack shipped
+unconditionally; the response clause dropped from the Danger Zone
+label; the strip label reverted to the Item 2 wording; an Observers
+label promising to delete responses; Observers' false gate restored;
+and the import-error path losing its keys again.
+
+**Measured after:** the suite went 3193 → **3209** (+16: 14 in the new
+Danger Zone file and 2 for the import-error path, which is
+parametrised over both cascading pages — I wrote +1 before running it,
+and the run is what the number comes from).
+
+**2026-09-09 — PR 2b: the open question, closed from the rule rather
+than by waiting.** The Upload and Danger Zone cards shared the
+`not is_ready` gate the selection surface had, so both rendered on
+`expired` and `archived` while `/import` and `/delete-all` returned
+409. The author's stated principle — draft and validated edit, the rest
+do not, "since the thing is over" — is a rule about editing, and both
+of these are edits. Asked twice and left open; deciding it from what
+they had already said beat closing the item around a known hole.
+
+**And the tightening trap fired in the other direction.** The new
+assertion `"danger-zone" not in body` failed on a *template comment*
+describing the shape `.danger-zone` — prose, not markup. That is
+19H.3's lesson exactly ("an assertion that fails on prose explaining a
+rule is one somebody deletes"), reached this time by writing the loose
+assertion first. Re-pinned on `class="card danger-zone"`.
+
+**Measured after:** the suite went 3209 → **3241** (+32, the Upload /
+Danger Zone matrix across four pages × five statuses).
+
+**2026-09-09 — PR 3 landed; Item 3 closes.** `spec/lifecycle.md` §5
+now states the `is_editable` gate for the whole mutating surface —
+cards *and* the roster pages' selection controls — with Observers'
+checkbox exception named, and corrects the section's own claim that
+the grid hides "while session is `ready`". `spec/setup_pages.md`
+carries the three-state copy table, the selection gate, and a Danger
+Zone account that says plainly what was broken and what the hidden
+field fixes.
+
+**A gap the fix created, written into the spec rather than left to be
+found.** The lock card that explains why setup is locked is keyed to
+`ready` alone. So on `expired` and `archived` the mutating cards are
+now absent with nothing saying why — the page went from wrong and
+talkative to correct and silent. Recorded in `spec/lifecycle.md` §5 as
+a known gap and in Out of scope above, rather than quietly widening
+this item into a copy surface nobody asked for.
+
+### Definition of done
+
+- Row checkboxes, the selection buttons and the Delete gate render on
+  `draft` and `validated` only — asserted per status, all five.
+- A POST to `/bulk-delete` on a non-editable session still 409s, and
+  the page no longer offers the control that produces it.
+- The Danger Zone's Delete-all **succeeds** on a session with
+  responses, asserted end to end — the defect that opened finding 3.
+- Both confirmations name assignments and responses where the delete
+  destroys them, and name neither on Observers / Relationships.
+- The four `delete-all` forms and the four strips agree on the
+  sentence.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- ~~**Whether the Danger Zone should also hide on `expired` /
+  `archived`.**~~ **Answered 2026-09-09 from the author's own rule, not
+  by waiting.** They gave the principle for rows — draft and validated
+  edit, `ready` is receiving responses, `expired` and `archived` are
+  over — and an import and a delete-all are edits, so the principle
+  reaches them without a new decision. Both cards were rendering on
+  `expired` and `archived` while both routes 409'd: the same defect as
+  the row selection, one card down the page. Put to the author twice
+  and left standing; resolving it from what they had already said beat
+  shipping the item with a known hole in it.
+- None outstanding.
+
+### Out of scope
+
+- **`is_ready` where it guards anything else** — lock cards, friendly-
+  label editors, upload forms, and the seven non-roster templates. A
+  correct gate for a different question.
+- **The CSV replace-roster confirm**, which destroys assignments and
+  responses on the same pages and has its own copy. Named because the
+  grep finds it; changing it is a third surface and nobody has
+  reported it.
+- **Undo**, still. Nothing in this app has it.
+- **A lock card for `expired` / `archived`** (found at PR 2b,
+  2026-09-09). The yellow lock card that explains *why* setup is
+  locked is keyed to `ready` alone, so on the other two frozen states
+  the mutating cards are simply absent with nothing saying why. The
+  page is now correct and silent, where before it was wrong and
+  talkative. A copy surface of its own, and nobody has reported it;
+  recorded in `spec/lifecycle.md` §5 as a known gap so the next reader
+  of that section meets it.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the "Deleting the selected rows" and Danger
+  Zone accounts state the `is_editable` gate on the selection surface
+  and the copy rule for both confirmations (PR 3).
+- `spec/lifecycle.md` — the five-state table records that the
+  selection surface is offered only in the two editable states (PR 3).
 - `docs/status.md` — row at the close (PR 3).

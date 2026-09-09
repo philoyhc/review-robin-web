@@ -601,6 +601,23 @@ async def _handle_import(
                     "filter_status_options": status_options,
                     "filter_search_options": search_options,
                     "is_ready": lifecycle.is_ready(review_session),
+                    # Segment 19I Item 3. This render path builds its
+                    # own context, so every key the strip reads has to
+                    # be repeated here. `delete_discards_responses`
+                    # (Item 2) was missing and **nothing failed**:
+                    # Jinja's `Undefined` is falsy in `{% if %}`, so
+                    # the label silently took its no-loss branch on
+                    # this page. Only `roster_response_count`, which is
+                    # compared rather than tested, raised — which is
+                    # how the older omission was found.
+                    "is_editable": lifecycle.is_editable(review_session),
+                    "delete_discards_responses": (
+                        lifecycle.session_has_responses(db, review_session)
+                    ),
+                    "delete_discards_assignments": assignment_count > 0,
+                    "roster_response_count": (
+                        lifecycle.session_response_count(db, review_session)
+                    ),
                     "fields_with_data": fields_with_data,
                     "edit_id": None,
                     "add_mode": False,

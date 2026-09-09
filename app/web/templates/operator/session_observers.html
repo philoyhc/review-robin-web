@@ -60,7 +60,11 @@
      actually gates. Upload card stays below the table (mirrors
      Reviewers / Reviewees layout). #}
   {% set _show_cohort_slot = not edit_mode and not is_archived %}
-  {% set _show_actions_slot = not is_ready %}
+  {# Segment 19I Item 3 — was ``not is_ready``, which left the bulk
+     card rendering on ``expired`` / ``archived`` where every action
+     409s. The checkboxes below keep their own looser gate: they
+     drive the cohort editor, not just these buttons. #}
+  {% set _show_actions_slot = is_editable %}
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
@@ -267,16 +271,20 @@
                      form="observers-bulk-form"
                      data-delete-confirm="observers-bulk-delete"
                      disabled>
-              {# Response-aware copy (Segment 19I Item 2). One
-                 checkbox, not two: the strip's confirmed shape
-                 has a single gate, so the acknowledgement rides
-                 with the tick as a hidden field and the label
-                 says what is being agreed to. The route still
-                 requires both fields, and refuses without the
-                 tick that carries them. #}
+              {# The sentence names what goes, modelled on the
+                 Instruments page's "…and its associated assignments
+                 and reviewer responses." (Segment 19I Item 3). One
+                 checkbox, not two: the strip's confirmed shape has a
+                 single gate, so the acknowledgement rides with the
+                 tick as a hidden field and the label says what is
+                 being agreed to. The route still requires both
+                 fields, and refuses without the tick that carries
+                 them. #}
               <span>
                 {%- if delete_discards_responses -%}
-                  Yes, delete these and discard their saved responses
+                  Yes, delete these and their associated assignments and reviewer responses
+                {%- elif delete_discards_assignments -%}
+                  Yes, delete these and their associated assignments
                 {%- else -%}
                   Yes, delete these
                 {%- endif -%}
@@ -325,7 +333,7 @@
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
     </form>
-  {% elif not is_ready %}
+  {% elif is_editable %}
     <form id="observers-bulk-form" method="post"
           action="{{ observers_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
@@ -784,7 +792,13 @@
      they've seen the current roster. Danger Zone keeps its
      ``total_row_count > 0`` gate; Upload renders whenever the
      session is editable. #}
-  {% if not is_ready and not edit_mode %}
+  {# Upload + Danger Zone (Segment 19I Item 3). Was
+     ``not is_ready``, which left both rendering on ``expired``
+     and ``archived`` where the import and the delete-all both
+     409. The author's rule for rows — draft and validated edit,
+     the rest do not, because "the thing is over" — is a rule
+     about editing, and these are edits. #}
+  {% if is_editable and not edit_mode %}
     <div class="bottom-grid">
       <section class="card" id="upload-csv">
         <h2 style="margin-top: 0;">Upload Observers</h2>

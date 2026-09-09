@@ -183,6 +183,11 @@
               <a class="btn secondary"
                  href="{{ reviewees_base_url }}">Clear</a>
             {% endif %}
+            {# Segment 19I Item 3 — the mutating controls render
+               only where they can act. Clear, Search and the
+               "Showing N of M" hint stay: reading a finished
+               session's roster is legitimate. #}
+            {% if is_editable %}
             <button class="btn secondary" type="button"
                     id="reviewees-edit-btn"
                     disabled aria-disabled="true">Edit</button>
@@ -214,6 +219,7 @@
                     formaction="{{ reviewees_base_url }}/bulk-delete"
                     data-delete-btn="reviewees-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
+            {% endif %}
             <button class="btn secondary" type="submit">Search</button>
           </div>
           {# Second action row (Segment 19I Item 2): what the
@@ -226,6 +232,7 @@
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
             {% endif %}
+            {% if is_editable %}
             <span class="pill pill-count"
                   id="reviewees-selected-count" hidden>0 selected</span>
             <label class="delete-confirm-label">
@@ -235,16 +242,20 @@
                      form="reviewees-bulk-form"
                      data-delete-confirm="reviewees-bulk-delete"
                      disabled>
-              {# Response-aware copy (Segment 19I Item 2). One
-                 checkbox, not two: the strip's confirmed shape
-                 has a single gate, so the acknowledgement rides
-                 with the tick as a hidden field and the label
-                 says what is being agreed to. The route still
-                 requires both fields, and refuses without the
-                 tick that carries them. #}
+              {# The sentence names what goes, modelled on the
+                 Instruments page's "…and its associated assignments
+                 and reviewer responses." (Segment 19I Item 3). One
+                 checkbox, not two: the strip's confirmed shape has a
+                 single gate, so the acknowledgement rides with the
+                 tick as a hidden field and the label says what is
+                 being agreed to. The route still requires both
+                 fields, and refuses without the tick that carries
+                 them. #}
               <span>
                 {%- if delete_discards_responses -%}
-                  Yes, delete these and discard their saved responses
+                  Yes, delete these and their associated assignments and reviewer responses
+                {%- elif delete_discards_assignments -%}
+                  Yes, delete these and their associated assignments
                 {%- else -%}
                   Yes, delete these
                 {%- endif -%}
@@ -255,6 +266,7 @@
                        name="acknowledge_response_loss" value="true">
               {% endif %}
             </label>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -299,7 +311,7 @@
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
     </form>
-  {% elif not is_ready %}
+  {% elif is_editable %}
     <form id="reviewees-bulk-form" method="post"
           action="{{ reviewees_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
@@ -308,7 +320,7 @@
   {% endif %}
 
   {% if reviewees or add_mode %}
-    {% set selectable = not edit_mode and not is_ready %}
+    {% set selectable = not edit_mode and is_editable %}
     {% set has_photo = reviewees | selectattr("profile_link") | list | length > 0 %}
     {# Profile-link column always shows in edit mode so the operator
        can fill / clear it; otherwise only when some row has data. #}
@@ -545,7 +557,7 @@
 
   {# Selection → action-button state binding (Segment 15F PR 4).
      Only runs in the interactive non-edit / non-ready state. #}
-  {% if not edit_mode and not is_ready %}
+  {% if not edit_mode and is_editable %}
     <script>
       (function () {
         var editBtn = document.getElementById("reviewees-edit-btn");
@@ -639,7 +651,13 @@
     </script>
   {% endif %}
 
-  {% if not is_ready and not edit_mode %}
+  {# Upload + Danger Zone (Segment 19I Item 3). Was
+     ``not is_ready``, which left both rendering on ``expired``
+     and ``archived`` where the import and the delete-all both
+     409. The author's rule for rows — draft and validated edit,
+     the rest do not, because "the thing is over" — is a rule
+     about editing, and these are edits. #}
+  {% if is_editable and not edit_mode %}
   <div class="bottom-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Reviewees</h2>
@@ -696,11 +714,26 @@
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required
                      data-delete-confirm="delete-all">
+              {# Names what goes, modelled on the Instruments page
+                 (Segment 19I Item 3). The response clause is what
+                 the label was missing: `delete-all` destroys every
+                 saved answer under this roster and said nothing. #}
               Yes, delete the existing
               <span class="pill pill-empty">{{ total_row_count }} reviewee{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and their associated
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
               and
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
             </label>
+            {# The acknowledgement rides with this tick, as it does
+               on the selected-rows gate. Without it the route's
+               `_require_response_loss_ack` returned 400 and no
+               roster template sent the field — so Delete-all was
+               unreachable on any session with a response. #}
+            {% if roster_response_count > 0 %}
+              <input type="hidden" id="reviewees-delete-all-ack"
+                     name="acknowledge_response_loss" value="true">
+            {% endif %}
           </p>
           <p>
             <button class="btn destructive" type="submit"
