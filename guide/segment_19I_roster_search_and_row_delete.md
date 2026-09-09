@@ -1641,6 +1641,53 @@ has been in all four pages' context since Item 3.
 page, card or navigation affordance. This adds a clause to a label on
 a card that has been there since Segment 09.
 
+### Status
+
+**2026-09-09 — landed in one PR, as planned.**
+
+**The blast radius held**, with one addition the plan did not name:
+the parse-error re-render. `_shared.py`'s import handler builds its
+own context, and Item 3 had already been bitten there —
+`delete_discards_responses` was missing from it and **nothing failed**,
+because Jinja's `Undefined` is falsy in `{% if %}`. So the new tests
+pin the label on that path too, not only on the GET.
+
+**A test helper that worked on the GET page and not on the error
+page.** `_upload_form` located the Upload card by seeking
+`/reviewers/import"` in the body. On the error render the page chrome
+carries `?return_to=/operator/sessions/1/reviewers/import` in a
+header link, which precedes every `<form>` on the page — so the seek
+landed in the header and found no form before it. Rewritten to walk
+the forms and take the one whose *opening tag* posts to the import
+route. Worth recording because the helper was not wrong on the case
+it was written for; it was wrong on the case the new test added.
+
+**Five mutations, five kills** — the hidden field removed, the
+response clause removed, the clause made unconditional, the Observers
+gate put back, and `roster_response_count` zeroed on the error
+render. No vacuous assertion this round, the first clean run in four
+days.
+
+**The Quick Setup finding was half wrong when first written down.**
+The two `acknowledge_response_loss=None` call sites in
+`_quick_setup.py` looked like the defect and are not: they are in the
+create-session handler, where the session was made in the same
+request, so `existing > 0` is false and the gate is never reached.
+Reproducing it moved the finding to the real place — the Session Home
+card, whose form omits the field — and changed the symptom from a 400
+to a `needs_confirm` redirect. Recorded under "Open questions" as
+measured, not as first supposed.
+
+**Measured after:** the suite went 3257 → **3267** (+10, the new
+`test_setup_import_response_loss.py`).
+
+**Not verified here:** the Azure dev slot. The browser pass on the
+sandbox covered the reported flow end to end — a `draft` session with
+3 reviewers, 1 assignment and 2 responses, the label reading *"Yes,
+replace the existing 3 reviewers and delete the 1 assignment and 2
+reviewer responses"*, and the upload replacing the roster without an
+error.
+
 ### Definition of done
 
 - The reported flow succeeds: a session with responses, reverted to
