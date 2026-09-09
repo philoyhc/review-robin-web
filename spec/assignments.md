@@ -587,10 +587,44 @@ with `active=true|false`. The service helper
    `assignments.instrument_self_reviews_active_set` with
    `counts.flipped` + `context.active` + `refs.instrument_id`.
 
-Past activation (`is_ready`), the checkbox disables with the
-title "Session is ongoing — revert to draft to change
-self-review inclusion." The lifecycle spec spells out the
-revert path.
+Whenever the session is **not editable** — `ready`, `expired` or
+`archived` — the checkbox disables, matching the
+`_require_editable` its route already enforced (Segment 19I Item
+8; it was `is_ready` alone until then, so the box was live on
+`expired` and `archived` where the route answered 409). Its title
+names the way out that state actually has: *"Revert to draft to
+change self-review inclusion."* on `ready` and `expired`, which
+`revert_session_to_draft` accepts, and *"Unarchive this session
+…"* on `archived`, which it refuses. `spec/lifecycle.md` §2.5
+and §5 carry the state machine.
+
+### The page's lifecycle surface (Segment 19I Item 8)
+
+The Assignments page splits the way the roster Setup pages do
+(`spec/setup_pages.md`, and `spec/lifecycle.md` §5):
+
+- **The selection-driven half follows `is_editable`** — row
+  checkboxes, the select-all header cell, the hidden
+  `assignments-bulk-form` they post to, the selected-count pill,
+  `Inactivate` / `Activate` and the wiring script render only on
+  `draft` and `validated`, which is what all five mutating routes
+  enforce.
+- **The read-only half renders in every state** — the `Search by:`
+  select, the search box, `Clear`, `Showing N of M` and the
+  `Search` button. Reading a finished session's assignments is
+  legitimate, and mid-session is exactly when an operator checks
+  who is assigned to whom.
+
+Before Item 8 the template gated the whole operator-actions card
+on `not is_ready`, which disagreed with those routes on **three of
+five** states in both directions: `expired` and `archived` offered
+live controls the routes refuse, and `ready` lost the search
+altogether.
+
+**No lock card here.** The four roster pages still have none on
+`expired` / `archived` (`spec/lifecycle.md` §5) while Instruments
+gained one in Item 6; a third variant would widen that
+inconsistency rather than close it.
 
 ### Preview table
 
@@ -610,16 +644,22 @@ left → right:
 
 Rows with `include=False` render dimmed. The (select) column
 enables bulk-set Include via a checkbox column header + a
-per-row checkbox; the action row above the table carries
-`Include selected` / `Exclude selected` buttons.
+per-row checkbox; the operator-actions card carries the
+**`Inactivate`** / **`Activate`** buttons the selection drives.
 
 #### Bulk-set Include
 
-`POST /assignments/include` with the selected
-`assignment_id`s + `include=true|false`. Service helper
-`assignments.bulk_set_assignment_include`. Lifecycle-aware
-(same revert-to-draft guard as the self-review toggle when
-the session is `is_ready`).
+Two routes, `POST /assignments/bulk-inactivate` and
+`POST /assignments/bulk-activate`, both over the service helper
+`assignments.bulk_set_assignment_include`. **Corrected 2026-09-09**
+(Segment 19I Item 8): this section named a single
+`POST /assignments/include` taking `include=true|false`, and
+buttons labelled `Include selected` / `Exclude selected`. Neither
+the route nor those labels exists anywhere in the app — only the
+helper name was right. `spec/operator_button_audit.md` has carried
+the correct labels throughout. Lifecycle-aware
+(the same `_require_editable` guard as the self-review toggle —
+`draft` or `validated`).
 
 ## Reconcile + regenerate
 

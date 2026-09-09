@@ -2438,6 +2438,98 @@ flag, 0 route changes (`_assignments.py` already calls
 2. **The spec** rides with it — `spec/assignments.md` is small here and
    the change is one paragraph.
 
+### Status
+
+**2026-09-09 — landed in one PR, as planned.**
+
+**The ladder held**, and the self-review toggle joined the mutating
+half once measured: its route gates on `_require_editable` like the
+other four, so line 97's `is_ready` was the same mistake in
+miniature. Its title needed Item 6's `lock_action` for the same
+reason — widening the gate without it would have told an `archived`
+operator to revert, which `revert_session_to_draft` refuses.
+
+**Two fixture faults, both caught by the tests failing rather than
+passing.**
+
+1. The self-review checkbox renders only when
+   `block.self_review_total > 0`, so a roster of distinct people
+   leaves it off the page entirely — my first fixture asserted on a
+   control that was never there. Fixed by seeding a self-review row
+   (`is_self_review=True`) alongside the ordinary pair. Had the
+   assertion been written the other way round (`"disabled" in …`
+   over an empty list) it would have **passed vacuously**; `assert
+   boxes` is what caught it.
+2. Adding that row broke the route test's
+   `select(Assignment.id).…one()`, which then found two.
+
+**The vacuous check I nearly shipped in the plan.** While measuring,
+`"operator-actions-card" in body` read as true on every state — the
+string appears **15 times** in `base.html`'s inline CSS. The item's
+table counts the rendered `<div>` instead, and the test module says
+so at the top of its constants.
+
+**Five mutations, five kills**, including the smaller diff the
+Decision rejected: gating the whole card on `can_edit` fixes the dead
+controls and keeps the `ready` regression, and six tests fail on it.
+That the tests distinguish the two designs is the point.
+
+**Verified in Chromium** across all five states, and the `ready`
+search **driven**, not just rendered:
+
+| state | search | `Search by:` | row boxes | select-all | bulk | self-review |
+|---|---|---|---|---|---|---|
+| `draft` | yes | yes | 2 | yes | yes | live |
+| `validated` | yes | yes | 2 | yes | yes | live |
+| `ready` | yes | yes | 0 | no | no | disabled, "Revert to draft…" |
+| `expired` | yes | yes | 0 | no | no | disabled, "Revert to draft…" |
+| `archived` | yes | yes | 0 | no | no | disabled, "Unarchive this session…" |
+
+On `ready`: 2 rows → search `Ben` → 1 row, hint `Showing 1 of 2.`,
+Clear → 2 rows.
+
+**Measured after:** the suite went 3310 → **3338**.
+
+**`spec-writer`: six confirmations and three findings, each verified
+before acting.**
+
+1. **My own new prose was loose.** `spec/lifecycle.md` said the
+   self-review toggle "moves with the mutating half" — behaviourally
+   right, structurally misleading: it **disables in place** where the
+   bulk controls **disappear**, because the row it sits in is a status
+   table that reads in every state. Rewritten to say which manner.
+2. **Undeclared doc impact — two files.** `spec/setup_pages.md` and
+   `spec/operator_ui_concept.md` both described the roster lock card
+   as "the same pattern the Instruments **and Assignments** pages
+   use". Item 8's new text says Assignments has no lock card, so
+   those lines now contradicted it — and `operator_ui_concept.md`
+   already contradicted *itself*, since its P4 records that the three
+   post-Operations pages retired their `.card.lock` notices.
+   `session_assignments.html` carries a comment saying the same. Both
+   corrected; bullets added to `### Doc impact` per the plan
+   convention.
+3. **A false route and false button labels, one paragraph below the
+   text this item edited.** `spec/assignments.md`'s "Bulk-set
+   Include" named `POST /assignments/include` taking
+   `include=true|false`, with buttons `Include selected` /
+   `Exclude selected`. Verified: **no such route exists**, and
+   neither label appears in any template — the real routes are
+   `bulk-inactivate` / `bulk-activate` over the helper the section
+   correctly named. Corrected, since the section describes the very
+   card this item changed.
+
+**One thing `spec-writer` reported that measurement overturned.** It
+flagged that `spec/setup_pages.md` and `operator_ui_concept.md`
+contradict the "no lock card" claim — which is right — but the
+underlying question is whether Assignments renders one, and
+`grep -c "card lock" session_assignments.html` returns **1**. That
+single match is inside a comment recording the card's *retirement*.
+The claim stands; the check that looked like it disproved it was
+counting a comment. Recorded because it is the same shape as this
+item's own vacuous-check finding, one layer up.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - A per-status matrix asserts, for all five states, the route's status
@@ -2475,4 +2567,9 @@ flag, 0 route changes (`_assignments.py` already calls
   half renders in every state (Item 8).
 - `spec/lifecycle.md` — §5's surface list gains Assignments alongside
   the rosters and Instruments (Item 8).
+- `spec/setup_pages.md` and `spec/operator_ui_concept.md` — **added
+  at build**, not named at planning time: both said the roster lock
+  card follows "the same pattern the Instruments **and Assignments**
+  pages use", which this item's new prose contradicts. See
+  `### Status` (Item 8).
 - `docs/status.md` — row at the close (Item 8).

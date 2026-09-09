@@ -94,8 +94,8 @@
                          data-self-review-instrument="{{ block.instrument_id }}"
                          data-self-review-state="{{ block.self_review_checkbox_state }}"
                          {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
-                         {% if is_ready %}disabled aria-disabled="true"
-                           title="Session is ongoing — revert to draft to change self-review inclusion."{% endif %}
+                         {% if not can_edit %}disabled aria-disabled="true"
+                           title="{{ lock_action }} to change self-review inclusion."{% endif %}
                          aria-label="Include self-reviews for this instrument">
                 </form>
               {% endif %}
@@ -200,7 +200,15 @@
       {# Card B — operator-actions card (right half): a free-text
          search to locate a row, plus row-selection-driven bulk
          Inactivate / Activate. #}
-      {% if not is_ready %}
+      {# Segment 19I Item 8 — the card itself renders in every
+         state. Item 3 settled that the read-only half of an
+         operator-actions strip (the search, Clear, the count) stays
+         wherever the page does, because reading a finished session is
+         legitimate; only the selection-driven half below follows
+         `can_edit`. This card used to be gated whole on
+         `not is_ready`, which removed the only way to find a row on
+         exactly the state an operator checks who is assigned to
+         whom. #}
       <div class="card operator-actions-card">
         <form method="get"
               action="/operator/sessions/{{ session.id }}/assignments"
@@ -238,6 +246,7 @@
               <a class="btn secondary"
                  href="/operator/sessions/{{ session.id }}/assignments">Clear</a>
             {% endif %}
+            {% if can_edit %}
             <span class="pill pill-count"
                   id="assignments-selected-count" hidden>0 selected</span>
             <button class="btn secondary" type="submit"
@@ -250,13 +259,13 @@
                     form="assignments-bulk-form"
                     formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
                     disabled aria-disabled="true">Activate</button>
+            {% endif %}
             <button class="btn secondary" type="submit">Search</button>
           </div>
         </form>
       </div>
-      {% endif %}
     </div>
-    {% if not is_ready %}
+    {% if can_edit %}
     {# Hidden shell — the row-select checkboxes and the Card B
        bulk buttons associate to it via ``form=``. The filter
        term rides along so a bulk action redirects back to the
@@ -282,7 +291,7 @@
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
         <thead>
         <tr>
-          {% if not is_ready %}
+          {% if can_edit %}
           <th class="row-select-cell">
             <input type="checkbox" id="assignments-select-all"
                    aria-label="Select all assignments">
@@ -334,7 +343,7 @@
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
           {% set rel_active = rel and rel.status == "active" %}
           <tr data-row-instrument="{{ assignment.instrument_id }}">
-            {% if not is_ready %}
+            {% if can_edit %}
             <td class="row-select-cell">
               <input type="checkbox" class="assignment-select"
                      name="assignment_ids" value="{{ assignment.id }}"
@@ -438,7 +447,7 @@
         }
       })();
     </script>
-    {% if not is_ready %}
+    {% if can_edit %}
     {# Card B selection wiring — count the ticked row checkboxes,
        drive the "{n} selected" pill + the Inactivate / Activate
        buttons, and mirror the header select-all. #}

@@ -31,6 +31,7 @@ from app.services import (
     assignments,
     csv_imports,
     relationships as relationships_service,
+    session_lifecycle as lifecycle,
 )
 from app.services.instruments import _instrument_label
 from app.web import breadcrumbs, views
@@ -268,6 +269,29 @@ def _render_assignments_hub(
             ),
             "page_ctx": views.build_assignments_page_context(
                 db, review_session
+            ),
+            # Segment 19I Item 8 — the page's half of the gate the
+            # five mutating routes already enforce. The template read
+            # `is_ready` from the shared workflow context, which
+            # disagreed with those routes on three of five states:
+            # `expired` / `archived` offered live controls they
+            # refuse, and `ready` hid the *search* along with them.
+            # Composed here rather than added to
+            # `build_workflow_card_context`, which eight pages share.
+            "can_edit": lifecycle.is_editable(review_session),
+            # The recovery path out of each locked state, for the
+            # disabled self-review toggle's title.
+            # `revert_session_to_draft` accepts `ready` and `expired`;
+            # `archived` leaves through `unarchive_session` in the
+            # archived-sessions lobby (Item 6 set this pattern).
+            "lock_action": (
+                ""
+                if lifecycle.is_editable(review_session)
+                else (
+                    "Unarchive this session"
+                    if lifecycle.is_archived(review_session)
+                    else "Revert to draft"
+                )
             ),
             **workflow_ctx,
         },

@@ -432,6 +432,28 @@ Home is plain greying-out. The Quick Setup card on Home follows
 the same convention (body-greyed, Lock/Unlock toggle visible but
 inert at the service layer).
 
+**Assignments answers to the same predicate** (Segment 19I Item
+8), and splits the way the roster pages do: the selection-driven
+half — row checkboxes, select-all, the bulk form, the
+selected-count pill, `Inactivate` / `Activate` — renders only
+while `is_editable`, which is what its five mutating routes
+enforce; the read-only half — the `Search by:` select, the search
+box, `Clear`, `Showing N of M` — renders in every state. Its
+per-instrument self-review toggle answers to the same predicate but
+in the other manner: it **stays on the page and disables**, where
+the bulk controls disappear — the row it sits in is a status table
+that reads in every state. Its disabled title names each state's own
+way out, as the Instruments page's do.
+
+It was gated whole on `not is_ready`, which disagreed with those
+routes on **three of five** states in both directions: `expired`
+and `archived` offered live controls the routes refuse, and
+`ready` lost the search along with them — on the state an operator
+is most likely reading that page in. Assignments takes **no lock
+card**, for the reason Instruments' presence makes sharper: the
+four roster pages still have none, and a third variant would widen
+that gap rather than close it. See `spec/assignments.md`.
+
 **Operations pages** (Validate / Assignments / Previews /
 Invitations / Responses) while session is `draft` / `validated`:
 each page renders its own "session not yet activated" banner if
