@@ -2016,6 +2016,54 @@ and it is deliberate for one slice, not an oversight.
 
 **Not verified here:** the Azure dev slot.
 
+---
+
+**2026-09-09 — PR 2 landed. PR 3 (the spec) outstanding.**
+
+The lock card now covers all three locked states. `ready`'s sentence
+is untouched; `expired` and `archived` get their own, each naming the
+way out that state actually has.
+
+**Both ways out were measured through the route, not assumed from the
+service.** `revert_session_to_draft` accepts `ready` and `expired`,
+and the `/revert` route delegates with no lifecycle precondition of
+its own — posted and confirmed 303 → `draft` from both. From
+`archived` it answers **409**, which is why that branch offers no
+form: a revert button there would be the dead control Item 3 removed
+from the roster pages.
+
+**The archived branch's link was nearly a finding against itself.**
+The card sends the operator to `/operator/sessions/archived` to
+unarchive, and a first browser check found **no Unarchive control on
+that page**. It is inside a `<template>` — the bulk-action expander
+the lobby's JS clones once rows are selected — so it is absent from
+the DOM until then. Re-checked by actually ticking a row: the control
+appears and is enabled. The instruction is true. Recorded because the
+first measurement said otherwise, and shipping on it would have been
+this item's own defect committed while fixing it.
+
+**Five mutations, five kills**: the card re-gated on `is_ready`,
+`archived` given the revert form, the `expired` copy reverted to
+"ongoing", the lobby link dropped, and `is_archived` forced False.
+
+**Verified in Chromium**, including driving the flow rather than
+reading the markup:
+
+| state | card | revert form | lobby link |
+|---|---|---|---|
+| `draft` | no | — | — |
+| `ready` | yes | yes | no |
+| `expired` | yes | yes | no |
+| `archived` | yes | **no** | **yes** |
+
+The `expired` card's revert was clicked through end to end: the
+button is disabled until the confirm tick, the post lands on `draft`,
+and the lock card disappears.
+
+**Measured after:** the suite went 3295 → **3310**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - The per-status matrix asserts, for all five states, the route's
