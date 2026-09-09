@@ -28,7 +28,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 |---|---|---|
 | **19I.1** | The filter strip rationalized, and search extended to tag contents | **Closed 2026-09-09** (3 PRs) |
 | **19I.2** | Delete selected rows from the Operator actions card | **Closed 2026-09-09** (3 PRs, scaffold-first) |
-| **19I.3** | The delete surface told straight: lifecycle gate, copy that names what goes, and a Danger Zone that works | Open — **planned** |
+| **19I.3** | The delete surface told straight: lifecycle gate, copy that names what goes, and a Danger Zone that works | **Closed 2026-09-09** (3 PRs + a 2b) |
 | 19I.4+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
 
 ---
@@ -1275,6 +1275,23 @@ assertion first. Re-pinned on `class="card danger-zone"`.
 **Measured after:** the suite went 3209 → **3241** (+32, the Upload /
 Danger Zone matrix across four pages × five statuses).
 
+**2026-09-09 — PR 3 landed; Item 3 closes.** `spec/lifecycle.md` §5
+now states the `is_editable` gate for the whole mutating surface —
+cards *and* the roster pages' selection controls — with Observers'
+checkbox exception named, and corrects the section's own claim that
+the grid hides "while session is `ready`". `spec/setup_pages.md`
+carries the three-state copy table, the selection gate, and a Danger
+Zone account that says plainly what was broken and what the hidden
+field fixes.
+
+**A gap the fix created, written into the spec rather than left to be
+found.** The lock card that explains why setup is locked is keyed to
+`ready` alone. So on `expired` and `archived` the mutating cards are
+now absent with nothing saying why — the page went from wrong and
+talkative to correct and silent. Recorded in `spec/lifecycle.md` §5 as
+a known gap and in Out of scope above, rather than quietly widening
+this item into a copy surface nobody asked for.
+
 ### Definition of done
 
 - Row checkboxes, the selection buttons and the Delete gate render on
@@ -1318,6 +1335,14 @@ Danger Zone matrix across four pages × five statuses).
   grep finds it; changing it is a third surface and nobody has
   reported it.
 - **Undo**, still. Nothing in this app has it.
+- **A lock card for `expired` / `archived`** (found at PR 2b,
+  2026-09-09). The yellow lock card that explains *why* setup is
+  locked is keyed to `ready` alone, so on the other two frozen states
+  the mutating cards are simply absent with nothing saying why. The
+  page is now correct and silent, where before it was wrong and
+  talkative. A copy surface of its own, and nobody has reported it;
+  recorded in `spec/lifecycle.md` §5 as a known gap so the next reader
+  of that section meets it.
 
 ### Doc impact
 

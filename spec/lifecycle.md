@@ -333,11 +333,39 @@ GET-side rendering rules.
 ## 5. UI lock-card pattern
 
 **On Setup pages** (Reviewers / Reviewees / Relationships /
-Instruments) while session is `ready`: the
-mutating-card grid (Upload, Danger Zone) is hidden and a
-**yellow lock card** renders in its place with copy explaining
-that setup is locked and offering a "Revert to draft" inline
-form.
+Instruments) whenever the session is **not editable** — i.e. not
+`draft` and not `validated`: the mutating-card grid (Upload,
+Danger Zone) is hidden. On `ready` a **yellow lock card** renders
+in its place with copy explaining that setup is locked and
+offering a "Revert to draft" inline form.
+
+**The gate is `is_editable`, not `is_ready`** (Segment 19I Item 3).
+It was the latter until then, which is only `status == "ready"`,
+so `expired` and `archived` sessions rendered the Upload and
+Danger Zone cards — and, on the roster pages, row checkboxes and a
+live Delete — while every route behind them returned 409. The
+page now offers what `_require_editable` will accept and nothing
+else; §3.1 is the authority and the templates read the same
+predicate.
+
+**The roster pages' selection surface follows the same gate**: row
+checkboxes, the selection-driven Edit / Inactivate / Activate /
+Add / Delete controls, the selected-count pill and the delete
+confirmation render only while editable. The read-only half of
+the strip — the Status filter, the search box, `Showing N of M`
+and Clear — renders in every state, because reading a finished
+session's roster is legitimate. **Observers is the one exception,
+on checkboxes only**: theirs stay live until `archived` because
+they drive the cohort rule editor (`spec/setup_pages.md`), which
+is deliberately usable mid-session; its bulk *card* follows the
+common gate.
+
+**Known gap, not closed by 19I.3:** on `expired` and `archived`
+the mutating cards are hidden and **no lock card explains why** —
+the lock card is still keyed to `ready` alone. The page is
+correct but silent. Recorded in
+`guide/segment_19I_roster_search_and_row_delete.md` Item 3
+"Out of scope".
 
 The lock card's "Revert to draft" form carries a `return_to`
 query param scoped to the page set (`reviewers`, `reviewees`,
