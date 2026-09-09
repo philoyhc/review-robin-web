@@ -1803,3 +1803,205 @@ error.
   label's response clause, and Observers' import losing the
   requirement (Item 5).
 - `docs/status.md` — row at the close (Item 5).
+
+## Item 6 — The instruments a finished session can still lose
+
+### Opportunity
+
+Item 3 gated the roster pages on `is_editable` because they offered
+row selection and a live Delete on `expired` and `archived`, where
+every mutating route returned 409. The Instruments page has the same
+lifecycle gap with the **opposite and worse** outcome: the routes do
+not refuse.
+
+`_require_instrument_editable` (`app/web/routes_operator/_shared.py`)
+gates on `_can_edit_instrument`, which is `not lifecycle.is_ready(...)`.
+So the whole instrument surface is protected exactly while the session
+is collecting and stops being protected the moment collection **ends** —
+which is when the data has become the record.
+
+Measured at `3f2df04c`, one session per state, two instruments so the
+`is_only_instrument` rule does not confound the button, an assignment
+and one submitted response:
+
+| state | lock card | Delete buttons rendered | route | delete outcome |
+|---|---|---|---|---|
+| `draft` | no | 3 live | permits | deletes — correct |
+| `validated` | no | 3 live | permits | deletes — correct |
+| `ready` | **yes** | 0 live, 3 permanently disabled | **409** | blocked — correct |
+| `expired` | **no** | **3 live** | **permits** | **deletes** |
+| `archived` | **no** | **3 live** | **permits** | **deletes** |
+
+`Instrument` cascades `assignments` → `responses`, both
+`delete-orphan`, so on `expired` and `archived` the delete took the
+assignment and the **submitted response** with it: measured
+`assignments_left=0 responses_left=0` from a seeded 1 and 1. The
+description edit lands the same way (`desc_changed=True` on both).
+
+**The page offers this, not just the route.** The Delete buttons on
+those two states render `type="submit"` behind nothing but the confirm
+tick — checked because Item 5's retraction is the standing reminder
+that a route defect the page cannot reach is not a defect. This one
+the page can reach.
+
+No test asserts the current permissive behaviour on either state; the
+gap was never pinned, which is why it survived Item 3.
+
+### Decision
+
+**One predicate, `is_editable`, for the routes and the page, plus a
+lock card on the two states that gain the silence.**
+
+`_can_edit_instrument` becomes `lifecycle.is_editable(review_session)` —
+`draft` or `validated` — which corrects all **24**
+`_require_instrument_editable` call sites at once, and is the same
+predicate `_require_editable` already enforces on every roster route.
+The page's `can_edit` follows it, so page and route agree by
+construction rather than by two lists kept in step (Item 3's phrasing,
+and its reason).
+
+**The lock card is extended, not invented.** `ready` already renders
+`<div class="card lock">` with *"The instruments cannot be modified
+while the session is ongoing. Revert the session to draft if you wish
+to modify anything."* and an inline revert form. `expired` and
+`archived` get the same card with the state's own recovery verb, both
+of which exist in the service layer:
+
+- `expired` → `revert_session_to_draft` accepts `expired` as a
+  starting state, so the card carries the **same inline revert form**
+  `ready`'s does.
+- `archived` → `unarchive_session` is `archived → draft`, but it is
+  surfaced only as bulk-unarchive in the archived-sessions lobby
+  (`sessions_archived.html`). That card **names the path without
+  offering the control**, rather than inventing a second unarchive
+  affordance on a Setup page.
+
+Rejected: **gating only the destructive routes** (delete, replicate)
+and leaving description edits open on the two closed states. There is
+no principle that splits them, and Item 3 settled that the page and
+the route answer to one predicate.
+
+Rejected: **leaving `archived` mutable** on the argument that the
+operator owns their own data. The delete is irreversible — no
+soft-delete column, no snapshot, measured in Item 2 — and `archived`
+is the state whose whole purpose is to be the record. An operator who
+genuinely wants to edit an archived session has a path: unarchive it,
+which is a deliberate act that says so.
+
+### Semantics
+
+- `is_editable` is `draft` **or** `validated`, so `validated` keeps
+  every instrument control it has today; this narrows `expired` and
+  `archived` only.
+- A `validated` session is invalidated by instrument mutations exactly
+  as now — `invalidate_if_validated` at the service entry points is
+  untouched.
+- The routes answer **409**, the same code and the same guard as
+  today; only the predicate widens. The page is the courtesy, the
+  route is the guarantee.
+- Read stays open on all five states: the page renders, cards expand,
+  the preview surface and the extracts are unaffected. Reading a
+  finished instrument set is legitimate.
+- The lock card renders once per page, above the cards, where
+  `ready`'s does — not per instrument.
+
+### Judgment calls — decided
+
+- **`expired`'s card carries the revert form; `archived`'s does
+  not** (2026-09-09). Revert already accepts `expired`, so the
+  control is truthful there. Unarchive lives in the lobby, and a
+  Setup page is not where a session comes back from the archive.
+- **The gate moves in `_can_edit_instrument`, not at the 24 call
+  sites** (2026-09-09). The call sites are already correct — they
+  ask "is this editable"; the helper answered the wrong question.
+
+### Blast radius (measured)
+
+At `3f2df04c`:
+
+- `grep -rn "_require_instrument_editable(" app/web/routes_operator/` →
+  **24** call sites: `_instruments.py` 18, `_instruments_band2.py` 3,
+  `_instruments_pagination.py` 3. **None change** — the helper does.
+- `_can_edit_instrument` — 1 definition (`_shared.py:385`), 1 caller.
+- `grep -c "is_ready" app/web/templates/operator/instruments_index.html`
+  → **18**, of which the ones gating *mutation* move to `can_edit`;
+  the rest guard other things and must be read individually.
+- `app/web/views/_instruments.py:716-717` — `is_ready` /
+  `can_edit = not is_ready`, the page's half of the same mistake.
+- 2 specs: `spec/instruments.md` (the "409 once the session is
+  `is_ready`" sentence at §"All three call…") and `spec/lifecycle.md`
+  §5, which lists Instruments among the editable surfaces.
+
+### PR ladder
+
+1. **PR 1 — the lifecycle gate, route and page together.**
+   `_can_edit_instrument` becomes `is_editable`; the view's `can_edit`
+   stops deriving from `is_ready`; the template's mutation gates
+   follow `can_edit`. A per-status matrix test replaces the
+   measurement above, asserting both the route's 409 and the page's
+   absent controls. Landing these together is deliberate — gating the
+   route alone would leave live buttons that 409, which is the shape
+   Item 3 existed to remove. Must not touch: the lock card, the copy,
+   or `is_ready` where it guards something other than mutation.
+2. **PR 2 — the lock card on `expired` and `archived`.** The existing
+   `card lock` extended to the two states, with `expired` carrying the
+   inline revert form and `archived` naming the lobby path. Must not
+   touch: the gate.
+3. **PR 3 — the spec.** `spec/instruments.md`'s gate sentence and
+   `spec/lifecycle.md` §5's editable-surface list.
+
+**No scaffold slice.** `CLAUDE.md`'s scaffold-first rule is for a new
+page, card or navigation affordance. This extends a card the page
+already renders on `ready` to two more states; the shape is agreed
+because it is already on screen. Recorded here because the rule was
+considered rather than skipped.
+
+### Definition of done
+
+- The per-status matrix asserts, for all five states, the route's
+  status **and** whether the page offers the control — both ways
+  round, so neither half can drift.
+- A delete attempt on `expired` and on `archived` leaves the
+  instrument, its assignment and its response in place, asserted by
+  count.
+- `draft` and `validated` keep every instrument control, asserted.
+- The lock card renders on `ready`, `expired` and `archived` and not
+  on `draft` / `validated`; `expired`'s carries the revert form and
+  `archived`'s does not, asserted.
+- Every new assertion mutation-checked.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether `archived` should be read-only for *everything* on this
+  page, including the collapse / expand and sort state.** This item
+  says no — those are per-viewer display state, not session data —
+  but the author may want an archived session to render frozen. Not
+  blocking: the gate lands either way.
+
+### Out of scope
+
+- **The other Setup surfaces on `expired` / `archived`.** Item 3
+  already gated the four roster pages; nothing else was measured as
+  permissive here, and a sweep is not what this item is.
+- **Response-Type Definitions** beyond what the shared helper already
+  covers. The three RTD call sites move with `_can_edit_instrument`
+  and get no separate treatment.
+- **A general "finished session" read-only mode** across the operator
+  UI. That is a design, not a fix, and belongs in
+  `guide/deferred_consolidated.md` if the author wants it.
+
+### Doc impact
+
+- `spec/instruments.md` — the gate sentence changes from "409 once the
+  session is `is_ready`" to the `is_editable` rule, and the page's
+  lock-card states are recorded (Item 6).
+- `spec/lifecycle.md` — §5's editable-surface account gains
+  Instruments under the same `is_editable` rule as the rosters
+  (Item 6).
+- `docs/status.md` — row at the close (Item 6).
