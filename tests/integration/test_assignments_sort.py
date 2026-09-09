@@ -126,8 +126,24 @@ def test_assignments_cookie_sort_by_reviewer_asc(
     # Reviewer column sorts on name — Alpha R, Bravo R, Charlie R
     # in row order.
     assert (
-        body.find("Alpha R") < body.find("Bravo R") < body.find("Charlie R")
+        _rows(body).find("Alpha R")
+        < _rows(body).find("Bravo R")
+        < _rows(body).find("Charlie R")
     )
+
+
+def _rows(body: str) -> str:
+    """The preview table only.
+
+    These assertions compare where names appear in the document, and
+    Segment 19I Item 9 added a `<datalist>` of `"Name (handle)"`
+    labels that renders **before** the table and is sorted
+    alphabetically. Against the whole body, `find()` returns the
+    datalist hit: the descending test failed, and — worse — the
+    ascending ones would have passed whatever order the table was in.
+    Scoping to the table restores exactly what they were checking.
+    """
+    return body[body.index('<table id="assignments-table"'):]
 
 
 def test_assignments_cookie_sort_by_reviewer_desc(
@@ -145,7 +161,9 @@ def test_assignments_cookie_sort_by_reviewer_desc(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert (
-        body.find("Charlie R") < body.find("Bravo R") < body.find("Alpha R")
+        _rows(body).find("Charlie R")
+        < _rows(body).find("Bravo R")
+        < _rows(body).find("Alpha R")
     )
 
 
@@ -172,10 +190,11 @@ def test_assignments_cookie_sort_by_reviewee(
     # reviewees sort desc: Charlie E before Alpha E.
     # (Self-review for Alpha R/Alpha E is excluded by the
     # ``exclude_self_review=true`` flag in _populate_full_matrix.)
-    alpha_r = body.find("Alpha R")
-    bravo_r = body.find("Bravo R")
+    rows = _rows(body)
+    alpha_r = rows.find("Alpha R")
+    bravo_r = rows.find("Bravo R")
     # Look only inside Alpha R's row range for ordering check.
-    alpha_segment = body[alpha_r:bravo_r]
+    alpha_segment = rows[alpha_r:bravo_r]
     assert alpha_segment.find("Charlie E") < alpha_segment.find("Bravo E")
 
 
