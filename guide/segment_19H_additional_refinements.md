@@ -919,9 +919,15 @@ now recorded under `### Open questions`.
   rather than an application one. **Narrowed at the close** (the
   `spec-writer` pass, 2026-09-09): the deployment docs record "No Front
   Door / CDN, no Static Web App", so on the documented topology nothing
-  sits between App Service and the browser to cache independently. The
-  question stays open rather than answered, because the topology is a
-  document and the dev slot is the check.
+  sits between App Service and the browser to cache independently.
+  **Answered from the deployed app, 2026-09-09**: no intermediary. A
+  fresh Chrome profile showed the new captures at once while Edge kept
+  the old ones through a hard refresh, and clearing Edge's cache fixed
+  it — the stale bytes were one browser profile's stored entry, created
+  **before** the header shipped and therefore still governed by the old
+  heuristic rules. The fix stops new stale entries; it cannot reach one
+  already saved, which is worth knowing the next time a capture is
+  replaced and someone reports it twice.
 
 ### Out of scope
 
