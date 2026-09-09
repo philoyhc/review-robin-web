@@ -191,7 +191,8 @@ operator-controlled page-break layout:
   All three call `session_lifecycle.invalidate_if_validated`
   at entry. Routes that call them apply
   `_require_instrument_editable` so the operations 409
-  once the session is `is_ready`.
+  unless the session is **editable** — `draft` or `validated`
+  (Segment 19I Item 6; it was `not is_ready` until then).
 
 ## Per-instrument card
 
@@ -833,8 +834,9 @@ Bottom row of the card, right-aligned, in this order:
 - **Lock / Unlock** — flips between view and edit mode by
   adding / removing `?editing={iid}` from the URL. Save +
   Lock are independent: Save doesn't lock, so the operator can
-  keep editing after a Save. Both disabled past activation
-  (`is_ready`).
+  keep editing after a Save. Both disabled whenever the session
+  is not editable — `ready`, `expired` or `archived`
+  (Segment 19I Item 6; `is_ready` alone until then).
 
 #### Save / Lock interaction
 
@@ -877,9 +879,13 @@ Bottom row of the card, right-aligned, in this order:
   - `is_draft` → succeeds, no invalidation.
   - `is_validated` → succeeds, invalidates the session back to
     `draft` (`invalidate_if_validated` emits an audit event).
-  - `is_ready` → 400 "Cannot add instruments to an active
-    session" (defensive — the button is disabled in this
-    state).
+  - `ready` / `expired` / `archived` → **409** via
+    `_require_instrument_editable`, detail `"Instrument
+    structure is locked while the session is <status>"`
+    (defensive — the button is disabled in these states).
+    Measured 2026-09-09: the spec said `is_ready` → 400 with a
+    different message, and had said so since before Segment 19I;
+    the route has always raised through the shared gate.
 
 ### `Replicate` semantics
 
@@ -928,10 +934,17 @@ The page-wide invariants the lock model enforces:
 
 1. **At most one card unlocked at a time.** Either zero (view
    mode) or exactly one instrument is unlocked.
-2. **Past-activation lock.** When the session is `is_ready`
-   (activated), every edit affordance disables. The lifecycle
-   spec spells out the revert-to-draft path
-   (`spec/lifecycle.md`).
+2. **Not-editable lock.** Whenever the session is not `draft`
+   or `validated` — `ready`, `expired` or `archived` — every
+   edit affordance disables and the routes behind them 409
+   (Segment 19I Item 6). A **lock card** above the instrument
+   cards says which state the page is in and names that state's
+   way out: `ready` and `expired` carry an inline "Revert to
+   draft" form, which `revert_session_to_draft` accepts from
+   both; `archived` points at the Archived-sessions lobby's
+   Unarchive and offers no control, because `/revert` answers
+   409 from `archived`. The lifecycle spec carries the state
+   machine (`spec/lifecycle.md` §2.5, §5).
 3. **Save invalidates validation.** Any successful Save on
    Bands 1 / 3 calls `lifecycle.invalidate_if_validated`. If
    the session was `validated`, it flips back to `draft` and

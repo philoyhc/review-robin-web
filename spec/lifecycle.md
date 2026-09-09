@@ -228,11 +228,22 @@ state machine at the request boundary:
 ### 3.1 `_require_editable(session)`
 
 Raises **HTTP 409 Conflict** when the session is not `draft` or
-`validated`. Every operator setup-mutation endpoint (session
-edit, roster import, roster delete-all, instrument CRUD,
-relationships CRUD, assignment generate, assignment delete-all,
-Quick Setup, settings import, email-template editor, etc.) calls
-this **first**.
+`validated`. Operator setup-mutation endpoints (session edit,
+roster import, roster delete-all, relationships CRUD, assignment
+generate, assignment delete-all, Quick Setup, settings import,
+etc.) call this **first**.
+
+Two corrections to what this list used to claim, both found by the
+`spec-writer` pass on Segment 19I Item 6 and both predating it:
+
+- **Instrument CRUD does not call this helper.** Its ~24 route
+  sites call `_require_instrument_editable` →
+  `_can_edit_instrument`, a separate helper that since Item 6
+  carries the *same* predicate (`is_editable`) and raises the same
+  409 with its own detail message. Same rule, different function.
+- **The email-template editor calls no lifecycle gate at all**, so
+  it never belonged here — §5 below has always said so, and the
+  two passages contradicted each other.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
 
@@ -340,14 +351,30 @@ mutating-card grid (Upload, Danger Zone) is hidden. On `ready` a
 that setup is locked and offering a "Revert to draft" inline
 form.
 
-**Instruments is not one of these pages** and its rules differ in
-both directions: it has no Upload or Danger Zone card to hide,
-and its structure mutations gate on `_require_instrument_editable`
-→ `_can_edit_instrument`, which is `not is_ready` rather than
-`is_editable`. So instrument structure stays mutable on `expired`
-and `archived` — the same gap 19I.3 closed for the roster pages,
-still open here. Recorded rather than fixed: it is a different
-surface with its own gate, and nobody has reported it.
+**Instruments answers to the same predicate** (Segment 19I Item 6)
+through its own helper: `_require_instrument_editable` →
+`_can_edit_instrument`, which is `lifecycle.is_editable(...)`. It
+was `not is_ready` until then, which protected the instrument
+surface exactly while the session was *collecting* and stopped
+protecting it the moment collection **ended** — so on `expired`
+and `archived` the page rendered live Delete buttons, the routes
+permitted the delete, and the `Instrument` → `assignments` →
+`responses` cascade took submitted answers with it. The page's
+`can_edit` reads the same predicate, so page and route agree by
+construction.
+
+`is_ready` still guards what it actually describes on that page:
+the per-instrument **Open** / **Close** controls, which are
+collection-phase actions rather than setup mutations.
+
+The page differs from the roster four in shape, not in gate: it
+has no Upload or Danger Zone card to hide, and its **lock card
+covers all three locked states**, each naming the way out that
+state has — `ready` and `expired` carry the inline revert form
+(`revert_session_to_draft` accepts both), while `archived` names
+the lobby's Unarchive and offers no control, because `/revert`
+answers 409 from `archived` and a button there would be a dead
+control. See `spec/instruments.md`.
 
 **The gate is `is_editable`, not `is_ready`** (Segment 19I Item 3).
 It was the latter until then, which is only `status == "ready"`,
@@ -372,12 +399,15 @@ they drive the cohort rule editor (`spec/setup_pages.md`), which
 is deliberately usable mid-session; its bulk *card* follows the
 common gate.
 
-**Known gap, not closed by 19I.3:** on `expired` and `archived`
-the mutating cards are hidden and **no lock card explains why** —
-the lock card is still keyed to `ready` alone. The page is
-correct but silent. Recorded in
+**Known gap on the four roster pages, not closed by 19I.3:** on
+`expired` and `archived` their mutating cards are hidden and **no
+lock card explains why** — their lock card is still keyed to
+`ready` alone, verified on all four. The pages are correct but
+silent. Recorded in
 `guide/segment_19I_roster_search_and_row_delete.md` Item 3
-"Out of scope".
+"Out of scope". **Instruments no longer shares this gap**: Item 6
+extended its card to all three locked states, so the two surfaces
+now differ here until the rosters catch up.
 
 The lock card's "Revert to draft" form carries a `return_to`
 query param scoped to the page set (`reviewers`, `reviewees`,
