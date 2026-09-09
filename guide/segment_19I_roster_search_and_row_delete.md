@@ -2847,6 +2847,33 @@ paths.
 
 **Measured after:** the suite went 3382 → **3403**.
 
+**`spec-writer` adjudicated, 2026-09-09.** It confirmed the status
+mapping table, the `Showing N of M` composition, the chips ignoring
+both filters, the `REVIEWERS_DATALIST_CAP` cap, and the
+excluded-side `sa_false()` rule against the code. Three flags:
+
+1. **Acted on.** The new prose said `include=False` "already dims a
+   row". It does not, and never did: the `<tr>` carries only
+   `data-row-instrument`, and the Include cell's pill swaps
+   `pill-info` → `pill-empty`, a warning-coloured badge
+   (`base.html:2867`). I had copied the claim from
+   `spec/assignments.md`'s own older Columns paragraph, so the error
+   was pre-existing and my line propagated it. Both are corrected,
+   the older one with a dated note — a fix on a line the item was
+   editing anyway, not a sweep.
+2. **Noted, not acted on.** The suite does not exercise the *pure*
+   one-sided `allowed == []` → `sa_false()` branch: the shared
+   fixture seeds Ana Lim on both sides, so
+   `assignments_picked_handles` always returns both handles and the
+   scoping test exercises the narrowing, not the empty case. Correct
+   by reading; unasserted end-to-end. Recorded rather than fixed
+   because the fixture is shared and reshaping it to cover this
+   would weaken the self-review coverage it was added for.
+3. **Noted, not acted on.** `spec/operator_ui_concept.md:120` still
+   lists the Rule column retired 2026-05-26, and does not mention
+   the `Status:` select or the typeahead. Pre-existing drift in a
+   doc Item 9 does not commit to; already a standing open item.
+
 **Not verified here:** the Azure dev slot. Both PRs changed the
 template.
 

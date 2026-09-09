@@ -702,9 +702,10 @@ the instrument-side filter — client-side, over the rendered window.
 
 `?status=` filters the pairs by **`Assignment.include`** — the
 boolean the operator-actions card's own **Inactivate** / **Activate**
-buttons flip, and which already dims a row when false. It was visible
-and unfilterable until Item 9, so an operator could inactivate in
-bulk and have no way to list the result back.
+buttons flip, and which the Include column already shows as a
+`no` pill. It was visible and unfilterable until Item 9, so an
+operator could inactivate in bulk and have no way to list the
+result back.
 
 | value | matches |
 |---|---|
@@ -748,7 +749,11 @@ left → right:
 | Include | yes (boolean) | yes (toggle) |
 | Instrument | yes | yes (per-instrument Show checkbox in the status table above) |
 
-Rows with `include=False` render dimmed. The (select) column
+A row with `include=False` renders its Include cell as a
+warning-coloured `no` pill (`.pill-empty`); the row itself is not
+dimmed or otherwise restyled. **Corrected 2026-09-09 (19I.9)** —
+this line previously claimed the whole row dimmed, which no
+template or stylesheet has ever implemented. The (select) column
 enables bulk-set Include via a checkbox column header + a
 per-row checkbox; the operator-actions card carries the
 **`Inactivate`** / **`Activate`** buttons the selection drives.
