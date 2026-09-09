@@ -23,7 +23,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19H.1** | The card's two setup pills go stale after an AJAX Save | **Closed 2026-09-08** |
 | **19H.2** | A locked instrument card must carry no unsaved edits | **Closed 2026-09-08** |
 | **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | **Closed 2026-09-09** |
-| 19H.4+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
+| **19H.4** | A screencap replaced under the same name never reaches a cached reader | **Closed 2026-09-09** |
+| 19H.5+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
 
@@ -736,4 +737,188 @@ thing is half a fix.
   `spec/settings_inventory.md`'s `rrw-theme` entry is not edited — it is
   named here only as the contract this item reads
   <!-- cites: spec/settings_inventory.md -->.
+- `docs/status.md` — row at the close (PR 1).
+
+---
+
+## Item 4 — A replaced screencap that never arrives
+
+### Opportunity
+
+Reported from use the day Item 3 landed: the two Guide screencaps
+refreshed in `cf96319a` still showed their **old** pictures, while the
+sixteen dark captures added hours later appeared at once.
+
+Both halves of that are the same fact. The dark captures are **new
+URLs**, never in anyone's cache, so they must be fetched. The two
+refreshed captures kept **the same URL**, so a stored copy could answer
+without a request. Confirmed by the author from the app: the same path
+with `?v=2` — a URL the cache has never seen — returns the new picture.
+
+The mechanism is a missing header. `StaticFiles` sends `etag` and
+`last-modified` and **no `Cache-Control`** (`grep -rn "Cache-Control"
+app/` returns nothing), which leaves freshness to the browser's
+heuristic: with no stated lifetime a stored copy may be reused for a
+fraction of its age without asking the server at all.
+
+**Measured, because the first attempt at measuring it failed.** A
+browser driven against a local server picked up a replaced capture
+immediately, on both reload and navigation — which looked like a
+refutation and was not. Files written seconds earlier have almost no
+age, so the heuristic lifetime is almost zero and the browser asks
+anyway. Ageing the file ten days before the first visit reproduces the
+defect exactly.
+
+### Decision
+
+**Send `Cache-Control: no-cache` from the static mount**, via a
+`StaticFiles` subclass that sets the header in `file_response`.
+
+`no-cache` is store-and-revalidate, not do-not-store: the browser keeps
+the file and keeps sending `If-None-Match`, so an unchanged capture
+still answers 304 with no body and the saving that matters survives.
+What goes is the window in which the browser does not ask.
+
+Rejected: **fingerprinted filenames** (`assignments-page.a1b2c3.png`)
+with a long `max-age`, the usual answer and a better one for a real
+asset pipeline. `spec/architecture.md` says this directory is
+deliberately not one — "nothing here is compiled, fingerprinted, or
+versioned" — and buying cache-friendliness with a build step is the
+trade that paragraph exists to refuse.
+
+Rejected: **a short `max-age`**. It replaces an unbounded stale window
+with a bounded one, which is the same defect with a smaller number; and
+the number would have to be argued about.
+
+Rejected: **doing nothing and hard-refreshing.** It works, and it asks
+every future reader to know that a picture they are looking at may be a
+picture of something else.
+
+### Semantics
+
+- **Unchanged capture:** conditional request, 304, no body. `304` keeps
+  `cache-control` (it is in Starlette's `NotModifiedResponse` header
+  allowlist), so the next visit revalidates too.
+- **Replaced capture:** the validator no longer matches, so the same
+  conditional request returns 200 with the new bytes.
+- **Applies to the whole `/static` mount**, not just `guide/`. It is one
+  directory of PNGs; a per-directory rule would be a policy with one
+  case and two places to look.
+- **Nothing else changes.** No route, no template, no capture.
+
+### Judgment calls — decided
+
+- **Set the header after `super().file_response(...)`** (2026-09-09).
+  That method builds the 200 and then swaps in a `NotModifiedResponse`
+  for a 304; setting it afterwards lands on whichever came back, where
+  setting it on the `FileResponse` first would rely on the allowlist
+  copying it across.
+- **A subclass, not middleware** (2026-09-09). The rule is a property of
+  serving files from this mount, and a middleware would have to
+  re-derive which responses it applies to from the path.
+
+### Blast radius (measured)
+
+At `94b2f3e5`:
+
+| What | Measured | Command |
+|---|---|---|
+| static mounts in the app | 1 | `grep -n "StaticFiles" app/main.py` |
+| files it serves | 32 | `find app/web/static -type f \| wc -l` |
+| `Cache-Control` anywhere in `app/` | 0 | `grep -rn "Cache-Control\|max-age" app/` |
+| test files touching `/static` | 1 | `grep -rln "/static" tests/` |
+| specs describing the mount | 1 (`spec/architecture.md`, Static assets ¶) | `grep -rn "static/guide\|StaticFiles" spec/` |
+
+### Status
+
+**2026-09-09 — Item 4 built and landed.** One PR, as the ladder
+intended. The change is four lines; the work was establishing that they
+were the right four.
+
+**The first measurement said the opposite of the truth.** A browser
+driven against a local server picked up a replaced capture immediately,
+on a reload *and* on a plain navigation — so the caching account looked
+refuted, and shipping a header on the strength of a story would have
+been the thing to avoid. The flaw was in the experiment: the files it
+served had been written seconds earlier, and heuristic freshness is a
+fraction of the age since `Last-Modified`, so a brand-new file is never
+reused without asking. Ageing the file ten days before the first visit
+made the two configurations separate cleanly.
+
+**An earlier reading was simply wrong and is recorded as such.** A first
+probe reported that a reload kept showing the old image; instrumented
+properly, that same reload sent `If-None-Match`, got a 200 with the new
+bytes, and rendered them. The probe had sampled `naturalWidth` before
+the lazy-loaded image re-decoded. It briefly pointed at "the server
+lies", which it does not.
+
+**A/B against the same browser, same aged file, same navigation:**
+
+| Mount | `cache-control` served | After the file is replaced |
+|---|---|---|
+| `StaticFiles` (before) | *(none)* | **stale — the old picture** |
+| `_RevalidatingStaticFiles` (after) | `no-cache` | **fresh — the new picture** |
+
+That is the reported defect reproduced and then fixed, rather than
+inferred from the header's meaning.
+
+**One of the three tests passes with or without the fix, deliberately.**
+`test_a_replaced_screencap_is_served_fresh` pins the *server* half — a
+changed file must stop matching the old validator — which was never
+broken and is what the failed first measurement briefly cast doubt on.
+It is a regression pin on the half the header does not control, and it
+is worth having precisely because that half was doubted. The other two
+die under all three mutants (subclass reverted, header set only on the
+200 branch, `no-cache` swapped for a long `max-age`).
+
+**Decisions confirmed at build:**
+
+- **The whole `/static` mount, not just `guide/`** (2026-09-09). One
+  directory of PNGs; a per-directory policy would have one case and two
+  places to look.
+- **Set after `super()`** (2026-09-09), so the header lands on the 200
+  and the 304 alike rather than relying on `NotModifiedResponse`'s
+  allowlist to carry it — though it does carry it, which is why the 304
+  test passes.
+
+### PR ladder
+
+1. **PR 1 — the header, the tests, and the spec.** One rung; the change
+   is four lines. Must not touch: the captures, the Guide markup, the
+   figure CSS, or the mount's path.
+
+### Definition of done
+
+- A capture replaced under the same filename reaches a reader who has
+  the old one cached, demonstrated against a browser holding a stored
+  copy — not argued from the header alone.
+- An unchanged capture still answers 304 with no body.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19H.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether anything between the app and the reader caches too.** The
+  header instructs whatever honours it; a CDN or proxy in the deployed
+  path is outside this sandbox's reach and outside this item. If a
+  replaced capture is still stale on the dev slot after this ships,
+  that is the next thing to look at, and it is a deployment question
+  rather than an application one.
+
+### Out of scope
+
+- **Fingerprinting, and any asset pipeline.** See Decision.
+- **Any other response's caching.** HTML responses are uncached by
+  default here and no one has reported otherwise; widening this to the
+  whole app would be a policy nobody has needed.
+
+### Doc impact
+
+- `spec/architecture.md` — the static-assets paragraph records that the
+  mount sends `Cache-Control: no-cache`, why (a replaced file under an
+  unchanged name), and that fingerprinting stays refused (PR 1).
 - `docs/status.md` — row at the close (PR 1).

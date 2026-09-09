@@ -118,6 +118,18 @@ collects committed files from a non-recursive `iterdir()`. A third
 failure joins the two: a capture with no twin, which would render an
 empty figure in one theme while every per-file check still passed.
 
+The mount sends **`Cache-Control: no-cache`** (Segment 19H Item 4,
+2026-09-09) — store, but revalidate before use. Without it Starlette
+sends only `etag` and `last-modified`, and a browser may reuse a stored
+copy for a fraction of its age without asking, so a capture **replaced
+under an unchanged filename** keeps showing the old picture; that is not
+hypothetical, it is how the 2026-09-09 screencap refresh reached a
+reader as the previous image while the light/dark set added the same day
+appeared at once, being new URLs. Revalidation stays cheap: an unchanged
+capture still answers 304 with no body. Fingerprinted filenames would
+also solve it and are still refused — versioning the names is the asset
+pipeline this directory exists without.
+
 ### Route conventions
 
 Operator + participant **mutations** follow one house style: a `POST`
