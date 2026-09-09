@@ -2821,7 +2821,14 @@ and live specs.
   caps at 200 rows (500 filtered), so on a 1,000-row roster the
   operator cannot see half of it, and tags are how such a roster is
   partitioned — cohort, tutor group, class. Searching them is what
-  brings one partition into the window. And the
+  brings one partition into the window. **Two decisions reversed
+  2026-09-09, before any code**, on cases the author supplied: tag
+  values **do** join the typeahead (the list is built from the
+  uncapped roster, so it can name a partition whose rows the cap
+  hides — `TW01` … `TW55`), and matching is **per column** — substring
+  on names, whole-value on tags, unioned. The one-rule alternative
+  died on `Ethan`: it would have dropped every Ethan-by-name the
+  moment some tag value happened to be `Ethan`, differing by roster. And the
   four pages disagree about the dropdown beside it: three carry a
   Status filter, Relationships carries a `Search by` side-picker and
   **no status filter at all** — on the one page that can produce

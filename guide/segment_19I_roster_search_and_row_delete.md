@@ -110,33 +110,99 @@ is exact-matched against the handle
 (`_extract_filter_label_tail`), so a tag value containing parentheses
 would silently be read as a handle pick.
 
+### Decision — revised 2026-09-09
+
+The Decision above stands except in two places, both reversed the same
+day, before any code. The original text is left as written; this is
+what replaces it and why.
+
+**1. Tag values *do* join the typeahead** — reversing the fourth bullet
+and the second rejection. The author's case: tags `TW01` … `TW55`, and
+typing `TW2` should narrow the suggestions to the `TW2x` values.
+
+The argument is the item's own motivation, seen from the other end.
+**The typeahead is how an operator discovers what partitions exist.**
+Without tag values in it, an operator must already know that `TW23` is
+a value before they can filter to it — on a roster too large to read.
+And because the list is built from **`all_reviewers`**, uncapped
+(measured; see Blast radius), it can offer a partition whose rows are
+currently past the 200/500 cap: the operator sees a group they cannot
+see rows for, and picking it brings those rows into the window. That
+is the reachability problem solved rather than mitigated.
+
+The suggestions are the **distinct** tag values, not one per row — 55
+options for `TW01` … `TW55`, against 1,000 for the people list.
+
+**2. Matching is per column, not per input.** A first draft of this
+revision proposed one rule — *an input that exactly equals a known
+handle or tag value filters exactly, otherwise substring* — and it was
+wrong in the worst available way. The author's counter-example:
+typing `Ethan` should return every row whose **name** contains it. Under
+that rule, if any tag value happened to be `Ethan`, the exact branch
+would fire and **drop** Ethan Wong and Ethan Lim, keeping only rows
+whose tag or handle is exactly `Ethan`. The same input would mean
+different things on different rosters, decided by data the operator
+cannot see — and it would pass every test written for it.
+
+So the rule belongs on the column: **name and handle match by
+substring; `tag_N` matches whole-value, case-insensitively; a row
+matches if any column does.** `Ethan` returns the Ethans by name *and*
+anyone tagged exactly `Ethan`; `Team A` no longer drags in `Team A2`,
+because that is a tag and tags are whole-value.
+
+Rejected with it: **prefix matching on tags**, the apparent middle
+ground. `Team A` is a prefix of `Team A2`, so prefix reintroduces
+exactly the failure whole-value removes.
+
+**What this forces.** `_extract_filter_label_tail` fires today on *any*
+input ending in `(…)`, which is the parens hazard the original
+rejection named. It must fire only when the input **exactly equals one
+of the labels the page offered** — data-driven in the safe direction,
+since it can then only trigger on a string the app itself produced. A
+tag like `Group (B)` falls through to per-column matching and
+whole-value matches the tag.
+
 ### Semantics
 
 - **Empty search** — no-op, as today.
-- **Multiple matches across columns** — a row matches if *any*
-  searchable column contains the needle. No column weighting; this is
-  a filter, not a ranking.
-- **A typeahead pick** keeps today's behavior: text ending in
-  `(handle)` exact-matches the handle. Because suggestions stay
-  people-only, on Relationships the pick must now match **either**
-  side's handle rather than the selected side's.
-- **A typed value that ends in parentheses** is read as a handle pick
-  and will not match a tag of the same text. Known edge, unchanged
-  from today, and the reason tags stay out of the suggestions.
+- **Per-column matching, unioned** (revised 2026-09-09) — name and
+  handle by **substring**, each `tag_N` by **whole value**,
+  case-insensitive; a row matches if any column does. No weighting;
+  this is a filter, not a ranking.
+- **A people pick** keeps today's behavior — text of the form
+  `Name (handle)` exact-matches the handle — but fires **only when the
+  input exactly equals an offered label** (revised 2026-09-09), not on
+  any input ending in parentheses. On Relationships the pick matches
+  **either** side's handle rather than the selected side's.
+- **A tag value containing parentheses** therefore matches its tag
+  rather than being read as a handle pick. The edge the original
+  Decision accepted is closed by the narrower trigger.
+- **A partial tag value filters to nothing** unless it also hits a name
+  or handle: `TW2` is not a whole tag value, so the table shows
+  name/handle hits only, while the **suggestion list still narrows to
+  `TW20` … `TW29`** for the operator to pick from. The list explores;
+  the filter selects.
 - **Observers** search one tag slot, not three. The predicate reads
   the columns the model has rather than assuming three.
 - **Status on Relationships** filters on `Relationship.status`, the
   same `active` / `inactive` values `bulk_inactivate` writes.
 - **Filters compose** — status and search both apply, as they do on
   the three pages that have both today.
-- **Substring, as today** — a tag search matches any row whose tag
-  *contains* the needle, the same rule name and handle already use.
-  This is the consistent choice and it has a cost at partition scale;
-  see Open questions.
+- **Tag suggestions are the distinct values** of each slot, computed
+  from the same uncapped list the people options come from. A row
+  contributes its value once however many rows share it.
+- **A tag slot holding free text** could contribute hundreds of
+  distinct values. Tag suggestions are capped separately from people
+  and are preferred when trimming: they are the partition, and there
+  are normally few.
 - **The two Relationships datalists merge into one.** `search_by`
   currently swaps the input's `list=` between a reviewer list and a
-  reviewee list; one list carries both. The
-  `REVIEWERS_DATALIST_CAP` (200) applies to the merged list.
+  reviewee list; one list carries both, plus the pair-context tag
+  values. The `REVIEWERS_DATALIST_CAP` (200) applies to the people
+  half.
+- **A tag value equal to someone's handle** matches rows on both
+  counts — a union, which is the least surprising answer and the one
+  the author asked for in the `Ethan` case.
 
 ### Judgment calls — decided
 
@@ -148,6 +214,13 @@ would silently be read as a handle pick.
   (2026-09-09). The label names the column, the value is in the row;
   an operator searching "senior" is looking for rows, not for a column
   called something.
+- **Tag suggestions are distinct values, not one option per row**
+  (2026-09-09). 55 options against 1,000, and it makes the existing
+  200-option cap stop binding for the half of the list that matters.
+- **The people-pick trigger narrows to "equals an offered label"**
+  (2026-09-09). It was "ends in parentheses", which cannot tell a tag
+  from a label; the app knows what it offered, so let it check that
+  instead of inferring from punctuation.
 
 ### Blast radius (measured)
 
@@ -160,6 +233,14 @@ At `6b4dc027`:
 | `search_by` references | 59 in `app/`, 22 in `tests/` | `grep -rn "search_by" app/ tests/` |
 | tag slots | reviewer 3, reviewee 3, relationship 3, **observer 1** | `grep -c "tag_[0-9]: Mapped" app/db/models/<m>.py` |
 | specs to change | `spec/setup_pages.md` (the strip + the stale justification) | `grep -n "Search + filter strip" spec/setup_pages.md` |
+| datalist source | **`all_reviewers`** — the full roster, before filter and before cap | `grep -n "reviewers_search_options(" -A 2 app/web/routes_operator/_setup_reviewers.py` |
+
+**That last row is what made the 2026-09-09 reversal cheap**, and it
+was measured before the reversal was agreed rather than assumed after.
+The suggestion list is built from the complete in-memory roster, so
+distinct tag values are a set comprehension over a list the route
+already holds — no new query — and the list can name partitions whose
+rows the cap currently hides.
 
 **The 22 `search_by` references in tests are the item's real cost** —
 retiring a parameter that three test files exercise
@@ -174,27 +255,47 @@ these four functions is currently unpinned.
 
 ### PR ladder
 
-1. **PR 1 — tags join the search on Reviewers, Reviewees, Observers.**
-   No strip change, no `search_by` involvement; the three pages whose
-   dropdown is already a status filter. Lands the operator-visible
-   value first and at the lowest risk. Must not touch:
-   `filter_relationships_rows`, the templates' strip markup, or the
-   datalists.
+**Amended 2026-09-09** by `### Decision — revised`: tag values now
+join the suggestions, so PR 1 touches the datalists it was originally
+told not to. The rung boundaries are unchanged — three roster pages,
+then Relationships, then the spec — and the struck clause is left
+visible rather than edited away.
+
+1. **PR 1 — tags join the search *and the suggestions* on Reviewers,
+   Reviewees, Observers.** Per-column matching (substring on name and
+   handle, whole-value on `tag_N`); distinct tag values added to each
+   page's datalist; the people-pick trigger narrowed to "equals an
+   offered label". No strip change, no `search_by` involvement; the
+   three pages whose dropdown is already a status filter. Lands the
+   operator-visible value first and at the lowest risk. Must not
+   touch: `filter_relationships_rows`, the templates' strip markup,
+   ~~or the datalists~~ (struck 2026-09-09 — the datalists are now
+   part of this rung).
 2. **PR 2 — Relationships rationalized.** Status filter added,
-   `search_by` retired, the two datalists merged, pair-context tags
-   joined to the search. Must not touch: the other three pages'
-   filters, or anything in Item 2.
+   `search_by` retired, the two datalists merged **and carrying
+   pair-context tag values**, pair-context tags joined to the search
+   under the same per-column rule. Must not touch: the other three
+   pages' filters, or anything in Item 2.
 3. **PR 3 — the spec.** `spec/setup_pages.md`'s strip section rewritten
    to one shape for four pages, with the stale justification removed
-   rather than edited around.
+   rather than edited around, and the per-column matching rule and the
+   suggestion contract stated.
 
 ### Definition of done
 
-- Typing a tag value into any of the four search boxes filters to the
-  rows carrying it, asserted per page.
+- Typing a **whole** tag value into any of the four search boxes
+  filters to the rows carrying it, asserted per page.
+- Typing a **partial** name still returns every row whose name
+  contains it, and is not narrowed by a tag that happens to equal the
+  input — the `Ethan` case, asserted directly.
+- Each page's suggestion list offers the **distinct** tag values
+  alongside the people, including values whose rows fall past the
+  display cap.
+- A tag value containing parentheses matches its tag rather than being
+  read as a handle pick.
 - Relationships offers `All` / `Active` / `Inactive` and filters on it.
 - Relationships' search matches either side's name or handle, and the
-  page's own pair-context tags, with one merged people datalist.
+  page's own pair-context tags, with one merged datalist.
 - No `search_by` remains in `app/`.
 - The four predicates gain direct unit tests, since today they have
   none.
@@ -207,21 +308,16 @@ these four functions is currently unpinned.
 
 ### Open questions
 
-- **Substring or whole-value match on tags?** The dropdown
-  rationalization and the people-only typeahead are settled (author,
-  2026-09-09). This one is opened *by* the partition motivation and is
-  not settled. Substring is what name and handle do, so it is the
-  consistent answer — but partitions are exactly where it misleads:
-  searching `Team A` also brings in `Team A2` and `Team AB`, and an
-  operator who believes they have isolated a partition has not. That
-  matters most in combination with Item 2, where the next act may be
-  a delete. Three candidates, none free: keep substring and rely on
-  the `Showing N of M` hint; match a tag **whole-value**
-  case-insensitively while names stay substring (precise, but two
-  rules in one box); or offer the distinct values of a tag slot as a
-  picker, which is the exact tool for partitioning and a larger change
-  than this item. **Decided by the author before PR 1** — it changes
-  what the operator gets, not just how it is built.
+- ~~**Substring or whole-value match on tags?**~~ **Answered
+  2026-09-09, by the author: whole-value on tags, substring on names,
+  unioned.** The question was opened by the partition motivation and
+  closed by two cases the author supplied — `TW01` … `TW55` for the
+  suggestions, and `Ethan` for the matching. Both are recorded in
+  `### Decision — revised 2026-09-09`, along with the one-rule proposal
+  the `Ethan` case killed. The third candidate the question listed —
+  a distinct-value picker — arrived instead as tag values *in the
+  typeahead*, which is that idea at the size this item can carry.
+- None outstanding.
 
 ### Out of scope
 
