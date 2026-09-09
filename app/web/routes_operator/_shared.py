@@ -612,6 +612,14 @@ async def _handle_import(
                 {
                     "total_row_count": len(list_items),
                     "displayed_row_count": len(list_items),
+                    # Segment 19I Item 10 — this path renders the
+                    # whole roster unfiltered and uncapped, so the
+                    # shared count line has nothing to report. Set
+                    # explicitly rather than left undefined: an
+                    # absent key would render the same today, but
+                    # only by relying on Jinja's undefined being
+                    # falsy.
+                    "preview_count_line": None,
                     "filter_status": "all",
                     "filter_search": "",
                     "filter_status_options": status_options,

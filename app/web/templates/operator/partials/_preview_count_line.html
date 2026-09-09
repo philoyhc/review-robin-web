@@ -1,0 +1,15 @@
+{# The one preview-count sentence, top-left of the table card it
+   describes (Segment 19I Item 10). It sits with the rows it counts
+   (Segment 19I Item 4): it was once flush right in the
+   operator-actions strip, ~950px from the table, and now reads
+   left-to-right with the page.
+
+   Every branch of the wording — whether the pool is the roster or
+   the matching set, whether the cap withheld anything — is composed
+   in ``views.preview_count_line`` and arrives here as one string,
+   so no page can drift from the others by editing its own copy.
+   ``None`` when the table shows everything, because a caption
+   saying so is noise. #}
+{% if preview_count_line %}
+  <p class="muted table-showing-hint">{{ preview_count_line }}</p>
+{% endif %}

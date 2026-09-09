@@ -55,6 +55,7 @@ from ._invitations import InvitationsRow, build_invitations_rows
 
 # Filter / search helpers shared by Invitations + Responses
 # (sliced in PR 4).
+from ._preview_counts import preview_count_line
 from ._filters import (
     INVITATIONS_STATUS_OPTIONS,
     OBSERVERS_STATUS_OPTIONS,
@@ -214,6 +215,7 @@ __all__ = [
     "RESPONSES_STATUS_OPTIONS",
     "REVIEWEES_STATUS_OPTIONS",
     "REVIEWERS_DATALIST_CAP",
+    "preview_count_line",
     "ASSIGNMENTS_STATUS_OPTIONS",
     "assignments_picked_handles",
     "assignments_search_options",

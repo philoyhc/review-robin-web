@@ -323,15 +323,7 @@
        can fill / clear it; otherwise only when some row has data. #}
     {% set show_profile_link = edit_mode or has_photo %}
     <div class="card">
-      {# The "Showing N of M" hint sits with the rows it counts
-         (Segment 19I Item 4). It was flush right in the
-         operator-actions strip, ~950px from the table it
-         describes; here it reads left-to-right with the page. #}
-      {% if displayed_row_count != total_row_count %}
-        <p class="muted table-showing-hint">
-          Showing {{ displayed_row_count }} of {{ total_row_count }}.
-        </p>
-      {% endif %}
+      {% include "operator/partials/_preview_count_line.html" %}
       <table id="reviewees-table"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
         <thead>

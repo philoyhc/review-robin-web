@@ -600,6 +600,16 @@ def _render_relationships_page(
             "roster_response_count": 0,
             "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
+            # Segment 19I Item 10 — the one preview-count
+            # sentence the seven table pages share. The
+            # branching lives in the view helper; the
+            # template renders whatever string it returns.
+            "preview_count_line": views.preview_count_line(
+                shown=displayed_row_count,
+                matching=len(filtered),
+                total=len(all_rows),
+                noun="relationships",
+            ),
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
