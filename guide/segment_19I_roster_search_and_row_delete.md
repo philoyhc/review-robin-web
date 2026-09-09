@@ -2060,6 +2060,58 @@ The `expired` card's revert was clicked through end to end: the
 button is disabled until the confirm tick, the post lands on `draft`,
 and the lock card disappears.
 
+---
+
+**2026-09-09 — PR 3 landed. Item 6 closed.**
+
+`spec/lifecycle.md` §5 and `spec/instruments.md` now describe the
+`is_editable` gate and the three-state lock card. Two of the edited
+passages were **my own prose from Item 3**, false one item later —
+the same pattern every item in this segment has turned up.
+
+**A pre-existing spec error, corrected on the way.** The
+add-instrument route was documented as `is_ready` → **400** *"Cannot
+add instruments to an active session"*. Measured across all five
+states: it has always raised **409** through the shared gate, with
+that gate's own message. Predates Segment 19I.
+
+**`spec-writer`: three findings, all verified before acting, all
+adjudicated.**
+
+1. **Undeclared doc impact — `spec/sort_by_reviewee.md`.** Its Sort-cell
+   sentence said *"the instrument's `is_ready` lock applies"*. That
+   was accurate until PR 1: Band 2 is `inert` unless the card is
+   unlocked, and `editing_instrument_id` is forced `None` whenever
+   `can_edit` is false — so moving `can_edit` to `is_editable`
+   silently brought `expired` and `archived` under the lock.
+   Confirmed by render: `unlocked_cards` is 1 on `draft` /
+   `validated` and 0 on all three locked states. **Item 6 made this
+   stale and the plan had not named the file** — bullet added to
+   `### Doc impact` per the plan convention, and the sentence
+   rewritten to describe the mechanism rather than a predicate it
+   never read directly.
+2. **`spec/lifecycle.md` §3.1 named the wrong gate for two
+   surfaces**, both predating Item 6 and both verified by grep:
+   instrument CRUD calls `_require_instrument_editable` (18 sites in
+   `_instruments.py`, 0 calls to `_require_editable`), and the
+   email-template editor calls **no** lifecycle gate at all — which
+   §5 of the same file has always said, so the two passages
+   contradicted each other. Fixed while in the sentence: leaving it
+   would have meant implicitly endorsing it in the same pass.
+3. **The Assignments page has this item's defect, unfixed.** Its
+   routes gate on `_require_editable` (`is_editable`) while
+   `session_assignments.html` still disables its controls on
+   `is_ready` alone — so on `expired` and `archived` it offers live
+   controls the routes refuse. Verified. That is the *dead-control*
+   shape Item 3 removed from the rosters, not this item's
+   destructive one, and it is a different surface: **reported, not
+   fixed** — see "Out of scope".
+
+**Not verified here:** the Azure dev slot. PRs 1 and 2 changed
+templates; PR 3 changed only prose.
+
+---
+
 **Measured after:** the suite went 3295 → **3310**.
 
 **CI caught a break my local gate could not see.** The new lock-card
@@ -2122,6 +2174,17 @@ other either.
 - **A general "finished session" read-only mode** across the operator
   UI. That is a design, not a fix, and belongs in
   `guide/deferred_consolidated.md` if the author wants it.
+- **The Assignments page's dead controls on `expired` / `archived`**
+  (found by `spec-writer` at this item's close, 2026-09-09). Its
+  routes gate on `_require_editable` while
+  `session_assignments.html` disables on `is_ready` alone, so it
+  offers controls the routes refuse — Item 3's shape, on a surface
+  neither Item 3 nor Item 6 covered. Reported for the author to
+  scope; fixing it here would widen the item past the page it names.
+- **The four roster pages' missing lock card on `expired` /
+  `archived`** (Item 3's own "Out of scope", still open). Instruments
+  now has one and they do not, so the two surfaces differ until they
+  catch up — recorded in `spec/lifecycle.md` §5.
 
 ### Doc impact
 
@@ -2129,6 +2192,12 @@ other either.
   session is `is_ready`" to the `is_editable` rule, and the page's
   lock-card states are recorded (Item 6).
 - `spec/lifecycle.md` — §5's editable-surface account gains
-  Instruments under the same `is_editable` rule as the rosters
+  Instruments under the same `is_editable` rule as the rosters;
+  §3.1's list of `_require_editable` callers loses instrument CRUD
+  and the email-template editor, neither of which calls it
   (Item 6).
+- `spec/sort_by_reviewee.md` — **added at build**, not named at
+  planning time: the Sort-cell lock sentence described an
+  `is_ready` lock, and Item 6 brought `expired` and `archived`
+  under it. See `### Status` (Item 6).
 - `docs/status.md` — row at the close (Item 6).

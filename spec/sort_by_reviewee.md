@@ -218,7 +218,7 @@ entirely on a no-op save (when `old_value == normalised`).
 
 Sort config edits **invalidate `validated → draft`** via `lifecycle.invalidate_if_validated()`, mirroring every other instrument-mutating service per item #3. Setting a sort doesn't change assignment data, but it changes the reviewer-facing form render, which the validation snapshot covers.
 
-The instrument's `is_ready` lock applies — when the session is `ready`, Sort cells render locked alongside the rest of the Display Fields card, and the operator must Revert to draft to change them (same yellow lock card pattern as elsewhere).
+The instrument card's edit lock applies — whenever the session is **not editable** (`ready`, `expired` or `archived`) Sort cells render locked alongside the rest of the Display Fields card, and the operator must leave that state to change them. The lock is not read from the lifecycle directly: Band 2 is `inert` unless the card is unlocked, and `editing_instrument_id` is forced to `None` whenever `can_edit` is false (`app/web/views/_instruments.py`). Segment 19I Item 6 moved `can_edit` from `not is_ready` to `is_editable`, which is what brought `expired` and `archived` under this lock — before it, a closed session's Sort cells were still editable. The way out is the state's own: Revert to draft from `ready` or `expired`, Unarchive from `archived` (`spec/lifecycle.md` §5).
 
 Reviewer-side override is view-only and never invalidates anything.
 

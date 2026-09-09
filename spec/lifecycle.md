@@ -228,11 +228,22 @@ state machine at the request boundary:
 ### 3.1 `_require_editable(session)`
 
 Raises **HTTP 409 Conflict** when the session is not `draft` or
-`validated`. Every operator setup-mutation endpoint (session
-edit, roster import, roster delete-all, instrument CRUD,
-relationships CRUD, assignment generate, assignment delete-all,
-Quick Setup, settings import, email-template editor, etc.) calls
-this **first**.
+`validated`. Operator setup-mutation endpoints (session edit,
+roster import, roster delete-all, relationships CRUD, assignment
+generate, assignment delete-all, Quick Setup, settings import,
+etc.) call this **first**.
+
+Two corrections to what this list used to claim, both found by the
+`spec-writer` pass on Segment 19I Item 6 and both predating it:
+
+- **Instrument CRUD does not call this helper.** Its ~24 route
+  sites call `_require_instrument_editable` →
+  `_can_edit_instrument`, a separate helper that since Item 6
+  carries the *same* predicate (`is_editable`) and raises the same
+  409 with its own detail message. Same rule, different function.
+- **The email-template editor calls no lifecycle gate at all**, so
+  it never belonged here — §5 below has always said so, and the
+  two passages contradicted each other.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
 
