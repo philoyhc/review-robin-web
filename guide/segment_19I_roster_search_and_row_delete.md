@@ -1251,8 +1251,10 @@ label; the strip label reverted to the Item 2 wording; an Observers
 label promising to delete responses; Observers' false gate restored;
 and the import-error path losing its keys again.
 
-**Measured after:** the suite went 3193 → 3207 (+14 Danger Zone, +1
-import-error path, with two Item 2 copy assertions rewritten).
+**Measured after:** the suite went 3193 → **3209** (+16: 14 in the new
+Danger Zone file and 2 for the import-error path, which is
+parametrised over both cascading pages — I wrote +1 before running it,
+and the run is what the number comes from).
 
 ### Definition of done
 
