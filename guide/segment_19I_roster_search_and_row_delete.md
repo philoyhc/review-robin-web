@@ -1211,6 +1211,49 @@ like the thing but also occurs somewhere the change does not touch.
 `tests/integration/test_setup_selection_lifecycle.py`, five statuses ×
 four pages plus the exceptions).
 
+**2026-09-09 — PR 2 landed** (the copy, and the Danger Zone made
+reachable). Both confirmations now name what goes, modelled on the
+Instruments sentence: the strip reads "Yes, delete these and their
+associated assignments and reviewer responses", the Danger Zone names
+the counts. `delete-all` carries the acknowledgement on the same single
+tick, so **the defect that opened finding 3 is closed**: a session with
+responses can have its roster deleted, asserted by posting exactly what
+the rendered form carries rather than fields invented by the test.
+
+**The copy needed a third state the finding did not name.** A roster
+whose rows carry assignments loses them even with no response saved,
+and the old label said nothing. Two flags rather than one, so the
+sentence is true in all three cases.
+
+**Observers' gate was dropped, not satisfied.** `delete_all_observers`
+required `acknowledge_response_loss` for a loss that cannot happen —
+nothing references an observer. Feeding it a hidden field would have
+made the button work while leaving the operator agreeing to a fiction;
+the requirement is gone and the now-dead parameter with it.
+Relationships never had the gate, so it needed nothing.
+
+**A latent bug of my own, found by a comparison rather than a test.**
+`_shared.py` builds its **own** context for the CSV-import error
+render — a second render path this plan's blast radius missed — and it
+never carried `delete_discards_responses`, which Item 2 PR 3 added. No
+test failed, because **Jinja's `Undefined` is falsy in `{% if %}`**: the
+label silently took its no-loss branch on that page for as long as the
+key had existed. Only `roster_response_count`, which is *compared*
+rather than tested, raised an error and exposed the older omission. A
+test now pins that page. The lesson is not "add the key" — it is that a
+missing context flag is invisible to every boolean the template makes
+of it, so the render path count is the thing to measure, and I measured
+templates instead.
+
+**Seven mutants, seven kills**: the hidden ack removed; the ack shipped
+unconditionally; the response clause dropped from the Danger Zone
+label; the strip label reverted to the Item 2 wording; an Observers
+label promising to delete responses; Observers' false gate restored;
+and the import-error path losing its keys again.
+
+**Measured after:** the suite went 3193 → 3207 (+14 Danger Zone, +1
+import-error path, with two Item 2 copy assertions rewritten).
+
 ### Definition of done
 
 - Row checkboxes, the selection buttons and the Delete gate render on

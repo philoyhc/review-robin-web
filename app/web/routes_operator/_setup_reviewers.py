@@ -201,6 +201,17 @@ def _render_reviewers_page(
             # route then gates on the *selected* rows' exact
             # count, so a tick on a selection that carries no
             # responses costs nothing.
+            # Segment 19I Item 3 — the confirmation names what the
+            # delete destroys, modelled on the Instruments page. A
+            # roster whose rows carry assignments loses them even
+            # when no response has been saved, so the two clauses
+            # are separate flags rather than one.
+            "delete_discards_assignments": (
+                csv_imports.existing_assignment_count(db, review_session.id) > 0
+            ),
+            "roster_response_count": lifecycle.session_response_count(
+                db, review_session
+            ),
             "delete_discards_responses": (
                 lifecycle.session_has_responses(db, review_session)
             ),

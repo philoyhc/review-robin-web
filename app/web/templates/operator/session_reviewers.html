@@ -234,16 +234,20 @@
                      form="reviewers-bulk-form"
                      data-delete-confirm="reviewers-bulk-delete"
                      disabled>
-              {# Response-aware copy (Segment 19I Item 2). One
-                 checkbox, not two: the strip's confirmed shape
-                 has a single gate, so the acknowledgement rides
-                 with the tick as a hidden field and the label
-                 says what is being agreed to. The route still
-                 requires both fields, and refuses without the
-                 tick that carries them. #}
+              {# The sentence names what goes, modelled on the
+                 Instruments page's "…and its associated assignments
+                 and reviewer responses." (Segment 19I Item 3). One
+                 checkbox, not two: the strip's confirmed shape has a
+                 single gate, so the acknowledgement rides with the
+                 tick as a hidden field and the label says what is
+                 being agreed to. The route still requires both
+                 fields, and refuses without the tick that carries
+                 them. #}
               <span>
                 {%- if delete_discards_responses -%}
-                  Yes, delete these and discard their saved responses
+                  Yes, delete these and their associated assignments and reviewer responses
+                {%- elif delete_discards_assignments -%}
+                  Yes, delete these and their associated assignments
                 {%- else -%}
                   Yes, delete these
                 {%- endif -%}
@@ -696,11 +700,26 @@
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required
                      data-delete-confirm="delete-all">
+              {# Names what goes, modelled on the Instruments page
+                 (Segment 19I Item 3). The response clause is what
+                 the label was missing: `delete-all` destroys every
+                 saved answer under this roster and said nothing. #}
               Yes, delete the existing
               <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and their associated
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
               and
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
             </label>
+            {# The acknowledgement rides with this tick, as it does
+               on the selected-rows gate. Without it the route's
+               `_require_response_loss_ack` returned 400 and no
+               roster template sent the field — so Delete-all was
+               unreachable on any session with a response. #}
+            {% if roster_response_count > 0 %}
+              <input type="hidden" id="reviewers-delete-all-ack"
+                     name="acknowledge_response_loss" value="true">
+            {% endif %}
           </p>
           <p>
             <button class="btn destructive" type="submit"

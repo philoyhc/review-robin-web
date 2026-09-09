@@ -593,6 +593,11 @@ def _render_relationships_page(
             # that cannot happen. The route's gate reaches the
             # same answer on its own via ``cascade_counts``; this
             # keeps the page from saying otherwise.
+            # Always ``False`` / ``0``: deleting a relationship reaches
+            # no assignment and no response (Segment 19I Item 2,
+            # measured from the model graph).
+            "delete_discards_assignments": False,
+            "roster_response_count": 0,
             "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
             "is_ready": is_ready,

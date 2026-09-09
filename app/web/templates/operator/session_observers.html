@@ -271,16 +271,20 @@
                      form="observers-bulk-form"
                      data-delete-confirm="observers-bulk-delete"
                      disabled>
-              {# Response-aware copy (Segment 19I Item 2). One
-                 checkbox, not two: the strip's confirmed shape
-                 has a single gate, so the acknowledgement rides
-                 with the tick as a hidden field and the label
-                 says what is being agreed to. The route still
-                 requires both fields, and refuses without the
-                 tick that carries them. #}
+              {# The sentence names what goes, modelled on the
+                 Instruments page's "…and its associated assignments
+                 and reviewer responses." (Segment 19I Item 3). One
+                 checkbox, not two: the strip's confirmed shape has a
+                 single gate, so the acknowledgement rides with the
+                 tick as a hidden field and the label says what is
+                 being agreed to. The route still requires both
+                 fields, and refuses without the tick that carries
+                 them. #}
               <span>
                 {%- if delete_discards_responses -%}
-                  Yes, delete these and discard their saved responses
+                  Yes, delete these and their associated assignments and reviewer responses
+                {%- elif delete_discards_assignments -%}
+                  Yes, delete these and their associated assignments
                 {%- else -%}
                   Yes, delete these
                 {%- endif -%}

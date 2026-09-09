@@ -388,9 +388,10 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
 
     with_loss = client.get(f"/operator/sessions/{s.id}/{page}").text
     assert f'id="{page}-delete-ack"' in with_loss
-    assert "delete these and discard their saved responses" in with_loss, (
-        "one gate, and its label says what the tick agrees to"
-    )
+    assert (
+        "delete these and their associated assignments and reviewer responses"
+        in with_loss
+    ), "one gate, and its label says what the tick agrees to (19I.3 copy)"
 
 
 @pytest.mark.parametrize("page", ["observers", "relationships"])
@@ -414,4 +415,5 @@ def test_the_gate_never_names_response_loss_where_there_is_none(
     body = client.get(f"/operator/sessions/{s.id}/{page}").text
 
     assert f'id="{page}-delete-ack"' not in body
-    assert "discard their saved responses" not in body
+    assert "reviewer responses" not in body
+    assert "associated assignments" not in body
