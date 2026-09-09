@@ -554,12 +554,13 @@ checkbox toggles the rows on the page, and the page is capped at
 takes 500 and a delete leaves 100 behind **having looked complete** —
 the sharp edge of the partition workflow the search exists to enable.
 The confirmation therefore states the **selected** count and never the
-match count. Two numbers say the rest: the pill's own denominator
-(`4 of 4 selected` — every rendered row picked) read against the
-`Showing N of M` hint above the table (`Showing 4 of 12` — the window
-is not the roster). Before Item 4 the hint sat inside this row and
-carried that job alone; it now sits with the table and the pill states
-its own window, so the pairing survives the move.
+match count. Two numbers say the rest, and on that same 600-row tag
+they read: `Showing 500 of 600` above the table — the window is not
+the match — against `500 of 500 selected` in the status row — every
+rendered row is picked. Until Item 4 the hint sat in the status row
+beside the gate and carried that job by adjacency; it now sits with
+the table, and the pill states its own denominator, so the pairing
+survives the move across two cards.
 
 ### The Danger Zone's `delete-all` (Segment 19I Item 3)
 

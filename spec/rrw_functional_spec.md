@@ -1052,8 +1052,10 @@ Each page offers:
 - **Operator-actions card** — a search + status-filter strip
   and a selection-driven row of bulk and per-row actions
   (Edit, Inactivate, Activate, Add, Delete, Search, Clear),
-  with a status row beneath it carrying "Showing N of M", the
-  selected-count and the delete confirmation (Segment 19I).
+  with a status row beneath it carrying the selected-count pill
+  (`N of M selected`, where M is the rendered window) and the
+  delete confirmation. The `Showing N of M` hint sits above the
+  preview table, not in this row (Segment 19I Item 4).
   In Edit / Add mode an inline Save + Cancel pair replaces the
   row of selection-driven buttons.
 - **Preview table** — every row in the roster (paginated by
