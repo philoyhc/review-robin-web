@@ -168,3 +168,21 @@ def test_a_blank_term_yields_no_tag_predicates() -> None:
         assert _tag_matches(term, *columns) == [], repr(term)
 
     assert len(_tag_matches("Team A", *columns)) == 3
+
+
+def test_the_placeholder_names_every_column_the_search_reads(
+    db: Session, client: TestClient
+) -> None:
+    """It read `Name or email` while the tag columns were invisible,
+    which was honest. Now that they match, the placeholder is the
+    only thing on the page that says what the box will search.
+
+    Pinned because copy that nothing asserts drifts silently — the
+    lesson `lock_action` taught in Item 6.
+    """
+    s = seed_session_with_assignment(client, db, code="ast-ph")
+
+    body = client.get(f"/operator/sessions/{s.id}/assignments").text
+
+    assert 'placeholder="Name, email or tag"' in body
+    assert 'placeholder="Name or email"' not in body

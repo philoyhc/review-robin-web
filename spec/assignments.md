@@ -626,6 +626,49 @@ altogether.
 gained one in Item 6; a third variant would widen that
 inconsistency rather than close it.
 
+### Search matching (Segment 19I Item 7)
+
+`?q=` filters the pairs; `?search_by=` scopes it. The matching rule
+is the one `spec/setup_pages.md` "Search matching and suggestions"
+settles for the roster pages, applied to a pair:
+
+| Column | Rule |
+|---|---|
+| Reviewer `name` / `email`, Reviewee `name` / `email_or_identifier` | substring, case-insensitive |
+| `tag_1..3` on either side | **whole value**, case- and surrounding-whitespace-insensitive |
+
+`search_by` is `all` (either side), `reviewer` or `reviewee`, and it
+scopes a side's tags along with its name and handle — **tags need no
+control of their own here**, because they belong to the reviewer and
+the reviewee individually rather than to the pair. (Relationships'
+pair-context tags are the case that has no side to attribute them
+to, and `spec/setup_pages.md` records why they match both.)
+
+Scoping is **per side, not per person**: on a self-review row the
+reviewer and reviewee are the same person, so that person's tag
+matches under `reviewer` *and* under `reviewee`.
+
+The tag columns were invisible to this search until Item 7 — a tag
+an operator could filter by on the roster pages returned nothing
+here.
+
+**The rule is expressed twice, deliberately.** The roster pages run
+it in Python over a loaded list
+(`app/web/views/_filters.py::_matches_row`); this page runs it in
+SQL, because `count_pairs` and the `PAIR_PREVIEW_LIMIT` cap both run
+in the query and `Showing N of M` keeps its meaning — `N` is the
+pairs matching the term, `M` every pair in the session.
+`tests/integration/test_assignments_search_tags.py` holds one table
+of cases against both paths so they cannot drift apart silently.
+Its known limit: Python `str.casefold` and SQL `lower` agree on
+ASCII but not on every codepoint.
+
+**Not partitioned by instrument.** Raised and set aside 2026-09-09:
+a session carries a handful of distinct instruments against a roster
+of hundreds, so an instrument partition divides the list barely at
+all. The per-instrument `Show` checkboxes in the status table remain
+the instrument-side filter — client-side, over the rendered window.
+
 ### Preview table
 
 The full assignment matrix, one row per `Assignment`. Columns

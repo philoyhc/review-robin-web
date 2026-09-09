@@ -2311,6 +2311,59 @@ two expressions of one rule drift. See "Open questions".
 that has never had it, and the author asked for matching, not
 suggestions. Recorded in "Out of scope".
 
+### Status
+
+**2026-09-09 — landed in two PRs, as laid out.**
+
+**The open question is closed by the author**, whose constraint was
+*"Don't change what the count mean."* That settles it for the
+duplicate-plus-conformance-test: `count_pairs` and the cap run in
+the query, so the rule is expressed a second time in SQL and one
+table of cases runs against both paths.
+
+**An instrument partition was raised and set aside** (author,
+2026-09-09): *"Partitioning by instruments over a large roster will
+do very little since there will always only be a few distinct
+instruments."* Measured before the decision, and worth keeping
+because the measurement outlived the feature:
+`_instrument_label` returns `short_label`, falling back to
+`Instrument_{id}` — the stored `name` is *"a pure internal handle"*
+and appears **nowhere** on the page, so the obvious implementation
+(match `Instrument.name`) would have matched a string no operator
+can see. Also found: the per-instrument `Show` checkboxes already
+filter by instrument, **client-side over the rendered window**, so
+they show a partial view on a session past the 200-row cap and
+never move the count. Both recorded in `spec/assignments.md`.
+
+**Mutation testing found the empty-term guard unpinned**, and then
+found my first attempt to pin it *also* passed with the guard gone:
+an empty term makes the name predicate `ILIKE '%%'`, which matches
+every row whatever the tags do, so at `count_pairs` level the guard
+is invisible. Asserted on `_tag_matches`, where it lives. Sixth
+unpinned behaviour caught this way in the segment.
+
+**Two of my tests asserted premises the fixture does not hold.**
+`_assignment_states.seed_session_with_assignment` (written for Item
+8) seeds a **self-review** row whose reviewee is the same person as
+the reviewer and carries the same `Team A` tag. So `Team A` matches
+under both scopes, and matches *both* pairs under `reviewer`, which
+suppresses the `Showing N of M` hint. Rewritten against measured
+counts — `Cohort 1` and `Team B` are the clean one-sided pairs —
+and the shared-tag case gets its own test, because *scoping is per
+side, not per person* is a real rule that only a self-review row
+makes visible.
+
+**Six mutations, six kills**: predicates dropped, whole-value
+weakened to substring, the empty-term guard removed, the reviewee
+side matched against the reviewer's columns, `tag_2` / `tag_3`
+dropped, and the placeholder reverted.
+
+**Measured after:** the suite went 3338 → **3382**.
+
+**Not verified here:** the Azure dev slot. PR 2 changes one
+placeholder string; the matching itself is exercised through the
+route in the tests.
+
 ### Definition of done
 
 - Each of the seven measured cases above asserted, including the two
