@@ -2780,6 +2780,76 @@ At `b4724e16`:
    not touch: the status filter, tag matching.
 3. **PR 3 — the spec.**
 
+### Status
+
+**2026-09-09 — landed in three PRs, as laid out.**
+
+**The swap question was settled by the author before the build**:
+the `Search by:` select stays, because
+`check_cross_table_identity` documents that the same person is
+routinely both reviewer and reviewee, so a picked label under `all`
+returns both the reviews they must write and the reviews about them.
+
+**Two latent traps in the page, both found rather than reasoned
+about.**
+
+1. `col_data_sample` was aliased to `pair_sample` whenever no search
+   was active, to skip a second query. Filtering `pair_sample` by
+   status would have silently filtered the **column chips** too. The
+   condition now covers both filters.
+2. Naming the route parameter `status` shadowed the module-level
+   `status` import, and the page died with
+   `AttributeError: 'str' object has no attribute 'HTTP_200_OK'`.
+   Found by running it. It is `filter_status` with a `status` alias,
+   so the URL is unchanged.
+
+**The datalist quietly gutted four existing sort assertions, and
+that is the finding of this item.** `test_assignments_sort.py`
+compares where names appear in the document; the new `<datalist>`
+renders **before** the table and is sorted alphabetically, so
+`find()` began returning its hits. **One test failed loudly — the
+descending one. The three ascending ones would have passed whatever
+order the table was in.** All five are now scoped to the table and
+mutation-checked: removing or inverting the sort fails three of
+them, where before the fix the ascending one survived both.
+
+The lesson generalises past this page: **a test that locates content
+by position in a whole rendered document is one new element away
+from proving nothing**, and the element that breaks it need not be
+near the thing under test.
+
+**Three of my own assertions proved nothing until fixed.** The chip
+test matched `data-col-chip`, an attribute that does not exist,
+comparing `[] == []`; two pick tests called the service directly
+with a label the *route* resolves, so they tested a path the
+operator never takes. Rewritten to assert the enabled chip set (and
+that it is non-empty), and to exercise the pick through the route
+as well as the predicate.
+
+**Nine mutations, nine kills** across the two code PRs: the status
+filter never applied, active/inactive swapped, the chip sample
+inheriting the filter, the route-level normalisation dropped, the
+sort removed, the sort inverted, and the pick predicate's three
+paths.
+
+**Two process failures worth recording, both mine.**
+
+- A mutation loop ran `git checkout -- app/` while PR 2's app edits
+  were **uncommitted** and deleted them; the tests survived (they
+  live under `tests/`), so the file passed in isolation before the
+  run and failed after. The same mistake was made earlier in this
+  segment on a roster template. The guard is to commit before
+  mutating, which PR 1 did and PR 2 did not.
+- The gate was chained as `ruff && pytest | tail`, and a pipe makes
+  the exit status `tail`'s — so a failing suite still satisfied the
+  `&&` and a red commit was pushed. Exit codes are captured, not
+  piped, from here.
+
+**Measured after:** the suite went 3382 → **3403**.
+
+**Not verified here:** the Azure dev slot. Both PRs changed the
+template.
+
 ### Definition of done
 
 - Status filters to exactly the `include` value, asserted for all

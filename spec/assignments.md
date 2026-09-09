@@ -663,11 +663,74 @@ of cases against both paths so they cannot drift apart silently.
 Its known limit: Python `str.casefold` and SQL `lower` agree on
 ASCII but not on every codepoint.
 
+**The typeahead** (Segment 19I Item 9) offers both sides'
+`"Name (handle)"` labels in **one** list, sorted case-insensitively
+and capped at `REVIEWERS_DATALIST_CAP`. One list rather than one per
+side because `Search by:` can change without a reload; the picked
+handle resolves against whichever side the scope allows anyway.
+
+**Tag values are not offered**, unlike the roster pages' list. A tag
+identifies too many pairs to partition by here, where on a roster of
+people it partitions usefully (author's measurement against a large
+mock roster, 2026-09-09). Tag *matching*, above, is unaffected.
+
+**A picked label matches the handle by equality**, and this is
+load-bearing rather than a refinement: the term submitted is the
+whole label, and `%Ana Lim (ana@example.edu)%` is a substring of no
+name and no email — so without the rule a picked suggestion returns
+**nothing**. Equality is also what separates `ana@example.edu` from
+`ana2@example.edu`, which a name substring cannot.
+
+Detection is `views.assignments_picked_handles`, resolved **per
+side** against the **uncapped** label sets, so a label past the
+display cap that the operator types from memory is still recognised.
+The two sides carry different rules, both inherited from the roster
+pages rather than newly invented: a **reviewer** tail must contain
+`@` (their handle is always an email, and the guard also stops a tag
+like `Group (B)` reading as a pick), a **reviewee** tail need not
+(`email_or_identifier` may be an anonymous ID). A pick naming a side
+the scope excludes matches nothing, rather than falling back to a
+substring search that would ignore the scope.
+
 **Not partitioned by instrument.** Raised and set aside 2026-09-09:
 a session carries a handful of distinct instruments against a roster
 of hundreds, so an instrument partition divides the list barely at
 all. The per-instrument `Show` checkboxes in the status table remain
 the instrument-side filter — client-side, over the rendered window.
+
+### Status filter (Segment 19I Item 9)
+
+`?status=` filters the pairs by **`Assignment.include`** — the
+boolean the operator-actions card's own **Inactivate** / **Activate**
+buttons flip, and which already dims a row when false. It was visible
+and unfilterable until Item 9, so an operator could inactivate in
+bulk and have no way to list the result back.
+
+| value | matches |
+|---|---|
+| `all` (and anything unrecognised) | every pair |
+| `active` | `include IS true` |
+| `inactive` | `include IS false` |
+
+Options come from `views.ASSIGNMENTS_STATUS_OPTIONS`; the select is
+the roster pages' shape (`spec/setup_pages.md`).
+
+**It composes with the search into `Showing N of M`** — `N` is the
+pairs matching *both* filters, `M` every pair in the session. That is
+the roster pages' own reading of the same sentence
+(`views/_filters.py`: *"Filters compose: status + search"*).
+
+**The column chips ignore both filters.** `col_data_sample` is built
+from an unfiltered `list_pairs` so narrowing the view never flips a
+chip's enabled state. It is aliased to the filtered sample only when
+*neither* filter is active, purely to skip a second query.
+
+The value is normalised at the route before it reaches the context,
+because it also rides the bulk form's hidden `filter_status` field
+and returns on the next request — an unrecognised value would
+otherwise persist there. The route parameter is named `filter_status`
+with a `status` alias: `status` alone shadows the module-level
+`status` import (`status.HTTP_200_OK`).
 
 ### Preview table
 
