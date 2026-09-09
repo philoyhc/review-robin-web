@@ -2921,3 +2921,218 @@ template.
   typeahead and the picked-label rule; a new note records the status
   filter and that the chip sample stays unfiltered (Item 9).
 - `docs/status.md` — row at the close (Item 9).
+
+## Item 10 — one preview-count sentence across seven pages
+
+### Opportunity
+
+The author, reading the Assignments page after Item 9: the
+`Showing first N of M unique pairs.` line is in the right place but
+"the styling seems slightly different from the version in the
+rosters", and the page also carries a second, separate
+`…and X more not shown.` below the table.
+
+Both observations are correct, and measuring the seven preview
+pages found the divergence is wider than styling:
+
+| Page | Notice | Position | Class | Capped? |
+|---|---|---|---|---|
+| Reviewers / Reviewees / Relationships / Observers | `Showing N of M.` | top-left of table card | `.muted .table-showing-hint` | 200 / 500 |
+| Assignments | `Showing N of M.` | filter row, flush right | `.muted` | — |
+| Assignments | `Showing first N of M unique pairs.` | top-left of preview card | `.form-help` | 200 (`PAIR_PREVIEW_LIMIT`) |
+| Assignments | `…and X more not shown.` | below the table | `.form-help` | — |
+| Invitations / Responses | `Showing N of M.` | filter row, flush right | `.muted` | **none** |
+
+Three findings, all measured rather than reasoned about:
+
+1. **The styling difference is real and has a cause.**
+   `.table-showing-hint` (`base.html:1392`) sets only a margin, so
+   the text inherits body size; `.form-help` (`base.html:2618`) sets
+   `font-size: var(--fs-small)`. The Assignments line renders
+   *smaller* than the rosters'.
+2. **Invitations and Responses have no row budget at all.**
+   `rows = views.filter_*_rows(all_rows, …)` with no slice
+   (`_operations.py:320`, `:628`). They render every matching row,
+   however many. So `Showing first N of M` would be false there — N
+   always equals M.
+3. **The roster sentence already conflates two things.**
+   `total_row_count = len(all_reviewers)` — the *unfiltered* total —
+   but `displayed_row_count = len(filtered[:cap])`
+   (`_setup_reviewers.py:139-145`, `:196`). Filter 1,240 to 3 and it
+   says `Showing 3 of 1,240`, a filter report; cap 300 to 200 and it
+   says `Showing 200 of 300`, a cap report. One sentence, two
+   meanings. Appending "; X more not shown" to it unconditionally
+   would be **wrong** in the filter case: rows excluded by a filter
+   are not withheld, they do not match.
+
+### Decision
+
+One sentence, one position (top-left of the table card), one class,
+on all seven pages — with the clauses varying so each branch stays
+true:
+
+| State | Sentence |
+|---|---|
+| Capped, unfiltered | `Showing first 200 of 1,240 reviewers; 1,040 more not shown.` |
+| Capped, filtered | `Showing first 500 of 900 matching reviewers; 400 more not shown.` |
+| Filtered, under cap | `Showing 3 of 1,240 reviewers.` |
+| Unfiltered, under cap | *(nothing rendered)* |
+
+In every branch **M is the pool the numerator was drawn from**, and
+the word `matching` appears exactly when M is the matching count
+rather than the whole roster. The `; X more not shown` clause
+appears **only when the cap actually bit**.
+
+Both decisions were put to the author (2026-09-09) and settled:
+
+- **Invitations and Responses stay uncapped.** Rejected: adding the
+  rosters' 200/500 cap. It would have made the `first …` branch
+  reachable there and the seven pages uniform, and it is low-risk
+  (measured: neither template contains a checkbox or a bulk action,
+  so nothing can silently act on a hidden row) — but it is a
+  behaviour change on two read-only monitoring pages, and the author
+  chose not to buy uniformity with one. Consequence: only the
+  filter branch ever fires on those two.
+- **M = matching rows in the capped branch.** Rejected: keeping M as
+  the whole roster always. `first 500 of 1,240` when only 900 match
+  overstates what the filter left, and the withheld count would be
+  computed against the wrong denominator.
+
+Rejected for the shape itself: **two separate lines** (a filter
+count where it is now, plus a cap line top-left). Most precise, but
+it is the bottom-of-table duplication this item exists to remove,
+relocated.
+
+### Semantics
+
+Per boundary, for the helper that composes the sentence:
+
+- **`shown == matching == total`** — nothing renders. Preserves
+  today's rule (`test_setup_showing_hint.py:146`): `Showing 6 of 6`
+  is noise.
+- **`shown == matching < total`** (filtered, under cap) — filter
+  branch, no `first`, no withheld clause.
+- **`shown < matching == total`** (capped, unfiltered) — cap branch,
+  M is the total, no `matching` word.
+- **`shown < matching < total`** (capped *and* filtered) — cap
+  branch, M is the matching count, `matching` word present. **No
+  existing test covers this state**; verified by reading all 30
+  `Showing` sites in `tests/`. `test_reviewers_page_filter.py:195`
+  looks like it does but seeds `status=active` against 600 active
+  rows, so total == matching == 600 and the two readings coincide.
+- **Zero matches** — the no-match message already owns that state
+  (`session_assignments.html:309`); the count line does not render.
+  Assignments today renders `Showing 0 of 1`
+  (`test_assignments_page_generate.py:240`) from the filter-row
+  span, which this item removes; the assertion moves to the new
+  line's absence plus the no-match copy.
+- **Noun per page** — `reviewers`, `reviewees`, `relationships`,
+  `observers`, `assignments`; **Invitations says `reviewers`** and
+  **Responses says `reviewees`**, because those tables are one row
+  per reviewer and per reviewee respectively (verified:
+  `build_invitations_rows` iterates `per_reviewer_progress`,
+  `build_responses_rows` iterates `per_reviewee_coverage`).
+- **Thousands separators** — kept, as Assignments already does
+  (`"{:,}".format`), and extended to the roster numbers, which
+  currently render bare.
+
+### Judgment calls — decided
+
+- **`.table-showing-hint` is the survivor**, not `.form-help`. The
+  author named the rosters as the reference ("different from the
+  version in the rosters"), and the hint is a statement about the
+  table, not help text for a form control.
+- **The count leaves `.filter-actions` on three pages**
+  (Assignments, Invitations, Responses). `Clear` and `Apply` stay —
+  they are actions; the count is a report, and the author's rule is
+  that it always sits top-left.
+- **The helper returns the composed string, not parts.** The
+  branching is the contract; splitting it across a view helper and a
+  Jinja `{% if %}` chain would put half the rule in a template,
+  which `spec/architecture.md` reserves `app/web/views/` for.
+
+### Blast radius (measured)
+
+```
+grep -rln "Showing" app/web/templates/                    → 8 files (7 pages + base.html)
+grep -rln "table-showing-hint" app/web/templates/         → 5 files (4 rosters + base.html)
+grep -rn "Showing" tests/ --include=*.py | wc -l          → 30 (11 files; ~9 are comments)
+grep -rn "more not shown" app/ tests/ spec/ docs/         → 1 (session_assignments.html only)
+```
+
+Route modules carrying the context keys: `_setup_reviewers.py`,
+`_setup_reviewees.py`, `_setup_relationships.py`,
+`_setup_observers.py`, `_assignments.py`, `_operations.py` (two
+handlers) — 6 files.
+
+Specs describing the hint: `spec/setup_pages.md` (6 sites),
+`spec/assignments.md` (3), `spec/operations_pages.md` (2),
+`spec/lifecycle.md` (2), `spec/rrw_functional_spec.md` (1).
+`spec/preview_hub.md:119` matches the grep but is an unrelated use
+of the word.
+
+### PR ladder
+
+1. **The helper, the shared partial, and the four roster pages.**
+   Establishes the contract on the pages that already have both the
+   cap and the class, so the diff is copy + call-site only.
+2. **Assignments.** Three notices collapse to one: the filter-row
+   span and the below-table line go, the top-left line adopts the
+   helper and the roster class. Must not touch the search, the
+   status filter, or the chip sample.
+3. **Invitations and Responses.** The count moves from the filter
+   row to the top-left of the table card, noun `reviewers` /
+   `reviewees`. No cap added — filter branch only. Must not touch
+   the datalists (both already render them).
+4. **Spec + `docs/status.md` row.**
+
+### Definition of done
+
+- One helper composes all four branches, unit-tested at each
+  boundary including `shown < matching < total`, which nothing
+  covers today.
+- All seven pages render the line top-left of the table card in
+  `.table-showing-hint`; asserted per page, scoped to the card.
+- `…and X more not shown.` appears nowhere in `app/`.
+- No count renders in `.filter-actions` on any of the seven.
+- The quiet case still renders nothing (`Showing 6 of 6` absent).
+- Every new assertion mutation-checked.
+- `ruff check .` and `.venv/bin/pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.10` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. Both decisions were put to the author and settled before the
+  ladder was cut.
+
+### Out of scope
+
+- **Adding a cap to Invitations or Responses.** Decided against
+  above; recorded here so a later reader does not read the
+  uncapped filter branch as an oversight.
+- **The 200 / 500 split versus Assignments' flat 200.** Three pages
+  keep one rule and one keeps another; unifying the *caps* is a
+  behaviour change this item does not make. Recorded in
+  `guide/deferred_consolidated.md` if it survives review.
+- **The four roster pages' missing lock card** on `expired` /
+  `archived` — Item 3's open gap, untouched.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the "Showing N of M" hint section gains
+  the four-branch sentence and the `matching` wording (Item 10).
+- `spec/assignments.md` — the count line replaces the filter-row
+  span and the below-table line; `unique pairs` becomes
+  `assignments` (Item 10).
+- `spec/operations_pages.md` — the muted "Showing N of M." note
+  moves out of the button row to the top-left of the table, and the
+  noun becomes `reviewers` / `reviewees` (Item 10).
+- `spec/lifecycle.md` — the two sites naming the hint's position in
+  the filter row (Item 10).
+- `spec/rrw_functional_spec.md` — the one site describing where the
+  hint sits (Item 10).
+- `docs/status.md` — row at the close (Item 10).
