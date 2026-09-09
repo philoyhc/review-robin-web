@@ -2201,3 +2201,278 @@ other either.
   `is_ready` lock, and Item 6 brought `expired` and `archived`
   under it. See `### Status` (Item 6).
 - `docs/status.md` — row at the close (Item 6).
+
+## Item 7 — The Assignments search cannot see the tags
+
+### Opportunity
+
+The author, on closing Item 6: *"There's also a search box there that
+probably can do with a similar treatment, though in this case, there's
+more reason to segregate by reviewers vs reviewees; but at least allow
+search/partition by name, email substring, and tags whole."*
+
+**Two of the three asks are already shipped.** Measured at `42c21a04`
+against a session with one pair — reviewer `Ana Lim /
+ana@example.edu / Team A / Cohort 1`, reviewee `Ben Ord /
+ben@example.edu / Team B`:
+
+| query | `search_by` | result |
+|---|---|---|
+| `Ana` | `all` | matches |
+| `ana@` | `all` | matches |
+| `Ben` | `reviewee` | matches |
+| `Ana` | `reviewee` | 0 — correctly scoped |
+| `Team A` | `all` | **0** |
+| `Cohort 1` | `all` | **0** |
+| `Team B` | `all` | **0** |
+
+So name and handle already match by substring, and the
+reviewer/reviewee segregation the author asked for **already exists**
+as a `Search by:` select (`all` / `reviewer` / `reviewee`,
+`_SEARCH_BY_VALUES` in `_assignments.py`). What is missing is the
+third: **the six tag columns are invisible to this search**, exactly
+the gap Item 1 closed on the four roster Setup pages.
+
+The page also has no typeahead — the roster pages gained one in Item 1
+(distinct tag values, then `"Name (handle)"` people labels) — and its
+placeholder reads `Name or email`, which is honest today and will not
+be once tags match.
+
+### Decision
+
+**Teach the existing search the tag columns, keeping the rule Item 1
+settled: text by substring, tags by whole value.** `search_by` already
+scopes which side is matched, and tags belong to the reviewer and the
+reviewee individually, so scoping falls out for free — `Team A` under
+`Reviewers` matches reviewers tagged `Team A` and nothing else. That
+is the segregation the author wanted, and it is already built.
+
+Rejected: **a separate tag control** (a second select, or a `tag:`
+prefix). Item 1 rejected the equivalent on the roster pages and the
+reason holds harder here, where a `Search by:` select already occupies
+that slot: two controls to express one filter, on a row that is
+already a pair.
+
+Rejected: **matching tags by substring**, for Item 1's reason —
+whole-value is what keeps `Team A` from dragging in `Team A2`.
+
+### Semantics
+
+- Tag match is **whole value**, case- and surrounding-whitespace-
+  insensitive; text stays substring. Per column, unioned, as Item 1.
+- `search_by=reviewer` matches the reviewer's name, handle **and**
+  `tag_1..3`; `reviewee` the reviewee's; `all` either side.
+- A row whose reviewer or reviewee FK does not resolve is matched on
+  the side that does, as Relationships does (Item 1).
+- The `Showing N of M` hint and `PAIR_PREVIEW_LIMIT = 200` are
+  unchanged. **Note the roster pages lift their cap to 500 when a
+  filter is applied and this page does not** — out of scope here, but
+  it means a tag matching more than 200 pairs renders 200 with the
+  hint saying so.
+
+### Judgment calls — decided
+
+- **The `Search by:` select is not touched** (2026-09-09). It already
+  segregates, and adding tags does not change what the three options
+  mean.
+
+### Blast radius (measured)
+
+At `42c21a04`:
+
+- `_apply_pair_search` (`app/services/assignments/_coverage.py:256`) —
+  1 definition, **2 call sites** (`count_pairs`, `list_pairs`), plus a
+  re-export in `app/services/assignments/__init__.py`. The whole
+  change lands in that one function.
+- `Reviewer.tag_1..3` and `Reviewee.tag_1..3` — 6 columns, already on
+  the models; no migration.
+- 1 template line (the placeholder), 1 spec.
+
+**The architectural wrinkle, and the item's real risk.** The roster
+pages filter **in Python**, over a loaded list, through
+`views/_filters.py::_matches_row` — the function that *is* Item 1's
+rule. Assignments filters **in SQL**, because `count_pairs` and the
+200-row cap both run in the query. So the rule cannot simply be
+reused: it has to be expressed a second time as SQL predicates, and
+two expressions of one rule drift. See "Open questions".
+
+### PR ladder
+
+1. **PR 1 — the rule in SQL, plus the conformance test.** Tag
+   predicates added to `_apply_pair_search`, and a test that runs the
+   *same* table of cases against both `_matches_row` and the SQL path
+   so a future edit to either shows up as a disagreement. Must not
+   touch: `search_by`, the cap, the `Showing` hint.
+2. **PR 2 — the placeholder and the spec.** `Name or email` becomes
+   accurate; `spec/assignments.md` gains the matching rule pointing at
+   `spec/setup_pages.md`'s account rather than restating it.
+
+**No typeahead slice.** Adding one here is a new affordance on a page
+that has never had it, and the author asked for matching, not
+suggestions. Recorded in "Out of scope".
+
+### Definition of done
+
+- Each of the seven measured cases above asserted, including the two
+  that must stay 0 (`Ana` under `reviewee`, and a `Team A2`-style
+  near-miss that whole-value must exclude).
+- The conformance test pins the SQL path and `_matches_row` to the
+  same answers.
+- Every new assertion mutation-checked.
+- `ruff check .` and the **bare** `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether to express the rule twice or unify the two search paths.**
+  PR 1 as laid out duplicates it (SQL here, Python there) and pins
+  both with one test. The alternative — moving Assignments to the
+  view-layer filter — would unify the rule but changes what the count
+  and the cap mean, since both currently run in SQL. **Recommend the
+  duplicate-plus-conformance-test**, and record the unification as
+  deferred; the author decides if that reads wrong.
+
+### Out of scope
+
+- **A typeahead / `<datalist>` on this page.** New affordance, not
+  asked for. If it lands later it should reuse Item 1's two-part list.
+- **The filtered cap.** The roster pages lift 200 → 500 under a
+  filter; this page stays at 200. Same class, different constant, and
+  nobody has reported it.
+- **The Invitations and Responses pages**, which have their own
+  searches. Not measured here.
+
+### Doc impact
+
+- `spec/assignments.md` — the search account gains the tag rule and
+  points at `spec/setup_pages.md` "Search matching and suggestions"
+  for the shared per-column rule rather than restating it (Item 7).
+- `docs/status.md` — row at the close (Item 7).
+
+## Item 8 — The Assignments page, told straight
+
+### Opportunity
+
+Found by `spec-writer` at Item 6's close and confirmed by render: the
+Assignments page's lifecycle signalling is wrong in **both**
+directions, and it is the last operator surface in this segment's
+sweep that has not been corrected.
+
+Measured at `42c21a04`, one pair per session, posting
+`bulk-inactivate` to test the route:
+
+| state | operator-actions card (search **and** bulk) | row checkboxes | bulk route |
+|---|---|---|---|
+| `draft` | present | 1 | 303 ✓ |
+| `validated` | present | 1 | 303 ✓ |
+| `ready` | **absent entirely** | 0 | 409 ✓ |
+| `expired` | present | 1 | **409** ✗ |
+| `archived` | present | 1 | **409** ✗ |
+
+The template gates the whole card on `{% if not is_ready %}` while the
+five mutating routes gate on `_require_editable` (`is_editable`). The
+two disagree on three of five states:
+
+- On **`expired` / `archived`** the page offers row checkboxes and live
+  bulk Inactivate / Activate that every route refuses — Item 3's
+  dead-control shape, on the surface Item 3 did not cover.
+- On **`ready`** it goes the other way and hides the **search** along
+  with the controls. Item 3 settled that the read-only half of the
+  strip stays in every state, because reading a finished session is
+  legitimate; this page removes the only way to find a row.
+
+### Decision
+
+**One predicate for the mutating half, and the read-only half in every
+state** — Item 3's rule, applied to the surface it skipped.
+
+The selection-driven controls (row checkboxes, bulk Inactivate /
+Activate, the bulk form they post to) render only while `is_editable`,
+which is what the five routes already enforce. The `Search by:`
+select, the search box, Clear and `Showing N of M` render always.
+
+Rejected: **gating the whole card on `is_editable`**, the smaller
+diff. It would fix the dead controls and keep the `ready` regression —
+an operator looking at an activated session still could not find a
+row.
+
+Rejected: **leaving `ready` alone** on the grounds that nobody
+reported it. The page is the one surface where an operator goes to
+check who is assigned to whom mid-session, which is exactly when the
+session is `ready`.
+
+### Semantics
+
+- `is_editable` is `draft` or `validated`; this both narrows
+  `expired` / `archived` and restores the search on `ready`.
+- The routes are untouched — they already answer 409. The page is the
+  courtesy; the route is the guarantee.
+- A lock card is **not** added here. The four roster pages still lack
+  one on `expired` / `archived` (Item 3's open gap, recorded in
+  `spec/lifecycle.md` §5); adding one to Assignments alone would make
+  a third inconsistent surface. See "Out of scope".
+
+### Judgment calls — decided
+
+- **The read-only half returns on `ready` as part of this item**
+  (2026-09-09), rather than being split out. It is the same one-line
+  gate: separating them would mean touching the same condition twice.
+
+### Blast radius (measured)
+
+At `42c21a04`: 1 template (`session_assignments.html`, **7** `is_ready`
+uses — each read individually, since some may guard non-mutating
+things as they did on the Instruments page), 1 view for the context
+flag, 0 route changes (`_assignments.py` already calls
+`_require_editable` at 5 sites), 1 spec.
+
+### PR ladder
+
+1. **One PR.** Route and page must agree in the same commit, as in
+   Item 6 PR 1: gating one without the other leaves a state the other
+   contradicts.
+2. **The spec** rides with it — `spec/assignments.md` is small here and
+   the change is one paragraph.
+
+### Definition of done
+
+- A per-status matrix asserts, for all five states, the route's status
+  **and** what the page offers, both halves, both ways round.
+- The search box, `Search by:` select and Clear render on all five
+  states, asserted.
+- Row checkboxes and the bulk form render only on `draft` /
+  `validated`, asserted.
+- Every new assertion mutation-checked.
+- `ruff check .` and the **bare** `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None. The rule is Item 3's, already settled and twice applied.
+
+### Out of scope
+
+- **A lock card on Assignments.** The roster pages still have none on
+  `expired` / `archived`; Instruments gained one in Item 6. Adding a
+  third variant before the rosters catch up would widen the
+  inconsistency rather than close it. The rosters' gap is the one to
+  fix first.
+- **The filtered cap** and **the typeahead** — Item 7's "Out of scope",
+  same reasons.
+
+### Doc impact
+
+- `spec/assignments.md` — the page's lifecycle account states the
+  `is_editable` gate on the selection surface and that the read-only
+  half renders in every state (Item 8).
+- `spec/lifecycle.md` — §5's surface list gains Assignments alongside
+  the rosters and Instruments (Item 8).
+- `docs/status.md` — row at the close (Item 8).
