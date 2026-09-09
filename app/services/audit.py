@@ -613,6 +613,17 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "observers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 19I Item 2 — the selection-driven delete on the four
+    # roster Setup pages. Singular noun, matching the per-row
+    # ``*.bulk_inactivated`` family rather than the roster-wide
+    # ``*s.deleted_all``. ``counts`` rather than ``snapshot``: the
+    # deleted ids point at nothing once the commit lands, so the
+    # auditable facts are how many rows went and what went with them
+    # (assignments and responses, counted for *these* rows).
+    "reviewer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
+    "reviewee.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
+    "observer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
+    "relationship.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
     "instrument.view_policy_set": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),

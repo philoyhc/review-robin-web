@@ -42,7 +42,7 @@ from app.services.csv_imports import (
     decode_csv,
 )
 from app.services.email_identity import normalize_email
-from app.services.roster_bulk import bulk_set_status
+from app.services.roster_bulk import bulk_delete, bulk_set_status
 from app.services.roster_status import ROSTER_STATUSES, normalise_status
 
 
@@ -793,3 +793,32 @@ __all__ = [
     "save_relationships",
     "update_relationship",
 ]
+
+
+def delete_selected(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    relationship_ids: list[int],
+    user: User,
+    correlation_id: str | None = None,
+) -> tuple[int, int, int]:
+    """Delete the selected relationships. Returns
+    ``(deleted, cascaded_assignments, cascaded_responses)``.
+
+    The selection-driven sibling of :func:`bulk_inactivate` — same
+    id list, same session scoping, same ``not_in_session`` refusal —
+    and of ``delete_all_relationships``, whose cascade semantics it
+    inherits rather than reinvents. Segment 19I Item 2.
+    """
+    return bulk_delete(
+        db,
+        review_session=review_session,
+        model=Relationship,
+        ids=relationship_ids,
+        error_cls=RelationshipOperationError,
+        event_type="relationship.bulk_deleted",
+        entity_noun="relationship",
+        user=user,
+        correlation_id=correlation_id,
+    )
