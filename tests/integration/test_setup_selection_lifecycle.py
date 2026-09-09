@@ -204,3 +204,60 @@ def test_the_route_still_refuses_even_though_the_page_no_longer_asks(
 
     assert response.status_code == 409, response.status_code
     assert db.get(model, row_id) is not None
+
+
+# ── Upload + Danger Zone ───────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("page", ALL_PAGES)
+@pytest.mark.parametrize("status", EDITABLE)
+def test_the_upload_and_danger_zone_cards_render_while_editable(
+    db: Session, client: TestClient, page: str, status: str
+) -> None:
+    s = _session(client, db, code=f"dz-on-{page}-{status}")
+    s.status = status
+    db.commit()
+
+    body = _render(client, s, page)
+
+    assert 'class="card danger-zone"' in body
+    assert f"/{page}/delete-all" in body
+
+
+@pytest.mark.parametrize("page", ALL_PAGES)
+@pytest.mark.parametrize("status", FROZEN)
+def test_the_upload_and_danger_zone_cards_go_when_frozen(
+    db: Session, client: TestClient, page: str, status: str
+) -> None:
+    """The author's rule for rows is a rule about editing, and an
+    import and a delete-all are edits. Both 409'd on `expired` and
+    `archived` while still rendering — the same defect the row
+    selection had, one card down the page."""
+    s = _session(client, db, code=f"dz-off-{page}-{status}")
+    s.status = status
+    db.commit()
+
+    body = _render(client, s, page)
+
+    assert 'class="card danger-zone"' not in body
+    assert f"/{page}/delete-all" not in body
+    assert f"/{page}/import" not in body
+
+
+@pytest.mark.parametrize("page", ALL_PAGES)
+@pytest.mark.parametrize("status", FROZEN)
+def test_delete_all_still_refuses_when_frozen(
+    db: Session, client: TestClient, page: str, status: str
+) -> None:
+    """Again: the page is a courtesy, the 409 is the guarantee."""
+    s = _session(client, db, code=f"dz-post-{page}-{status}")
+    s.status = status
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{s.id}/{page}/delete-all",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409, response.status_code

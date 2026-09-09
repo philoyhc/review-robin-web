@@ -1256,6 +1256,25 @@ Danger Zone file and 2 for the import-error path, which is
 parametrised over both cascading pages — I wrote +1 before running it,
 and the run is what the number comes from).
 
+**2026-09-09 — PR 2b: the open question, closed from the rule rather
+than by waiting.** The Upload and Danger Zone cards shared the
+`not is_ready` gate the selection surface had, so both rendered on
+`expired` and `archived` while `/import` and `/delete-all` returned
+409. The author's stated principle — draft and validated edit, the rest
+do not, "since the thing is over" — is a rule about editing, and both
+of these are edits. Asked twice and left open; deciding it from what
+they had already said beat closing the item around a known hole.
+
+**And the tightening trap fired in the other direction.** The new
+assertion `"danger-zone" not in body` failed on a *template comment*
+describing the shape `.danger-zone` — prose, not markup. That is
+19H.3's lesson exactly ("an assertion that fails on prose explaining a
+rule is one somebody deletes"), reached this time by writing the loose
+assertion first. Re-pinned on `class="card danger-zone"`.
+
+**Measured after:** the suite went 3209 → **3241** (+32, the Upload /
+Danger Zone matrix across four pages × five statuses).
+
 ### Definition of done
 
 - Row checkboxes, the selection buttons and the Delete gate render on
@@ -1277,12 +1296,17 @@ and the run is what the number comes from).
 
 ### Open questions
 
-- **Whether the Danger Zone should also hide on `expired` / `archived`.**
-  It hides on `ready` today, which the author confirms is right. The
-  same "the thing is over" argument reaches the other two, but the
-  Danger Zone is a different surface from row selection and the author
-  spoke only about rows. Decided at PR 2 from what
-  `_require_editable` already refuses, and raised rather than assumed.
+- ~~**Whether the Danger Zone should also hide on `expired` /
+  `archived`.**~~ **Answered 2026-09-09 from the author's own rule, not
+  by waiting.** They gave the principle for rows — draft and validated
+  edit, `ready` is receiving responses, `expired` and `archived` are
+  over — and an import and a delete-all are edits, so the principle
+  reaches them without a new decision. Both cards were rendering on
+  `expired` and `archived` while both routes 409'd: the same defect as
+  the row selection, one card down the page. Put to the author twice
+  and left standing; resolving it from what they had already said beat
+  shipping the item with a known hole in it.
+- None outstanding.
 
 ### Out of scope
 

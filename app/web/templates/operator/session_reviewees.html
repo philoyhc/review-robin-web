@@ -651,7 +651,13 @@
     </script>
   {% endif %}
 
-  {% if not is_ready and not edit_mode %}
+  {# Upload + Danger Zone (Segment 19I Item 3). Was
+     ``not is_ready``, which left both rendering on ``expired``
+     and ``archived`` where the import and the delete-all both
+     409. The author's rule for rows — draft and validated edit,
+     the rest do not, because "the thing is over" — is a rule
+     about editing, and these are edits. #}
+  {% if is_editable and not edit_mode %}
   <div class="bottom-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Reviewees</h2>
