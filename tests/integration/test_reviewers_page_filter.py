@@ -212,12 +212,14 @@ def test_operator_actions_card_renders_inert_buttons(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     assert 'class="card operator-actions-card"' in body
-    # All four action affordances present.
+    # All five action affordances present. ``Add new row`` shortened
+    # to ``Add`` in 19I Item 2 to make room for ``Delete``.
     for label in (
         ">Edit</button>",
         ">Inactivate</button>",
         ">Activate</button>",
-        ">Add new row</a>",
+        ">Add</a>",
+        ">Delete</button>",
     ):
         assert label in body
     # The three buttons (Edit / Inactivate / Reactivate) start

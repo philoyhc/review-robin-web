@@ -410,17 +410,43 @@ person, or add one row. Top-to-bottom:
    reaches both sides of the pair without being told which. What
    the search matches and what the typeahead offers is the
    "Search matching and suggestions" contract below.
-2. **Single inline action row** (`filter-actions`) — the
-   "Showing N of M" hint, an optional **Clear** link, a
-   selected-count pill, the selection-driven **Edit**,
-   **Inactivate**, **Activate** and **Add new row** controls,
-   and finally the **Search** submit button last. All action
-   buttons + the pill sit inline on this one row, *before* the
-   Search submit (there is no separate next row). Buttons
-   enable / disable from the checkbox selection (see below).
-   The row greys out (`is-locked`) while a row is being
-   edited / added; a focused **Save / Cancel** pair renders
-   below a divider in that state.
+2. **Action row** (`filter-actions`) — an optional **Clear**
+   link, then the selection-driven **Edit**, **Inactivate**,
+   **Activate**, **Add** and **Delete** controls, and finally
+   the **Search** submit last. Controls only: the status items
+   moved to row 3 in Segment 19I. Buttons enable / disable from
+   the checkbox selection (see below). The row greys out
+   (`is-locked`) while a row is being edited / added; a focused
+   **Save / Cancel** pair renders below a divider in that
+   state.
+
+   `Add` was `Add new row` until 19I and shortened to make room
+   for `Delete`, which carries the **Destructive** role
+   (outline red, `spec/ui_elements.md` §6) and sits between
+   `Add` and `Search`.
+3. **Status row** (`filter-confirm`) — the **"Showing N of M"**
+   hint, the **selected-count pill**, and the delete
+   **confirmation checkbox** (`Yes, delete these`), inline and
+   flush right beneath the controls (Segment 19I). The three
+   are one kind of thing — what the page is showing and what is
+   picked — and the gate sits with the count because it is
+   *about* the count: "3 selected · ☐ Yes, delete these" is a
+   sentence, where the same checkbox on the button row would be
+   a control with no stated object.
+
+   **The delete gate is two-stage.** A selection enables the
+   checkbox; ticking the checkbox enables `Delete`, through the
+   app-wide `data-delete-confirm` / `data-delete-btn` pairing in
+   `base.html`. With nothing selected **both** are inactive — a
+   tickable box with nothing to confirm invites confirming
+   before selecting. Changing the selection **clears** the tick
+   rather than merely disabling it, because "these" names the
+   selection as it stood when the box was ticked.
+
+   Its own class rather than a change to `.filter-actions`,
+   which seven templates share: the three non-roster users
+   (Assignments, Invitations, Responses) keep the single-row
+   shape.
 
 The list is **capped at 200 rows** (lifted to **500** when a
 search or status filter is applied) — the cap is applied after
