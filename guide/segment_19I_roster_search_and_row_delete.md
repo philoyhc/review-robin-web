@@ -2062,6 +2062,25 @@ and the lock card disappears.
 
 **Measured after:** the suite went 3295 → **3310**.
 
+**CI caught a break my local gate could not see.** The new lock-card
+test imported its fixtures as
+`from tests.integration.test_instruments_lifecycle_gate import ...`,
+and `postgres` failed collection with `ModuleNotFoundError: No module
+named 'tests'`. It passed locally because I run
+`.venv/bin/python -m pytest`, and `python -m` puts the working
+directory on `sys.path`; CI runs the bare `pytest`, which does not.
+Reproduced locally by switching invocation, which is now the gate:
+**`.venv/bin/pytest`, not `python -m pytest`.**
+
+The repo's convention was already there and I missed it — helpers are
+shared through a `_`-prefixed module imported relatively
+(`from ._full_matrix import ...`), which works because
+`tests/integration/__init__.py` makes the package. Mine was the only
+absolute `from tests.` import in the suite. Fixed by extracting
+`tests/integration/_instrument_states.py` and importing it relatively
+from both files, so the two test modules no longer depend on each
+other either.
+
 **Not verified here:** the Azure dev slot.
 
 ### Definition of done

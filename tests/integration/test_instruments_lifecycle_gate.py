@@ -15,7 +15,6 @@ other without a failure.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import re
 
 import pytest
@@ -23,73 +22,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import (
-    Assignment,
-    Instrument,
-    InstrumentResponseField,
-    Response,
-    Reviewee,
-    Reviewer,
-    ReviewSession,
+from app.db.models import Assignment, Instrument, Response
+
+from ._instrument_states import (
+    ALL_STATES,
+    EDITABLE,
+    LOCKED,
+    seed_session_with_instruments as _seed,
 )
-
-EDITABLE = ("draft", "validated")
-LOCKED = ("ready", "expired", "archived")
-ALL_STATES = EDITABLE + LOCKED
-
-
-def _seed(client: TestClient, db: Session, *, code: str) -> tuple[ReviewSession, int]:
-    """Two instruments (so `is_only_instrument` never confounds the
-    Delete button), one assignment, one submitted response."""
-    r = client.post(
-        "/operator/sessions",
-        data={"name": "S", "code": code},
-        follow_redirects=False,
-    )
-    assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
-
-    reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
-    first = Instrument(session_id=s.id, name="I1", order=0)
-    second = Instrument(session_id=s.id, name="I2", order=1)
-    db.add_all([reviewer, reviewee, first, second])
-    db.flush()
-
-    field = InstrumentResponseField(
-        instrument_id=first.id,
-        field_key="f0",
-        label="F0",
-        _inline_data_type="Integer",
-        _inline_response_type="Likert5",
-        order=0,
-    )
-    db.add(field)
-    assignment = Assignment(
-        session_id=s.id,
-        reviewer_id=reviewer.id,
-        reviewee_id=reviewee.id,
-        instrument_id=first.id,
-        include=True,
-        created_by_mode="manual",
-    )
-    db.add(assignment)
-    db.flush()
-    db.add(
-        Response(
-            assignment_id=assignment.id,
-            response_field_id=field.id,
-            value="3",
-            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
-            version=1,
-        )
-    )
-    db.commit()
-    return s, first.id
 
 
 def _live_delete_buttons(page: str) -> int:

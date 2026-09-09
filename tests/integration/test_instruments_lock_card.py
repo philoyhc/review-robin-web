@@ -21,11 +21,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
-from tests.integration.test_instruments_lifecycle_gate import (
+from ._instrument_states import (
+    ALL_STATES,
     EDITABLE,
     LOCKED,
-    ALL_STATES,
-    _seed,
+    seed_session_with_instruments as _seed,
 )
 
 
