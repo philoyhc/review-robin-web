@@ -253,22 +253,70 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     )
 
 
+def _tag_matches(term: str, *columns):
+    """Whole-value tag predicates for ``term`` (Segment 19I Item 7).
+
+    The tag half of Item 1's per-column rule, expressed in SQL:
+    **text matches by substring, tags by whole value**, both
+    case-insensitive and ignoring surrounding whitespace. Whole-value
+    is what keeps ``Team A`` from dragging in ``Team A2``; substring
+    on names is what makes a partial name useful.
+
+    Returns ``[]`` for an empty term so a whitespace-only search
+    cannot match every row whose tag slot is blank.
+
+    **The rule lives twice.** The roster Setup pages run it in Python
+    over a loaded list (``app/web/views/_filters.py::_matches_row``);
+    this page runs it in SQL, because ``count_pairs`` and the 200-row
+    cap both run in the query and the ``Showing N of M`` count keeps
+    its meaning. ``tests/integration/test_assignments_search_tags.py``
+    holds one table of cases against both paths so the two cannot
+    drift apart silently.
+
+    Known limit of the second expression: Python ``str.casefold`` and
+    SQL ``lower`` agree on ASCII but not everywhere (``ß`` folds to
+    ``ss`` in Python, stays ``ß`` in SQL). The conformance table is
+    ASCII, so a non-ASCII tag is the one place the two rules could
+    still disagree.
+    """
+    folded = term.strip().casefold()
+    if not folded:
+        return []
+    return [func.lower(func.trim(column)) == folded for column in columns]
+
+
 def _apply_pair_search(stmt, search: str, search_by: str = "all"):
-    """Add the reviewer / reviewee free-text filter to a pairs query
-    — case-insensitive substring match on name or email (Segment
-    13C Assignments-page search). ``search_by`` scopes which side
-    is matched: ``reviewer`` / ``reviewee`` match only that side;
-    anything else (``all``) matches either."""
+    """Add the reviewer / reviewee free-text filter to a pairs query.
+
+    Name and handle match by **case-insensitive substring** (Segment
+    13C); ``tag_1..3`` on each side match by **whole value** (Segment
+    19I Item 7 — they were invisible to this search until then, so a
+    tag an operator could see on the roster pages returned nothing
+    here). ``search_by`` scopes which side is matched: ``reviewer`` /
+    ``reviewee`` match only that side, including that side's tags;
+    anything else (``all``) matches either.
+
+    Tags scope for free because they belong to the reviewer and the
+    reviewee individually — which is why this page needs no separate
+    tag control.
+    """
     term = f"%{search.strip()}%"
     stmt = stmt.join(
         Reviewer, Assignment.reviewer_id == Reviewer.id
     ).join(Reviewee, Assignment.reviewee_id == Reviewee.id)
     reviewer_match = or_(
-        Reviewer.name.ilike(term), Reviewer.email.ilike(term)
+        Reviewer.name.ilike(term),
+        Reviewer.email.ilike(term),
+        *_tag_matches(
+            search, Reviewer.tag_1, Reviewer.tag_2, Reviewer.tag_3
+        ),
     )
     reviewee_match = or_(
         Reviewee.name.ilike(term),
         Reviewee.email_or_identifier.ilike(term),
+        *_tag_matches(
+            search, Reviewee.tag_1, Reviewee.tag_2, Reviewee.tag_3
+        ),
     )
     if search_by == "reviewer":
         return stmt.where(reviewer_match)
