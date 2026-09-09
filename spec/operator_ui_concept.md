@@ -273,8 +273,8 @@ All three setup-roster pages share an identical chrome shape:
 3. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting). Sits immediately under the info card — same status-info-then-yellow-lock pattern the Instruments and Assignments pages use.
 4. **Friendly-label editor (left) + Operator actions card (right)** — a half-width `bottom-grid` pair. The friendly-label editor is the inline editor for the per-session tag-column labels; the Operator actions card (Segment 15F) carries the search / status filter strip and the selection-driven Edit · Inactivate · Activate · Add-new-row button row. See `spec/setup_pages.md` "Operator actions card".
 5. Browseable data-preview table of the saved rows (always visible, even while locked) — leftmost checkbox column drives the operator-actions selection; a row flips to inline inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
-6. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden when the lock card is shown or a row is being edited / added.
-7. **Danger Zone** card with the **Delete all** confirm-checkbox form. Hidden when the lock card is shown or a row is being edited / added.
+6. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden unless the session is `is_editable` (`draft` / `validated`), or while a row is being edited / added.
+7. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card. Both were keyed to the lock card's `is_ready` until Segment 19I Item 3; on `expired` and `archived` they rendered while their routes answered 409, and the lock card — still `is_ready`-only — does not appear to explain the absence. See `spec/lifecycle.md` §5.
 
 Per-row inline **Edit**, **Add** (`Add new row` until Segment 19I), and bulk **Inactivate / Reactivate** on these three pages shipped in Segment 15F (2026-05-15), joined by a selection-driven **Delete** in Segment 19I — the Operator actions card is the surface; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
 

@@ -332,12 +332,22 @@ GET-side rendering rules.
 
 ## 5. UI lock-card pattern
 
-**On Setup pages** (Reviewers / Reviewees / Relationships /
-Instruments) whenever the session is **not editable** — i.e. not
-`draft` and not `validated`: the mutating-card grid (Upload,
-Danger Zone) is hidden. On `ready` a **yellow lock card** renders
-in its place with copy explaining that setup is locked and
-offering a "Revert to draft" inline form.
+**On the four roster Setup pages** (Reviewers / Reviewees /
+Relationships / Observers) whenever the session is **not
+editable** — i.e. not `draft` and not `validated`: the
+mutating-card grid (Upload, Danger Zone) is hidden. On `ready` a
+**yellow lock card** renders in its place with copy explaining
+that setup is locked and offering a "Revert to draft" inline
+form.
+
+**Instruments is not one of these pages** and its rules differ in
+both directions: it has no Upload or Danger Zone card to hide,
+and its structure mutations gate on `_require_instrument_editable`
+→ `_can_edit_instrument`, which is `not is_ready` rather than
+`is_editable`. So instrument structure stays mutable on `expired`
+and `archived` — the same gap 19I.3 closed for the roster pages,
+still open here. Recorded rather than fixed: it is a different
+surface with its own gate, and nobody has reported it.
 
 **The gate is `is_editable`, not `is_ready`** (Segment 19I Item 3).
 It was the latter until then, which is only `status == "ready"`,
