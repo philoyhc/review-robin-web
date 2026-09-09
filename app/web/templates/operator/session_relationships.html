@@ -176,6 +176,11 @@
               <a class="btn secondary"
                  href="{{ relationships_base_url }}">Clear</a>
             {% endif %}
+            {# Segment 19I Item 3 — the mutating controls render
+               only where they can act. Clear, Search and the
+               "Showing N of M" hint stay: reading a finished
+               session's roster is legitimate. #}
+            {% if is_editable %}
             <button class="btn secondary" type="button"
                     id="relationships-edit-btn"
                     disabled aria-disabled="true">Edit</button>
@@ -210,6 +215,7 @@
                     formaction="{{ relationships_base_url }}/bulk-delete"
                     data-delete-btn="relationships-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
+            {% endif %}
             <button class="btn secondary" type="submit">Search</button>
           </div>
           {# Second action row (Segment 19I Item 2): what the
@@ -222,6 +228,7 @@
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
             {% endif %}
+            {% if is_editable %}
             <span class="pill pill-count"
                   id="relationships-selected-count" hidden>0 selected</span>
             <label class="delete-confirm-label">
@@ -251,6 +258,7 @@
                        name="acknowledge_response_loss" value="true">
               {% endif %}
             </label>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -312,7 +320,7 @@
         <option value="{{ opt_label }}"></option>
       {% endfor %}
     </datalist>
-  {% elif not is_ready %}
+  {% elif is_editable %}
     <form id="relationships-bulk-form" method="post"
           action="{{ relationships_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
@@ -321,7 +329,7 @@
   {% endif %}
 
   {% if relationships or add_mode %}
-    {% set selectable = not edit_mode and not is_ready %}
+    {% set selectable = not edit_mode and is_editable %}
     <div class="card">
       <table id="relationships-table"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
@@ -563,7 +571,7 @@
   {# Selection → action-button state binding (Segment 15F PR 5
      stage 2). Only runs in the interactive non-edit / non-ready
      state. #}
-  {% if not edit_mode and not is_ready %}
+  {% if not edit_mode and is_editable %}
     <script>
       (function () {
         var editBtn = document.getElementById("relationships-edit-btn");

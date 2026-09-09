@@ -60,7 +60,11 @@
      actually gates. Upload card stays below the table (mirrors
      Reviewers / Reviewees layout). #}
   {% set _show_cohort_slot = not edit_mode and not is_archived %}
-  {% set _show_actions_slot = not is_ready %}
+  {# Segment 19I Item 3 — was ``not is_ready``, which left the bulk
+     card rendering on ``expired`` / ``archived`` where every action
+     409s. The checkboxes below keep their own looser gate: they
+     drive the cohort editor, not just these buttons. #}
+  {% set _show_actions_slot = is_editable %}
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
@@ -325,7 +329,7 @@
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
     </form>
-  {% elif not is_ready %}
+  {% elif is_editable %}
     <form id="observers-bulk-form" method="post"
           action="{{ observers_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">

@@ -596,6 +596,13 @@ def _render_relationships_page(
             "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
             "is_ready": is_ready,
+            # Segment 19I Item 3 — the gate on the selection surface.
+            # ``is_ready`` is only ``status == "ready"``, so gating on it
+            # left `expired` and `archived` sessions rendering checkboxes
+            # and a live Delete while every mutation 409d. This is what
+            # ``_require_editable`` enforces, so page and route agree by
+            # construction rather than by two lists kept in step.
+            "is_editable": lifecycle.is_editable(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
             "can_add_relationship": bool(reviewers) and bool(reviewees),

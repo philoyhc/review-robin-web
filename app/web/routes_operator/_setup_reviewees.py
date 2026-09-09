@@ -206,6 +206,13 @@ def _render_reviewees_page(
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
             "is_ready": is_ready,
+            # Segment 19I Item 3 — the gate on the selection surface.
+            # ``is_ready`` is only ``status == "ready"``, so gating on it
+            # left `expired` and `archived` sessions rendering checkboxes
+            # and a live Delete while every mutation 409d. This is what
+            # ``_require_editable`` enforces, so page and route agree by
+            # construction rather than by two lists kept in step.
+            "is_editable": lifecycle.is_editable(review_session),
             "fields_with_data": views.friendly_fields_with_data(
                 review_session,
                 assignments.reviewee_fields_with_data(db, review_session.id),
