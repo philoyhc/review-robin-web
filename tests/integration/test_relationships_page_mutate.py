@@ -406,8 +406,8 @@ def test_bulk_inactivate_route(db: Session, client: TestClient) -> None:
 def test_bulk_action_keeps_filter(
     db: Session, client: TestClient
 ) -> None:
-    """The active search filter rides through a bulk action so the
-    operator lands back on the same filtered view."""
+    """The active status + search filter rides through a bulk action
+    so the operator lands back on the same filtered view."""
     review_session = _make_session(client, db, code="rel-m-keepfilter")
     _rv, _re, rels = _seed(
         db,
@@ -421,13 +421,13 @@ def test_bulk_action_keeps_filter(
         "/relationships/bulk-inactivate",
         data={
             "relationship_ids": [rels[0].id],
-            "filter_search_by": "reviewee",
+            "filter_status": "inactive",
             "filter_q": "Jane",
         },
         follow_redirects=False,
     )
     loc = response.headers["location"]
-    assert "search_by=reviewee" in loc
+    assert "status=inactive" in loc
     assert "q=Jane" in loc
 
 

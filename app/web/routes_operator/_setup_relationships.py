@@ -57,7 +57,7 @@ _RELATIONSHIP_SORT_KEYS = {
 @router.get("/sessions/{session_id}/relationships", response_class=HTMLResponse)
 def relationships_list(
     request: Request,
-    search_by: str = "reviewer",
+    status: str = "all",
     q: str = "",
     edit_id: int | None = None,
     add: int = 0,
@@ -73,7 +73,7 @@ def relationships_list(
         db=db,
         issues=[],
         filename=None,
-        search_by=search_by,
+        status=status,
         search=q,
         edit_id=edit_id,
         add_mode=bool(add),
@@ -278,7 +278,7 @@ def relationships_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
-    filter_search_by: str = Form(default="reviewer"),
+    filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
@@ -355,14 +355,14 @@ def relationships_update(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         [relationship_id],
-        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/relationships/bulk-inactivate")
 def relationships_bulk_inactivate(
     relationship_ids: list[int] = Form(default=[]),
-    filter_search_by: str = Form(default="reviewer"),
+    filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
@@ -384,14 +384,14 @@ def relationships_bulk_inactivate(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
-        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/relationships/bulk-reactivate")
 def relationships_bulk_reactivate(
     relationship_ids: list[int] = Form(default=[]),
-    filter_search_by: str = Form(default="reviewer"),
+    filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
@@ -413,7 +413,7 @@ def relationships_bulk_reactivate(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
-        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
@@ -465,7 +465,7 @@ def _render_relationships_page(
     issues: list,
     filename: str | None,
     missing_confirm: bool = False,
-    search_by: str = "reviewer",
+    status: str = "all",
     search: str = "",
     edit_id: int | None = None,
     add_mode: bool = False,
@@ -508,18 +508,20 @@ def _render_relationships_page(
         value_resolver=_relationship_sort_value,
     )
 
-    # Segment 15F PR 5 — locate-a-pair search: the ``search_by``
-    # dropdown picks which side of the pair the search box matches.
-    # 200/500 cap mirrors Reviewers / Reviewees.
-    search_dimension = search_by if search_by == "reviewee" else "reviewer"
+    # Segment 15F PR 5 — locate-a-pair search. Segment 19I Item 1
+    # rationalized the strip to the shape the other three roster pages
+    # use: the dropdown is the Status filter, and the search box
+    # matches both sides of the pair plus the row's own pair-context
+    # tags rather than one operator-chosen side. 200/500 cap mirrors
+    # Reviewers / Reviewees.
     filtered = views.filter_relationships_rows(
         all_rows,
         reviewer_by_id=reviewer_by_id,
         reviewee_by_id=reviewee_by_id,
-        search_by=search_dimension,
+        status=status,
         search=search,
     )
-    is_filtered = bool(search.strip())
+    is_filtered = status != "all" or bool(search.strip())
     cap = _SETUP_FILTERED_CAP if is_filtered else _SETUP_DEFAULT_CAP
     capped = filtered[:cap]
     displayed_row_count = len(capped)
@@ -595,27 +597,18 @@ def _render_relationships_page(
             "reviewee_picker_options": _relationship_picker_options(
                 reviewees, handle_attr="email_or_identifier"
             ),
-            "filter_search_by": search_dimension,
+            "filter_status": status,
             "filter_search": search,
-            "filter_search_by_options": views.RELATIONSHIPS_SEARCH_BY_OPTIONS,
-            # Both dimensions' datalists ship every render — the
-            # template's `<select>` swaps the input's `list=` so the
-            # autocomplete is "Search by"-aware without a reload.
-            "filter_search_options_reviewer": (
-                views.relationships_search_options(
-                    all_rows,
-                    reviewer_by_id=reviewer_by_id,
-                    reviewee_by_id=reviewee_by_id,
-                    search_by="reviewer",
-                )
-            ),
-            "filter_search_options_reviewee": (
-                views.relationships_search_options(
-                    all_rows,
-                    reviewer_by_id=reviewer_by_id,
-                    reviewee_by_id=reviewee_by_id,
-                    search_by="reviewee",
-                )
+            "filter_status_options": views.RELATIONSHIPS_STATUS_OPTIONS,
+            # One list, not two. The page used to ship a reviewer
+            # datalist and a reviewee datalist and swap the input's
+            # `list=` from the retired "Search by" dropdown; the search
+            # now matches both sides, so the suggestions do too, and
+            # they lead with the pair-context tag values.
+            "filter_search_options": views.relationships_search_options(
+                all_rows,
+                reviewer_by_id=reviewer_by_id,
+                reviewee_by_id=reviewee_by_id,
             ),
             "fields_with_data": views.friendly_fields_with_data(
                 review_session,

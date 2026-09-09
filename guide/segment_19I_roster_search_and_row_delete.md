@@ -299,6 +299,65 @@ run. Nothing here is a new lesson; the frequency is the finding.
 **Measured after:** the suite went 3054 → 3071 (14 unit tests on
 predicates that had none, 3 page-level).
 
+**2026-09-09 — PR 2 landed** (Relationships). The page now carries the
+same strip as the other three: a Status dropdown, one search box
+matching both sides of the pair plus the row's own pair-context tags,
+one suggestion list with tags ahead of people. Rung 3 (the spec) is
+what closes the item.
+
+**The ladder held again.** No line of the other three pages' filters
+or templates is in the diff, and nothing from Item 2 is. The shared
+helpers PR 1 added (`_matches_row`, `_picked_label_handle`,
+`_distinct_tag_options`) took the fourth page with no change, which is
+the return on having cut them as helpers rather than inlining them
+three times.
+
+**The 22 `search_by` test references, resolved.** Counted per file
+rather than in aggregate: 8 in `test_assignments_page_generate.py`,
+which keeps its own side-picker and is Out of scope; 12 in
+`test_relationships_page_filter.py`; 2 in
+`test_relationships_page_mutate.py` (one bulk-redirect filter-carry,
+kept and now carrying `status`). Of the filter file's 9 tests, one
+pinned the dropdown markup and one pinned the `list=`-swapping script
+— both gone with the mechanisms they described; one pinned that the
+reviewer dimension does *not* match a reviewee, and is inverted, since
+matching both sides is the point of the rung; the rest kept their
+behavior and lost the parameter. 9 tests became 13.
+
+**`RELATIONSHIPS_SEARCH_BY_OPTIONS` deleted, not kept with a
+retirement comment.** The first cut left it in place, commented as
+retired. Checked rather than assumed: nothing in `app/`, `tests/`,
+`spec/` or `docs/` referenced it any more, and it was no longer
+exported from `app/web/views/__init__.py`, so what remained was a
+public-looking constant whose only reader was its own epitaph. The
+history it carried is in the comment above `RELATIONSHIPS_STATUS_OPTIONS`,
+where a reader of the live code will meet it.
+
+**Six mutants, six kills** — one side matched instead of two; tags by
+substring; the status filter skipped; the suggestion map keyed on
+`person.id` alone; the Clear link ignoring status; people offered
+ahead of tags. The `person.id` one is the judgment call below, and it
+is the mutant most likely to have shipped: both roster tables start at
+`id` 1, so a single-keyed map silently drops one side of every early
+pair, and only a test seeding a colliding pair sees it.
+
+**Decisions confirmed at build:**
+
+- **The suggestion map is keyed `(dimension, person.id)`**
+  (2026-09-09). A reviewer and a reviewee can share a primary key;
+  keyed on the id alone, one label overwrites the other.
+- **The Clear link counts status as a filter** (2026-09-09). Matching
+  the other three pages — without it an operator who narrows to
+  Inactive has no one-click way back.
+- **The `list=`-swapping inline script is gone, not repointed**
+  (2026-09-09). It existed only to track the dropdown; with one
+  datalist there is nothing to swap, and the page loses a script
+  rather than gaining a no-op one.
+
+**Measured after:** the suite went 3071 → 3083 (+12: 8 unit tests on
+`filter_relationships_rows` and `relationships_search_options`, and
+`test_relationships_page_filter.py` 9 → 13).
+
 ### PR ladder
 
 **Amended 2026-09-09** by `### Decision — revised`: tag values now

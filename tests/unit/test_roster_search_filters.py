@@ -15,12 +15,14 @@ different rosters — see `test_a_tag_equal_to_a_name_adds_rows`.
 
 from __future__ import annotations
 
-from app.db.models import Observer, Reviewee, Reviewer
+from app.db.models import Observer, Relationship, Reviewee, Reviewer
 from app.web.views import (
     filter_observers_rows,
     filter_reviewees_rows,
+    filter_relationships_rows,
     filter_reviewers_rows,
     observers_search_options,
+    relationships_search_options,
     reviewees_search_options,
     reviewers_search_options,
 )
@@ -231,3 +233,187 @@ def test_every_page_offers_its_tags_ahead_of_its_people() -> None:
 
     assert reviewees_search_options(reviewees)[0] == "Alpha"
     assert observers_search_options(observers)[0] == "Panel"
+
+
+# ── Relationships ──────────────────────────────────────────────────────
+#
+# Segment 19I Item 1 rewrote this predicate: it used to take a
+# ``search_by`` dimension and match one side of the pair. It now takes a
+# ``status`` like the other three pages and matches both sides plus the
+# row's own pair-context tags, under the same per-column rule.
+
+
+def _pair(
+    rid: int,
+    *,
+    reviewer: Reviewer,
+    reviewee: Reviewee,
+    status: str = "active",
+    **tags: str,
+) -> Relationship:
+    return Relationship(
+        id=rid,
+        session_id=1,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        status=status,
+        **tags,
+    )
+
+
+def _rv(pk: int, name: str, email: str) -> Reviewer:
+    return Reviewer(id=pk, session_id=1, name=name, email=email, status="active")
+
+
+def _re(pk: int, name: str, handle: str) -> Reviewee:
+    return Reviewee(
+        id=pk,
+        session_id=1,
+        name=name,
+        email_or_identifier=handle,
+        status="active",
+    )
+
+
+def _maps(
+    reviewers: list[Reviewer], reviewees: list[Reviewee]
+) -> dict[str, dict[int, object]]:
+    return {
+        "reviewer_by_id": {r.id: r for r in reviewers},
+        "reviewee_by_id": {r.id: r for r in reviewees},
+    }
+
+
+def test_one_needle_reaches_both_sides_of_the_pair() -> None:
+    """The 15F predicate needed the operator to say which side to look
+    at; a reviewee named like the needle was invisible on the reviewer
+    dimension."""
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    bob = _rv(2, "Bob Ray", "bob@example.edu")
+    zeta = _re(1, "Zeta Lim", "zeta@example.edu")
+    yara = _re(2, "Yara Ng", "yara@example.edu")
+    rows = [
+        _pair(1, reviewer=ali, reviewee=zeta),
+        _pair(2, reviewer=bob, reviewee=yara),
+    ]
+
+    kept = filter_relationships_rows(
+        rows, status="all", search="Zeta", **_maps([ali, bob], [zeta, yara])
+    )
+
+    assert [r.id for r in kept] == [1]
+
+
+def test_a_pair_context_tag_matches_by_whole_value() -> None:
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [
+        _pair(1, reviewer=ali, reviewee=carol, tag_1="TW01"),
+        _pair(2, reviewer=ali, reviewee=carol, tag_1="TW02"),
+        _pair(3, reviewer=ali, reviewee=carol, tag_1="TW010"),
+    ]
+    maps = _maps([ali], [carol])
+
+    assert [r.id for r in filter_relationships_rows(
+        rows, status="all", search="TW01", **maps
+    )] == [1], "whole value, so TW010 is not a hit"
+    assert filter_relationships_rows(
+        rows, status="all", search="TW0", **maps
+    ) == [], "a prefix matches no tag"
+
+
+def test_a_pair_context_tag_equal_to_a_name_adds_rows() -> None:
+    """The Ethan case at pair level: a tag whose value happens to equal
+    a person's name unions with the name matches rather than replacing
+    them."""
+    ethan = _rv(1, "Ethan Wong", "ew@example.edu")
+    mia = _rv(2, "Mia Tan", "mt@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [
+        _pair(1, reviewer=ethan, reviewee=carol),
+        _pair(2, reviewer=mia, reviewee=carol, tag_1="Ethan"),
+    ]
+
+    kept = filter_relationships_rows(
+        rows, status="all", search="Ethan", **_maps([ethan, mia], [carol])
+    )
+
+    assert {r.id for r in kept} == {1, 2}
+
+
+def test_status_narrows_before_the_search_runs() -> None:
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [
+        _pair(1, reviewer=ali, reviewee=carol, tag_1="TW01"),
+        _pair(2, reviewer=ali, reviewee=carol, tag_1="TW01", status="inactive"),
+    ]
+
+    kept = filter_relationships_rows(
+        rows, status="active", search="TW01", **_maps([ali], [carol])
+    )
+
+    assert [r.id for r in kept] == [1]
+
+
+def test_a_dangling_side_does_not_crash_or_match() -> None:
+    """A row whose reviewer FK is absent from the map still filters —
+    the present side is matched and the missing one is skipped."""
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [_pair(1, reviewer=ali, reviewee=carol)]
+
+    maps = {"reviewer_by_id": {}, "reviewee_by_id": {carol.id: carol}}
+
+    assert filter_relationships_rows(rows, status="all", search="Ali", **maps) == []
+    assert [r.id for r in filter_relationships_rows(
+        rows, status="all", search="Carol", **maps
+    )] == [1]
+
+
+def test_a_reviewer_and_reviewee_sharing_a_primary_key_both_appear() -> None:
+    """Both roster tables start at id 1, so a suggestion map keyed on
+    ``person.id`` alone would drop one of them. Keyed per side."""
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [_pair(1, reviewer=ali, reviewee=carol)]
+
+    options = relationships_search_options(rows, **_maps([ali], [carol]))
+
+    assert "Ali Chen (ali@example.edu)" in options
+    assert "Carol Ho (carol@example.edu)" in options
+
+
+def test_relationship_suggestions_lead_with_pair_context_tags() -> None:
+    ali = _rv(1, "Ali Chen", "ali@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [
+        _pair(1, reviewer=ali, reviewee=carol, tag_1="Panel A"),
+        _pair(2, reviewer=ali, reviewee=carol, tag_1="Panel A", tag_2="Round 2"),
+    ]
+
+    options = relationships_search_options(rows, **_maps([ali], [carol]))
+
+    assert options[:2] == ["Panel A", "Round 2"], "distinct tags, sorted, first"
+    assert options.count("Ali Chen (ali@example.edu)") == 1
+
+
+def test_picking_an_offered_label_exact_matches_on_either_side() -> None:
+    """Two people whose handles share a prefix: picking the suggestion
+    for one must not drag the other in through the substring path."""
+    ana = _rv(1, "Ana Lim", "ana@example.edu")
+    ana2 = _rv(2, "Ana Lim", "ana2@example.edu")
+    carol = _re(1, "Carol Ho", "carol@example.edu")
+    rows = [
+        _pair(1, reviewer=ana, reviewee=carol),
+        _pair(2, reviewer=ana2, reviewee=carol),
+    ]
+
+    kept = filter_relationships_rows(
+        rows,
+        status="all",
+        search="Ana Lim (ana@example.edu)",
+        **_maps([ana, ana2], [carol]),
+    )
+
+    assert [r.id for r in kept] == [1]
