@@ -29,7 +29,8 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19I.1** | The filter strip rationalized, and search extended to tag contents | **Closed 2026-09-09** (3 PRs) |
 | **19I.2** | Delete selected rows from the Operator actions card | **Closed 2026-09-09** (3 PRs, scaffold-first) |
 | **19I.3** | The delete surface told straight: lifecycle gate, copy that names what goes, and a Danger Zone that works | **Closed 2026-09-09** (3 PRs + a 2b) |
-| 19I.4+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
+| **19I.4** | The two counts moved to where they read: the hint to the table, a denominator into the pill | **Closed 2026-09-09** (1 PR) |
+| 19I.5+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
 
 ---
 
@@ -1401,3 +1402,128 @@ to verify word-for-word and does not find.
   button tables: outside the editable states these controls are absent,
   not disabled (PR 3 follow-up, added at build).
 - `docs/status.md` — row at the close (PR 3).
+
+
+---
+
+## Item 4 — The two counts, where they read
+
+### Opportunity
+
+The author piloted moving the `Showing N of M` hint out of the
+operator-actions strip and above the preview table, then asked for a
+second change with it: expand the selected-count pill from
+`N selected` to `N of M selected`.
+
+Measured on the pilot render: the hint sat at `x≈1010`, flush right in
+the strip; the table it describes starts at `x≈58`. Roughly 950px, and
+across a card boundary, between a number and the rows it counts.
+
+### Decision
+
+**Move the hint to the preview-table card's top-left, and give the
+pill its own denominator — the rendered window.**
+
+The two changes are one idea, which is why they arrived together.
+Moving the hint costs something the spec leans on: it is what tells an
+operator that select-all took the **rendered window** rather than the
+whole match (600 matching rows render 500, so a delete leaves 100
+behind looking complete). Sitting beside the selected-count and the
+delete gate, the hint was half of that sentence. **The pill's new
+denominator is the other half, relocated into the strip**: `4 of 4
+selected` beside `Showing 4 of 12` above the table says the same thing
+with two numbers instead of one adjacency.
+
+`M` is the **rendered window**, not the roster, because that is what
+select-all can reach. The roster total would read as reassurance where
+the window reads as a warning.
+
+Rejected: **keeping a copy in both places**, which is what the pilot
+shipped to be looked at. Two identical numbers 80px apart read as an
+oversight, not a choice.
+
+Rejected: **moving the hint and leaving the pill alone**, which is the
+literal first half of the ask. It spends the adjacency and buys
+nothing back.
+
+### Semantics
+
+- The hint renders only when the cap or a filter has trimmed the list;
+  `Showing 6 of 6` is noise. Unchanged by the move.
+- The pill is hidden at zero, so `0 of 0 selected` is a placeholder the
+  operator never sees; it exists so the server-rendered markup and the
+  JS agree on the format.
+- `M` tracks the rendered checkboxes, so it follows the filter: filter
+  to four rows and select-all reads `4 of 4 selected` even on a
+  twelve-row roster.
+
+### Judgment calls — decided
+
+- **`M` is the window, not the roster** (2026-09-09). The window is
+  what select-all reaches, and the number exists to expose a gap
+  rather than paper over it.
+
+### Blast radius (measured)
+
+At `e6462def`: 4 templates (the hint in two places each, plus one JS
+line), 1 `base.html` rule, 2 spec passages. No route or service change
+— both numbers were already in the render context.
+
+### PR ladder
+
+1. **One PR.** Splitting the hint's move from the pill's denominator
+   would land a state where the move's cost is paid and nothing has
+   bought it back.
+
+### Definition of done
+
+- The hint renders above the table on all four pages and nowhere in
+  the strip, asserted both ways.
+- The pill reads `N of M selected` with `M` the rendered window,
+  verified in a browser since the text is JS-set.
+- `ruff check .` and `pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Status
+
+**2026-09-09 — landed in one PR.**
+
+**A test of mine claimed three things and pinned two.**
+`test_the_status_row_carries_all_three_and_the_button_row_none`
+(Item 2) asserted the hint's *absence from the button row* and never
+its *presence in the status row* — so moving the hint out of that row
+entirely broke nothing and the suite stayed green. The name said
+"all three". Renamed to what it actually checks, and the hint's new
+home is pinned properly in a new file, both ways round.
+
+**Seventh vacuous assertion in four days**, and the first whose
+give-away was in its own name. The others hid behind a substring; this
+one advertised a claim it never made.
+
+**Verified in Chromium**: one hint copy at `x=58` (was `x≈1010`), and
+the pill reading `1 of 4` → `2 of 4` → `4 of 4 selected` as rows are
+checked and select-all fires.
+
+**Measured after:** the suite went 3241 → **3257** (+16, the new
+`test_setup_showing_hint.py`).
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- **The Assignments, Invitations and Responses pages**, which have
+  their own `Showing N of M`. Same class, different surface, and
+  nobody has reported them.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the status-row description loses the hint and
+  gains the pill's `N of M` format; "Preview tables" gains the hint's
+  new home; the select-all caveat is rewritten around the two numbers.
+- `docs/status.md` — row at the close.
