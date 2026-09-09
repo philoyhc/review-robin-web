@@ -392,6 +392,22 @@ Observers carry one tag slot where the others carry three; and
 "status lifts the cap to 500" true rather than plausible. The first
 two would have been wrong if written from the plan's prose.
 
+**The `spec-writer` pass, adjudicated.** It verified every factual
+claim in the new subsection against the code — the per-column table,
+the both-sides rule, the dangling-FK behavior, the uncapped label set,
+the ordering and both cap values, and `is_filtered` on all four routes
+— and found no drift left live. Three flags, all accepted:
+
+- Two British forms in prose written this morning (`parenthesised`,
+  `recognised`), fixed. New prose is US per `CLAUDE.md`; the no-sweep
+  rule protects *existing* prose, not text I wrote an hour ago.
+- The pick path's paragraph never said, for Relationships, that the
+  exact match is checked against **either** side — true in the code and
+  one of the six mutants PR 2 killed, but a reader could take "both
+  sides" as scoped to the substring table above it. One clause added.
+  Filed as a completeness gap rather than an error, which is what it
+  was, but the mutant it corresponds to is why it was worth closing.
+
 ### PR ladder
 
 **Amended 2026-09-09** by `### Decision — revised`: tag values now

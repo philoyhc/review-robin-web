@@ -459,14 +459,16 @@ a prefix of `Team A2`.
 
 **Picking a person from the typeahead.** When the input is
 *exactly* one of the `"Name (handle)"` labels the page offered,
-the parenthesised handle is exact-matched instead — otherwise
+the parenthesized handle is exact-matched instead — otherwise
 picking `Ana Lim (ana@example.edu)` would also return
-`ana2@example.edu`. The trigger is "equals an offered label", not
-"ends in parentheses": punctuation cannot tell a label from a tag
-value like `Group (B)`, and a reviewee handle need not contain
-`@`. The check runs against the **uncapped** label set, so a
-label past the suggestion cap that an operator types from memory
-is still recognised.
+`ana2@example.edu`. On Relationships that exact match is checked
+against **either** side of the pair, as the substring rules are.
+The trigger is "equals an offered label", not "ends in
+parentheses": punctuation cannot tell a label from a tag value
+like `Group (B)`, and a reviewee handle need not contain `@`. The
+check runs against the **uncapped** label set, so a label past
+the suggestion cap that an operator types from memory is still
+recognized.
 
 **What the typeahead offers.** The distinct **tag values** first,
 then the `"Name (handle)"` people labels sorted
