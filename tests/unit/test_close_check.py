@@ -113,7 +113,15 @@ def plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     run("add", "-A")
     run("commit", "-qm", "log Item 3")
 
-    monkeypatch.setattr(cc, "REPO", root)
+    # Segment 19J Item 3 carved the tool into a package, and this one
+    # line is the whole cost of it at the test seam. ``REPO`` used to be
+    # a module global in the single file, so patching it once reached
+    # every reader. It now lives in ``close_check/_shared.py``, and the
+    # readers reference it as ``_shared.REPO`` rather than importing the
+    # name — because ``from ._shared import REPO`` would bind a *copy*
+    # per module and a patch here would silently miss them. One patch
+    # point survives the carve; it just moved.
+    monkeypatch.setattr(cc._shared, "REPO", root)
     cc._ITEM_START_CACHE.clear()
     yield plan
     cc._ITEM_START_CACHE.clear()

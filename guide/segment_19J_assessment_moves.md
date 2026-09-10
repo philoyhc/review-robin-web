@@ -53,7 +53,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 |---|---|---|
 | **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Closed 2026-09-10** (3 rungs; 15 findings) |
 | **19J.2** | The refinement allowance, measured rather than asserted | **Open 2026-09-10** |
-| **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Open 2026-09-10** |
+| **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | 19J.4+ | Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot. | Open — **empty** |
 
 ---
@@ -619,6 +619,95 @@ $ grep -rn "close_check.py" --include="*.md" . | wc -l        # every plan's DoD
   string, which is why it is frozen.
 - **No production code touches it.** It is dev tooling; `app/` has no
   reference.
+
+### Status
+
+**2026-09-10 — landed in one rung, as planned. Two costs the plan did
+not predict, both measured.**
+
+`tools/close_check.py` is now a 36-line shim over
+`tools/close_check/`: `_shared.py` (37), `_manifest.py` (683),
+`_archive.py` (85), `_sweep.py` (126), `__init__.py` (the 107-line
+reasoning docstring + `main`). The invocation string is unchanged.
+
+**The shape was verified, not assumed.** A `.py` and a same-named
+package directory coexist, and the directory wins on the same
+`sys.path` entry — probed in a throwaway tree for both `python3
+tools/close_check.py` and `importlib.util.spec_from_file_location`
+(the test's loader) before a line of the real carve was written.
+
+**`_shared` is three names, not the file the plan imagined.**
+Measured usage across the three halves:
+
+| name | manifest | archive | sweep |
+|---|---|---|---|
+| `REPO` | 10 | 2 | 5 |
+| `_git` | 6 | 0 | 3 |
+| `Unresolvable` | 3 | 0 | 2 |
+
+Nothing else crosses. `resolve_committed`, the three manifest regexes
+and `last_touched_ever` are manifest-only — so the coupling is even
+lower than the item's Opportunity measured, and lower again than the
+three snapshots that declined the split on it.
+
+**`_archive` is not a peer of the other two.** It calls five
+`_manifest` functions (`find_manifests`, `_section`, `parse_bullets`,
+`window`, `honoured`) and adds a loop and totals. "Three jobs in one
+file" was right about the count and wrong about the shape: two are
+independent, one is a driver. That is why it is 85 lines and not 600,
+and it is recorded in its own module docstring.
+
+**Cost 1 — the carve broke the test seam, and the fix is the
+interesting part.** `REPO` was a module global, so
+`monkeypatch.setattr(cc, "REPO", root)` reached every reader. After
+the split, `from ._shared import REPO` binds a **copy per module** and
+that one patch silently misses them — eight tests failed on a real
+path escaping into `/tmp`. The fix keeps a single patch point rather
+than adding three: `_manifest`, `_archive` and `_sweep` reference
+`_shared.REPO` through the module instead of importing the name, and
+the test patches `cc._shared.REPO`. The plan's Definition of done
+allowed exactly this ("or its loader is updated with the reason
+recorded"); the reason is recorded in the test, in eight lines,
+because the next person to add a module here needs to know why the
+constant is spelled the long way.
+
+**Cost 2 — the carve created a bytecode cache where there was none,
+and it served stale code inside twenty minutes.** A single-file script
+run as `python3 tools/close_check.py` is compiled and **never
+cached**; once it is a package the script *imports*, every module gets
+a `.pyc`. Python invalidates on `(mtime, size)` — so a same-size edit
+restored within the same filesystem second is indistinguishable from
+the original. Restoring a mutation of `"pass"` → `"okay"` (four
+characters for four) produced a tool that kept printing `OKAY` from a
+clean source, and it took a `find -name __pycache__ -delete` to
+resolve. `__pycache__/` is already in `.gitignore` so nothing ships,
+but **the tool now has a staleness mode it did not have before**, and
+anyone editing it in a tight loop should know that.
+
+**The proof the plan asked for, and a check on the proof.** All CLI
+modes were captured before the carve and diffed after: `--archived`,
+`--stale`, five ids spanning pass and fail (`19J.1`, `19J.2`,
+`19I.12`, `18R`, `19G`), `--json`, an unknown id, `--since` without
+`--stale`, and `--help` — 22 streams over stdout and stderr, plus
+every exit code. **All 22 byte-identical; exit codes `0 0 0 0 0 1 0 0
+2 2 0` match.**
+
+That claim was then tested for vacuity, because "no diff" is the
+easiest passing assertion to write and the hardest to trust. The
+first mutation attempt (`sed` on the literal `PASS`) **matched
+nothing** — the verdict is computed from a constant, not printed
+literally — and reported "not caught", which would have certified the
+harness as blind. The real mutation, flipping the `PASS` constant's
+value, was caught. The lesson is 19I's at one more remove: *a
+mutation test can itself be vacuous, and a vacuous mutation test
+looks exactly like a failing one.*
+
+**Judgment held.** The plan rejected "stop mentioning it" on the
+grounds that the coupling justifying three snapshots of inaction had
+never been checked. The check confirmed the plan: three shared names,
+one of the three "jobs" a thin driver. The split was cheap. The two
+costs above are real and neither would have been visible without
+building it.
 
 ### PR ladder
 

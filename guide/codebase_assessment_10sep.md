@@ -339,15 +339,20 @@ paying for itself, and it is the strongest evidence in this window that the
   hand-kept date replaced by a pointer to the sweep record. The original claim is
   struck rather than deleted because the *class* it named was real; only its
   diagnosis was wrong.
-- **`tools/close_check.py` crossed 1,000 LOC** (863 at 08sep, **+137**),
-  growing by the `cites:` handling and the item-dating work of 19G.4–19G.8. It
-  still carries the two jobs flagged two snapshots ago — the per-segment close
-  check and the sweep-cadence report — sharing `REPO`, `_git` and
-  `last_touched_ever` and nothing else. The observation has now been repeated
-  three times and the file has grown 30% since it was first made. It remains
-  dev tooling with one caller, so it is still not a proposal; but a fourth
-  repetition should come with either a split or a decision to stop mentioning
-  it.
+- ~~**`tools/close_check.py` crossed 1,000 LOC** … sharing `REPO`, `_git` and
+  `last_touched_ever` and nothing else … a fourth repetition should come with
+  either a split or a decision to stop mentioning it.~~ **Closed 2026-09-10 as
+  Segment 19J Item 3 — split.** Two corrections to what three snapshots
+  recorded. The halves never shared `last_touched_ever`: its only call site is
+  inside `check_manifest`. And there were **three** jobs, not two — the
+  `--archived` baseline report is a third, though measuring showed it is a
+  *driver* over the close check (it calls five of its functions) rather than a
+  peer. Genuinely shared: `REPO`, `_git`, `Unresolvable`. That is lower coupling
+  than the reason given three times for not splitting, which is what settled
+  it. Now a 36-line shim over `close_check/` — `_shared` 37, `_manifest` 683,
+  `_archive` 85, `_sweep` 126, `__init__` carrying the reasoning docstring and
+  `main`. The invocation string is frozen because every archived plan's
+  Definition of done names it.
 - **The docs corpus is 135,331 LOC against 58,724 of production — 2.3:1.** Two
   segment plans totalling 6,654 lines both archived today, which is the shape
   working. But 19I's plan reached **4,840 lines**, past what a reader holds end
@@ -507,5 +512,11 @@ window.**
 **Watchlist tripwire: ~1,400 for `_instruments.py`, ~1,200 for the other two.**
 One is now inside 150 LOC of its tripwire, which was not true at 08sep.
 
-`tools/close_check.py` is **1,000 LOC (+137)** — see §5. Not a proposal; a
-decision now overdue.
+`tools/close_check.py` was **1,000 LOC (+137)** — **split 2026-09-10** (19J.3).
+The decision this section called overdue was taken, and the two costs it
+produced are recorded in the item's `Status`: the carve broke a
+single-patch-point test seam (`from X import NAME` binds a copy per module),
+and it created a `.pyc` cache a single-file script never had — which served
+stale code within twenty minutes of existing, because Python's
+`(mtime, size)` invalidation cannot see a same-size edit inside one
+filesystem second.
