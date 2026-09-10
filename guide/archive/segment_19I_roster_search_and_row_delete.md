@@ -2,7 +2,7 @@
 
 **Opened:** 2026-09-09 · **Theme:** the four Setup roster pages —
 finding rows, and removing them · **Related:**
-`spec/setup_pages.md`, `guide/segment_19H_additional_refinements.md`
+`spec/setup_pages.md`, `guide/archive/segment_19H_additional_refinements.md`
 (the live small-refinements segment these two were too large for)
 
 Two refinements the author raised together on 2026-09-09, both

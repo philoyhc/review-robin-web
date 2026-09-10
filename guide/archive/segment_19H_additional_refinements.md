@@ -1744,3 +1744,71 @@ Suite 3589 -> 3595.
   setup-mutation control on the roster pages answers `is_editable`,
   and what the editor's old gate concealed (Item 7).
 - `docs/status.md` — row for the item (Item 7).
+
+---
+
+## Segment close — 2026-09-10
+
+**Seven items over three days, PRs #2219 → #2278.** Every item carries
+its own `### Doc impact` and `### Status`; `python3
+tools/close_check.py 19H.<n>` exits 0 with no warnings for all seven,
+so the segment closes on the item manifests rather than a
+segment-level one.
+
+**It closes on both of its own triggers at once.** The rule written at
+the top was: closes when the queue empties or at the next assessment
+snapshot, whichever comes first. The queue emptied at Item 7, and the
+author has called for an assessment snapshot in the same breath. The
+shape held — 19C's failure was a standing home with no trigger, and
+this segment admitted seven items, refused none it should have taken,
+and never had to be argued about.
+
+**One admission was recorded rather than waved through.** Item 6 came
+from a build (19I.3 PR 2b), not from using the app, which is what the
+admission rule names. It was operator-facing and the author directed
+it, which settled it — but the exception is written down in that
+item's Judgment calls, because a rule that quietly stops being applied
+is how a scoped segment becomes a standing one.
+
+**The finding the segment is really about: the measurement is the
+work, and the first measurement is often wrong.** In four of the seven
+items the first measurement would have shipped the wrong fix.
+
+- **Item 1** — the plan's blast radius said one template renders the
+  setup-status partial. Fifteen do.
+- **Item 4** — the cache probe was wrong **twice, in opposite
+  directions**. A browser against a local server picked up a replaced
+  capture immediately, apparently refuting the caching account; the
+  flaw was that heuristic freshness is a fraction of the age since
+  `Last-Modified` and the files had been written seconds earlier.
+  Ageing the file ten days separated the configurations cleanly. An
+  earlier probe had reported the opposite — that a reload kept showing
+  the old image — because it sampled `naturalWidth` before the
+  lazy-loaded image re-decoded, and briefly pointed at "the server
+  lies", which it does not.
+- **Item 5** — a test written for the item described a scenario that
+  **cannot happen**: `field_labels.upsert` rejects the reviewee email
+  slot outright. The same wrong claim sat in the code comment beside
+  it.
+- **Item 6** — the plan rejected a shared partial at "four parameters
+  to express three sentences", estimated from the gap description. The
+  markup proved byte-identical across 23 lines but for two tokens.
+
+None was caught by re-reading. Each was caught by running something
+and watching it disagree.
+
+**Its companion: the close audit is not a formality.** Items 2 → 6
+each had their `spec-writer` pass find drift the item's own sweep had
+missed, twice including a claim the item had *just written*. Item 6's
+found three at once — a fourth stale passage its grep could not match
+(the pattern read `lock card`, the text read `card lock`), an
+undeclared spec carrying the claim in four more places, and the item's
+own new sentence overstating the code. That last one became **Item
+7**, which is the segment eating its own tail in the useful direction:
+an audit finding turned into a shipped fix the same day.
+
+**What the segment leaves.** Nothing open. The two gaps 19I recorded —
+no lock card on the roster pages, and `spec/rrw_functional_spec.md`
+§9.7's non-existent Self-reviews card — were half settled here: Item 6
+closed the first, and the second is still open, still recorded, still
+belonging to whoever opens the next segment on the Assignments page.

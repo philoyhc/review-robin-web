@@ -1,8 +1,8 @@
 # Segment 19G — Post-assessment follow-ups
 
 **Opened:** 2026-09-08 · **Theme:** settling the recommended moves from
-`guide/codebase_assessment_08sep.md` §8 · **Related:**
-`guide/codebase_assessment_08sep.md`, `constitution.md`,
+`guide/archive/codebase_assessment_08sep.md` §8 · **Related:**
+`guide/archive/codebase_assessment_08sep.md`, `constitution.md`,
 `tests/unit/test_doc_conventions.py`
 
 **Bounded, not a standing home.** 19C closed on 2026-09-08 because a
@@ -89,7 +89,7 @@ already make easy enough.
 
 ### Opportunity
 
-`guide/codebase_assessment_08sep.md` §5 recorded four documentation
+`guide/archive/codebase_assessment_08sep.md` §5 recorded four documentation
 defects found in one window, each live for between three weeks and four
 months, every one found by a human-directed audit and none by a check.
 §8's move #3 asked whether the class deserves a mechanism and proposed a
@@ -1938,7 +1938,7 @@ At `f506285f`, over all 99 plans (live + archived):
 - `docs/status.md` — row at the close. The 19G.7 row does not carry the
   three-manifest claim (checked), so nothing there needs amending.
 - *(for the human — outside the script's `spec/` + `docs/` regex)*
-  `guide/codebase_assessment_08sep.md` §8's three-manifest claim
+  `guide/archive/codebase_assessment_08sep.md` §8's three-manifest claim
   corrected to two; `tools/README.md`'s `close_check.py` row;
   `.claude/skills/segment-plan/SKILL.md`'s Doc-impact contract; and
   `guide/segment_plan_template.md`'s Doc-impact comment — the last three
@@ -2470,7 +2470,7 @@ not a plan, and is excluded from the three counts above.)*
 - *(for the human — outside the script's `spec/` + `docs/` regex)*
   `guide/post_azure_todo_checklist.md` (new, with item 1);
   `guide/README.md`'s index row for it; and
-  `guide/codebase_assessment_08sep.md` §5's long-window entry amended
+  `guide/archive/codebase_assessment_08sep.md` §5's long-window entry amended
   with the measurement.
 
 ### Status
@@ -2579,7 +2579,7 @@ account of the segment as a whole, and of the close itself.
 ### Intended versus done
 
 Intended: settle two recommended moves from
-`guide/codebase_assessment_08sep.md` §8 and close. Done: ten items, of
+`guide/archive/codebase_assessment_08sep.md` §8 and close. Done: ten items, of
 which **two were the planned moves and eight came out of the previous
 item's findings.** That is not scope creep in the usual sense — the
 segment's admission rule was "work arising from this segment's own
@@ -2658,7 +2658,7 @@ out.
 
 ### One thing deliberately left stale
 
-`guide/codebase_assessment_08sep.md` still says this segment "stays open
+`guide/archive/codebase_assessment_08sep.md` still says this segment "stays open
 with an empty queue and a close trigger", and gives the PR range as
 starting at #2196 (that PR is the participant top-bar Guide link, which
 shipped just before the segment opened; the range is #2197 → #2214).

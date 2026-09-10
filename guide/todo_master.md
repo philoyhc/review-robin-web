@@ -2751,7 +2751,7 @@ bounced them.
 
 *Four PRs inside that span are **not** 19G items: #2205, #2211 and #2215 are the 08sep assessment's three same-day amendments, and #2216 is the post-Azure checklist's second item. The assessment itself gives the range as starting at #2196; that PR is the participant top-bar Guide link, which shipped just before the segment opened.*
 
-Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md` §8 and ran to ten items, of which **eight were produced by the previous item's findings** rather than planned in advance. Shipped surface: **26 lines** — one companion pill. Everything else is documentation and the tooling that checks it.
+Opened to settle two recommended moves from `guide/archive/codebase_assessment_08sep.md` §8 and ran to ten items, of which **eight were produced by the previous item's findings** rather than planned in advance. Shipped surface: **26 lines** — one companion pill. Everything else is documentation and the tooling that checks it.
 
 - **Item 1 — summary drift, answered per class** (#2197 → #2202). The §8 question assumed one mechanism; the four instances turned out to be **four classes**, and the proposed registry targeted one. **A** prose restating a code constant → *derived* against `_PER_CELL_VALID_MODES`. **B** prose summarising another document → *conceded*, registry rejected on Article VI and recorded so it is not re-proposed. **C** pointers into another document's numbering → deferred to a measurement. **D** prose about behaviour with no source → conceded outright. **A fifth class nobody had counted** — 84 broken path references in live prose — is now enforced. `docs/unenforced_conventions.md` created, which Article VI had promised since it was written.
 - **Item 2 — `spec/operator_button_audit.md` §§4–5 regenerated** (#2203), discharging the stub above.
@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md`
 
 ---
 
-### Segment 19H — Additional refinements — 🔵 **live** (**seven items closed**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; queue empty again; plan stays in `guide/segment_19H_additional_refinements.md`, **not archived**)
+### Segment 19H — Additional refinements — ✅ complete + archived 2026-09-10 (**seven items**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; plan archived: `guide/archive/segment_19H_additional_refinements.md`)
 
 **A named scope, not a standing home.** Items are admitted only from
 **operator-facing refinements found by using the app**, each carrying
@@ -2848,6 +2848,17 @@ operator-facing refinement found by use gets its own segment.
   because Item 6 is what put the card there. 19I.3 had scoped the same
   gate out as "a correct gate for a different question" without testing
   whether it was correct. Both halves now read `is_editable`.
+
+**Closed on both of its own triggers at once.** The rule written when
+the segment opened was: closes when the queue empties or at the next
+assessment snapshot, whichever comes first. The queue emptied at Item
+7 and the author called for the snapshot in the same breath. The shape
+held — 19C's failure was a standing home with no trigger; this segment
+took seven items, refused none it should have taken, and never had to
+be argued about. One admission is recorded rather than waved through:
+Item 6 came from a build, not from using the app, and the exception is
+written into that item's Judgment calls, because a rule that quietly
+stops being applied is how a scoped segment becomes a standing one.
 
 **Three findings.** *A test can assert nothing and still pass* — Item
 1's first wiring assertion was satisfied by the JS helper's own
