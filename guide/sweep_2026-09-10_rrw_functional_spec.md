@@ -198,11 +198,30 @@ implied.** Three separate facts:
    (`session_config_io/_serialize.py:146`), applied on import
    (`_apply_session.py:39`), and copied by clone
    (`session_clone.py:108`).
-3. **Its only operator surface is the Settings CSV round-trip.**
-   The UI toggle is *per-instrument*, in the Assignments
-   per-instrument status card
-   (`session_assignments.html:85–90`), audited as
-   `assignments.instrument_self_reviews_active_set`.
+3. **It has no *setter* in the UI**, but it is not inert. The
+   session-wide setter retired — `set_instrument_self_reviews_active`'s
+   own docstring calls itself the "mirror of the retired
+   session-wide `set_self_reviews_active`". The flag is written
+   only by the Settings CSV apply path and clone.
+
+**Corrected 2026-09-10, at rung 2.** Point 3 first read "**its
+only operator surface is the Settings CSV round-trip**", which
+implied the column does nothing. It does: `_generate.py:346`
+reads it — `review_session.self_reviews_active if is_self else
+True` — so the flag **seeds the `include` value of every
+self-review pair at generation time**. The operator then flips
+those assignments per instrument from the Assignments status
+card's Self review column (`session_assignments.html:85–90`,
+audited `assignments.instrument_self_reviews_active_set`). Two
+layers, both live: a generation default and a per-instrument
+override. §8.6's existing wording — "When true, self-review pairs
+participate … Per-pair include overrides apply post-flip" — turns
+out to describe exactly that and needs no change.
+
+**Author's decision (2026-09-10):** "Self review assignments are
+flipped active/inactive through Assignments page." So §9.7's card
+bullet is deleted and §9.7 / §10.3 name the Assignments page as
+the surface. Not a gap; the sweep's first reading of it was.
 
 So the spec names a card that never shipped for a flag that is
 genuinely settable — just not by clicking anything. §8.6's "The
@@ -211,11 +230,10 @@ silent on *where*, which is the part a reader needs. §10.3 repeats
 the phantom: "the operator controls session-wide self-review
 behaviour via the self-reviews-active toggle".
 
-**Disposition:** delete §9.7's card bullet per the item's
-Decision, and make §8.6 say the flag rides the Settings CSV.
-**Flagged for the author** — a session-wide flag with no UI is
-either a gap worth a feature item or a deliberate
-advanced-operator affordance; the sweep does not decide that.
+**Disposition, applied at rung 2:** §9.7's card bullet deleted;
+§9.7 and §10.3 now name the Assignments page as where self-review
+assignments are flipped, and §5.9 records that the session flag
+seeds `include` at generation. §8.6 unchanged — it was right.
 
 ### F8 · §9.7 — the Assignments operator-actions card, as of 19I.9
 
@@ -363,11 +381,19 @@ spec — it is the name the *code, tests and a shipped migration*
 use for the same work the *plans* call 14B, and this spec is the
 one place where the two vocabularies meet.
 
-**Disposition changes accordingly.** Rung 2 must **not** simply
-rewrite this spec to say 14B: that would make the spec agree with
-the roadmap and disagree with the schema comments a reader hits
-next. Either the equivalence is stated once here, or the rename is
-its own item across all four files. **Flagged for the author.**
+**Disposition, resolved at rung 2 — and the equivalence already
+existed.** The author's read was right and checkable: segment
+numbering moved from a `-1` / `-2` suffix to letters (the archive
+still holds `segment_12A-1`, `-2`, `-3`), and
+`guide/segment_14B_email_infrastructure.md` **line 4 already says
+"Renamed from `segment_14-1_email_infra.md`"**.
+
+So no corpus-wide rename is needed and none was done. §11.6 now
+says **14B**, cites that plan file, and states in one sentence why
+`email_outbox.py`, its test and the `c4f6a8b0d2e5` migration still
+say 14-1 in their comments. A reader who follows the pointer lands
+on the document that reconciles both names — which is what the
+concern above was asking for, already built.
 
 ---
 

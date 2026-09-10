@@ -290,12 +290,17 @@ A reviewee can:
 - **Acknowledge** they have seen their results (a one-shot,
   idempotent gesture stamping `results_acknowledged_at`).
 
-Access is gated on the reviewee's `email_or_identifier` parsing
-as a real email that matches the signed-in user
-(case-insensitive). **Confidential reviewees** (non-email
-identifiers, used for analysis-only sessions) cannot reach the
-results surface by construction — there is no inbox to
-authenticate against.
+Access is gated by `require_reviewee_with_current_grant`
+(Segment 19F PR 4): the roster check — an active reviewee row
+whose `email_or_identifier` parses as a real email matching the
+signed-in user, case-insensitively — **plus a currently-resolving
+visibility grant**, meaning at least one instrument granting this
+reviewee a mode under a window that is open right now. Without a
+grant the route answers 404. (Before 19F the roster check alone
+opened the surface; see [§10.9](#109-reviewee-results-surface).)
+**Confidential reviewees** (non-email identifiers, used for
+analysis-only sessions) cannot reach the results surface by
+construction — there is no inbox to authenticate against.
 
 ### 4.5 Observer
 
@@ -362,9 +367,15 @@ at, updated-at.
 
 ### 5.3 Reviewee
 
-A person being reviewed. Reviewees do not sign in to RRW; they
-are the *subjects* of evaluation, not participants. Reviewees,
-like reviewers, are session-resident.
+A person being reviewed. Reviewees are session-resident, like
+reviewers. An **email-identified** reviewee is also a live
+authenticated audience — they sign in, reach `/me`, and read the
+results collected about them where a visibility policy grants it
+(see [§4.4](#44-reviewee)); a reviewee identified by anything
+other than an email is a subject of evaluation only, with no way
+in. (This paragraph read "reviewees do not sign in to RRW … not
+participants" until 2026-09-10, three months after the
+participant model shipped.)
 
 **User-supplied fields:** name, email or other identifier (used as
 the unique within-session key — institutions that don't use email
@@ -466,7 +477,7 @@ A column on an instrument that shows *context about the reviewee*
 to the reviewer — read-only, derived from existing roster /
 relationship data, not collected by this review.
 
-Display fields draw from **seven sources**:
+Display fields draw from **nine sources**:
 
 1. The reviewee's name.
 2. The reviewee's email or identifier.
@@ -481,7 +492,11 @@ include/exclude flag, an order, and (for the operator-side
 default) a tri-state sort-priority slot.
 
 The reviewee's name and email are always present (cannot be
-turned off); the other five sources are opt-in.
+turned off — they are the two locked rows); the other **seven**
+are opt-in. The canonical list is `_DEFAULT_DISPLAY_LABELS` in
+`app/services/instruments/_display_fields.py`. (This read "seven
+sources … the other five" until 2026-09-10; the enumeration below
+it always listed nine.)
 
 ### 5.9 Assignment
 
@@ -490,9 +505,22 @@ unit "this reviewer will review this reviewee on this
 instrument".
 
 **Fields:** reviewer id, reviewee id, instrument id, include flag
-(used by the assignment-regeneration reconciler), self-review
-flag (computed: true when reviewer.email matches reviewee.email,
-case-insensitive).
+(used by the assignment-regeneration reconciler, and seeded at
+generation from the session's self-reviews-active flag for
+self-review pairs — see [§8.6](#86-self-review-behaviour)),
+self-review flag.
+
+The self-review flag is computed by `classify_self_review` and
+depends on the instrument's unit of review:
+
+- **Individual-scoped** — true when reviewer.email matches
+  reviewee.email, case-insensitively.
+- **Group-scoped** — the *whole-group* rule: true when the
+  reviewer is a member of the group being reviewed, and when it
+  fires **every assignment in that group is flagged**, not only
+  the reviewer's own cell.
+
+`spec/assignments.md` § *Self-review policy* is the authority.
 
 Assignments are produced by the assignment-generation step from
 the instrument's pinned rule against the active roster. They are
@@ -673,11 +701,32 @@ hidden.
 ### 6.2 Editable vs locked semantics
 
 In `draft` and `validated`, every setup page is fully editable.
-In `ready`, every setup page renders with a prominent yellow
-"lock" card explaining that the session is open for responses
-and offering a one-click Pause action. While locked, upload
-affordances and destructive-action cards are hidden; form
-controls inside builders are disabled.
+In every other state — `ready`, `expired`, `archived` — the four
+roster Setup pages and Instruments render a prominent yellow
+**lock card** explaining why setup is locked and offering the way
+out that state has: `ready` and `expired` carry an inline Revert
+form, `archived` links the lobby's Unarchive and offers no
+control, because `/revert` answers 409 from there. All four roster
+pages render one partial,
+`operator/partials/_roster_lock_card.html`; `spec/lifecycle.md`
+§5 is the contract.
+
+Not *every* setup page: the **Email Template** page renders no
+lock card and carries no editable gate at all (deliberate —
+`spec/email_template_editor.md` §5), and Assignments /
+Invitations / Responses retired theirs when the Workflow card
+became the lifecycle chrome.
+
+While locked, upload affordances and destructive-action cards are
+hidden, the row-selection surface is absent rather than inert, and
+form controls inside builders — including the friendly-label
+editor — are disabled. Every one of those answers the same
+`is_editable` predicate as the card, so the explanation and the
+controls cannot disagree.
+
+(This paragraph said "in `ready`, every setup page" until
+2026-09-10. The card was keyed to `ready` alone until Segment 19H
+Item 6 and the friendly-label editor until Item 7.)
 
 The Session details config card on Session Home is also
 lifecycle-gated — its edit swap (`?editing=1`) is only reachable
@@ -721,9 +770,11 @@ Two entry paths exist:
 
 - **Direct session link** (`/me/sessions/{id}`). The signed-
   in user's email must case-insensitively match an active
-  reviewer row on that session. Mismatch produces a friendly
-  account-mismatch banner pointing the user at their account-debug
-  page.
+  reviewer row on that session. Mismatch answers a **bare 404** —
+  no banner, no hint that the session exists — so a signed-in
+  stranger cannot enumerate session ids (Segment 19F PR 1). (This
+  bullet promised an account-mismatch banner until 2026-09-10;
+  that banner belongs to the invitation path below.)
 
 - **Unique invitation link** (`/me/invite/{token}`). The
   token is per-reviewer, per-session, one-shot redemption to a
@@ -732,7 +783,9 @@ Two entry paths exist:
   Redemption matches token → reviewer, checks the signed-in user's
   email matches the invited reviewer's email, stamps `opened_at`
   on first visit (idempotent), emits `invitation.opened`, and
-  forwards to the session.
+  forwards to the session. **On mismatch this path — and only this
+  path — renders the friendly account-mismatch page**, with a
+  `403`, pointing the user at their account-debug page.
 
 Reviewers can access only the sessions they are listed in.
 
@@ -1044,7 +1097,12 @@ and **Observers** (gated on `observers_enabled`).
 Each page offers:
 
 - **Friendly-label editor card** — inline editors for the
-  display labels of this entity's tag and identity slots.
+  display labels of this entity's **tag slots only**. The reviewee
+  identity / photo overrides retired 2026-05-31 (see
+  [§8.5](#85-friendly-labels)); `field_labels.upsert` refuses
+  them, and the built-in defaults still render. The editor answers
+  the same `is_editable` gate as the rest of the page (Segment 19H
+  Item 7).
 - **Operator-actions card** — a search + status-filter strip
   and a selection-driven row of bulk and per-row actions
   (Edit, Inactivate, Activate, Add, Delete, Search, Clear),
@@ -1147,11 +1205,17 @@ on the Operations row of the chrome. It carries:
   self-review toggle (locked while `ready`), included count, and a
   per-instrument "Show in preview table" filter checkbox. (The
   Rule column retired 2026-05-26 — the rule lives on Band 1.)
-- **Self-reviews card** — session-wide self-reviews-active
-  toggle.
-- **Operator-actions card** — search box + Search-by
-  dropdown (All / Reviewer / Reviewee) + bulk Inactivate /
-  Activate / Show-pair-row controls.
+- **Operator-actions card** — a status filter, a search box with
+  typeahead suggestions, a Search-by dropdown (All / Reviewers /
+  Reviewees), and the selection-driven bulk Inactivate / Activate
+  / Show-pair-row controls. **Self-review assignments are flipped
+  active/inactive here**, per instrument, from the status card's
+  Self review column — there is no session-wide toggle on this
+  page; the session's self-reviews-active flag seeds the `include`
+  value at generation time and this surface overrides it after
+  (see [§8.6](#86-self-review-behaviour)). (The status filter and
+  typeahead landed in Segment 19I Item 9; a "Self-reviews card"
+  was listed here until 2026-09-10 and never existed.)
 - **Assignments preview table** — every materialised pair,
   with reviewer identity + tag columns, reviewee identity +
   tag columns, pair-context tag columns, Include checkbox,
@@ -1396,8 +1460,11 @@ controls whether each instrument's responses remain readable
 or are hidden after close.
 
 If the signed-in identity does not match any reviewer row on
-the session, the reviewer sees an account-mismatch banner
-pointing them at their account-debug page.
+the session, a direct link answers a **bare 404** — the
+enumeration-safe refusal from Segment 19F PR 1. The friendly
+account-mismatch page belongs to the *invitation* path
+([§7.2](#72-reviewer-identity)), which answers 403 and names the
+invited address.
 
 ### 10.3 Review surface
 
@@ -1436,9 +1503,11 @@ persist in a per-(browser, session, instrument) cookie.
 **Self-review** — when the reviewer's own email matches a
 reviewee row in the session (case-insensitive), the reviewer
 sees a row for themselves. The reviewer surface marks the row
-visually but does not block writes; the operator controls
-session-wide self-review behaviour via the self-reviews-active
-toggle.
+visually but does not block writes. Whether such a row is active
+at all is the operator's: the session's self-reviews-active flag
+seeds it at generation, and the **Assignments page flips
+self-review assignments active/inactive per instrument**
+thereafter (see [§9.7](#97-configure-assignments)).
 
 ### 10.4 Group-scoped review surface
 
@@ -1733,7 +1802,12 @@ outbox row, and flips its status straight to `sent` as a
 **dev-mode preview** — no message is actually handed to a mail
 server. The `SmtpEmailTransport` exists and is unit-tested but has
 no caller on the live send path; lighting it up is the scope of
-Segment 14-1 Part A. The functional contract (templates, tokens,
+**Segment 14B Part A** (`guide/segment_14B_email_infrastructure.md`).
+That plan was `segment_14-1_email_infra.md` before segment
+numbering moved from a `-1` / `-2` suffix to letters, and its
+header records the rename — which is why `email_outbox.py`, its
+test and the `c4f6a8b0d2e5` migration still say "Segment 14-1" in
+their comments. Same work, older name. The functional contract (templates, tokens,
 outbox, scheduling, transport class) is complete; only the last
 mile (invoking the transport from the send path) is pending.
 
@@ -1793,13 +1867,22 @@ exception, called out on the file's surface).
 
 ### 12.3 Responses extract
 
-A 21-column long-format file:
+A 21-column long-format file, in this order:
 `ReviewerName, ReviewerEmail, ReviewerTag1/2/3, RevieweeName,
-RevieweeEmail_or_Identifier, RevieweeTag1/2/3, InstrumentName,
+RevieweeEmail, RevieweeTag1/2/3, InstrumentName,
 InstrumentShortLabel, FieldKey, FieldLabel, ResponseType,
-Value, SavedAt, SubmittedAt, Version, SelfReview,
+Value, SelfReview, SavedAt, SubmittedAt, Version,
 InstrumentFlavour`. A per-instrument preamble at the top of
 the file lists each instrument's field dictionary.
+
+`RevieweeEmail` deliberately mirrors the roster CSV header even
+though the underlying column is `Reviewee.email_or_identifier`.
+The canonical tuple is `HEADER` in
+`app/services/extracts/responses_extract.py`. (This list named the
+column `RevieweeEmail_or_Identifier` and placed `SelfReview` after
+`Version` until 2026-09-10 — a name and a position, which are the
+two things that break a consumer built against
+[§12.7](#127-round-trip-stability)'s stability promise.)
 
 Group-scoped instruments collapse one row per group rather
 than per member. The file streams to the operator without
@@ -2100,14 +2183,18 @@ failure semantics and the per-route matrix, is
    the admin flag; changing *who is an admin* additionally
    requires the config-derived super-admin tier.
 
-Three gates apply to participant surfaces, all by
-case-insensitive email match against an **active** roster row:
+Three gates apply to participant surfaces, each by
+case-insensitive email match against an **active** roster row —
+and gate 5 additionally by a visibility grant:
 
 4. **Reviewer in session** — the reviewer surface, save /
    submit / clear, and the post-submit summary.
-5. **Reviewee in session** — the reviewee results surface; a
-   reviewee whose identifier is not an email can never reach
-   it.
+5. **Reviewee in session, with a current grant** — the reviewee
+   results surface. The roster match alone is not enough: at
+   least one instrument must grant this reviewee a mode under a
+   window open right now, or the route answers 404 (Segment 19F
+   PR 4, [§4.4](#44-reviewee)). A reviewee whose identifier is not
+   an email can never reach it.
 6. **Observer in session** — the observer collation surface.
 
 An invitation token grants nothing on its own: the token
@@ -2145,11 +2232,14 @@ A full security-posture catalogue lives in
 - **Boundary tag** — A display field marked "Group by" on a
   group-scoped instrument. Members of a group share the same
   value for every boundary tag.
-- **D6 source** — One of the seven possible display-field
+- **D6 source** — One of the **nine** possible display-field
   sources (reviewee name, reviewee email, photo link, three
-  reviewee tags, three pair-context tags).
+  reviewee tags, three pair-context tags — the bracket has always
+  enumerated nine; the count said seven until 2026-09-10). Two
+  are locked on, seven opt-in; see
+  [§5.8](#58-display-field).
 - **Display field** — A read-only context column on an
-  instrument; one of seven D6 sources.
+  instrument; one of nine D6 sources.
 - **Display label** — The user-facing string for a lifecycle
   state. `ready` displays as "Activated"; `validated`
   displays as "Validated"; etc. The label vocabulary
@@ -2184,9 +2274,11 @@ A full security-posture catalogue lives in
 - **Reviewer** — A person giving feedback.
 - **RuleSet** — A bundle of rules selecting which
   `(reviewer, reviewee)` pairs an instrument applies to.
-- **Self-review** — An assignment where the reviewer and the
-  reviewee are the same person (matched by email, case-
-  insensitive).
+- **Self-review** — On an individual-scoped instrument, an
+  assignment where the reviewer and the reviewee are the same
+  person (matched by email, case-insensitive). On a group-scoped
+  instrument, the whole-group rule applies instead — see
+  [§5.9](#59-assignment).
 - **Session** — One review cycle. The top-level unit.
 - **Sys admin** — A workspace-level governance role.
 - **Workspace** — The deployment-level container holding the
@@ -2196,15 +2288,23 @@ A full security-posture catalogue lives in
 
 ## 19. Reading guide
 
-The per-page / per-subsystem specs that this document
-references:
+Every live per-page / per-subsystem spec. Where one of them
+disagrees with this document, **the subsystem spec wins** and this
+one is corrected to match — this file describes the product, they
+describe the surfaces.
+
+(Until 2026-09-10 this table listed only the specs this document
+happened to cite, which left eleven live specs unnamed — including
+`spec/ui_elements.md`, and seven that govern a section this
+document already has.)
 
 | Subject | Spec |
 |---|---|
 | Domain model + audit-event detail | `spec/architecture.md` |
 | Auth posture + audience model | `spec/audience_and_identity_model.md` |
 | CSV import / export contracts | `spec/csv_contracts.md` |
-| UI vocabulary (button styles, layout) | `spec/domain_assumptions.md` |
+| UI vocabulary (button roles, layout primitives) | `spec/ui_elements.md` |
+| Load-bearing domain assumptions | `spec/domain_assumptions.md` |
 | Email backend options | `spec/email_infra_options.md` |
 | Email Template editor (page contract, overrides, merge tags) | `spec/email_template_editor.md` |
 | Group-scoped instruments | `spec/instruments.md` (operator-card / model side); `spec/assignments.md` (fan-out / aggregation) |
@@ -2228,6 +2328,16 @@ references:
 | Visual style (general primitives) | `spec/visual_style_general.md` |
 | Visual style (RRW-specific) | `spec/visual_style_rrw.md` |
 | Workflow card states | `spec/workflow_card.md` |
+| Colour tokens (two-tier semantic system) | `spec/color_tokens.md` |
+| Extract data workbench + Data shaper | `spec/extract_data.md` |
+| Participant model (reviewee / observer contracts) | `spec/participant_model.md` |
+| Rehydrate (rebuild a session from extracts) | `spec/rehydrate.md` |
+| Role landing pages + audience visibility | `spec/role_landing_and_visibility.md` |
+| Role-navigator chip strip | `spec/role_navigator.md` |
+| Round-trip coverage (export → import) | `spec/roundtrip_coverage.md` |
+| Validate page | `spec/validate_page.md` |
+| Visibility policy (audience × window grid) | `spec/visibility_policy.md` |
+| Blob storage (planned) | `spec/blob_storage.md` |
 
 For ship-state — what URL works today, what audit event fires
 today, what is queued for an upcoming segment — read

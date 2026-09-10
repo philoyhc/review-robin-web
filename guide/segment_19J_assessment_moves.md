@@ -51,7 +51,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 
 | Item | Covers | State |
 |---|---|---|
-| **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Open 2026-09-10** |
+| **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Closed 2026-09-10** (3 rungs; 15 findings) |
 | **19J.2** | The refinement allowance, measured rather than asserted | **Open 2026-09-10** |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Open 2026-09-10** |
 | 19J.4+ | Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot. | Open — **empty** |
@@ -262,6 +262,52 @@ sections, all update-in-place, is one PR — but **two of them (F7,
 F15) carry a question the sweep declined to decide**, so rung 2
 should land the thirteen mechanical ones and take direction on
 those two.
+
+**2026-09-10 — rungs 2 and 3 landed together, and both open
+questions were answered by the author.** All fifteen findings
+applied across fourteen sections, plus `spec/README.md`'s currency
+line. Rung 3 merged into this push because its one edit is the
+mechanism rung 2's edits exist to stop repeating.
+
+**F7 — "Self review assignments are flipped active/inactive
+through Assignments page" (author).** Checking that answer
+corrected the sweep's own finding. The sweep said the session-wide
+flag's "only operator surface is the Settings CSV round-trip",
+implying it does nothing. **It is read by the generator** —
+`_generate.py:346`, `review_session.self_reviews_active if
+is_self else True` — so it seeds the `include` value of every
+self-review pair at generation, and the Assignments status card
+overrides per instrument afterwards. Two live layers, not a dead
+column. §8.6 turned out to describe exactly that already and was
+left alone; §9.7's phantom card went, and §9.7 / §10.3 / §5.9 now
+name the real surfaces. **The finding was wrong in the direction
+of alarm**, which is the opposite of this segment's usual failure
+and worth the same treatment: corrected in place, stating what it
+used to say.
+
+**F15 — the author's convention hypothesis was right, and the fix
+was already in the repo.** Numbering moved from `-1` / `-2` to
+letters (the archive still holds `segment_12A-1/-2/-3`), and
+`guide/segment_14B_email_infrastructure.md` **line 4 already
+reads "Renamed from `segment_14-1_email_infra.md`"**. So the
+equivalence needed stating in the spec, not building: §11.6 now
+says 14B, points at that plan, and says in one sentence why the
+schema comments still say 14-1. No corpus-wide rename, no new
+item.
+
+**A near-miss worth recording.** Rung 2 was written on a branch
+restarted from `origin/main`, which does not carry rung 1 — so
+`spec/README.md`'s new pointer to the sweep record was a **dead
+path**, and `tests/unit/test_doc_conventions.py` failed on it.
+That test is 19G.7's broken-path check, catching exactly the class
+it was built for, on the sweep whose §6 notes the same check
+cannot see F13. The work was saved as a patch, the branch reset to
+rung 1's head, and the patch reapplied — no commit was lost, and
+the check went green once the sweep file was actually present.
+
+**Doc impact gained nothing.** `guide/segment_14B_email_infrastructure.md`
+was read to resolve F15 but not edited — it already carried the
+rename — so it is cited, not committed to.
 
 ### PR ladder
 
