@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md`
 
 ---
 
-### Segment 19H — Additional refinements — 🔵 **live** (both opened items closed 2026-09-08; plan stays in `guide/segment_19H_additional_refinements.md`, **not archived**)
+### Segment 19H — Additional refinements — 🔵 **live** (**seven items closed**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; queue empty again; plan stays in `guide/segment_19H_additional_refinements.md`, **not archived**)
 
 **A named scope, not a standing home.** Items are admitted only from
 **operator-facing refinements found by using the app**, each carrying
@@ -2790,6 +2790,64 @@ operator-facing refinement found by use gets its own segment.
   the warning true rather than reworded it. **Refusing to lock a dirty
   card was rejected**: it satisfies the invariant but removes a
   legitimate exit.
+- **Item 3 — a night-mode Guide** (planned #2223, built #2224). The
+  Guide's sixteen screencaps were light-theme images on a page with a
+  dark theme, and `spec/ui_elements.md` had *conceded it in writing* —
+  the figure mat was documented as a mitigation for a defect that
+  could not be fixed while one capture set existed. The author
+  supplied a second, so it shipped as light/dark pairs on a `-dark.png`
+  suffix. The suffix paid what the plan said: thirty-two new `<img>`
+  tags took the screencap suite **52 → 100 cases with no change to the
+  test file at all**, and only then did the pair checks take it to 134.
+- **Item 4 — a replaced screencap that never arrives** (#2225, closed
+  #2226). Reported from use the day Item 3 landed: two captures
+  refreshed under **the same URL** still showed their old pictures
+  while sixteen new ones appeared at once. `StaticFiles` sends `etag`
+  and `last-modified` and no `Cache-Control`, leaving freshness to the
+  browser's heuristic. Four lines; the work was proving they were the
+  right four. **The first measurement said the opposite of the truth**
+  — a browser against a local server picked up the replacement
+  immediately, because heuristic freshness is a fraction of the age
+  since `Last-Modified` and the files had been written seconds
+  earlier. Ageing the file ten days separated the two configurations
+  cleanly. An earlier probe reading was simply wrong and is recorded
+  as such: it had sampled `naturalWidth` before the lazy-loaded image
+  re-decoded, and briefly pointed at "the server lies", which it does
+  not.
+- **Item 5 — a pill that names a CSV column instead of the column**
+  (#2227). Two of the three "Fields with data" pill rows disagreed
+  with their own preview tables — `ReviewerName` / `ReviewerEmail`
+  beside columns headed `Name` / `Email`, and on Relationships a
+  reviewee `Email` beside a header reading `Reviewee`. One gap with
+  two faces: the mapping reaches only the 12 renamable slots. **A test
+  I wrote described something that cannot happen** and failed for that
+  reason — `field_labels.upsert` rejects the reviewee email slot
+  outright, so the scenario it protected against was fiction; the same
+  wrong claim was corrected in the code comment beside it. Caught by
+  running it, not by reading it.
+- **Item 6 — the roster lock card explains every state it locks**
+  (#2277). The yellow card saying *why* setup is locked was keyed to
+  `is_ready` while every control on those pages moved to `is_editable`
+  at 19I.3 — so `expired` and `archived` were correct and **silent**.
+  Three branches now, `archived` linking Unarchive and carrying no
+  control because `/revert` 409s from there. Measuring first found a
+  second defect: Relationships and Observers had always posted
+  `return_to` slugs the route's allowlist did not contain, so those
+  reverts fell through to Session Home — invisible because a 303 to a
+  real page looks like success, and 3,529 tests had not noticed.
+  `spec/lifecycle.md` §5's account of that allowlist was **wrong in the
+  direction that hid it**. The plan's own rejection of a shared partial
+  was overturned by the build: estimated from the gap description, the
+  markup proved byte-identical across 23 lines but for two tokens.
+- **Item 7 — the friendly-label editor answers the same gate as its
+  card** (#2278). Item 6's close audit measured the editor on all five
+  states and found the page contradicting itself: on `expired` and
+  `archived`, a lock card saying the roster cannot be modified above a
+  live **Save labels** button whose route answered **303**. The gate
+  was Segment 15A vintage; **the contradiction was one day old**,
+  because Item 6 is what put the card there. 19I.3 had scoped the same
+  gate out as "a correct gate for a different question" without testing
+  whether it was correct. Both halves now read `is_editable`.
 
 **Three findings.** *A test can assert nothing and still pass* — Item
 1's first wiring assertion was satisfied by the JS helper's own
@@ -2803,6 +2861,23 @@ mechanism* — Item 2 corrected three stale spec passages by looking for
 paragraphs like the one it edited; the `spec-writer` pass found a
 fourth, stale for the identical reason because it names the same
 shared function.
+
+**What the seven have in common: the measurement is the work.** Every
+item here was reported or confirmed by exercising the app, and in four
+of them the *first* measurement was wrong in a way that would have
+shipped the wrong fix — Item 1's blast radius (one template, actually
+fifteen), Item 4's cache probe (twice, in opposite directions), Item
+5's impossible test premise, and Item 6's plan-time estimate of what a
+shared partial would cost. None was caught by re-reading; each was
+caught by running something and watching it disagree.
+
+**And the close audit is not a formality.** Items 2, 3, 4, 5 and 6 each
+had their `spec-writer` pass find drift the item's own sweep had
+missed, twice including a claim the item had *just written*. Item 6's
+found three: a fourth stale passage its grep could not match (the
+pattern read `lock card`, the text read `card lock`), an undeclared
+spec carrying the claim in four more places, and the item's own new
+sentence overstating the code — which became Item 7.
 
 ---
 
