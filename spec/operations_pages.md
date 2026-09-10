@@ -140,9 +140,23 @@ reminders, and Incomplete reviews).
   the filtered status set.
 - **Apply / Clear** — Apply submits the form; Clear (visible only
   when a filter is active) is a link back to the unparameterised
-  page.
-- A muted "Showing N of M." line appears alongside the buttons when
-  a filter is active.
+  page. These are the only things in the row: **Segment 19I Item 10
+  moved the count out of it.**
+
+**The preview-count line** sits at the top-left of the table card,
+above the rows it counts, in `.table-showing-hint` — the same helper
+and partial the four roster pages and Assignments use
+(`spec/setup_pages.md`, "Preview tables"). Its noun here is
+**`reviewers`**, not "invitations": this table is one row per
+reviewer (`build_invitations_rows` iterates
+`monitoring.per_reviewer_progress`).
+
+**This page is uncapped.** It renders every matching row, however
+many — there is no 200 / 500 window as on the rosters. So only the
+filter branch can ever fire: `Showing 3 of 1,240 reviewers.`, or
+nothing at all. `first …` and `; X more not shown` are unreachable
+here by construction. A filter that matches every row renders
+nothing, because a table showing everything needs no caption.
 
 ### Table columns
 
@@ -212,7 +226,11 @@ variant).
 
 Same shape as the Invitations filter card: Status `<select>` +
 Search `<input>` against `filter_search_options` (reviewee name or
-email) + Apply / Clear / "Showing N of M." muted note.
+email) + Apply / Clear. The preview-count line sits above the table
+rather than in this card (Segment 19I Item 10), and its noun is
+**`reviewees`** — one row per reviewee, from
+`monitoring.per_reviewee_coverage`. This page is uncapped on the
+same terms as Invitations, so only the filter branch fires.
 
 ### Table columns
 

@@ -610,10 +610,11 @@ The Assignments page splits the way the roster Setup pages do
   `draft` and `validated`, which is what all five mutating routes
   enforce.
 - **The read-only half renders in every state** — the `Search by:`
-  select, the search box, `Clear`, `Showing N of M` and the
-  `Search` button. Reading a finished session's assignments is
-  legitimate, and mid-session is exactly when an operator checks
-  who is assigned to whom.
+  select, the search box, `Clear` and the `Search` button. The count
+  itself left this card in Segment 19I Item 10 — see "The
+  preview-count line" below. Reading a finished session's
+  assignments is legitimate, and mid-session is exactly when an
+  operator checks who is assigned to whom.
 
 Before Item 8 the template gated the whole operator-actions card
 on `not is_ready`, which disagreed with those routes on **three of
@@ -656,8 +657,8 @@ here.
 it in Python over a loaded list
 (`app/web/views/_filters.py::_matches_row`); this page runs it in
 SQL, because `count_pairs` and the `PAIR_PREVIEW_LIMIT` cap both run
-in the query and `Showing N of M` keeps its meaning — `N` is the
-pairs matching the term, `M` every pair in the session.
+in the query and the preview-count line keeps its meaning — `N` is
+the pairs matching the term, `M` every pair in the session.
 `tests/integration/test_assignments_search_tags.py` holds one table
 of cases against both paths so they cannot drift apart silently.
 Its known limit: Python `str.casefold` and SQL `lower` agree on
@@ -716,9 +717,9 @@ result back.
 Options come from `views.ASSIGNMENTS_STATUS_OPTIONS`; the select is
 the roster pages' shape (`spec/setup_pages.md`).
 
-**It composes with the search into `Showing N of M`** — `N` is the
-pairs matching *both* filters, `M` every pair in the session. That is
-the roster pages' own reading of the same sentence
+**It composes with the search into the preview-count line** — `N` is
+the pairs matching *both* filters, `M` every pair in the session.
+That is the roster pages' own reading of the same sentence
 (`views/_filters.py`: *"Filters compose: status + search"*).
 
 **The column chips ignore both filters.** `col_data_sample` is built
@@ -732,6 +733,33 @@ and returns on the next request — an unrecognised value would
 otherwise persist there. The route parameter is named `filter_status`
 with a `status` alias: `status` alone shadows the module-level
 `status` import (`status.HTTP_200_OK`).
+
+### The preview-count line (Segment 19I Item 10)
+
+Until Item 10 this page reported its counts in **three** places: a
+`Showing {matching} of {total}.` span flush right in the
+operator-actions row, a `Showing first N of M unique pairs.` line
+top-left of the preview card in `.form-help`, and a
+`…and X more not shown.` line below the table. All three collapse
+into the one sentence the seven preview pages share, rendered by
+`operator/partials/_preview_count_line.html` in
+`.table-showing-hint` — the roster pages' class. `.form-help` sets
+`--fs-small`, which is why this page's line used to render a size
+smaller than the identical sentence on the rosters.
+
+The noun is **`assignments`**; `unique pairs` is retired. The four
+branches and the rule behind them are in `spec/setup_pages.md`,
+"Preview tables (shared toggle pattern)" — this page is capped by
+`PAIR_PREVIEW_LIMIT` (200, unlifted by a filter), so all four are
+reachable here.
+
+**A search matching nothing renders no count line** — the shared
+rule, not a quirk of this page (`spec/setup_pages.md`, "Preview
+tables"). The line sits inside the preview card's `pair_sample`
+gate, so there is no table for it to caption, and `No assignments
+match the search.` owns that state alone. Before Item 10 a
+`Showing 0 of 1.` also rendered in the filter row, which is what
+changed here.
 
 ### Preview table
 
