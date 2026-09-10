@@ -2409,12 +2409,18 @@
         color: var(--text-body);
         cursor: pointer;
       }
-      /* Setup-page column-visibility chips (Segment 18E Part 1) —
-         each chip toggles whether its column shows in the preview
-         table. Rendered as pills reusing the Sessions-lobby
-         tag-filter chip styling (.pill .tag-chip): filled
-         (is-selected) means the column is visible; a struck-through
-         is-disabled chip marks a column with no data. */
+      /* Column-visibility chips (Segment 18E Part 1) — each chip
+         toggles whether its column shows in the preview table.
+         Rendered as pills reusing the Sessions-lobby tag-filter chip
+         styling (.pill .tag-chip): filled (is-selected) means the
+         column is visible, plain means hidden.
+
+         ``.tag-chip.is-disabled`` no longer appears on any chip row:
+         19I Item 12 rung 3 retired the struck-through "no data in
+         this column" state, because a slot with no data now renders
+         neither chip nor column. The rule stays because
+         ``instruments_index.html`` renders the same class for its
+         Band 1 link chips, which are a different mechanism. */
       body.ui-v2 .col-chip-row {
         display: flex;
         flex-wrap: wrap;
@@ -3947,10 +3953,14 @@
       //     <span class="pill tag-chip is-selected"
       //           data-col-toggle="{SLOT}"
       //           role="button" tabindex="0" aria-pressed="true">Label</span>
-      //     <span class="pill tag-chip is-disabled"
-      //           data-col-toggle="{SLOT}"
-      //           aria-disabled="true">Label</span>
       //   </p>
+      //
+      // Every chip present is a live one. A slot with no data
+      // anywhere in the roster renders neither chip nor column
+      // (19I Item 12 rung 3), which retired the disabled-chip state
+      // this primitive used to carry — and with it the branch that
+      // hid an empty column, since there is no longer a column to
+      // hide.
       //
       // A page may carry several chip rows against one table —
       // Assignments groups its nine slots into three — so the
@@ -3999,13 +4009,6 @@
 
           chips.forEach(function (chip) {
             var slot = chip.getAttribute("data-col-toggle");
-            // A column with no data is shown as a disabled chip and
-            // its column stays hidden — the operator cannot turn on
-            // an empty column, and storage never overrides that.
-            if (chip.classList.contains("is-disabled")) {
-              apply(slot, false);
-              return;
-            }
             var visible = true;
             if (
               stored &&
@@ -4044,10 +4047,8 @@
           function persist() {
             var state = {};
             chips.forEach(function (chip) {
-              if (!chip.classList.contains("is-disabled")) {
-                state[chip.getAttribute("data-col-toggle")] =
-                  chip.getAttribute("aria-pressed") === "true";
-              }
+              state[chip.getAttribute("data-col-toggle")] =
+                chip.getAttribute("aria-pressed") === "true";
             });
             try {
               window.localStorage.setItem(

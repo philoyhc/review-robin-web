@@ -34,10 +34,10 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 
-# The chip markup, per state. ``is-disabled`` is what "no data in
-# this column" renders as until rung 3 retires it.
+# The chip markup. Since rung 3 there is only one state: a slot with
+# data renders a live chip, and a slot without renders nothing at
+# all — no chip, and no column for it to govern.
 LIVE = 'tag-chip is-selected" data-col-toggle="{slot}"'
-DEAD = 'tag-chip is-disabled" data-col-toggle="{slot}"'
 
 
 def _session(
@@ -78,12 +78,19 @@ def _rows(body: str) -> str:
 
 
 def _chip_state(body: str, slot: str) -> str:
-    """``"live"`` / ``"dead"`` / ``"absent"`` for one chip."""
+    """``"live"`` or ``"absent"`` for one chip.
+
+    The third state — a struck ``is-disabled`` chip marking a column
+    with no data — retired in rung 3. Its absence is asserted rather
+    than assumed, because "absent" and "struck" would otherwise be
+    indistinguishable to every caller below.
+    """
     flat = " ".join(body.split())
     if LIVE.format(slot=slot) in flat:
         return "live"
-    if DEAD.format(slot=slot) in flat:
-        return "dead"
+    assert f'is-disabled" data-col-toggle="{slot}"' not in flat, (
+        f"{slot} rendered the retired disabled-chip state"
+    )
     return "absent"
 
 
@@ -115,7 +122,7 @@ def test_a_tag_past_the_reviewers_cap_still_lights_its_chip(
     ).text
     assert "R0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-1") == "live"
-    assert _chip_state(body, "tag-2") == "dead"
+    assert _chip_state(body, "tag-2") == "absent"
 
 
 def test_a_tag_past_the_reviewees_cap_still_lights_its_chip(
@@ -138,7 +145,7 @@ def test_a_tag_past_the_reviewees_cap_still_lights_its_chip(
     ).text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-2") == "live"
-    assert _chip_state(body, "tag-1") == "dead"
+    assert _chip_state(body, "tag-1") == "absent"
 
 
 def test_a_photo_past_the_cap_still_lights_the_profile_chip(
@@ -282,11 +289,11 @@ def test_the_responses_chip_reads_the_roster_not_the_filtered_rows(
 # --------------------------------------------------------------------------- #
 
 
-def test_a_slot_with_no_data_anywhere_still_strikes_its_chip(
+def test_a_slot_with_no_data_anywhere_renders_no_chip_and_no_column(
     db: Session, client: TestClient
 ) -> None:
     """The other half of the contract: roster-wide must not mean
-    "always live". Rung 3 turns this state into no chip at all."""
+    "always live"."""
     review_session = _session(client, db, code="chip-empty")
     db.add(
         Reviewer(
@@ -302,8 +309,84 @@ def test_a_slot_with_no_data_anywhere_still_strikes_its_chip(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     assert _chip_state(body, "tag-1") == "live"
-    assert _chip_state(body, "tag-2") == "dead"
-    assert _chip_state(body, "tag-3") == "dead"
+    assert _chip_state(body, "tag-2") == "absent"
+    assert _chip_state(body, "tag-3") == "absent"
+
+    # And the columns go with the chips. Scoped to the table: the
+    # page's own <style> block still names every ``.tag-col-N`` in a
+    # ``col-hidden-`` rule, so an unscoped assertion matches the CSS.
+    _t = body.index("<table id=")
+    table = body[_t : body.index("</table>", _t)]
+    assert "tag-col-1" in table
+    assert "tag-col-2" not in table
+    assert "tag-col-3" not in table
+
+
+def test_a_roster_with_no_tags_at_all_renders_no_chip_row(
+    db: Session, client: TestClient
+) -> None:
+    """``Show columns:`` with nothing after it is a label, not a
+    control."""
+    review_session = _session(client, db, code="chip-none")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alpha",
+            email="alpha@example.edu",
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    assert "Show columns:" not in body
+    assert 'data-col-toggles-for="reviewers-table"' not in body
+    _t = body.index("<table id=")
+    table = body[_t : body.index("</table>", _t)]
+    for slot in ("tag-col-1", "tag-col-2", "tag-col-3"):
+        assert slot not in table
+    # The table itself still renders its remaining columns.
+    assert "Alpha" in table
+
+
+def test_edit_mode_renders_every_tag_column_even_when_empty(
+    db: Session, client: TestClient
+) -> None:
+    """The chicken-and-egg guard, and the one place rung 3's rule
+    must not apply.
+
+    A tag with no data renders no column — but an operator adding or
+    editing a row has to be able to type into an empty tag, which is
+    the only way it ever stops being empty. ``edit_mode`` overrides
+    the gate, exactly as the Photo column has always done.
+    """
+    review_session = _session(client, db, code="chip-editmode")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alpha",
+            email="alpha@example.edu",
+        )
+    )
+    db.commit()
+
+    plain = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    adding = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?add=1"
+    ).text
+
+    _p = plain.index("<table id=")
+    _a = adding.index("<table id=")
+    plain_table = plain[_p : plain.index("</table>", _p)]
+    add_table = adding[_a : adding.index("</table>", _a)]
+
+    assert "tag-col-1" not in plain_table
+    for slot in ("tag-col-1", "tag-col-2", "tag-col-3"):
+        assert slot in add_table, slot
+    assert 'name="tag_1"' in add_table
 
 
 # --------------------------------------------------------------------------- #
@@ -352,7 +435,7 @@ def test_a_tag_past_the_assignments_pair_cap_still_lights_its_chip(
         "capped sample could have seen the tag"
     )
     assert _chip_state(body, "rt1") == "live"
-    assert _chip_state(body, "rt2") == "dead"
+    assert _chip_state(body, "rt2") == "absent"
 
 
 def test_assignments_pair_context_chips_stay_active_only(
@@ -399,7 +482,7 @@ def test_assignments_pair_context_chips_stay_active_only(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
 
-    assert _chip_state(assignments_body, "p1") == "dead"
+    assert _chip_state(assignments_body, "p1") == "absent"
     assert _chip_state(relationships_body, "tag-1") == "live"
 
 
@@ -434,3 +517,45 @@ def test_the_photo_chip_and_the_photo_column_agree(
     assert 'class="profile-col"' in body, (
         "the chip is live but the column it governs was not rendered"
     )
+
+
+def test_an_assignments_group_with_no_data_renders_no_row(
+    db: Session, client: TestClient
+) -> None:
+    """Assignments is the only page with several chip rows, so it is
+    the only one that can render a group label with no chips after
+    it. Reviewer tags are populated here; reviewee tags and
+    pair-context are empty, so those two rows go entirely.
+
+    A mutation removing this gate survived the first pass — nothing
+    else in the suite looks at the group labels.
+    """
+    review_session = _session(client, db, code="chip-group-empty")
+    for i in range(2):
+        db.add(
+            Reviewer(
+                session_id=review_session.id,
+                name=f"R{i}",
+                email=f"r{i}@example.edu",
+                tag_1="Team A",
+            )
+        )
+        db.add(
+            Reviewee(
+                session_id=review_session.id,
+                name=f"E{i}",
+                email_or_identifier=f"e{i}@example.edu",
+            )
+        )
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert "Show reviewers:" in body
+    assert "Show reviewees:" not in body
+    assert "Show relationships:" not in body
+    assert _chip_state(body, "rt1") == "live"
+    assert _chip_state(body, "et1") == "absent"

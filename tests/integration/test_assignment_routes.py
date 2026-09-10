@@ -443,7 +443,11 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     # Top of the preview card. Since 19I Item 12 rung 1 that is the
     # first "Show columns" chip row, which now lives in this card
     # rather than one of its own.
-    preview = body[body.index('data-col-toggles-for="assignments-table"') :]
+    # Top of the preview card. Anchored on the card itself rather
+    # than on the chip row: since 19I Item 12 rung 3 a roster with no
+    # tags at all renders no chip row, and this seed has none.
+    preview = body[body.rindex('<div class="card"', 0,
+                               body.index('id="assignments-table"')) :]
     assert '<p class="muted table-showing-hint">' in preview
     # The class the page used to use, and the wording that went with
     # it. `.form-help` survives elsewhere in the app, so this is
@@ -554,13 +558,29 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # Header carries every per-slot column even when the data is sparse.
-    assert 'class="assignment-col col-rt1 rrw-sortable"' in body
+    # The header carries exactly the slots that hold data. Until
+    # 19I Item 12 rung 3 it carried all nine, the six empty ones
+    # hidden by CSS behind a struck chip; the author asked for
+    # neither the chip nor the column.
+    # ``index("</table>")`` alone finds the FIRST table in the
+    # page, which on several of these sits well above the
+    # preview — the slice then runs backwards, is empty, and
+    # every assertion over it holds vacuously.
+    _t = body.index("<table id=")
+    table = body[_t : body.index("</table>", _t)]
+    assert 'class="assignment-col col-rt1 rrw-sortable"' in table
     assert "Tag 1" in body
-    assert 'class="assignment-col col-et2 rrw-sortable"' in body
+    assert 'class="assignment-col col-et2 rrw-sortable"' in table
     assert "Tag 2" in body
-    assert 'class="assignment-col col-p1 rrw-sortable"' in body
+    assert 'class="assignment-col col-p1 rrw-sortable"' in table
     assert "Pair context 1" in body
+    # The seed populates one slot per source; the other six are
+    # empty across the roster and render no column at all. Scoped to
+    # the table because the page's <style> block still names every
+    # ``col-{slot}`` in its (now partly dead) col-hidden rules.
+    for empty in ("col-rt2", "col-rt3", "col-et1", "col-et3",
+                  "col-p2", "col-p3"):
+        assert empty not in table, empty
     assert "col-a3" not in body
     assert 'data-sort-key="reviewer"' in body
     assert 'data-sort-key="reviewee"' in body
@@ -572,8 +592,8 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert ">cohort-a</td>" in body
     assert ">bench-a</td>" in body
 
-    # "Show columns" chip initial state — slots with data render
-    # as selected chips; empty slots render disabled.
+    # "Show columns" chips — one per slot that holds data, and
+    # nothing for the rest.
     def _chip_class(slot: str) -> str:
         before = body.split(f'data-col-toggle="{slot}"', 1)[0]
         return before.rsplit("<span", 1)[1]
@@ -581,5 +601,10 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert "is-selected" in _chip_class("rt1")
     assert "is-selected" in _chip_class("et2")
     assert "is-selected" in _chip_class("p1")
-    assert "is-disabled" in _chip_class("rt2")
-    assert "is-disabled" in _chip_class("p3")
+    for empty in ("rt2", "rt3", "et1", "et3", "p2", "p3"):
+        assert f'data-col-toggle="{empty}"' not in body, empty
+
+    # All three groups still render, because each has one live slot.
+    for group in ("Show reviewers:", "Show reviewees:",
+                  "Show relationships:"):
+        assert group in body

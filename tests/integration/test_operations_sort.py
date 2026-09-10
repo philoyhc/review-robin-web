@@ -282,11 +282,20 @@ def test_both_pages_render_the_tag_columns(
     assert "Group A" in resp and "Wave 2" in resp
 
 
-def test_an_empty_tag_slot_renders_a_disabled_chip(
+def test_an_empty_tag_slot_renders_no_chip_and_no_column(
     client: TestClient, db: Session
 ) -> None:
-    """`tag_3` is empty across the seed, so its chip is disabled and
-    cannot be turned on. Slots 1 and 2 have data and are live."""
+    """`tag_3` is empty across the roster, so neither its chip nor its
+    column renders. Slots 1 and 2 have data and are live.
+
+    Until Segment 19I Item 12 rung 3 the empty slot rendered a struck,
+    ``aria-disabled`` chip and a hidden-but-present column. The author
+    asked for neither: *"don't bother showing any chips for tags that
+    don't have any data at all."* The column goes with the chip
+    because the chip was the only thing hiding it — the shared
+    primitive branched on ``is-disabled`` to stamp
+    ``col-hidden-{slot}``, so a chip removed on its own would have
+    left the empty column **visible**."""
     s = _seed(client, db, "ops-tags-empty")
     for page in ("invitations", "responses"):
         body = client.get(f"/operator/sessions/{s.id}/{page}").text
@@ -296,8 +305,19 @@ def test_an_empty_tag_slot_renders_a_disabled_chip(
         for slot in ("tag-1", "tag-2"):
             i = chips.index(f'data-col-toggle="{slot}"')
             assert 'aria-pressed="true"' in chips[i : i + 200], (page, slot)
-        i3 = chips.index('data-col-toggle="tag-3"')
-        assert 'aria-disabled="true"' in chips[i3 : i3 + 200], page
+        assert 'data-col-toggle="tag-3"' not in chips, page
+        assert "aria-disabled" not in chips, page
+        # Scoped to the table: the page's own <style> block still
+        # names ``.tag-col-3`` in a ``col-hidden-tag-3`` rule, which
+        # is dead but harmless, and an unscoped assertion matches it.
+        # ``index("</table>")`` alone finds the FIRST table in the
+        # page, which on several of these sits well above the
+        # preview — the slice then runs backwards, is empty, and
+        # every assertion over it holds vacuously.
+        _t = body.index("<table id=")
+        table = body[_t : body.index("</table>", _t)]
+        assert "tag-col-3" not in table, page
+        assert "tag-col-1" in table and "tag-col-2" in table, page
 
 
 def test_both_pages_declare_the_shared_primitive(

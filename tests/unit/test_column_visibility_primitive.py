@@ -174,3 +174,23 @@ def test_the_fields_with_data_card_no_longer_holds_chips() -> None:
     ):
         src = (OPERATOR / name).read_text()
         assert src.index("Fields with data:") < src.index(CHIP_ROW)
+
+
+def test_the_primitive_carries_no_disabled_chip_branch() -> None:
+    """Segment 19I Item 12 rung 3 retired the struck "no data in this
+    column" chip: a slot with no data renders neither chip nor
+    column, so there is nothing for the primitive to grey out and no
+    empty column left for it to hide.
+
+    Pinned structurally because the branch is *behaviorally* dead —
+    a mutation restoring it changed no rendered page and passed every
+    integration test in the suite. Only the source says it is gone.
+
+    ``base.html`` still carries a ``.tag-chip.is-disabled`` CSS rule,
+    which stays: ``instruments_index.html`` renders that class for
+    its Band 1 link chips, a different mechanism entirely.
+    """
+    src = BASE.read_text()
+    start = src.index('data-rrw-col-toggles"')
+    iife = src[start : src.index("</script>", start)]
+    assert "is-disabled" not in iife
