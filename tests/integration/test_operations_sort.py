@@ -232,6 +232,12 @@ def test_both_tables_carry_the_sort_markers(
         assert f'<table id="{table}"' in body
         assert f'data-rrw-sortable="rrw-sort-{page}-{s.id}"' in body
         assert '<tbody class="rrw-rows">' in body
+        # The table sits inside `.table-scroll` (base.html). Without
+        # it, rung 3's tag columns pushed Invitations past its card at
+        # **every** viewport width up to 1920 — measured 1496px of
+        # table against a 1396px cap — and the whole page scrolled
+        # sideways rather than the table.
+        assert '<div class="table-scroll">' in body
         # Every sortable header carries a key and a button, and every
         # rendered row carries a value for it.
         assert 'class="rrw-sortable"' in body

@@ -120,6 +120,11 @@
         {% endfor %}
       </p>
       {% include "operator/partials/_preview_count_line.html" %}
+      {# `.table-scroll` (base.html) keeps a wide table's overflow
+         inside its own card instead of pushing the whole page
+         sideways. Ten columns on a page capped at ~1396px will
+         outgrow someone's screen whatever the headers say. #}
+      <div class="table-scroll">
       <table id="invitations-table"
              data-rrw-col-toggles="rrw-invitation-tag-visibility"
              data-rrw-sortable="rrw-sort-invitations-{{ session.id }}">
@@ -140,17 +145,17 @@
           <th class="rrw-sortable" data-sort-key="email_status">Email Status<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Email Status"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="email_sent_at">Email Sent<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Email Sent"
+          <th class="rrw-sortable" data-sort-key="email_sent_at">Sent<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Sent"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-type="Integer" data-sort-key="review_progress">Review Progress<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Review Progress"
+          <th class="rrw-sortable" data-sort-type="Integer" data-sort-key="review_progress">Progress<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Progress"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-type="Integer" data-sort-key="required_fields">Required Fields<button type="button" class="rrw-sort-btn"
+          <th class="rrw-sortable" data-sort-type="Integer" data-sort-key="required_fields">Required<br>Fields<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Required Fields"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="last_reminder_at">Last reminder<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Last reminder"
+          <th class="rrw-sortable" data-sort-key="last_reminder_at">Reminder<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reminder"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
           <th class="col-shrink"></th>
         </tr>
@@ -250,6 +255,7 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
     {# The slot -> column-class mapping is the page's own, by design:
        the shared primitive only toggles ``col-hidden-{slot}`` on the

@@ -555,13 +555,18 @@ def test_invitations_page_renders_consolidated_column_headers(
     # the sort cascade names.
     start = body.index("<thead>")
     head = body[start : body.index("</thead>", start)]
+    # Three labels were narrowed in Segment 19I Item 11 after the tag
+    # columns pushed the table past its container at every viewport
+    # width: `Review Progress` -> `Progress`, `Last reminder` ->
+    # `Reminder`, and `Required Fields` kept both words stacked onto
+    # two lines rather than shortened.
     for key, label in (
         ("name", "Reviewer"),
         ("email_status", "Email Status"),
-        ("email_sent_at", "Email Sent"),
-        ("review_progress", "Review Progress"),
-        ("required_fields", "Required Fields"),
-        ("last_reminder_at", "Last reminder"),
+        ("email_sent_at", "Sent"),
+        ("review_progress", "Progress"),
+        ("required_fields", "Required<br>Fields"),
+        ("last_reminder_at", "Reminder"),
     ):
         assert (
             f'data-sort-key="{key}">{label}' in head

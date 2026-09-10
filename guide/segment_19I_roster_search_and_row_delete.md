@@ -3582,6 +3582,51 @@ along with its Responses twin and the valid-key set.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — a rung 3 regression, found by the author and fixed.**
+
+The three tag columns pushed the Invitations table past its
+container. Measured in Chromium rather than eyeballed, this was **not
+a small-screen problem**: the page caps at ~1396px and the table was
+**1496px**, so it overflowed at every width up to 1920 and scrolled
+the whole document sideways. Responses had the same defect above
+~1150px of content — the author asked me to check it, and was right
+to.
+
+| Viewport | Invitations | Responses |
+|---|---|---|
+| 1024 | over by 556 | over by 91 |
+| 1280 | over by 300 | fits |
+| 1440 | over by 140 | fits |
+| 1920 | over by 100 | fits |
+
+**Fixed two ways, both measured before choosing:**
+
+- Both tables now sit in `.table-scroll`, which `base.html` already
+  provides and two other templates already use. Ten columns on a
+  capped page will outgrow someone's screen whatever the headers say;
+  the overflow belongs inside the card.
+- Four Invitations headers narrowed — `Review Progress` →
+  `Progress`, `Last reminder` → `Reminder`, `Email Sent` → `Sent`,
+  and `Required Fields` **stacked onto two lines** rather than
+  shortened (the author's call). Table 1496 → 1324, which fits the
+  card exactly at 1440+.
+
+**`Regenerate` → `Regen` was measured and rejected.** The author
+proposed it; on its own it saved 32px of a 140px overflow, and after
+the headers were narrowed it closed 31px of the remaining 36 —
+leaving a 5px hairline scroll, worse than either outcome.
+`Email Sent` → `Sent` closes the same gap exactly and costs no button
+label.
+
+**The lesson for the ladder:** rung 3 was verified functionally (do
+the chips hide the right columns?) and not dimensionally (does the
+table still fit?). Adding columns to a table is a layout change, and
+the Chromium pass should have measured width against the container,
+not only behaviour. Rungs 4+ measure both.
+
+**Measured:** the suite is unchanged at 3481 — the fix is layout, and
+the new assertions replace edited ones.
+
 ### Definition of done
 
 - One column-visibility implementation in `base.html`; no page
