@@ -150,9 +150,20 @@ _templates.env.globals["instrument_label"] = (
 # reminders). Form posts include a hidden ``return_to`` field carrying
 # one of these slugs; the route honours the override only when it
 # matches.
+#
+# Segment 19H Item 6 rung 1 — ``relationships`` and ``observers``
+# were missing while both templates posted them, so reverting from
+# either lock card fell through to Session Home: the operator asked
+# to revert *so they could edit relationships* and landed somewhere
+# else. Silent, because a 303 to a real page looks like success.
+# Measured before the fix:
+#     revert-to reviewers      -> /operator/sessions/1/reviewers
+#     revert-to relationships  -> /operator/sessions/1
 _REVERT_RETURN_TO = {
     "reviewers",
     "reviewees",
+    "relationships",
+    "observers",
     "assignments",
     "instruments",
     "validate",
