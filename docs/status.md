@@ -1,10 +1,26 @@
 # Implementation status
 
-**As of:** 2026-09-10. **Segment 19I — roster search and row
+**As of:** 2026-09-10. Latest shipped — **Segment 19H Items 6 + 7**:
+the four roster Setup pages now say why they are locked in every state
+that locks them, and every setup-mutation control on them answers one
+predicate. The yellow lock card was keyed to `is_ready` while the
+controls had moved to `is_editable`, so `expired` and `archived` were
+correct and silent; it branches three ways now, `archived` linking
+Unarchive and carrying no control because `/revert` answers 409 from
+there. Item 6's close audit then found the page contradicting itself —
+a live **Save labels** button under a card saying the roster could not
+be modified — and Item 7 moved the friendly-label editor's gate to
+match. Two defects surfaced by measuring rather than by reading: the
+Relationships and Observers lock cards had always posted `return_to`
+slugs their route's allowlist did not contain, so those reverts landed
+on Session Home, and `spec/lifecycle.md` §5's account of that allowlist
+was wrong in the direction that hid it.
+
+Before them — **Segment 19I — roster search and row
 deletion — closed and archived** at thirteen items (twelve closed,
 one withdrawn), PRs #2230 → #2276; plan now at
-`guide/archive/segment_19I_roster_search_and_row_delete.md`. Latest
-shipped in it — **Item 12**: one
+`guide/archive/segment_19I_roster_search_and_row_delete.md`. Its last
+shipped item — **Item 12**: one
 place for column selection, and one card fewer. The `Show columns:`
 chips now sit in the preview-table card on all **six** surfaces that
 have them — four moved there, Invitations and Responses having
