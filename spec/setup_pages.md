@@ -15,9 +15,12 @@ surfaces reachable from the chrome's Setup row:
 Each Setup Page follows the same shell (chrome + Setup row +
 status strip + a body of cards). The Reviewers, Reviewees,
 Relationships, and Observers pages additionally render a **preview
-table** of the session's current rows that all share a common
-visibility-toggle pattern; this spec covers that shared pattern
-alongside the per-page idiosyncrasies.
+table** of the session's current rows. Three of those four share
+the **column-visibility pattern** described below — Observers
+carries a single tag and no chips — and since Segment 19I Item 11
+that pattern is a shared primitive used by six operator tables in
+all. This spec is its canonical description, alongside the
+per-page idiosyncrasies.
 
 **Observers page gate.** The Observers Setup page routes
 (`app/web/routes_operator/_setup_observers.py`) are gated by
@@ -352,9 +355,24 @@ subject: `reviewers`, `reviewees`, `relationships`, `observers`,
 `reviewers` on Invitations and `reviewees` on Responses. Counts carry
 thousands separators.
 
-The Reviewers, Reviewees, and Relationships preview tables share
+The Reviewers, Reviewees, and Relationships preview tables carry
 a **column-visibility chip row** that lets the operator hide
-optional columns. The pattern (Segment 18E Part 1):
+optional columns. The pattern arrived with these three (Segment
+18E Part 1) and is documented here, but it is no longer theirs
+alone: Segment 19I Item 11 extracted the mechanism into a shared
+primitive, and six operator tables now opt into it — these three,
+plus Operations Assignments, Invitations and Responses. The three
+non-Setup surfaces are specified in `spec/operations_pages.md`;
+everything below describes the pattern itself.
+
+A page opts in with **markup only**. The table carries an `id` and
+`data-rrw-col-toggles="<storage-key>"`; each chip row carries
+`data-col-toggles-for="<table-id>"`; each chip carries
+`data-col-toggle="<slot>"`. The key rides on the *table* rather
+than the row because one table may have several rows of chips —
+Assignments groups its nine slots into three rows against one key.
+
+The pattern:
 
 - A `Show columns:` chip row sits in the top "Fields with data"
   card, directly below the `Fields with data:` line. Each chip is
@@ -386,23 +404,38 @@ optional columns. The pattern (Segment 18E Part 1):
   That column is server-rendered only when some row has a link, so
   its chip never reaches the disabled state.
 - Operator choice persists per browser via `localStorage` under a
-  per-page key:
+  per-table key, which the primitive reads from the table's
+  `data-rrw-col-toggles` attribute:
   - Reviewers preview: `rrw-reviewer-tag-visibility`.
   - Reviewees preview: `rrw-reviewee-tag-visibility`.
   - Relationships preview: `rrw-relationship-tag-visibility`.
+  - Operations Assignments: `rrw-assignment-col-visibility`.
+  - Operations Invitations: `rrw-invitation-tag-visibility`.
+  - Operations Responses: `rrw-response-tag-visibility`.
+
+  **The keys are fixed.** Renaming one silently resets every
+  operator's saved columns on that page, so the extraction changed
+  none of the four that predated it, and
+  `tests/unit/test_column_visibility_primitive.py` pins all six.
+  Full inventory in `spec/settings_inventory.md`.
 - Stored choice wins over the data-driven default for live chips.
   Stored "hide" keeps a populated column hidden; stored "show"
   reveals an explicitly-toggled-on column on next load. Disabled
   chips ignore storage entirely (see above).
-- The inline JS targets `[data-col-toggle]` and early-returns on
+- The shared JS targets `[data-col-toggle]` and early-returns on
   the `is-disabled` chip class so listeners aren't bound and
   storage isn't applied.
 
-The pattern is intentionally not extracted into a Jinja macro —
-each page's column shape differs enough (Reviewees adds the
-profile-link chip) that the inline JS + scoped `<style>` block per
-template is more legible than a macro with a sprawling parameter
-list.
+**What is shared, and what is not.** The behavior is one
+implementation in `base.html` (Segment 19I Item 11 — before it,
+four templates carried a byte-for-byte copy, 224 lines between
+them). The **markup and the scoped `<style>` block stay
+per-template**: each page's column shape differs enough (Reviewees
+adds the profile-link chip; Assignments renders three chip rows)
+that a Jinja macro would need a sprawling parameter list to say
+less than the markup already does. The primitive is deliberately
+ignorant of slot vocabulary — it toggles `col-hidden-{slot}` on
+the table, and the page's own CSS decides which cells that hides.
 
 ## Sortable headers (shared affordance)
 
@@ -1132,9 +1165,12 @@ above.
 
 ## Implementation pointers
 
-- The shared visibility-toggle pattern lives inline per template
-  (HTML structure + `<style>` + `<script>`). Each page picks its
-  own `STORAGE_KEY` and CSS class names so they don't collide.
+- The shared visibility-toggle **behavior** lives in `base.html`
+  (Segment 19I Item 11); each template supplies only the HTML
+  structure and its scoped `<style>`, naming its own storage key
+  and CSS classes so pages don't collide. A page that
+  re-implements the toggle instead of opting in fails
+  `tests/unit/test_column_visibility_primitive.py`.
 - Per-entity row counts and the raw "fields with data" CSV column
   names come from the helpers in `app/services/assignments/`
   (`reviewer_fields_with_data`, `reviewee_fields_with_data`) and

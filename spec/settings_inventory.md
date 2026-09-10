@@ -382,7 +382,7 @@ preference stored?" finds the answer quickly.
 | Cookie | Scope | Purpose |
 |---|---|---|
 | `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't Session Home or a `/operator/sessions/{id}/quick-setup/...` endpoint (so leaving Home for the lobby, operator settings, or `/about` relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
-| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`) — the SSR decoders `unquote()` before `json.loads` (fixed 2026-05-15; see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` (operator setup + operations tables, one cookie per page). The three Setup tables added an `updated_at` sort key in Segment 15F. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. Segment 13B Part 2 PR 5 (#874). |
+| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`) — the SSR decoders `unquote()` before `json.loads` (fixed 2026-05-15; see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page; the last two added by Segment 19I Item 11, 2026-09-10). The three Setup tables added an `updated_at` sort key in Segment 15F. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. Segment 13B Part 2 PR 5 (#874). |
 
 ### `localStorage` (per browser, per origin; survives sessions)
 
@@ -391,8 +391,21 @@ preference stored?" finds the answer quickly.
 | `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Photo / Tag1 / Tag2 / Tag3). |
 | `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
-| `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). The legacy assignment-context group retired in 15D. |
+| `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). The legacy assignment-context group retired in 15D. Three chip rows, one key: the key rides on the table, not the row. |
+| `rrw-invitation-tag-visibility` | Operations > Invitations table | Per-column toggle state (reviewer Tag1 / Tag2 / Tag3). Segment 19I Item 11 (2026-09-10). |
+| `rrw-response-tag-visibility` | Operations > Responses table | Per-column toggle state (reviewee Tag1 / Tag2 / Tag3). Segment 19I Item 11 (2026-09-10). |
 | `rrw-theme` | Chrome light/dark toggle (every page) | Display mode. Values `"light"` / `"dark"` (absent = light). Applied as `data-theme` on `<html>` — Light removes the attribute (bare `:root`), Dark stamps `data-theme="dark"` (the `:root[data-theme="dark"]` palette + `color-scheme: dark`). A synchronous no-FOUC `<script>` at the top of `base.html`'s `<head>` reads the key and sets the attribute before first paint; the shared `_partials/theme_toggle.html` pill (in the operator chrome + reviewer top bar) writes it. **Two-state, no OS-follow** (no `prefers-color-scheme`). Browser-local only — never synced to the server. `error.html` (standalone) carries its own copy of the same read-script + palette. Segment 19C Item 2 (2026-08-21). |
+
+**The six column-visibility keys share one implementation and no
+naming scheme.** Segment 19I Item 11 replaced four byte-identical
+copies of the toggle JS with a single primitive in `base.html` that
+reads its key from the table's `data-rrw-col-toggles` attribute —
+and deliberately **renamed none of the four keys that predated it**,
+because a rename silently resets every operator's saved columns on
+that page. That is why Assignments says `col-visibility` where the
+rest say `tag-visibility`. All six are pinned by
+`tests/unit/test_column_visibility_primitive.py`; the pattern itself
+is specified in `spec/setup_pages.md`.
 
 ### `sessionStorage` (per browser tab; cleared on tab close)
 
