@@ -73,6 +73,30 @@ Both pages render the same four stacked regions, in order:
 4. **Result table** — single-card containing the filtered row list,
    or an empty-state `.muted` message when no rows match.
 
+**The result table is a roster-style table** on both pages
+(Segment 19I Item 11). Each carries the three facilities the Setup
+preview tables have, through the same shared primitives rather
+than page-local copies:
+
+- **Sortable headers** — `<table id="..."
+  data-rrw-sortable="rrw-sort-{invitations|responses}-{session_id}">`
+  over `<thead>` + `<tbody class="rrw-rows">`, with the cookie
+  re-applied server-side so the first paint is already ordered.
+  See `spec/sort_by_reviewee.md`.
+- **Three tag columns** with a `Show columns:` chip row above the
+  table, per the pattern in `spec/setup_pages.md`, "Preview tables
+  (shared toggle pattern)". The chip row sits in the **table card**
+  here — these pages have no "Fields with data" card to hold it.
+- **`.table-scroll`** — both tables sit in the wrapper `base.html`
+  provides, so ten columns overflow *inside* the card rather than
+  scrolling the page sideways. Measured, not assumed: before it,
+  Invitations' natural width was 1496px against a ~1396px page cap
+  and overflowed at every viewport up to 1920.
+
+Neither page has the rosters' select column or bulk actions —
+they are read-only monitoring surfaces, and nothing here mutates a
+roster row.
+
 ### Lifecycle behavior
 
 Both pages render content across all session lifecycle states. Per
@@ -135,9 +159,18 @@ reminders, and Incomplete reviews).
 
 - **Status `<select>`** — `all` plus the per-status options exposed
   by the route via `filter_status_options`.
-- **Search `<input>`** — autocompletes against
-  `filter_search_options` (reviewer name or email), matched against
-  the filtered status set.
+- **Search `<input>`** — matches the reviewer's **name and email by
+  substring** and their **`tag_1..3` by whole value**, unioned. That
+  is the rosters' own rule (`_matches_row`, Segment 19I Item 1),
+  adopted here by Item 11 rather than re-invented: whole-value on
+  tags keeps `Team A` from dragging in `Team A2`, while substring on
+  a name is what makes a partial name useful. Matching runs against
+  the status-filtered set.
+- **The `<datalist>` offers `Name (email)` labels only.** Tag values
+  are matchable but never suggested — a tag identifies too many rows
+  to partition a list by (Segment 19I Item 9's finding). Matching a
+  tag and suggesting one are separate questions, and the answer
+  differs.
 - **Apply / Clear** — Apply submits the form; Clear (visible only
   when a filter is active) is a link back to the unparameterised
   page. These are the only things in the row: **Segment 19I Item 10
@@ -160,15 +193,37 @@ nothing, because a table showing everything needs no caption.
 
 ### Table columns
 
-| Column | Content |
-|---|---|
-| Reviewer | Name + `<code>` email; name links to per-invitation detail page when an `Invitation` row exists |
-| Email Status | Pill: `sent` / `queued` / `not sent` |
-| Email Sent | Timestamp pill, or `—` |
-| Review Progress | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
-| Required Fields | Pill: `(D/T)` |
-| Last reminder | Timestamp pill, or `—` |
-| (actions) | Per-row buttons — see below |
+| # | Column | Toggle? | Sort key | Content |
+|---|---|---|---|---|
+| 1 | Reviewer | — | `name` | Name + `<code>` email; name links to per-invitation detail page when an `Invitation` row exists |
+| 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
+| 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
+| 5 | Email Status | — | `email_status` | Pill: `sent` / `queued` / `not sent` |
+| 6 | Sent | — | `email_sent_at` | Timestamp pill, or `—` |
+| 7 | Progress | — | `review_progress` | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
+| 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
+| 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—` |
+| 10 | (actions) | — | — | Per-row buttons — see below |
+
+The tag columns sit at 2-4, between the identity column and the
+status columns, so the canonical order matches the roster tables.
+
+**Four headers are deliberately terse** — `Progress`, `Sent`,
+`Reminder`, and `Required Fields` stacked onto two lines. The tag
+columns pushed the table 140px past its card at 1440px; narrowing
+these four recovered 172px and it fits exactly. Renaming the
+`Regenerate` button to `Regen` was measured as an alternative and
+rejected — it closed 31px of the remaining 36, leaving a hairline
+scroll, and cost a button label to do it.
+
+**The two progress columns sort by completion percentage, not the
+raw done count.** Totals differ per row, so "3 done" orders nothing
+an operator would recognize. A row with nothing to do (total 0)
+carries an empty `data-sort-value`; both the server-side
+`apply_cookie_sort` and the client comparator place empty last
+regardless of direction, so the two halves cannot disagree about
+where those rows land.
 
 ### Per-row action buttons
 
@@ -225,21 +280,32 @@ variant).
 ### Filter card
 
 Same shape as the Invitations filter card: Status `<select>` +
-Search `<input>` against `filter_search_options` (reviewee name or
-email) + Apply / Clear. The preview-count line sits above the table
-rather than in this card (Segment 19I Item 10), and its noun is
-**`reviewees`** — one row per reviewee, from
-`monitoring.per_reviewee_coverage`. This page is uncapped on the
-same terms as Invitations, so only the filter branch fires.
+Search `<input>` + Apply / Clear, and the same matching rule —
+reviewee name and email-or-identifier by substring, `tag_1..3` by
+whole value, with the `<datalist>` offering `Name (email)` labels
+only. The preview-count line sits above the table rather than in
+this card (Segment 19I Item 10), and its noun is **`reviewees`** —
+one row per reviewee, from `monitoring.per_reviewee_coverage`. This
+page is uncapped on the same terms as Invitations, so only the
+filter branch fires.
 
 ### Table columns
 
-| Column | Content |
-|---|---|
-| Reviewee | Name + `<code>` email-or-identifier; name links to per-reviewee detail page |
-| Coverage | Pill: `complete` / `adequate` / `at risk` / `no responses` |
-| Reviewers completed | Pill: `D/T` (filled count vs. total) or `—` when total is 0 |
-| Last response | Timestamp pill, or `—` |
+| # | Column | Toggle? | Sort key | Content |
+|---|---|---|---|---|
+| 1 | Reviewee | — | `name` | Name + `<code>` email-or-identifier; name links to per-reviewee detail page |
+| 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewee", "tag_1")` |
+| 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
+| 5 | Coverage | — | `coverage_state` | Pill: `complete` / `adequate` / `at risk` / `no responses` |
+| 6 | Reviewers<br>completed | — | `reviewers_done` | Pill: `D/T` (filled count vs. total) or `—` when total is 0 |
+| 7 | Last response | — | `last_response_at` | Timestamp pill, or `—` |
+
+`Reviewers completed` is stacked onto two lines for the same reason
+Invitations stacks `Required Fields`: it drops the table's natural
+minimum from 1031px to 962px, which fits the card from 1280 up.
+`Reviewers completed` sorts on completion percentage, on the same
+terms as the Invitations progress columns above.
 
 ### Coverage state definitions
 
@@ -324,7 +390,18 @@ session.`
   single source of truth for "send reminder email."
 - Filter parsing lives in `app/web/views/_filters.py` so the
   Invitations and Responses pages reuse the same Status / Search
-  contract.
+  contract — and, since Segment 19I Item 11, the same `_matches_row`
+  the four roster filters use, rather than a third variant of it.
+- **Sort wiring** is in `app/web/routes_operator/_operations.py`:
+  a per-page valid-key set plus an `_invitations_sort_value` /
+  `_responses_sort_value` resolver passed to
+  `views.apply_cookie_sort`. Unlike the rosters, these resolvers
+  cannot be a plain `getattr` — the row is a wrapper, so identity
+  and tag keys reach **through** it
+  (`InvitationsRow.reviewer.name`, `ResponsesRow.reviewee.tag_1`).
+- **Column visibility** is the shared `base.html` primitive; each
+  template supplies only the chip markup and a scoped `<style>`
+  mapping its slots to column classes. See `spec/setup_pages.md`.
 - "At risk" thresholds and coverage-state definitions on the
   Responses page are computed in one place in
   `app/web/views/_responses.py`. Future operator configuration of

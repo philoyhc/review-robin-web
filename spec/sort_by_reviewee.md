@@ -13,6 +13,12 @@ Segment 13 during the 2026-05-07 wrap-up; locks in the
 decisions reached during the Segment 11 §2.6 discussion
 (2026-05-03).
 
+**The primitive has outlived its segment.** Later work opts new
+tables in without changing anything here — Segment 19I Item 11
+(2026-09-10) added the Operations **Invitations** and **Responses**
+tables, template-and-route work only. The current surface list is
+in "Implementation pointers — shipped" below.
+
 13B is now single-purpose: this sort feature. Sibling segments
 on the same surface family:
 
@@ -278,11 +284,23 @@ The Display Fields available to sort are scoped to the instrument's own display 
   the column label (the click target) via the
   `rrw-sort-btn` class.
 - **Reviewer template** (`review_surface.html`) +
-  **operator tables** (Reviewers / Reviewees / Relationships
-  / Operations Assignments): each annotated with
+  **operator tables** — Reviewers / Reviewees / Relationships
+  (Setup) and Assignments / Invitations / Responses (Operations),
+  six in all: each annotated with
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.
+- **Wrapper rows need a resolver.** The four rosters and
+  Assignments hand `apply_cookie_sort` rows whose sort keys are
+  their own attributes, so a plain `getattr` suffices. Invitations
+  and Responses do not: their rows are per-reviewer / per-reviewee
+  **view wrappers**, so `_operations.py` passes a resolver that
+  reaches through (`row.reviewer.name`, `row.reviewee.tag_1`) and
+  derives the progress keys as a **completion percentage** rather
+  than a raw count. `apply_cookie_sort` collapses `""` to `None`
+  and sorts `None` last in both directions, matching the client
+  comparator — so a row with nothing to do lands in the same place
+  server-side and after a click.
 - **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
   carrying the canonical
   `[{"key": "...", "dir": "asc|desc"}, ...]` shape,
@@ -303,6 +321,8 @@ The Display Fields available to sort are scoped to the instrument's own display 
     operator-table tests).
   - `tests/integration/test_assignments_sort.py` (5
     Operations Assignments tests).
+  - `tests/integration/test_operations_sort.py` (Operations
+    Invitations + Responses, Segment 19I Item 11).
   - Render: reviewer-side override JS reorders visible rows; reset link returns to default. (Probably JS-via-Selenium; if too costly for this segment, defer to a follow-on PR with explicit deferral note.)
 - **Spec cross-ref updates:** when this lands, update `spec/operator_ui_concept.md` Display Fields section to describe the Sort column; update `spec/reviewer-surface.md` to describe the header-click override.
 

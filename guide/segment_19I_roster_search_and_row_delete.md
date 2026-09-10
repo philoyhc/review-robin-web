@@ -3656,6 +3656,43 @@ starting to offer tag values.
 **Not verified here:** the Azure dev slot. No template changed in this
 rung, so there is nothing new to look at.
 
+**2026-09-10 — the author asked for one more header stack.**
+`Reviewers completed` on Responses, on the same terms as
+`Required Fields`: measured 1031px → **962px** of natural minimum,
+which fits the card from 1280 up and scrolls inside it at 1024.
+Mutation-checked (un-stacking fails the header test). Suite
+unchanged at 3488.
+
+**2026-09-10 — rung 5 landed, and found two things the four spec
+files got wrong.**
+
+The five specs the manifest names were edited as committed. Two
+corrections came out of writing them, neither of which the plan
+anticipated:
+
+- **`spec/setup_pages.md` claimed the Observers preview shares the
+  visibility-toggle pattern.** It does not and never did —
+  `session_observers.html` has no `data-col-toggle` at all. The
+  sentence was in the file's opening paragraph, which this rung was
+  rewriting anyway to generalize the pattern; corrected rather than
+  left, since a reader sent to look for chips on Observers finds
+  none.
+- **`spec/setup_pages.md`'s `localStorage` list was already
+  incomplete** before this item: it named the three Setup keys and
+  omitted `rrw-assignment-col-visibility`, which is the same grep
+  blind spot that made the plan under-count the duplication at
+  planning time. It now lists all six.
+
+**One code change in a spec rung**, declared rather than smuggled:
+`base.html`'s primitive comment still recited the **211 / 55 / 46**
+figures the Status block corrected on 2026-09-10. A comment that
+ships inside every rendered document is a poor place to leave a
+number the plan has already retracted, so it now says 224 / 56.
+Nothing executable changed.
+
+**`close_check 19I.11`** and a `spec-writer` pass over the five
+doc-impact files close the item; their outcomes are recorded below.
+
 ### Definition of done
 
 - One column-visibility implementation in `base.html`; no page
