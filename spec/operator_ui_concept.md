@@ -70,7 +70,7 @@ Home's body, layout, and per-state behaviour are specified in **`spec/session_ho
 
 ### 3. Per Session Setup Pages
 
-The five surfaces where the operator does the work needed to make the session run properly. Each one has full edit affordance while the session is `draft` / `validated`, and locks down once the session is `ready` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing").
+The five surfaces where the operator does the work needed to make the session run properly. Each one has full edit affordance while the session is `draft` / `validated`, and locks down once it is not — `ready`, `expired` or `archived` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing"). The card branches per locked state and `archived` carries no control; `spec/lifecycle.md` §5 is the contract.
 
 | Page | Template | URL |
 |---|---|---|
@@ -190,7 +190,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 - **From any phase page**, both rows are visible and any tab is one click away. No traversal through Home is required to switch phases.
 - **From Home**, the chrome renders the same way, with no tab active. Both phase rows remain visible and clickable; Home's body is what's distinctive, not its chrome.
-- **Lifecycle states don't hide pages.** Setup tabs remain visible and reachable when the session is `ready`, but their pages render locked behind the yellow lock card. Operations tabs remain visible and reachable when the session is `draft` or `validated`, but their actions render disabled. The chrome is stable across the lifecycle; the page bodies adapt.
+- **Lifecycle states don't hide pages.** Setup tabs remain visible and reachable once the session is no longer editable — `ready`, `expired` or `archived` — but their pages render locked behind the yellow lock card. Operations tabs remain visible and reachable when the session is `draft` or `validated`, but their actions render disabled. The chrome is stable across the lifecycle; the page bodies adapt.
 
 ### Sub-pages and Preview
 
@@ -262,11 +262,11 @@ a live one.)*
 All three setup-roster pages share an identical chrome shape:
 
 1. Session top nav.
-2. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting). Sits directly under the status strip, above the `.card-columns` container — it used to follow the info card, which retired in Segment 19I Item 12. **Not Assignments**: P4 above already records that the three post-Operations pages retired their `.card.lock` notices, and this line contradicted it (corrected in Segment 19I Item 8).
+2. Yellow lock card whenever the session is not editable (with `return_to=reviewers` / `reviewees` / `relationships` / `observers` so the operator returns here after reverting — two of those four slugs were missing from the route's allowlist until Segment 19H Item 6, so those reverts landed on Session Home). Sits directly under the status strip, above the `.card-columns` container — it used to follow the info card, which retired in Segment 19I Item 12. **Not Assignments**: P4 above already records that the three post-Operations pages retired their `.card.lock` notices, and this line contradicted it (corrected in Segment 19I Item 8).
 3. **Friendly-label editor (left) + Operator actions card (right)** — the right-hand pair of the page's one `.card-columns` container, **not** a `.bottom-grid`; this page uses that only for Upload + Danger Zone. The friendly-label editor is the inline editor for the per-session tag-column labels; the Operator actions card (Segment 15F) carries the search / status filter strip and the selection-driven Edit · Inactivate · Activate · Add-new-row button row. See `spec/setup_pages.md` "Operator actions card".
 4. Browseable data-preview table of the saved rows (always visible, even while locked) — leftmost checkbox column drives the operator-actions selection; a row flips to inline inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
 5. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden unless the session is `is_editable` (`draft` / `validated`), or while a row is being edited / added.
-6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card. Both were keyed to the lock card's `is_ready` until Segment 19I Item 3; on `expired` and `archived` they rendered while their routes answered 409, and the lock card — still `is_ready`-only — does not appear to explain the absence. See `spec/lifecycle.md` §5.
+6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card. Both were keyed to the lock card's `is_ready` until Segment 19I Item 3; on `expired` and `archived` they rendered while their routes answered 409. The lock card stayed `is_ready`-only for a further day, so those two states were correct and silent, until Segment 19H Item 6 moved it to the same `is_editable` predicate. See `spec/lifecycle.md` §5.
 
 Per-row inline **Edit**, **Add** (`Add new row` until Segment 19I), and bulk **Inactivate / Reactivate** on these three pages shipped in Segment 15F (2026-05-15), joined by a selection-driven **Delete** in Segment 19I — the Operator actions card is the surface; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
 

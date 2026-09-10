@@ -94,7 +94,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right (the `Fields with data` card that used to head the right stack retired in Segment 19I Item 12 rung 4). The Activated lock card sits above the container, not between the pairs. |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right (the `Fields with data` card that used to head the right stack retired in Segment 19I Item 12 rung 4). The lock card ("Activated" by history; it renders in every non-editable state since Segment 19H Item 6) sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
@@ -214,10 +214,13 @@ Every Setup Page renders, top-to-bottom:
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts
    pills per entity.
-3. **Lifecycle gate cards** (when the session is Activated): a
-   `card lock` carrying "The {entity} cannot be modified while the
-   session is ongoing. Revert the session to draft if you wish to
-   modify anything." with an inline Revert form. Sits **above**
+3. **Lifecycle gate cards** (whenever the session is not
+   editable): the shared `card lock`
+   (`operator/partials/_roster_lock_card.html`), which branches per
+   locked state — `ready` and `expired` carry an inline Revert
+   form, `archived` links Unarchive and carries no control. The
+   three branches and their copy are specified in
+   `spec/lifecycle.md` §5. Sits **above**
    the friendly-label editor so the yellow card immediately
    follows the status info card — the same status-info-then-
    yellow-lock pattern the Instruments page uses. **Not
@@ -1175,11 +1178,36 @@ above.
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- Lifecycle gating is one predicate on the four roster pages:
-  `is_editable` — `draft` or `validated`. The Upload + Danger Zone
-  cards render behind `{% if is_editable %}`, and a `card lock` at
-  the top of the body renders behind `{% if not is_editable %}`, so
-  the explanation and the controls cannot disagree. Both halves
+- Lifecycle gating on the four roster pages is `is_editable` —
+  `draft` or `validated` — for everything except the friendly-label
+  editor. The Upload + Danger Zone cards render behind
+  `{% if is_editable %}`, and a `card lock` at the top of the body
+  renders behind `{% if not is_editable %}`, so those two cannot
+  disagree.
+
+  **The friendly-label editor is the exception, and it currently
+  contradicts the card.** It is gated on `is_ready` alone, in both
+  the template and `_save_field_labels`
+  (`app/web/routes_operator/_shared.py`), as this document's own
+  "Friendly-label editor" section records. On `expired` and
+  `archived` its inputs render enabled, its Save button renders, and
+  `POST …/field-labels` answers **303**, directly below a lock card
+  that says the roster cannot be modified. Measured, all four states:
+
+  | State | `field-labels` POST | Card says locked | Save button |
+  |---|---|---|---|
+  | `draft` | 303 | no | yes |
+  | `ready` | **409** | yes | no |
+  | `expired` | 303 | yes | **yes** |
+  | `archived` | 303 | yes | **yes** |
+
+  The editor's gate pre-dates Segment 19H Item 6; the card asserting
+  the opposite on those two states is that item's, which is how a
+  seven-month-old gate became a visible contradiction. Item 6 did not
+  change the editor: whether labels *should* stay renameable on a
+  finished session is a behaviour question for the author, and
+  19I.3 scoped the same gate out for the same reason. Recorded here
+  rather than fixed so the next reader meets it. Both halves
   arrived late: the cards read `{% if not is_ready %}` until
   Segment 19I Item 3, which is what left them rendering on `expired`
   and `archived` where the routes answered 409, and the card stayed

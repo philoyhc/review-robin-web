@@ -1441,6 +1441,57 @@ waived.
 empties or at the next assessment snapshot, and Item 6 emptied it
 again rather than ending it.
 
+**The close audit found two things rung 3 had missed, and one it
+introduced.** `spec-writer`, run against the doc-impact specs, both
+verified — the second by measurement, not by reading:
+
+1. **A fourth stale site in `spec/setup_pages.md`**, in the Shared
+   body shape section: the most literal restatement of the old
+   single-branch behaviour, quoting the `ready` copy verbatim as
+   though it were the only branch. Rung 3's commit message claimed
+   it had found every one "by grepping `lock card` across the file
+   rather than by trusting the manifest's aim" — **and that grep was
+   itself the wrong aim**: the passage reads `card lock`, words
+   reversed, so the pattern could not match it. A fifth mention
+   ("The Activated lock card sits above the container") was found
+   the same way. This is 19I's lesson arriving once more: a search
+   is an assertion about the corpus, and an under-shaped pattern
+   returns a confident, wrong count.
+
+2. **`spec/operator_ui_concept.md` was never in the manifest** and
+   carried the claim in four more places, including one asserting
+   the card "is still `is_ready`-only". Added to `### Doc impact`
+   above per the plan-revision rule, rather than fixed silently.
+
+3. **The sentence rung 3 introduced was itself an overstatement.**
+   "Lifecycle gating is one predicate on the four roster pages:
+   `is_editable`" is false: the friendly-label editor is gated on
+   `is_ready` alone, in both its template and `_save_field_labels`.
+   Measured across all four states:
+
+   | State | `field-labels` POST | Card says locked | Save button |
+   |---|---|---|---|
+   | `draft` | 303 | no | yes |
+   | `ready` | **409** | yes | no |
+   | `expired` | 303 | yes | **yes** |
+   | `archived` | 303 | yes | **yes** |
+
+   So on `expired` and `archived` the page now renders a lock card
+   saying the roster cannot be modified, and a live Save labels
+   button directly below it that works. **The editor's gate
+   pre-dates this item; the card contradicting it is this item's**,
+   which is how a Segment 15A gate became a visible contradiction in
+   a day. 19I.3 scoped the same gate out as "a correct gate for a
+   different question" without testing whether it was correct.
+
+   Not fixed here. Whether labels stay renameable on a finished
+   session is a behaviour decision for the author, and the two
+   resolutions differ in what they take away: gate the editor on
+   `is_editable` and the contradiction goes but an existing ability
+   goes with it; leave it and the card's copy is too absolute.
+   Recorded in `spec/setup_pages.md` with the measurement, and
+   raised to the author.
+
 ### PR ladder
 
 1. **The exit works.** Add `relationships` and `observers` to
@@ -1514,4 +1565,9 @@ above.
 - `spec/setup_pages.md` — the four roster pages' locked-state
   chrome: which states render the card, what each says, which
   carries a control (Item 6).
+- `spec/operator_ui_concept.md` — the cross-page chrome contract's
+  four statements that the lock card appears "when `ready`", plus the
+  Danger Zone note asserting the card is still `is_ready`-only.
+  Undeclared at planning time; added when the close audit found it
+  (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).
