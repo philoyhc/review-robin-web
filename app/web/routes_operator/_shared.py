@@ -24,9 +24,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import Instrument, ReviewSession, User
+from app.db.models import (
+    Instrument,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
+from app.services._queries import slot_has_data, tag_slot_presence
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, roster_bulk
@@ -599,12 +606,35 @@ async def _handle_import(
                 raw_fields = assignments.reviewer_fields_with_data(
                     db, review_session.id
                 )
+                # 19I Item 12 rung 2 — this path re-renders the same
+                # template, so it owes it the same chip flags. Missing
+                # them here would render every chip as "no data" on a
+                # failed import, which is exactly when an operator is
+                # looking hardest at which columns arrived.
+                col_data = views.chip_slots(
+                    tag_slot_presence(
+                        db, session_id=review_session.id, model=Reviewer
+                    ),
+                    prefix="tag-",
+                )
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
                 raw_fields = assignments.reviewee_fields_with_data(
                     db, review_session.id
                 )
+                col_data = views.chip_slots(
+                    tag_slot_presence(
+                        db, session_id=review_session.id, model=Reviewee
+                    ),
+                    prefix="tag-",
+                ) | {
+                    "profile": slot_has_data(
+                        db,
+                        session_id=review_session.id,
+                        column=Reviewee.profile_link,
+                    )
+                }
             fields_with_data = views.friendly_fields_with_data(
                 review_session, raw_fields, surface=kind
             )
@@ -643,6 +673,7 @@ async def _handle_import(
                         lifecycle.session_response_count(db, review_session)
                     ),
                     "fields_with_data": fields_with_data,
+                    "col_data": col_data,
                     "edit_id": None,
                     "add_mode": False,
                     "edit_values": None,

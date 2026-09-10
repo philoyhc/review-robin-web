@@ -4252,6 +4252,75 @@ the same block this rung is editing.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 2 landed as the amended ladder laid out, and the
+bug it predicted is real.**
+
+`tag_slot_presence` (`app/services/_queries.py`, beside
+`slot_has_data`) answers `{"tag_1": bool, …}` over the session's
+rows; `views.chip_slots` re-keys it to each page's own slot names
+(`tag-1…`, `rt1…`, `et1…`, `p1…`); six routes pass one `col_data`
+map and six templates read a flag instead of computing one. No
+template computes a has-data flag any more.
+
+**Demonstrated live, not only asserted.** 250 reviewers, only #249
+carrying `tag_1`, rendered against the same SQLite file from a
+worktree at `origin/main` and from this branch:
+
+| | `tag-1` chip |
+|---|---|
+| `origin/main` | `is-disabled` — struck, "No data in this column" |
+| this branch | `is-selected` |
+
+The tagged row is past the 200-row cap and does not render on either.
+So the pre-item page was striking out a column the roster holds, and
+under rung 3 it would have dropped that column entirely.
+
+**A defect this rung created and this rung fixes.** The Reviewees
+Photo *column* was gated on `reviewees | selectattr("profile_link")`
+— the displayed rows — while its *chip* had just gone roster-wide. A
+photo living only past the cap would light the chip and leave the
+column out: a control wired to nothing. Both read
+`col_data["profile"]` now, pinned by a test that fails if either
+half reverts. **Reviewers' profile column keeps its display-list
+scan** and is not inconsistent with anything, because that page has
+no profile chip (Item 11's asymmetry, corrected in the spec at Item
+11's close).
+
+**`col_data_sample` retires**, and with it the second unfiltered
+200-row `list_pairs` fetch Assignments ran on every filtered render.
+Item 9's comment on it was half-right — the sample was deliberately
+unfiltered, and still carried `list_pairs`' default
+`limit=PAIR_PREVIEW_LIMIT`.
+
+**The vacuity guards were themselves vacuous at first.** Each new
+test asserts the tagged row did *not* render, so that a seed which
+accidentally shows it cannot pass. Written as `"Bravo" not in body`
+they failed on the search box's `<datalist>`, which lists every
+roster member by name and handle. Scoped to `<tbody class="rrw-rows">`.
+That is the unscoped-substring trap for the **fourth** time in this
+segment.
+
+**Mutations:** 7, all killed — the helper returning `False`
+throughout; the Reviewers route reverted to scanning its capped
+display list (fails the cap *and* the filter test, which is the
+bug); `active_only` dropped from the pair-context group; a
+`chip_slots` off-by-one in slot names; the profile chip reading a
+tag column; the Invitations route dropping `col_data`; and the Photo
+column reverted to its display-list scan.
+
+**Verified in Chromium:** chips read `tag-1:live, tag-2:disabled,
+tag-3:disabled` on the 250-row seed, toggling persists
+(`{"tag-1":false}` — disabled slots correctly absent) and survives
+reload, and a filter down to one row leaves `tag-1` live. No page
+errors. Render is ~26 ms steady on that page; a paired before/after
+on timing was not taken, so "negligible" here rests on the absolute
+figure and on the fact that the rung removes a 200-row query from
+Assignments while adding three to nine indexed `LIMIT 1`s.
+
+**Measured:** the suite went 3503 → **3513**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table

@@ -78,3 +78,48 @@ def slot_has_data(
     if active_only:
         q = q.where(model.status == "active")
     return db.execute(q.limit(1)).first() is not None
+
+
+def tag_slot_presence(
+    db: Any,
+    *,
+    session_id: int,
+    model: Any,
+    active_only: bool = False,
+) -> dict[str, bool]:
+    """``{"tag_1": bool, "tag_2": bool, "tag_3": bool}`` for a
+    session's rows of ``model``.
+
+    Three :func:`slot_has_data` calls, which is three indexed
+    ``LIMIT 1``s — the same primitive the "Fields with data" pills
+    were built on, and the reason Segment 19I Item 12 could make the
+    column chips answer over the **whole roster** rather than over
+    whichever rows the page happened to be rendering.
+
+    That distinction was not cosmetic. Before Item 12 every one of
+    the six chip surfaces scanned its own row list in Jinja, and
+    every one of them could therefore be wrong:
+
+    - the three Setup rosters scanned the **filtered and capped**
+      display list, so a tag populated only past the 200/500 window,
+      or only on rows a filter excluded, read as "no data";
+    - Invitations and Responses scanned the filtered set;
+    - Assignments deliberately used an *unfiltered* sample and was
+      still capped at ``PAIR_PREVIEW_LIMIT``.
+
+    ``active_only=True`` restricts to ``status == "active"`` rows.
+    Assignments passes it for pair-context tags, matching the rule
+    engine's view (only active relationships contribute predicate
+    values); the Relationships Setup page does not, because it shows
+    imported data regardless of status. The two answers differ on
+    purpose.
+    """
+    return {
+        f"tag_{slot}": slot_has_data(
+            db,
+            session_id=session_id,
+            column=getattr(model, f"tag_{slot}"),
+            active_only=active_only,
+        )
+        for slot in (1, 2, 3)
+    }

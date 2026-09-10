@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
+from app.services._queries import tag_slot_presence
 from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewers import ReviewerOperationError
@@ -247,6 +248,17 @@ def _render_reviewers_page(
                 review_session,
                 assignments.reviewer_fields_with_data(db, review_session.id),
                 surface="reviewers",
+            ),
+            # 19I Item 12 rung 2 — the chips' has-data flags, answered
+            # over the whole roster by query rather than by scanning
+            # whichever rows this render produced. Keyed by the page's
+            # own chip slot names, so the template reads a flag instead
+            # of computing one.
+            "col_data": views.chip_slots(
+                tag_slot_presence(
+                    db, session_id=review_session.id, model=Reviewer
+                ),
+                prefix="tag-",
             ),
             "edit_id": edit_id,
             "add_mode": add_mode,

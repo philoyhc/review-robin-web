@@ -351,3 +351,28 @@ def friendly_fields_with_data(
         else:
             resolved.append(raw)
     return resolved
+
+
+def chip_slots(
+    presence: dict[str, bool], *, prefix: str
+) -> dict[str, bool]:
+    """Re-key a ``{"tag_1": bool, ...}`` presence map to the chip slot
+    names a page's markup actually uses.
+
+    The column-visibility primitive knows no slot vocabulary — it
+    toggles ``col-hidden-{slot}`` for whatever slot a chip names — so
+    each page picks its own. The Setup rosters, Invitations and
+    Responses use ``tag-1``..``tag-3``; Assignments groups nine slots
+    as ``rt1``..``rt3`` / ``et1``..``et3`` / ``p1``..``p3``. Both
+    shapes are ``prefix`` + the slot number, which is why one mapper
+    covers all six (Segment 19I Item 12 rung 2).
+
+    Templates then read a flag instead of computing one. Before this,
+    six templates each scanned their own row list with ``selectattr``
+    — the divergence that let every one of them disagree with the
+    roster.
+    """
+    return {
+        f"{prefix}{key.removeprefix('tag_')}": value
+        for key, value in presence.items()
+    }

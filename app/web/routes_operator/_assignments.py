@@ -25,7 +25,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import (
     assignments,
@@ -33,6 +33,7 @@ from app.services import (
     relationships as relationships_service,
     session_lifecycle as lifecycle,
 )
+from app.services._queries import tag_slot_presence
 from app.services.instruments import _instrument_label
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -178,10 +179,6 @@ def _render_assignments_hub(
         q, roster_reviewers, roster_reviewees
     )
     assignment_count = assignments.existing_count(db, review_session.id)
-    # Segment 19I Item 9 — the status filter joins the search here.
-    # The `col_data_sample` alias below is only safe while *neither*
-    # filter is active: it exists to skip a second query, and a
-    # filtered sample would flip the column chips.
     if q or filter_status in _STATUS_VALUES:
         matching_count = assignments.count_pairs(
             db,
@@ -205,9 +202,6 @@ def _render_assignments_hub(
             if matching_count
             else []
         )
-        # The column chips' enabled state is computed from an
-        # unfiltered sample so neither filter ever flips a chip.
-        col_data_sample = assignments.list_pairs(db, review_session.id)
     else:
         matching_count = assignment_count
         pair_sample = (
@@ -215,7 +209,6 @@ def _render_assignments_hub(
             if assignment_count
             else []
         )
-        col_data_sample = pair_sample
     # Pair-context lookup is built up-front so the cookie-backed
     # sort (Segment 13B Part 2 PR 8) can resolve ``pair_tag_*``
     # keys without a second pass through the relationships table.
@@ -302,7 +295,42 @@ def _render_assignments_hub(
                 db, review_session.id
             ),
             "pair_sample": pair_sample,
-            "col_data_sample": col_data_sample,
+            # 19I Item 12 rung 2 — nine chip flags, answered over the
+            # session's rosters rather than over a sample of assignment
+            # rows. The sample this replaces was deliberately unfiltered
+            # (Item 9) but still carried ``list_pairs``' default
+            # ``limit=PAIR_PREVIEW_LIMIT``, so a tag populated only past
+            # row 200 struck its own chip out. It also cost a second
+            # 200-row fetch per filtered render, which these nine
+            # indexed ``LIMIT 1``s replace.
+            #
+            # ``active_only`` on the pair-context group matches the rule
+            # engine: only active relationships contribute predicate
+            # values. The Relationships Setup page counts every row, and
+            # the two answers differ on purpose.
+            "col_data": (
+                views.chip_slots(
+                    tag_slot_presence(
+                        db, session_id=review_session.id, model=Reviewer
+                    ),
+                    prefix="rt",
+                )
+                | views.chip_slots(
+                    tag_slot_presence(
+                        db, session_id=review_session.id, model=Reviewee
+                    ),
+                    prefix="et",
+                )
+                | views.chip_slots(
+                    tag_slot_presence(
+                        db,
+                        session_id=review_session.id,
+                        model=Relationship,
+                        active_only=True,
+                    ),
+                    prefix="p",
+                )
+            ),
             # Segment 19I Item 10 — the page's three separate
             # notices (this filter count, a `Showing first N of M
             # unique pairs.` line, and a `…and X more not shown.`

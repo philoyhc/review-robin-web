@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
+from app.services._queries import slot_has_data, tag_slot_presence
 from app.services import reviewees as reviewees_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewees import RevieweeOperationError
@@ -239,6 +240,28 @@ def _render_reviewees_page(
                 assignments.reviewee_fields_with_data(db, review_session.id),
                 surface="reviewees",
             ),
+            # 19I Item 12 rung 2 — the chips' has-data flags, answered
+            # over the whole roster by query rather than by scanning
+            # whichever rows this render produced. Keyed by the page's
+            # own chip slot names, so the template reads a flag instead
+            # of computing one.
+            # The Photo chip is the one non-tag slot on any of the
+            # six pages, so it is asked for directly rather than
+            # bending ``tag_slot_presence`` into a general shape for
+            # a single caller.
+            "col_data": views.chip_slots(
+                tag_slot_presence(
+                    db, session_id=review_session.id, model=Reviewee
+                ),
+                prefix="tag-",
+            )
+            | {
+                "profile": slot_has_data(
+                    db,
+                    session_id=review_session.id,
+                    column=Reviewee.profile_link,
+                )
+            },
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,
