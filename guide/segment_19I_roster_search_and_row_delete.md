@@ -3531,6 +3531,57 @@ percentage becoming the raw count, and the tbody losing its class.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 3 landed as laid out, and cheaply.**
+
+Three sortable tag columns and a `Show columns:` chip row per page,
+through the primitive rung 1 extracted. **Template-only on the data
+side**, exactly as the plan predicted: both row types already carry
+the ORM object, so no service, query or view changed. Each page keeps
+its own slot → column-class mapping, because the primitive
+deliberately knows no slot vocabulary. Two new storage keys.
+
+**The structural test now covers six chip pages rather than four** —
+the two joined *through* the primitive, which is what extracting it
+was for.
+
+**A mutation survived, and it was the same hole for the third time in
+this file.** Deleting the resolver's entire tag branch failed
+nothing: the seed's tag values (Team X/Y/Z against Charlie/Bravo/
+Alpha) happened to order identically to the **email default**, so a
+resolver returning `None` for every row left the rows where the
+assertion expected them. Responses had the same defect, unmutated
+and unnoticed.
+
+The seed now sets `tag_1` to an order matching **neither** the email
+default nor the name sort:
+
+    email default : Charlie, Bravo, Alpha
+    name asc      : Alpha, Bravo, Charlie
+    tag_1 asc     : Bravo, Alpha, Charlie
+
+The pattern is worth naming, because it has now cost three rounds:
+**when the fixture's natural order coincides with the order under
+test, the test asserts nothing.** It is invisible in review — the
+assertion reads correctly — and only a mutation finds it.
+
+**Verified in Chromium** on both pages: the empty `tag_3` renders a
+disabled chip with its column already hidden, clicking that chip does
+nothing, hiding `tag_1` persists (`{"tag-1":false,"tag-2":true}` —
+the disabled slot correctly absent) and survives reload. The run also
+incidentally proves the two keys do not cross-contaminate: Responses
+opened with `tag_1` visible after Invitations had hidden its own. No
+page errors.
+
+**Mutations:** 7 run. Six killed first time — a shared storage key, a
+chip row losing its table pointer, the CSS mapping dropped, the empty
+slot's chip rendering enabled, and two more below. The seventh (the
+resolver's tag branch) survived, was fixed as above, and is now killed
+along with its Responses twin and the valid-key set.
+
+**Measured:** the suite went 3472 → **3481**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - One column-visibility implementation in `base.html`; no page
