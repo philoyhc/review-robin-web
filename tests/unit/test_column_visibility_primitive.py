@@ -20,12 +20,16 @@ TEMPLATES = Path(__file__).resolve().parents[2] / "app" / "web" / "templates"
 BASE = TEMPLATES / "base.html"
 OPERATOR = TEMPLATES / "operator"
 
-# The pages that drive column-visibility chips today.
+# The pages that drive column-visibility chips today. Invitations and
+# Responses joined in rung 3 — through the primitive, which is the
+# point of having extracted it in rung 1.
 CHIP_PAGES = [
     "session_reviewers.html",
     "session_reviewees.html",
     "session_relationships.html",
     "session_assignments.html",
+    "session_invitations.html",
+    "session_responses.html",
 ]
 
 # The storage key each page has always used. Renaming one silently
@@ -36,6 +40,8 @@ STORAGE_KEYS = {
     "session_reviewees.html": "rrw-reviewee-tag-visibility",
     "session_relationships.html": "rrw-relationship-tag-visibility",
     "session_assignments.html": "rrw-assignment-col-visibility",
+    "session_invitations.html": "rrw-invitation-tag-visibility",
+    "session_responses.html": "rrw-response-tag-visibility",
 }
 
 # The line that actually hides a column. Exactly one implementation of

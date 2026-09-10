@@ -52,6 +52,9 @@ from app.web.routes_operator._shared import _REVERT_RETURN_TO, _templates
 
 _INVITATIONS_SORT_KEYS = {
     "name",
+    "tag_1",
+    "tag_2",
+    "tag_3",
     "email_status",
     "email_sent_at",
     "review_progress",
@@ -61,6 +64,9 @@ _INVITATIONS_SORT_KEYS = {
 
 _RESPONSES_SORT_KEYS = {
     "name",
+    "tag_1",
+    "tag_2",
+    "tag_3",
     "coverage_state",
     "reviewers_done",
     "last_response_at",
@@ -83,6 +89,8 @@ def _completion_pct(done: int, total: int) -> int | None:
 def _invitations_sort_value(row, key: str):
     if key == "name":
         return row.reviewer.name
+    if key in ("tag_1", "tag_2", "tag_3"):
+        return getattr(row.reviewer, key)
     if key == "email_status":
         return row.email_status
     if key == "email_sent_at":
@@ -103,6 +111,8 @@ def _invitations_sort_value(row, key: str):
 def _responses_sort_value(row, key: str):
     if key == "name":
         return row.reviewee.name
+    if key in ("tag_1", "tag_2", "tag_3"):
+        return getattr(row.reviewee, key)
     if key == "coverage_state":
         return row.coverage_state
     if key == "reviewers_done":
