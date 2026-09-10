@@ -15,9 +15,28 @@ admission of anything that arrives later.
 segment planned two items and closed at ten, **eight of them produced
 by the previous item's findings** rather than by the plan. The three
 below are not a prediction of how many items this segment will have.
-They are the three that were known at opening. If a fourth arrives from
-a finding, it is admitted; if one arrives from anywhere else, it gets
-its own segment.
+They are the three that were known at opening. ~~If a fourth arrives
+from a finding, it is admitted; if one arrives from anywhere else, it
+gets its own segment.~~
+
+**Admission widened by the author, 2026-09-10, before the first
+build.** The segment stays open for further items after these three,
+whatever their source — not only findings of 19J.1–3. The original
+rule is struck above rather than deleted, because the narrower shape
+was a real decision and the reason it was widened matters: 19G and 19H
+both took items the plan had not named and both closed cleanly, so the
+restriction was buying a discipline those two segments already showed
+they did not need.
+
+**What that costs, and the trigger that answers it.** An open admission
+rule is how 19C became a standing home — nineteen days, ten items, a
+plan nobody read. The guard is not the admission rule but the close
+trigger, which 19H demonstrated: this segment closes **when its queue
+empties or at the next assessment snapshot, whichever comes first**,
+and the queue emptying is checked at every item close rather than
+noticed later. If the plan passes ~2,000 lines before that, it closes
+on length and the residue opens a new segment — the rule 19I closed on
+when its theme ran out.
 
 **Already, before the first build.** Measuring the blast radius of
 these three corrected **three claims** that were carried in prose,
@@ -35,7 +54,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Open 2026-09-10** |
 | **19J.2** | The refinement allowance, measured rather than asserted | **Open 2026-09-10** |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Open 2026-09-10** |
-| 19J.4+ | Admitted only from a finding of 19J.1–3. | Open — **empty** |
+| 19J.4+ | Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot. | Open — **empty** |
 
 ---
 
@@ -165,6 +184,84 @@ $ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 file
 - **No code changes expected.** If the sweep finds a claim the code
   should honour rather than the spec should drop, that is a finding and
   a new item, not a widening of this one.
+
+### Status
+
+**2026-09-10 — rung 1 landed. Rungs 2 and 3 follow.**
+
+`guide/sweep_2026-09-10_rrw_functional_spec.md`, 467 lines, all
+**108** headings read (the plan and the 10sep assessment both said
+107 — that count excluded the `#` title; the file is 1 + 20 `##` +
+87 `###`). **Fifteen findings across fourteen sections; 94 of 108
+sections current (87%).** No spec was edited, as the rung
+intended.
+
+**The Opportunity's diagnosis was confirmed from inside the
+document.** 19F changed the reviewee results gate to require a
+resolving visibility grant. §10.9 says so correctly and names the
+segment; §4.4 and §17 gate 5, describing the same gate, still
+carry the pre-19F check. One fact, three places, and the one that
+is right is the section 19F PR 6 happened to open. That is
+piecemeal currency, demonstrated rather than argued.
+
+**What the count of findings should not be read as.** Fifteen is
+low for 2,235 lines, and the nine edits since August are why —
+this is a maintained document with unmaintained *corners*. The
+corners are where the value was: §5.3 still says reviewees are
+"not participants" three months after they became an
+authenticated audience, and §18's glossary prints "seven"
+display-field sources directly above a bracket enumerating nine.
+
+**Two findings turned out to be bigger than the assessment
+recorded**, both because measuring changed the shape:
+
+- **F7, the Self-reviews card.** The 10sep snapshot called it a
+  card that does not exist. True — but
+  `review_session.self_reviews_active` **does** exist, round-trips
+  through the Settings CSV and clone, and has **no UI anywhere**
+  (zero template hits). So the fix is not one deletion: §9.7's
+  card goes, §8.6 must say the flag rides the Settings CSV, and
+  whether a session-wide flag with no operator surface is a gap or
+  a deliberate advanced affordance is the author's call.
+- **F10, the Responses extract columns.** §12.3's *count* is
+  right (21, checked column by column) and two *details* are
+  wrong — the tenth column is `RevieweeEmail`, not
+  `RevieweeEmail_or_Identifier`, and `SelfReview` sits after
+  `Value`, not after `Version`. §12.7 promises byte-stable round
+  trip, so this list is a contract a downstream consumer builds
+  against; a wrong name and a wrong position are the two things
+  that break one.
+
+**One finding was written wrong and corrected inside the sweep.**
+F15's first draft asserted that "Segment 14-1" appears "once in
+the entire repository". Measured: **ten occurrences across four
+files** — `email_outbox.py`, an outbox test, a shipped Alembic
+migration, and this spec. So the two names are not a typo here but
+a **corpus-wide vocabulary split**: the code, tests and schema say
+14-1, the plans say 14B, and this spec is where they meet. The
+disposition changed with it — rung 2 must not quietly make the
+spec agree with the roadmap and disagree with the schema comments
+a reader hits next. **The wrong version is left in the sweep with
+its correction**, per 19G.3: a silent fix erases the evidence that
+asserting-instead-of-measuring is still happening, including here,
+in the document written to catch it.
+
+**Three code comments** were found describing a world that has
+moved, and recorded rather than fixed (this item's scope is one
+spec): `deps.py:398` calls a referenced dependency an unreferenced
+"Phase 1 stub"; `field_labels.py:89` says "12 in-scope slots"
+where the constant holds 9 — **the identical 9-vs-12 drift the
+specs had fixed on 2026-08-20**, never swept into the code; and
+`sessions.py:190` names the Edit Session page that retired in 18R
+Item 4. Each is a candidate 19J item if the author wants the class
+chased in `app/`.
+
+**Open question answered.** The plan asked what count would make
+rung 2 too big to land in one PR. Fifteen findings over fourteen
+sections, all update-in-place, is one PR — but **two of them (F7,
+F15) carry a question the sweep declined to decide**, so rung 2
+should land the thirteen mechanical ones and take direction on
+those two.
 
 ### PR ladder
 
