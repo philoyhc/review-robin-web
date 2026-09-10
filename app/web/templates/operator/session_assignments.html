@@ -145,59 +145,13 @@
      the Next Action card carries the affordance. #}
 
   {% if assignment_count %}
-    {# Has-data flags drive the "Show columns" chips; they read an
-       unfiltered sample (``col_data_sample``) so an active search
-       never flips a chip's enabled state. #}
-    {% set has_r_tag_1 = col_data_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
-    {% set has_r_tag_2 = col_data_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
-    {% set has_r_tag_3 = col_data_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
-    {% set has_e_tag_1 = col_data_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
-    {% set has_e_tag_2 = col_data_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
-    {% set has_e_tag_3 = col_data_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
-    {% set ctx = namespace(p1=false, p2=false, p3=false) %}
-    {% for asgn in col_data_sample %}
-      {% set rel = pair_context_lookup.get((asgn.reviewer_id, asgn.reviewee_id)) %}
-      {% if rel and rel.status == "active" %}
-        {% if rel.tag_1 %}{% set ctx.p1 = true %}{% endif %}
-        {% if rel.tag_2 %}{% set ctx.p2 = true %}{% endif %}
-        {% if rel.tag_3 %}{% set ctx.p3 = true %}{% endif %}
-      {% endif %}
-    {% endfor %}
-    {# Card A — column-visibility card (left half of the bottom
-       grid). "Show columns" chips, grouped by source, driving the
-       same ``rrw-assignment-col-visibility`` localStorage the
-       inline checkboxes used to. #}
-    {% set col_groups = [
-      ("Show reviewers", [
-        ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
-        ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
-        ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
-      ]),
-      ("Show reviewees", [
-        ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
-        ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
-        ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
-      ]),
-      ("Show relationships", [
-        ("p1", field_label(session, "pair_context", "1"), ctx.p1),
-        ("p2", field_label(session, "pair_context", "2"), ctx.p2),
-        ("p3", field_label(session, "pair_context", "3"), ctx.p3),
-      ]),
-    ] %}
-    <div class="bottom-grid">
-      <div class="card">
-        {% for group_label, items in col_groups %}
-          <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0{% if not loop.last %} 0 8px 0{% endif %};">
-            <span>{{ group_label }}:</span>
-            {% for slot, label, has_data in items %}
-              <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                    data-col-toggle="{{ slot }}"
-                    {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
-            {% endfor %}
-          </p>
-        {% endfor %}
-      </div>
-      {# Card B — operator-actions card (right half): a free-text
+    {# 19I Item 12 rung 1 — the "Show columns" chips moved out of a
+       card of their own and into the preview-table card, beside the
+       rows they govern. Their flags and groups travel with them; the
+       computation now sits next to its only use, a hundred lines
+       further down. What was a two-card ``bottom-grid`` is one
+       full-width operator-actions card. #}
+    {# Card B — operator-actions card (now full width): a free-text
          search to locate a row, plus row-selection-driven bulk
          Inactivate / Activate. #}
       {# Segment 19I Item 8 — the card itself renders in every
@@ -286,7 +240,6 @@
           </div>
         </form>
       </div>
-    </div>
     {% if can_edit %}
     {# Hidden shell — the row-select checkboxes and the Card B
        bulk buttons associate to it via ``form=``. The filter
@@ -301,10 +254,59 @@
     </form>
     {% endif %}
     <div class="card">
-      <h2>Assignments preview</h2>
+      {# No heading: this is the only preview-table card in the app
+         that carried one (19I Item 12 rung 1). #}
       {% if not pair_sample %}
         <p class="muted">No assignments match the search.</p>
       {% else %}
+      {# Has-data flags drive the "Show columns" chips; they read an
+         unfiltered sample (``col_data_sample``) so an active search
+         never flips a chip's enabled state. #}
+      {% set has_r_tag_1 = col_data_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
+      {% set has_r_tag_2 = col_data_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
+      {% set has_r_tag_3 = col_data_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
+      {% set has_e_tag_1 = col_data_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
+      {% set has_e_tag_2 = col_data_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
+      {% set has_e_tag_3 = col_data_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
+      {% set ctx = namespace(p1=false, p2=false, p3=false) %}
+      {% for asgn in col_data_sample %}
+        {% set rel = pair_context_lookup.get((asgn.reviewer_id, asgn.reviewee_id)) %}
+        {% if rel and rel.status == "active" %}
+          {% if rel.tag_1 %}{% set ctx.p1 = true %}{% endif %}
+          {% if rel.tag_2 %}{% set ctx.p2 = true %}{% endif %}
+          {% if rel.tag_3 %}{% set ctx.p3 = true %}{% endif %}
+        {% endif %}
+      {% endfor %}
+      {# Three rows against one table: the slots come from three
+         different sources and collapsing them would lose that. The
+         storage key rides on the table, so one key covers all nine. #}
+      {% set col_groups = [
+        ("Show reviewers", [
+          ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
+          ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
+          ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
+        ]),
+        ("Show reviewees", [
+          ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
+          ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
+          ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
+        ]),
+        ("Show relationships", [
+          ("p1", field_label(session, "pair_context", "1"), ctx.p1),
+          ("p2", field_label(session, "pair_context", "2"), ctx.p2),
+          ("p3", field_label(session, "pair_context", "3"), ctx.p3),
+        ]),
+      ] %}
+      {% for group_label, items in col_groups %}
+        <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 {% if loop.last %}12{% else %}8{% endif %}px 0;">
+          <span>{{ group_label }}:</span>
+          {% for slot, label, has_data in items %}
+            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                  data-col-toggle="{{ slot }}"
+                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
+          {% endfor %}
+        </p>
+      {% endfor %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="assignments-table"
              data-rrw-col-toggles="rrw-assignment-col-visibility"
@@ -407,8 +409,6 @@
         display: none;
       }
     </style>
-    <script>
-    </script>
     {% if can_edit %}
     {# Card B selection wiring — count the ticked row checkboxes,
        drive the "{n} selected" pill + the Inactivate / Activate

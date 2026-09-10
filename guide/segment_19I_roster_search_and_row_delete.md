@@ -4183,6 +4183,75 @@ render?* and is the one place where a wrong move makes an empty
 column **appear** rather than vanish. Landed together, a column that
 vanishes gives no way to tell which of the two changes decided it.
 
+### Status
+
+**2026-09-10 — rung 1 landed as the amended ladder laid out.**
+
+Four pages moved their chip row into the preview-table card, above
+the count line, and the `Assignments preview` heading is gone. All
+six chip surfaces now agree. **Template-only**; no route, service or
+view changed.
+
+**Assignments cost more than the three rosters put together**, as
+expected but for one reason the plan had not named: its chip card
+was the left half of a `bottom-grid`, so removing it would have left
+the operator-actions card rendering at half width in a `1fr 1fr`
+grid. The grid is unwrapped and that card is full width. Its flags,
+its `col_groups` and its three chip rows travelled together, so the
+computation now sits next to its only use instead of a hundred lines
+above it.
+
+**A test-anchor problem, four times over.** Four assertions in
+`test_assignment_routes.py` used the string `Assignments preview` as
+a proxy for "the preview card rendered" — the heading this rung
+retires. Repointed to `id="assignments-table"` (presence) and to
+`data-col-toggles-for="assignments-table"` (top of the card), both
+of which say what the tests actually meant.
+
+**The heading assertion was wrong at both ends, and a mutation found
+each.** `test_no_preview_card_carries_a_heading` first sliced from
+the chip row, so a heading placed *above* the chips — exactly where
+the retired one sat — fell outside it; the mutation that restored
+`<h2>Assignments preview</h2>` survived. Widened to start at the
+card's own `<div class="card">`, and it survived **again**: the
+slice ended at `src.index("</table>")`, the **first** table in the
+file, which on Assignments is the per-instrument status table near
+the top. So the slice ran backwards and was empty, and the assertion
+held whatever the card contained. This is the segment's recurring
+defect in a new costume — **an assertion that reads correctly and
+tests nothing** — and once more only a mutation exposed it.
+
+**Mutations:** 6, all killed after the fix above — the Reviewers
+chips moved back above the pill row, the Assignments heading
+restored, its three group labels dropped, the Responses chips moved
+below the count line, an `<h2>` added to the Reviewers preview card,
+and the Reviewees profile chip deleted.
+
+**Verified in Chromium** at 1440 and 1024 on all four pages: the
+chip row is inside the table card and precedes the table, no card
+carries an `<h2>`, and the page never scrolls sideways. Toggling
+still hides the right column, writes the right key
+(`{"rt1":false,"rt2":true,"et1":true,"p1":true}` on Assignments —
+four live slots, disabled ones correctly absent) and survives a
+reload; a disabled chip still refuses, which rung 3 will retire. No
+page errors.
+
+**Measured against the pre-change template, not assumed** (Item 11's
+lesson): at 1024 the Assignments table is 964px inside a 944px card,
+**and it is 964/944 on `main` too**. The 20px overflow is
+pre-existing — Assignments never got the `.table-scroll` wrapper
+Item 11 gave Invitations and Responses. Reported, not fixed: it is
+independent of this move, and widening the rung to carry it is the
+bundling `CLAUDE.md` warns against.
+
+**Also removed:** the empty `<script></script>` that Item 11's
+extraction left in `session_assignments.html`. Zero-risk, and it is
+the same block this rung is editing.
+
+**Measured:** the suite went 3488 → **3503**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table
