@@ -3484,6 +3484,53 @@ assertions added).
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 2 landed as laid out.**
+
+Both tables gained the shape the sort primitive needs (`id`,
+`<thead>`, `<tbody class="rrw-rows">`), annotated headers, a
+`data-sort-value` per cell, and the route re-applies the cookie so
+the first paint is already ordered.
+
+**Two decisions the plan did not anticipate:**
+
+- **The progress columns sort by completion percentage, not the raw
+  done count.** Totals differ per row, so "3 done" orders nothing an
+  operator would recognise. `_completion_pct` returns `None` when
+  there is nothing to do and the template emits an empty
+  `data-sort-value` for the same state — measured first:
+  `apply_cookie_sort` collapses `""` to `None` and the client
+  comparator returns `null`, and **both sort it last regardless of
+  direction**, so the two halves cannot disagree about where those
+  rows land.
+- **Two existing tests asserted `<th>Label</th>` verbatim** and broke
+  on the sort button. Rewritten to match each label against its sort
+  key inside `<thead>`, pinning both facts.
+
+**The new tests' first draft was vacuous, and only a failure exposed
+it.** Both builders default to `order_by(email)`
+(`monitoring._assigned_active_reviewers`, `per_reviewee_coverage`),
+and the seed's emails matched its names — so every name-ascending
+assertion would have passed with the sort doing nothing. The seed now
+uses emails in reverse name order. A second hole in the same file:
+`client.cookies` persists, so the "unsorted" fetch taken *after* a
+sorted one still carried the cookie; it is taken first now.
+
+**The same hole appeared in the browser check.** Name-descending
+happens to equal the default email order on both pages, so reloading
+in that state could not distinguish "the server re-applied the
+cookie" from "the server did nothing". Re-checked in the
+**ascending** state, where the orders differ: Invitations reloads
+Alpha/Bravo/Charlie against a default of Charlie/Bravo/Alpha, and
+Responses Delta/Echo against Echo/Delta. No page errors on either.
+
+**Mutations:** 4, all killed — the resolver reduced to the rosters'
+plain `getattr`, the route dropping `apply_cookie_sort`, the
+percentage becoming the raw count, and the tbody losing its class.
+
+**Measured:** the suite went 3464 → **3472**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - One column-visibility implementation in `base.html`; no page
