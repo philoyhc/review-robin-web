@@ -38,6 +38,18 @@ noticed later. If the plan passes ~2,000 lines before that, it closes
 on length and the residue opens a new segment — the rule 19I closed on
 when its theme ran out.
 
+**The trigger fired the same day, and is deliberately held.**
+2026-09-10: 19J.1, 19J.3 and 19J.2 all closed, so the queue is empty
+and the rule above says close. It stays open on the author's explicit
+direction ("keep 19J open for more items after these 3"), which
+post-dates the rule and overrides it. Recorded rather than quietly
+resolved either way, because a close trigger that is silently skipped
+the first time it fires is not a trigger — and because the plan is
+~800 lines, well short of the length ceiling, so the reason to hold it
+open is the author's and not the document's. **The next item admitted
+here resets the clock; if none arrives, the next assessment snapshot
+closes it.**
+
 **Already, before the first build.** Measuring the blast radius of
 these three corrected **three claims** that were carried in prose,
 two of them mine from the snapshot published hours ago. Each correction
@@ -52,7 +64,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | Item | Covers | State |
 |---|---|---|
 | **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Closed 2026-09-10** (3 rungs; 15 findings) |
-| **19J.2** | The refinement allowance, measured rather than asserted | **Open 2026-09-10** |
+| **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | 19J.4+ | Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot. | Open — **empty** |
 
@@ -475,6 +487,69 @@ $ ls guide/archive/segment_*.md | wc -l
 - **No code, no spec.** This is arithmetic over existing artefacts.
 - **The one risk is a false rate from six points**, which the write-up
   states rather than hides.
+
+### Status
+
+**2026-09-10 — landed in one rung, as planned. The answer is the
+permitted one: there is no stable term.**
+
+Five deltas, computed from the six sidecars; classification applied
+mechanically rather than from recollection —
+`git diff --name-status <since>..<head>` for files added under
+`app/web/routes*` and `app/web/templates/*.html`. **Exactly one of
+the five is a feature window** (05sep→08sep: `routes_guide.py`,
+`routes_templates.py`, `guide.html`); the two templates added in the
+most recent window are partials, not pages.
+
+Every candidate unit the plan named was computed, plus one it did
+not — production-touching commits — because "merges" turned out to
+count windows where production was barely touched at all (91 merges
+for +110 lines). None stabilises: **14× to 117× spread across the
+four refinement windows**, tightest per non-merge commit, worst on
+the asserted unit.
+
+**The asserted figure, in its own unit.** "+1.5k per active week"
+measures 48 to 5,607 across the five windows — a **117× spread**
+around a median of 1,603. The assertion was not wildly placed; it was
+placed in a distribution too wide for any single figure to carry a
+projection, which is what "compute it" was for.
+
+**Two corrections the measurement made to §7's diagnosis, which was
+also mine.**
+
+1. **The feature/refinement split does not explain the variance** —
+   and it was the fix §7 proposed. The feature window is *mid-range*
+   on every unit (14.5 LOC per merge, against 1.2–23.9 for refinement
+   windows), and the biggest window in the set is a refinement window.
+   Sorting windows by kind does not sort them by growth, so "the
+   method does not model refinement" was the wrong account of why the
+   projection kept being overtaken.
+2. **Net production LOC is a residual.** Gross production churn against
+   net growth: 1,736→229, 1,754→**110**, 224→**200**, 3,342→1,418,
+   4,476→1,602 — a net/gross ratio from **0.06 to 0.89**. A window that
+   rewrites in place and one that adds look nothing alike, and the
+   projection is the difference of two numbers an order of magnitude
+   larger than itself. That is the mechanism; "refinement" was a label
+   on it, not an explanation.
+
+**What §7 became.** No allowance line. The per-item table is stated as
+a **floor** that models named work only, and future snapshots
+reconcile against it by saying *by how much it was overtaken* — a
+measurement — rather than projecting a total that pretends to model
+the overtaking. A third snapshot being overtaken is now the expected
+result rather than a surprise to explain.
+
+**Open question answered: no.** The mechanism generalises, but the
+`codebase-assessment` skill lives outside this repository; changing it
+is the author's call, not a side effect of an item that measured one
+project's five windows.
+
+**What this item did not do.** It did not re-take any snapshot's
+tables — the sidecars are the record and this read them, as Out of
+scope required. Six sidecars exist; older snapshots predate the
+convention and are excluded, stated here rather than left silent. Five
+points is weak evidence for any positive claim, which is part of why
+the negative one — *no stable term* — is the defensible answer.
 
 ### PR ladder
 

@@ -436,14 +436,76 @@ about 05sep, attributing it to 19E's surface arriving unmodelled. This window
 has no such excuse — it shipped **one new module** and still added 1,602
 production lines.
 
-The honest reading is that **the projection method models remaining features and
-does not model refinement**, and refinement is what this project spends most of
-its windows doing. Three of the last four windows added 1,400–1,600 production
-lines with no new feature scope. A projection that ignores that will be low
-every time. Rather than raise the range by a guess, this snapshot states the
-bias explicitly: **the figures above are a floor, and a refinement allowance of
-roughly +1.5k per active week is the missing term.** The next snapshot should
-either carry that allowance or record why it did not.
+~~The honest reading is that **the projection method models remaining features
+and does not model refinement** … a refinement allowance of roughly +1.5k per
+active week is the missing term. The next snapshot should either carry that
+allowance or record why it did not.~~
+
+**Measured 2026-09-10 as Segment 19J Item 2, and the answer is that there is
+no term to carry.** That paragraph asserted a figure under a skill whose first
+rule is that every number comes from a command — the one number in this
+document reasoned rather than computed. Computed now, over the five deltas the
+six sidecars support:
+
+| window | class | Δ production | merges | PRs | non-merge commits | days |
+|---|---|---:|---:|---:|---:|---:|
+| 17aug→19aug | refinement | +229 | 26 | 26 | 28 | 1 |
+| 19aug→04sep | refinement | +110 | 91 | 91 | 108 | 16 |
+| 04sep→05sep | refinement | +200 | 23 | 23 | 31 | 1 |
+| 05sep→08sep | **feature** | +1,418 | 98 | 96 | 136 | 3 |
+| 08sep→10sep | refinement | +1,602 | 67 | 65 | 110 | 2 |
+
+Windows are classified by the plan's own test — did the window's segments ship
+a new route or a new page — applied mechanically rather than by recollection:
+`git diff --name-status <since>..<head>` for files added under
+`app/web/routes*` and `app/web/templates/*.html`. Exactly one window qualifies:
+05sep→08sep added `routes_guide.py`, `routes_templates.py` and `guide.html`.
+The two templates added in the last window are partials (`_preview_count_line`,
+`_roster_lock_card`), not pages.
+
+**No unit stabilises the rate.** Across the four refinement windows:
+
+| unit | min | max | spread |
+|---|---:|---:|---:|
+| per merge | 1.2 | 23.9 | **20×** |
+| per PR | 1.2 | 24.6 | **20×** |
+| per non-merge commit | 1.0 | 14.6 | **14×** |
+| per production-touching commit | 4.1 | 66.7 | **16×** |
+| per calendar day | 6.9 | 801 | **117×** |
+| **per active week — the asserted unit** | **48** | **5,607** | **117×** |
+
+The asserted 1,500 sits near the median (1,603) and inside a range spanning
+117×, which is the definition of a figure that cannot carry a projection.
+
+**Two things the measurement corrected, beyond the number.**
+
+1. **The feature/refinement split does not explain the variance**, and it was
+   the fix this section proposed. The feature window is *mid-range* on every
+   unit (14.5 per merge, against 1.2–23.9 for refinement windows), and the
+   largest window in the set is a refinement window. Sorting windows by kind
+   does not sort them by growth.
+2. **Net production LOC is a residual, which is why it is unstable.** Gross
+   production churn against net growth, same five windows: 1,736→229 (0.13),
+   1,754→110 (**0.06**), 224→200 (**0.89**), 3,342→1,418 (0.42),
+   4,476→1,602 (0.36). A window that rewrites in place and a window that adds
+   look nothing alike, and the projection is built on the difference of two
+   numbers an order of magnitude larger than it.
+
+**What §7 does instead.** The per-item table above stays, and it is a
+**floor**: it models the work that has been named and nothing else. There is no
+allowance line, because a rate that varies 117× is not an allowance — it is a
+statement that the next window could add 100 lines or 1,600 and history does
+not distinguish the cases in advance. Future snapshots should reconcile against
+the floor and **say by how much it was overtaken**, which is a measurement, in
+place of projecting a total that pretends to model the overtaking. Two
+consecutive snapshots were overtaken; a third that is overtaken is not a
+surprise to be explained away but the expected result of projecting named work
+only.
+
+**The open question in the plan — whether this belongs in the
+`codebase-assessment` skill — is answered no.** The mechanism generalises, but
+the skill lives outside this repository and changing it is the author's call,
+not a side effect of an item that measured one project's five windows.
 
 Nothing was cut. Excludes anything past v1.
 
