@@ -155,9 +155,16 @@ def filter_invitations_rows(
     """Apply status + search filters to invitations rows.
 
     ``status`` is one of ``INVITATIONS_STATUS_OPTIONS`` keys or
-    ``"all"`` (anything else falls through to "all"). ``search`` is
-    matched case-insensitively against the reviewer's name or email;
-    when the value looks like a ``"Name (email)"`` typeahead pick, the
+    ``"all"`` (anything else falls through to "all").
+
+    ``search`` uses the roster pages' per-column rule
+    (``_matches_row``, Segment 19I Item 1, extended here by Item 11):
+    the reviewer's **name and email match by substring**, their
+    **``tag_1..3`` match whole value**. Whole-value on tags is what
+    keeps ``Team A`` from dragging in ``Team A2``; substring on names
+    is what makes a partial name useful.
+
+    When the value looks like a ``"Name (email)"`` typeahead pick, the
     bracketed email is used for an exact match instead. Empty
     ``search`` is a no-op."""
     out = list(rows)
@@ -174,8 +181,15 @@ def filter_invitations_rows(
             out = [
                 r
                 for r in out
-                if _matches_search(r.reviewer.name, needle)
-                or _matches_search(r.reviewer.email, needle)
+                if _matches_row(
+                    needle,
+                    text=(r.reviewer.name, r.reviewer.email),
+                    tags=(
+                        r.reviewer.tag_1,
+                        r.reviewer.tag_2,
+                        r.reviewer.tag_3,
+                    ),
+                )
             ]
     return out
 
@@ -191,8 +205,10 @@ def filter_responses_rows(
     helper maps back to the row's ``coverage_state`` (``"at risk"`` /
     ``"no responses"``).
 
-    ``search`` is matched case-insensitively against the reviewee's
-    name or ``email_or_identifier``; when the value looks like a
+    ``search`` uses the roster pages' per-column rule
+    (``_matches_row``) exactly as Invitations does: the reviewee's
+    **name and ``email_or_identifier`` match by substring**, their
+    **``tag_1..3`` match whole value**. When the value looks like a
     ``"Name (identifier)"`` typeahead pick, the bracketed identifier
     is used for an exact match instead."""
     out = list(rows)
@@ -219,8 +235,15 @@ def filter_responses_rows(
             out = [
                 r
                 for r in out
-                if _matches_search(r.reviewee.name, needle)
-                or _matches_search(r.reviewee.email_or_identifier, needle)
+                if _matches_row(
+                    needle,
+                    text=(r.reviewee.name, r.reviewee.email_or_identifier),
+                    tags=(
+                        r.reviewee.tag_1,
+                        r.reviewee.tag_2,
+                        r.reviewee.tag_3,
+                    ),
+                )
             ]
     return out
 

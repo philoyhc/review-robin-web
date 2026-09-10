@@ -16,13 +16,19 @@ different rosters — see `test_a_tag_equal_to_a_name_adds_rows`.
 from __future__ import annotations
 
 from app.db.models import Observer, Relationship, Reviewee, Reviewer
+from app.web.views._invitations import InvitationsRow
+from app.web.views._responses import ResponsesRow
 from app.web.views import (
+    filter_invitations_rows,
     filter_observers_rows,
     filter_reviewees_rows,
     filter_relationships_rows,
+    filter_responses_rows,
     filter_reviewers_rows,
+    invitations_search_options,
     observers_search_options,
     relationships_search_options,
+    responses_search_options,
     reviewees_search_options,
     reviewers_search_options,
 )
@@ -417,3 +423,141 @@ def test_picking_an_offered_label_exact_matches_on_either_side() -> None:
     )
 
     assert [r.id for r in kept] == [1]
+
+
+# ── Invitations and Responses (Segment 19I Item 11 rung 4) ─────────────
+#
+# Both pages matched name and handle by substring and could not see the
+# tag columns at all — the same gap Item 1 closed on the rosters, on the
+# two pages Item 1 did not cover. They now call the same `_matches_row`,
+# so `Team A` finds its rows and does not drag in `Team A2`.
+
+
+def _invitation_row(reviewer: Reviewer) -> InvitationsRow:
+    """Only ``reviewer`` matters to the filter; the rest is scaffolding
+    the dataclass requires."""
+    return InvitationsRow(
+        reviewer=reviewer,
+        invitation=None,
+        email_status="not sent",
+        email_sent_at=None,
+        review_progress_state="not started",
+        review_progress_done=0,
+        review_progress_total=1,
+        required_fields_done=0,
+        required_fields_total=1,
+        last_reminder_at=None,
+    )
+
+
+def _reviewee_with_tags(name: str, handle: str, **tags: str) -> Reviewee:
+    """`_re` above takes a pk and no tags; this section needs tags."""
+    return Reviewee(
+        session_id=1,
+        name=name,
+        email_or_identifier=handle,
+        status="active",
+        **tags,
+    )
+
+
+def _response_row(reviewee: Reviewee) -> ResponsesRow:
+    return ResponsesRow(
+        reviewee=reviewee,
+        coverage_state="no responses",
+        reviewers_done=0,
+        reviewers_total=1,
+        last_response_at=None,
+    )
+
+
+def test_invitations_search_now_reads_the_tag_columns() -> None:
+    """The behaviour rung 4 adds. Before it this returned no rows: a
+    tag value is a substring of no name and no email."""
+    rows = [
+        _invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="Team A")),
+        _invitation_row(_reviewer("Ben", "ben@example.edu", tag_1="Team B")),
+    ]
+
+    kept = filter_invitations_rows(rows, status="all", search="Team A")
+
+    assert {r.reviewer.name for r in kept} == {"Ana"}
+
+
+def test_invitations_tags_match_whole_value_not_prefix() -> None:
+    """`Team A` must not drag in `Team A2` — the rule Item 1 set, which
+    prefix matching would break."""
+    rows = [
+        _invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="Team A")),
+        _invitation_row(_reviewer("Ben", "ben@example.edu", tag_1="Team A2")),
+    ]
+
+    kept = filter_invitations_rows(rows, status="all", search="Team A")
+
+    assert {r.reviewer.name for r in kept} == {"Ana"}
+
+
+def test_invitations_name_and_email_still_match_by_substring() -> None:
+    """Tags being whole-value must not have made the text columns
+    exact — a partial name is the common case."""
+    rows = [
+        _invitation_row(_reviewer("Ana Lim", "ana@example.edu", tag_1="Team A")),
+        _invitation_row(_reviewer("Ben Ord", "ben@example.edu", tag_1="Team B")),
+    ]
+
+    assert {
+        r.reviewer.name
+        for r in filter_invitations_rows(rows, status="all", search="na L")
+    } == {"Ana Lim"}
+
+
+def test_invitations_search_reads_all_three_tag_slots() -> None:
+    rows = [
+        _invitation_row(
+            _reviewer("Ana", "ana@example.edu", tag_1="T1", tag_2="T2", tag_3="T3")
+        ),
+        _invitation_row(_reviewer("Ben", "ben@example.edu", tag_1="Other")),
+    ]
+    for term in ("T1", "T2", "T3"):
+        kept = filter_invitations_rows(rows, status="all", search=term)
+        assert {r.reviewer.name for r in kept} == {"Ana"}, term
+
+
+def test_responses_search_now_reads_the_tag_columns() -> None:
+    rows = [
+        _response_row(_reviewee_with_tags("Carol", "carol@example.edu", tag_1="Group A")),
+        _response_row(_reviewee_with_tags("Dave", "dave@example.edu", tag_1="Group B")),
+    ]
+
+    kept = filter_responses_rows(rows, status="all", search="Group A")
+
+    assert {r.reviewee.name for r in kept} == {"Carol"}
+
+
+def test_responses_tags_match_whole_value_not_prefix() -> None:
+    rows = [
+        _response_row(_reviewee_with_tags("Carol", "carol@example.edu", tag_1="Group A")),
+        _response_row(_reviewee_with_tags("Dave", "dave@example.edu", tag_1="Group A2")),
+    ]
+
+    kept = filter_responses_rows(rows, status="all", search="Group A")
+
+    assert {r.reviewee.name for r in kept} == {"Carol"}
+
+
+def test_neither_datalist_offers_tag_values() -> None:
+    """Already true before rung 4, and pinned here because rung 4 is
+    what makes tags matchable: a tag identifies too many rows to be a
+    useful *suggestion*, which is the distinction Item 9 drew on the
+    Assignments page. Matching a tag and suggesting one are different
+    questions.
+    """
+    inv = [
+        _invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="Team A"))
+    ]
+    resp = [
+        _response_row(_reviewee_with_tags("Carol", "carol@example.edu", tag_1="Group A"))
+    ]
+
+    assert invitations_search_options(inv) == ["Ana (ana@example.edu)"]
+    assert responses_search_options(resp) == ["Carol (carol@example.edu)"]
