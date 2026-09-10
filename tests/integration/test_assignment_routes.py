@@ -261,7 +261,11 @@ def test_assignments_hub_renders_count_and_mode(
 
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "Assignments preview" in populated.text
+    # The preview card, anchored on the table rather than on a
+    # heading: 19I Item 12 rung 1 retired the ``Assignments
+    # preview`` <h2>, which was the only one on a preview card
+    # anywhere in the app.
+    assert 'id="assignments-table"' in populated.text
     # The per-instrument status table renders a Self review pill
     # (even when the instrument has zero self-review rows). Reads
     # the count via the ``data-self-review-count`` attribute so the
@@ -436,7 +440,10 @@ def test_the_count_line_uses_the_shared_partial_and_class(
         f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
     ).text
 
-    preview = body[body.index("Assignments preview") :]
+    # Top of the preview card. Since 19I Item 12 rung 1 that is the
+    # first "Show columns" chip row, which now lives in this card
+    # rather than one of its own.
+    preview = body[body.index('data-col-toggles-for="assignments-table"') :]
     assert '<p class="muted table-showing-hint">' in preview
     # The class the page used to use, and the wording that went with
     # it. `.form-help` survives elsewhere in the app, so this is
@@ -492,7 +499,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     )
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "Assignments preview" not in empty.text
+    assert 'id="assignments-table"' not in empty.text
 
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
@@ -500,7 +507,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert "Assignments preview" in body
+    assert 'id="assignments-table"' in body
     assert "alice@example.edu" in body
     assert "carol@example.edu" in body
 

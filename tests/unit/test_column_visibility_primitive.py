@@ -92,3 +92,85 @@ def test_the_shared_sketch_cannot_collide_with_real_markup() -> None:
         assert real not in base
     for real_slot in ("tag-1", "tag-2", "tag-3", "rt1", "et1", "p1"):
         assert f'data-col-toggle="{real_slot}"' not in base
+
+
+# --------------------------------------------------------------------------- #
+# Where the chip row sits — Segment 19I Item 12 rung 1.
+#
+# Invitations and Responses have had their chips inside the table
+# card since Item 11; the other four kept theirs in a card of their
+# own, a grid away from the rows they govern. The author preferred
+# the newer shape, so all six now agree.
+#
+# These are ordering assertions over the template source. They exist
+# because the failure mode is silent: a chip row rendered in the
+# wrong card still works, and nothing else in the suite would notice
+# it drifting back.
+# --------------------------------------------------------------------------- #
+
+CHIP_ROW = 'data-col-toggles-for="'
+COUNT_LINE = "operator/partials/_preview_count_line.html"
+
+
+@pytest.mark.parametrize("name", CHIP_PAGES)
+def test_chips_sit_above_the_count_line_and_the_table(name: str) -> None:
+    """chips → count line → table, in that order, on every page."""
+    src = (OPERATOR / name).read_text()
+    chips = src.index(CHIP_ROW)
+    count = src.index(COUNT_LINE)
+    table = src.index('<table id="')
+    assert chips < count < table, (
+        f"{name}: chips@{chips} count@{count} table@{table}"
+    )
+
+
+@pytest.mark.parametrize("name", CHIP_PAGES)
+def test_no_preview_card_carries_a_heading(name: str) -> None:
+    """Assignments was the only preview-table card in the app with an
+    ``<h2>`` (``Assignments preview``). Nothing in that card may be a
+    heading — the page's chrome already says what the table is.
+
+    Both ends of the slice were wrong once, and each was found by a
+    mutation rather than by reading:
+
+    - it started at the chip row, so a heading placed *above* the
+      chips — exactly where the retired one sat — was outside it;
+    - it ended at ``src.index("</table>")``, the **first** table in
+      the file. On Assignments that is the per-instrument status
+      table near the top, so the slice ran backwards and was empty,
+      and the assertion held whatever the card contained.
+    """
+    src = (OPERATOR / name).read_text()
+    chips = src.index(CHIP_ROW)
+    card_open = src.rindex('<div class="card"', 0, chips)
+    card_end = src.index("</table>", chips)
+    assert card_open < chips < card_end
+    assert "<h2" not in src[card_open:card_end]
+
+
+def test_the_retired_assignments_heading_stays_retired() -> None:
+    src = (OPERATOR / "session_assignments.html").read_text()
+    assert "Assignments preview" not in src
+
+
+def test_assignments_keeps_its_three_chip_rows() -> None:
+    """The move is about *where* the control sits, not how it is
+    grouped: the nine slots come from three different sources and one
+    flat row would lose that."""
+    src = (OPERATOR / "session_assignments.html").read_text()
+    assert src.count(CHIP_ROW) == 1  # one loop, three renders
+    for label in ("Show reviewers", "Show reviewees", "Show relationships"):
+        assert label in src
+
+
+def test_the_fields_with_data_card_no_longer_holds_chips() -> None:
+    """Rung 1 leaves the card standing — rung 4 retires it — but the
+    chips are out of it. Asserted by position: the pill row comes
+    first in the file, the chip row much later, in the table card."""
+    for name in (
+        "session_reviewers.html",
+        "session_reviewees.html",
+        "session_relationships.html",
+    ):
+        src = (OPERATOR / name).read_text()
+        assert src.index("Fields with data:") < src.index(CHIP_ROW)

@@ -115,19 +115,6 @@
         <span class="muted">—</span>
       {% endfor %}
     </p>
-    {% if reviewers and not edit_mode %}
-      {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
-      {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
-      {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
-      <p class="col-chip-row" data-col-toggles-for="reviewers-table" style="margin: 12px 0 0 0;">
-        <span>Show columns:</span>
-        {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
-          <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                data-col-toggle="tag-{{ slot }}"
-                {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label_header(session, "reviewer", "tag_" ~ slot) }}</span>
-        {% endfor %}
-      </p>
-    {% endif %}
       </div>
 
     <div class="card operator-actions-card">
@@ -316,6 +303,23 @@
        Mirrors the Reviewees Setup page. #}
     {% set show_profile_link = edit_mode or has_photo %}
     <div class="card">
+      {# Column show/hide chips (19I Item 12 rung 1). They sit in the
+         table card, directly above the rows they govern, the way
+         Invitations and Responses have had them since Item 11 —
+         rather than in the "Fields with data" card a grid away. #}
+      {% if reviewers and not edit_mode %}
+        {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
+        {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
+        {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
+        <p class="col-chip-row" data-col-toggles-for="reviewers-table" style="margin: 0 0 12px 0;">
+          <span>Show columns:</span>
+          {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
+            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                  data-col-toggle="tag-{{ slot }}"
+                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label_header(session, "reviewer", "tag_" ~ slot) }}</span>
+          {% endfor %}
+        </p>
+      {% endif %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="reviewers-table"
              data-rrw-col-toggles="rrw-reviewer-tag-visibility"
