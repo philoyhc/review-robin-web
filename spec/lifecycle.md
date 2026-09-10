@@ -391,9 +391,10 @@ Add / Delete controls, the selected-count pill and the delete
 confirmation render only while editable. The read-only half of
 the strip — the Status filter, the search box and Clear —
 renders in every state, because reading a finished session's
-roster is legitimate. So does the `Showing N of M` hint, which
+roster is legitimate. So does the preview-count line, which
 since Item 4 sits above the **preview table** rather than in the
-strip (`spec/setup_pages.md`, "Preview tables"). **Observers is the one exception,
+strip, and since Item 10 is shared by all seven preview pages
+(`spec/setup_pages.md`, "Preview tables"). **Observers is the one exception,
 on checkboxes only**: theirs stay live until `archived` because
 they drive the cohort rule editor (`spec/setup_pages.md`), which
 is deliberately usable mid-session; its bulk *card* follows the
@@ -438,7 +439,9 @@ half — row checkboxes, select-all, the bulk form, the
 selected-count pill, `Inactivate` / `Activate` — renders only
 while `is_editable`, which is what its five mutating routes
 enforce; the read-only half — the `Search by:` select, the search
-box, `Clear`, `Showing N of M` — renders in every state. Its
+box, `Clear` — renders in every state, as does the preview-count
+line above the table (Segment 19I Item 10 moved it out of the
+strip here too). Its
 per-instrument self-review toggle answers to the same predicate but
 in the other manner: it **stays on the page and disables**, where
 the bulk controls disappear — the row it sits in is a status table

@@ -3138,10 +3138,39 @@ modules, ~30 test sites; nothing outside that list needed touching.
 committed before their mutation run — the guard Item 9 established
 after `git checkout -- app/` deleted uncommitted work twice.
 
-**Measured:** the suite went 3403 → 3425 (PR 1) → 3426 (PR 2).
+**2026-09-10 — rungs 3 and 4 landed; the item closes.**
 
-**Not verified here:** the Azure dev slot. Five templates changed
-across the two rungs.
+- **PR 3** (#2257) — Invitations and Responses; the count leaves
+  `.filter-actions` on the last two pages, and `base.html`'s
+  `.filter-card` comment is corrected where it actually went stale.
+- **PR 4** — the five specs and the `docs/status.md` row.
+
+**All seven pages verified as a set, not page by page:**
+`grep -rn 'class="muted">Showing' app/web/templates/` returns
+nothing, and all seven templates include the partial.
+
+**One behaviour change fell out of the helper on rungs 2 and 3**, and
+is recorded in the spec rather than left to be rediscovered: the old
+per-page guards rendered a count whenever a filter was *active*, so a
+search matching every row still printed `Showing 5 of 5.`. The helper
+returns `None` when nothing was narrowed — Item 4's rule.
+
+**`close_check` note adjudicated (2026-09-10).** It reported
+`_operations touched; not in manifest: spec/validate_page.md,
+spec/preview_hub.md`. Neither describes the count line —
+`preview_hub.md:119` is an unrelated use of the word "Showing", and
+`validate_page.md` never mentions it. The note flags specs that
+mention the touched module, not the changed behaviour; no bullet
+added.
+
+**Mutations:** 10 (PR 1) + 6 (PR 2) + 5 (PR 3) = **21, all killed**.
+
+**Measured:** the suite went 3403 → 3425 (PR 1) → 3426 (PR 2) →
+3430 (PR 3).
+
+**Not verified here:** the Azure dev slot. Seven templates changed
+across the three code rungs — a line moved between cards on three of
+them, which the suite can only check as text.
 
 ### Definition of done
 

@@ -303,13 +303,44 @@ Every Setup Page renders, top-to-bottom:
 
 ## Preview tables (shared toggle pattern)
 
-**The "Showing N of M" hint** renders at the **top-left of the
+**The preview-count line** renders at the **top-left of the
 preview-table card**, above the table, whenever the cap or a filter
 has trimmed the list (`.table-showing-hint`; Segment 19I Item 4). It
 lived flush right in the operator-actions strip until then, roughly
 950px from the rows it describes; here it reads left-to-right with the
-page and sits with what it counts. An untrimmed list renders no hint —
-"Showing 6 of 6" is noise. It appears on all four roster pages.
+page and sits with what it counts. An untrimmed list renders no line —
+"Showing 6 of 6" is noise.
+
+Since **Segment 19I Item 10** it appears on all **seven** pages that
+preview rows — the four roster pages, Assignments, Invitations and
+Responses — through one view helper
+(`app.web.views.preview_count_line`) and one partial
+(`operator/partials/_preview_count_line.html`). Before Item 10 the
+seven reported in four different ways: two positions, two CSS
+classes, and on Assignments a second `…and X more not shown.` line
+below the table.
+
+**The wording varies by branch, because the two reasons a table can
+fall short of the roster are not interchangeable.** A filter
+*excluded* rows — they do not match, so they are not being withheld.
+A cap *truncated* the window — those rows exist and are being kept
+back, which is the only case the operator can act on:
+
+| State | Line |
+|---|---|
+| Capped, unfiltered | `Showing first 200 of 1,240 reviewers; 1,040 more not shown.` |
+| Capped, filtered | `Showing first 500 of 900 matching reviewers; 400 more not shown.` |
+| Filtered, under the cap | `Showing 3 of 1,240 reviewers.` |
+| Neither | *(nothing renders)* |
+
+In every branch **M is the pool the numerator was drawn from**; the
+word `matching` appears exactly when that pool is the filtered set
+rather than the whole roster; and the `; X more not shown` clause
+appears only when the cap actually bit. The noun is the page's
+subject: `reviewers`, `reviewees`, `relationships`, `observers`,
+`assignments`, and — because those tables are one row per person —
+`reviewers` on Invitations and `reviewees` on Responses. Counts carry
+thousands separators.
 
 The Reviewers, Reviewees, and Relationships preview tables share
 a **column-visibility chip row** that lets the operator hide
@@ -449,7 +480,8 @@ person, or add one row. Top-to-bottom:
    a sentence, where the same checkbox on the button row would be
    a control with no stated object.
 
-   The **"Showing N of M"** hint shared this row until Item 4 and
+   The **preview-count line** (then worded `Showing N of M`)
+   shared this row until Item 4 and
    now sits at the top-left of the preview-table card instead —
    with the rows it counts rather than ~950px to their right. See
    "Preview tables" below.
@@ -546,7 +578,8 @@ exist. Services: `delete_selected` on each roster service, over
 `expired` and `archived` the row checkboxes, the selection-driven
 buttons, the selected-count pill, the delete confirmation and the
 bulk form they post to are all absent; the Status filter, the search
-box, `Showing N of M` and Clear remain, because reading a finished
+box, the preview-count line and Clear remain, because reading a
+finished
 roster is legitimate. `ready` is open for receiving responses;
 `expired` and `archived` are over. The route still answers 409 either
 way — the page is a courtesy, not the guarantee. See
@@ -559,9 +592,10 @@ takes 500 and a delete leaves 100 behind **having looked complete** —
 the sharp edge of the partition workflow the search exists to enable.
 The confirmation therefore states the **selected** count and never the
 match count. Two numbers say the rest, and on that same 600-row tag
-they read: `Showing 500 of 600` above the table — the window is not
-the match — against `500 of 500 selected` in the status row — every
-rendered row is picked. Until Item 4 the hint sat in the status row
+they read: `Showing first 500 of 600 matching reviewers; 100 more not
+shown.` above the table — the window is not the match, and the line
+says so outright since Item 10 — against `500 of 500 selected` in the
+status row — every rendered row is picked. Until Item 4 the hint sat in the status row
 beside the gate and carried that job by adjacency; it now sits with
 the table, and the pill states its own denominator, so the pairing
 survives the move across two cards.
@@ -596,8 +630,9 @@ the Upload card beside it — `spec/lifecycle.md` §5.
 The list is **capped at 200 rows** (lifted to **500** when a
 search or status filter is applied) — the cap is applied after
 sort, so the visible window matches the operator's chosen order.
-A "Showing N of M" hint renders when the cap or filter trims the
-list.
+The preview-count line renders when the cap or filter trims the
+list; see "Preview tables (shared toggle pattern)" for its four
+branches.
 
 ### The Upload card's replace (Segment 19I Item 5)
 
