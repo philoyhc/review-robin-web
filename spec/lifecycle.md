@@ -391,6 +391,18 @@ the lobby's Unarchive and offers no control, because `/revert`
 answers 409 from `archived` and a button there would be a dead
 control. See `spec/instruments.md`.
 
+**Every setup-mutation control on those pages answers that one
+predicate** as of Segment 19H Item 7. The friendly-label editor was
+the last that did not: gated on `is_ready` alone since Segment 15A,
+it accepted a save on `expired` and `archived` — 303, not 409 —
+while the lock card two elements above said the roster could not be
+modified. That contradiction became visible only when Item 6 put the
+card on those two states, which is the general shape: a gate nobody
+questions stays invisible until something adjacent starts asserting
+its opposite. Both halves of the editor's gate — the template's
+`disabled` and `_save_field_labels` — now read `is_editable`. See
+`spec/setup_pages.md`.
+
 **The gate is `is_editable`, not `is_ready`** (Segment 19I Item 3).
 It was the latter until then, which is only `status == "ready"`,
 so `expired` and `archived` sessions rendered the Upload and

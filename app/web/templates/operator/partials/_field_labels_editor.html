@@ -7,9 +7,17 @@
   ``.btn.secondary`` style and start ``disabled``; inline JS
   enables them when an input changes (and re-disables them after
   Cancel discards the pending edits). Inputs render disabled (no
-  Save/Cancel buttons) when ``is_ready`` is true — the page's
-  existing ``<div class="card lock">`` already messages "revert
-  to draft" in that state.
+  Save/Cancel buttons) whenever the session is **not editable** —
+  the page's ``<div class="card lock">`` already messages the way
+  out for that state.
+
+  This was ``is_ready`` until Segment 19H Item 7, so on ``expired``
+  and ``archived`` the inputs rendered enabled, the Save button
+  rendered, and the route answered 303 — directly below a lock card
+  saying the roster could not be modified. 19H.6 put that card on
+  those two states and so made a Segment 15A gate into a visible
+  contradiction; the editor now answers the same predicate as
+  everything else on the page.
 
   Usage:
 
@@ -20,7 +28,7 @@
 
   with these locals in scope:
     - session
-    - is_ready
+    - is_editable
     - field_labels_form_action     (POST URL)
     - field_labels_source_type     (e.g. "reviewer")
     - field_labels_card_title      (e.g. "Tag labels")
@@ -46,12 +54,12 @@
                    value="{{ lp.friendly if lp.has_override else '' }}"
                    placeholder="{{ lp.canonical }}"
                    maxlength="255"
-                   {% if is_ready %}disabled aria-disabled="true"{% endif %}>
+                   {% if not is_editable %}disabled aria-disabled="true"{% endif %}>
           </label>
         {% endfor %}
       </div>
     {% endfor %}
-    {% if not is_ready %}
+    {% if is_editable %}
       <div class="field-labels-actions">
         <button class="btn secondary"
                 type="button"
@@ -65,7 +73,7 @@
     {% endif %}
   </form>
 </div>
-{% if not is_ready %}
+{% if is_editable %}
 <script>
   (function () {
     var form = document.getElementById({{ field_labels_form_id | tojson }});

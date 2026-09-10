@@ -726,11 +726,20 @@ def _save_field_labels(
 ) -> None:
     """Upsert / clear per submitted slot (Segment 15A Slice 3).
 
-    Rejected with 409 when ``is_ready`` — labels are locked
-    alongside the rest of the page's data on a live session;
-    operators revert to draft to rename.
+    Rejected with 409 whenever the session is not editable — labels
+    are locked alongside the rest of the page's data once it stops
+    being a draft; operators revert to draft to rename.
+
+    Segment 19H Item 7. This was ``is_ready`` from Segment 15A until
+    then, so ``expired`` and ``archived`` sessions accepted the save
+    (303) while the page's lock card said the roster could not be
+    modified — 19H.6 put that card on those two states and turned a
+    quiet inconsistency into a page contradicting itself. The gate is
+    now ``_require_editable``'s predicate, so the editor, the Upload
+    and Danger Zone cards, the selection surface and the lock card
+    all answer one question.
     """
-    if lifecycle.is_ready(review_session):
+    if not lifecycle.is_editable(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
