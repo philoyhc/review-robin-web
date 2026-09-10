@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/codebase_assessment_08sep.md`
 
 ---
 
-### Segment 19H — Additional refinements — 🔵 **live** (**seven items closed**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; queue empty again; plan stays in `guide/segment_19H_additional_refinements.md`, **not archived**)
+### Segment 19H — Additional refinements — ✅ complete + archived 2026-09-10 (**seven items**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; plan archived: `guide/archive/segment_19H_additional_refinements.md`)
 
 **A named scope, not a standing home.** Items are admitted only from
 **operator-facing refinements found by using the app**, each carrying
@@ -2848,6 +2848,17 @@ operator-facing refinement found by use gets its own segment.
   because Item 6 is what put the card there. 19I.3 had scoped the same
   gate out as "a correct gate for a different question" without testing
   whether it was correct. Both halves now read `is_editable`.
+
+**Closed on both of its own triggers at once.** The rule written when
+the segment opened was: closes when the queue empties or at the next
+assessment snapshot, whichever comes first. The queue emptied at Item
+7 and the author called for the snapshot in the same breath. The shape
+held — 19C's failure was a standing home with no trigger; this segment
+took seven items, refused none it should have taken, and never had to
+be argued about. One admission is recorded rather than waved through:
+Item 6 came from a build, not from using the app, and the exception is
+written into that item's Judgment calls, because a rule that quietly
+stops being applied is how a scoped segment becomes a standing one.
 
 **Three findings.** *A test can assert nothing and still pass* — Item
 1's first wiring assertion was satisfied by the JS helper's own
