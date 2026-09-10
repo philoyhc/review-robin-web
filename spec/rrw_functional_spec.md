@@ -1043,10 +1043,6 @@ and **Observers** (gated on `observers_enabled`).
 
 Each page offers:
 
-- **Stats info card** at the top — high-level row counts
-  (number of active rows, "Fields with data" pills showing
-  which optional columns carry any non-empty value across the
-  roster).
 - **Friendly-label editor card** — inline editors for the
   display labels of this entity's tag and identity slots.
 - **Operator-actions card** — a search + status-filter strip

@@ -85,8 +85,10 @@ than page-local copies:
   See `spec/sort_by_reviewee.md`.
 - **Three tag columns** with a `Show columns:` chip row above the
   table, per the pattern in `spec/setup_pages.md`, "Preview tables
-  (shared toggle pattern)". The chip row sits in the **table card**
-  here — these pages have no "Fields with data" card to hold it.
+  (shared toggle pattern)". The chip row sits in the **table card**,
+  which since Segment 19I Item 12 is where every chip row in the app
+  sits. A tag slot with nothing in it across the session's roster
+  renders neither chip nor column.
 - **`.table-scroll`** — both tables sit in the wrapper `base.html`
   provides, so ten columns overflow *inside* the card rather than
   scrolling the page sideways. Measured, not assumed: before it,

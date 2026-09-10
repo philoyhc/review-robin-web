@@ -93,7 +93,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Fields with data` then `Operator actions` on the right. The Activated lock card sits above the container, not between the pairs. |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right (the `Fields with data` card that used to head the right stack retired in Segment 19I Item 12 rung 4). The Activated lock card sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
@@ -213,39 +213,7 @@ Every Setup Page renders, top-to-bottom:
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts
    pills per entity.
-3. **"Fields with data" pill row** — badge per CSV column that has
-   at least one populated value (`reviewer_fields_with_data` /
-   `reviewee_fields_with_data` in `app/services/assignments/`;
-   `relationships.fields_with_data` in
-   `app/services/relationships.py`). Drives operator awareness of
-   which optional fields the latest import populated. The raw CSV
-   column names are mapped through `views.friendly_fields_with_data`
-   so that **a pill reads what this page's preview table heads that
-   column**. Three sources, in order (Segment 19H Item 5, 2026-09-09):
-   a **per-page** label for a column the renamable slots cannot name
-   correctly; then the session's field-label config for one of the 12
-   in-scope field-label slots — **nine of them operator-renamable**,
-   with the three reviewee-identity slots (`RevieweeName`,
-   `RevieweeEmail`, `PhotoLink`) resolving to a fixed builtin default
-   since renaming them was retired 2026-05-31 (`spec/settings_inventory.md`
-   `field_label_overrides`) — which is the same label the preview header
-   and the `Show columns:` chip render; then
-   the canonical CSV name for anything else (`Status` on
-   Relationships, whose preview header is also `Status`).
-
-   The per-page layer exists because two columns fall outside the
-   slots in opposite ways. `ReviewerName` / `ReviewerEmail` have no
-   slot at all, and rendered as raw CSV names beside preview columns
-   headed `Name` and `Email`; they now read **`Name`** and **`Email`**.
-   `RevieweeEmail` does have a slot, and on Relationships resolved to
-   the reviewee page's `Email` beside a column headed `Reviewee`; on
-   that page the two identifier pills now read **`Reviewer`** and
-   **`Reviewee`**, matching its fixed headers. So one CSV column has
-   two correct pill texts depending on the page, which is why the
-   surface is a required parameter rather than a global map — and why
-   it indexes rather than defaults: a page that omits it raises instead
-   of quietly rendering CSV column names again.
-4. **Lifecycle gate cards** (when the session is Activated): a
+3. **Lifecycle gate cards** (when the session is Activated): a
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to
    modify anything." with an inline Revert form. Sits **above**
@@ -256,8 +224,11 @@ Every Setup Page renders, top-to-bottom:
    Workflow-card-as-Operations-chrome rollout, as
    `spec/operator_ui_concept.md` P4 says and the template's own
    comment records (Segment 19I Item 8).
-5. **Friendly-label editor (left) + Operator actions card
-   (right)** — a half-width `bottom-grid` pair.
+4. **Friendly-label editor (left) + Operator actions card
+   (right)** — the right-hand pair of the page's one
+   `.card-columns` container (see the placement table above).
+   **Not** a `.bottom-grid`: that class carries only the Upload +
+   Danger Zone pair further down.
    - The **friendly-label editor** (Segment 15A Slice 3) is the
      inline editor card via
      `operator/partials/_field_labels_editor.html`. Reviewers +
@@ -283,7 +254,7 @@ Every Setup Page renders, top-to-bottom:
      always and merely ship `disabled`, which is why the earlier
      wording said "inert"; it is now not rendered at all. See
      `spec/lifecycle.md` §5.
-6. **Preview table card** — Reviewers / Reviewees / Relationships.
+5. **Preview table card** — Reviewers / Reviewees / Relationships.
    Always renders when the entity is non-empty (or when Add mode
    is active), regardless of lifecycle state. A **leftmost
    checkbox column** drives the operator-actions selection (a
@@ -295,7 +266,7 @@ Every Setup Page renders, top-to-bottom:
    button. While a row is being edited (`?edit_id=`) or a blank
    Add row is active (`?add=1`), that row's cells render as
    inputs / pickers — see "Per-row Edit / Add / bulk actions".
-7. **Body grid** — Upload + Danger Zone cards. Hidden when the
+6. **Body grid** — Upload + Danger Zone cards. Hidden when the
    session is Activated *or* while a row is being edited / added.
    Placed **after** the preview table so the operator's eye lands
    on the data they're managing first; the upload-CSV +
@@ -374,8 +345,10 @@ Assignments groups its nine slots into three rows against one key.
 
 The pattern:
 
-- A `Show columns:` chip row sits in the top "Fields with data"
-  card, directly below the `Fields with data:` line. Each chip is
+- A `Show columns:` chip row sits **inside the preview-table card**,
+  immediately above the count line and the rows it governs (Segment
+  19I Item 12 rung 1 — it used to sit in the "Fields with data" card,
+  a grid away, and that card retired at rung 4). Each chip is
   a `<span class="pill … tag-chip" data-col-toggle="<slot>"
   role="button" tabindex="0">` carrying the column's **friendly
   label** (the operator-set field label, falling back to the
@@ -390,19 +363,36 @@ The pattern:
   `tag-col-1`). The chip flips between filled (`is-selected`,
   column shown) and plain pill (column hidden), with `aria-pressed`
   tracking the state.
-- Each chip defaults to **selected iff that column has at least
-  one populated value** in the current preview rows.
-- **Empty columns render a disabled chip** (`pill-empty
-  tag-chip is-disabled`, struck through, `aria-disabled="true"
-  title="No data in this column"`, no `role="button"`). The
-  operator can't toggle an empty column on, and stored "show"
-  preferences carried over from a load when the column had data
-  are ignored — the chip stays unselected and the column stays
-  hidden until the next import populates it.
+- **A chip exists iff its column holds data somewhere in the
+  session's roster** — and so does the column. A slot with nothing
+  in it renders neither (Segment 19I Item 12 rung 3): no chip, no
+  `<th>`, no `<td>`.
+
+  Two rules changed there at once, and each mattered.
+
+  **The question is roster-wide**, answered by a query, not by
+  scanning the rendered rows. Every one of the six surfaces used to
+  scan its own row list, and every one could therefore be wrong: the
+  Setup rosters scanned the **filtered and 200/500-capped** display
+  list, Invitations and Responses the filtered set, and Assignments a
+  deliberately unfiltered sample that was still capped at
+  `PAIR_PREVIEW_LIMIT`. A tag populated only past the cap read as
+  "no data".
+
+  **The struck "no data in this column" chip is retired.** It was the
+  thing that hid the empty column — the shared primitive branched on
+  `is-disabled` to stamp `col-hidden-{slot}` — so removing the chip
+  alone would have made the empty column *visible*. The column goes
+  with it.
+
+  **`edit_mode` overrides the gate** on the three roster pages: an
+  operator adding or editing a row sees every tag column and can type
+  into an empty one, which is the only way a tag ever stops being
+  empty. The Photo column has always worked this way.
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
-  That column is server-rendered only when some row has a link, so
-  its chip never reaches the disabled state. **Reviewers does not
+  Chip and column are gated on the same `col_data["profile"]`, so
+  neither can appear without the other. **Reviewers does not
   have this chip**, though it renders the same `profile-col` cells:
   there, the column's visibility is a server-side decision only. The
   asymmetry predates the extraction and survives it unchanged.
@@ -423,13 +413,17 @@ The pattern:
   none of the four that predated it, and
   `tests/unit/test_column_visibility_primitive.py` pins all six.
   Full inventory in `spec/settings_inventory.md`.
-- Stored choice wins over the data-driven default for live chips.
-  Stored "hide" keeps a populated column hidden; stored "show"
-  reveals an explicitly-toggled-on column on next load. Disabled
-  chips ignore storage entirely (see above).
-- The shared JS targets `[data-col-toggle]` and early-returns on
-  the `is-disabled` chip class so listeners aren't bound and
-  storage isn't applied.
+- Stored choice wins over the data-driven default. Stored "hide"
+  keeps a populated column hidden; stored "show" reveals an
+  explicitly-toggled-on column on next load. A stored entry naming
+  a slot the page no longer renders is ignored — the primitive
+  iterates chips and consults storage, never the reverse — so
+  hiding a tag, importing a roster without it, then importing one
+  with it again restores the saved state.
+- The shared JS targets `[data-col-toggle]` and binds every chip it
+  finds. It carried an `is-disabled` early-return until Segment 19I
+  Item 12 rung 3 retired that state; **every chip rendered is now a
+  live one**.
 
 **What is shared, and what is not.** The behavior is one
 implementation in `base.html` (Segment 19I Item 11 — before it,
@@ -882,9 +876,9 @@ section beneath:
 | 7 | Status | — | `reviewer.status` |
 | 8 | Updated | — | `reviewer.updated_at` (`%Y-%m-%d %H:%M`) |
 
-The `Show columns:` chip row sits in the top "Fields with data"
-card; see "Preview tables (shared toggle pattern)" above for
-default-state and persistence rules.
+The `Show columns:` chip row sits in the preview-table card, above
+the rows; see "Preview tables (shared toggle pattern)" above for
+which chips render and for the persistence rules.
 
 ## Reviewees page (`session_reviewees.html`)
 
@@ -935,18 +929,6 @@ when `Status` is omitted. POSTs to
 `/operator/sessions/{id}/relationships/import` via
 `save_relationships(...)`.
 
-### Stats card
-
-Single-line "Fields with data" card above the body grid:
-
-> Fields with data: {pill, pill, …}
-
-Mirrors the Reviewers / Reviewees stats card shape exactly — the
-per-entity row count is **not** repeated here, since the chrome
-status strip already carries it. Fields-with-data labels come
-from `relationships.fields_with_data(...)` in
-`app/services/relationships.py`.
-
 ### Preview table
 
 | # | Column | Toggle? | Notes |
@@ -960,9 +942,9 @@ from `relationships.fields_with_data(...)` in
 | 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment (post-15 cleanup polish #768) |
 | 7 | Updated | — | `relationship.updated_at` (`%Y-%m-%d %H:%M`) |
 
-The `Show columns:` chip row sits in the top "Fields with data"
-card; same default-state and persistence rules as Reviewers /
-Reviewees per the shared section above.
+The `Show columns:` chip row sits in the preview-table card, above
+the rows; same rules as Reviewers / Reviewees per the shared section
+above.
 
 The Status column is *not* toggleable — every relationship has a
 status by design, and the pill treatment makes the value visually
@@ -1037,8 +1019,11 @@ The Observers page renders, top-to-bottom:
      rendered when at least one observer exists.
 
 There is no friendly-label editor (observers have no renamable
-label slots) and no "Fields with data" pill row above the table —
-the tag schema is fixed at one slot.
+label slots) and **no column-visibility chips** — the tag schema is
+fixed at one slot, and Segment 19I Item 11 settled that a one-tag
+chip row is a different question from the three-tag one. Observers
+also never carried the "Fields with data" pill row that the other
+three pages had until Segment 19I Item 12 rung 4 retired it.
 
 ### Preview table
 
@@ -1176,16 +1161,16 @@ above.
   and CSS classes so pages don't collide. A page that
   re-implements the toggle instead of opting in fails
   `tests/unit/test_column_visibility_primitive.py`.
-- Per-entity row counts and the raw "fields with data" CSV column
-  names come from the helpers in `app/services/assignments/`
-  (`reviewer_fields_with_data`, `reviewee_fields_with_data`) and
-  `app/services/relationships.py`
-  (`fields_with_data`) — keep them in sync with any new optional
-  column added to the model + CSV importer. The route then runs
-  the raw list through `views.friendly_fields_with_data`
-  (`app/web/views/_setup.py`), passing the page's own required
-  `surface` keyword, to resolve each column through the three-source
-  order in "Shared body shape" item 3 before the pills render.
+- **Which columns hold data** is answered by
+  `app/services/_queries.py::tag_slot_presence` — three
+  `slot_has_data` calls, so three indexed `LIMIT 1`s — and re-keyed
+  to the page's own chip slot names by `views.chip_slots`. The route
+  passes one `col_data` map; **no template computes the flag**
+  (Segment 19I Item 12 rung 2). `reviewer_fields_with_data` /
+  `reviewee_fields_with_data` in `app/services/assignments/` survive
+  for the Instruments page's `display_source_presence`, which unions
+  them; keep those in sync with any new optional column added to the
+  model + CSV importer.
 - Lifecycle gating is the existing pattern: a `card lock` at the
   top of the body when `is_ready`, and the Upload + Danger Zone
   cards conditionally rendered behind `{% if is_editable %}` on the
