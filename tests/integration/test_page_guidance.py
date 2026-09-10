@@ -360,8 +360,13 @@ ROSTER_PAGES = ("reviewers", "reviewees", "relationships")
 def test_the_roster_pages_put_every_top_card_in_one_column_container(
     client: TestClient, db: Session
 ) -> None:
-    """All four cards above the preview table share one `.card-columns`,
+    """Every card above the preview table shares one `.card-columns`,
     not two stacked row grids.
+
+    Three cards since 19I Item 12 rung 4 retired the "Fields with
+    data" card that used to head the right stack: guidance and the
+    tag-label editor on the left, Operator actions alone on the
+    right.
 
     Two containers would look identical when everything is closed and
     still fail the point of the change: growth in the upper one pushes
@@ -383,12 +388,11 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
         order = [
             body.index(CARD),
             body.index("field-labels-form"),
-            body.index("Fields with data:"),
             body.index('class="card operator-actions-card"'),
         ]
         assert order == sorted(order), (page, order)
 
-        # No row grid above those four. The Upload / Danger Zone pair
+        # No row grid above those three. The Upload / Danger Zone pair
         # below still is a `.bottom-grid` and should be — asserting
         # position rather than absence keeps this independent of whether
         # the preview table rendered.

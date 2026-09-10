@@ -603,9 +603,6 @@ async def _handle_import(
             if kind == "reviewers":
                 status_options = views.REVIEWERS_STATUS_OPTIONS
                 search_options = views.reviewers_search_options(list_items)
-                raw_fields = assignments.reviewer_fields_with_data(
-                    db, review_session.id
-                )
                 # 19I Item 12 rung 2 — this path re-renders the same
                 # template, so it owes it the same chip flags. Missing
                 # them here would render every chip as "no data" on a
@@ -620,9 +617,6 @@ async def _handle_import(
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
-                raw_fields = assignments.reviewee_fields_with_data(
-                    db, review_session.id
-                )
                 col_data = views.chip_slots(
                     tag_slot_presence(
                         db, session_id=review_session.id, model=Reviewee
@@ -635,9 +629,6 @@ async def _handle_import(
                         column=Reviewee.profile_link,
                     )
                 }
-            fields_with_data = views.friendly_fields_with_data(
-                review_session, raw_fields, surface=kind
-            )
             context.update(
                 {
                     "total_row_count": len(list_items),
@@ -672,7 +663,6 @@ async def _handle_import(
                     "roster_response_count": (
                         lifecycle.session_response_count(db, review_session)
                     ),
-                    "fields_with_data": fields_with_data,
                     "col_data": col_data,
                     "edit_id": None,
                     "add_mode": False,

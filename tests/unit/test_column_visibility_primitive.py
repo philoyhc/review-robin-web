@@ -163,17 +163,18 @@ def test_assignments_keeps_its_three_chip_rows() -> None:
         assert label in src
 
 
-def test_the_fields_with_data_card_no_longer_holds_chips() -> None:
-    """Rung 1 leaves the card standing — rung 4 retires it — but the
-    chips are out of it. Asserted by position: the pill row comes
-    first in the file, the chip row much later, in the table card."""
-    for name in (
-        "session_reviewers.html",
-        "session_reviewees.html",
-        "session_relationships.html",
-    ):
+def test_no_template_renders_a_fields_with_data_card() -> None:
+    """Rung 1 moved the chips out of the card; rung 4 retired the card.
+    Its pills named the columns holding any value, which the chips now
+    say — and say better, since a chip both reports the fact and acts
+    on it.
+
+    The bare string, not the rendered markup: this asserts no template
+    is building one again, and the only mentions left anywhere are the
+    comments recording why it went."""
+    for name in sorted(p.name for p in OPERATOR.glob("*.html")):
         src = (OPERATOR / name).read_text()
-        assert src.index("Fields with data:") < src.index(CHIP_ROW)
+        assert "Fields with data:" not in src, name
 
 
 def test_the_primitive_carries_no_disabled_chip_branch() -> None:

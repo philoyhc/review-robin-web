@@ -4400,6 +4400,66 @@ No page errors.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 4 landed, and took one more thing with it than
+the plan expected.**
+
+The card is gone from all three Setup pages, along with its four
+route context keys (Assignments' dead one included) and
+`views.friendly_fields_with_data` with both its lookup tables.
+**-372 lines against +137**, of which the app is -214/+43.
+
+**The plan's Semantics were wrong about which services survive.**
+They said the three `*_fields_with_data` services stay because
+`display_source_presence` unions all three — but that union is over
+the **assignments module's** three (`reviewer_`, `reviewee_`,
+`assignment_`), and `relationships.fields_with_data` is not among
+them. The Relationships route was its only caller, so it lost that
+and retired too: another 45 lines and an `__all__` entry. Caught by
+grepping for callers after the route edit rather than by trusting
+the plan's own sentence.
+
+**The pills' one surviving contract moved rather than died.** Seven
+tests covered them. Three said *the thing naming a tag column
+outside the table header reads the operator's friendly label, not
+the raw CSV name* — still true, of the chip now, and **nothing
+asserted that of a chip**. Rewritten against the chips rather than
+deleted. The other four were Segment 19H Item 5's, pinning
+`_SURFACE_LABELS` — the per-surface map that let one CSV column
+(`RevieweeEmail`) read `Email` on one page and `Reviewee` on
+another. Chips never name an identity column, only tag and profile
+slots, which resolve through the renamable-slot path; the map had no
+caller left and retired with the function.
+
+**A layout test counted the cards.**
+`test_the_roster_pages_put_every_top_card_in_one_column_container`
+asserted a four-element source order through the pill card. The
+contract — one `.card-columns`, the whole left column then the whole
+right — is unchanged; only the membership is. Three now. Verified in
+Chromium: one container, `[2, 1]` cards per column, at 1440 and
+1024, no page scroll.
+
+**The unscoped-substring trap, a seventh time.** `"ReviewerTag1" not
+in body` failed because the Upload card's CSV-header help lists the
+raw column names, quite correctly. The retired pill assertions were
+scoped by their own markup (`<span class="pill pill-count">…`); the
+chip ones have to say so explicitly.
+
+**Verified in Chromium**: no page renders `Fields with data`, and
+the **CSV-import error path still renders its chips** — the path
+rung 2 wired specially, and the one most easily forgotten, since it
+re-renders the same template from a different function.
+
+**Mutations:** 5, all killed — the card restored; the chip label
+replaced by the raw CSV name on Reviewers and on Relationships; the
+profile chip losing its label; and the operator-actions card leaving
+the `.card-columns` stack.
+
+**Measured:** the suite went 3518 → **3515** — the only rung in this
+item to *lose* tests, and correctly: seven pill tests became three
+chip tests plus one asserting no template builds the card again.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table

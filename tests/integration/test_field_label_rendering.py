@@ -312,13 +312,47 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
     assert "Lab section" in body
 
 
-# ── "Fields with data" pills ─────────────────────────────────────────────
+# ── The column chips carry the friendly label ────────────────────────
+#
+# Segment 19I Item 12 rung 4 retired the "Fields with data" pills.
+# Their one contract that outlived them is this: the thing naming a
+# tag column outside the table header reads the operator's friendly
+# label, not the raw CSV name. That thing is now the ``Show columns:``
+# chip, which both reports that the column holds data and toggles it.
+#
+# The four tests that stood here for Segment 19H Item 5 went with the
+# pills. They pinned ``friendly_fields_with_data``'s per-surface map,
+# which existed so one CSV column (``RevieweeEmail``) could read
+# ``Email`` on one page and ``Reviewee`` on another. Chips never name
+# an identity column — only tag and profile slots, which resolve
+# through the renamable-slot path — so the map had no caller left and
+# retired with the function.
 
 
-def test_reviewers_fields_with_data_pill_uses_friendly_override(
+def _chip_label(body: str, slot: str) -> str:
+    """The text of one chip."""
+    flat = " ".join(body.split())
+    i = flat.index(f'data-col-toggle="{slot}"')
+    return flat[i : flat.index("</span>", i)].split(">", 1)[1]
+
+
+def _chip_row(body: str) -> str:
+    """Just the ``Show columns:`` row.
+
+    The raw CSV names these tests check for are also listed, quite
+    correctly, in the Upload card's header help — ``<code>ReviewerTag1
+    </code>`` and friends. The retired pill tests were scoped by their
+    own markup; these have to say so.
+    """
+    flat = " ".join(body.split())
+    i = flat.index('class="col-chip-row"')
+    return flat[i : flat.index("</p>", i)]
+
+
+def test_reviewers_chip_uses_the_friendly_override(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, "fl-rev-pill")
+    review_session = _make_session(client, db, "fl-rev-chip")
     actor = _actor(db)
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
@@ -343,16 +377,16 @@ def test_reviewers_fields_with_data_pill_uses_friendly_override(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
-    # The "Fields with data" pill reads the friendly override, not
-    # the raw CSV column name.
-    assert '<span class="pill pill-count">Cohort</span>' in body
-    assert '<span class="pill pill-count">ReviewerTag1</span>' not in body
+    assert _chip_label(body, "tag-1") == "Cohort"
+    assert "ReviewerTag1" not in _chip_row(body)
 
 
-def test_reviewees_fields_with_data_pills_use_default_friendly_labels(
+def test_reviewees_chips_use_the_builtin_friendly_defaults(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, "fl-ree-pill")
+    """No override set, so each chip falls back to its builtin
+    default rather than the CSV column name."""
+    review_session = _make_session(client, db, "fl-ree-chip")
     client.post(
         f"/operator/sessions/{review_session.id}/reviewees/import",
         files={
@@ -369,52 +403,32 @@ def test_reviewees_fields_with_data_pills_use_default_friendly_labels(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewees"
     ).text
-    # Renamable slots fall back to their builtin friendly default.
-    for label in ("Name", "Email", "Profile", "Tag 1"):
-        assert f'<span class="pill pill-count">{label}</span>' in body
-    assert '<span class="pill pill-count">RevieweeName</span>' not in body
-    assert '<span class="pill pill-count">PhotoLink</span>' not in body
+    assert _chip_label(body, "profile") == "Profile"
+    assert _chip_label(body, "tag-1") == "Tag 1"
+    chips = _chip_row(body)
+    assert "PhotoLink" not in chips
+    assert "RevieweeTag1" not in chips
 
 
-def test_relationships_fields_with_data_pill_uses_friendly_override(
+def test_relationships_chip_uses_the_friendly_override(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, "fl-rel-pill")
+    review_session = _make_session(client, db, "fl-rel-chip")
     actor = _actor(db)
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
-        files={
-            "file": (
-                "rel.csv",
-                b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
-                b"alice@example.edu,carol@example.edu,mentor\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
+    for path, payload in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
+        ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+        (
+            "relationships",
+            b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+            b"alice@example.edu,carol@example.edu,mentor\n",
+        ),
+    ):
+        client.post(
+            f"/operator/sessions/{review_session.id}/{path}/import",
+            files={"file": (f"{path}.csv", payload, "text/csv")},
+            follow_redirects=False,
+        )
     field_labels.upsert(
         db,
         review_session,
@@ -426,24 +440,15 @@ def test_relationships_fields_with_data_pill_uses_friendly_override(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert '<span class="pill pill-count">Mentorship</span>' in body
-    assert (
-        '<span class="pill pill-count">PairContextTag1</span>' not in body
-    )
+    assert _chip_label(body, "tag-1") == "Mentorship"
+    assert "PairContextTag1" not in _chip_row(body)
 
 
-# ── The pill reads the page's own column header (Segment 19H Item 5) ───
-#
-# `friendly_fields_with_data` maps a raw CSV column name to what the
-# preview table heads that column, and could only do so through the 12
-# renamable slots. Two columns fell outside that, in opposite ways.
-# `ReviewerName` / `ReviewerEmail` are not renamable, so they rendered
-# as raw CSV names beside preview columns headed `Name` and `Email`.
-# `RevieweeEmail` is renamable, so on Relationships it rendered the
-# reviewee page's label beside a column headed `Reviewee`.
-
-
-def _seed_roster_and_pair(client: TestClient, review_session: ReviewSession) -> None:
+def test_no_page_renders_a_fields_with_data_card(
+    client: TestClient, db: Session
+) -> None:
+    """The card itself is gone from all three Setup pages."""
+    review_session = _make_session(client, db, "fl-no-card")
     for path, payload in (
         ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
         ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
@@ -457,82 +462,8 @@ def _seed_roster_and_pair(client: TestClient, review_session: ReviewSession) -> 
             files={"file": (f"{path}.csv", payload, "text/csv")},
             follow_redirects=False,
         )
-
-
-def test_reviewers_pills_read_the_preview_headers_not_csv_names(
-    client: TestClient, db: Session
-) -> None:
-    """The Reviewers preview heads its two columns `Name` and `Email`,
-    and neither is renamable, so before 19H.5 the pills beside them read
-    `ReviewerName` and `ReviewerEmail`."""
-    review_session = _make_session(client, db, "fl-rvr-hdr")
-    _seed_roster_and_pair(client, review_session)
-
-    body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
-
-    assert '<span class="pill pill-count">Name</span>' in body
-    assert '<span class="pill pill-count">Email</span>' in body
-    assert '<span class="pill pill-count">ReviewerName</span>' not in body
-    assert '<span class="pill pill-count">ReviewerEmail</span>' not in body
-
-
-def test_relationships_pills_read_reviewer_and_reviewee(
-    client: TestClient, db: Session
-) -> None:
-    """Relationships heads its two identifier columns `Reviewer` and
-    `Reviewee`. Both hold an email, and before 19H.5 the pills read
-    `ReviewerEmail` (no renamable slot) and `Email` (the reviewee page's
-    label, resolved on the wrong page)."""
-    review_session = _make_session(client, db, "fl-rel-hdr")
-    _seed_roster_and_pair(client, review_session)
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
-    ).text
-
-    assert '<span class="pill pill-count">Reviewer</span>' in body
-    assert '<span class="pill pill-count">Reviewee</span>' in body
-    assert '<span class="pill pill-count">ReviewerEmail</span>' not in body
-    assert '<span class="pill pill-count">Email</span>' not in body
-
-
-def test_one_raw_column_resolves_differently_per_surface(
-    client: TestClient, db: Session
-) -> None:
-    """The invariant the per-surface map exists for, stated directly.
-
-    `RevieweeEmail` is one CSV column with two correct pill texts: the
-    Reviewees preview heads it `Email`, the Relationships preview heads
-    it `Reviewee`. A single global mapping cannot say both, which is
-    why the surface is a parameter and why it is consulted before the
-    renamable slots.
-    """
-    from app.web import views
-
-    review_session = _make_session(client, db, "fl-two-surfaces")
-
-    assert views.friendly_fields_with_data(
-        review_session, ["RevieweeEmail"], surface="reviewees"
-    ) == ["Email"]
-    assert views.friendly_fields_with_data(
-        review_session, ["RevieweeEmail"], surface="relationships"
-    ) == ["Reviewee"]
-    # And a column no page overrides still reaches its renamable slot.
-    assert views.friendly_fields_with_data(
-        review_session, ["PairContextTag1"], surface="relationships"
-    ) == ["Pair context 1"]
-
-
-def test_an_unknown_surface_fails_loudly(db: Session) -> None:
-    """`surface` indexes rather than `get`s, so a page that misspells it
-    raises instead of quietly rendering CSV column names again — which
-    is the defect this item fixed and the one a silent default would
-    re-introduce one page at a time."""
-    from app.web import views
-
-    review_session = db.execute(select(ReviewSession)).scalars().first()
-
-    with pytest.raises(KeyError):
-        views.friendly_fields_with_data(
-            review_session, ["ReviewerName"], surface="reviewer"
-        )
+    for page in ("reviewers", "reviewees", "relationships"):
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/{page}"
+        ).text
+        assert "Fields with data" not in body, page

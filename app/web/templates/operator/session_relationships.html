@@ -46,9 +46,17 @@
 
   {# 19E rung 6b — every card above the preview table in two
      independent column stacks: the guidance card then the tag-label
-     editor on the left, "Fields with data" then Operator actions on the
-     right. Opening the guidance grows only the left column, and the
-     right one neither moves nor stretches.
+     editor on the left, Operator actions on the right. Opening the
+     guidance grows only the left column, and the right one neither
+     moves nor stretches.
+
+     19I Item 12 rung 4 retired the "Fields with data" card that used
+     to head the right stack. Its pills named the columns holding any
+     value, which the column chips above the preview table now say —
+     and say better, since a chip both reports the fact and acts on
+     it. The two identity pills it also carried (Name, Email) were
+     appended whenever the roster had any rows at all, so they
+     restated a count the chrome status strip already shows.
 
      The Activated lock card sits ABOVE the container rather than
      between the two pairs (where it used to be, splitting them into
@@ -103,18 +111,7 @@
     </div>
 
     <div>
-      <div class="card">
-    <p style="margin: 0;">
-      Fields with data:
-      {% for label in fields_with_data %}
-        <span class="pill pill-count">{{ label }}</span>
-      {% else %}
-        <span class="muted">—</span>
-      {% endfor %}
-    </p>
-      </div>
-
-    <div class="card operator-actions-card">
+      <div class="card operator-actions-card">
       <h2>Operator actions</h2>
       {# Filter + action buttons grey out (``is-locked``) while a
          row is being edited; the Edit form below the divider stays
@@ -332,7 +329,8 @@
       {# Column show/hide chips (19I Item 12 rung 1). They sit in the
          table card, directly above the rows they govern, the way
          Invitations and Responses have had them since Item 11 —
-         rather than in the "Fields with data" card a grid away. #}
+         rather than in the "Fields with data" card a grid away —
+         which rung 4 then retired outright. #}
       {# A chip row with no chips in it is a label and nothing else,
          so the row goes too when every slot is empty (19I Item 12
          rung 3). #}

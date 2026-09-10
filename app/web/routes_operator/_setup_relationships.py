@@ -643,13 +643,6 @@ def _render_relationships_page(
                 reviewer_by_id=reviewer_by_id,
                 reviewee_by_id=reviewee_by_id,
             ),
-            "fields_with_data": views.friendly_fields_with_data(
-                review_session,
-                relationships_service.fields_with_data(
-                    db, review_session.id
-                ),
-                surface="relationships",
-            ),
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. No ``active_only``
