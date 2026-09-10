@@ -4770,7 +4770,11 @@ a plan.
 
 ### Doc impact
 
-- `docs/status.md` — row at the close (Item 13). <!-- doc-impact-waived: withdrawn before rung 1; the replacement is a template-only pill reorder on one page, and no spec states the pill's position within the row -->
+- `docs/status.md` — a row for the replacement change, carrying the
+  record of what this item planned and why it was withdrawn (Item 13).
+  No spec bullet: none states the pill's position within the row, and
+  `spec/lifecycle.md` lists it as a member of the selection-driven
+  half, which stays true. <!-- cites: spec/lifecycle.md -->
 
 ### Status
 
@@ -4779,3 +4783,58 @@ replaced.** The four roster pages keep their pill in the search
 card beside the delete gate. Assignments' pill moved left of its
 buttons; the row is pinned by
 `tests/integration/test_assignment_routes.py`.
+
+---
+
+## Segment close — 2026-09-10
+
+**Thirteen items opened over two days; twelve closed, one withdrawn.**
+PRs #2230 → #2276. The suite went 3054 → 3520. Every item carries its
+own `### Doc impact` and `### Status`; `python3 tools/close_check.py
+19I.<n>` exits 0 with no warnings for all thirteen, so the segment
+closes on the item manifests rather than a segment-level one.
+
+**Why it closes now rather than staying open.** The theme — the four
+Setup roster pages, and finding or removing rows on them — was
+exhausted by Item 12: after that there was no roster surface left that
+the author had raised and the segment had not answered. Item 13 was
+the first ask that arrived and did not fit, and the author withdrew it
+on the rendered strip rather than on the plan. What kept the file open
+after that was bookkeeping, not work. Left open, it becomes what 19C
+became — a standing home whose plan is too long to read end to end,
+whose `close_check` window swallows other segments whole. At 4,700
+lines it is already past the length where a reader can hold it, which
+is the argument for closing it at the point its theme ran out.
+
+**The finding the segment is really about: an assertion is only as
+strong as the string it matches.** Seven times across the segment a
+negative substring assertion held for a reason unrelated to the
+behaviour it was written for — `"tag-col-3" not in body` matching the
+page's own `col-hidden-tag-3` CSS; `"is-disabled" not in body`
+matching the `base.html` comment written to explain the retirement;
+`"Bravo" not in body` matching the search `<datalist>` that lists
+every roster member; and four table slices taken with
+`body.index("</table>")`, which finds the *first* close tag on the
+page and so ran backwards and held vacuously. Each was found by
+mutation — breaking the code and watching the test stay green — not by
+reading. 19G.7 recorded the same shape at the corpus level (*vacuity
+is not coverage*); this segment is the same lesson at the assertion
+level, and the answer is the same: scope the slice, then prove the
+assertion fails when the behaviour does.
+
+**Its companion, from the build side:** the roster-wide flag in Item
+12 was only demonstrably a fix because the same 250-row roster was
+rendered from a `git worktree` at `origin/main` and from the branch
+against the same SQLite file — struck chip against live chip. A
+before/after on identical data is the cheapest proof available here
+and the sandbox supports it directly.
+
+**Two things this segment did not do**, both recorded rather than
+carried: the four roster pages still render no lock card on `expired`
+/ `archived` (Item 3's gap, in `spec/lifecycle.md` §5), and
+`spec/rrw_functional_spec.md` §9.7 still describes a standalone
+"Self-reviews card" on the Assignments page that does not exist —
+found by `spec-writer` at Item 12's close, reported, left alone
+because inventing the card is a feature decision and deleting the
+prose is a spec claim neither the author nor the code has settled.
+Both belong to whoever opens the next segment on these pages.

@@ -405,7 +405,7 @@ common gate.
 lock card explains why** — their lock card is still keyed to
 `ready` alone, verified on all four. The pages are correct but
 silent. Recorded in
-`guide/segment_19I_roster_search_and_row_delete.md` Item 3
+`guide/archive/segment_19I_roster_search_and_row_delete.md` Item 3
 "Out of scope". **Instruments no longer shares this gap**: Item 6
 extended its card to all three locked states, so the two surfaces
 now differ here until the rosters catch up.

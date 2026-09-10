@@ -2806,50 +2806,81 @@ shared function.
 
 ---
 
-### Segment 19I — Roster search and row deletion — 🔵 **live** (both items **planned, not built**, 2026-09-09; plan at `guide/segment_19I_roster_search_and_row_delete.md`)
+### Segment 19I — Roster search and row deletion — ✅ complete + archived 2026-09-10 (**thirteen items — twelve closed, one withdrawn**, 2026-09-09 → 2026-09-10; PRs #2230 → #2276; plan archived: `guide/archive/segment_19I_roster_search_and_row_delete.md`)
 
-Two refinements the author raised together, both about working with
-roster rows once they are in the app. Opened as their own segment
-rather than as 19H items: 19H is a finite queue of small refinements,
-and each of these is multi-PR work across services, routes, templates
-and live specs.
+Opened for **two** refinements about working with roster rows once
+they are in the app, and grew to thirteen as the author exercised
+each landing against a real roster. Items close independently, so
+each carries its own `Doc impact` / `Status` and there is no
+segment-level manifest. The suite went **3054 → 3520** across it.
 
-- **Item 1 — the filter strip rationalized, and search over tag
-  contents.** The search box matches only name and handle, so the tag
-  columns an operator most often selects on are unsearchable. **At
-  roster scale that is reachability, not convenience**: the preview
-  caps at 200 rows (500 filtered), so on a 1,000-row roster the
-  operator cannot see half of it, and tags are how such a roster is
-  partitioned — cohort, tutor group, class. Searching them is what
-  brings one partition into the window. **Two decisions reversed
-  2026-09-09, before any code**, on cases the author supplied: tag
-  values **do** join the typeahead (the list is built from the
-  uncapped roster, so it can name a partition whose rows the cap
-  hides — `TW01` … `TW55`), and matching is **per column** — substring
-  on names, whole-value on tags, unioned. The one-rule alternative
-  died on `Ethan`: it would have dropped every Ethan-by-name the
-  moment some tag value happened to be `Ethan`, differing by roster. And the
-  four pages disagree about the dropdown beside it: three carry a
-  Status filter, Relationships carries a `Search by` side-picker and
-  **no status filter at all** — on the one page that can produce
-  inactive rows, since it ships `bulk-inactivate` and surfaces a
-  `Status` pill. `spec/setup_pages.md` justifies that with a claim the
-  page contradicts. Decision: one strip shape on all four, `search_by`
-  retires, tags join the search, typeahead stays people-only.
-- **Item 2 — delete selected rows.** Selection already exists and
-  eight bulk routes already use it; what is missing underneath is any
-  per-entity delete service at all. Decision: `bulk-delete` per page
-  narrowing the existing `_delete_all` helper, so cascade semantics
-  are inherited; `Delete` in the Destructive role after a shortened
-  `Add`, with the selected-count and its confirmation checkbox moved
-  to a second row.
+The shape it took, by theme rather than by number:
 
-**Two measurements shape the plans.** Retiring `search_by` touches
-**22 test references**, and **no test calls the four filter
-predicates directly** — the unit-level behavior is unpinned today.
-`.filter-actions` is shared by **seven** templates, only four of them
-in scope, so the second row wants its own class rather than a change
-to the shared one.
+- **Items 1–3 — the row-level surface.** The filter strip
+  rationalized to one shape on all four roster pages (`search_by`
+  retired, tags joined the search per column: substring on names,
+  whole-value on tags); `bulk-delete` per page, scaffold-first; then
+  **the delete surface told straight** — a lifecycle gate that
+  matched its routes, copy naming what goes, and a Danger Zone that
+  worked. Item 3 also opened the standing gap that is still
+  open: the roster pages render **no lock card** on `expired` /
+  `archived`, recorded in `spec/lifecycle.md` §5.
+- **Items 4 + 10 — the counts, moved and then unified.** Item 4
+  took `Showing N of M` out of the operator-actions strip
+  (~950px from the table it described) and gave the selected-count
+  pill its own denominator to compensate. Item 10 then made **one
+  sentence across seven pages**, branching four ways so that rows a
+  filter *excluded* are never reported as rows the page *withheld* —
+  a distinction the single shared sentence had been eliding.
+- **Items 5–6 — two defects found by use.** A roster replace the
+  operator could not make, and instruments a finished session could
+  still lose.
+- **Items 7–9 — Assignments brought up to the roster standard.**
+  Its search reads the tag columns; its operator-actions card stopped
+  contradicting its own routes; its strip gained the status filter
+  and typeahead the rosters had.
+- **Items 11–12 — the column-visibility facility.** Item 11 found
+  the mechanism duplicated **four times, 224 identical lines**,
+  extracted it into one `base.html` primitive and rolled it onto
+  Invitations and Responses. Item 12 then moved every chip row into
+  the preview-table card, made "has data" a **roster-wide query**
+  rather than a scan of the rendered rows — which was wrong on all
+  six surfaces, capped or filtered — and retired the "Fields with
+  data" card whose pills the chips had superseded (**-372 lines**).
+- **~~Item 13~~ — planned, then withdrawn on evidence.** Moving the
+  selected-count pill to the table card would have split the delete
+  gate from the count it is about. The plan's own single Open
+  question asked exactly that, and a screenshot answered it before
+  any code. Replaced by a one-line reorder on Assignments, which has
+  no delete gate.
+
+**The lesson the segment kept re-teaching**, recorded across seven
+`Status` blocks: *an assertion that reads correctly can test
+nothing.* Unscoped substrings matched the app's own prose seven
+times — twice matching comments written to explain the very
+retirement being checked — fixture orders coincided with the order
+under test three times, and a table slice ending at the file's
+**first** `</table>` ran backwards and held vacuously in four
+places. Every one was found by a mutation or a run, none by
+re-reading.
+
+**Closed on the theme running out, not on a count.** After Item 12
+there was no roster surface the author had raised and the segment had
+not answered; Item 13 was the first ask that did not fit, and what
+kept the file open after it was withdrawn was bookkeeping. At 4,800
+lines the plan was already past what a reader can hold end to end —
+the shape 19C was retired for — so it closes on its item manifests
+(`python3 tools/close_check.py 19I.<n>` exits 0, no warnings, for all
+thirteen) and moves to `guide/archive/` with its index row.
+
+**Two gaps recorded rather than carried**, for whoever opens the next
+segment on these pages: the four roster pages still render no lock
+card on `expired` / `archived` (Item 3's gap, in `spec/lifecycle.md`
+§5), and `spec/rrw_functional_spec.md` §9.7 still describes a
+standalone *Self-reviews card* on the Assignments page that does not
+exist — found by `spec-writer` at Item 12's close and left alone,
+because inventing the card is a feature decision and deleting the
+prose is a spec claim neither the author nor the code has settled.
 
 ---
 
