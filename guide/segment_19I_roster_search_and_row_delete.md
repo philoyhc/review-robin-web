@@ -4505,6 +4505,42 @@ from the card.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — the `.table-scroll` gap closed, at the author's
+instruction.**
+
+Reported at rung 1 and again above; the author asked for it. One
+wrapper on the Assignments preview table, the primitive Item 11
+already gave Invitations and Responses.
+
+**Before and after on the same database**, nine tag slots populated,
+14 columns, table 1508px:
+
+| Viewport | before | after |
+|---|---|---|
+| 1440 | document 1566 vs client 1440 — **page scrolls** | document 1440, wrapper scrolls |
+| 1280 | page scrolls | document 1280, wrapper scrolls |
+| 1024 | page scrolls | document 1024, wrapper scrolls |
+
+The table is still 1508px wide; the overflow is now inside the card,
+which is the whole point. Nine of the fourteen columns can be hidden
+by the chips above it — but the operator has to be able to see them
+before deciding to.
+
+**The test I wrote first claimed something I had not measured.** It
+asserted all six chip tables carry the wrapper, "so the rule is all
+six". Three do not: the Setup rosters never had it, and running the
+test said so. They measure 1324px inside a 1360px card and fit, so
+the rule is the three Operations tables — which is what the test now
+says, with the roster figure recorded as the reason for their
+absence.
+
+**Mutations:** 2, both killed — the wrapper removed from Assignments
+and from Invitations.
+
+**Measured:** the suite went 3516 → **3519**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table
