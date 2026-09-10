@@ -4770,7 +4770,11 @@ a plan.
 
 ### Doc impact
 
-- `docs/status.md` — row at the close (Item 13). <!-- doc-impact-waived: withdrawn before rung 1; the replacement is a template-only pill reorder on one page, and no spec states the pill's position within the row -->
+- `docs/status.md` — a row for the replacement change, carrying the
+  record of what this item planned and why it was withdrawn (Item 13).
+  No spec bullet: none states the pill's position within the row, and
+  `spec/lifecycle.md` lists it as a member of the selection-driven
+  half, which stays true. <!-- cites: spec/lifecycle.md -->
 
 ### Status
 
