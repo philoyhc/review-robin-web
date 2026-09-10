@@ -2765,6 +2765,57 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
+### Segment 19J — The assessment's three moves — 🔵 **live** (**three items open**, opened 2026-09-10; plan: `guide/segment_19J_assessment_moves.md`)
+
+The three recommended next moves in
+`guide/codebase_assessment_10sep.md` §8, and nothing else. Same shape
+as 19G, which opened for an assessment's §8 and closed at ten items —
+**eight of them produced by the previous item's findings** rather than
+by the plan. So three is what was known at opening, not a prediction of
+the count: a fourth arriving from a finding is admitted, anything else
+gets its own segment.
+
+- **Item 1 — `spec/rrw_functional_spec.md` swept against the code.** It
+  is the canonical entry point for new readers and the only ⚠ row in
+  the snapshot: §9.7 lists an Assignments *Self-reviews card* that does
+  not exist. Three rungs — the sweep recorded first with no spec edits,
+  then the fixes, then `spec/README.md`'s currency line.
+- **Item 2 — the refinement allowance, measured rather than asserted.**
+  §7 names "+1.5k production per active week" and it is the one number
+  in that document reasoned rather than computed, under a skill whose
+  first rule is that every number comes from a command. Six sidecars
+  exist; the unit is chosen after looking, and **"there is no stable
+  term" is a permitted answer**.
+- **Item 3 — `tools/close_check.py`, split or stop mentioning it.**
+  Three snapshots have carried the same observation while the file grew
+  770 → 863 → **1,000** LOC. A three-way carve (`_manifest` /
+  `_archive` / `_sweep` over `_shared`), CLI frozen because every
+  plan's Definition of done names the invocation string.
+
+**Measuring the blast radius corrected three claims before the first
+build**, two of them from the snapshot published hours earlier — which
+is 19H's finding arriving in the next segment.
+
+- **`rrw_functional_spec.md` is not stale, and that is worse.** §5
+  called it "the least-audited live spec … 23 days stale". It has had
+  **nine edits and 1,106 changed lines** since the date it claims
+  alignment to. Every one was made by a segment editing the sections its
+  own work touched; none read the document through. The defect is
+  **piecemeal currency reading as whole-document currency**, and a
+  hand-kept alignment date in `spec/README.md` that no edit ever moved.
+- **"+1.5k per active week" is probably the wrong unit.** The two large
+  windows are **3 days each**, and one 16-day, 91-merge window added
+  **+110**.
+- **The two `close_check.py` halves do not share `last_touched_ever`.**
+  Three snapshots said they did; its only call is at line 627, inside
+  `check_manifest`. They share `REPO` and `_git` and nothing else —
+  **less coupling than the observation claimed**, which makes the split
+  cheaper than the reason given three times for not doing it. There are
+  also **three** jobs, not two: the close check (680 lines), the
+  archive baseline (60), the sweep cadence (96).
+
+---
+
 ### Segment 19H — Additional refinements — ✅ complete + archived 2026-09-10 (**seven items**, 2026-09-08 → 2026-09-10; PRs #2219 → #2278; plan archived: `guide/archive/segment_19H_additional_refinements.md`)
 
 **A named scope, not a standing home.** Items are admitted only from

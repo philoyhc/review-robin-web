@@ -1,0 +1,517 @@
+# Segment 19J — The assessment's three moves
+
+**Opened:** 2026-09-10 · **Theme:** the three recommended next moves in
+`guide/codebase_assessment_10sep.md` §8 · **Related:**
+`guide/archive/segment_19G_post_assessment.md` (the same shape, one
+assessment earlier), `guide/codebase_assessment_10sep.md`
+
+The 10sep snapshot closed with three recommended moves, capped at three
+by the assessment skill's own rule. This segment is those three and
+nothing else. It exists because 19G proved the shape works: a segment
+opened to settle an assessment's §8, with a finite scope and no
+admission of anything that arrives later.
+
+**What 19G also proved, and what this plan therefore expects.** That
+segment planned two items and closed at ten, **eight of them produced
+by the previous item's findings** rather than by the plan. The three
+below are not a prediction of how many items this segment will have.
+They are the three that were known at opening. If a fourth arrives from
+a finding, it is admitted; if one arrives from anywhere else, it gets
+its own segment.
+
+**Already, before the first build.** Measuring the blast radius of
+these three corrected **three claims** that were carried in prose,
+two of them mine from the snapshot published hours ago. Each correction
+is recorded in the item that found it, and one of them changes what
+Item 1 is for.
+
+Items close independently, so each carries its own `### Doc impact`
+and `### Status` and there is no segment-level `## Doc impact`.
+
+### Items
+
+| Item | Covers | State |
+|---|---|---|
+| **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Open 2026-09-10** |
+| **19J.2** | The refinement allowance, measured rather than asserted | **Open 2026-09-10** |
+| **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Open 2026-09-10** |
+| 19J.4+ | Admitted only from a finding of 19J.1–3. | Open — **empty** |
+
+---
+
+## Item 1 — `spec/rrw_functional_spec.md` swept against the code
+
+### Opportunity
+
+`spec/rrw_functional_spec.md` is the **canonical entry point for new
+readers** — `spec/README.md` says so — and it is the only ⚠ row in the
+10sep snapshot's compliance table. §9.7 lists an Assignments
+**"Self-reviews card — session-wide self-reviews-active toggle"** that
+does not exist; the toggle is per-instrument, inside the per-instrument
+status table (`session_assignments.html:85–90`). It was found by
+`spec-writer` at 19I.12's close, reported, and left because inventing
+the card is a feature decision and deleting the prose is a spec claim
+nobody had settled.
+
+**The snapshot's characterisation of this file was wrong, and measuring
+it is what showed that.** §5 of `codebase_assessment_10sep.md` calls it
+"the least-audited live spec" and cites `spec/README.md`'s "aligned
+with the system as of 2026-08-18" as "23 days stale". Measured:
+
+```
+$ git log --oneline --since=2026-08-18 -- spec/rrw_functional_spec.md | wc -l
+9
+$ git diff <first-since>^ HEAD -- spec/rrw_functional_spec.md
+725 insertions, 381 deletions
+```
+
+**Nine edits and 1,106 changed lines since the date it claims alignment
+to.** The file is not neglected. What is true is narrower and more
+interesting: every one of those nine edits was made by a segment
+touching **the sections its own work touched** — 19C's friendly-label
+carrier, 19F's specs pass, 19I.2, 19I.4, 19I.10, 19I.12 — and no edit
+has ever read the document end to end. The alignment date in
+`spec/README.md` has not moved through any of them.
+
+So the defect is **not staleness; it is that piecemeal currency reads
+as whole-document currency.** A spec edited nine times in three weeks
+looks maintained, and its index line still promises alignment to a date
+before all nine. A reader has no way to tell which sections were
+checked and which were merely nearby. §9.7 is one section nobody's work
+happened to touch, and it is wrong.
+
+### Decision
+
+**Sweep the document end to end against the code, fix what has drifted,
+and replace `spec/README.md`'s fixed alignment date with something that
+cannot silently rot.**
+
+- **The sweep is section by section**, using the same shape as
+  `guide/sweep_2026-09-05_spec-docs.md`: each §N read, each claim about
+  behaviour checked against the code path that implements it, findings
+  recorded with `path:line` evidence before any fix.
+- **The alignment line changes form.** A date maintained by hand is a
+  claim with no owner, which is what produced this item. It becomes a
+  statement of **what kind of currency the reader can expect** —
+  swept-on-date plus the note that per-subsystem specs are authoritative
+  where they disagree — with the date owned by the sweep record rather
+  than by whoever last edited a paragraph.
+- **§9.7's Self-reviews card is deleted, not built.** The per-instrument
+  toggle is the shipped design, `spec/assignments.md` documents it, and
+  nothing else in the corpus references a session-wide card. Deleting
+  the bullet is a correction; building the card is a feature request
+  that has never been made.
+
+Rejected: **fixing §9.7 alone and closing.** It is the cheap move and
+it is the one that guarantees a repeat — §9.7 is wrong because nobody
+read the whole document, and fixing only the section somebody happened
+to notice leaves the mechanism exactly as it was. The measurement above
+is the argument: nine edits, none of them a read-through.
+
+Rejected: **retiring `rrw_functional_spec.md` in favour of the
+per-subsystem specs.** It is the document a new reader meets first and
+the only one that describes the product rather than a surface. The
+overlap with per-subsystem specs is real but the answer to it is the
+precedence note above, not deletion.
+
+### Semantics
+
+- **A drifted claim is one the code contradicts**, not one the code has
+  moved past in emphasis. §9.7's card is drift; a section describing a
+  page's purpose in different words than the surface spec is not.
+- **Where this document and a per-subsystem spec disagree**, the
+  subsystem spec wins and this one is corrected to match — the
+  precedence the alignment line will state explicitly.
+- **A section with no corresponding code** is either a feature that was
+  cut (delete, recording what it said) or one never built (mark it, do
+  not silently keep it in the present tense). The sweep must say which.
+- **The sweep record is the artefact**, not the diff. `guide/sweep_*`
+  is the existing shape; this one is scoped to a single file and says
+  so.
+
+### Judgment calls — decided
+
+- **The whole document, not a sampled audit** (2026-09-10). At 2,235
+  lines and 107 headings a sample would leave the same "which sections
+  were checked?" question this item exists to answer.
+- **`spec/README.md`'s line changes in this item, not a later one**
+  (2026-09-10) — the line is the mechanism that let §9.7 sit wrong, and
+  fixing the instance without the mechanism is the rejected alternative.
+- **The snapshot gets an amendment** (2026-09-10). §5's "least-audited"
+  and "23 days stale" are wrong as measured. 08sep was amended three
+  times and 19G.3 established that a correction states what the claim
+  used to be; this follows both.
+
+### Blast radius (measured)
+
+```
+$ wc -l spec/rrw_functional_spec.md                                    # 2,235
+$ grep -c "^## \|^### " spec/rrw_functional_spec.md                    # 107 headings
+$ git log --since=2026-08-18 --oneline -- spec/rrw_functional_spec.md  # 9 commits
+$ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 files
+```
+
+- **1 spec, 2,235 lines, 107 sections** to read.
+- **10 live documents reference it**: `spec/README.md`,
+  `spec/permissions.md`, `spec/email_template_editor.md`,
+  `docs/status.md`, `docs/practice-audit-2026-09-04.md`,
+  `rrw_sdd_in_practice.md`, `guide/todo_master.md`,
+  `guide/sweep_2026-09-05_spec-docs.md`, `guide/sweep_template.md`,
+  `guide/codebase_assessment_10sep.md`. Only `spec/README.md`'s
+  reference makes a claim about its currency.
+- **Known drift so far: 1** (§9.7). The sweep's job is to find out
+  whether that number is 1 or 20, and **the honest reading of this plan
+  is that nobody knows** — which is the item.
+- **No code changes expected.** If the sweep finds a claim the code
+  should honour rather than the spec should drop, that is a finding and
+  a new item, not a widening of this one.
+
+### PR ladder
+
+1. **The sweep, recorded.** Read all 107 sections against the code;
+   produce `guide/sweep_2026-09-<dd>_rrw_functional_spec.md` in the
+   existing sweep shape, with every finding carrying `path:line`
+   evidence and a proposed disposition. **No spec edits in this rung** —
+   the record is reviewable on its own, and separating finding from
+   fixing is what let 19G.7 catch a measurement that had certified a
+   corpus clean and was itself wrong.
+2. **The fixes.** Apply the dispositions, §9.7 included. Each
+   correction states what the claim used to be.
+3. **The alignment line.** `spec/README.md`'s currency claim reworded,
+   pointing at the sweep record.
+
+Must not touch: the per-subsystem specs (a disagreement is fixed *here*,
+per Semantics), and any code.
+
+### Definition of done
+
+- `guide/sweep_2026-09-<dd>_rrw_functional_spec.md` exists, covers all
+  107 sections, and every finding carries `path:line` evidence
+- §9.7 no longer describes a Self-reviews card
+- `spec/README.md`'s line no longer carries a hand-maintained date
+- the 10sep snapshot carries an amendment correcting "least-audited"
+  and "23 days stale"
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.1` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **How many findings is "too many to fix in rung 2"?** If the sweep
+  returns twenty, rung 2 splits by section group rather than growing.
+  Decided at rung 1's end, on the count.
+
+### Out of scope
+
+- **Building a session-wide self-reviews card.** A feature request
+  nobody has made.
+- **The per-subsystem specs' own currency.** The 8-weeks-or-500-merges
+  sweep cadence (19A Item 2) covers those; this item is one file.
+- **`spec/README.md`'s other rows.** Only the row that made a currency
+  claim about the file being swept.
+
+### Doc impact
+
+- `spec/rrw_functional_spec.md` — §9.7's Self-reviews card deleted, plus
+  whatever else the sweep finds (Item 1).
+- `spec/README.md` — the `rrw_functional_spec.md` row's currency claim
+  reworded to point at the sweep record rather than a hand-kept date
+  (Item 1).
+- `guide/codebase_assessment_10sep.md` — §5's "least-audited live spec"
+  and "23 days stale" amended; nine edits and 1,106 changed lines say
+  otherwise, and the real defect is piecemeal currency reading as
+  whole-document currency (Item 1).
+- `docs/status.md` — row when the item closes (Item 1).
+
+---
+
+## Item 2 — The refinement allowance, measured rather than asserted
+
+### Opportunity
+
+`guide/codebase_assessment_10sep.md` §7 says the projection method
+"models remaining features and does not model refinement", names a
+missing term of **"roughly +1.5k production per active week"**, and
+asks the next snapshot to carry it or record why not.
+
+**That figure is an assertion, and this project's own standing rule is
+that every number in an assessment is produced by a command or does not
+go in.** It was reasoned from three windows read off the table, not
+computed. It is currently the only number in that document that would
+fail the rule it is written under.
+
+The evidence it was reasoned from, taken from the sidecars:
+
+| Snapshot | Window | Merges | Production LOC | Δ |
+|---|---|---|---|---|
+| 17aug | 2026-06-03 → 08-18 | 106 | 55,165 | — |
+| 19aug | 2026-08-19 | 26 | 55,394 | +229 |
+| 04sep | 2026-08-19 → 09-04 | 91 | 55,504 | +110 |
+| 05sep | 2026-09-04 → 09-05 | 23 | 55,704 | +200 |
+| 08sep | 2026-09-05 → 09-08 | 98 | 57,122 | +1,418 |
+| 10sep | 2026-09-08 → 09-10 | 67 | 58,724 | +1,602 |
+
+Two things are visible immediately and neither supports "+1.5k per
+active week" as stated. The two large windows are **3 days each**, not
+weeks. And the 04sep window is 16 calendar days and 91 merges for
+**+110** — an order of magnitude below the recent pair. Whatever the
+right term is, *per active week* is probably the wrong unit, and the
+mean over these six windows is not it either.
+
+### Decision
+
+**Compute the term, decide its unit from the data, and write whichever
+answer the data gives — including "there is no stable term".**
+
+- **The unit is chosen after looking**, not before. Candidates: LOC per
+  merge, LOC per non-merge commit, LOC per calendar day of an active
+  window, LOC per closed item. The sidecars carry merge and commit
+  counts for every window; item counts come from the archived plans.
+- **Feature windows and refinement windows are separated** before any
+  rate is computed, because mixing them is the defect §7 named. The
+  classifier is the segment plans: a window whose segments shipped a
+  new route or a new page is a feature window; one whose segments
+  shipped only changes to existing surfaces is refinement.
+- **"No stable term" is a permitted and possibly correct answer.** Six
+  windows spanning +110 to +1,602 may simply not have a rate. If so,
+  §7's method changes differently — a range with a stated floor and an
+  explicit "unmodelled" line rather than a false precision.
+
+Rejected: **carrying +1.5k/week forward and checking it next snapshot.**
+That is what §7 proposed, and it is the weaker version of this item: it
+makes one more snapshot's projection depend on an unmeasured figure, and
+if it is wrong the error compounds into the next reconciliation exactly
+as the skill's own "a recalled delta compounds" warning describes.
+
+Rejected: **dropping §7's projections altogether.** They have been
+useful twice — 05sep's being too low is what 08sep diagnosed, and
+08sep's being too low is what produced this item. A projection that is
+reconciled honestly each time earns its place; the fix is the missing
+term, not the section.
+
+### Semantics
+
+- **An "active window"** is one between two snapshots with at least one
+  segment closing in it. All six above qualify; the definition matters
+  for future windows where a snapshot is taken during a quiet period.
+- **Production LOC only.** Templates track production loosely and tests
+  track it strongly; if the term is real it should be visible in the
+  number the projection is about.
+- **The sidecars are the source.** Six exist (`17aug` → `10sep`); older
+  snapshots predate the sidecar convention and are excluded, with the
+  exclusion stated rather than silent.
+- **A term derived from six points is weak evidence** and the write-up
+  says so. Six is what exists.
+
+### Judgment calls — decided
+
+- **The result changes `§7` of the *current* snapshot, not only the
+  next one** (2026-09-10). §7 already names the term; if the measurement
+  contradicts it, leaving it standing means the live snapshot carries a
+  figure known to be wrong.
+- **Segment plans are the feature/refinement classifier** (2026-09-10),
+  not a heuristic over the diff. The plans state what each segment set
+  out to ship, which is the question being asked.
+
+### Blast radius (measured)
+
+```
+$ ls guide/archive/codebase_assessment_*.json guide/codebase_assessment_*.json
+6 sidecars (17aug, 19aug, 04sep, 05sep, 08sep, 10sep)
+$ ls guide/archive/segment_*.md | wc -l
+(the plans that classify each window)
+```
+
+- **6 data points.** No new measurement infrastructure needed — every
+  figure is already in a sidecar or an archived plan.
+- **1 document changed** (`guide/codebase_assessment_10sep.md` §7),
+  plus the skill's own guidance if the finding generalises.
+- **No code, no spec.** This is arithmetic over existing artefacts.
+- **The one risk is a false rate from six points**, which the write-up
+  states rather than hides.
+
+### PR ladder
+
+1. **The measurement and the §7 amendment**, together. One rung: the
+   arithmetic is short, and a rung that computed a number without
+   writing what it means would be a commit nobody can review.
+
+### Definition of done
+
+- the term is computed from the six sidecars with the commands recorded
+- feature and refinement windows are separated, with the classification
+  per window stated
+- `guide/codebase_assessment_10sep.md` §7 carries the computed term, its
+  unit, and its weakness — or records that no stable term exists and
+  what §7 does instead
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.2` exits 0; any warning adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Does the finding belong in the `codebase-assessment` skill?** If the
+  term generalises past this repo it is guidance, not a local number.
+  Decided when the number exists.
+
+### Out of scope
+
+- **Re-taking any prior snapshot's tables.** The sidecars are the
+  record; this item reads them.
+- **Projecting anything past v1.**
+
+### Doc impact
+
+- `guide/codebase_assessment_10sep.md` — §7's asserted "+1.5k per active
+  week" replaced by the computed term and its unit, or by an explicit
+  finding that no stable term exists (Item 2).
+- `docs/status.md` — row when the item closes (Item 2).
+
+---
+
+## Item 3 — `tools/close_check.py` — split it or stop mentioning it
+
+### Opportunity
+
+Three consecutive snapshots have carried the same observation:
+`tools/close_check.py` holds two jobs in one file. It was 770 LOC when
+first noted, 863 at 08sep, and **1,000 at 10sep — +30% since the
+observation was made**, each snapshot repeating it and none acting. The
+10sep entry says a fourth repetition should come with either a split or
+a decision to stop mentioning it. This is that.
+
+**Measured, and the measurement corrects the observation itself.** All
+three snapshots describe the two halves as sharing "`REPO`, `_git` and
+`last_touched_ever`". They do not:
+
+```
+$ grep -n "last_touched_ever" tools/close_check.py
+502:def last_touched_ever(path: str) -> str | None:
+627:            ever = last_touched_ever(entry["path"]) or "never"
+```
+
+Line 627 is inside `check_manifest` — the close-check half. **The sweep
+half never calls it.** The shared surface is `REPO` and `_git`, and
+nothing else.
+
+And there are **three** modes, not two:
+
+| Lines | Job | Entry |
+|---|---|---|
+| 121–800 | the per-segment close check | `close_check.py <id>` |
+| 801–860 | the archive-wide baseline report | `--archived` |
+| 861–956 | the sweep-cadence report | `--stale` |
+
+680 / 60 / 96 lines, sharing two module-level names. That is less
+coupling than three snapshots have claimed, which makes the split
+cheaper than the observation implied — and cheapness was the reason
+given each time for not doing it.
+
+### Decision
+
+**Split it into a package**, `tools/close_check/`, mirroring the
+per-concern carves 18O and 18N used on production code:
+
+- `_shared.py` — `REPO`, `_git`, `Unresolvable`, `resolve_committed`
+- `_manifest.py` — the close check (parsing, windows, C1–C7,
+  `check_manifest`, `run`, `report`)
+- `_archive.py` — `archived_report`
+- `_sweep.py` — `sweep_scope`, `last_sweep_date`, `stale_report`
+- `__init__.py` — `main()` and the argument parser
+
+The CLI is unchanged: `python3 tools/close_check.py <id>` must keep
+working, because that exact string appears in every plan's Definition
+of done and in `CLAUDE.md`.
+
+Rejected: **stop mentioning it.** The other half of the 10sep
+ultimatum, and it loses on the measurement above — the coupling that
+justified inaction turns out to be two names. A watchlist entry
+declined on a reason that has been checked and found wrong should be
+acted on, not retired.
+
+Rejected: **splitting only the sweep half out** and leaving 740 lines.
+It is the smaller change and it leaves `--archived` — a third job — in
+a file named for the first. The three-way split is barely more work
+than the two-way one.
+
+### Semantics
+
+- **The CLI contract is frozen.** Every flag, exit code and stderr line
+  behaves identically; `tests/unit/test_close_check.py` loads the module
+  by path and must keep passing, which is the contract's own gate.
+- **`tools/close_check.py` stays as the entry point** — a package
+  directory beside it would change the invocation string. Either the
+  file becomes a thin shim importing the package, or the package
+  directory takes the name and the `.py` goes; the rung decides on
+  whether `importlib.util.spec_from_file_location` in the existing test
+  survives it. **Whichever keeps the invocation string identical wins.**
+- **No behaviour change.** Not one check's verdict may move. The proof
+  is running the split version against every archived plan and diffing
+  the output against the pre-split run.
+
+### Judgment calls — decided
+
+- **A package, not two files** (2026-09-10) — there are three jobs, and
+  `_shared.py` has somewhere to live.
+- **The observation's own error is recorded, not quietly fixed**
+  (2026-09-10). Three snapshots said `last_touched_ever` was shared. The
+  10sep amendment says what the claim used to be, per 19G.3.
+
+### Blast radius (measured)
+
+```
+$ wc -l tools/close_check.py                                  # 1,000
+$ grep -rn "close_check" --include="*.py" . | grep -v tools/  # 1 caller
+$ grep -rn "close_check.py" --include="*.md" . | wc -l        # every plan's DoD
+```
+
+- **1 file, 1,000 lines, 3 jobs**, sharing 2 module-level names.
+- **1 code caller**: `tests/unit/test_close_check.py`, which loads it by
+  path via `importlib.util.spec_from_file_location`.
+- **Every archived plan's Definition of done** names the invocation
+  string, which is why it is frozen.
+- **No production code touches it.** It is dev tooling; `app/` has no
+  reference.
+
+### PR ladder
+
+1. **The split**, with the CLI frozen and the archived-plan output
+   diffed pre- and post-split as the proof.
+
+### Definition of done
+
+- `python3 tools/close_check.py <id>`, `--archived`, `--stale`,
+  `--since`, `--json` all behave identically
+- the pre/post `--archived` output over every archived plan is
+  byte-identical
+- `tests/unit/test_close_check.py` passes unmodified, or its loader is
+  updated with the reason recorded
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.3` exits 0 — **run from the split
+  version**
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The one that mattered — whether the coupling makes a split
+expensive — was answered by the measurement.
+
+### Out of scope
+
+- **Any change to what the checks check.** C1–C7 keep their current
+  semantics exactly; this is a carve, not a revision.
+- **The long-window C3 weakness**, measured and downgraded at 19G.10.
+
+### Doc impact
+
+- `guide/codebase_assessment_10sep.md` — §5's and §9's
+  `tools/close_check.py` entries: the split recorded, and the
+  three-snapshot claim that the halves share `last_touched_ever`
+  corrected with what it used to say (Item 3).
+- `docs/status.md` — row when the item closes (Item 3).
