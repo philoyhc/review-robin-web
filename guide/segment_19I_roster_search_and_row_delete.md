@@ -37,7 +37,8 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19I.9** | The Assignments strip finishes the job | **Closed 2026-09-09** (3 PRs) |
 | **19I.10** | One preview-count sentence across seven pages | **Closed 2026-09-10** (4 PRs) |
 | **19I.11** | The roster table facility on Invitations and Responses | **Closed 2026-09-10** (7 PRs) |
-| **19I.12** | One place for column selection, and one card fewer | **Open** — planned 2026-09-10 |
+| **19I.12** | One place for column selection, and one card fewer | **Closed 2026-09-10** (7 PRs + 3 refinements) |
+| ~~19I.13~~ | The selected count, moved to the rows it counts | **Withdrawn 2026-09-10** — replaced by a pill reorder on Assignments |
 
 ---
 
@@ -4724,3 +4725,57 @@ item and is unrelated to it.
   introduced two primitives (Item 12).
 - `docs/status.md` — the Relationships route-table row describes the
   stats card, plus the Item 12 close row (Item 12).
+
+---
+
+## Item 13 — the selected count, moved to the rows it counts ~~(withdrawn)~~
+
+**Withdrawn 2026-09-10, before rung 1, by the author.** Kept as a
+record of what was considered and why it was dropped.
+
+### Opportunity
+
+The author, after Item 12: move the selected-count pill out of the
+search card and into the preview-table card, inline after the
+`Showing first X of Y…` line, or on the line after the chips when
+that line does not render.
+
+Planned in full — one status slot defined relative to the table
+rather than three placement rules, because measuring found that the
+"no count line" branch is the **common** case (`preview_count_line`
+returns `None` for any session under 200 rows with no filter) and
+that Observers has no chips to anchor the fallback to.
+
+### Decision
+
+**Withdrawn.** The plan's one Open question — *does the
+delete-confirm checkbox keep reading `Yes, delete these…` once the
+count leaves its side?* — answered itself the moment the author
+looked at the rendered strip: the checkbox stays in the search card,
+so moving only the pill splits a gate from the count it is about.
+`spec/setup_pages.md` §"Operator actions card" item 3 had argued
+that pairing from the start, and Item 4 left the pill behind for
+exactly this reason. The plan reached the right question and the
+screenshot answered it faster than a build would have.
+
+**Replaced by a one-line change on Assignments only**, which has no
+delete gate and so no pairing to break: the selected-count pill moves
+to the **left of every button** in its `filter-actions` row, from
+`Clear · 0 selected · Inactivate · Activate · Search` to
+`0 selected · Clear · Inactivate · Activate · Search`. Template-only
+— no spec fixes the pill's position within the row (`lifecycle.md`
+lists it as a member of the selection-driven half, which stays
+true), so it carries its reasoning here and in its PR rather than in
+a plan.
+
+### Doc impact
+
+- `docs/status.md` — row at the close (Item 13). <!-- doc-impact-waived: withdrawn before rung 1; the replacement is a template-only pill reorder on one page, and no spec states the pill's position within the row -->
+
+### Status
+
+**2026-09-10 — planned, then withdrawn before any code, and
+replaced.** The four roster pages keep their pill in the search
+card beside the delete gate. Assignments' pill moved left of its
+buttons; the row is pinned by
+`tests/integration/test_assignment_routes.py`.

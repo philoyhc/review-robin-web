@@ -608,3 +608,39 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     for group in ("Show reviewers:", "Show reviewees:",
                   "Show relationships:"):
         assert group in body
+
+
+def test_the_selected_count_leads_the_action_row(
+    client: TestClient, db: Session
+) -> None:
+    """The pill sits left of every button in `filter-actions`.
+
+    It read as a control when it sat between `Clear` and
+    `Inactivate` (author, 2026-09-10, from a screenshot); it is a
+    reading, so it leads. Asserted by position within the row rather
+    than by presence, which the surrounding tests already cover.
+
+    Scoped to the row: `Search` also appears in the filter card's
+    labels, and `Clear` only renders when a filter is active — hence
+    the query.
+    """
+    review_session = _make_session(client, db, code="asn-pill-order")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["r0@example.edu"],
+        reviewee_idents=["e0@example.edu"],
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
+    ).text
+    start = body.index('class="filter-actions"')
+    row = body[start : body.index("</div>", start)]
+
+    pill = row.index('id="assignments-selected-count"')
+    for label in (">Clear<", ">Inactivate<", ">Activate<", ">Search<"):
+        assert label in row, label
+        assert pill < row.index(label), label
