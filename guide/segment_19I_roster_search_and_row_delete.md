@@ -4592,6 +4592,47 @@ Generated / Groups / Self review / Included / Show. Verified against
 the template before removing it. Flagged in this session more than
 once and never in a line anyone was editing until now.
 
+**`spec-writer` found six, and all six were real** — the most any
+pass has returned in this segment, and worth reading as a set,
+because four are mine and two are older.
+
+Mine, from this rung:
+
+1. `docs/status.md`'s header said the chips moved "on all five
+   surfaces". There are **six**, and only **four** moved —
+   Invitations and Responses arrived at Item 11. Wrong twice in one
+   clause, and self-contradicting against `setup_pages.md`, which
+   says "six operator tables" in the same commit.
+2. `spec/operator_ui_concept.md` said the retired card "used to sit
+   above the lock card". It sat **below** it, heading the right
+   column of `.card-columns` — checked against
+   `git show 61205984^`: lock card at line 26, the container at 60,
+   the pill card at 111.
+3. The Relationships route-table row listed the upload / danger-zone
+   grid before the preview table. The DOM is `.card-columns` (66) →
+   preview table (348) → `.bottom-grid` (653).
+4. Two bullets in the toggle-pattern section still described the
+   **disabled chip's storage behavior** and the primitive's
+   `is-disabled` early-return. I rewrote the bullet above them at
+   rung 3 and did not read on.
+
+Older, and fixed because the sentences were in front of me:
+
+5. **Three places called the friendly-label editor + Operator
+   actions pair a "half-width `bottom-grid`".** It is the page's one
+   `.card-columns` — `.bottom-grid` carries only Upload + Danger
+   Zone. `setup_pages.md`'s own placement table has said
+   `.card-columns` since 19E rung 6b, so the file contradicted
+   itself. Two of the three were in text this rung edited.
+6. The Reviewees profile bullet still drew a contrast with "the
+   disabled state", which no chip can now reach.
+
+**Left alone, and reported rather than fixed:**
+`spec/rrw_functional_spec.md` §9.7 describes a standalone
+"Self-reviews card" on the Assignments page that does not exist —
+only the per-instrument toggle in the status table. Predates this
+item and is unrelated to it.
+
 **Not verified here:** the Azure dev slot. Documentation only.
 
 ### Definition of done

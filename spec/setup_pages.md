@@ -225,7 +225,10 @@ Every Setup Page renders, top-to-bottom:
    `spec/operator_ui_concept.md` P4 says and the template's own
    comment records (Segment 19I Item 8).
 4. **Friendly-label editor (left) + Operator actions card
-   (right)** — a half-width `bottom-grid` pair.
+   (right)** — the right-hand pair of the page's one
+   `.card-columns` container (see the placement table above).
+   **Not** a `.bottom-grid`: that class carries only the Upload +
+   Danger Zone pair further down.
    - The **friendly-label editor** (Segment 15A Slice 3) is the
      inline editor card via
      `operator/partials/_field_labels_editor.html`. Reviewers +
@@ -388,8 +391,8 @@ The pattern:
   empty. The Photo column has always worked this way.
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
-  That column is server-rendered only when some row has a link, so
-  its chip never reaches the disabled state. **Reviewers does not
+  Chip and column are gated on the same `col_data["profile"]`, so
+  neither can appear without the other. **Reviewers does not
   have this chip**, though it renders the same `profile-col` cells:
   there, the column's visibility is a server-side decision only. The
   asymmetry predates the extraction and survives it unchanged.
@@ -410,13 +413,17 @@ The pattern:
   none of the four that predated it, and
   `tests/unit/test_column_visibility_primitive.py` pins all six.
   Full inventory in `spec/settings_inventory.md`.
-- Stored choice wins over the data-driven default for live chips.
-  Stored "hide" keeps a populated column hidden; stored "show"
-  reveals an explicitly-toggled-on column on next load. Disabled
-  chips ignore storage entirely (see above).
-- The shared JS targets `[data-col-toggle]` and early-returns on
-  the `is-disabled` chip class so listeners aren't bound and
-  storage isn't applied.
+- Stored choice wins over the data-driven default. Stored "hide"
+  keeps a populated column hidden; stored "show" reveals an
+  explicitly-toggled-on column on next load. A stored entry naming
+  a slot the page no longer renders is ignored — the primitive
+  iterates chips and consults storage, never the reverse — so
+  hiding a tag, importing a roster without it, then importing one
+  with it again restores the saved state.
+- The shared JS targets `[data-col-toggle]` and binds every chip it
+  finds. It carried an `is-disabled` early-return until Segment 19I
+  Item 12 rung 3 retired that state; **every chip rendered is now a
+  live one**.
 
 **What is shared, and what is not.** The behavior is one
 implementation in `base.html` (Segment 19I Item 11 — before it,

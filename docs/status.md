@@ -2,8 +2,10 @@
 
 **As of:** 2026-09-10. Latest shipped — **Segment 19I Item 12**: one
 place for column selection, and one card fewer. The `Show columns:`
-chips moved into the preview-table card on all five surfaces that
-have them, a slot with no data anywhere in the roster now renders
+chips now sit in the preview-table card on all **six** surfaces that
+have them — four moved there, Invitations and Responses having
+arrived at Item 11 — a slot with no data anywhere in the roster
+renders
 neither chip nor column, and the "Fields with data" card retired —
 its pills said what the chips say, and a chip also acts on it.
 Before it — **Segment 19I Item 11**: the
@@ -653,7 +655,7 @@ suite against a `postgres:16` service container).
 | `GET /operator/sessions/{id}/reviewees` | roster Manage view with anchored `#upload-csv` import card and disabled Edit Reviewees button |
 | `POST /operator/sessions/{id}/reviewees/import` | parse + replace + audit; on validation errors re-renders the Manage page |
 | `POST /operator/sessions/{id}/reviewees/delete-all` | delete every reviewee + cascade |
-| `GET /operator/sessions/{id}/relationships` | Relationships Setup page (Segment 15D PR 2). Guidance + tag-label editor left, Operator actions right in a `.card-columns`; upload + danger zone cards in a `.bottom-grid`; preview-table card below carrying its `Show columns:` chips above the rows, mirroring the reviewer / reviewee shape; trailing `status` cell renders as a `pill-info` (active) / `pill-empty` (inactive) span. The stats info card (`Fields with data:` pills) retired in Segment 19I Item 12. |
+| `GET /operator/sessions/{id}/relationships` | Relationships Setup page (Segment 15D PR 2). Guidance + tag-label editor left, Operator actions right in a `.card-columns`; preview-table card below it, carrying its `Show columns:` chips above the rows and mirroring the reviewer / reviewee shape; upload + danger zone cards in a `.bottom-grid` beneath that; trailing `status` cell renders as a `pill-info` (active) / `pill-empty` (inactive) span. The stats info card (`Fields with data:` pills) retired in Segment 19I Item 12. |
 | `POST /operator/sessions/{id}/relationships/import` | parse + replace + audit; on validation errors re-renders the Setup page; emits `relationships.imported` |
 | `POST /operator/sessions/{id}/relationships/delete-all` | delete every relationships row + cascade; emits `relationships.deleted_all` |
 | `GET /operator/sessions/{id}/assignments` | **Operations** Assignments page (chrome row label moved from Setup to Operations in 15D PR 6a). Hosts the **Assignment Rule** card (formerly "Rule Based Assignment", retitled in Post-Segment 15 cleanup) + **Self-reviews** bulk-toggle card in a half-width `.bottom-grid`, plus the **Assignment pairs** preview table below |
