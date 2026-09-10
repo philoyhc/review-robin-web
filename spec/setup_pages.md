@@ -84,7 +84,8 @@ Every Setup Page renders, top-to-bottom:
    one down. A full-width card (the Activated lock card) therefore
    cannot sit between the pairs; `.card-columns` has no spanning slot,
    so it goes above the container, where its "cannot edit" notice
-   reads anyway. `.card-columns` is `1fr 1fr` with `align-items: start`, and
+   reads anyway. It is "the Activated lock card" by history only —
+   since Segment 19H Item 6 it renders in every non-editable state. `.card-columns` is `1fr 1fr` with `align-items: start`, and
    each child is a *column* that stacks its own cards — so opening the
    guidance pushes down only what is below it in its own column, and
    the other column neither moves nor stretches. That is the whole
@@ -977,8 +978,11 @@ The Observers page renders, top-to-bottom:
 1. Chrome (`session-nav-card` partial with `Observers` highlighted
    in the Setup row).
 2. Status strip (`session_setup_status_row` partial).
-3. Yellow **lock card** (when the session is Activated) with the
-   standard "revert to draft" Revert form.
+3. Yellow **lock card** (whenever the session is not editable) —
+   the shared `_roster_lock_card.html` partial, which carries the
+   "revert to draft" Revert form on `ready` and `expired` and a
+   link to Unarchive on `archived`. Its presence does not gate the
+   cohort rule editor below, which stays live until `archived`.
 4. **Cohort match rule editor (left) + Operator actions card
    (right)** — a `.bottom-grid` pair. Layout differs from
    Reviewers / Reviewees because the Observers page carries
@@ -1171,13 +1175,18 @@ above.
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- Lifecycle gating is the existing pattern: a `card lock` at the
-  top of the body when `is_ready`, and the Upload + Danger Zone
-  cards conditionally rendered behind `{% if is_editable %}` on the
-  four roster pages — `{% if not is_ready %}` until Segment 19I Item
-  3, which is what left them rendering on `expired` and `archived`
-  where both routes answered 409. The lock card itself is still keyed
-  to `is_ready` alone, which is the known gap recorded in
-  `spec/lifecycle.md` §5. The
-  preview table renders unconditionally so the operator can read
-  the current rows even while the session is Activated.
+- Lifecycle gating is one predicate on the four roster pages:
+  `is_editable` — `draft` or `validated`. The Upload + Danger Zone
+  cards render behind `{% if is_editable %}`, and a `card lock` at
+  the top of the body renders behind `{% if not is_editable %}`, so
+  the explanation and the controls cannot disagree. Both halves
+  arrived late: the cards read `{% if not is_ready %}` until
+  Segment 19I Item 3, which is what left them rendering on `expired`
+  and `archived` where the routes answered 409, and the card stayed
+  keyed to `is_ready` until Segment 19H Item 6, which left those two
+  states correct and silent. The card's three branches — one per
+  locked state, `archived` carrying no control — are specified in
+  `spec/lifecycle.md` §5; all four pages render it from
+  `operator/partials/_roster_lock_card.html`. The preview table
+  renders unconditionally so the operator can read the current rows
+  even while the session is Activated.

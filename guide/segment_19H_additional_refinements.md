@@ -25,7 +25,7 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | **Closed 2026-09-09** |
 | **19H.4** | A screencap replaced under the same name never reaches a cached reader | **Closed 2026-09-09** |
 | **19H.5** | A "Fields with data" pill that names a CSV column instead of the column | **Closed 2026-09-09** |
-| **19H.6** | The roster pages' lock card explains one locked state out of three | **Open 2026-09-10** |
+| **19H.6** | The roster pages' lock card explains one locked state out of three | **Closed 2026-09-10** (2 rungs + specs) |
 | 19H.7+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
@@ -1364,7 +1364,7 @@ $ grep -rln 'cannot be modified' tests/                                    # 1 (
 
 ### Status
 
-**2026-09-10 — rungs 1 and 2 landed; rung 3 (specs) follows.**
+**2026-09-10 — closed at three rungs, as planned.**
 
 **The Decision's rejected alternative was wrong, and the build
 overturned it.** The plan rejected a shared partial on the estimate
@@ -1424,6 +1424,22 @@ templates":
   another's noun (1), one context losing `is_archived` (9).
 
 Suite 3520 -> 3529 (rung 1) -> 3589 (rung 2).
+
+**Rung 3 corrected three spec claims, not one.** The manifest named
+`spec/lifecycle.md` §5 for the gap paragraph and the allowlist. The
+edit found `spec/setup_pages.md` carrying the same stale claim in
+**three** places — the lifecycle-gating bullet ("the lock card
+itself is still keyed to `is_ready` alone"), the Observers page's
+card list ("when the session is Activated"), and the layout section
+still calling it "the Activated lock card". One was in the manifest;
+the other two were found by grepping `lock card` across the file
+rather than by trusting the manifest's aim. All three fixed, none
+waived.
+
+**The item table row and the Items index** were updated at close.
+19H stays live: the segment's rule is that it closes when the queue
+empties or at the next assessment snapshot, and Item 6 emptied it
+again rather than ending it.
 
 ### PR ladder
 
