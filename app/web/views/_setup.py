@@ -30,7 +30,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
-from app.services import assignments, csv_imports, field_labels
+from app.services import assignments, csv_imports
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services.text import pluralize
@@ -264,93 +264,6 @@ def session_status_pills(
         responses_drafts=responses_drafts,
         responses_submitted=responses_submitted,
     )
-
-
-# Raw CSV column name -> renamable (source_type, source_field)
-# slot. Only the 12 in-scope friendly-label slots appear.
-_FIELD_LABEL_SLOTS: dict[str, tuple[str, str]] = {
-    "ReviewerTag1": ("reviewer", "tag_1"),
-    "ReviewerTag2": ("reviewer", "tag_2"),
-    "ReviewerTag3": ("reviewer", "tag_3"),
-    "RevieweeName": ("reviewee", "name"),
-    "RevieweeEmail": ("reviewee", "email_or_identifier"),
-    "PhotoLink": ("reviewee", "profile_link"),
-    "RevieweeTag1": ("reviewee", "tag_1"),
-    "RevieweeTag2": ("reviewee", "tag_2"),
-    "RevieweeTag3": ("reviewee", "tag_3"),
-    "PairContextTag1": ("pair_context", "1"),
-    "PairContextTag2": ("pair_context", "2"),
-    "PairContextTag3": ("pair_context", "3"),
-}
-
-
-# Raw CSV column name -> the pill's text on one page, for columns
-# where the renamable slots cannot supply it (Segment 19H Item 4a,
-# 2026-09-09).
-#
-# Two different reasons land here, and they need the same answer.
-# `ReviewerName` / `ReviewerEmail` have no slot at all, so they fell
-# out as raw CSV names on a page whose preview columns say `Name` and
-# `Email`. `RevieweeEmail` does have one — resolvable to a builtin
-# default, though not operator-overridable — and on Relationships it
-# resolved to the reviewee page's `Email` beside a preview column
-# headed `Reviewee`.
-# Same column, two pages, two headers: the mapping cannot be global,
-# which is why it is keyed by surface and why it is consulted before
-# the renamable slots rather than after.
-_SURFACE_LABELS: dict[str, dict[str, str]] = {
-    "reviewers": {"ReviewerName": "Name", "ReviewerEmail": "Email"},
-    "reviewees": {},
-    "relationships": {
-        "ReviewerEmail": "Reviewer",
-        "RevieweeEmail": "Reviewee",
-    },
-}
-
-
-def friendly_fields_with_data(
-    review_session: ReviewSession,
-    raw_labels: list[str],
-    *,
-    surface: str,
-) -> list[str]:
-    """Map raw CSV column names to what the page's preview column says,
-    for the "Fields with data" pills on the Setup pages.
-
-    The pill and the preview-table header name the same column, so they
-    read the same thing. Three sources, in order:
-
-    1. ``_SURFACE_LABELS[surface]`` — this page's own header for a
-       column the renamable slots cannot name correctly. It wins,
-       because the preview header it mirrors is fixed: Relationships
-       heads its two identifier columns ``Reviewer`` and ``Reviewee``,
-       which is a different question from what the reviewee page calls
-       its identifier column.
-    2. the session's field-label config (operator override → builtin
-       default) for one of the 12 in-scope field-label slots. Nine of
-       those are operator-renamable; the three reviewee-identity slots
-       resolve to a fixed builtin default and reject an override, which
-       is why `_SURFACE_LABELS` is the only way to give `RevieweeEmail`
-       a different word on a different page.
-    3. the canonical CSV name, for anything else — ``Status`` on
-       Relationships, whose preview header is also ``Status``.
-
-    ``surface`` is keyword-only and required, and indexes rather than
-    ``get``s: a page that forgets it, or misspells it, fails loudly
-    instead of quietly rendering CSV column names again.
-    """
-    page_labels = _SURFACE_LABELS[surface]
-    resolved: list[str] = []
-    for raw in raw_labels:
-        if raw in page_labels:
-            resolved.append(page_labels[raw])
-        elif raw in _FIELD_LABEL_SLOTS:
-            resolved.append(
-                field_labels.resolve(review_session, *_FIELD_LABEL_SLOTS[raw])
-            )
-        else:
-            resolved.append(raw)
-    return resolved
 
 
 def chip_slots(

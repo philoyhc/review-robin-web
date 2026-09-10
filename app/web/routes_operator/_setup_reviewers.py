@@ -244,11 +244,6 @@ def _render_reviewers_page(
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
             "is_editable": lifecycle.is_editable(review_session),
-            "fields_with_data": views.friendly_fields_with_data(
-                review_session,
-                assignments.reviewer_fields_with_data(db, review_session.id),
-                surface="reviewers",
-            ),
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. Keyed by the page's
