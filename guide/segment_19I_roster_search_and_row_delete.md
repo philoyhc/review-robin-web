@@ -3690,8 +3690,28 @@ ships inside every rendered document is a poor place to leave a
 number the plan has already retracted, so it now says 224 / 56.
 Nothing executable changed.
 
-**`close_check 19I.11`** and a `spec-writer` pass over the five
-doc-impact files close the item; their outcomes are recorded below.
+**`close_check 19I.11` exits 0.** Its one note — `_operations`
+touched, `spec/validate_page.md` and `spec/preview_hub.md` not in
+the manifest — is a package-level false positive: both are
+Operations-row siblings whose routes share the package, and neither
+describes anything this item changed. Adjudicated, no bullet added.
+
+**`spec-writer` found one flag, and it was real.** Nothing in the
+five files was wrong about Item 11, but `spec/setup_pages.md`'s
+**Reviewers** column table marked the Profile column `✓` under
+`Toggle?` — and Reviewers has no profile chip and no
+`col-hidden-profile` rule, only the three tag chips. The same file
+said so correctly six hundred lines earlier, in the shared-pattern
+section, so it contradicted itself; the stale `✓` dates to
+2026-06-01 and is unrelated to this item. Verified against the
+template before believing it (the previous `spec-writer` flag this
+segment was false), then fixed in both places — the row now reads
+`—` and the shared-pattern bullet states the asymmetry outright.
+
+This is the third rung running in which the **Reviewers profile
+column** has needed a note. The Judgment call above predicted a
+reader would misread it as something the extraction dropped; the
+spec had in fact been claiming a chip that never existed.
 
 ### Definition of done
 

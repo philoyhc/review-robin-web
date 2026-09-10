@@ -402,7 +402,12 @@ The pattern:
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
   That column is server-rendered only when some row has a link, so
-  its chip never reaches the disabled state.
+  its chip never reaches the disabled state. **Reviewers does not
+  have this chip**, though it renders the same `profile-col` cells:
+  there, the column's visibility is a server-side decision only. The
+  asymmetry predates the extraction and survives it unchanged.
+  (Recorded here because the Reviewers column table said otherwise
+  until 2026-09-10.)
 - Operator choice persists per browser via `localStorage` under a
   per-table key, which the primitive reads from the table's
   `data-rrw-col-toggles` attribute:
@@ -870,7 +875,7 @@ section beneath:
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). W11, PR #1756. |
+| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). W11, PR #1756. **Not toggleable** — unlike the Reviewees Photo column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry is long-standing and deliberate; the `✓` here was stale (corrected 2026-09-10). |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
