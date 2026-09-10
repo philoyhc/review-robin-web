@@ -44,14 +44,30 @@ from ._full_matrix import (
 #
 # `tag_3` is left empty on purpose throughout: rung 3's chip for an
 # empty slot must render disabled, and its column must stay hidden.
+# `tag_1` is ordered differently again from **both** the email default
+# and the name order, so a tag-sort assertion cannot pass by matching
+# either. The first draft had Team X/Y/Z lining up exactly with the
+# email default, and a mutation that deleted the resolver's tag
+# branch entirely still passed — the same hole as the name seed, in
+# the same file, twice.
+#
+#   email default : Charlie, Bravo, Alpha
+#   name asc      : Alpha, Bravo, Charlie
+#   tag_1 asc     : Bravo, Alpha, Charlie
 REVIEWERS = [
-    ("Alpha R", "zulu@example.edu", "Team Z", "Cohort 2"),
-    ("Bravo R", "yankee@example.edu", "Team Y", "Cohort 1"),
-    ("Charlie R", "xray@example.edu", "Team X", "Cohort 3"),
+    ("Alpha R", "zulu@example.edu", "Team B", "Cohort 2"),
+    ("Bravo R", "yankee@example.edu", "Team A", "Cohort 1"),
+    ("Charlie R", "xray@example.edu", "Team C", "Cohort 3"),
 ]
+# Two rows only, so tag order must coincide with one of the others;
+# it is set to differ from the **default**, which is what a dropped
+# resolver falls back to.
+#
+#   email default : Echo, Delta
+#   tag_1 asc     : Delta, Echo
 REVIEWEES = [
-    ("Delta E", "zulu-e@example.edu", "Group Q", "Wave 2"),
-    ("Echo E", "yankee-e@example.edu", "Group P", "Wave 1"),
+    ("Delta E", "zulu-e@example.edu", "Group A", "Wave 2"),
+    ("Echo E", "yankee-e@example.edu", "Group B", "Wave 1"),
 ]
 # Unsorted (email asc) therefore reads Charlie, Bravo, Alpha.
 DEFAULT_ORDER = ["Charlie R", "Bravo R", "Alpha R"]
@@ -255,9 +271,9 @@ def test_both_pages_render_the_tag_columns(
     the columns silently stopped rendering."""
     s = _seed(client, db, "ops-tags")
     inv = _rows(client.get(f"/operator/sessions/{s.id}/invitations").text)
-    assert "Team Z" in inv and "Cohort 2" in inv
+    assert "Team B" in inv and "Cohort 2" in inv
     resp = _rows(client.get(f"/operator/sessions/{s.id}/responses").text)
-    assert "Group Q" in resp and "Wave 2" in resp
+    assert "Group A" in resp and "Wave 2" in resp
 
 
 def test_an_empty_tag_slot_renders_a_disabled_chip(
@@ -302,9 +318,10 @@ def test_invitations_cookie_sort_by_tag(
     accident."""
     s = _seed(client, db, "inv-tag-sort")
     rows = _rows(_sorted_body(client, s.id, "invitations", "tag_1", "asc"))
-    # Team X (Charlie), Team Y (Bravo), Team Z (Alpha)
+    # Team A (Bravo), Team B (Alpha), Team C (Charlie) — an order that
+    # matches neither the email default nor the name sort.
     assert (
-        rows.find("Charlie R") < rows.find("Bravo R") < rows.find("Alpha R")
+        rows.find("Bravo R") < rows.find("Alpha R") < rows.find("Charlie R")
     )
 
 
@@ -313,5 +330,6 @@ def test_responses_cookie_sort_by_tag(
 ) -> None:
     s = _seed(client, db, "resp-tag-sort")
     rows = _rows(_sorted_body(client, s.id, "responses", "tag_1", "asc"))
-    # Group P (Echo) before Group Q (Delta) — the reverse of name asc.
-    assert rows.find("Echo E") < rows.find("Delta E")
+    # Group A (Delta) before Group B (Echo) — the reverse of the email
+    # default, which is what a dropped resolver would leave behind.
+    assert rows.find("Delta E") < rows.find("Echo E")
