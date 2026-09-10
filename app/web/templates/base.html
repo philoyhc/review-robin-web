@@ -1282,6 +1282,11 @@
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
+      /* A lone card in a `.bottom-grid`, held to the right-hand
+         column at half width instead of stretching across both.
+         Without it a single child lands in column 1 and reads as a
+         card that failed to fill the row. */
+      .bottom-grid > .grid-right { grid-column: 2; }
       .bottom-left {
         display: flex;
         flex-direction: column;
@@ -2426,6 +2431,21 @@
         flex-wrap: wrap;
         align-items: center;
         gap: var(--space-2);
+      }
+      /* One chip row can carry several labelled groups (Assignments
+         has three: reviewer / reviewee / relationship tags). Each
+         group is its own inline-flex box so a narrow viewport wraps
+         BETWEEN groups rather than stranding a label at the end of a
+         line with its chips on the next. The wider left gap on every
+         group after the first is what separates them on one line. */
+      body.ui-v2 .chip-group {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .chip-group + .chip-group {
+        margin-left: var(--space-4);
       }
       body.ui-v2 .tag-chip.is-disabled {
         cursor: default;

@@ -37,7 +37,11 @@ from ._assignment_states import (
 # `.operator-actions-card` in its inline CSS 15 times, so a substring
 # test for it is true on every page and asserts nothing. That was a
 # real vacuous check caught while measuring this item.
-CARD = '<div class="card operator-actions-card">'
+# The card, not its exact class list: 19I Item 12 added
+# ``grid-right`` when the author asked for it back at half
+# width, and a whole-attribute match broke on a layout class
+# that has nothing to do with what these tests check.
+CARD = 'class="card operator-actions-card'
 SEARCH_INPUT = '<input type="text" name="q"'
 SEARCH_BY = '<select name="search_by">'
 BULK_FORM = '<form id="assignments-bulk-form"'

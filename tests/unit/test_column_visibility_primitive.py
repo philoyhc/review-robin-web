@@ -153,14 +153,36 @@ def test_the_retired_assignments_heading_stays_retired() -> None:
     assert "Assignments preview" not in src
 
 
-def test_assignments_keeps_its_three_chip_rows() -> None:
-    """The move is about *where* the control sits, not how it is
-    grouped: the nine slots come from three different sources and one
-    flat row would lose that."""
+def test_assignments_keeps_its_three_groups_on_one_row() -> None:
+    """The nine slots come from three different sources, so the labels
+    stay — but all three groups sit on **one** chip row (author,
+    2026-09-10), each in its own ``.chip-group`` box so a narrow
+    viewport wraps between groups rather than stranding a label from
+    its chips.
+
+    One ``data-col-toggles-for`` and one ``<p class="col-chip-row">``:
+    before this the template rendered the row three times in a loop.
+    """
     src = (OPERATOR / "session_assignments.html").read_text()
-    assert src.count(CHIP_ROW) == 1  # one loop, three renders
+    assert src.count(CHIP_ROW) == 1
+    assert src.count('<p class="col-chip-row"') == 1
+    assert src.count('<span class="chip-group">') == 1  # one loop
     for label in ("Show reviewers", "Show reviewees", "Show relationships"):
         assert label in src
+
+
+def test_the_assignments_search_card_is_half_width_and_right() -> None:
+    """Rung 1 unwrapped the ``bottom-grid`` when it took the chips out
+    of it, leaving this card full width — a lone child of a ``1fr 1fr``
+    grid would otherwise sit in the *left* column. The author asked for
+    it back at half width, flush right (2026-09-10), which is what
+    ``.grid-right`` does."""
+    src = (OPERATOR / "session_assignments.html").read_text()
+    assert 'class="card operator-actions-card grid-right"' in src
+    grid = src.index('<div class="bottom-grid">')
+    assert grid < src.index("operator-actions-card grid-right")
+    # And the primitive it depends on exists.
+    assert ".bottom-grid > .grid-right { grid-column: 2; }" in BASE.read_text()
 
 
 def test_no_template_renders_a_fields_with_data_card() -> None:

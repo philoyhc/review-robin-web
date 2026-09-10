@@ -4460,6 +4460,51 @@ chip tests plus one asserting no template builds the card again.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — two Assignments refinements from the author, after
+rung 4.**
+
+1. **The three chip groups share one row.** The labels stay — the
+   nine slots come from three sources — but each group is now a
+   `.chip-group` inline-flex box inside a single `.col-chip-row`, so
+   a narrow viewport wraps **between** groups instead of stranding a
+   label at the end of a line with its chips on the next. Measured
+   with all nine slots populated: one line at 1440, two at 1280 and
+   1024, groups never split.
+2. **The search card is half width, flush right again.** Rung 1 made
+   it full width because unwrapping the `bottom-grid` would otherwise
+   have dropped a lone child into the *left* column. The grid is back
+   with one child and a new `.grid-right` (`grid-column: 2`).
+   Measured: width ratio 0.49 of the grid, 0px from its right edge,
+   at 1440 / 1280 / 1024.
+
+**A test broke on a class it does not care about.**
+`test_assignments_lifecycle_gate` matched the card by its whole
+`class` attribute, so adding `grid-right` failed five parametrised
+cases about lifecycle states. Loosened to the class name.
+
+**And the Chromium pass surfaced the `.table-scroll` gap again,
+much worse than rung 1 measured it.** This was the first seed with
+**all nine** tag slots populated — 14 columns — and the table is
+**1508px inside a 1360px card**, pushing the document to 1566 at a
+1440 viewport. So Assignments now scrolls the whole **page**
+sideways, not just overflows its card by 20px as rung 1 recorded.
+
+Established as **not** this change's doing before reporting it: the
+overflowing element is `#assignments-table` itself, and neither
+change touches the table — one edits a `<p>` above it, the other a
+card in a different container. Still reported rather than folded in,
+same as at rung 1: `.table-scroll` is a one-line fix using the
+primitive Item 11 already applied to Invitations and Responses, and
+it is the author's call whether it rides here or lands on its own.
+
+**Mutations:** 3, all killed — the groups split back into three
+rows, the `.chip-group` wrapper dropped, and `grid-right` removed
+from the card.
+
+**Measured:** the suite went 3515 → **3516**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table
