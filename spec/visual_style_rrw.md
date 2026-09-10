@@ -92,7 +92,6 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 **Status / info card** — read-mostly, no primary action. Renders pills, counts, summaries, identifying metadata. Default visual treatment (white background, neutral border). Examples:
 
-- "Fields with data" card at the top of Reviewers / Reviewees / Relationships.
 - Session Details card on Session Home.
 - Summary card on the Responses page (assigned / invited / opened / submitted / incomplete pills).
 - "All Instrument Status" card at the top of Instruments.

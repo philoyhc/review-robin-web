@@ -4541,6 +4541,59 @@ and from Invitations.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 5 landed; the specs, on the way out.**
+
+The six documents the manifest named, plus one it did not.
+
+- **`spec/setup_pages.md`** carried the most. "Shared body shape"
+  item 3 — the pill row and the whole three-source
+  `friendly_fields_with_data` resolution that Segment 19H Item 5
+  wrote nine days ago — is gone, and the list renumbered 1-6. The
+  `.card-columns` membership row, the two per-page chip-row
+  pointers, the Relationships `### Stats card` section and the
+  Observers "no pill row" note all follow. The toggle-pattern
+  section now states the roster-wide rule, why the struck chip could
+  not simply be deleted, and the `edit_mode` override.
+- **`spec/operator_ui_concept.md`** — the Setup shared-shape list
+  loses its Info card item (renumbered 2-6), both prose mentions go,
+  and the Assignments body shape is rewritten.
+- **`spec/operations_pages.md`**, **`spec/rrw_functional_spec.md`**,
+  **`spec/visual_style_rrw.md`** — one passage each.
+- **`spec/assignments.md`** — the body-shape list gains the
+  operator-actions card, loses the preview card's heading, and
+  describes the one-line chip groups and `.table-scroll`.
+- **`spec/ui_elements.md`** — **not in the manifest**, added here.
+  The refinements after rung 4 introduced `.chip-group` and
+  `.bottom-grid > .grid-right`, and §10 had never listed
+  `.table-scroll` either.
+- **`docs/status.md`** — the Item 12 row, the header paragraph, and
+  the Relationships route-table row, which still described the stats
+  card. The four historical timeline rows that mention the pills stay
+  as they are: they record what shipped on the day.
+
+**Two numbered lists renumbered, and the first attempt broke a
+third.** A blanket "decrement every `N. **`" pass corrupted the
+Observers list further down `setup_pages.md`, which has its own
+numbering, and left a duplicated line where the slice ended. Redone
+line-indexed and bounded to the one list. Caught by reading the
+result, not by a test — nothing checks list numbering.
+
+**Two cross-references pointed at the retired item.**
+`spec/operator_ui_concept.md` and `setup_pages.md`'s own
+implementation pointers both cited `§"Shared body shape" item 3` —
+the reference Segment 19H Item 5 had carefully repointed there.
+Both rewritten.
+
+**And one standing error fixed while in the sentence.**
+`spec/operator_ui_concept.md`'s Assignments body shape listed a
+**Rule** column on the per-instrument status card; that column
+retired 2026-05-26 and the template renders Instrument / Type /
+Generated / Groups / Self review / Included / Show. Verified against
+the template before removing it. Flagged in this session more than
+once and never in a line anyone was editing until now.
+
+**Not verified here:** the Azure dev slot. Documentation only.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table
@@ -4623,5 +4676,10 @@ and from Invitations.
 - `spec/assignments.md` — the body-shape list names the
   **Assignments preview** card by its heading, and the
   column-visibility chips card moves into the table card (Item 12).
+- `spec/ui_elements.md` — §10 Layout primitives gains `.chip-group`
+  and `.bottom-grid > .grid-right`, and records `.table-scroll`,
+  which the table had never listed. **Added at rung 5**: the plan
+  did not name this file, and the refinements after rung 4
+  introduced two primitives (Item 12).
 - `docs/status.md` — the Relationships route-table row describes the
   stats card, plus the Item 12 close row (Item 12).

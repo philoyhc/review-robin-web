@@ -530,8 +530,30 @@ The Operations-row page at
    summarising the current materialisation.
 2. **Validation results banner** (when `?validated=1` or a
    validation pass surfaces issues).
-3. **Assignments preview** — the row-level table of materialised
-   pairs, with filter chips + per-row Include checkbox.
+3. **Operator-actions card** — the search / status filter and the
+   selection-driven bulk Inactivate / Activate row. Half width,
+   flush right (`.grid-right` in a `bottom-grid`).
+4. **Assignments preview card** — the row-level table of
+   materialised pairs, with a per-row Include checkbox. It carries
+   **no `<h2>`**: it was the only preview-table card in the app with
+   one, and `Assignments preview` retired in Segment 19I Item 12.
+
+   Above the rows sit the **`Show columns:` chips**, all three
+   groups on one line — `Show reviewers:` / `Show reviewees:` /
+   `Show relationships:`, nine slots from three sources against one
+   `rrw-assignment-col-visibility` key. A slot with nothing in it
+   across the session's rosters renders neither chip nor column, and
+   a group with all three empty renders no label either. The rule
+   and the primitive are in `spec/setup_pages.md`, "Preview tables
+   (shared toggle pattern)"; pair-context presence is counted
+   **active-only**, matching the rule engine, where the
+   Relationships Setup page counts every row.
+
+   The table sits in `.table-scroll`. With all nine tag slots
+   populated it renders 14 columns — measured at 1508px inside a
+   1360px card — so its overflow belongs inside the card rather than
+   scrolling the whole page (Segment 19I Item 12; the same wrapper
+   Item 11 gave Invitations and Responses).
 
 The page reuses the Workflow card chrome shared with Session
 Home + other Operations-row pages.

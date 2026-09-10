@@ -610,6 +610,9 @@ spacing.
 | `.field-builder` + `.field-builder.locked` | keep | — |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) — equal-width tile row inside a card | added 2026-09-07 | — |
 | `.guide-figure` (+ `.guide-figure-narrow`) — screencap figure on `/guide` | added 2026-09-07 | — |
+| `.table-scroll` (`overflow-x: auto`) — a wide table's overflow stays inside its card instead of scrolling the page. On the three Operations preview tables, whose chip-hidden columns make them wider than the card by construction; the Setup rosters measure inside theirs and go without | — | — |
+| `.chip-group` — one labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips. Assignments has three | added 2026-09-10 | — |
+| `.bottom-grid > .grid-right` (`grid-column: 2`) — a lone card held to the right-hand column at half width. Without it a single child of a `1fr 1fr` grid lands in column 1 and reads as a card that failed to fill the row | added 2026-09-10 | — |
 
 `.setup-nav` is a candidate for deletion (see §2).
 
