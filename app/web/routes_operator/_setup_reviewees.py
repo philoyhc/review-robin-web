@@ -117,6 +117,10 @@ def _render_reviewees_page(
     """Render the Reviewees Setup page — the reviewee-side mirror of
     ``_render_reviewers_page`` (Segment 15F PR 4)."""
     is_ready = lifecycle.is_ready(review_session)
+    # Segment 19H Item 6 — the lock-card partial branches on
+    # ``archived`` (no revert form: ``/revert`` 409s from there).
+    # Observers already passed this for its checkbox exception.
+    is_archived = lifecycle.is_archived(review_session)
     if is_ready:
         edit_id = None
         add_mode = False
@@ -228,6 +232,7 @@ def _render_reviewees_page(
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
             "is_ready": is_ready,
+            "is_archived": is_archived,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
             # left `expired` and `archived` sessions rendering checkboxes

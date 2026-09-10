@@ -1323,6 +1323,9 @@ not a smaller change for being tidier.
   (2026-09-10), not filed. The section is the one this item edits
   anyway, and a spec sentence that would have concealed the defect
   is worth more attention than a queue entry.
+- **A shared partial after all** (2026-09-10, rung 2) — the
+  Decision's rejected alternative, overturned once the markup was
+  actually dumped rather than described. See `### Status`.
 
 ### Blast radius (measured)
 
@@ -1358,6 +1361,69 @@ $ grep -rln 'cannot be modified' tests/                                    # 1 (
 - **Specs** — `spec/lifecycle.md` §5 (the gap paragraph goes, the
   allowlist sentence is corrected), `spec/setup_pages.md` (the
   roster pages' locked-state chrome).
+
+### Status
+
+**2026-09-10 — rungs 1 and 2 landed; rung 3 (specs) follows.**
+
+**The Decision's rejected alternative was wrong, and the build
+overturned it.** The plan rejected a shared partial on the estimate
+that it "would take four parameters to express three sentences."
+That estimate was made from the gap description, not from the
+markup. Dumping all four cards showed them **byte-identical across
+23 lines except for two tokens** — the sentence subject and the
+`return_to` slug. The four-parameter figure came from folding
+Instruments' card into the same partial, which was never the
+proposal. So rung 2 landed
+`app/web/templates/operator/partials/_roster_lock_card.html` with
+exactly two parameters, included from all four pages via
+`{% with %}`, and the repo already carries twenty partials under
+that directory.
+
+This is the segment's own lesson arriving from the other side: 19I
+kept finding assertions that read correctly and tested nothing;
+here a *plan* read correctly and described markup nobody had
+opened. The Decision stays as written above, because that is what
+was believed at planning time.
+
+**What rung 2 actually changed**, against the ladder's "four
+templates":
+
+- one new partial (60 lines including its comment), and 23 lines
+  removed from each of the four pages — a net **-32** lines of
+  markup for three times the states covered
+- `is_archived` added to three route contexts
+  (`_setup_reviewers.py`, `_setup_reviewees.py`,
+  `_setup_relationships.py`); Observers already passed it
+- `_shared.py`'s shared CSV-import render path deliberately does
+  **not** gain it, with a comment saying why: that path sits behind
+  `_require_editable`, so it renders only when editable and the card
+  never reads the key. Recorded because the site's own comment
+  documents an earlier bug where a missing key silently took a
+  falsy branch.
+
+**Findings the build kept.**
+
+- **Rung 1's fix was invisible until it was measured.** The two
+  broken slugs produced a 303 to a real page, which is what success
+  looks like. Nothing in 3,529 tests noticed.
+- **A test that reads a template file breaks when the markup
+  moves.** Rung 1 asserted each template posted its own slug by
+  opening the `.html`; rung 2's partial made all four fail. Replaced
+  with an assertion against the *rendered* card, which is both
+  stronger and immune to the next move.
+- **`git checkout --` cost a rung-2 edit.** Mutation M3 was undone
+  with `git checkout -- session_relationships.html`, which restored
+  the file to the rung-1 commit and silently discarded that
+  template's partial swap. The restore-and-rerun showed 7 failures
+  where 0 were expected, which is the only reason it was caught.
+  Copy the file aside; do not reach for `checkout` while the work is
+  uncommitted.
+- **Every mutation was caught** — gate back to `is_ready` (28
+  failures), a revert form on `archived` (4), one page rendering
+  another's noun (1), one context losing `is_archived` (9).
+
+Suite 3520 -> 3529 (rung 1) -> 3589 (rung 2).
 
 ### PR ladder
 

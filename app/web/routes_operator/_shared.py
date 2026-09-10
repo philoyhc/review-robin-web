@@ -667,6 +667,10 @@ async def _handle_import(
                     # compared rather than tested, raised — which is
                     # how the older omission was found.
                     "is_editable": lifecycle.is_editable(review_session),
+                    # No ``is_archived``: this path is behind
+                    # ``_require_editable`` above, so it renders only
+                    # when editable, and the lock card (19H.6) gates on
+                    # ``not is_editable`` and never reads it here.
                     "delete_discards_responses": (
                         lifecycle.session_has_responses(db, review_session)
                     ),
