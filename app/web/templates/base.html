@@ -3927,6 +3927,140 @@
     </script>
 
     <script>
+      // Segment 19I Item 11 — shared column-visibility primitive.
+      //
+      // Four templates carried a byte-for-byte copy of this (211
+      // lines between them: 55 each on Reviewers / Reviewees /
+      // Relationships and 46 on Assignments, whose only differences
+      // were a storage key and a table id). It follows the same
+      // shape as the sort primitive above: declarative markup, one
+      // implementation.
+      //
+      // Sketch (deliberately using placeholder names, not any real
+      // page's ids or slots — this comment ships inside every
+      // rendered document, and an unscoped test assertion will
+      // happily match example markup):
+      //
+      //   <table id="{TABLE}" data-rrw-col-toggles="{STORAGE-KEY}">
+      //   ...
+      //   <p class="col-chip-row" data-col-toggles-for="{TABLE}">
+      //     <span class="pill tag-chip is-selected"
+      //           data-col-toggle="{SLOT}"
+      //           role="button" tabindex="0" aria-pressed="true">Label</span>
+      //     <span class="pill tag-chip is-disabled"
+      //           data-col-toggle="{SLOT}"
+      //           aria-disabled="true">Label</span>
+      //   </p>
+      //
+      // A page may carry several chip rows against one table —
+      // Assignments groups its nine slots into three — so the
+      // storage key lives on the table and each row points at it.
+      //
+      // Hiding a column is the page's own CSS, not this code's: it
+      // toggles ``col-hidden-{slot}`` on the table and each page maps
+      // its slots to its own column classes (one class per slot,
+      // named by the page). The slot vocabulary is deliberately not
+      // fixed here.
+      //
+      // Storage keys are the ones each page already used. Renaming
+      // one would silently reset every operator's saved columns.
+      (function () {
+        var rows = document.querySelectorAll("[data-col-toggles-for]");
+        if (!rows.length) return;
+
+        // Group the rows by the table they drive.
+        var byTable = {};
+        Array.prototype.forEach.call(rows, function (row) {
+          var id = row.getAttribute("data-col-toggles-for");
+          (byTable[id] = byTable[id] || []).push(row);
+        });
+
+        Object.keys(byTable).forEach(function (id) {
+          var table = document.getElementById(id);
+          if (!table) return;
+          var storageKey = table.getAttribute("data-rrw-col-toggles");
+          var chips = [];
+          byTable[id].forEach(function (row) {
+            Array.prototype.push.apply(
+              chips,
+              Array.prototype.slice.call(
+                row.querySelectorAll("[data-col-toggle]")
+              )
+            );
+          });
+          if (!chips.length) return;
+
+          var stored = null;
+          try {
+            stored = JSON.parse(
+              window.localStorage.getItem(storageKey) || "null"
+            );
+          } catch (e) {}
+
+          chips.forEach(function (chip) {
+            var slot = chip.getAttribute("data-col-toggle");
+            // A column with no data is shown as a disabled chip and
+            // its column stays hidden — the operator cannot turn on
+            // an empty column, and storage never overrides that.
+            if (chip.classList.contains("is-disabled")) {
+              apply(slot, false);
+              return;
+            }
+            var visible = true;
+            if (
+              stored &&
+              Object.prototype.hasOwnProperty.call(stored, slot)
+            ) {
+              visible = !!stored[slot];
+            }
+            setChip(chip, slot, visible);
+            bind(chip, function () {
+              setChip(
+                chip,
+                slot,
+                chip.getAttribute("aria-pressed") !== "true"
+              );
+              persist();
+            });
+          });
+
+          function bind(el, handler) {
+            el.addEventListener("click", handler);
+            el.addEventListener("keydown", function (e) {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handler();
+              }
+            });
+          }
+          function setChip(chip, slot, visible) {
+            chip.classList.toggle("is-selected", visible);
+            chip.setAttribute("aria-pressed", visible ? "true" : "false");
+            apply(slot, visible);
+          }
+          function apply(slot, visible) {
+            table.classList.toggle("col-hidden-" + slot, !visible);
+          }
+          function persist() {
+            var state = {};
+            chips.forEach(function (chip) {
+              if (!chip.classList.contains("is-disabled")) {
+                state[chip.getAttribute("data-col-toggle")] =
+                  chip.getAttribute("aria-pressed") === "true";
+              }
+            });
+            try {
+              window.localStorage.setItem(
+                storageKey,
+                JSON.stringify(state)
+              );
+            } catch (e) {}
+          }
+        });
+      })();
+    </script>
+
+    <script>
       // Operator-page convention: every redirect-back-with-banner card
       // (or any inline error / confirmation banner) carries the
       // ``banner-scroll-target`` class so the page can jump to it on

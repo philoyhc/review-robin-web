@@ -3297,12 +3297,17 @@ Three findings shape the work more than the line counts do.
    ORM objects, so `tag_1..3` need no service, query or view change.
 2. **The column-visibility mechanism is duplicated four times**, not
    three as first counted — `session_reviewers`, `session_reviewees`,
-   `session_relationships` carry a byte-identical 55-line IIFE, and
-   `session_assignments` a 46-line variant under a different storage
-   key (`rrw-assignment-col-visibility`, which is why a grep for
-   `tag-visibility` missed it). **211 lines of duplicated JS**, plus
-   four near-identical CSS blocks. Porting as-is makes it six copies.
-   The two page-specific values are the storage key and the table id;
+   `session_relationships` and `session_assignments`, the last under a
+   different storage key (`rrw-assignment-col-visibility`, which is
+   why a grep for `tag-visibility` missed it). ~~55-line IIFEs on
+   three pages and a 46-line variant on Assignments, **211 lines**~~
+   — **corrected at build, 2026-09-10: all four blocks are identical
+   and the total is 224 lines, 56 from each.** The original figures
+   came from a measurement whose anchor walked back to an inner
+   `forEach(function` rather than the IIFE opener, so it under-counted
+   every block and mis-described Assignments as a variant. Plus four
+   near-identical CSS blocks. Porting as-is makes it six copies. The
+   two page-specific values are the storage key and the table id;
    everything else is the same code.
 3. **Neither target page can take the sort primitive as it stands.**
    `session_invitations.html` and `session_responses.html` have **no
@@ -3389,7 +3394,8 @@ grep -rhoE '"rrw-[a-z-]*visibility"' app/web/templates/operator/*.html | sort -u
     → 4 keys (reviewer / reviewee / relationship tag-visibility, assignment col-visibility)
 grep -rn "col-hidden" app/web/templates/operator/*.html
     → 4 CSS blocks + 4 JS toggle sites
-IIFE line counts: reviewers 55, reviewees 55, relationships 55, assignments 46  → 211
+IIFE line counts (corrected 2026-09-10): 56 each × 4 → 224
+    the pre-build figures (55/55/55/46 → 211) came from a bad anchor; see Opportunity
 grep -c '<th' on the target tables → invitations 7, responses 4
 grep -c '<thead>' → invitations 0, responses 0        (the sort blocker)
 ```
@@ -3421,6 +3427,62 @@ four storage keys and their surfaces), `spec/sort_by_reviewee.md`
 
 Rungs 2-4 are independently shippable and each leaves both pages
 coherent; rung 1 stands alone.
+
+### Status
+
+**2026-09-10 — rung 1 landed as laid out.**
+
+The primitive lives in `base.html` beside the sort one; all four
+pages converted; **-224 template lines, +130 in `base.html`**.
+Storage keys, slot vocabularies and per-page CSS unchanged, as the
+Semantics required.
+
+**The plan's own line count was wrong and is corrected above.** The
+duplication is 224 lines from four identical blocks, not 211 from
+three-plus-a-variant. Same bad anchor, twice: the measurement that
+produced 211 walked `rindex("(function")` back to an inner
+`forEach(function`, and the *first* attempt at the removal used the
+same anchor and cut nine lines off the top of each block, leaving
+orphaned openers. Caught by grepping the templates for leftovers
+rather than by the suite, which would not have noticed.
+
+**`git checkout -- <file>` destroyed uncommitted work again**, on
+`session_reviewers.html`, during the mutation run — the third time
+this segment, and the first where the guard ("commit before
+mutating") had already been written down by me and then not
+followed. Everything after that point was committed before any
+mutation.
+
+**Two hazards of the extraction itself, both found by running it:**
+
+1. `test_reviewers_profile_link.py` asserted `"profile-col" not in
+   body` over the whole document, so it failed the moment
+   `base.html` mentioned the class in a comment. Scoped to the
+   table — which is what the test's own name claims — and bounded at
+   `</table>`, since a slice to end-of-document still catches
+   `base.html`'s trailing scripts.
+2. **The primitive's own explanatory sketch is shipped inside every
+   rendered page.** Written with real ids and slot names it is
+   indistinguishable from markup to any unscoped assertion — the
+   same trap, created by the fix for the trap. It now uses
+   placeholders, pinned by a test.
+
+**Verified in Chromium**, which the suite cannot do: Reviewers'
+three chips with the empty `tag_3` disabled and its column hidden,
+a toggle writing `{"tag-1":false,"tag-2":true}` (disabled slot
+correctly absent) and surviving reload; and Assignments' three chip
+rows / nine slots / one key — the shape that actually exercises the
+grouping — with one click per group hiding its column and all nine
+states riding in one key. No page errors on either.
+
+**Mutations:** 5, all killed — a fifth copy of the toggle, a renamed
+storage key, a table losing its key attribute, the sketch reverting
+to real names, and the primitive deleted from `base.html`.
+
+**Measured:** the suite went 3430 → **3464** (34 structural
+assertions added).
+
+**Not verified here:** the Azure dev slot.
 
 ### Definition of done
 

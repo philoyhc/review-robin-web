@@ -199,7 +199,16 @@ def test_reviewers_table_hides_profile_link_column_when_no_data(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     # Non-edit mode + no profile_link data anywhere ⇒ column is hidden.
-    assert "profile-col" not in body
+    #
+    # Scoped to the table (Segment 19I Item 11). This read
+    # `"profile-col" not in body` over the whole document, so it
+    # failed the moment `base.html` mentioned the class name in a
+    # comment — the third unscoped-substring assertion this segment
+    # to match the app's own prose about itself rather than markup.
+    # The test's own name says "table", which is what it now checks.
+    start = body.index('id="reviewers-table"')
+    table = body[start : body.index("</table>", start)]
+    assert "profile-col" not in table
 
 
 def test_reviewers_table_surfaces_profile_link_column_with_data(
