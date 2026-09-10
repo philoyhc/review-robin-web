@@ -30,7 +30,14 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19I.2** | Delete selected rows from the Operator actions card | **Closed 2026-09-09** (3 PRs, scaffold-first) |
 | **19I.3** | The delete surface told straight: lifecycle gate, copy that names what goes, and a Danger Zone that works | **Closed 2026-09-09** (3 PRs + a 2b) |
 | **19I.4** | The two counts moved to where they read: the hint to the table, a denominator into the pill | **Closed 2026-09-09** (1 PR) |
-| 19I.5+ | Admitted for further work on the roster pages' row-level surface. | Open — **empty** |
+| **19I.5** | The replace an operator could not make | **Closed 2026-09-09** (1 PR) |
+| **19I.6** | The instruments a finished session could still lose | **Closed 2026-09-09** (3 PRs) |
+| **19I.7** | The Assignments search reads the tag columns | **Closed 2026-09-09** (2 PRs) |
+| **19I.8** | The Assignments page, told straight | **Closed 2026-09-09** (1 PR) |
+| **19I.9** | The Assignments strip finishes the job | **Closed 2026-09-09** (3 PRs) |
+| **19I.10** | One preview-count sentence across seven pages | **Closed 2026-09-10** (4 PRs) |
+| **19I.11** | The roster table facility on Invitations and Responses | **Closed 2026-09-10** (7 PRs) |
+| **19I.12** | One place for column selection, and one card fewer | **Open** — planned 2026-09-10 |
 
 ---
 
@@ -3766,3 +3773,260 @@ spec had in fact been claiming a chip that never existed.
 - `spec/sort_by_reviewee.md` — the sort primitive's surface list
   gains the two pages (Item 11).
 - `docs/status.md` — row at the close (Item 11).
+
+---
+
+## Item 12 — one place for column selection, and one card fewer
+
+### Opportunity
+
+The author, after Item 11 put the chip row on Invitations and
+Responses (2026-09-10):
+
+> *"I actually like the way Invitations and Responses do the tag
+> selection for display in table above the table itself, rather than
+> in a separate card, as in Reviewers, Reviewees, Relationships. In
+> addition, the "Fields with data:" status counts are not absolutely
+> critical, since it's not like you can set up a roster without the
+> display fields, while the selection chips already double for
+> indicating whether there's data."*
+
+Both halves check out, and measuring them turns one preference into
+two separable findings.
+
+**Six chip surfaces, three placements.** Item 11 gave Invitations and
+Responses their chip row *inside the table card*, immediately above
+the preview-count line and the rows it governs. The three roster pages
+put theirs *inside the "Fields with data" card*, which sits in the
+right-hand stack of the `.card-columns` container — above the preview
+table and separated from it by the whole Operator actions card.
+Assignments has a third arrangement again: three grouped chip rows in
+a card of their own, the left half of a `bottom-grid`. So the newest
+surfaces are the ones whose control sits with the thing it controls.
+
+**The pills are all but redundant with the chips — with one
+exception, and it has already been replaced.** Read against the
+services rather than assumed:
+
+| Page | Pills the card renders | Covered by a chip? |
+|---|---|---|
+| Reviewers | `Name`, `Email` whenever any row exists; one per non-empty `tag_1..3` | tags yes; the two identity pills say only "the roster is non-empty" |
+| Reviewees | the same, plus `PhotoLink` | yes — Reviewees has a `profile` chip |
+| Relationships | `Reviewer`, `Reviewee`; one per non-empty `PairContextTag{n}`; **`Status`, when any row is `inactive`** | tags yes; **`Status` has no chip** |
+
+`ReviewerName` / `ReviewerEmail` are appended by
+`reviewer_fields_with_data` on `has_any` alone
+(`app/services/assignments/_coverage.py:31`) — they are required
+columns, so their pills are a row-count proxy for a count the chrome
+status strip already carries. The author's *"you can't set up a roster
+without the display fields"* is exactly this, and it is true in code.
+
+The Relationships `Status` pill is the one real signal, and **Item 1
+of this segment already replaced it twice.** Item 1's own Opportunity
+cited this pill as evidence that the page can produce inactive rows
+and could not filter to them; it then gave Relationships the Status
+dropdown (`RELATIONSHIPS_STATUS_OPTIONS`, `active` / `inactive`) that
+the other three pages had. The preview table's Status column is also
+sortable (`data-sort-key="status"`). So "are any rows inactive?" is
+answerable two ways on that page without the pill.
+
+**And one of the three routes' context keys is already dead
+elsewhere.** The Assignments page builds `fields_with_data`
+(`_assignments.py:326`) and no template reads it — found and left
+alone at 19H.5's close, 2026-09-09.
+
+### Decision
+
+**Move the chip row into the table card on all three roster pages,
+matching Invitations and Responses exactly — chips, then the
+preview-count line, then the table — and retire the "Fields with
+data" card, its four route context keys, and the
+`friendly_fields_with_data` adapter that now has no consumer.**
+
+Nothing replaces the pills. The Relationships `Status` signal is not
+rebuilt anywhere, because Item 1 already built its replacement; this
+item's job is to stop rendering a third route to the same fact.
+
+Rejected: **keeping the card and moving only the chips.** It leaves a
+card whose whole content is two pills naming required columns and a
+third for a fact the filter strip answers better — a card that exists
+because it used to hold something. Retiring it is the point, not a
+side effect.
+
+Rejected: **moving the pills into the table card too**, above or
+below the chips. That is the same information in a new place; the
+question the author asked is whether it earns a place at all, and
+measured against the chips it does not.
+
+Rejected: **a `Status` chip on Relationships** to carry the retired
+pill's one unique signal. Status is not a hideable column — every
+relationship has one, and `spec/setup_pages.md` says so — so a chip
+there would be a badge wearing a control's clothes.
+
+**Assignments keeps its chip card** (see Open questions). Its three
+grouped rows and its `bottom-grid` partner make the move a different
+layout question from the rosters' one-row case, and the author named
+three pages.
+
+### Semantics
+
+- **Empty roster.** The chip row is gated on rows today
+  (`{% if reviewers and not edit_mode %}`) and stays so; the table
+  card renders its existing empty state. Nothing renders where the
+  card used to be, rather than an empty card.
+- **`edit_mode`.** The chip row hides while a row is being added or
+  edited, as today — an operator mid-edit should not be able to hide
+  the column they are typing into. Preserved verbatim, not
+  re-derived.
+- **A slot with no data** still renders a disabled, struck chip whose
+  column starts hidden. That is the primitive's behavior (Item 11),
+  unchanged, and it is the half of the author's claim that does the
+  work: the chip *is* the empty-column indicator.
+- **The CSV-import error path** (`_shared.py`) re-renders these
+  templates with a filter/cap context; it drops the
+  `fields_with_data` key with the rest.
+- **`localStorage` keys, slot names and per-page CSS are untouched.**
+  This is a move, not a rewire — the chip markup and its
+  `data-col-toggles-for` pointer travel intact, so no operator's
+  saved column state resets.
+- **Observers** has neither card nor chips today and gains neither.
+- **The three `*_fields_with_data` services stay.**
+  `display_source_presence` (`_coverage.py:104`) unions all three for
+  the Instruments page. Only the *view adapter* and the *card* retire.
+
+### Judgment calls — decided
+
+- **Chips go above the preview-count line**, not below, because that
+  is where Invitations and Responses put them and the whole item is
+  about the five pages agreeing.
+- **`friendly_fields_with_data` is deleted, not left dead.**
+  Segment 19H Item 5 shipped it on 2026-09-09 — one day before this
+  item — and its per-surface label table has no other consumer once
+  the card goes. Leaving it is the "mechanise badly" the constitution
+  names; the git history keeps it if it is ever wanted back.
+- **Assignments' dead `fields_with_data` key goes in the same rung**
+  as the three live ones. It is the same symbol and the same removal,
+  and leaving one dead copy behind is how the next reader concludes
+  the key is still live. Declared here rather than smuggled, since
+  strictly it is a fourth page's change.
+- **The `Show columns:` label stays.** It is what the two Operations
+  pages render, and a chip row with no lead-in reads as a pill row.
+
+### Blast radius (measured)
+
+```
+grep -rln "Fields with data" app/web/templates            → 3
+grep -rn  '"fields_with_data"' app/web/routes_operator/*.py → 5
+    (_setup_reviewers, _setup_reviewees, _setup_relationships,
+     _shared error path, _assignments — the last one dead)
+grep -rn  "friendly_fields_with_data" app/ --include=*.py  → 6
+    (1 def, 1 export, 1 __all__, 3 call sites — all retiring)
+grep -rln "fields_with_data\|Fields with data" tests/ --include=*.py → 2
+    (test_field_label_rendering.py: 10 hits; test_page_guidance.py: 1)
+grep -rln "Fields with data" spec/ docs/                   → 6
+grep -rln "col-chip-row" app/web/templates/operator        → 7
+    (6 toggle pages + session_extract_data.html, which reuses the
+     class for layout only and carries no data-col-toggles-for)
+```
+
+Templates: 3. Routes: 4 files. Views: `_setup.py` (one adapter
+retires). Services: **none** — `display_source_presence` keeps all
+three helpers alive.
+
+Specs describing the card: `spec/setup_pages.md` (six places — the
+`.card-columns` layout row, "Shared body shape" item 3, the chip
+row's stated location, the two per-page repeats, the Relationships
+stats card, and the Observers "no pill row" note),
+`spec/operator_ui_concept.md` (three), `spec/rrw_functional_spec.md`
+(the Stats info card bullet), `spec/visual_style_rrw.md` (one
+example), `spec/operations_pages.md` (one sentence written on
+2026-09-10 that this item falsifies: *"these pages have no 'Fields
+with data' card to hold it"* stops distinguishing anything once no
+page has one), `docs/status.md` (the Relationships route-table row).
+
+### PR ladder
+
+1. **Move the chip row** into the table card on all three pages,
+   above the preview-count line. The "Fields with data" card stays,
+   pills only — which is what it was before Segment 18E. Visible
+   change, nothing removed, fully reversible.
+2. **Retire the card**: the three template blocks, the four route
+   context keys (Assignments' dead one included), and
+   `views.friendly_fields_with_data`.
+3. **Specs + `docs/status.md` row.**
+
+Rung 1 is worth landing alone: it is the half the author asked for
+first, and it leaves the pages coherent whether or not rung 2
+follows. Rung 2 is the removal, and separating it means the diff that
+*deletes* is not also the diff that *moves* — the two are reviewed
+against different questions.
+
+Not split per page: the three edits are the same edit, and a reviewer
+who models one models all three.
+
+### Definition of done
+
+- All five chip surfaces render the chip row inside the table card,
+  immediately above the preview-count line. Asserted structurally,
+  not by reading.
+- No template renders `Fields with data`; no route builds a
+  `fields_with_data` context key; `friendly_fields_with_data` is
+  gone from `app/web/views/`.
+- `display_source_presence` and the three `*_fields_with_data`
+  services still pass their own tests — the Instruments page is
+  untouched.
+- Column visibility still persists per page under the same
+  `localStorage` keys, verified in Chromium on all three pages
+  (the suite cannot).
+- **Measured dimensionally as well as functionally** — Item 11's
+  lesson: the roster tables gain no columns here, but the table card
+  gains a row above them, so the check is that nothing reflows into
+  an overflow.
+- Every new assertion mutation-checked.
+- `ruff check .` and `.venv/bin/pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.12` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Does Assignments move too?** Decides: the author. Its chip card
+  is three grouped rows paired with the Operator actions card in a
+  `bottom-grid`, so moving it into the table card is a layout
+  question the rosters' single row does not raise. Recommendation:
+  **leave it**, and revisit only if the split placement grates once
+  the other five agree. Its dead context key retires either way.
+
+### Out of scope
+
+- **Observers** — no card and no chips today, and Item 11 already
+  settled that a one-tag chip row is a different question.
+- **`session_extract_data.html`** — reuses `.col-chip-row` for
+  layout with no toggle behavior behind it; not a chip surface.
+- **The per-entity row count.** It is not in these cards (the chrome
+  status strip carries it) and this item does not move it.
+- **Reviewers' un-hideable Profile column** — Item 11's judgment
+  call, corrected in the spec at Item 11's close, unchanged here.
+
+### Doc impact
+
+- `spec/setup_pages.md` — retire "Shared body shape" item 3 (the pill
+  row); restate the chip row's location as the table card; update the
+  `.card-columns` layout row, the Reviewers / Reviewees / Relationships
+  repeats, the Relationships stats-card section, and the Observers
+  "no pill row" note (Item 12).
+- `spec/operator_ui_concept.md` — the Setup-pages shared-shape list
+  loses its Info card item, and the two prose mentions of the pill
+  row go with it (Item 12).
+- `spec/rrw_functional_spec.md` — the "Stats info card" bullet in the
+  four-Setup-pages shape (Item 12).
+- `spec/visual_style_rrw.md` — the card is cited as a live example of
+  a page-level info card; pick a live one or drop the line (Item 12).
+- `spec/operations_pages.md` — the sentence explaining that
+  Invitations and Responses have no "Fields with data" card to hold
+  their chip row stops distinguishing them once no page has one
+  (Item 12).
+- `docs/status.md` — the Relationships route-table row describes the
+  stats card, plus the Item 12 close row (Item 12).
