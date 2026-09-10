@@ -3627,6 +3627,35 @@ not only behaviour. Rungs 4+ measure both.
 **Measured:** the suite is unchanged at 3481 — the fix is layout, and
 the new assertions replace edited ones.
 
+**2026-09-10 — rung 4 landed as laid out.**
+
+Both filters now call the rosters' own `_matches_row`, so the rule is
+shared rather than a third variant: name and handle by substring,
+`tag_1..3` by whole value, unioned. Rung 3 made the tags visible; a
+value typed into the search still returned nothing until this.
+
+**The datalist half needed no change.** Both option builders already
+emit only `Name (handle)` labels, so no tag value was ever offered as
+a suggestion — the plan committed to a rule the code already kept. It
+is pinned by a test rather than left to coincidence, because rung 4 is
+exactly what makes tags matchable, and **matching a tag and suggesting
+one are different questions**: Item 9's finding, that a tag identifies
+too many rows to partition by.
+
+**Tests went where the rule already lives.**
+`tests/unit/test_roster_search_filters.py` holds this rule for the
+four roster filters and did not cover these two; seven cases added
+there rather than in a new file.
+
+**Mutations:** 4, all killed — each filter reverted to substring-only,
+tags matching by substring instead of whole value, and the datalist
+starting to offer tag values.
+
+**Measured:** the suite went 3481 → **3488**.
+
+**Not verified here:** the Azure dev slot. No template changed in this
+rung, so there is nothing new to look at.
+
 ### Definition of done
 
 - One column-visibility implementation in `base.html`; no page
