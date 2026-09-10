@@ -4,18 +4,21 @@ Pins the three POST handlers on Reviewers / Reviewees /
 Relationships:
 
 - Upsert / clear semantics per slot in one form submit.
-- Lifecycle gate — ``is_ready`` returns 409.
+- Lifecycle gate — anything but ``draft`` / ``validated``
+  returns 409 (Segment 19H Item 7; was ``is_ready`` alone).
 - Validation invalidation propagates from
   ``field_labels.upsert`` / ``.clear``.
 - Audit emission per modified slot.
-- Editor block renders inputs + Save button when not ready,
-  disabled + no Save when ready.
+- Editor block renders inputs + Save button while editable,
+  disabled + no Save in every locked state.
 
 The resolver / mutator semantics themselves are covered by
 ``tests/integration/test_field_labels_resolver.py`` — this file
 covers only the route + template wiring.
 """
 from __future__ import annotations
+
+import pytest
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -123,20 +126,47 @@ def test_reviewers_save_emits_audit_set_per_slot(
     assert len(set_events) == 2
 
 
-def test_reviewers_save_rejects_when_ready(
-    client: TestClient, db: Session
+@pytest.mark.parametrize("state", ("ready", "expired", "archived"))
+def test_reviewers_save_rejects_in_every_locked_state(
+    client: TestClient, db: Session, state: str
 ) -> None:
-    review_session = _make_session(client, db, "fle-rev-ready")
-    # Forge the session into the ready state to trip the lifecycle
-    # gate; the helper short-circuit avoids the full activate dance.
-    review_session.status = "ready"
+    """Segment 19H Item 7 widened this from ``ready`` alone.
+
+    ``expired`` and ``archived`` used to answer **303** — the save
+    went through — while the page's lock card said the roster could
+    not be modified. 19H.6 put that card on those two states, which
+    is what made a Segment 15A gate a visible contradiction.
+    """
+    review_session = _make_session(client, db, f"fle-rev-{state[:4]}")
+    # Forge the state to trip the lifecycle gate; the helper
+    # short-circuit avoids the full activate dance.
+    review_session.status = state
     db.flush()
     response = client.post(
         f"/operator/sessions/{review_session.id}/reviewers/field-labels",
         data={"tag_1": "Cohort"},
         follow_redirects=False,
     )
-    assert response.status_code == 409
+    assert response.status_code == 409, state
+
+
+@pytest.mark.parametrize("state", ("draft", "validated"))
+def test_reviewers_save_still_works_while_editable(
+    client: TestClient, db: Session, state: str
+) -> None:
+    """The other half of the gate. Widening a rejection is only
+    correct if it did not also swallow ``validated``, which is
+    editable and which the old ``is_ready`` test never covered."""
+    review_session = _make_session(client, db, f"fle-rev-ok-{state[:4]}")
+    review_session.status = state
+    db.flush()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        data={"tag_1": "Cohort"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, state
+    assert [r.label for r in _rows(db, review_session.id)] == ["Cohort"], state
 
 
 def test_reviewers_page_renders_editor_when_not_ready(
@@ -166,22 +196,30 @@ def test_reviewers_page_renders_editor_when_not_ready(
     assert 'disabled>Save labels' in body
 
 
-def test_reviewers_page_renders_editor_disabled_when_ready(
-    client: TestClient, db: Session
+@pytest.mark.parametrize("state", ("ready", "expired", "archived"))
+def test_reviewers_page_renders_editor_disabled_in_every_locked_state(
+    client: TestClient, db: Session, state: str
 ) -> None:
-    review_session = _make_session(client, db, "fle-rev-readonly")
-    review_session.status = "ready"
+    """The page must not offer a control its route will refuse — the
+    rule 19I.3 applied to the rest of this page and 19H.7 applies to
+    the last control that was still keyed to ``is_ready``."""
+    review_session = _make_session(client, db, f"fle-ro-{state[:4]}")
+    review_session.status = state
     db.flush()
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
-    assert "Reviewer tag labels" in body
+    assert "Reviewer tag labels" in body, state
     # Inputs render with ``disabled``; the Save + Cancel buttons
-    # are suppressed entirely.
-    assert 'name="tag_1"' in body
-    assert "disabled" in body
-    assert "Save labels" not in body
-    assert "data-field-labels-cancel" not in body
+    # are suppressed entirely. ``disabled`` is asserted on the input
+    # itself rather than anywhere in the page — the page carries
+    # other disabled controls, and an unscoped check would hold for
+    # the wrong reason.
+    tag_input = body[body.index('name="tag_1"'):]
+    tag_input = tag_input[: tag_input.index(">") + 1]
+    assert "disabled" in tag_input, state
+    assert "Save labels" not in body, state
+    assert "data-field-labels-cancel" not in body, state
 
 
 # ── Reviewees route (three tag slots) ───────────────────────────────────

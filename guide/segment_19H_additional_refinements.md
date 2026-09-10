@@ -26,7 +26,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19H.4** | A screencap replaced under the same name never reaches a cached reader | **Closed 2026-09-09** |
 | **19H.5** | A "Fields with data" pill that names a CSV column instead of the column | **Closed 2026-09-09** |
 | **19H.6** | The roster pages' lock card explains one locked state out of three | **Closed 2026-09-10** (2 rungs + specs) |
-| 19H.7+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
+| **19H.7** | The friendly-label editor answers the same gate as the card above it | **Closed 2026-09-10** (1 rung) |
+| 19H.8+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
 
@@ -1571,3 +1572,175 @@ above.
   Undeclared at planning time; added when the close audit found it
   (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).
+
+
+---
+
+## Item 7 — The friendly-label editor answers the same gate as the card above it
+
+### Opportunity
+
+Item 6's close audit measured the friendly-label editor on all five
+lifecycle states and found the page contradicting itself:
+
+```
+draft      field-labels POST 303   card locked no    save btn yes
+ready      field-labels POST 409   card locked yes   save btn no
+expired    field-labels POST 303   card locked yes   save btn yes
+archived   field-labels POST 303   card locked yes   save btn yes
+```
+
+On `expired` and `archived` the page rendered a lock card saying the
+roster cannot be modified, and a live **Save labels** button directly
+below it whose route answered 303 — the save went through.
+
+The editor has been gated on `is_ready` alone since Segment 15A, in
+both halves: `{% if is_ready %}disabled` in
+`partials/_field_labels_editor.html`, and
+`if lifecycle.is_ready(...)` in `_save_field_labels`
+(`app/web/routes_operator/_shared.py`). **The gate is old; the
+contradiction is one day old**, because Item 6 is what put the lock
+card on those two states. 19I.3 had scoped the same gate out as "a
+correct gate for a different question" without testing whether it was
+correct.
+
+The author's call, given both resolutions: gate the editor on
+`is_editable`.
+
+### Decision
+
+**Move both halves of the editor's gate to `is_editable`**, so every
+setup-mutation control on the four roster pages answers one
+predicate. Renaming labels on a finished session means reverting it
+to draft — which is exactly what the card already says.
+
+Rejected: **leave the editor live and narrow the card's copy** to
+say what is still editable. It keeps an ability that exists today,
+and it was the author's alternative. It loses because the card would
+then have to enumerate exceptions to stay true, and the next control
+that changes gate re-breaks it; a page that offers only what its
+routes accept needs no such enumeration. 19I.3 established that rule
+for this page and this is the last control outside it.
+
+### Semantics
+
+- **`draft` / `validated`** — inputs enabled, Save/Cancel render,
+  `POST …/field-labels` answers 303. Unchanged.
+- **`ready` / `expired` / `archived`** — inputs `disabled`, no
+  Save/Cancel pair, no inline JS block, route answers 409. `ready`
+  is unchanged; the other two move from 303.
+- **The 409 detail string** already read "Session is {status};
+  revert to draft to rename labels", which is true for `expired`
+  and false-ish for `archived` (that one unarchives first). Left as
+  is: the lock card above carries the per-state exit, and the detail
+  is not rendered to the operator on this path.
+- **Existing labels are unaffected** in every state — they still
+  resolve and still appear in extracts. Only renaming is gated.
+
+### Judgment calls — decided
+
+- **Opened as Item 7 rather than reopening Item 6** (2026-09-10).
+  Item 6 closed with its `Status` written and `close_check` passing;
+  its PR merged before the author's decision arrived. A merged PR is
+  finished.
+- **The 409 detail string is left alone** (2026-09-10) — see
+  Semantics. Changing it is a copy question on a string no operator
+  reads through this path.
+
+### Blast radius (measured)
+
+```
+$ grep -rn 'is_ready' app/web/templates/operator/partials/_field_labels_editor.html   # 3
+$ grep -rn 'session_reviewers.html\|session_reviewees.html\|session_relationships.html' app/web/routes_operator/*.py   # 5 render sites
+$ grep -rn '"is_editable"' app/web/routes_operator/_setup_*.py app/web/routes_operator/_shared.py   # 4 contexts, all 5 sites covered
+```
+
+- **1 partial**, three `is_ready` sites (input `disabled`, the
+  Save/Cancel block, the inline JS block).
+- **1 service function**, `_save_field_labels`, serving all three
+  routes.
+- **5 render sites** for the three templates that include the
+  partial; all five already pass `is_editable`, checked before the
+  template started reading it — a missing key is falsy in Jinja and
+  would have silently disabled the editor on `draft`.
+- **1 test file**, `test_field_labels_editor_routes.py`.
+- **Specs** — `spec/setup_pages.md` (two passages), `spec/lifecycle.md` §5.
+
+### PR ladder
+
+1. Both halves of the gate, the widened tests, and the specs. One
+   rung: the template and the route must move together or the page
+   offers a control its route refuses, which is the defect being
+   fixed.
+
+### Definition of done
+
+- `POST …/field-labels` answers 409 on `ready`, `expired`,
+  `archived`, and 303 on `draft` and `validated`
+- the editor renders disabled with no Save/Cancel in all three
+  locked states
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `spec/setup_pages.md` no longer records the editor as an exception
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19H.7` exits 0; any warning adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The author decided the one question Item 6 raised.
+
+### Out of scope
+
+- **The 409 detail string's `archived` wording** — see Semantics.
+- **Any other `is_ready` in the codebase.** It correctly guards
+  collection-phase controls (the per-instrument Open / Close pair);
+  this item touches only the friendly-label editor.
+
+### Status
+
+**2026-09-10 — landed in one rung, as planned.**
+
+Measured after, on all five states, same probe as the Opportunity's:
+
+```
+draft      field-labels POST 303   card locked no    save btn yes
+validated  field-labels POST 303   card locked no    save btn yes
+ready      field-labels POST 409   card locked yes   save btn no
+expired    field-labels POST 409   card locked yes   save btn no
+archived   field-labels POST 409   card locked yes   save btn no
+```
+
+**The test the old file did not have.** `test_field_labels_editor_routes.py`
+covered `ready` → 409 and `draft` → 303, and nothing else. Widening a
+rejection is only correct if it did not also swallow `validated`,
+which is editable and which no test touched — so the item added
+`test_reviewers_save_still_works_while_editable` alongside the
+widened rejection. Mutation-checked three ways: the route gate back
+to `is_ready` (2 failures), the template gate back to `is_ready`
+(2), and a gate that rejects everything (9) — that last one is the
+check that the widening did not become a blanket.
+
+**One assertion was unscoped and is now scoped.** The pre-existing
+`test_reviewers_page_renders_editor_disabled_when_ready` asserted
+`"disabled" in body` against the whole page, which holds for any of
+the page's other disabled controls — it would have passed with the
+editor fully enabled. Now sliced to the `tag_1` input's own tag.
+
+**A spec claim corrected rather than softened.** `spec/setup_pages.md`
+said "Lifecycle gating is one predicate on the four roster pages:
+`is_editable`" — written in Item 6, false when written, and rung 3 of
+that item had to add an exception paragraph. Item 7 removes the
+exception rather than the claim.
+
+Suite 3589 -> 3595.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the friendly-label editor's gate in the
+  card-by-card list, and the lifecycle-gating bullet's exception
+  paragraph, which becomes a before/after record (Item 7).
+- `spec/lifecycle.md` — §5 gains the statement that every
+  setup-mutation control on the roster pages answers `is_editable`,
+  and what the editor's old gate concealed (Item 7).
+- `docs/status.md` — row for the item (Item 7).

@@ -248,10 +248,12 @@ Every Setup Page renders, top-to-bottom:
      authoring surface — search / status filter strip + a
      selection-driven button row (Edit · Inactivate · Activate ·
      Add · Delete). See "Operator actions card" below.
-   - The **friendly-label editor** is gated by `is_ready`: when
-     the session is Activated its inputs render `disabled` and
-     the Save/Cancel pair is suppressed; the lifecycle-gate card
-     above carries the "revert to draft" prompt for that state.
+   - The **friendly-label editor** is gated by `is_editable`
+     (Segment 19H Item 7; `is_ready` from Segment 15A until then):
+     in every locked state its inputs render `disabled` and the
+     Save/Cancel pair is suppressed, and `POST …/field-labels`
+     answers 409. The lifecycle-gate card above carries the way
+     out for that state.
    - The **operator-actions button row** is gated by
      `is_editable` (Segment 19I Item 3) and is **absent**, not
      inert, outside `draft` / `validated`. It used to render
@@ -1178,37 +1180,17 @@ above.
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- Lifecycle gating on the four roster pages is `is_editable` —
-  `draft` or `validated` — for everything except the friendly-label
-  editor. The Upload + Danger Zone cards render behind
+- Lifecycle gating on the four roster pages is one predicate:
+  `is_editable` — `draft` or `validated`. The Upload + Danger Zone
+  cards and the friendly-label editor render behind
   `{% if is_editable %}`, and a `card lock` at the top of the body
-  renders behind `{% if not is_editable %}`, so those two cannot
-  disagree.
+  renders behind `{% if not is_editable %}`, so the explanation and
+  the controls cannot disagree. That claim was false when it was
+  first written, in Segment 19H Item 6 — see the editor's own
+  paragraph below — and Item 7 made it true rather than softening
+  it.
 
-  **The friendly-label editor is the exception, and it currently
-  contradicts the card.** It is gated on `is_ready` alone, in both
-  the template and `_save_field_labels`
-  (`app/web/routes_operator/_shared.py`), as this document's own
-  "Friendly-label editor" section records. On `expired` and
-  `archived` its inputs render enabled, its Save button renders, and
-  `POST …/field-labels` answers **303**, directly below a lock card
-  that says the roster cannot be modified. Measured, all four states:
-
-  | State | `field-labels` POST | Card says locked | Save button |
-  |---|---|---|---|
-  | `draft` | 303 | no | yes |
-  | `ready` | **409** | yes | no |
-  | `expired` | 303 | yes | **yes** |
-  | `archived` | 303 | yes | **yes** |
-
-  The editor's gate pre-dates Segment 19H Item 6; the card asserting
-  the opposite on those two states is that item's, which is how a
-  seven-month-old gate became a visible contradiction. Item 6 did not
-  change the editor: whether labels *should* stay renameable on a
-  finished session is a behaviour question for the author, and
-  19I.3 scoped the same gate out for the same reason. Recorded here
-  rather than fixed so the next reader meets it. Both halves
-  arrived late: the cards read `{% if not is_ready %}` until
+  Both halves arrived late: the cards read `{% if not is_ready %}` until
   Segment 19I Item 3, which is what left them rendering on `expired`
   and `archived` where the routes answered 409, and the card stayed
   keyed to `is_ready` until Segment 19H Item 6, which left those two
@@ -1218,3 +1200,28 @@ above.
   `operator/partials/_roster_lock_card.html`. The preview table
   renders unconditionally so the operator can read the current rows
   even while the session is Activated.
+
+  **The friendly-label editor was the exception until Segment 19H
+  Item 7, and is no longer.** It was gated on `is_ready` alone from
+  Segment 15A, in both the template and `_save_field_labels`
+  (`app/web/routes_operator/_shared.py`). Item 6 put the lock card on
+  `expired` and `archived`, and so turned a quiet inconsistency into
+  a page contradicting itself — a card saying the roster could not be
+  modified, above a live Save labels button whose route answered 303.
+  Item 7 moved both halves of the editor's gate to `is_editable`.
+  Measured before and after:
+
+  | State | POST before | POST after | Card locked | Save button after |
+  |---|---|---|---|---|
+  | `draft` | 303 | 303 | no | yes |
+  | `validated` | 303 | 303 | no | yes |
+  | `ready` | 409 | 409 | yes | no |
+  | `expired` | **303** | **409** | yes | no |
+  | `archived` | **303** | **409** | yes | no |
+
+  So the page offers what its routes will accept and nothing else, in
+  every state — the rule 19I.3 applied to the Upload and Danger Zone
+  cards and the selection surface, now true of the last control still
+  keyed to `is_ready`. Renaming labels on a finished session means
+  reverting it to draft, which is what the card already says.
+
