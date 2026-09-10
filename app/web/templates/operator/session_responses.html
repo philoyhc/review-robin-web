@@ -81,22 +81,34 @@
   {% if rows %}
     <div class="card">
       {% include "operator/partials/_preview_count_line.html" %}
-      <table>
+      <table id="responses-table"
+             data-rrw-sortable="rrw-sort-responses-{{ session.id }}">
+        <thead>
         <tr>
-          <th>Reviewee</th>
-          <th>Coverage</th>
-          <th>Reviewers completed</th>
-          <th>Last response</th>
+          <th class="rrw-sortable" data-sort-key="name">Reviewee<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewee"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="coverage_state">Coverage<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Coverage"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-type="Integer" data-sort-key="reviewers_done">Reviewers completed<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewers completed"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="last_response_at">Last response<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Last response"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
         </tr>
+        </thead>
+        <tbody class="rrw-rows">
         {% for row in rows %}
           <tr>
-            <td>
+            <td data-sort-value="{{ row.reviewee.name }}">
               <a href="/operator/sessions/{{ session.id }}/responses/{{ row.reviewee.id }}/detail">
                 <strong>{{ row.reviewee.name }}</strong>
               </a><br>
               <code>{{ row.reviewee.email_or_identifier }}</code>
             </td>
-            <td>
+            <td data-sort-value="{{ row.coverage_state }}">
               {% if row.coverage_state == "complete" %}
                 <span class="pill pill-count">complete</span>
               {% elif row.coverage_state == "adequate" %}
@@ -107,7 +119,9 @@
                 <span class="pill pill-empty">no responses</span>
               {% endif %}
             </td>
-            <td>
+            {# Completion percentage, not the raw done count — see
+             the twin on Invitations (19I Item 11). #}
+            <td data-sort-value="{{ (row.reviewers_done * 100 // row.reviewers_total) if row.reviewers_total else '' }}">
               {% if row.reviewers_total == 0 %}
                 <span class="pill pill-empty">—</span>
               {% elif row.reviewers_done == row.reviewers_total %}
@@ -116,7 +130,7 @@
                 <span class="pill pill-empty">{{ row.reviewers_done }}/{{ row.reviewers_total }}</span>
               {% endif %}
             </td>
-            <td>
+            <td data-sort-value="{{ row.last_response_at.isoformat() if row.last_response_at else '' }}">
               {% if row.last_response_at %}
                 <span class="pill pill-count">{{ row.last_response_at | format_datetime }}</span>
               {% else %}
@@ -125,6 +139,7 @@
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
     </div>
   {% else %}

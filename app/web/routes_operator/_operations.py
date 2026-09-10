@@ -37,6 +37,81 @@ from app.web.deps import (
 from app.web.routes_operator._shared import _REVERT_RETURN_TO, _templates
 
 
+# --------------------------------------------------------------------------- #
+# Column sort — Segment 19I Item 11 rung 2.
+#
+# Both tables opt into the shared ``data-rrw-sortable`` primitive, so the
+# cookie carries the operator's cascade and the route re-applies it here:
+# the first paint lands in the chosen order rather than being re-shuffled
+# by JS after load.
+#
+# These rows are **wrappers**, not ORM objects, so the roster pages'
+# one-line ``getattr(row, key)`` resolver does not reach
+# ``row.reviewer.name``. Hence the explicit maps below.
+# --------------------------------------------------------------------------- #
+
+_INVITATIONS_SORT_KEYS = {
+    "name",
+    "email_status",
+    "email_sent_at",
+    "review_progress",
+    "required_fields",
+    "last_reminder_at",
+}
+
+_RESPONSES_SORT_KEYS = {
+    "name",
+    "coverage_state",
+    "reviewers_done",
+    "last_response_at",
+}
+
+
+def _completion_pct(done: int, total: int) -> int | None:
+    """Percentage complete, or ``None`` when there is nothing to do.
+
+    The progress columns show ``done/total`` and the totals differ per
+    row, so ordering by the raw done count orders nothing an operator
+    would recognise. ``None`` sorts last on both sides — the template
+    renders an empty ``data-sort-value`` for the same state, and
+    ``apply_cookie_sort`` and the client comparator both treat
+    empty/None as "no data, sorts last regardless of direction".
+    """
+    return (done * 100) // total if total else None
+
+
+def _invitations_sort_value(row, key: str):
+    if key == "name":
+        return row.reviewer.name
+    if key == "email_status":
+        return row.email_status
+    if key == "email_sent_at":
+        return row.email_sent_at
+    if key == "review_progress":
+        return _completion_pct(
+            row.review_progress_done, row.review_progress_total
+        )
+    if key == "required_fields":
+        return _completion_pct(
+            row.required_fields_done, row.required_fields_total
+        )
+    if key == "last_reminder_at":
+        return row.last_reminder_at
+    return None
+
+
+def _responses_sort_value(row, key: str):
+    if key == "name":
+        return row.reviewee.name
+    if key == "coverage_state":
+        return row.coverage_state
+    if key == "reviewers_done":
+        return _completion_pct(row.reviewers_done, row.reviewers_total)
+    if key == "last_response_at":
+        return row.last_response_at
+    return None
+
+
 def _invitation_redirect_url(session_id: int, return_to: str | None) -> str:
     """Resolve the redirect target for an invitation action. ``return_to``
     overrides only when it matches the operations-row allowlist; otherwise
@@ -317,6 +392,15 @@ def invitations_index(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     all_rows = views.build_invitations_rows(db, review_session)
+    all_rows = views.apply_cookie_sort(
+        all_rows,
+        views.decode_cookie_sort_spec(
+            cookies=dict(request.cookies),
+            cookie_name=f"rrw-sort-invitations-{review_session.id}",
+            valid_keys=_INVITATIONS_SORT_KEYS,
+        ),
+        value_resolver=_invitations_sort_value,
+    )
     rows = views.filter_invitations_rows(all_rows, status=status, search=q)
     search_options = views.invitations_search_options(all_rows)
     invitation_rows = invitations.list_invitations_for_session(
@@ -638,6 +722,15 @@ def session_responses(
     persisted across navigations.
     """
     all_rows = views.build_responses_rows(db, review_session)
+    all_rows = views.apply_cookie_sort(
+        all_rows,
+        views.decode_cookie_sort_spec(
+            cookies=dict(request.cookies),
+            cookie_name=f"rrw-sort-responses-{review_session.id}",
+            valid_keys=_RESPONSES_SORT_KEYS,
+        ),
+        value_resolver=_responses_sort_value,
+    )
     rows = views.filter_responses_rows(all_rows, status=status, search=q)
     search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
