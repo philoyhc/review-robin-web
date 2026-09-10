@@ -151,7 +151,9 @@ def test_responses_page_renders_table_for_assigned_reviewees(
     for key, label in (
         ("name", "Reviewee"),
         ("coverage_state", "Coverage"),
-        ("reviewers_done", "Reviewers completed"),
+        # Stacked onto two lines (19I Item 11), as `Required Fields`
+        # is on Invitations.
+        ("reviewers_done", "Reviewers<br>completed"),
         ("last_response_at", "Last response"),
     ):
         assert f'data-sort-key="{key}">{label}' in head
