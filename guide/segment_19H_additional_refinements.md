@@ -25,7 +25,8 @@ Items close independently, so each carries its own `### Doc impact` and
 | **19H.3** | A night-mode Guide — the sixteen screencaps ship as light/dark pairs | **Closed 2026-09-09** |
 | **19H.4** | A screencap replaced under the same name never reaches a cached reader | **Closed 2026-09-09** |
 | **19H.5** | A "Fields with data" pill that names a CSV column instead of the column | **Closed 2026-09-09** |
-| 19H.6+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
+| **19H.6** | The roster pages' lock card explains one locked state out of three | **Closed 2026-09-10** (2 rungs + specs) |
+| 19H.7+ | Admitted only for operator-facing refinements found by using the app. | Open — **empty** |
 
 ---
 
@@ -1156,3 +1157,417 @@ the renamable slots (which puts `Email` back on Relationships), and
 - `spec/operator_ui_concept.md` — the Info-card bullet stops saying the
   pills list CSV column names (PR 1).
 - `docs/status.md` — row at the close (PR 1).
+
+---
+
+## Item 6 — The roster pages' lock card explains one locked state out of three
+
+### Opportunity
+
+The four roster Setup pages carry a yellow lock card that explains
+*why* setup is locked and offers the way out. It is keyed to
+`ready` alone:
+
+```jinja
+{% if is_ready %}            {# session_reviewers.html:25 #}
+  <div class="card lock">
+    The reviewers cannot be modified while the session is ongoing.
+```
+
+Everything else on those pages is keyed to `is_editable` — `draft`
+or `validated` — since 19I.3 moved it there. So on `expired` and
+`archived` the mutating cards, the row checkboxes and the
+selection-driven controls are all correctly absent, and **nothing
+says why**. Measured across all four pages × all five states, both
+feature toggles on, with a throwaway probe under `pytest`:
+
+```
+reviewers      draft      lock=False  deletebtn=True
+reviewers      validated  lock=False  deletebtn=True
+reviewers      ready      lock=True   deletebtn=False
+reviewers      expired    lock=False  deletebtn=False   ← silent
+reviewers      archived   lock=False  deletebtn=False   ← silent
+```
+
+Identical on reviewees, relationships and observers. The pages are
+correct and silent, where before 19I.3 they were wrong and
+talkative — they rendered live Delete buttons behind routes that
+answered 409.
+
+Instruments had the same shape and 19I.6 PR 2 closed it there, so
+the two surfaces disagree today: `instruments_index.html:363` keys
+its card on `{% if not can_edit %}` and branches three ways, each
+naming the exit its own state actually has. `spec/lifecycle.md` §5
+records the roster half as a known gap, and the author has now
+directed it closed.
+
+**Two things the measurement found that the gap description did not
+predict.**
+
+1. **The exit is already broken on two of the four pages.** The
+   revert form posts a `return_to` slug that the route's allowlist
+   does not contain. `_REVERT_RETURN_TO` (`_shared.py:153`) holds
+   nine slugs — `reviewers`, `reviewees`, `assignments`,
+   `instruments`, `validate`, `previews`, `invitations`,
+   `responses`, `extract-data` — and **neither `relationships` nor
+   `observers`**, which are exactly what those two templates post.
+   Anything not in the set falls through to Session Home
+   (`_shared.py:348`). Proven live:
+
+   ```
+   revert-to reviewers      -> 303 /operator/sessions/1/reviewers
+   revert-to reviewees      -> 303 /operator/sessions/1/reviewees
+   revert-to relationships  -> 303 /operator/sessions/1
+   revert-to observers      -> 303 /operator/sessions/1
+   ```
+
+   The operator asks to revert so they can edit relationships, and
+   lands on Home. It pre-dates this item — those slugs have been in
+   the templates since the cards were written — and nobody has
+   reported it, which is what a silent redirect earns.
+
+2. **`spec/lifecycle.md` §5's account of that allowlist is wrong**,
+   and wrong in the direction that hid finding 1. It reads "scoped
+   to the page set (`reviewers`, `reviewees`, `relationships`,
+   `instruments`, `setup-invite`)" — naming `relationships` as
+   though it worked, naming `setup-invite`, which is not in the set
+   at all, and omitting six that are. A reader checking whether the
+   Relationships card's exit worked would have been told yes.
+
+### Decision
+
+**Give the four roster cards the three-branch shape Instruments
+already has, and fix the exit before offering it in two more
+states.**
+
+- **The gate becomes `not is_editable`**, not `is_ready` — the same
+  predicate the rest of the page already answers, so card and
+  controls agree by construction rather than by coincidence. This
+  is 19I.3's move applied to the one element it left behind.
+- **Three branches, each naming the exit its own state has.**
+  `ready` and `expired` carry the inline revert form
+  (`revert_session_to_draft` accepts both); `archived` names the
+  lobby's Unarchive and offers **no control**, because `/revert`
+  answers 409 from `archived` and a button there would be the dead
+  control 19I.3 spent a PR removing.
+- **`relationships` and `observers` join `_REVERT_RETURN_TO`**, so
+  all four cards return the operator to the page they were trying
+  to edit. Landing them on Home is not a smaller bug for being
+  older.
+- **Copy is Instruments' copy with the page's own noun.** "The
+  reviewers cannot be modified because the session is closed."
+  `expired` displays as **Closed** to an operator
+  (`app/services/lifecycle_display.py`), so the copy says closed,
+  not expired — the rule Instruments already follows.
+
+Rejected: **a shared partial for all five cards.** Tempting —
+Instruments' card and the four roster cards would then be one
+file — but the five differ in the noun, in `return_to`, and
+Instruments differs in gate name (`can_edit` vs `is_editable`) and
+in having no Upload/Danger Zone grid around it. A partial would
+take four parameters to express three sentences, and 19I.11's
+extraction earned its keep on **224 byte-identical lines**, which
+this is not. Duplicate the twelve lines four times and let a test
+hold them equal.
+
+Also rejected: **fixing only the copy and leaving the redirect**,
+on the grounds that the redirect is a separate defect. It is a
+separate defect, and it lives inside the control this item is
+about to render in two more states. Shipping a card whose button
+lands the operator somewhere else, twice as often as before, is
+not a smaller change for being tidier.
+
+### Semantics
+
+- **`draft` / `validated`** — no card. The page is editable and has
+  nothing to explain.
+- **`ready`** — copy unchanged from today ("while the session is
+  ongoing"), inline revert form, `return_to` the page's own slug.
+- **`expired`** — "because the session is closed", inline revert
+  form. `revert_session_to_draft` accepts `expired`
+  (`spec/lifecycle.md` §2.5), so the control is live.
+- **`archived`** — "because the session is archived", a link to
+  `/operator/sessions/archived`, **no form**. `/revert` answers 409
+  here.
+- **Relationships and Observers behind their feature toggles** —
+  both pages 404 when `relationships_enabled` / `observers_enabled`
+  is off, before any of this renders. The card inherits that; there
+  is no locked-and-disabled state to express.
+- **Observers' checkbox exception is untouched.** Its row
+  checkboxes stay live until `archived` because they drive the
+  cohort rule editor (`spec/setup_pages.md`); the lock card is
+  about the mutating cards, and both can be true at once. The card
+  appearing on `ready` while checkboxes remain is today's behaviour
+  and stays.
+- **The revert's `return_to`** resolves to
+  `/operator/sessions/{id}/{slug}` for every slug in the allowlist,
+  else Session Home. Adding two slugs changes only those two pages.
+
+### Judgment calls — decided
+
+- **Opened as 19H.6, not 19H.1** (2026-09-10). The author said
+  "19H.1"; that number belongs to the closed setup-pills item and
+  reusing it would collide with a passing `close_check 19H.1`. The
+  plan's Items table already reserved "19H.6+".
+- **Admitted to 19H although it was found by building, not by
+  using** (2026-09-10). The segment's rule is operator-facing
+  refinements found by using the app; this one surfaced at 19I.3
+  PR 2b during a build. It is operator-facing and the author has
+  directed it, which settles admission — recorded rather than
+  waved through, because the rule is what keeps 19H from becoming
+  19C.
+- **The `return_to` fix rides in this item rather than its own**
+  (2026-09-10). It is a distinct defect, but it is the exit of the
+  control this item renders; see Decision.
+- **`spec/lifecycle.md` §5's wrong allowlist gets corrected here**
+  (2026-09-10), not filed. The section is the one this item edits
+  anyway, and a spec sentence that would have concealed the defect
+  is worth more attention than a queue entry.
+- **A shared partial after all** (2026-09-10, rung 2) — the
+  Decision's rejected alternative, overturned once the markup was
+  actually dumped rather than described. See `### Status`.
+
+### Blast radius (measured)
+
+```
+$ grep -rn '{% if is_ready %}' app/web/templates/operator/*.html | wc -l   # 4
+$ grep -rn '"is_ready"' app/web/routes_operator/_setup_*.py                # 4 sites
+$ grep -rn '"is_archived"' app/web/routes_operator/                        # 1 (observers only)
+$ grep -rln 'card lock' app/web/templates/operator/                        # 9 files, 5 live cards
+$ grep -rln 'cannot be modified' tests/                                    # 1 (instruments)
+```
+
+- **4 templates** — `session_reviewers.html:25`,
+  `session_reviewees.html:23`, `session_relationships.html:23`,
+  `session_observers.html:19`.
+- **4 context sites** — `_setup_reviewers.py:239`,
+  `_setup_reviewees.py:230`, `_setup_relationships.py:614`,
+  `_setup_observers.py:202`. Three need `is_archived` added;
+  Observers already passes it (`:210`) for the checkbox exception.
+- **1 service constant** — `_REVERT_RETURN_TO`
+  (`_shared.py:153`), plus `_WORKFLOW_RETURN_TO` which derives from
+  it (`_workflow.py:56`) and so widens with it. That derivation is
+  the one thing to check rather than assume: it governs the
+  workflow card's detour, not the lock card.
+- **The other five `card lock` hits are not cards.** Three are
+  comments recording a *retired* card (`session_assignments.html:126`,
+  `session_invitations.html:20`, `session_responses.html:20`), one
+  is a comment in `partials/_field_labels_editor.html:11`, and one
+  is Instruments' already-fixed card. Counted because a grep for
+  `card lock` finds nine files and only five hold a card.
+- **Tests** — one file asserts this copy today
+  (`test_instruments_lock_card.py`, 131 lines, 5 tests). A roster
+  sibling follows its shape.
+- **Specs** — `spec/lifecycle.md` §5 (the gap paragraph goes, the
+  allowlist sentence is corrected), `spec/setup_pages.md` (the
+  roster pages' locked-state chrome).
+
+### Status
+
+**2026-09-10 — closed at three rungs, as planned.**
+
+**The Decision's rejected alternative was wrong, and the build
+overturned it.** The plan rejected a shared partial on the estimate
+that it "would take four parameters to express three sentences."
+That estimate was made from the gap description, not from the
+markup. Dumping all four cards showed them **byte-identical across
+23 lines except for two tokens** — the sentence subject and the
+`return_to` slug. The four-parameter figure came from folding
+Instruments' card into the same partial, which was never the
+proposal. So rung 2 landed
+`app/web/templates/operator/partials/_roster_lock_card.html` with
+exactly two parameters, included from all four pages via
+`{% with %}`, and the repo already carries twenty partials under
+that directory.
+
+This is the segment's own lesson arriving from the other side: 19I
+kept finding assertions that read correctly and tested nothing;
+here a *plan* read correctly and described markup nobody had
+opened. The Decision stays as written above, because that is what
+was believed at planning time.
+
+**What rung 2 actually changed**, against the ladder's "four
+templates":
+
+- one new partial (60 lines including its comment), and 23 lines
+  removed from each of the four pages — a net **-32** lines of
+  markup for three times the states covered
+- `is_archived` added to three route contexts
+  (`_setup_reviewers.py`, `_setup_reviewees.py`,
+  `_setup_relationships.py`); Observers already passed it
+- `_shared.py`'s shared CSV-import render path deliberately does
+  **not** gain it, with a comment saying why: that path sits behind
+  `_require_editable`, so it renders only when editable and the card
+  never reads the key. Recorded because the site's own comment
+  documents an earlier bug where a missing key silently took a
+  falsy branch.
+
+**Findings the build kept.**
+
+- **Rung 1's fix was invisible until it was measured.** The two
+  broken slugs produced a 303 to a real page, which is what success
+  looks like. Nothing in 3,529 tests noticed.
+- **A test that reads a template file breaks when the markup
+  moves.** Rung 1 asserted each template posted its own slug by
+  opening the `.html`; rung 2's partial made all four fail. Replaced
+  with an assertion against the *rendered* card, which is both
+  stronger and immune to the next move.
+- **`git checkout --` cost a rung-2 edit.** Mutation M3 was undone
+  with `git checkout -- session_relationships.html`, which restored
+  the file to the rung-1 commit and silently discarded that
+  template's partial swap. The restore-and-rerun showed 7 failures
+  where 0 were expected, which is the only reason it was caught.
+  Copy the file aside; do not reach for `checkout` while the work is
+  uncommitted.
+- **Every mutation was caught** — gate back to `is_ready` (28
+  failures), a revert form on `archived` (4), one page rendering
+  another's noun (1), one context losing `is_archived` (9).
+
+Suite 3520 -> 3529 (rung 1) -> 3589 (rung 2).
+
+**Rung 3 corrected three spec claims, not one.** The manifest named
+`spec/lifecycle.md` §5 for the gap paragraph and the allowlist. The
+edit found `spec/setup_pages.md` carrying the same stale claim in
+**three** places — the lifecycle-gating bullet ("the lock card
+itself is still keyed to `is_ready` alone"), the Observers page's
+card list ("when the session is Activated"), and the layout section
+still calling it "the Activated lock card". One was in the manifest;
+the other two were found by grepping `lock card` across the file
+rather than by trusting the manifest's aim. All three fixed, none
+waived.
+
+**The item table row and the Items index** were updated at close.
+19H stays live: the segment's rule is that it closes when the queue
+empties or at the next assessment snapshot, and Item 6 emptied it
+again rather than ending it.
+
+**The close audit found two things rung 3 had missed, and one it
+introduced.** `spec-writer`, run against the doc-impact specs, both
+verified — the second by measurement, not by reading:
+
+1. **A fourth stale site in `spec/setup_pages.md`**, in the Shared
+   body shape section: the most literal restatement of the old
+   single-branch behaviour, quoting the `ready` copy verbatim as
+   though it were the only branch. Rung 3's commit message claimed
+   it had found every one "by grepping `lock card` across the file
+   rather than by trusting the manifest's aim" — **and that grep was
+   itself the wrong aim**: the passage reads `card lock`, words
+   reversed, so the pattern could not match it. A fifth mention
+   ("The Activated lock card sits above the container") was found
+   the same way. This is 19I's lesson arriving once more: a search
+   is an assertion about the corpus, and an under-shaped pattern
+   returns a confident, wrong count.
+
+2. **`spec/operator_ui_concept.md` was never in the manifest** and
+   carried the claim in four more places, including one asserting
+   the card "is still `is_ready`-only". Added to `### Doc impact`
+   above per the plan-revision rule, rather than fixed silently.
+
+3. **The sentence rung 3 introduced was itself an overstatement.**
+   "Lifecycle gating is one predicate on the four roster pages:
+   `is_editable`" is false: the friendly-label editor is gated on
+   `is_ready` alone, in both its template and `_save_field_labels`.
+   Measured across all four states:
+
+   | State | `field-labels` POST | Card says locked | Save button |
+   |---|---|---|---|
+   | `draft` | 303 | no | yes |
+   | `ready` | **409** | yes | no |
+   | `expired` | 303 | yes | **yes** |
+   | `archived` | 303 | yes | **yes** |
+
+   So on `expired` and `archived` the page now renders a lock card
+   saying the roster cannot be modified, and a live Save labels
+   button directly below it that works. **The editor's gate
+   pre-dates this item; the card contradicting it is this item's**,
+   which is how a Segment 15A gate became a visible contradiction in
+   a day. 19I.3 scoped the same gate out as "a correct gate for a
+   different question" without testing whether it was correct.
+
+   Not fixed here. Whether labels stay renameable on a finished
+   session is a behaviour decision for the author, and the two
+   resolutions differ in what they take away: gate the editor on
+   `is_editable` and the contradiction goes but an existing ability
+   goes with it; leave it and the card's copy is too absolute.
+   Recorded in `spec/setup_pages.md` with the measurement, and
+   raised to the author.
+
+### PR ladder
+
+1. **The exit works.** Add `relationships` and `observers` to
+   `_REVERT_RETURN_TO`; assert all four slugs round-trip to their
+   own page, and that `_WORKFLOW_RETURN_TO` still resolves what it
+   did. No template change. Ships alone because it is a defect fix
+   with its own evidence, and because a green rung 1 is what lets
+   rung 2 offer the control twice as often.
+2. **The card covers all three locked states.** Gate on
+   `not is_editable`, three branches, `is_archived` into the three
+   contexts that lack it, in all four templates. New
+   `tests/integration/test_roster_lock_card.py` in the shape of
+   the instruments one — presence across all five states, copy per
+   state, form present on `ready`/`expired`, absent on `archived`,
+   and the offered revert actually working.
+3. **The specs.** `spec/lifecycle.md` §5 loses the known-gap
+   paragraph and gains the corrected allowlist;
+   `spec/setup_pages.md` gains the locked-state chrome. Last,
+   per the phase rule.
+
+Must not touch: Observers' checkbox exception, the Danger Zone /
+Upload gating (19I.3 settled it), the Email Template page's
+deliberate absence of a lock card, or any `is_ready` that guards a
+collection-phase control.
+
+### Definition of done
+
+- All four roster pages render a lock card on `ready`, `expired`
+  and `archived`, and none on `draft` / `validated`
+- `expired` copy says **closed**, matching `lifecycle_display`
+- `archived` offers a link to `/operator/sessions/archived` and no
+  revert form
+- Reverting from each of the four cards lands back on that page
+- `tests/integration/test_roster_lock_card.py` covers all four
+  pages × five states
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `spec/lifecycle.md` §5 no longer records the gap, and its
+  `return_to` sentence names the real allowlist
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19H.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The shape is Instruments', already shipped and specced; the
+only judgment was whether the redirect fix travels with it, decided
+above.
+
+### Out of scope
+
+- **A shared partial for the five lock cards** — rejected in
+  Decision; recorded here because the next reader will think of it.
+- **`setup-invite` as a `return_to` slug.** The spec names it and
+  the allowlist does not contain it. Unlike `relationships` /
+  `observers`, **no template posts it**, so nothing is broken —
+  it is a spec-only error, corrected in rung 3 by removing the
+  claim rather than by widening the set.
+- **The Email Template page's absent lock card** — deliberate, per
+  `spec/email_template_editor.md` §5.
+- **`spec/rrw_functional_spec.md` §9.7's Self-reviews card**, the
+  other gap 19I recorded. Different page, different question.
+
+### Doc impact
+
+- `spec/lifecycle.md` — §5 loses the "Known gap on the four roster
+  pages" paragraph, gains the three-state roster card, and its
+  `return_to` sentence is corrected to the real `_REVERT_RETURN_TO`
+  set (Item 6).
+- `spec/setup_pages.md` — the four roster pages' locked-state
+  chrome: which states render the card, what each says, which
+  carries a control (Item 6).
+- `spec/operator_ui_concept.md` — the cross-page chrome contract's
+  four statements that the lock card appears "when `ready`", plus the
+  Danger Zone note asserting the card is still `is_ready`-only.
+  Undeclared at planning time; added when the close audit found it
+  (Item 6).
+- `docs/status.md` — row when the item closes (Item 6).

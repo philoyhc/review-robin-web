@@ -84,7 +84,8 @@ Every Setup Page renders, top-to-bottom:
    one down. A full-width card (the Activated lock card) therefore
    cannot sit between the pairs; `.card-columns` has no spanning slot,
    so it goes above the container, where its "cannot edit" notice
-   reads anyway. `.card-columns` is `1fr 1fr` with `align-items: start`, and
+   reads anyway. It is "the Activated lock card" by history only —
+   since Segment 19H Item 6 it renders in every non-editable state. `.card-columns` is `1fr 1fr` with `align-items: start`, and
    each child is a *column* that stacks its own cards — so opening the
    guidance pushes down only what is below it in its own column, and
    the other column neither moves nor stretches. That is the whole
@@ -93,7 +94,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right (the `Fields with data` card that used to head the right stack retired in Segment 19I Item 12 rung 4). The Activated lock card sits above the container, not between the pairs. |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right (the `Fields with data` card that used to head the right stack retired in Segment 19I Item 12 rung 4). The lock card ("Activated" by history; it renders in every non-editable state since Segment 19H Item 6) sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
@@ -213,10 +214,13 @@ Every Setup Page renders, top-to-bottom:
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts
    pills per entity.
-3. **Lifecycle gate cards** (when the session is Activated): a
-   `card lock` carrying "The {entity} cannot be modified while the
-   session is ongoing. Revert the session to draft if you wish to
-   modify anything." with an inline Revert form. Sits **above**
+3. **Lifecycle gate cards** (whenever the session is not
+   editable): the shared `card lock`
+   (`operator/partials/_roster_lock_card.html`), which branches per
+   locked state — `ready` and `expired` carry an inline Revert
+   form, `archived` links Unarchive and carries no control. The
+   three branches and their copy are specified in
+   `spec/lifecycle.md` §5. Sits **above**
    the friendly-label editor so the yellow card immediately
    follows the status info card — the same status-info-then-
    yellow-lock pattern the Instruments page uses. **Not
@@ -977,8 +981,11 @@ The Observers page renders, top-to-bottom:
 1. Chrome (`session-nav-card` partial with `Observers` highlighted
    in the Setup row).
 2. Status strip (`session_setup_status_row` partial).
-3. Yellow **lock card** (when the session is Activated) with the
-   standard "revert to draft" Revert form.
+3. Yellow **lock card** (whenever the session is not editable) —
+   the shared `_roster_lock_card.html` partial, which carries the
+   "revert to draft" Revert form on `ready` and `expired` and a
+   link to Unarchive on `archived`. Its presence does not gate the
+   cohort rule editor below, which stays live until `archived`.
 4. **Cohort match rule editor (left) + Operator actions card
    (right)** — a `.bottom-grid` pair. Layout differs from
    Reviewers / Reviewees because the Observers page carries
@@ -1171,13 +1178,43 @@ above.
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- Lifecycle gating is the existing pattern: a `card lock` at the
-  top of the body when `is_ready`, and the Upload + Danger Zone
-  cards conditionally rendered behind `{% if is_editable %}` on the
-  four roster pages — `{% if not is_ready %}` until Segment 19I Item
-  3, which is what left them rendering on `expired` and `archived`
-  where both routes answered 409. The lock card itself is still keyed
-  to `is_ready` alone, which is the known gap recorded in
-  `spec/lifecycle.md` §5. The
-  preview table renders unconditionally so the operator can read
-  the current rows even while the session is Activated.
+- Lifecycle gating on the four roster pages is `is_editable` —
+  `draft` or `validated` — for everything except the friendly-label
+  editor. The Upload + Danger Zone cards render behind
+  `{% if is_editable %}`, and a `card lock` at the top of the body
+  renders behind `{% if not is_editable %}`, so those two cannot
+  disagree.
+
+  **The friendly-label editor is the exception, and it currently
+  contradicts the card.** It is gated on `is_ready` alone, in both
+  the template and `_save_field_labels`
+  (`app/web/routes_operator/_shared.py`), as this document's own
+  "Friendly-label editor" section records. On `expired` and
+  `archived` its inputs render enabled, its Save button renders, and
+  `POST …/field-labels` answers **303**, directly below a lock card
+  that says the roster cannot be modified. Measured, all four states:
+
+  | State | `field-labels` POST | Card says locked | Save button |
+  |---|---|---|---|
+  | `draft` | 303 | no | yes |
+  | `ready` | **409** | yes | no |
+  | `expired` | 303 | yes | **yes** |
+  | `archived` | 303 | yes | **yes** |
+
+  The editor's gate pre-dates Segment 19H Item 6; the card asserting
+  the opposite on those two states is that item's, which is how a
+  seven-month-old gate became a visible contradiction. Item 6 did not
+  change the editor: whether labels *should* stay renameable on a
+  finished session is a behaviour question for the author, and
+  19I.3 scoped the same gate out for the same reason. Recorded here
+  rather than fixed so the next reader meets it. Both halves
+  arrived late: the cards read `{% if not is_ready %}` until
+  Segment 19I Item 3, which is what left them rendering on `expired`
+  and `archived` where the routes answered 409, and the card stayed
+  keyed to `is_ready` until Segment 19H Item 6, which left those two
+  states correct and silent. The card's three branches — one per
+  locked state, `archived` carrying no control — are specified in
+  `spec/lifecycle.md` §5; all four pages render it from
+  `operator/partials/_roster_lock_card.html`. The preview table
+  renders unconditionally so the operator can read the current rows
+  even while the session is Activated.

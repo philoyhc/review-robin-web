@@ -346,10 +346,25 @@ GET-side rendering rules.
 **On the four roster Setup pages** (Reviewers / Reviewees /
 Relationships / Observers) whenever the session is **not
 editable** — i.e. not `draft` and not `validated`: the
-mutating-card grid (Upload, Danger Zone) is hidden. On `ready` a
-**yellow lock card** renders in its place with copy explaining
-that setup is locked and offering a "Revert to draft" inline
-form.
+mutating-card grid (Upload, Danger Zone) is hidden and a
+**yellow lock card** renders in its place, explaining that setup
+is locked and offering the way out that state has.
+
+All four render one partial,
+`operator/partials/_roster_lock_card.html`, parameterized on the
+sentence subject and the page's `return_to` slug (Segment 19H
+Item 6). It branches three ways, matching Instruments:
+
+| State | Copy | Control |
+|---|---|---|
+| `ready` | "cannot be modified while the session is ongoing" | inline revert form |
+| `expired` | "cannot be modified because the session is **closed**" | inline revert form |
+| `archived` | "cannot be modified because the session is archived" | link to `/operator/sessions/archived`, **no control** |
+
+`expired` displays as **Closed** to an operator
+(`app/services/lifecycle_display.py`), so the copy says closed.
+`archived` carries no revert form because `/revert` answers 409
+from there and a button would be a dead control.
 
 **Instruments answers to the same predicate** (Segment 19I Item 6)
 through its own helper: `_require_instrument_editable` →
@@ -400,21 +415,35 @@ they drive the cohort rule editor (`spec/setup_pages.md`), which
 is deliberately usable mid-session; its bulk *card* follows the
 common gate.
 
-**Known gap on the four roster pages, not closed by 19I.3:** on
-`expired` and `archived` their mutating cards are hidden and **no
-lock card explains why** — their lock card is still keyed to
-`ready` alone, verified on all four. The pages are correct but
-silent. Recorded in
-`guide/archive/segment_19I_roster_search_and_row_delete.md` Item 3
-"Out of scope". **Instruments no longer shares this gap**: Item 6
-extended its card to all three locked states, so the two surfaces
-now differ here until the rosters catch up.
+**The gap 19I.3 left is closed** (Segment 19H Item 6). Between
+19I.3 and then, the roster cards were keyed to `is_ready` while
+every control on those pages had moved to `is_editable`, so on
+`expired` and `archived` the pages were correct and silent —
+mutating cards absent, nothing saying why. The card and the
+controls now answer the same predicate, so they agree by
+construction rather than by coincidence.
 
-The lock card's "Revert to draft" form carries a `return_to`
-query param scoped to the page set (`reviewers`, `reviewees`,
-`relationships`, `instruments`, `setup-invite`) so the operator
-lands back on the page they were trying to edit after the
-revert.
+The lock card's "Revert to draft" form posts a `return_to` slug so
+the operator lands back on the page they were trying to edit. The
+route honours it only when it matches `_REVERT_RETURN_TO`
+(`app/web/routes_operator/_shared.py`) — `reviewers`, `reviewees`,
+`relationships`, `observers`, `assignments`, `instruments`,
+`validate`, `previews`, `invitations`, `responses`,
+`extract-data` — and otherwise falls through to Session Home. That
+fallback is what stops a crafted slug steering the redirect, so the
+set is an allowlist rather than a hint.
+
+This paragraph named a page set that never existed until Segment
+19H Item 6: it listed `setup-invite`, which is not in the
+allowlist and which no template posts, and it listed
+`relationships` as though it worked. `relationships` and
+`observers` were **missing** from the allowlist while both
+templates posted them, so reverting from either card fell through
+to Session Home — an operator reverting *so they could edit
+relationships* landed on Home, and a 303 to a real page looks like
+success. Item 6 rung 1 added both slugs. The prose is recorded
+here rather than silently corrected because a spec sentence that
+asserts a control works is the reason nobody checked it.
 
 The **Email Template** page is the exception: it renders no lock
 card and its routes carry no `_require_editable`, so email copy

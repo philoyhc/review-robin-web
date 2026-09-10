@@ -20,29 +20,9 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {% if is_ready %}
-    <div class="card lock">
-      <p style="margin: 0 0 12px 0;">
-        Relationships cannot be modified while the session is ongoing.
-        Revert the session to draft if you wish to modify anything.
-      </p>
-      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
-        <input type="hidden" name="return_to" value="relationships">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required
-                   data-delete-confirm="revert">
-            Yes, revert <strong>{{ session.name }}</strong> to draft.
-          </label>
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit"
-                  data-delete-btn="revert"
-                  disabled aria-disabled="true">Revert to draft</button>
-        </p>
-      </form>
-    </div>
-  {% endif %}
+  {% with lock_subject = "Relationships", lock_slug = "relationships" %}
+    {% include "operator/partials/_roster_lock_card.html" %}
+  {% endwith %}
 
   {# 19E rung 6b — every card above the preview table in two
      independent column stacks: the guidance card then the tag-label
