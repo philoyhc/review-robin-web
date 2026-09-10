@@ -2,8 +2,19 @@
 
 **As of:** the two-segment refinement arc closing. Segments **19I** (roster
 search and row deletion) and **19H** (additional refinements) both closed and
-archived today, and **no segment is live** for the first time since 19A opened
-on 2026-08-19.
+archived today. **Segment 19J** opened the same day for this document's own
+§8 and closed all three of its items before the day was out; it is the only
+live segment.
+
+> **Updated 2026-09-10, end of day** to reflect Segment 19J — **tables and SHA
+> re-taken together**, per the rule that a stale SHA silently decouples the
+> numbers from the tree. 19J touched **no `app/` code**, so production,
+> templates and migrations are unmoved and every §2 production figure below
+> stands as first written; `docs` and `tooling` moved, and the window grew from
+> 67 merges to 73. The sections 19J's items settle carry their own struck-and-
+> corrected notes rather than being silently rewritten: §3's ⚠ row (19J.1), §5's
+> spec entry (19J.1) and `close_check` entry (19J.3), §7's projection term
+> (19J.2), §9's watchlist tail (19J.3), and §8's three moves.
 
 Since the 08sep snapshot:
 
@@ -19,9 +30,9 @@ Since the 08sep snapshot:
   naming the wrong columns, and the roster lock card brought onto the same
   predicate as the controls it explains.
 
-All shipped 2026-09-08 → 2026-09-10 (67 merge commits, 110 non-merge, over
-3 calendar days). Numbers taken on `claude/read-only-repo-s3r5u5` at
-`e0f86bf1`. Single-author project with an agent in the loop; the human author
+All shipped 2026-09-08 → 2026-09-10 (73 merge commits, 116 non-merge, over
+3 calendar days, PRs #2215 → #2285). Numbers taken on
+`claude/read-only-repo-s3r5u5` at `5df1b77c`. Single-author project with an agent in the loop; the human author
 runs no local Python, so the agent's container and CI are the only gates before
 the Azure dev slot.
 
@@ -78,12 +89,18 @@ this window, so every delta below shares its denominator with 08sep.
 
 | Area | Files | LOC | Δ LOC from 08sep |
 | --- | --- | --- | --- |
-| `docs` | 238 (236 prior) | **135,331** | +8,324 (+6.6%) |
-| `tests` | 291 (269 prior) | **99,809** | +6,692 (+7.2%) |
+| `docs` | 242 (236 prior) | **141,114** | +14,107 (+11.1%) |
+| `tests` | 291 (269 prior) | **99,817** | +6,700 (+7.2%) |
 | `production` | 204 (203 prior) | **58,724** | +1,602 (+2.8%) |
 | `templates` | 63 (61 prior) | **24,508** | +872 (+3.7%) |
-| `tooling` | 9 | **11,618** | unchanged |
+| `tooling` | 14 (9 prior) | **11,781** | +163 (+1.4%) |
 | `migrations` | 77 | **6,772** | unchanged |
+
+**`production` is the number to read twice.** It is identical before and after
+19J — that segment swept a spec, measured a projection and carved a dev tool,
+and touched **not one line under `app/`**. The +1,602 is 19I and 19H's alone.
+`tooling` gains 5 files for +163 lines: `tools/close_check.py` became a shim
+over a five-module package (19J.3), which is a carve, not growth.
 
 **Migrations unchanged is the number to notice.** Three days, twenty items, two
 segments, and **no schema change at all** — every behaviour in this window came
@@ -137,15 +154,28 @@ Templates, +872: `base.html` +228 (the column-visibility primitive, the
 `_roster_lock_card.html`, each replacing markup duplicated across four to seven
 templates.
 
-Docs, +8,324, of which **6,654 is two segment plans** (19I at 4,840 lines, 19H
-at 1,814) that both archived today. Live prose grew by ~1,100: `spec/setup_pages.md`
-+446, `spec/assignments.md` +201, `spec/lifecycle.md` +136, plus `docs/status.md`
-and `guide/todo_master.md`. **The plans are 80% of the docs delta and they are
-now historical**, which is the intended shape — plan on the way in, spec on the
-way out.
+Docs, **+14,107**, and the shape is the same at both ends of the day. Of the
+first +8,324, **6,654 is two segment plans** (19I at 4,840 lines, 19H at 1,814)
+that both archived; live prose grew ~1,100 — `spec/setup_pages.md` +446,
+`spec/assignments.md` +201, `spec/lifecycle.md` +136, plus `docs/status.md` and
+`guide/todo_master.md`. 19J then added ~5,800 more, again mostly a plan, a
+record, and this document's own amendments:
+`guide/segment_19J_assessment_moves.md` (824),
+`guide/sweep_2026-09-10_rrw_functional_spec.md` (515), and +584 here —
+against **+110 net** of live spec prose, which is what fifteen corrections to
+`spec/rrw_functional_spec.md` and a rewritten `spec/README.md` row come to once
+struck text is counted against added. **The planning artefacts are ~80% of the docs delta at both counts, and
+they are historical the moment their segment closes** — which is the intended
+shape: plan on the way in, spec on the way out.
 
-Tests, +6,692 across 22 new files, all integration or unit tests for this
-window's behaviour.
+That ratio is worth stating plainly rather than as a virtue: **this project
+writes roughly eight lines about the work for every line of live prose the work
+changes.** Whether that is discipline or overhead is not something the number
+settles, and §5 carries it as a weakness rather than a strength.
+
+Tests, +6,700 across 22 new files, all integration or unit tests for this
+window's behaviour. The 8 lines 19J added are one comment explaining why a
+monkeypatch target moved.
 
 ### Package shape
 
@@ -231,7 +261,7 @@ module landed this window.
 | Two-tier semantic colour tokens | `spec/color_tokens.md` | ✓ shipped 2026-08-23 |
 | Theme customizer (developer) | `guide/theme_customizer.md` | ✓ v1.1 shipped 2026-09-06 |
 | Email template editor | `spec/email_template_editor.md` | ✓ shipped 2026-09-05 |
-| **Assignments "Self-reviews card"** | **`spec/rrw_functional_spec.md` §9.7** | **⚠ drift — the spec's card list names a *session-wide self-reviews-active toggle* card that does not exist. The toggle is **per-instrument**, inside the per-instrument status table (`session_assignments.html:85–90`). Found by `spec-writer` at 19I.12's close, reported, and deliberately left: inventing the card is a feature decision and deleting the prose is a spec claim neither author nor code has settled** |
+| **Assignments "Self-reviews card"** | **`spec/rrw_functional_spec.md` §9.7** | **✅ resolved 2026-09-10 (19J.1).** Was ⚠ drift: the spec listed a *session-wide self-reviews-active toggle* card that does not exist. The sweep found the truth is two-layered rather than absent — `review_session.self_reviews_active` **is** real and is read by `_generate.py:346` to seed every self-review pair's `include` at generation, while the operator flips those assignments **per instrument** on the Assignments page. The card bullet is deleted and §9.7 / §10.3 / §5.9 name the real surfaces. **This was the only ⚠ row in the table** |
 | Operator theming (in-app tweaker) | `guide/theme_customizer.md` Stretch | ⏸ planned — `guide/deferred_consolidated.md` Part A |
 | Email dispatch / invitations | `guide/segment_14B_email_infrastructure.md` | ⛔ blocked — SMTP backend + outbox rows exist, no live dispatch caller. Gated on institutional Azure provisioning |
 | Blob storage | `spec/blob_storage.md`, `guide/segment_18Q_blob.md` | ⏸ planned — awaiting institutional storage account |
@@ -353,7 +383,8 @@ paying for itself, and it is the strongest evidence in this window that the
   `_archive` 85, `_sweep` 126, `__init__` carrying the reasoning docstring and
   `main`. The invocation string is frozen because every archived plan's
   Definition of done names it.
-- **The docs corpus is 135,331 LOC against 58,724 of production — 2.3:1.** Two
+- **The docs corpus is 141,114 LOC against 58,724 of production — 2.4:1**
+  (2.3:1 before 19J, which added ~5,800 docs lines and no production). Two
   segment plans totalling 6,654 lines both archived today, which is the shape
   working. But 19I's plan reached **4,840 lines**, past what a reader holds end
   to end, and its own close record says so. The mitigation that worked was
@@ -365,9 +396,13 @@ paying for itself, and it is the strongest evidence in this window that the
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `e0f86bf1`**, and here is what that claim rests on:
+**No known open bugs at `5df1b77c`** — **re-established at the end-of-day
+amendment, not carried over from `e0f86bf1`**, because "no known bugs" is a
+claim and a moved SHA invalidates the checking behind it. Here is what it rests
+on:
 both CI tracks green on the merged head of every PR in the window; `ruff check
-.` clean; **3,595 passed, 16 skipped**; all 16 skips read and attributed (15
+.` clean; **3,595 passed, 16 skipped** (unchanged across 19J, which added no
+tests — its 8 test lines are one explanatory comment); all 16 skips read and attributed (15
 Wave 5 legacy-card retirements, one fixture shape — none masking a defect); **0
 `xfail` markers** anywhere in `tests/`; **0 `TODO`/`FIXME`/`XXX` comments** in
 `app/`; **0 open issues** on the repository; and `docs/known_limitations.md`
@@ -413,8 +448,8 @@ its opposite.**
 
 ## 7. Estimated size upon completion
 
-Current: **58,724** production, **24,508** templates, **99,809** tests,
-**11,618** tooling.
+Current: **58,724** production, **24,508** templates, **99,817** tests,
+**11,781** tooling.
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
@@ -453,7 +488,7 @@ six sidecars support:
 | 19aug→04sep | refinement | +110 | 91 | 91 | 108 | 16 |
 | 04sep→05sep | refinement | +200 | 23 | 23 | 31 | 1 |
 | 05sep→08sep | **feature** | +1,418 | 98 | 96 | 136 | 3 |
-| 08sep→10sep | refinement | +1,602 | 67 | 65 | 110 | 2 |
+| 08sep→10sep | refinement | +1,602 | 73 | 71 | 116 | 2 |
 
 Windows are classified by the plan's own test — did the window's segments ship
 a new route or a new page — applied mechanically rather than by recollection:
@@ -467,12 +502,20 @@ The two templates added in the last window are partials (`_preview_count_line`,
 
 | unit | min | max | spread |
 |---|---:|---:|---:|
-| per merge | 1.2 | 23.9 | **20×** |
-| per PR | 1.2 | 24.6 | **20×** |
-| per non-merge commit | 1.0 | 14.6 | **14×** |
+| per merge | 1.2 | 21.9 | **18×** |
+| per PR | 1.2 | 22.6 | **19×** |
+| per non-merge commit | 1.0 | 13.8 | **14×** |
 | per production-touching commit | 4.1 | 66.7 | **16×** |
 | per calendar day | 6.9 | 801 | **117×** |
 | **per active week — the asserted unit** | **48** | **5,607** | **117×** |
+
+*(Re-taken with the window at `5df1b77c`. The end-of-day amendment extended
+the last window from 67 merges to 73, so its per-merge and per-PR rates fell
+from 23.9 and 24.6 — an instance of the same hazard the header note names:
+re-taking a window silently changes every rate derived from it, and the
+arithmetic has to be re-run rather than assumed to survive. **Every conclusion
+does survive**; the spreads move by at most two points. `Δ production` is
+unchanged because 19J touched no `app/` code.)*
 
 The asserted 1,500 sits near the median (1,603) and inside a range spanning
 117×, which is the definition of a figure that cannot carry a projection.
@@ -481,7 +524,7 @@ The asserted 1,500 sits near the median (1,603) and inside a range spanning
 
 1. **The feature/refinement split does not explain the variance**, and it was
    the fix this section proposed. The feature window is *mid-range* on every
-   unit (14.5 per merge, against 1.2–23.9 for refinement windows), and the
+   unit (14.5 per merge, against 1.2–21.9 for refinement windows), and the
    largest window in the set is a refinement window. Sorting windows by kind
    does not sort them by growth.
 2. **Net production LOC is a residual, which is why it is unstable.** Gross
@@ -541,14 +584,28 @@ The close audit earned its keep more visibly than in any prior window: five of
    2026-09-10 as Segment 19J.1** (`guide/sweep_2026-09-10_rrw_functional_spec.md`).
    15 findings, 14 sections, all fixed; the ⚠ row in §3 closes. See the amended
    §5 entry for what the measurement corrected about this move's own premise.
-2. **Carry the refinement allowance into the next projection, or refute it.**
-   Two consecutive snapshots have been overtaken by non-feature growth; §7 now
-   names the missing term rather than raising the range by a guess. One more
-   window will settle whether ~1.5k/active-week is the right figure.
-3. **Decide `tools/close_check.py`.** Third snapshot carrying the same
-   two-jobs-in-one-file observation, and the file has grown 30% since it was
-   first made. Split it or stop mentioning it — a watchlist entry that never
-   resolves is the shape §5 exists to catch.
+2. ~~**Carry the refinement allowance into the next projection, or refute it.**~~
+   **Refuted 2026-09-10 as Segment 19J.2.** There is no term: every candidate
+   unit spreads 14× to 117× across the four refinement windows, and the
+   feature/refinement split this move proposed as the model **does not explain
+   the variance** — the feature window is mid-range on every unit and the
+   largest window is a refinement window. §7 carries the arithmetic and now
+   states a floor instead of a projection.
+3. ~~**Decide `tools/close_check.py`.**~~ **Split 2026-09-10 as Segment
+   19J.3** — into `_shared` / `_manifest` / `_archive` / `_sweep` under a
+   36-line shim that freezes the invocation string, with all 22 CLI output
+   streams byte-identical. The coupling three snapshots declined to act on was
+   three names, and one of the three "jobs" turned out to be a driver over
+   another rather than a peer.
+
+**All three moves closed the day they were recommended**, which is not a
+boast: it is the argument for capping the list at three. A ranked backlog
+would still be a backlog.
+
+**What the next snapshot should recommend instead** is left deliberately
+empty here. Three moves were named, three were done, and the findings they
+produced (below, and in `guide/segment_19J_assessment_moves.md`) are the
+input to the next snapshot's §8 — not to this one's.
 
 ---
 

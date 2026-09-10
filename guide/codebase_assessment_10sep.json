@@ -3,10 +3,10 @@
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "e0f86bf1",
+    "head": "5df1b77c",
     "since": "d9ffdb93",
-    "merge_commits": 67,
-    "non_merge_commits": 110,
+    "merge_commits": 73,
+    "non_merge_commits": 116,
     "pr_numbers": [
       2215,
       2216,
@@ -72,16 +72,22 @@
       2276,
       2277,
       2278,
-      2279
+      2279,
+      2280,
+      2281,
+      2282,
+      2283,
+      2284,
+      2285
     ],
-    "pr_range": "#2215\u2013#2279",
+    "pr_range": "#2215\u2013#2285",
     "first_date": "2026-09-08",
     "last_date": "2026-09-10"
   },
   "areas": {
     "docs": {
-      "files": 238,
-      "loc": 135331
+      "files": 242,
+      "loc": 141114
     },
     "production": {
       "files": 204,
@@ -97,11 +103,11 @@
     },
     "tests": {
       "files": 291,
-      "loc": 99809
+      "loc": 99817
     },
     "tooling": {
-      "files": 9,
-      "loc": 11618
+      "files": 14,
+      "loc": 11781
     }
   },
   "biggest_production": [
@@ -1630,7 +1636,7 @@
       "docs"
     ],
     "docs/status.md": [
-      1147,
+      1155,
       "docs"
     ],
     "docs/troubleshooting.md": [
@@ -1650,7 +1656,7 @@
       "docs"
     ],
     "guide/archive/README.md": [
-      179,
+      180,
       "docs"
     ],
     "guide/archive/assumptions_ui_legacy.md": [
@@ -1679,6 +1685,14 @@
     ],
     "guide/archive/codebase_assessment_05sep.md": [
       425,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_08sep.json": [
+      3613,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_08sep.md": [
+      692,
       "docs"
     ],
     "guide/archive/codebase_assessment_09may.md": [
@@ -2249,12 +2263,12 @@
       47,
       "docs"
     ],
-    "guide/codebase_assessment_08sep.json": [
-      3613,
+    "guide/codebase_assessment_10sep.json": [
+      3690,
       "docs"
     ],
-    "guide/codebase_assessment_08sep.md": [
-      692,
+    "guide/codebase_assessment_10sep.md": [
+      584,
       "docs"
     ],
     "guide/deferred_consolidated.md": [
@@ -2273,6 +2287,10 @@
       352,
       "docs"
     ],
+    "guide/segment_19J_assessment_moves.md": [
+      824,
+      "docs"
+    ],
     "guide/segment_20_operator_polish_and_documentation.md": [
       134,
       "docs"
@@ -2285,6 +2303,10 @@
       209,
       "docs"
     ],
+    "guide/sweep_2026-09-10_rrw_functional_spec.md": [
+      515,
+      "docs"
+    ],
     "guide/sweep_template.md": [
       179,
       "docs"
@@ -2294,7 +2316,7 @@
       "docs"
     ],
     "guide/todo_master.md": [
-      3133,
+      3184,
       "docs"
     ],
     "new_project_practices_setup.md": [
@@ -2434,7 +2456,7 @@
       "docs"
     ],
     "spec/rrw_functional_spec.md": [
-      2235,
+      2345,
       "docs"
     ],
     "spec/session_home.md": [
@@ -3358,7 +3380,7 @@
       "tests"
     ],
     "tests/unit/test_close_check.py": [
-      324,
+      332,
       "tests"
     ],
     "tests/unit/test_cohort_rule_view_helpers.py": [
@@ -3658,7 +3680,27 @@
       "tooling"
     ],
     "tools/close_check.py": [
-      1000,
+      35,
+      "tooling"
+    ],
+    "tools/close_check/__init__.py": [
+      197,
+      "tooling"
+    ],
+    "tools/close_check/_archive.py": [
+      85,
+      "tooling"
+    ],
+    "tools/close_check/_manifest.py": [
+      682,
+      "tooling"
+    ],
+    "tools/close_check/_shared.py": [
+      37,
+      "tooling"
+    ],
+    "tools/close_check/_sweep.py": [
+      127,
       "tooling"
     ],
     "tools/code_metrics.py": [
