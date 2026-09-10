@@ -322,13 +322,23 @@ paying for itself, and it is the strongest evidence in this window that the
   codebase's. **Plan:** none — `docs/unenforced_conventions.md` §1.6 already
   records the class; a lint for it would have to understand what each string
   means.
-- **`spec/rrw_functional_spec.md` is the least-audited live spec, and it has
+- ~~**`spec/rrw_functional_spec.md` is the least-audited live spec, and it has
   drifted.** It is described in `spec/README.md` as "aligned with the system as
   of 2026-08-18" — 23 days stale — and it is the canonical entry point for new
-  readers. The Self-reviews-card row in §3 is one instance found incidentally;
-  nothing has swept the document. **Cost:** unmeasured, and that is the point.
-  **Plan:** a sweep is the obvious next move (§8), and it is the only ⚠ in the
-  compliance table.
+  readers.~~ **Amended 2026-09-10, and both halves were wrong.** Segment 19J.1
+  measured before sweeping: **nine edits and 1,106 changed lines** since the date
+  that index line claims alignment to. The file is neither least-audited nor
+  stale. What is true is narrower and worse — every one of those nine edits was
+  made by a segment revising **the sections its own work touched**, and none read
+  the document through, so **piecemeal currency reads as whole-document
+  currency** over an index date no edit ever moves. The sweep proved it from
+  inside the file: 19F's reviewee-gate change is described correctly in §10.9 and
+  incorrectly in §4.4 and §17, and the correct one is the section 19F PR 6
+  happened to open. **Cost, now measured:** 15 findings across 14 sections; 94 of
+  108 sections were current. **Closed** — swept, fixed, and `spec/README.md`'s
+  hand-kept date replaced by a pointer to the sweep record. The original claim is
+  struck rather than deleted because the *class* it named was real; only its
+  diagnosis was wrong.
 - **`tools/close_check.py` crossed 1,000 LOC** (863 at 08sep, **+137**),
   growing by the `cites:` handling and the item-dating work of 19G.4–19G.8. It
   still carries the two jobs flagged two snapshots ago — the per-segment close
@@ -460,11 +470,10 @@ The close audit earned its keep more visibly than in any prior window: five of
 
 **Recommended next moves.**
 
-1. **Sweep `spec/rrw_functional_spec.md` against the code.** It is the
-   canonical entry point for new readers, it is described as aligned to
-   2026-08-18, and the one place anybody looked (§9.7) had a card that does not
-   exist. It is the only ⚠ in §3, and it is the document a new reader meets
-   first.
+1. ~~**Sweep `spec/rrw_functional_spec.md` against the code.**~~ **Done
+   2026-09-10 as Segment 19J.1** (`guide/sweep_2026-09-10_rrw_functional_spec.md`).
+   15 findings, 14 sections, all fixed; the ⚠ row in §3 closes. See the amended
+   §5 entry for what the measurement corrected about this move's own premise.
 2. **Carry the refinement allowance into the next projection, or refute it.**
    Two consecutive snapshots have been overtaken by non-feature growth; §7 now
    names the missing term rather than raising the range by a guess. One more
