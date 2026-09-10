@@ -547,17 +547,27 @@ def test_invitations_page_renders_consolidated_column_headers(
         f"/operator/sessions/{session.id}/invitations"
     ).text
     # The full new column spec from segment_11C plan, in order.
-    for header in (
-        "<th>Reviewer</th>",
-        "<th>Email Status</th>",
-        "<th>Email Sent</th>",
-        "<th>Review Progress</th>",
-        "<th>Required Fields</th>",
-        "<th>Last reminder</th>",
+    #
+    # Matched by sort key rather than by `<th>Label</th>`: Segment 19I
+    # Item 11 made every one of these sortable, so the header now
+    # carries a class, a key and a button. Pinning the label to its
+    # key keeps both facts — the column exists, and it is the column
+    # the sort cascade names.
+    start = body.index("<thead>")
+    head = body[start : body.index("</thead>", start)]
+    for key, label in (
+        ("name", "Reviewer"),
+        ("email_status", "Email Status"),
+        ("email_sent_at", "Email Sent"),
+        ("review_progress", "Review Progress"),
+        ("required_fields", "Required Fields"),
+        ("last_reminder_at", "Last reminder"),
     ):
-        assert header in body, f"missing column header: {header!r}"
+        assert (
+            f'data-sort-key="{key}">{label}' in head
+        ), f"missing column header: {label!r} under key {key!r}"
     # The dropped "Opened" column from the pre-rewrite shape stays out.
-    assert "<th>Opened</th>" not in body
+    assert "Opened" not in head
 
 
 def test_invitations_page_renders_review_progress_and_required_fields_format(

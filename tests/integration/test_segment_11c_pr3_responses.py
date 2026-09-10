@@ -143,14 +143,18 @@ def test_responses_page_renders_table_for_assigned_reviewees(
     response = client.get(f"/operator/sessions/{session.id}/responses")
     assert response.status_code == 200
     body = response.text
-    # Headers per the PR spec.
-    for header in (
-        "<th>Reviewee</th>",
-        "<th>Coverage</th>",
-        "<th>Reviewers completed</th>",
-        "<th>Last response</th>",
+    # Headers per the PR spec, matched by sort key — Segment 19I
+    # Item 11 made each one sortable, so `<th>Label</th>` no longer
+    # describes the markup. See the twin in `test_invitations.py`.
+    start = body.index("<thead>")
+    head = body[start : body.index("</thead>", start)]
+    for key, label in (
+        ("name", "Reviewee"),
+        ("coverage_state", "Coverage"),
+        ("reviewers_done", "Reviewers completed"),
+        ("last_response_at", "Last response"),
     ):
-        assert header in body
+        assert f'data-sort-key="{key}">{label}' in head
     # Both reviewees render.
     assert "carol@example.edu" in body
     assert "dave@example.edu" in body
