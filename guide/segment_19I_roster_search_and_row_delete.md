@@ -3163,6 +3163,25 @@ spec/preview_hub.md`. Neither describes the count line —
 mention the touched module, not the changed behaviour; no bullet
 added.
 
+**`spec-writer` adjudicated, 2026-09-10.** It verified every claim
+in the five specs against the code — the four branches and their
+wording, the three cap regimes, the per-page nouns, the
+uncapped-by-construction reading of Invitations and Responses, the
+`.form-help` / `.table-showing-hint` font-size claim, and the
+select-all worked example's arithmetic — and found **no drift**.
+
+One **omission** it raised, verified and acted on: the "a filter
+matching nothing renders no count line" rule was stated only in
+`spec/assignments.md`, which read as though that page were special.
+It is not — all seven gate the whole preview card on the row list
+and fall through to a "No … match the current filter." message
+(`session_reviewers.html:311` `{% if reviewers or add_mode %}` …
+`{% elif total_row_count > 0 %}`, and the same shape on the rest).
+The rule now sits once in `spec/setup_pages.md` with the note that
+it is the template's doing and not the helper's — the helper
+returns `Showing 0 of 5 …` if it is ever called on that state — and
+the Assignments paragraph points at it.
+
 **Mutations:** 10 (PR 1) + 6 (PR 2) + 5 (PR 3) = **21, all killed**.
 
 **Measured:** the suite went 3403 → 3425 (PR 1) → 3426 (PR 2) →

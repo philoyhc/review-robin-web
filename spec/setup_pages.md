@@ -333,6 +333,16 @@ back, which is the only case the operator can act on:
 | Filtered, under the cap | `Showing 3 of 1,240 reviewers.` |
 | Neither | *(nothing renders)* |
 
+**A filter matching nothing renders no count line, on any of the
+seven.** Each page gates its whole preview card on the row list and
+falls through to a "No … match the current filter." message
+(`session_reviewers.html`'s `{% if reviewers or add_mode %}` …
+`{% elif total_row_count > 0 %}`, and the same shape on the other
+six). The line lives inside that gate, so there is no table for it
+to caption. This is the template's doing, not the helper's:
+`preview_count_line(shown=0, matching=0, total=5, …)` returns
+`Showing 0 of 5 …` if it is ever called.
+
 In every branch **M is the pool the numerator was drawn from**; the
 word `matching` appears exactly when that pool is the filtered set
 rather than the whole roster; and the `; X more not shown` clause
