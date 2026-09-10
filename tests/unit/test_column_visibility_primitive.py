@@ -217,3 +217,36 @@ def test_the_primitive_carries_no_disabled_chip_branch() -> None:
     start = src.index('data-rrw-col-toggles"')
     iife = src[start : src.index("</script>", start)]
     assert "is-disabled" not in iife
+
+
+# The three Operations tables outgrow their card and wrap their
+# overflow; the three Setup rosters measure inside theirs and do not.
+# Written as all six on a first pass and corrected by running it —
+# the Setup pages never had the wrapper, and asserting they did was a
+# claim, not a measurement.
+SCROLL_WRAPPED = [
+    "session_assignments.html",
+    "session_invitations.html",
+    "session_responses.html",
+]
+
+
+@pytest.mark.parametrize("name", SCROLL_WRAPPED)
+def test_the_wide_chip_tables_sit_inside_a_table_scroll_wrapper(
+    name: str,
+) -> None:
+    """Overflow belongs inside the card, not on the page.
+
+    Item 11 gave Invitations and Responses the wrapper and measured
+    why: 1496px of table against a ~1396px page cap, scrolling the
+    whole document sideways at every width up to 1920. Assignments was
+    left out and is the worst of the three — with all nine tag slots
+    populated it renders **14 columns**, a 1508px table in a 1360px
+    card, pushing the document 126px past a 1440 viewport.
+
+    The three Setup rosters are deliberately absent: measured at 1324px
+    inside a 1360px card, they fit.
+    """
+    src = (OPERATOR / name).read_text()
+    table = src.index('<table id="')
+    assert src.rfind('<div class="table-scroll">', 0, table) != -1, name

@@ -298,6 +298,15 @@
         {% endfor %}
       </p>
       {% include "operator/partials/_preview_count_line.html" %}
+      {# `.table-scroll` (base.html) keeps a wide table's overflow
+         inside its own card instead of pushing the whole page
+         sideways — the wrapper Item 11 gave Invitations and
+         Responses, and the one this page was missing. Measured with
+         all nine tag slots populated: 14 columns, a 1508px table in a
+         1360px card, and a document 126px wider than a 1440 viewport.
+         Nine columns can be hidden by the chips above, but the
+         operator has to be able to see them first. #}
+      <div class="table-scroll">
       <table id="assignments-table"
              data-rrw-col-toggles="rrw-assignment-col-visibility"
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
@@ -408,6 +417,7 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
       {% endif %}{# /pair_sample #}
     </div>
     <style>
