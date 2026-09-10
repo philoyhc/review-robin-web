@@ -98,6 +98,11 @@
         {% endfor %}
       </p>
       {% include "operator/partials/_preview_count_line.html" %}
+      {# `.table-scroll` (base.html) keeps a wide table's overflow
+         inside its own card instead of pushing the whole page
+         sideways. Ten columns on a page capped at ~1396px will
+         outgrow someone's screen whatever the headers say. #}
+      <div class="table-scroll">
       <table id="responses-table"
              data-rrw-col-toggles="rrw-response-tag-visibility"
              data-rrw-sortable="rrw-sort-responses-{{ session.id }}">
@@ -171,6 +176,7 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
     {# The slot -> column-class mapping is the page's own, by design:
        the shared primitive only toggles ``col-hidden-{slot}`` on the
