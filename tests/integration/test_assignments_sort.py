@@ -92,21 +92,68 @@ def test_assignments_table_renders_sort_scaffolding(
         in body
     )
     assert '<tbody class="rrw-rows">' in body
-    # Every sortable header carries its data-sort-key.
-    for key in (
-        "reviewer",
-        "reviewee",
-        "reviewer_tag_1",
-        "reviewee_tag_1",
-        "pair_tag_1",
-        "include",
-        "instrument",
-    ):
+    # Every sortable header carries its data-sort-key. The tag
+    # columns are conditional since 19I Item 12 rung 3 — a slot with
+    # no data anywhere renders no column, so no header and no sort
+    # key — and this seed imports no tags at all.
+    for key in ("reviewer", "reviewee", "include", "instrument"):
         assert f'data-sort-key="{key}"' in body
+    for key in ("reviewer_tag_1", "reviewee_tag_1", "pair_tag_1"):
+        assert f'data-sort-key="{key}"' not in body
     # Each <td> carries a data-sort-value mirroring the rendered
     # value.
     assert 'data-sort-value="Alpha R"' in body
     assert 'data-sort-value="Charlie R"' in body
+
+
+def test_a_populated_tag_column_carries_its_sort_key(
+    db: Session, client: TestClient
+) -> None:
+    """The other side of the conditional above: give a tag slot data
+    and its column, header and sort key all come back. Without this
+    the test above would pass just as well if tag columns had been
+    deleted outright."""
+    review_session = _make_session(client, db, code="asn-scaff-tag")
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                (
+                    b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+                    b"Bravo R,bravo@example.edu,Team B\n"
+                    b"Alpha R,alpha@example.edu,Team A\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                (
+                    b"RevieweeName,RevieweeEmail\n"
+                    b"Alpha E,alphae@example.edu\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert 'data-sort-key="reviewer_tag_1"' in body
+    assert 'data-col-toggle="rt1"' in body
+    # The reviewee and pair-context slots are still empty.
+    assert 'data-sort-key="reviewee_tag_1"' not in body
+    assert 'data-sort-key="pair_tag_1"' not in body
 
 
 def test_assignments_cookie_sort_by_reviewer_asc(

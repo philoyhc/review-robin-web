@@ -605,22 +605,41 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     assert "Tag1" in body
     assert 'class="tag-col tag-col-2 rrw-sortable"' in body
     assert "Tag2" in body
-    assert 'class="tag-col tag-col-3 rrw-sortable"' in body
-    assert "Tag3" in body
     assert "<th>Tags</th>" not in body
 
-    # "Show columns:" chip row in the top card — Tag1 / Tag2 pill
-    # chips selected (have data), Tag3 disabled because the column
-    # has no data anywhere. Whitespace-normalised so the assertions
+    # Tag3 is empty across the roster, so since 19I Item 12 rung 3 it
+    # renders neither a column nor a chip. Scoped to the table: the
+    # page's own <style> block still names ``.tag-col-3`` in a
+    # (now dead) ``col-hidden-tag-3`` rule.
+    # ``index("</table>")`` alone finds the FIRST table in the
+    # page, which on several of these sits well above the
+    # preview — the slice then runs backwards, is empty, and
+    # every assertion over it holds vacuously.
+    _t = body.index("<table id=")
+    table = body[_t : body.index("</table>", _t)]
+    assert "tag-col-3" not in table
+
+    # "Show columns:" chip row in the table card — Tag1 / Tag2 chips,
+    # and nothing for Tag3. Whitespace-normalised so the assertions
     # survive template indentation changes.
     flat = re.sub(r"\s+", " ", body)
     assert "Show columns:" in flat
     assert 'tag-chip is-selected" data-col-toggle="tag-1"' in flat
     assert 'tag-chip is-selected" data-col-toggle="tag-2"' in flat
-    assert 'tag-chip is-disabled" data-col-toggle="tag-3"' in flat
-    assert 'data-col-toggle="tag-3" aria-disabled="true"' in flat
-    # Tag1 / Tag2 chips are NOT disabled (they have data).
-    assert 'is-disabled" data-col-toggle="tag-1"' not in flat
+    assert 'data-col-toggle="tag-3"' not in flat
+    # The struck "no data in this column" chip retired with rung 3;
+    # every chip rendered is a live one.
+    # Scoped to the chip row. ``base.html`` explains the retired
+    # disabled state in a CSS comment that ships inside every
+    # rendered page, so an unscoped ``"is-disabled" not in body``
+    # matches the prose describing the thing it is checking for.
+    chips = flat[
+        flat.index('class="col-chip-row"') : flat.index(
+            "</p>", flat.index('class="col-chip-row"')
+        )
+    ]
+    assert "is-disabled" not in chips
+    assert "aria-disabled" not in chips
     # The old checkbox toggle strip is gone.
     assert "data-tag-toggle" not in flat
 
@@ -707,9 +726,22 @@ def test_relationships_page_renders_column_chips(
     )
 
     assert "Show columns:" in flat
-    # PairContextTag1 has data → chip selected; 2 / 3 empty → disabled.
+    # PairContextTag1 has data → chip. 2 / 3 are empty across the
+    # roster, so since 19I Item 12 rung 3 they render no chip at all
+    # rather than a struck one.
     assert 'tag-chip is-selected" data-col-toggle="tag-1"' in flat
-    assert 'tag-chip is-disabled" data-col-toggle="tag-2"' in flat
+    assert 'data-col-toggle="tag-2"' not in flat
+    assert 'data-col-toggle="tag-3"' not in flat
+    # Scoped to the chip row. ``base.html`` explains the retired
+    # disabled state in a CSS comment that ships inside every
+    # rendered page, so an unscoped ``"is-disabled" not in body``
+    # matches the prose describing the thing it is checking for.
+    chips = flat[
+        flat.index('class="col-chip-row"') : flat.index(
+            "</p>", flat.index('class="col-chip-row"')
+        )
+    ]
+    assert "is-disabled" not in chips
     assert "data-tag-toggle" not in flat
 
 

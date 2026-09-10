@@ -299,6 +299,16 @@
 
   {% if reviewees or add_mode %}
     {% set selectable = not edit_mode and is_editable %}
+    {# 19I Item 12 rung 3 — a slot with no data anywhere in the roster
+       renders neither chip nor column. ``edit_mode`` overrides: an
+       operator adding or editing a row must be able to type into a
+       tag that is empty today, which is the whole way a tag stops
+       being empty. Same rule the Photo column already uses. #}
+    {% set show_tag = {
+      1: edit_mode or col_data["tag-1"],
+      2: edit_mode or col_data["tag-2"],
+      3: edit_mode or col_data["tag-3"],
+    } %}
     {# Profile-link column always shows in edit mode so the operator
        can fill / clear it; otherwise only when the roster holds a
        link somewhere.
@@ -315,7 +325,10 @@
          table card, directly above the rows they govern, the way
          Invitations and Responses have had them since Item 11 —
          rather than in the "Fields with data" card a grid away. #}
-      {% if reviewees and not edit_mode %}
+      {# A chip row with no chips in it is a label and nothing else,
+         so the row goes too when every slot is empty (19I Item 12
+         rung 3). #}
+      {% if reviewees and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"] or col_data["profile"]) %}
         <p class="col-chip-row" data-col-toggles-for="reviewees-table" style="margin: 0 0 12px 0;">
           <span>Show columns:</span>
           {% if col_data["profile"] %}
@@ -323,11 +336,10 @@
                   data-col-toggle="profile" role="button" tabindex="0"
                   aria-pressed="true">{{ field_label_header(session, "reviewee", "profile_link") }}</span>
           {% endif %}
-          {% for slot in [1, 2, 3] %}
-            {% set has_data = col_data["tag-" ~ slot] %}
-            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+          {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
+            <span class="pill pill-count tag-chip is-selected"
                   data-col-toggle="tag-{{ slot }}"
-                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label_header(session, "reviewee", "tag_" ~ slot) }}</span>
+                  role="button" tabindex="0" aria-pressed="true">{{ field_label_header(session, "reviewee", "tag_" ~ slot) }}</span>
           {% endfor %}
         </p>
       {% endif %}
@@ -347,9 +359,9 @@
             <th>Name</th>
             <th>Email / Identifier</th>
             {% if show_profile_link %}<th>Profile link</th>{% endif %}
-            <th class="tag-col tag-col-1">{{ field_label_header(session, "reviewee", "tag_1") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>
-            <th class="tag-col tag-col-2">{{ field_label_header(session, "reviewee", "tag_2") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>
-            <th class="tag-col tag-col-3">{{ field_label_header(session, "reviewee", "tag_3") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
+            {% if show_tag[1] %}<th class="tag-col tag-col-1">{{ field_label_header(session, "reviewee", "tag_1") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>{% endif %}
+            {% if show_tag[2] %}<th class="tag-col tag-col-2">{{ field_label_header(session, "reviewee", "tag_2") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>{% endif %}
+            {% if show_tag[3] %}<th class="tag-col tag-col-3">{{ field_label_header(session, "reviewee", "tag_3") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>{% endif %}
             <th>Status</th>
             <th>Updated</th>
           {% else %}
@@ -360,15 +372,21 @@
                 aria-label="Sort by Email / Identifier"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "email_or_identifier") }}</th>
             {% if show_profile_link %}<th class="profile-col">{{ field_label_header(session, "reviewee", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewee", "profile_link") }}</th>{% endif %}
+            {% if show_tag[1] %}
             <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag1"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>
+            {% endif %}
+            {% if show_tag[2] %}
             <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "reviewee", "tag_2") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag2"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>
+            {% endif %}
+            {% if show_tag[3] %}
             <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "reviewee", "tag_3") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag3"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
+            {% endif %}
             <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Status"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
@@ -397,15 +415,21 @@
                          value="{{ edit_values.profile_link }}"
                          maxlength="2000" placeholder="Profile link"></td>
             {% endif %}
+            {% if show_tag[1] %}
             <td class="tag-col tag-col-1"><input type="text" name="tag_1"
                        form="reviewee-edit-form"
                        value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+            {% endif %}
+            {% if show_tag[2] %}
             <td class="tag-col tag-col-2"><input type="text" name="tag_2"
                        form="reviewee-edit-form"
                        value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+            {% endif %}
+            {% if show_tag[3] %}
             <td class="tag-col tag-col-3"><input type="text" name="tag_3"
                        form="reviewee-edit-form"
                        value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+            {% endif %}
             <td>
               <select name="status" form="reviewee-edit-form">
                 <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
@@ -432,15 +456,21 @@
                            value="{{ edit_values.profile_link }}"
                            maxlength="2000"></td>
               {% endif %}
+              {% if show_tag[1] %}
               <td class="tag-col tag-col-1"><input type="text" name="tag_1"
                          form="reviewee-edit-form"
                          value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+              {% endif %}
+              {% if show_tag[2] %}
               <td class="tag-col tag-col-2"><input type="text" name="tag_2"
                          form="reviewee-edit-form"
                          value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+              {% endif %}
+              {% if show_tag[3] %}
               <td class="tag-col tag-col-3"><input type="text" name="tag_3"
                          form="reviewee-edit-form"
                          value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+              {% endif %}
               <td>
                 <select name="status" form="reviewee-edit-form">
                   <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
@@ -471,9 +501,9 @@
                   {% endif %}
                 </td>
               {% endif %}
-              <td class="tag-col tag-col-1" data-sort-value="{{ reviewee.tag_1 or '' }}">{{ reviewee.tag_1 or "" }}</td>
-              <td class="tag-col tag-col-2" data-sort-value="{{ reviewee.tag_2 or '' }}">{{ reviewee.tag_2 or "" }}</td>
-              <td class="tag-col tag-col-3" data-sort-value="{{ reviewee.tag_3 or '' }}">{{ reviewee.tag_3 or "" }}</td>
+              {% if show_tag[1] %}<td class="tag-col tag-col-1" data-sort-value="{{ reviewee.tag_1 or '' }}">{{ reviewee.tag_1 or "" }}</td>{% endif %}
+              {% if show_tag[2] %}<td class="tag-col tag-col-2" data-sort-value="{{ reviewee.tag_2 or '' }}">{{ reviewee.tag_2 or "" }}</td>{% endif %}
+              {% if show_tag[3] %}<td class="tag-col tag-col-3" data-sort-value="{{ reviewee.tag_3 or '' }}">{{ reviewee.tag_3 or "" }}</td>{% endif %}
               <td data-sort-value="{{ reviewee.status }}">
                 <span class="pill {{ 'pill-info' if reviewee.status == 'active' else 'pill-empty' }}">{{ reviewee.status }}</span>
               </td>

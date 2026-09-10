@@ -269,15 +269,19 @@
         ("Show reviewees", "et", "reviewee"),
         ("Show relationships", "p", "pair_context"),
       ] %}
-      {% for group_label, prefix, entity in col_groups %}
-        <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 {% if loop.last %}12{% else %}8{% endif %}px 0;">
+      {# A group with nothing in any of its three slots renders no row
+         at all — a bare "Show reviewees:" with no chips after it reads
+         as a bug (19I Item 12 rung 3). Only Assignments can reach this,
+         having three groups. #}
+      {% for group_label, prefix, entity in col_groups
+         if col_data[prefix ~ 1] or col_data[prefix ~ 2] or col_data[prefix ~ 3] %}
+        <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 8px 0;">
           <span>{{ group_label }}:</span>
-          {% for n in [1, 2, 3] %}
+          {% for n in [1, 2, 3] if col_data[prefix ~ n] %}
             {% set slot = prefix ~ n %}
-            {% set has_data = col_data[slot] %}
-            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+            <span class="pill pill-count tag-chip is-selected"
                   data-col-toggle="{{ slot }}"
-                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label(session, entity, "tag_" ~ n if entity != "pair_context" else n | string) }}</span>
+                  role="button" tabindex="0" aria-pressed="true">{{ field_label(session, entity, "tag_" ~ n if entity != "pair_context" else n | string) }}</span>
           {% endfor %}
         </p>
       {% endfor %}
@@ -296,36 +300,54 @@
           <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          {% if col_data["rt1"] %}
           <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1">{{ field_label_header(session, "reviewer", "tag_1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_1") }}</th>
+          {% endif %}
+          {% if col_data["rt2"] %}
           <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2">{{ field_label_header(session, "reviewer", "tag_2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_2") }}</th>
+          {% endif %}
+          {% if col_data["rt3"] %}
           <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3">{{ field_label_header(session, "reviewer", "tag_3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_3") }}</th>
+          {% endif %}
           <th class="rrw-sortable" data-sort-key="reviewee">Reviewee<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          {% if col_data["et1"] %}
           <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>
+          {% endif %}
+          {% if col_data["et2"] %}
           <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2">{{ field_label_header(session, "reviewee", "tag_2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>
+          {% endif %}
+          {% if col_data["et3"] %}
           <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3">{{ field_label_header(session, "reviewee", "tag_3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
+          {% endif %}
+          {% if col_data["p1"] %}
           <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1">{{ field_label_header(session, "pair_context", "1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "1") }}</th>
+          {% endif %}
+          {% if col_data["p2"] %}
           <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2">{{ field_label_header(session, "pair_context", "2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "2") }}</th>
+          {% endif %}
+          {% if col_data["p3"] %}
           <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3">{{ field_label_header(session, "pair_context", "3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "3") }}</th>
+          {% endif %}
           <th class="rrw-sortable" data-sort-key="include">Include<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Include"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
@@ -351,19 +373,19 @@
               {{ assignment.reviewer.name }} &middot;
               <code>{{ assignment.reviewer.email }}</code>
             </td>
-            <td class="assignment-col col-rt1" data-sort-value="{{ assignment.reviewer.tag_1 or '' }}">{{ assignment.reviewer.tag_1 or "" }}</td>
-            <td class="assignment-col col-rt2" data-sort-value="{{ assignment.reviewer.tag_2 or '' }}">{{ assignment.reviewer.tag_2 or "" }}</td>
-            <td class="assignment-col col-rt3" data-sort-value="{{ assignment.reviewer.tag_3 or '' }}">{{ assignment.reviewer.tag_3 or "" }}</td>
+            {% if col_data["rt1"] %}<td class="assignment-col col-rt1" data-sort-value="{{ assignment.reviewer.tag_1 or '' }}">{{ assignment.reviewer.tag_1 or "" }}</td>{% endif %}
+            {% if col_data["rt2"] %}<td class="assignment-col col-rt2" data-sort-value="{{ assignment.reviewer.tag_2 or '' }}">{{ assignment.reviewer.tag_2 or "" }}</td>{% endif %}
+            {% if col_data["rt3"] %}<td class="assignment-col col-rt3" data-sort-value="{{ assignment.reviewer.tag_3 or '' }}">{{ assignment.reviewer.tag_3 or "" }}</td>{% endif %}
             <td data-sort-value="{{ assignment.reviewee.name }}">
               {{ assignment.reviewee.name }} &middot;
               <code>{{ assignment.reviewee.email_or_identifier }}</code>
             </td>
-            <td class="assignment-col col-et1" data-sort-value="{{ assignment.reviewee.tag_1 or '' }}">{{ assignment.reviewee.tag_1 or "" }}</td>
-            <td class="assignment-col col-et2" data-sort-value="{{ assignment.reviewee.tag_2 or '' }}">{{ assignment.reviewee.tag_2 or "" }}</td>
-            <td class="assignment-col col-et3" data-sort-value="{{ assignment.reviewee.tag_3 or '' }}">{{ assignment.reviewee.tag_3 or "" }}</td>
-            <td class="assignment-col col-p1" data-sort-value="{{ rel.tag_1 or '' if rel_active else '' }}">{{ rel.tag_1 or "" if rel_active else "" }}</td>
-            <td class="assignment-col col-p2" data-sort-value="{{ rel.tag_2 or '' if rel_active else '' }}">{{ rel.tag_2 or "" if rel_active else "" }}</td>
-            <td class="assignment-col col-p3" data-sort-value="{{ rel.tag_3 or '' if rel_active else '' }}">{{ rel.tag_3 or "" if rel_active else "" }}</td>
+            {% if col_data["et1"] %}<td class="assignment-col col-et1" data-sort-value="{{ assignment.reviewee.tag_1 or '' }}">{{ assignment.reviewee.tag_1 or "" }}</td>{% endif %}
+            {% if col_data["et2"] %}<td class="assignment-col col-et2" data-sort-value="{{ assignment.reviewee.tag_2 or '' }}">{{ assignment.reviewee.tag_2 or "" }}</td>{% endif %}
+            {% if col_data["et3"] %}<td class="assignment-col col-et3" data-sort-value="{{ assignment.reviewee.tag_3 or '' }}">{{ assignment.reviewee.tag_3 or "" }}</td>{% endif %}
+            {% if col_data["p1"] %}<td class="assignment-col col-p1" data-sort-value="{{ rel.tag_1 or '' if rel_active else '' }}">{{ rel.tag_1 or "" if rel_active else "" }}</td>{% endif %}
+            {% if col_data["p2"] %}<td class="assignment-col col-p2" data-sort-value="{{ rel.tag_2 or '' if rel_active else '' }}">{{ rel.tag_2 or "" if rel_active else "" }}</td>{% endif %}
+            {% if col_data["p3"] %}<td class="assignment-col col-p3" data-sort-value="{{ rel.tag_3 or '' if rel_active else '' }}">{{ rel.tag_3 or "" if rel_active else "" }}</td>{% endif %}
             <td data-sort-value="{{ 'yes' if assignment.include else 'no' }}">
               <span class="pill {{ 'pill-info' if assignment.include else 'pill-empty' }}">{{ "yes" if assignment.include else "no" }}</span>
             </td>

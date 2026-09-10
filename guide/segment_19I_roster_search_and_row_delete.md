@@ -4321,6 +4321,85 @@ Assignments while adding three to nine indexed `LIMIT 1`s.
 
 **Not verified here:** the Azure dev slot.
 
+**2026-09-10 — rung 3 landed as the amended ladder laid out.**
+
+A slot with no data anywhere in the roster now renders neither chip
+nor column, on all six surfaces. `base.html` lost the `is-disabled`
+branch and its `persist()` skip. Verified in Chromium against a
+sparse seed: Reviewers shows two chips, Reviewees and Relationships
+one each, Assignments four across its three groups — and **zero
+struck chips anywhere**.
+
+**The semantic the plan did not name, found by reading the
+templates rather than by a failure.** The roster pages render tag
+**inputs** in add / edit mode. Gate those on presence and an empty
+tag can never be filled in — the only way a tag stops being empty is
+someone typing into it. `show_tag[n]` is therefore
+`edit_mode or col_data["tag-n"]`, the same override the Photo column
+has always carried, and header and cell counts stay equal in both
+modes because one expression gates both. Verified in the browser:
+add mode renders no chip row, three tag columns and three tag
+inputs.
+
+**Two mutations survived the first pass, for opposite reasons.**
+
+1. **Assignments rendering an empty group's label row.** Nothing in
+   the suite looked at the group labels, so `Show reviewees:` with
+   no chips after it passed everything. A test now seeds reviewer
+   tags only and asserts the other two rows are gone.
+2. **`base.html` regaining the `is-disabled` branch changed no
+   rendered page.** The branch is *behaviorally* dead once no page
+   emits a disabled chip, so no integration test can reach it. Pinned
+   structurally instead, over the IIFE's source.
+
+**A CSS rule that looked dead and is not.** `.tag-chip.is-disabled`
+stays in `base.html`: `instruments_index.html` renders that class
+for its Band 1 link chips, a different mechanism. Deleting it with
+the branch would have silently unstyled the Instruments page. Its
+comment now says which caller keeps it alive.
+
+**The unscoped-substring trap, twice more — fifth and sixth in this
+segment.** `"tag-col-3" not in body` matched each page's own
+`col-hidden-tag-3` CSS rule, which is dead but harmless and stays;
+`"is-disabled" not in body` matched **the `base.html` comment
+written to explain the retirement**. Both scoped.
+
+**And a slice that ran backwards, again.** Three tests took
+`body[body.index("<table id=") : body.index("</table>")]`, which
+finds the **first** `</table>` in the page — on Assignments the
+per-instrument status table near the top. The slice was empty and
+every assertion over it held vacuously. Same defect as rung 1's
+heading assertion, in three new places; all now pass the start
+offset.
+
+**Tests updated rather than deleted.** Six existing tests asserted
+the disabled-chip contract. `test_assignments_sort` had asserted all
+seven sort keys render "even when the data is sparse" — now split:
+the four unconditional keys, the three tag keys absent on an untagged
+seed, and a **new test** giving one slot data so its column, header
+and sort key all come back. Without that pair the first half would
+pass just as well if tag columns had been deleted outright.
+
+**Mutations:** 9, all killed after the two fixes above — chips
+rendering for empty slots; columns rendering for empty slots;
+`edit_mode` no longer overriding the gate; the all-empty chip row
+rendering anyway; the Assignments empty group rendering; `base.html`
+regaining the branch; and Invitations' columns rendering
+regardless of data.
+
+**Verified in Chromium** at 1440 and 1024 on all four pages:
+**header count equals cell count on every page and viewport** — the
+structural risk of gating `<th>` and `<td>` separately — no struck
+chips, no page-level horizontal scroll, toggling still persists
+(`{"rt1":true,"rt2":false,"et1":true,"p1":true}`) and survives
+reload. Assignments still overflows its card by 20px at 1024, which
+is the pre-existing defect reported at rung 1 and unchanged here.
+No page errors.
+
+**Measured:** the suite went 3513 → **3518**.
+
+**Not verified here:** the Azure dev slot.
+
 ### Definition of done
 
 - All **six** chip surfaces render the chip row inside the table
