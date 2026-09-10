@@ -122,7 +122,7 @@
       {% set has_tag_1 = reviewees | selectattr("tag_1") | list | length > 0 %}
       {% set has_tag_2 = reviewees | selectattr("tag_2") | list | length > 0 %}
       {% set has_tag_3 = reviewees | selectattr("tag_3") | list | length > 0 %}
-      <p class="col-chip-row" style="margin: 12px 0 0 0;">
+      <p class="col-chip-row" data-col-toggles-for="reviewees-table" style="margin: 12px 0 0 0;">
         <span>Show columns:</span>
         {% if has_photo %}
           <span class="pill pill-count tag-chip is-selected"
@@ -325,6 +325,7 @@
     <div class="card">
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="reviewees-table"
+             data-rrw-col-toggles="rrw-reviewee-tag-visibility"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
         <thead>
         <tr>
@@ -495,61 +496,6 @@
       }
     </style>
     <script>
-      (function () {
-        var STORAGE_KEY = "rrw-reviewee-tag-visibility";
-        var table = document.getElementById("reviewees-table");
-        var chips = document.querySelectorAll("[data-col-toggle]");
-        if (!table || !chips.length) return;
-        var stored = null;
-        try {
-          stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
-        } catch (e) {}
-        chips.forEach(function (chip) {
-          var slot = chip.getAttribute("data-col-toggle");
-          if (chip.classList.contains("is-disabled")) {
-            apply(slot, false);
-            return;
-          }
-          var visible = true;
-          if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
-            visible = !!stored[slot];
-          }
-          setChip(chip, slot, visible);
-          bind(chip, function () {
-            setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
-            persist();
-          });
-        });
-        function bind(el, handler) {
-          el.addEventListener("click", handler);
-          el.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handler();
-            }
-          });
-        }
-        function setChip(chip, slot, visible) {
-          chip.classList.toggle("is-selected", visible);
-          chip.setAttribute("aria-pressed", visible ? "true" : "false");
-          apply(slot, visible);
-        }
-        function apply(slot, visible) {
-          table.classList.toggle("col-hidden-" + slot, !visible);
-        }
-        function persist() {
-          var state = {};
-          chips.forEach(function (chip) {
-            if (!chip.classList.contains("is-disabled")) {
-              state[chip.getAttribute("data-col-toggle")] =
-                chip.getAttribute("aria-pressed") === "true";
-            }
-          });
-          try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          } catch (e) {}
-        }
-      })();
     </script>
   {% endif %}
 

@@ -187,7 +187,7 @@
     <div class="bottom-grid">
       <div class="card">
         {% for group_label, items in col_groups %}
-          <p class="col-chip-row" style="margin: 0{% if not loop.last %} 0 8px 0{% endif %};">
+          <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0{% if not loop.last %} 0 8px 0{% endif %};">
             <span>{{ group_label }}:</span>
             {% for slot, label, has_data in items %}
               <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
@@ -307,6 +307,7 @@
       {% else %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="assignments-table"
+             data-rrw-col-toggles="rrw-assignment-col-visibility"
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
         <thead>
         <tr>
@@ -407,61 +408,6 @@
       }
     </style>
     <script>
-      (function () {
-        var STORAGE_KEY = "rrw-assignment-col-visibility";
-        var table = document.getElementById("assignments-table");
-        var chips = document.querySelectorAll("[data-col-toggle]");
-        if (!table || !chips.length) return;
-        var stored = null;
-        try {
-          stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
-        } catch (e) {}
-        chips.forEach(function (chip) {
-          var slot = chip.getAttribute("data-col-toggle");
-          if (chip.classList.contains("is-disabled")) {
-            apply(slot, false);
-            return;
-          }
-          var visible = true;
-          if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
-            visible = !!stored[slot];
-          }
-          setChip(chip, slot, visible);
-          bind(chip, function () {
-            setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
-            persist();
-          });
-        });
-        function bind(el, handler) {
-          el.addEventListener("click", handler);
-          el.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handler();
-            }
-          });
-        }
-        function setChip(chip, slot, visible) {
-          chip.classList.toggle("is-selected", visible);
-          chip.setAttribute("aria-pressed", visible ? "true" : "false");
-          apply(slot, visible);
-        }
-        function apply(slot, visible) {
-          table.classList.toggle("col-hidden-" + slot, !visible);
-        }
-        function persist() {
-          var state = {};
-          chips.forEach(function (chip) {
-            if (!chip.classList.contains("is-disabled")) {
-              state[chip.getAttribute("data-col-toggle")] =
-                chip.getAttribute("aria-pressed") === "true";
-            }
-          });
-          try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          } catch (e) {}
-        }
-      })();
     </script>
     {% if can_edit %}
     {# Card B selection wiring — count the ticked row checkboxes,
