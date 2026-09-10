@@ -27,6 +27,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import invitations, monitoring, validation
+from app.services._queries import tag_slot_presence
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -475,6 +476,16 @@ def invitations_index(
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.INVITATIONS_STATUS_OPTIONS,
+            # 19I Item 12 rung 2 — chip flags over the session's whole
+            # reviewer roster, not over ``rows``, which a filter
+            # narrows. A tag populated only on rows the filter excluded
+            # used to read as "no data" and strike its chip out.
+            "col_data": views.chip_slots(
+                tag_slot_presence(
+                    db, session_id=review_session.id, model=Reviewer
+                ),
+                prefix="tag-",
+            ),
             "filter_search_options": search_options,
             "eligible_count": len(eligible),
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
@@ -789,6 +800,16 @@ def session_responses(
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
+            # 19I Item 12 rung 2 — chip flags over the session's whole
+            # reviewee roster, not over ``rows``, which a filter
+            # narrows. A tag populated only on rows the filter excluded
+            # used to read as "no data" and strike its chip out.
+            "col_data": views.chip_slots(
+                tag_slot_presence(
+                    db, session_id=review_session.id, model=Reviewee
+                ),
+                prefix="tag-",
+            ),
             "filter_search_options": search_options,
             "incomplete_count": incomplete_count,
             "reviewees_with_responses_count": reviewees_with_responses_count,

@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Relationship, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments
+from app.services._queries import tag_slot_presence
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 from app.services.relationships import RelationshipOperationError
@@ -648,6 +649,18 @@ def _render_relationships_page(
                     db, review_session.id
                 ),
                 surface="relationships",
+            ),
+            # 19I Item 12 rung 2 — the chips' has-data flags, answered
+            # over the whole roster by query rather than by scanning
+            # whichever rows this render produced. No ``active_only``
+            # here: this page shows imported data regardless of status,
+            # where Assignments' pair-context chips count only active
+            # relationships. The two answers differ on purpose.
+            "col_data": views.chip_slots(
+                tag_slot_presence(
+                    db, session_id=review_session.id, model=Relationship
+                ),
+                prefix="tag-",
             ),
             "issues": issues,
             "missing_confirm": missing_confirm,

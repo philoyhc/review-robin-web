@@ -259,51 +259,25 @@
       {% if not pair_sample %}
         <p class="muted">No assignments match the search.</p>
       {% else %}
-      {# Has-data flags drive the "Show columns" chips; they read an
-         unfiltered sample (``col_data_sample``) so an active search
-         never flips a chip's enabled state. #}
-      {% set has_r_tag_1 = col_data_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
-      {% set has_r_tag_2 = col_data_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
-      {% set has_r_tag_3 = col_data_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
-      {% set has_e_tag_1 = col_data_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
-      {% set has_e_tag_2 = col_data_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
-      {% set has_e_tag_3 = col_data_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
-      {% set ctx = namespace(p1=false, p2=false, p3=false) %}
-      {% for asgn in col_data_sample %}
-        {% set rel = pair_context_lookup.get((asgn.reviewer_id, asgn.reviewee_id)) %}
-        {% if rel and rel.status == "active" %}
-          {% if rel.tag_1 %}{% set ctx.p1 = true %}{% endif %}
-          {% if rel.tag_2 %}{% set ctx.p2 = true %}{% endif %}
-          {% if rel.tag_3 %}{% set ctx.p3 = true %}{% endif %}
-        {% endif %}
-      {% endfor %}
-      {# Three rows against one table: the slots come from three
+      {# Three rows against one table: the nine slots come from three
          different sources and collapsing them would lose that. The
-         storage key rides on the table, so one key covers all nine. #}
+         storage key rides on the table, so one key covers all nine.
+         ``col_data`` carries the has-data flag per slot, answered by
+         the route over the session's rosters (19I Item 12 rung 2). #}
       {% set col_groups = [
-        ("Show reviewers", [
-          ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
-          ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
-          ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
-        ]),
-        ("Show reviewees", [
-          ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
-          ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
-          ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
-        ]),
-        ("Show relationships", [
-          ("p1", field_label(session, "pair_context", "1"), ctx.p1),
-          ("p2", field_label(session, "pair_context", "2"), ctx.p2),
-          ("p3", field_label(session, "pair_context", "3"), ctx.p3),
-        ]),
+        ("Show reviewers", "rt", "reviewer"),
+        ("Show reviewees", "et", "reviewee"),
+        ("Show relationships", "p", "pair_context"),
       ] %}
-      {% for group_label, items in col_groups %}
+      {% for group_label, prefix, entity in col_groups %}
         <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 {% if loop.last %}12{% else %}8{% endif %}px 0;">
           <span>{{ group_label }}:</span>
-          {% for slot, label, has_data in items %}
+          {% for n in [1, 2, 3] %}
+            {% set slot = prefix ~ n %}
+            {% set has_data = col_data[slot] %}
             <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
                   data-col-toggle="{{ slot }}"
-                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
+                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label(session, entity, "tag_" ~ n if entity != "pair_context" else n | string) }}</span>
           {% endfor %}
         </p>
       {% endfor %}
