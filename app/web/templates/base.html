@@ -3936,16 +3936,20 @@
       // shape as the sort primitive above: declarative markup, one
       // implementation.
       //
-      //   <table id="reviewers-table"
-      //          data-rrw-col-toggles="rrw-reviewer-tag-visibility">
+      // Sketch (deliberately using placeholder names, not any real
+      // page's ids or slots — this comment ships inside every
+      // rendered document, and an unscoped test assertion will
+      // happily match example markup):
+      //
+      //   <table id="{TABLE}" data-rrw-col-toggles="{STORAGE-KEY}">
       //   ...
-      //   <p class="col-chip-row" data-col-toggles-for="reviewers-table">
+      //   <p class="col-chip-row" data-col-toggles-for="{TABLE}">
       //     <span class="pill tag-chip is-selected"
-      //           data-col-toggle="tag-1"
-      //           role="button" tabindex="0" aria-pressed="true">Tag 1</span>
+      //           data-col-toggle="{SLOT}"
+      //           role="button" tabindex="0" aria-pressed="true">Label</span>
       //     <span class="pill tag-chip is-disabled"
-      //           data-col-toggle="tag-2"
-      //           aria-disabled="true">Tag 2</span>
+      //           data-col-toggle="{SLOT}"
+      //           aria-disabled="true">Label</span>
       //   </p>
       //
       // A page may carry several chip rows against one table —
@@ -3954,9 +3958,9 @@
       //
       // Hiding a column is the page's own CSS, not this code's: it
       // toggles ``col-hidden-{slot}`` on the table and each page maps
-      // its slots to its own column classes (`.tag-col-1`,
-      // `.profile-col`, `.col-rt1` …). The slot vocabulary is
-      // deliberately not fixed here.
+      // its slots to its own column classes (one class per slot,
+      // named by the page). The slot vocabulary is deliberately not
+      // fixed here.
       //
       // Storage keys are the ones each page already used. Renaming
       // one would silently reset every operator's saved columns.
