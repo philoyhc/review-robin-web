@@ -41,14 +41,33 @@ from ._full_matrix import (
 # so a seed whose emails happen to match its names makes every
 # name-ascending assertion pass whether or not the sort ran at all.
 # The first draft of this file did exactly that.
+#
+# `tag_3` is left empty on purpose throughout: rung 3's chip for an
+# empty slot must render disabled, and its column must stay hidden.
+# `tag_1` is ordered differently again from **both** the email default
+# and the name order, so a tag-sort assertion cannot pass by matching
+# either. The first draft had Team X/Y/Z lining up exactly with the
+# email default, and a mutation that deleted the resolver's tag
+# branch entirely still passed — the same hole as the name seed, in
+# the same file, twice.
+#
+#   email default : Charlie, Bravo, Alpha
+#   name asc      : Alpha, Bravo, Charlie
+#   tag_1 asc     : Bravo, Alpha, Charlie
 REVIEWERS = [
-    ("Alpha R", "zulu@example.edu"),
-    ("Bravo R", "yankee@example.edu"),
-    ("Charlie R", "xray@example.edu"),
+    ("Alpha R", "zulu@example.edu", "Team B", "Cohort 2"),
+    ("Bravo R", "yankee@example.edu", "Team A", "Cohort 1"),
+    ("Charlie R", "xray@example.edu", "Team C", "Cohort 3"),
 ]
+# Two rows only, so tag order must coincide with one of the others;
+# it is set to differ from the **default**, which is what a dropped
+# resolver falls back to.
+#
+#   email default : Echo, Delta
+#   tag_1 asc     : Delta, Echo
 REVIEWEES = [
-    ("Delta E", "zulu-e@example.edu"),
-    ("Echo E", "yankee-e@example.edu"),
+    ("Delta E", "zulu-e@example.edu", "Group A", "Wave 2"),
+    ("Echo E", "yankee-e@example.edu", "Group B", "Wave 1"),
 ]
 # Unsorted (email asc) therefore reads Charlie, Bravo, Alpha.
 DEFAULT_ORDER = ["Charlie R", "Bravo R", "Alpha R"]
@@ -71,11 +90,13 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
 
-    reviewers = "ReviewerName,ReviewerEmail\n" + "\n".join(
-        f"{n},{e}" for n, e in REVIEWERS
+    reviewers = (
+        "ReviewerName,ReviewerEmail,ReviewerTag1,ReviewerTag2\n"
+        + "\n".join(f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWERS)
     )
-    reviewees = "RevieweeName,RevieweeEmail\n" + "\n".join(
-        f"{n},{e}" for n, e in REVIEWEES
+    reviewees = (
+        "RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2\n"
+        + "\n".join(f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWEES)
     )
     for path, payload in (
         ("reviewers", reviewers),
@@ -233,3 +254,82 @@ def test_progress_columns_sort_by_percentage_not_raw_count() -> None:
     assert _completion_pct(2, 2) == 100
     # Nothing to do is not "0% done".
     assert _completion_pct(0, 0) is None
+
+
+# --------------------------------------------------------------------------- #
+# Tag columns and their chips — rung 3.
+# --------------------------------------------------------------------------- #
+
+
+def test_both_pages_render_the_tag_columns(
+    client: TestClient, db: Session
+) -> None:
+    """The tags were always on the row objects — `InvitationsRow.reviewer`
+    and `ResponsesRow.reviewee` are the ORM objects — so this rung is
+    template-only. That is what makes it worth asserting: nothing in
+    the service or query layer changed, so nothing there would fail if
+    the columns silently stopped rendering."""
+    s = _seed(client, db, "ops-tags")
+    inv = _rows(client.get(f"/operator/sessions/{s.id}/invitations").text)
+    assert "Team B" in inv and "Cohort 2" in inv
+    resp = _rows(client.get(f"/operator/sessions/{s.id}/responses").text)
+    assert "Group A" in resp and "Wave 2" in resp
+
+
+def test_an_empty_tag_slot_renders_a_disabled_chip(
+    client: TestClient, db: Session
+) -> None:
+    """`tag_3` is empty across the seed, so its chip is disabled and
+    cannot be turned on. Slots 1 and 2 have data and are live."""
+    s = _seed(client, db, "ops-tags-empty")
+    for page in ("invitations", "responses"):
+        body = client.get(f"/operator/sessions/{s.id}/{page}").text
+        chips = body[
+            body.index('class="col-chip-row"') : body.index("</p>", body.index('class="col-chip-row"'))
+        ]
+        for slot in ("tag-1", "tag-2"):
+            i = chips.index(f'data-col-toggle="{slot}"')
+            assert 'aria-pressed="true"' in chips[i : i + 200], (page, slot)
+        i3 = chips.index('data-col-toggle="tag-3"')
+        assert 'aria-disabled="true"' in chips[i3 : i3 + 200], page
+
+
+def test_both_pages_declare_the_shared_primitive(
+    client: TestClient, db: Session
+) -> None:
+    s = _seed(client, db, "ops-tags-primitive")
+    for page, table, key in (
+        ("invitations", "invitations-table", "rrw-invitation-tag-visibility"),
+        ("responses", "responses-table", "rrw-response-tag-visibility"),
+    ):
+        body = client.get(f"/operator/sessions/{s.id}/{page}").text
+        assert f'data-rrw-col-toggles="{key}"' in body
+        assert f'data-col-toggles-for="{table}"' in body
+        # The page's own slot -> column-class mapping, which the shared
+        # primitive deliberately does not know about.
+        assert f"#{table}.col-hidden-tag-1 .tag-col-1" in body
+
+
+def test_invitations_cookie_sort_by_tag(
+    client: TestClient, db: Session
+) -> None:
+    """Tag columns are sortable like the rosters'. Tag order is the
+    reverse of name order in the seed, so this cannot pass by
+    accident."""
+    s = _seed(client, db, "inv-tag-sort")
+    rows = _rows(_sorted_body(client, s.id, "invitations", "tag_1", "asc"))
+    # Team A (Bravo), Team B (Alpha), Team C (Charlie) — an order that
+    # matches neither the email default nor the name sort.
+    assert (
+        rows.find("Bravo R") < rows.find("Alpha R") < rows.find("Charlie R")
+    )
+
+
+def test_responses_cookie_sort_by_tag(
+    client: TestClient, db: Session
+) -> None:
+    s = _seed(client, db, "resp-tag-sort")
+    rows = _rows(_sorted_body(client, s.id, "responses", "tag_1", "asc"))
+    # Group A (Delta) before Group B (Echo) — the reverse of the email
+    # default, which is what a dropped resolver would leave behind.
+    assert rows.find("Delta E") < rows.find("Echo E")

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_field_label_header.html" import field_label_header %}
 
 {% block title %}Responses — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -80,13 +81,39 @@
 
   {% if rows %}
     <div class="card">
+      {# Tag columns and their show/hide chips (19I Item 11 rung 3).
+         The chips drive the shared primitive in ``base.html``; a slot
+         with no data anywhere renders disabled and its column stays
+         hidden. #}
+      {% set has_tag_1 = rows | selectattr("reviewee.tag_1") | list | length > 0 %}
+      {% set has_tag_2 = rows | selectattr("reviewee.tag_2") | list | length > 0 %}
+      {% set has_tag_3 = rows | selectattr("reviewee.tag_3") | list | length > 0 %}
+      <p class="col-chip-row" data-col-toggles-for="responses-table"
+         style="margin: 0 0 12px 0;">
+        <span>Show columns:</span>
+        {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
+          <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                data-col-toggle="tag-{{ slot }}"
+                {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label_header(session, "reviewee", "tag_" ~ slot) }}</span>
+        {% endfor %}
+      </p>
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="responses-table"
+             data-rrw-col-toggles="rrw-response-tag-visibility"
              data-rrw-sortable="rrw-sort-responses-{{ session.id }}">
         <thead>
         <tr>
           <th class="rrw-sortable" data-sort-key="name">Reviewee<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by tag 1"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "reviewee", "tag_2") }}<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by tag 2"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "reviewee", "tag_3") }}<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by tag 3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
           <th class="rrw-sortable" data-sort-key="coverage_state">Coverage<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Coverage"
@@ -108,6 +135,9 @@
               </a><br>
               <code>{{ row.reviewee.email_or_identifier }}</code>
             </td>
+            <td class="tag-col tag-col-1" data-sort-value="{{ row.reviewee.tag_1 or '' }}">{{ row.reviewee.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2" data-sort-value="{{ row.reviewee.tag_2 or '' }}">{{ row.reviewee.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3" data-sort-value="{{ row.reviewee.tag_3 or '' }}">{{ row.reviewee.tag_3 or "" }}</td>
             <td data-sort-value="{{ row.coverage_state }}">
               {% if row.coverage_state == "complete" %}
                 <span class="pill pill-count">complete</span>
@@ -142,6 +172,16 @@
         </tbody>
       </table>
     </div>
+    {# The slot -> column-class mapping is the page's own, by design:
+       the shared primitive only toggles ``col-hidden-{slot}`` on the
+       table and never assumes a slot vocabulary. #}
+    <style>
+      #responses-table.col-hidden-tag-1 .tag-col-1,
+      #responses-table.col-hidden-tag-2 .tag-col-2,
+      #responses-table.col-hidden-tag-3 .tag-col-3 {
+        display: none;
+      }
+    </style>
   {% else %}
     <div class="card">
       {% if total_row_count > 0 %}
