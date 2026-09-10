@@ -3248,3 +3248,211 @@ them, which the suite can only check as text.
 - `spec/rrw_functional_spec.md` — the one site describing where the
   hint sits (Item 10).
 - `docs/status.md` — row at the close (Item 10).
+
+## Item 11 — the roster table facility on Invitations and Responses
+
+### Opportunity
+
+The author, after Item 10 put one count sentence on all seven
+preview pages: *"What would it take to include the same tag column
+display, tag selection, sort, etc., facility in Invitations as in
+Reviewers? Similarly for Responses and Reviewees?"*
+
+Measuring the two pairs decomposed "the same facility" into four
+independent parts with very different costs:
+
+| Facility | Reviewers | Invitations | To port |
+|---|---|---|---|
+| Tag columns rendered | 3, labelled by the shared `field_label_header` macro | — | **Template only** |
+| Column-visibility chips | chip row + CSS + **55 lines of inline JS** | — | See below |
+| Column sort | `data-rrw-sortable` + `<thead>` + `<tbody class="rrw-rows">` + 8 annotated `<th>` + ~15 lines of route wiring | — | **Table restructure first** |
+| Search matches tags | tags whole-value (Item 1) | name / email only | extend the filter + its datalist |
+| Status filter | yes | yes | already there |
+| Row select + bulk delete | yes | — | not applicable — read-only pages |
+| 200 / 500 cap | yes | **none** | decided against in Item 10 |
+
+Three findings shape the work more than the line counts do.
+
+1. **Tags are already in the template's hands.**
+   `InvitationsRow.reviewer` and `ResponsesRow.reviewee` are the full
+   ORM objects, so `tag_1..3` need no service, query or view change.
+2. **The column-visibility mechanism is duplicated four times**, not
+   three as first counted — `session_reviewers`, `session_reviewees`,
+   `session_relationships` carry a byte-identical 55-line IIFE, and
+   `session_assignments` a 46-line variant under a different storage
+   key (`rrw-assignment-col-visibility`, which is why a grep for
+   `tag-visibility` missed it). **211 lines of duplicated JS**, plus
+   four near-identical CSS blocks. Porting as-is makes it six copies.
+   The two page-specific values are the storage key and the table id;
+   everything else is the same code.
+3. **Neither target page can take the sort primitive as it stands.**
+   `session_invitations.html` and `session_responses.html` have **no
+   `<thead>`, no `<tbody>` and no table `id`** — the tables are
+   `<table><tr>…headers…</tr>{% for %}<tr>…`. The primitive requires
+   all three, so sort begins with a structural change to each table.
+
+### Decision
+
+**Extract the column-visibility mechanism into a shared primitive
+first, then port.** It follows the shape `data-rrw-sortable` already
+proves in this codebase: declarative markup plus one implementation
+in `base.html`. Rung 1 is worth landing even if the rest never
+happens — it retires 211 duplicated lines and converts four pages
+with no visible change.
+
+Rejected: **copying the IIFE a fifth and sixth time.** It is the
+cheaper diff and the wrong one; the mechanism is already the most
+duplicated JS in the app, and two more copies would put a
+five-way edit behind any future change to it.
+
+Rejected: **generalising the chips into a server-rendered control**
+(a form + a persisted per-user setting). The state is a per-browser
+display preference, `localStorage` is where the app already keeps
+those (`spec/settings_inventory.md`), and a round-trip per toggle
+would be worse than the thing it replaced.
+
+**Observers stays out**, at the author's instruction (2026-09-10).
+It carries a single `tag_1` and no chip mechanism, so "the same as
+the rosters" was never true of it; folding it in would mean deciding
+what a one-tag chip row means, which is a different question.
+
+### Semantics
+
+- **Storage keys do not change.** The four existing keys stay
+  exactly as they are, because renaming one silently resets every
+  operator's saved column state on that page. The primitive reads
+  the key from the markup instead of hard-coding it.
+- **Slot names stay page-local.** The rosters use `tag-1..3` and
+  `profile`; Assignments uses `rt1..3` / `et1..3` / `p1..3`. The
+  primitive must not assume a vocabulary — it toggles
+  `col-hidden-{slot}` on the table for whatever slot the chip names.
+- **A chip with no data is disabled, not hidden**, and its column is
+  hidden — today's behaviour, preserved.
+- **A stored key naming a slot the page no longer has** is ignored,
+  as today (the loop reads chips and consults storage, never the
+  reverse).
+- **Sort on an uncapped page.** Invitations and Responses render
+  every matching row. The client-side sort reorders the DOM in
+  place; measured in Chromium against the shipped JS, **1,000 rows
+  ≈ 22-26 ms**, 2,000 ≈ 43-61 ms, 5,000 ≈ 102-227 ms per click.
+  Against a page that already costs 669-840 ms to render and ~1 MB
+  of HTML at 1,000 rows, sort adds ~3%.
+- **Cookie-backed order.** The rosters persist the sort spec in a
+  cookie and re-apply it server-side so the first paint lands in the
+  chosen order. These two pages need the same, which means a
+  sort-key resolver that reaches **through the wrapper**:
+  `InvitationsRow.reviewer.name`, not `getattr(row, key)` as the
+  rosters can use.
+- **Tag search.** Reviewers matches `tag_1..3` by **whole value**
+  (Item 1) while name and email match by substring; the two target
+  pages must adopt the same rule rather than inventing a third, and
+  their datalists must not offer tag values as suggestions (Item 9's
+  finding: a tag identifies too many rows to partition by).
+
+### Judgment calls — decided
+
+- **Rung 1 converts all four existing pages**, not just the three
+  that share the 55-line form. Leaving Assignments on its own
+  variant would keep two mechanisms alive and lose most of the point.
+- **The primitive lives in `base.html`** beside the sort JS, not in
+  a new static file. `app/web/static/` is deliberately not a general
+  asset pipeline (`CLAUDE.md`), and the sort primitive sets the
+  precedent.
+- **Reviewers' profile column stays un-hideable.** It renders
+  `profile-col` but has no chip, where Reviewees has both. That
+  asymmetry predates this item and is not its to settle; noted so a
+  reader does not read the extraction as having dropped something.
+
+### Blast radius (measured)
+
+```
+grep -rhoE '"rrw-[a-z-]*visibility"' app/web/templates/operator/*.html | sort -u
+    → 4 keys (reviewer / reviewee / relationship tag-visibility, assignment col-visibility)
+grep -rn "col-hidden" app/web/templates/operator/*.html
+    → 4 CSS blocks + 4 JS toggle sites
+IIFE line counts: reviewers 55, reviewees 55, relationships 55, assignments 46  → 211
+grep -c '<th' on the target tables → invitations 7, responses 4
+grep -c '<thead>' → invitations 0, responses 0        (the sort blocker)
+```
+
+Templates: 6 (four to convert, two to extend) + `base.html`.
+Routes: `_operations.py` (two handlers) for the sort wiring.
+Views: `_filters.py` (`filter_invitations_rows`,
+`filter_responses_rows`, and both `*_search_options`).
+
+Specs describing what changes: `spec/setup_pages.md` (the chip
+pattern), `spec/operations_pages.md` (both pages' columns and
+filter cards), `spec/settings_inventory.md` (lines 391-394 list all
+four storage keys and their surfaces), `spec/sort_by_reviewee.md`
+(the sort primitive's surface list, mirrored at
+`settings_inventory.md:385`).
+
+### PR ladder
+
+1. **Extract the column-visibility primitive** into `base.html`;
+   convert all four existing pages to it. Storage keys unchanged, no
+   visible change. Must not touch the two target pages.
+2. **Structure + sort on Invitations and Responses** — `<thead>`,
+   `<tbody class="rrw-rows">`, a table `id`, `data-rrw-sortable`,
+   annotated headers with `data-sort-value` cells, and the route
+   wiring with a wrapper-aware resolver. No new columns yet.
+3. **Tag columns + chips on both**, through the rung-1 primitive.
+4. **Tag matching in both searches**, plus the datalist rule.
+5. **Specs + `docs/status.md` row.**
+
+Rungs 2-4 are independently shippable and each leaves both pages
+coherent; rung 1 stands alone.
+
+### Definition of done
+
+- One column-visibility implementation in `base.html`; no page
+  carries its own copy. Asserted by a grep-shaped test, not by
+  reading.
+- The four existing pages behave identically before and after rung
+  1, including which chips are disabled and what persists.
+- Both target tables sort on every annotated column, and the chosen
+  order survives a reload (cookie applied server-side).
+- Tag columns render on both, labelled through
+  `field_label_header`, with chips that hide them.
+- A tag value typed into either search matches whole-value, and is
+  **absent** from the datalist.
+- Every new assertion mutation-checked.
+- `ruff check .` and `.venv/bin/pytest -q -n auto` pass.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19I.11` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- None blocking. The author settled the two that mattered on
+  2026-09-10: extract the primitive rather than copy it, and leave
+  Observers alone for now.
+
+### Out of scope
+
+- **Observers** — see Decision.
+- **Capping Invitations / Responses.** Decided against in Item 10
+  and unchanged here, though rung 2 makes the pages more inviting to
+  use at scale: measured, they already cost ~669-840 ms and ~1 MB of
+  HTML at 1,000 rows, and 1.2-1.5 s and 1.5-2.1 MB at 2,000. If the
+  author revisits the cap, that is its own item.
+- **Row selection and bulk actions** on the two pages. They are
+  read-only monitoring surfaces; nothing there mutates.
+- **Reviewers' un-hideable profile column** — see Judgment calls.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the column-visibility chip pattern becomes
+  a shared primitive rather than a three-page one; its description
+  generalises (Item 11).
+- `spec/operations_pages.md` — Invitations and Responses gain tag
+  columns, the chip row, sortable headers and tag matching in
+  search (Item 11).
+- `spec/settings_inventory.md` — two new `localStorage` keys in the
+  table at §`localStorage`, and a note that the existing four are
+  deliberately unchanged by the extraction (Item 11).
+- `spec/sort_by_reviewee.md` — the sort primitive's surface list
+  gains the two pages (Item 11).
+- `docs/status.md` — row at the close (Item 11).
