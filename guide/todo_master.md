@@ -2806,7 +2806,7 @@ shared function.
 
 ---
 
-### Segment 19I — Roster search and row deletion — 🔵 **live** (**twelve items closed, one withdrawn**, 2026-09-09 → 2026-09-10; PRs #2230 → #2275; plan stays in `guide/segment_19I_roster_search_and_row_delete.md`, **not archived**)
+### Segment 19I — Roster search and row deletion — ✅ complete + archived 2026-09-10 (**thirteen items — twelve closed, one withdrawn**, 2026-09-09 → 2026-09-10; PRs #2230 → #2276; plan archived: `guide/archive/segment_19I_roster_search_and_row_delete.md`)
 
 Opened for **two** refinements about working with roster rows once
 they are in the app, and grew to thirteen as the author exercised
@@ -2864,9 +2864,23 @@ under test three times, and a table slice ending at the file's
 places. Every one was found by a mutation or a run, none by
 re-reading.
 
-**Archiving is the author's call.** Every opened item has closed, so
-the segment could move to `guide/archive/` with an index row; it
-stays in `guide/` until that is decided, as 19H does.
+**Closed on the theme running out, not on a count.** After Item 12
+there was no roster surface the author had raised and the segment had
+not answered; Item 13 was the first ask that did not fit, and what
+kept the file open after it was withdrawn was bookkeeping. At 4,800
+lines the plan was already past what a reader can hold end to end —
+the shape 19C was retired for — so it closes on its item manifests
+(`python3 tools/close_check.py 19I.<n>` exits 0, no warnings, for all
+thirteen) and moves to `guide/archive/` with its index row.
+
+**Two gaps recorded rather than carried**, for whoever opens the next
+segment on these pages: the four roster pages still render no lock
+card on `expired` / `archived` (Item 3's gap, in `spec/lifecycle.md`
+§5), and `spec/rrw_functional_spec.md` §9.7 still describes a
+standalone *Self-reviews card* on the Assignments page that does not
+exist — found by `spec-writer` at Item 12's close and left alone,
+because inventing the card is a feature decision and deleting the
+prose is a spec claim neither the author nor the code has settled.
 
 ---
 
