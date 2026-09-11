@@ -4,7 +4,7 @@
 `spec/rrw_functional_spec.md`, all 108 headings · **Previous
 sweep:** `guide/sweep_2026-09-05_spec-docs.md` (folder-scoped;
 this file was not among its findings) · **Trigger:** Segment
-19J Item 1, from `guide/codebase_assessment_10sep.md` §8
+19J Item 1, from `guide/archive/codebase_assessment_10sep.md` §8
 recommended move #1.
 
 **A single-file sweep, deliberately.** The folder-scoped cadence
