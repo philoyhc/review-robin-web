@@ -1806,7 +1806,10 @@ underline.
 
 ## Item 7 — Pills rationalization: one vocabulary for two jobs
 
-**Stub, opened 2026-09-11.** The audit is done; the decision is not.
+**Opened as a stub 2026-09-11; planned out the same day** after four
+border treatments were mocked up and reviewed with the author. The
+mockups are not committed — they were a disposable comparison sheet,
+and the decision they produced is below.
 
 ### Opportunity
 
@@ -1832,30 +1835,329 @@ pointer cursor — the single existing affordance pointing the wrong way.
 
 ### Decision
 
-**Not taken.** The audit's §"Open questions for the decision" carries
-the five the author needs to settle, of which the first two are the
-shape of the whole item:
+**Reserve the shade, not the hue.** Author, 2026-09-11: *"only the
+particular shade of blue is reserved for clickable/draggables; lightly
+shades are entirely ok to use for static"*, and earlier the same day:
+*"reserve blue with accent outline for chips/pills that allow
+interaction (whether by clicking, or in the case of Instruments Band 2,
+by clicking and dragging)"*.
 
-1. **Which side moves** — 189 display against 61 interactive says the
-   label is the default reading and the control is the exception, so
-   the control is what should look different. Restyling 189 labels is
-   three times the diff for the same result.
-2. **What carries the signal** — border, background, affordance glyph,
-   or shape (pill for labels, something squarer for controls).
+Two mechanisms, both narrow:
 
-### Out of scope, already
+1. **The reserved pair — `--blue-strong` `#2563eb` (light) and
+   `--blue-glow` `#4b8bf5` (dark), reached through `--selected-bg` —
+   means "you can act on this"** on a pill or chip surface. A control
+   renders transparent-filled with a 2px edge and matching text in the
+   reserved shade; `is-selected` stays a solid fill of the same shade.
+2. **No static pill carries the reserved pair.** Every other blue stays
+   available to statics and none of them moves: `--status-info-bg`
+   `#dbeafe`, `--status-info-fg` `#1e40af`, `--role-reviewer-fg`
+   `#1d4ed8`.
+
+Resolving every pill-facing token through its `var()` chain, in both
+themes, found **exactly one static class on the reserved pair**:
+`--lifecycle-validated-fg` is `--blue-strong` / `--blue-glow`, which is
+`--selected-bg` to the digit. It retargets to the pair `pill-info`
+already uses (`--blue-deeper` `#1e40af` / `--blue-soft` `#93c5fd`) —
+no new token, and Validated stays the cool step between Draft (amber)
+and Ready (green).
+
+That answers the two questions the stub left open:
+
+1. **Which side moves** — the control, as the stub reasoned. Confirmed,
+   and now cheaper than the stub assumed: 54 controls take a CSS rule,
+   and the static side is one token swap rather than a recolour.
+2. **What carries the signal** — a 2px outline in the reserved shade.
+
+**Rejected alternatives**, all four mocked up before the choice:
+
+- **Hairline border in `--border-subtle`.** Rejected: `#e5e7eb` against
+  a `#dbeafe` chip is nearly invisible in light mode. It ships a change
+  nobody notices and the question returns.
+- **Outline swap in `--border-default`** (neutral grey — the Secondary
+  `.btn` role from `spec/ui_elements.md` §6, borrowed at pill scale).
+  Rejected: it separates control from label but spends no signal on
+  *which* color means action, so a reader still learns a separate rule
+  for links — and `--text-link` is already the reserved shade.
+- **Shape change**, controls to `border-radius: 4px`. Rejected: splits
+  one vocabulary into two and makes `.tag-chip` a misnomer, to carry a
+  signal the outline already carries.
+- **Moving all 69 pale-blue statics off the hue.** Rejected by the
+  author: the reservation is on the shade, and a 20-template recolor
+  buys nothing the shade rule does not.
+
+**Extended 2026-09-11 to the row pager.** Author: *"Use the opportunity
+to rationalize the pagination indicators (the every 200 rows thing) on
+the roster pages too. While not the same kind of rounded pill, they do
+have the same blue. Rather, use normal url link style text for the
+additional pages, and bold for the selected page"*.
+
+The 19J.5 pager is not a pill, but `.table-pager-link` wears the pill's
+habits: `padding`, `border-radius: var(--radius-button)` and
+`text-decoration: none`, so a range reads as a tinted block rather than
+as a link; and `.table-pager-link.is-current` is a solid
+`--selected-bg` fill in `--selected-fg`, which is the reserved shade on
+a **non-clickable** element — the current page is a `<span>`, the one
+cell in the strip that does not navigate.
+
+So the pager moves the other way from the chips. Chips gain a treatment
+because nothing marked them as controls; the pager **loses** one,
+because what it had was borrowed:
+
+- **Other pages** render as ordinary links — `--text-link` with the
+  underline the app's `a { color: var(--text-link) }` rule leaves to
+  the user agent. No padding, no radius, no `text-decoration: none`.
+  The `.table-pager` flex `gap` already does the spacing the padding
+  was doing.
+- **The current page** is `font-weight: 600` in body text. No fill, no
+  reserved shade.
+
+Rejected: **keeping the filled current-page cell and restyling only the
+others.** It is the cell that reads loudest and the only one that is
+not a link, so leaving it filled would keep the reserved shade on the
+one inert element in the strip — exactly the collision this item
+exists to remove.
+
+### Semantics
+
+Per mechanism, at the boundaries:
+
+- **Visible but not actionable.** `.tag-chip.is-disabled` (Band 1 link
+  chips, 2 sites in `instruments_index.html`) sets `cursor: default`
+  and is genuinely inert. It **suppresses the outline** — otherwise the
+  reserved shade would claim "actionable" about an element whose own
+  CSS says it is not.
+- **A static pill wearing a control's class string.** `b3_static_pill`
+  renders `pill pill-count tag-chip is-selected` with no interactive
+  attribute. The class string is the defect, not an exemption: it is
+  fixed, and it is fixed first (rung 1).
+- **Selected state.** `is-selected` keeps its solid `--selected-bg`
+  fill and gains a border in the same color, so the box does not change
+  size when the chip is toggled.
+- **Every pill gets `border: 1px solid transparent` at the base.**
+  Adding a visible border to controls alone would grow each chip by 2px
+  and reflow every table where a status label sits beside a toggle.
+- **2px comes from `inset box-shadow`, not `border-width`.** Same
+  reason: the box geometry has to stay identical.
+- **Hover is unchanged.** The outline is a resting-state signal;
+  `cursor: pointer` stays, and nothing new fires on hover.
+- **`--text-link` is the reserved shade and stays that way.** Links are
+  actionable, so the rule formalizes existing practice rather than
+  carving an exception out of it. The spec has to say so, or it reads
+  as an oversight.
+- ~~**Scope is pill and chip surfaces.**~~ **Widened 2026-09-11 to
+  pill, chip and row-pager surfaces**, on the author's instruction
+  above. The reasoning is unchanged: `--focus-ring`,
+  `--btn-primary-bg` and `--card-active-border` also resolve to the
+  pair and are all actionable or focus-related, so they are consistent
+  with the rule without being touched. `--status-info-border` resolves
+  to it on a *static* info panel and is the one known inconsistency
+  still outside the scope — recorded in Open questions, not fixed here,
+  because widening further turns a four-rung item into a whole-app
+  color audit.
+- **The pager's current cell keeps its semantics, loses its costume.**
+  It stays a `<span>` with `aria-current="page"`, so nothing changes
+  for a screen reader; only `background` and `color` go, and
+  `font-weight: 600` stays. Bold is what marks it now.
+- **The pager's disabled branch is already dead.** `_preview_pager.html`
+  renders `<span class="table-pager-link" aria-disabled="true">` when
+  `pager_url_base` is unset, and all **seven** routes now pass a
+  non-empty string unconditionally (measured below). The branch and its
+  CSS rule are scaffold left over from 19J.5 rung 1. Restyling a state
+  no page can reach would be worse than leaving it, so the branch, its
+  rule and the stale comment go with rung 4.
+- **The instruments audience override wins on specificity, by design
+  and for now.** `instruments_index.html:125-126` paints
+  `body.ui-v2 [data-new-model-audience="reviewees"|"observers"]
+  .tag-chip:not(.is-selected)` with a filled `--selected-bg` at opacity
+  0.4 — (0,3,1) against the proposed rule's (0,2,1). Those chips are
+  clickable, so the reservation holds; the *treatment* does not match.
+  Left alone in this item (see Open questions).
+
+### Judgment calls — decided
+
+- **2026-09-11 — the guard resolves tokens, it does not assert class
+  names.** A bare class-name assertion matches `base.html`'s own inline
+  CSS, which ships on every page; 19J.5 hit that three times. The test
+  parses the token blocks and follows each `var()` chain to a hex.
+- **2026-09-11 — Validated's replacement is a pair already in use**
+  rather than a new hue. Zero new tokens, and the lifecycle ramp still
+  reads amber → cool → green.
+- **2026-09-11 — `b3_static_pill` lands before the outline, not with
+  it.** Under the new rule it would render as an outlined control that
+  does nothing, so the bug gets louder; fixing it first also makes rung
+  1 shippable on its own merit, today, as a pointer-cursor defect.
+- **2026-09-11 — the reservation is scoped to pill, chip and row-pager
+  surfaces.** Stated in the spec as a scope, not left implicit, so the
+  next reader knows `--status-info-border` was seen and deferred rather
+  than missed.
+- **2026-09-11 — the pager's spacing comes from the flex `gap`, not
+  from per-link padding.** Dropping the padding is what makes a range
+  read as text; the `.table-pager` container already sets
+  `gap: var(--space-1) var(--space-2)`, so the strip does not collapse
+  when the padding goes.
+- **2026-09-11 — the underline is left to the user agent.** The app's
+  own link rule is `a { color: var(--text-link) }` with no
+  `text-decoration`, so "normal url link style" means removing
+  `text-decoration: none` rather than adding an underline of our own —
+  the pager then matches every other link on the page by construction
+  rather than by a value someone has to keep in sync.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `ebe00540`.
+
+| What | Count | Command |
+|---|---:|---|
+| Templates rendering `.tag-chip` | 10 | `grep -arl "tag-chip" app/web/templates --include=*.html \| grep -v base.html \| wc -l` |
+| Band 2 pill attribute sites | 26 | `grep -ac "data-new-model-band2-pill" app/web/templates/operator/instruments_index.html` |
+| `b3_static_pill` — macro + call sites | 1 + 5 | `grep -an "b3_static_pill(" app/web/templates/operator/instruments_index.html` |
+| `tag-chip is-disabled` sites | 2 | `grep -arc "tag-chip is-disabled" app/web/templates/operator/instruments_index.html` |
+| Test files mentioning pill or chip | 93 | `grep -rln "pill\\|tag-chip" tests/ \| wc -l` |
+| Static pill classes on the reserved pair | 1 | token resolution over `base.html`, both theme blocks, following every `var()` |
+| Templates including the row pager | 7 | `grep -rln "_preview_pager" app/web/templates \| wc -l` |
+| Routes supplying `pager_url_base` | 7, all unconditional | `grep -rn -A2 '"pager_url_base":' app/web/routes_operator/*.py` |
+| Pager CSS rules to change | 3 of 6 | `.table-pager-link`, `.table-pager-link.is-current`, and the dead `[aria-disabled="true"]` rule, `base.html:1437-1452` |
+
+**A correction to the audit.** `guide/pill_style_audit.md` counts
+`b3_static_pill` as **1** display use of `pill pill-count tag-chip`.
+It renders **5 times** — the audit's scan reads `class="..."` strings,
+so it saw the macro definition once and could not see the five
+`{{ b3_static_pill(...) }}` call sites. The audit's headline split
+(250 / 189 / 61) is unaffected in shape; the one both-ways combination
+it flags is worse than reported, not better.
+
+**Specs that carry the affected tokens:** `spec/color_tokens.md`
+(lifecycle-badge table, selection table, and the "Deliberate couplings"
+section) and `spec/ui_elements.md` §9 "Badges / pills".
+
+**Guide screencaps that go stale:** `assignments-page.png` and
+`-dark.png` (`guide.html:383`, the nine-chip column-toggle row) and
+`instrument-card-fields-and-visibility.png` and `-dark.png`
+(`guide.html:303`, the Band 2 pill row). Retaking them is dev-slot
+work, not sandbox work.
+
+### PR ladder
+
+Each rung carries its own spec edit; there is no trailing docs rung.
+
+1. **`b3_static_pill` off the control class string.** The macro drops
+   `tag-chip is-selected` and carries a static class only. 5 render
+   sites, one file. *Must not touch* `base.html` — this rung is a defect
+   fix that stands on its own whether or not the rest lands.
+2. **Validated off the reserved shade, plus the guard.**
+   `--lifecycle-validated-fg` retargets to `--blue-deeper` /
+   `--blue-soft` in both theme blocks;
+   `tests/unit/test_reserved_shade.py` resolves every pill-facing token
+   and asserts the reserved pair appears only on control rules. The two
+   land together because the test is red before the swap.
+   `spec/color_tokens.md`'s lifecycle-badge row updates with it.
+   *Must not touch* templates.
+3. **The control outline.** The `base.html` rule for `.tag-chip` and
+   `[data-new-model-band2-pill]`, the transparent baseline border on
+   `.pill`, and the `is-disabled` suppression; integration tests
+   asserting the rendered chip on Assignments and the rendered Band 2
+   pill carry it (targeting the element, not the class name).
+   `spec/ui_elements.md` §9 and `spec/color_tokens.md` "Deliberate
+   couplings" document the rule; `guide/post_azure_todo_checklist.md`
+   gains the screencap-retake row. *Must not* recolor any static pill.
+4. **The row pager off the reserved shade.** `.table-pager-link` drops
+   `padding`, `border-radius` and `text-decoration: none`;
+   `.table-pager-link.is-current` drops `background` and `color` and
+   keeps `font-weight: 600`; the dead `aria-disabled` branch, its CSS
+   rule and the stale scaffold comment come out of
+   `_preview_pager.html` and `base.html`. Unit test asserting the
+   rendered current cell carries no `background` and the range links
+   carry no `text-decoration: none` — targeting the rendered element,
+   not the class name. `spec/ui_elements.md` §10's pager row gains the
+   link-style sentence. *Must not* change the pager's shape, ranges,
+   suppression rule or `aria-current`.
+
+### Definition of done
+
+- `b3_static_pill` renders no `tag-chip` and no `is-selected`, at all
+  5 call sites.
+- `--lifecycle-validated-fg` resolves to `#1e40af` (light) and
+  `#93c5fd` (dark).
+- `tests/unit/test_reserved_shade.py` passes, and **fails** when
+  `--lifecycle-validated-fg` is reverted — mutation-checked, not
+  assumed.
+- Rendered `.tag-chip` and `[data-new-model-band2-pill]` elements carry
+  the outline; a rendered `.tag-chip.is-disabled` does not.
+- No static pill's color changes except Validated's foreground.
+- A range link in the pager renders with the page's ordinary link
+  color and underline; the current cell renders bold in body text with
+  no `background`.
+- The pager's `aria-disabled` branch is gone from the template and
+  `base.html`, and `aria-current="page"` still renders on the current
+  cell.
+- `tests/unit/test_pager.py` and `tests/integration/test_preview_pager.py`
+  still pass unchanged in substance — the pager's ranges, suppression
+  and shape are untouched.
+- `spec/ui_elements.md` §9 describes the control treatment and names
+  `--text-link` as the same rule, not an exception.
+- `spec/color_tokens.md` "Deliberate couplings" states the reservation
+  and its scope (pill and chip surfaces).
+- `guide/post_azure_todo_checklist.md` carries the screencap-retake row
+  naming the four files.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent
+  container before each push.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19J.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- **Does the reservation extend past pill and chip surfaces?**
+  `--status-info-border` resolves to the reserved pair on a static info
+  panel. Scoped out of this item deliberately. **Author decides**
+  whether it becomes 19J.8, a deferred entry, or nothing.
+- **The instruments audience override.** `instruments_index.html:125-126`
+  leaves two chip rows filled rather than outlined, at 0.4 opacity.
+  They are clickable so the rule is not violated, but the treatment is
+  inconsistent. **Author decides** whether that is a visibility-grid
+  item rather than a pill one.
+- **Band 1 `is-unset` chips.** They are clickable, so the rule says they
+  take the outline — but they would then carry an amber fill with a blue
+  edge, which no other chip does. **Needs a look on the dev slot** before
+  rung 3 is called done; if it reads badly, the fallback is to suppress
+  the outline the way `is-disabled` does and record why.
+
+### Out of scope
 
 - **Accessibility is not the problem here.** The interactive pills
   already carry `role="button"`, `tabindex="0"` and `aria-pressed`, so
   a screen reader and a keyboard distinguish what the eye cannot.
-  Whatever is chosen must not become a reason to drop those.
+  Whatever is chosen must not become a reason to drop those — and the
+  outline does not, it finally says the same thing to the eye.
 - **Status colours are not entangled.** The semantic modifiers
   (`pill-info` / `-success` / `-warning` / `-error` / `-super`) are
   display-only in all 50 of their uses, so a control treatment need not
   negotiate with them.
+- **The 69 static pills on other blues.** `#dbeafe`, `#1e40af` and
+  `#1d4ed8` are not the reserved pair; they stay, by the author's
+  decision above.
+- **The 32-class-combination consolidation.** The audit's larger
+  finding — six combinations used both ways — is a naming problem, not
+  a color one. Not addressed here; recorded in
+  `guide/pill_style_audit.md` and available to a later item.
+- **Retaking the Guide screencaps.** Dev-slot work after deploy, per
+  `CLAUDE.md` → Where work runs. Tracked on the post-Azure checklist,
+  not done in the sandbox.
 
 ### Doc impact
 
 - `guide/pill_style_audit.md` — the measured audit this item starts
   from (Item 7).
+- `spec/color_tokens.md` — "Deliberate couplings" gains the reserved-pair
+  rule and its scope; the lifecycle-badge row retargets
+  `--lifecycle-validated-fg` (Item 7).
+- `spec/ui_elements.md` — §9 "Badges / pills" documents the control
+  treatment, the `is-disabled` suppression, and `--text-link` as the
+  same rule; §10's `.table-pager` row gains the link-style sentence
+  (Item 7).
+- `guide/post_azure_todo_checklist.md` — screencap-retake row naming
+  the four affected files (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).
