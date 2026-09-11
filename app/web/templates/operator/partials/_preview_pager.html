@@ -11,18 +11,22 @@
    operator's own partition of the roster wins, and the count line
    speaks for that view instead.
 
-   ``pager_url_base`` is the path the range links point at. While it is
-   unset the strip renders **inert**: the shape is on the page and the
-   ranges are real, but nothing navigates. That is the scaffold rung,
-   landed on its own so the surface could be agreed before any wiring
-   attached to it (``CLAUDE.md`` → Working approach). #}
+   ``pager_url_base`` is the path the range links point at. All seven
+   routes pass one unconditionally; the inert third branch this macro
+   used to carry — a ``<span aria-disabled="true">`` for an unset base —
+   was the scaffold rung's, and came out at 19J.7 rung 4 once it was
+   measured to be unreachable. Restyling a state no page can render is
+   worse than not having it.
+
+   Every cell but the current one is an ordinary link, and looks like
+   one: the reserved accent shade belongs to things you can act on, and
+   the current cell is the one here that cannot be. It is marked by
+   weight instead (``spec/ui_elements.md`` §10). #}
 {% macro _cell(link, base) -%}
   {%- if link.is_current -%}
     <span class="table-pager-link is-current" aria-current="page">{{ link.label }}</span>
-  {%- elif base -%}
-    <a class="table-pager-link" href="{{ base }}offset={{ link.offset }}">{{ link.label }}</a>
   {%- else -%}
-    <span class="table-pager-link" aria-disabled="true">{{ link.label }}</span>
+    <a class="table-pager-link" href="{{ base }}offset={{ link.offset }}">{{ link.label }}</a>
   {%- endif -%}
 {%- endmacro %}
 {% if pager %}
