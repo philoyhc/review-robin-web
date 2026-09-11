@@ -186,20 +186,34 @@ and partial the four roster pages and Assignments use
 reviewer (`build_invitations_rows` iterates
 `monitoring.per_reviewer_progress`).
 
-**This page is uncapped.** It renders every matching row, however
-many — there is no 200 / 500 window as on the rosters. So only the
-filter branch can ever fire: `Showing 3 reviewers.`, or nothing at
-all. The withheld clause is unreachable here by construction.
+**This page is paged, and a filtered view is uncapped** (19J.5 rung
+3). ~~This page is uncapped. It renders every matching row, however
+many — there is no 200 / 500 window as on the rosters.~~ It rendered
+every matching row until rung 3, whatever the number, which is why it
+and Responses were the two that hurt most on a large roster. An
+unfiltered view now pages at **200**, with the `.table-pager` strip
+(`spec/ui_elements.md` §10) above and below the table and `?offset=`
+clamped rather than rejected — the rosters' rules exactly, shared
+through `views.build_pager` and `_page_operations_rows`.
+
+**A filtered view stays uncapped here**, which is the one place these
+two differ from the four Setup pages. Those carry a 500 filtered cap
+from Segment 15F; these never had a cap, and inventing one would take
+rows away from a filtered view that shows them today — a loss no part
+of 19J.5 asks for. The pager is suppressed while a filter is active
+either way, so the difference is visible only on a filter matching
+more than 500 rows.
+
+So the count line's **withheld clause is still unreachable here by
+construction**: an unfiltered view says nothing (the ranges speak) and
+a filtered one withholds nothing. What renders is `Showing 3
+reviewers.`, or nothing at all.
 
 Since **19J.5** a filter that matches every row still reports
 (`Showing 1,240 reviewers.`) rather than rendering nothing: the
 sentence and the pager read the same filter flag so they cannot
 disagree about which mode the page is in, and a filter that ran and
-excluded nothing is worth saying. An **unfiltered** view renders
-nothing, as it always did.
-
-*This page is not paged yet.* 19J.5 rung 3 wires its pager and retires
-the uncapped contract above; until then its pager strip renders inert.
+excluded nothing is worth saying.
 
 ### Table columns
 
@@ -296,8 +310,10 @@ whole value, with the `<datalist>` offering `Name (email)` labels
 only. The preview-count line sits above the table rather than in
 this card (Segment 19I Item 10), and its noun is **`reviewees`** —
 one row per reviewee, from `monitoring.per_reviewee_coverage`. This
-page is uncapped on the same terms as Invitations, so only the
-filter branch fires.
+page ~~is uncapped~~ **pages** on the same terms as Invitations
+(19J.5 rung 3): 200 rows to a page unfiltered, a filtered view
+uncapped and without a pager, so only the filter branch of the count
+line ever fires.
 
 ### Table columns
 

@@ -196,21 +196,23 @@ def test_the_pager_carries_no_selection_across_a_page(
     assert "selected=" not in strip
 
 
-def test_the_pages_still_waiting_for_their_rung_stay_inert(
+def test_assignments_still_waits_for_its_rung(
     client: TestClient, db: Session
 ) -> None:
-    """Assignments, Invitations and Responses keep the scaffold until
-    rungs 3 and 4. Their strips render and go nowhere — and because
-    they are not paged, they also keep the withheld notice that the
-    Setup pages have now dropped."""
+    """Assignments keeps the scaffold until rung 4 settles its sort
+    question. Its strip renders and goes nowhere — and because it is
+    not paged, it also keeps the withheld notice the other six have
+    now dropped.
+
+    Invitations and Responses left this test at rung 3; the list is
+    down to one page and empties at rung 4."""
     review_session = _make_session(client, db, code="pager-unwired")
     _import_reviewers(client, review_session.id, 12)
 
-    for page in ("invitations", "responses", "assignments"):
-        body = client.get(
-            f"/operator/sessions/{review_session.id}/{page}"
-        ).text
-        assert f"{page}?offset=" not in body, page
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert "assignments?offset=" not in body
 
 
 def test_editing_a_row_lands_on_the_page_that_holds_it(
@@ -258,3 +260,127 @@ def test_a_stale_edit_id_drops_edit_mode_rather_than_erroring(
     )
     assert response.status_code == 200
     assert "Reviewer 0000" in _table(response.text)
+
+
+# --------------------------------------------------------------------- #
+# Rung 3 — Invitations and Responses, the two that were uncapped.
+# --------------------------------------------------------------------- #
+
+
+def _ops_table(body: str, page: str) -> str:
+    """Just the rows of the page's own table — the search typeahead
+    renders every name into a ``<datalist>`` here too."""
+    table_id = "invitations-table" if page == "invitations" else "responses-table"
+    return body[body.index(f'id="{table_id}"') :]
+
+
+def _seed_paged_operations_session(
+    client: TestClient,
+    db: Session,
+    *,
+    code: str,
+    reviewers: int,
+    reviewees: int = 2,
+) -> int:
+    """A session whose Invitations / Responses tables have more rows
+    than one page. Both build their rows from **assignments**, not from
+    the roster, so the matrix has to be generated: Invitations is one
+    row per assigned reviewer and Responses one per reviewed reviewee.
+    """
+    from ._full_matrix import (
+        generate_via_page_button,
+        pin_full_matrix_on_all_instruments,
+    )
+
+    review_session = _make_session(client, db, code=code)
+    _import_reviewers(client, review_session.id, reviewers)
+    rows = b"".join(
+        f"Reviewee {i:04d},e{i:04d}@example.edu\n".encode()
+        for i in range(reviewees)
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": ("e.csv", b"RevieweeName,RevieweeEmail\n" + rows, "text/csv")
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+    return review_session.id
+
+
+def test_invitations_pages_and_reaches_the_rows_it_used_to_render_all_of(
+    client: TestClient, db: Session
+) -> None:
+    """The page rendered every matching row until rung 3, whatever the
+    number — which is why it is one of the two that hurt most on a
+    large roster."""
+    session_id = _seed_paged_operations_session(
+        client, db, code="ops-page-inv", reviewers=210
+    )
+
+    first = client.get(f"/operator/sessions/{session_id}/invitations").text
+    assert '<nav class="table-pager' in first
+    assert f'href="/operator/sessions/{session_id}/invitations?offset=200"' in first
+
+    second = client.get(
+        f"/operator/sessions/{session_id}/invitations?offset=200"
+    ).text
+    table = _ops_table(second, "invitations")
+    assert "Reviewer 0209" in table
+    assert "Reviewer 0000" not in table
+
+
+def test_responses_pages_on_the_same_terms(
+    client: TestClient, db: Session
+) -> None:
+    """One row per reviewee, so this fixture overflows on the reviewee
+    side rather than the reviewer side."""
+    session_id = _seed_paged_operations_session(
+        client, db, code="ops-page-resp", reviewers=2, reviewees=210
+    )
+
+    first = client.get(f"/operator/sessions/{session_id}/responses").text
+    assert '<nav class="table-pager' in first
+    assert f'href="/operator/sessions/{session_id}/responses?offset=200"' in first
+
+    second = client.get(
+        f"/operator/sessions/{session_id}/responses?offset=200"
+    ).text
+    table = _ops_table(second, "responses")
+    assert "Reviewee 0209" in table
+    assert "Reviewee 0000" not in table
+
+
+def test_an_out_of_range_offset_clamps_on_the_operations_pages_too(
+    client: TestClient, db: Session
+) -> None:
+    session_id = _seed_paged_operations_session(
+        client, db, code="ops-page-clamp", reviewers=210
+    )
+    response = client.get(
+        f"/operator/sessions/{session_id}/invitations?offset=99999"
+    )
+    assert response.status_code == 200
+    assert "Reviewer 0209" in _ops_table(response.text, "invitations")
+
+
+def test_a_filtered_operations_view_carries_no_pager_and_stays_uncapped(
+    client: TestClient, db: Session
+) -> None:
+    """The one place these two differ from the rosters: the Setup pages
+    cap a filtered view at 500, and these never had a cap to keep. The
+    pager is suppressed either way."""
+    session_id = _seed_paged_operations_session(
+        client, db, code="ops-page-filt", reviewers=210
+    )
+
+    body = client.get(
+        f"/operator/sessions/{session_id}/invitations?q=Reviewer"
+    ).text
+    assert '<nav class="table-pager' not in body
+    # All 210 match, and all 210 render — nothing withheld, so the
+    # sentence carries no withheld clause.
+    assert "Showing 210 reviewers." in body
+    assert "more not shown" not in body

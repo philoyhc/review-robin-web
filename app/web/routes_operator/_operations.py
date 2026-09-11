@@ -123,6 +123,36 @@ def _responses_sort_value(row, key: str):
     return None
 
 
+def _page_operations_rows(
+    matching: list, *, is_filtered: bool, offset: int
+) -> tuple[list, int, views.Pager | None]:
+    """Cut the page the operator asked for out of the Invitations /
+    Responses row list — Segment 19J.5 rung 3.
+
+    Both pages rendered **every** matching row until now, whatever the
+    number, which is why they are the two that hurt most on a large
+    roster. They page at 200 unfiltered, on the same terms as the
+    rosters.
+
+    **A filtered view stays uncapped here**, unlike the four Setup
+    pages, which cap theirs at 500. Those two carry the 500 from
+    Segment 15F; these two never had a cap, and inventing one would
+    take rows away from a filtered view that shows them today — a loss
+    no part of 19J.5 asks for. The pager is still suppressed while a
+    filter is active, so the two pages behave identically where it is
+    visible; they differ only in what a filter that matches more than
+    500 rows renders.
+    """
+    if is_filtered:
+        return matching, 0, None
+    offset = views.clamp_offset(offset, total=len(matching))
+    return (
+        matching[offset : offset + views.PAGE_SIZE],
+        offset,
+        views.build_pager(total=len(matching), offset=offset),
+    )
+
+
 def _invitation_redirect_url(session_id: int, return_to: str | None) -> str:
     """Resolve the redirect target for an invitation action. ``return_to``
     overrides only when it matches the operations-row allowlist; otherwise
@@ -393,6 +423,7 @@ def invitations_index(
     request: Request,
     status: str = "all",
     q: str = "",
+    offset: int = 0,
     super_status: str | None = None,
     super_button: str | None = None,
     super_step: str | None = None,
@@ -412,7 +443,15 @@ def invitations_index(
         ),
         value_resolver=_invitations_sort_value,
     )
-    rows = views.filter_invitations_rows(all_rows, status=status, search=q)
+    matching = views.filter_invitations_rows(all_rows, status=status, search=q)
+    # Segment 19J.5 rung 3 — this page rendered every matching row until
+    # now, whatever the number. It pages at 200 unfiltered; a filtered
+    # view stays uncapped and carries no pager (see the route's
+    # ``pager`` entry below).
+    is_filtered = bool(status != "all" or q.strip())
+    rows, offset, pager = _page_operations_rows(
+        matching, is_filtered=is_filtered, offset=offset
+    )
     search_options = views.invitations_search_options(all_rows)
     invitation_rows = invitations.list_invitations_for_session(
         db, review_session.id
@@ -475,21 +514,24 @@ def invitations_index(
             # speaks for that view instead. Both read the same filter
             # flag, so the two affordances can never disagree about
             # which mode the page is in.
-            "pager": (
-                None
-                if (status != "all" or q.strip())
-                else views.build_pager(total=len(all_rows))
+            "pager": pager,
+            # Only ever rendered on an unfiltered view, so the link
+            # carries no filter state — and deliberately not the
+            # sort cookie either, which is a cookie and travels on
+            # its own.
+            "pager_url_base": (
+                f"/operator/sessions/{review_session.id}/invitations?"
             ),
-            # 19J.5 rung 2 rewrote the helper's contract. This page is
-            # uncapped and not yet paged, so nothing is ever withheld
-            # and only the filter branch fires — as it always has.
-            # Rung 3 wires the pager and drops ``paged=False``.
+            # 19J.5 rung 3 — paged now, so the unfiltered branch says
+            # nothing and the ranges speak instead. A filtered view is
+            # uncapped here, so its sentence never carries a withheld
+            # clause.
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
-                pool=len(rows),
+                pool=len(matching),
                 noun="reviewers",
-                is_filtered=bool(status != "all" or q.strip()),
-                paged=False,
+                is_filtered=is_filtered,
+                paged=True,
             ),
             "filter_status": status,
             "filter_search": q,
@@ -739,6 +781,7 @@ def session_responses(
     request: Request,
     status: str = "all",
     q: str = "",
+    offset: int = 0,
     super_status: str | None = None,
     super_button: str | None = None,
     super_step: str | None = None,
@@ -770,7 +813,13 @@ def session_responses(
         ),
         value_resolver=_responses_sort_value,
     )
-    rows = views.filter_responses_rows(all_rows, status=status, search=q)
+    matching = views.filter_responses_rows(all_rows, status=status, search=q)
+    # Segment 19J.5 rung 3 — see the Invitations route above; the two
+    # pages page on identical terms.
+    is_filtered = bool(status != "all" or q.strip())
+    rows, offset, pager = _page_operations_rows(
+        matching, is_filtered=is_filtered, offset=offset
+    )
     search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
@@ -817,21 +866,24 @@ def session_responses(
             # speaks for that view instead. Both read the same filter
             # flag, so the two affordances can never disagree about
             # which mode the page is in.
-            "pager": (
-                None
-                if (status != "all" or q.strip())
-                else views.build_pager(total=len(all_rows))
+            "pager": pager,
+            # Only ever rendered on an unfiltered view, so the link
+            # carries no filter state — and deliberately not the
+            # sort cookie either, which is a cookie and travels on
+            # its own.
+            "pager_url_base": (
+                f"/operator/sessions/{review_session.id}/responses?"
             ),
-            # 19J.5 rung 2 rewrote the helper's contract. This page is
-            # uncapped and not yet paged, so nothing is ever withheld
-            # and only the filter branch fires — as it always has.
-            # Rung 3 wires the pager and drops ``paged=False``.
+            # 19J.5 rung 3 — paged now, so the unfiltered branch says
+            # nothing and the ranges speak instead. A filtered view is
+            # uncapped here, so its sentence never carries a withheld
+            # clause.
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
-                pool=len(rows),
+                pool=len(matching),
                 noun="reviewees",
-                is_filtered=bool(status != "all" or q.strip()),
-                paged=False,
+                is_filtered=is_filtered,
+                paged=True,
             ),
             "filter_status": status,
             "filter_search": q,

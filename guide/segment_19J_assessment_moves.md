@@ -76,7 +76,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
-| **19J.5** | Row pagination on the seven roster-bearing pages | **Rungs 1–2 of 4 landed 2026-09-11** — scaffold, then the four Setup pages paged |
+| **19J.5** | Row pagination on the seven roster-bearing pages | **Rungs 1–3 of 4 landed 2026-09-11** — six of seven pages paged; Assignments awaits its sort decision |
 | 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 
 ---
@@ -1357,6 +1357,44 @@ assertions; their route wiring is identical code. A per-page
 behavioural sweep would need per-page seeding — Relationships needs
 pairs — and buys little against one shared implementation.
 
+**2026-09-11 — rung 3 landed: Invitations and Responses paged.** One
+rung remains.
+
+**The contract these two lose.** `spec/operations_pages.md` stated
+twice that they were uncapped, deliberately — they rendered every
+matching row, whatever the number, which is exactly why 19J.4's
+benchmark found them the two that hurt. Both statements are struck and
+replaced rather than edited away.
+
+**One decision the plan did not make, made here.** A *filtered* view on
+these two **stays uncapped**, where the four Setup pages cap theirs at
+500. Those two carry the 500 from Segment 15F; these never had a cap,
+and inventing one would take rows away from a filtered view that shows
+them today — a loss nothing in this item asks for. The pager is
+suppressed on a filtered view either way, so the difference is visible
+only on a filter matching more than 500 rows. Consistency would have
+been the other call and is the weaker one: it buys symmetry by
+removing rows.
+
+**What this does not fix.** Paging these two cuts the HTML they emit,
+not the work behind it: every row is built before any slice happens,
+so the N+1 measured in 19J.4 is untouched. That was true when the item
+was planned and is restated here because a reader seeing "the two slow
+pages are paged" would reasonably assume otherwise.
+
+**Sort needed no attention here**, unlike the rung still to come. Both
+routes already sort the whole row list before filtering, so slicing
+after that is a slice of a globally sorted set. Assignments is the
+only page where the cookie sort runs over a window rather than the
+whole, which is what rung 4's open question is about.
+
+**A test that was weak until it was re-read.** The first Responses
+test seeded 4 reviewers × 2 reviewees, so the table held two rows, no
+pager rendered, and the test asserted only that a clamped offset did
+not error — it would have passed against a route that was never wired.
+Re-seeded to 210 reviewees, since Responses is one row per reviewee
+and overflows on the other side of the matrix from Invitations.
+
 **A test bug worth recording, because it nearly became a code bug.**
 The first suppression test passed `?search=` and saw a pager; the
 route's parameter is `q` (`status_filter` is aliased to `status`).
@@ -1381,7 +1419,9 @@ approach the surface lands inert before it moves anything.
    filter suppression. **Landed 2026-09-11**, as planned, plus the
    helper rewrite it could not avoid (see `### Status`).
 3. **Invitations + Responses wired** — the two that change contract from
-   uncapped; `spec/operations_pages.md` lands with them.
+   uncapped; `spec/operations_pages.md` lands with them. **Landed
+   2026-09-11**, as planned, plus the filtered-cap decision the plan
+   left open (see `### Status`).
 4. **Assignments wired** — SQL `OFFSET`, plus whatever the sort question
    below resolves to.
 
