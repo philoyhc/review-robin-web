@@ -3101,6 +3101,57 @@ Taken 2026-09-11 at `HEAD`.
 | `.banner-info` render sites | 3, all reviewer | `grep -rno "banner-info" app/web/templates --include='*.html'` |
 | Rules the guard currently scans | 36 pill/chip | `test_only_controls_reach_the_reserved_shade` |
 
+### Status
+
+**Closed 2026-09-11, in one rung rather than two.** Rung 1's
+measurement ran and the author's answer arrived with it, and the answer
+made rung 2 a paragraph rather than a slice — which the plan predicted
+("a decision that changes no pixels is a real outcome here, and the
+more likely one"). No colour changed.
+
+**The answer is better than either reading the plan offered.** The plan
+framed a binary — the shade means an affordance *anywhere*, or only on
+*chip-sized* things — and both were wrong in the same way: they asked
+about the element. The rule is about the **ambiguity**. A pill and a
+chip share one rounded shape for stating a fact and for offering a
+click, and the shade is what separates them; where no such confusion is
+possible the rule has nothing to do. That generalises, which neither of
+the plan's readings did: it tells the next person how to judge an
+element class nobody has looked at yet.
+
+**Measured before writing it down**, because a rule is only worth
+stating if it survives every case rather than the one that prompted it.
+Ten tokens resolve to the reserved pair in both themes — `--blue-strong`
+/ `--blue-glow` themselves, `--selected-bg`, `--text-link`,
+`--focus-ring`, `--btn-primary-bg`, `--btn-primary-border`,
+`--card-active-border`, `--chip-active-border`, `--chip-active-fg`,
+`--icon-btn-action-fg`, `--status-info-border`. Every consumer is
+either unambiguously interactive (`.btn`, `a`, `.skip-link`,
+`.theme-toggle-opt`, focus rings) or static **with no interactive twin**
+(`.banner-info`, `.rrw-busy-fill`, the active-card borders). The rule
+holds across all ten; nothing needed fixing.
+
+- **2026-09-11 — `.banner-info` was never a violation.** 19J.7 recorded
+  it as one and scoped it out. Under the rule as the author states it,
+  there is no clickable info banner for a static one to be confused
+  with, so the accent border misleads nobody. The item that existed to
+  fix drift closed by establishing there was none — which is why it
+  was worth measuring rather than patching.
+- **2026-09-11 — `.btn-icon` acquired the dual nature at 19J.9**, and
+  nobody noticed at the time. The pager's inactive steps render as
+  `<span class="btn-icon …">` beside live ones that are anchors, so
+  that class now has both forms: the second element class in the app to
+  qualify. It already holds — the inert form takes `--text-subtle` at
+  0.4 opacity and never the accent — but the guard could not see it.
+- **The guard now matches the rule rather than a category.** Its
+  selector filter was `pill|chip`, which encoded the narrow reading as
+  an implementation detail of a regex; it now also scans `.btn-icon`,
+  and its docstring says the filter is a *consequence* of the rule that
+  grows when a new class acquires the ambiguity. `.btn-icon.action`
+  joins the allowlist with the reason beside it. Two mutations checked:
+  a static `.btn-icon` taking the accent fails, and narrowing the
+  filter back to pills and chips fails.
+
 ### PR ladder
 
 1. **Measure, then decide.** Re-run the token resolution over every
@@ -3108,8 +3159,12 @@ Taken 2026-09-11 at `HEAD`.
    — not just the one 19J.7 noticed. Put the list to the author with
    the two readings above. *Must not* change a colour before the
    scope question is answered.
-2. **Whatever follows from that** — a spec paragraph, or a retarget
-   plus a widened guard. Sized once rung 1 has the list.
+2. ~~**Whatever follows from that** — a spec paragraph, or a retarget
+   plus a widened guard. Sized once rung 1 has the list.~~ **Collapsed
+   into rung 1** (2026-09-11): the author's answer arrived with the
+   measurement, and what followed was a spec paragraph plus a guard
+   whose filter now matches the rule. Splitting a paragraph across two
+   PRs would have been ceremony.
 
 ### Definition of done
 
@@ -3128,9 +3183,14 @@ Taken 2026-09-11 at `HEAD`.
 
 ### Open questions
 
-- **Which reading of the reservation is right?** The item exists to put
+- ~~**Which reading of the reservation is right?** The item exists to put
   that to the author with a full list rather than the one example.
-  **Author decides at rung 1.**
+  **Author decides at rung 1.**~~ **Answered 2026-09-11, and neither
+  reading was right.** Author: *"It's really for pills and chips only,
+  because of their dual nature. If there's a generalization, it would
+  be that the same would apply to other elements if they exhibit the
+  same static vs interactive ambiguity."* The scope is the **ambiguity**
+  — pills and chips are where it bites, not what it is about.
 
 ### Out of scope
 

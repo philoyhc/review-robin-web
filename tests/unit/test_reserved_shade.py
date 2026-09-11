@@ -1,9 +1,26 @@
 """One shade, reserved for one job.
 
-Segment 19J Item 7. ``--blue-strong`` (``#2563eb``, light) and
+Segment 19J Items 7 and 10. ``--blue-strong`` (``#2563eb``, light) and
 ``--blue-glow`` (``#4b8bf5``, dark) — the pair ``--selected-bg`` resolves
-to — mean "you can act on this" on a pill or chip surface. Nothing static
-carries them.
+to — mean "you can act on this". Nothing static carries them.
+
+**The scope is the ambiguity, not the element type** (author,
+2026-09-11, closing Item 10). The rule exists because a pill and a chip
+have a *dual nature*: the same rounded shape states a fact in one place
+and offers a click in another, and before 19J.7 the only thing telling
+them apart was ``cursor: pointer`` — invisible until the pointer is on
+it, absent on touch, absent from every screenshot. Where that ambiguity
+is absent the rule has nothing to do: there is no such thing as a
+clickable ``.banner-info`` that looks like a static one, so the accent
+border it carries misleads nobody.
+
+So the selector filter below is a **consequence** of the rule and not
+the rule itself, and it grows when a new element class acquires the
+same dual nature. ``.btn-icon`` acquired it at 19J.9 — the pager's
+inactive steps render as ``<span class="btn-icon …">`` beside live ones
+that are anchors — which is why it is scanned here. Anything else that
+starts rendering in both an inert and an interactive form belongs in
+this filter too.
 
 The check resolves **tokens**, not class names, for two reasons. A class
 name is defined in ``base.html``'s inline CSS, which ships on every
@@ -43,12 +60,20 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   interactive, and ``is-disabled`` — the one inert variant — cancels
 #:   the edge rather than inheriting it.
 #:
+#: - ``.btn-icon.action`` — the blue "+add" icon button. In this set
+#:   since 19J.10 widened the filter past pills and chips: the class
+#:   now renders inert too (the pager's inactive steps), so it carries
+#:   the ambiguity the rule is about. The inert form takes
+#:   ``--text-subtle`` at 0.4 opacity and never the accent, which is
+#:   the vocabulary holding rather than an exception to it.
+#:
 #: A new entry means a new control surface, and belongs here only once
 #: someone has confirmed it is one. A static pill appearing in this set
 #: is the bug the file exists to catch.
 CONTROL_SELECTORS = {
     "body.ui-v2 .tag-chip.is-selected",
     "body.ui-v2 .severity-chip.active",
+    "body.ui-v2 .btn-icon.action",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"
@@ -163,14 +188,17 @@ def test_validated_is_not_painted_in_the_control_shade() -> None:
 
 
 def test_only_controls_reach_the_reserved_shade() -> None:
-    """The rule itself, over every pill and chip rule in the sheet."""
+    """The rule itself, over every rule whose element class carries the
+    static-vs-interactive ambiguity (see the module docstring)."""
     css = _css()
     tokens = _token_maps(css)
 
     found: set[str] = set()
     scanned = 0
     for selector, body in _rules(css):
-        if not re.search(r"\.(?:[a-z0-9-]*(?:pill|chip))\b", selector):
+        if not re.search(
+            r"\.(?:[a-z0-9-]*(?:pill|chip)|btn-icon)\b", selector
+        ):
             continue
         scanned += 1
         for theme, reserved in RESERVED.items():
