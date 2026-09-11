@@ -132,7 +132,15 @@ def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
     """
     css = _stylesheet(client, db)
 
-    for selector in (".table-pager-step", ".table-pager-menu-item"):
+    for selector in (
+        # The step rule needs `.btn-icon` in its selector to outrank
+        # `body.ui-v2 .btn-icon`, which is the same specificity and sits
+        # later in the sheet. Named here in full so a future
+        # simplification of the selector fails loudly rather than
+        # silently dropping back to the icon-button defaults.
+        ".btn-icon.table-pager-step",
+        ".table-pager-menu-item",
+    ):
         block = _rule(css, f"body.ui-v2 {selector}")
         assert block is not None, f"{selector} lost its rule"
         assert "text-decoration: none" in block, (
@@ -141,5 +149,5 @@ def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
 
     # And each has a hover state, so an anchor that looks like neither a
     # link nor a button still says it is live.
-    assert _rule(css, "body.ui-v2 a.table-pager-step:hover") is not None
+    assert _rule(css, "body.ui-v2 a.btn-icon.table-pager-step:hover") is not None
     assert _rule(css, "body.ui-v2 a.table-pager-menu-item:hover") is not None

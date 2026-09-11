@@ -2713,6 +2713,22 @@ the operator can do changed. Net −42 lines in `_pager.py`.
   asserts the field set rather than the absence of one name, so it holds
   against whatever gets added rather than against what was removed.
 
+**2026-09-11 — the step glyphs enlarged**, author on the shipped
+cluster: *"make the `«`, `‹`, `›`, `»` larger"*. 1em to 1.5em — 14px to
+21px measured — and `line-height: 1` so the taller glyph does not grow
+the row the column chips share (toolbar unchanged at 34.9px; the
+cluster still 22.9px tall, its height set by the menu's summary).
+
+The tweak surfaced a **rule that had been dead since rung 1**. The step
+rule's selector was `body.ui-v2 .table-pager-step`, specificity (0,2,1)
+— the same as `body.ui-v2 .btn-icon` further down the sheet, which
+therefore won on order. Its `font-size` and `color` declarations never
+applied, and nothing showed it because both happened to match what
+`.btn-icon` already set. Raising the size is what made it visible; the
+selector is now `body.ui-v2 .btn-icon.table-pager-step` and the test
+names it in full, so a future simplification fails loudly rather than
+dropping silently back to the icon-button defaults.
+
 Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
 (25 pages — the 5,861 in the author's screenshot exceeds
 `csv_imports.MAX_ROWS`, so it cannot be one import): 26 anchors in the
