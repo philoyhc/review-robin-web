@@ -245,9 +245,10 @@ table's rows are worth re-verifying rather than copying forward.
   locale a server carries.
 - **Decisions get measured before they get made.** The in-place-swap question
   was answered with a page-turn cost table (413KB, 21ms at 556 rows, 116ms at
-  5,000), a count of which script blocks survive a DOM swap (one of five), and a
-  count of the markup that would need extracting first (928 lines across seven
-  templates). The answer was "don't" — and the numbers are what make that
+  5,000), a count of which script blocks survive a DOM swap, and a count of the markup
+  that would need extracting first (928 lines across seven templates). **The
+  script-block count in that assessment was wrong and is corrected there
+  2026-09-11** — see §5. The answer was "don't" — and the numbers are what make that
   re-decidable later.
 
 ## 5. Weaknesses
@@ -271,13 +272,23 @@ table's rows are worth re-verifying rather than copying forward.
   to narrate rather than remove. **Plan:** named in 19J.4's Out of scope and
   nowhere else. This is the most deferred decision in the codebase and the one I
   would expect to be forced by a real pilot roster.
-- **Four of five table-relevant script blocks in `base.html` bind to elements at
-  load.** Measured in the swap assessment: only the busy indicator is delegated
-  on `document`, and the 19J.9 outside-click handler was written delegated to
-  match it. The other four (~500 lines) would die with any re-rendered table.
-  **Cost:** it forecloses cheaply re-rendering a table, which is the foundation
-  of several things that are otherwise reasonable. **Plan:** named as "worth
-  doing regardless" in the assessment and in Part C; not scheduled.
+- ~~**Four of five table-relevant script blocks in `base.html` bind to elements
+  at load.**~~ **Corrected 2026-09-11, after this document first said it: it is
+  one block, not four.** Re-measured by reading each of the eight inline blocks
+  rather than by matching the word `DOMContentLoaded`, the only one binding to
+  elements inside the table card is the column-chip block (127 lines). The
+  321-line sort block binds nothing — its headers call `rrwSortHeaderClick`
+  through an inline `onclick` attribute, so the handler arrives with any
+  re-rendered markup; its one listener is a `DOMContentLoaded` badge repaint
+  that a swap would re-call. The delete-confirm block binds in the Operator
+  actions and lock cards, and the theme toggle is chrome — neither is
+  table-relevant. **Cost:** correspondingly smaller than stated — re-rendering
+  a table card costs one block of re-homing plus one function call, not ~500
+  lines. **Plan:** Segment 19K Item 2, opened on the corrected measurement.
+  **Recorded here rather than silently fixed**, because the figure was carried
+  from another document instead of re-derived, which is precisely the failure
+  the skill behind this series exists to prevent, and it survived into a
+  recommended next move.
 - **`close_check` cannot see `guide/` commitments, and it bit twice in one
   segment.** The tool tracks `spec/` and `docs/` paths only, so a `Doc impact`
   bullet naming a `guide/` file is unchecked: 19J.7's screencap-retake row and
@@ -371,11 +382,14 @@ question, not work in progress.
    were caught is that a person read the manifests at close. Every future
    segment's `Doc impact` inherits the gap. The same change should address C3's
    window starting at the segment's date rather than the item's (§5).
-2. **Convert the four element-bound script blocks in `base.html` to delegation.**
-   Named as worth doing regardless by the swap assessment and by Part C, it
-   commits to nothing, can be done one block at a time, and it is what makes any
-   future table re-render survivable. It is second because it is the only item
-   here that *unblocks* something rather than tidying.
+2. **Convert the column-chip script block in `base.html` to delegation.**
+   ~~The four element-bound blocks~~ — **one block, 127 lines**, corrected
+   2026-09-11 (§5). Named as worth doing regardless by the swap assessment and
+   by Part C, it commits to nothing and it is what makes a re-rendered table
+   card survivable. It stays second despite shrinking: it is still the only
+   item here that *unblocks* something rather than tidying, and it is now
+   cheap enough that the argument for doing it is stronger, not weaker.
+   Opened as Segment 19K Item 2.
 3. **Decide whether the Invitations / Responses N+1 gets an item.** It is
    measured (40,433 / 80,432 queries at 200×200), it is the most deferred
    decision in the codebase, and it currently lives only in one item's Out of

@@ -2765,6 +2765,48 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
+### Segment 19K — The 11sep assessment's three moves — 🔵 **live** (**three items open**, opened 2026-09-11; plan: `guide/segment_19K_assessment_moves.md`)
+
+The three next moves in `guide/codebase_assessment_11sep.md` §8, and
+whatever those three produce. Same shape as 19J, which opened for an
+assessment's §8 and closed at ten items — **seven produced by the
+previous item's findings**. The allowance is stated up front this time
+rather than discovered: an item arriving from another item's findings is
+admitted, anything else gets its own segment.
+
+- **Item 1 — `close_check` cannot see a `guide/` commitment.** Its
+  `COMMITTED_PATH` regex matches `spec/` and `docs/` only, so a
+  `Doc impact` bullet naming a `guide/` path is silently dropped:
+  **67 commitments across 33 plans**, none reported. Two went unhonoured
+  in 19J alone and nothing failed. A second, narrower gap in the same
+  tool: an **uncommitted** item heading widens C3's window to the
+  segment's, so a stub passes on a sibling's edits — observed twice on
+  2026-09-11, both reported as PASS before being corrected.
+- **Item 2 — the column-chip script binds to elements a re-render
+  replaces.** **The measurement corrected the move it was recommended
+  on.** The assessment said four blocks totalling ~500 lines die with a
+  re-rendered table; reading each of `base.html`'s eight blocks rather
+  than grepping for `DOMContentLoaded` gives **one block, 127 lines**.
+  The 321-line sort block binds nothing — its headers call
+  `rrwSortHeaderClick` through an inline `onclick`, so the handler
+  arrives with the markup — and two of the four named blocks are not
+  table-relevant at all.
+- **Item 3 — decide whether the Invitations / Responses N+1 gets an
+  item.** `monitoring.py:275` loops reviewees, then their assignments,
+  issuing one `select(Response)` per assignment: 40,433 and 80,432
+  queries at 200×200. Paging cut the HTML, not the work. The item is the
+  **decision**, and "not yet, and here is the trigger" is a permitted
+  answer; it must be recorded outside a plan's Out of scope wherever it
+  lands.
+
+**The first finding arrived before the first build**, which is the
+argument for measuring blast radius at planning time: Item 2's premise
+was wrong by about 4×, and the correction landed in the swap assessment
+and in the codebase assessment's §1, §5 and §8 before the plan was
+written.
+
+---
+
 ### Segment 19J — The assessment's three moves — ✅ complete + archived 2026-09-11 (**ten items**, 2026-09-10 → 2026-09-11, PRs #2281 → #2311; plan: `guide/archive/segment_19J_assessment_moves.md`)
 
 The three recommended next moves in
