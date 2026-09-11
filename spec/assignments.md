@@ -781,8 +781,9 @@ filtered view, `Showing 500 of 900 assignments, 400 more not shown.`
 A count of one takes the singular. *This page is not paged yet* — rung
 4 wires it, once the sort question below is settled — so it still
 renders the pre-19J.5 unfiltered notice (`Showing first 200 of 10,000
-assignments; 9,800 more not shown.`), which is true here and nowhere
-else, and its pager strip renders inert until then.
+assignments; 9,800 more not shown.`), and its pager strip renders
+inert until then. Since rung 3 it is the **only** page that does
+either: the other six page, so nothing is withheld on them.
 
 **A search matching nothing renders no count line** — the shared
 rule, not a quirk of this page (`spec/setup_pages.md`, "Preview

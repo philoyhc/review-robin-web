@@ -358,10 +358,11 @@ filtered view** and still reports (`Showing 1,240 reviewers.`): the
 sentence and the pager read the same flag, so they cannot disagree
 about which mode the page is in.
 
-*Pages not yet paged* — Assignments, Invitations and Responses, until
-19J.5's later rungs — keep the pre-19J.5 unfiltered notice
-(`Showing first 200 of 10,000 assignments; 9,800 more not shown.`),
-because they really do still truncate.
+*Pages not yet paged* — ~~Assignments, Invitations and Responses,
+until 19J.5's later rungs~~ **Assignments alone, until rung 4** —
+keep the pre-19J.5 unfiltered notice (`Showing first 200 of 10,000
+assignments; 9,800 more not shown.`), because it really does still
+truncate. Invitations and Responses joined at rung 3.
 
 **A filter matching nothing renders no count line, on any of the
 seven.** Each page gates its whole preview card on the row list and
