@@ -75,19 +75,51 @@ to the elements themselves (dies with them):
 
 | block | lines | what it does | survives a swap? |
 |---|---:|---|---|
-| 2 | 322 | sortable table headers | **no** — binds inside `DOMContentLoaded` |
-| 3 | 128 | column-visibility chips | **no** — binds per `[data-col-toggle]` |
-| 4 | 30 | (load-time setup) | **no** — `DOMContentLoaded` |
-| 5 | 22 | delete-confirmation gate | **no** — binds per checkbox |
-| 6 | 31 | theme toggle | n/a — outside the table |
-| 7 | 78 | navigation busy indicator | **yes** — delegated on `document` |
+| 2 | 321 | sortable table headers | **yes** — see the correction below |
+| 3 | 127 | column-visibility chips | **no** — binds per `[data-col-toggle]` |
+| 4 | 29 | first-banner scroll | n/a — outside the table |
+| 5 | 21 | delete-confirmation gate | n/a — outside the table card |
+| 6 | 30 | theme toggle | n/a — chrome |
+| 7 | 77 | navigation busy indicator | **yes** — delegated on `document` |
 
-**One of the five table-relevant blocks is delegated.** The other four —
-about 500 lines — were written on the assumption that the DOM is built
-once per page. That assumption is not wrong today; a swap is what makes
-it wrong. Each would need converting to delegation or re-invoking after
-every swap, and "re-invoke after swap" is the version that rots, because
-nothing fails loudly when a new behaviour forgets to register.
+> **Corrected 2026-09-11, and the correction matters more than the
+> original claim.** This table first read "one of five table-relevant
+> blocks is delegated; the other four, about 500 lines, bind to elements
+> and die with them" — and that was wrong about the largest of the four,
+> wrong about which blocks are table-relevant at all, and therefore
+> wrong by roughly 4× about the size of the work.
+>
+> Re-measured at `94aaa3b2` by reading each block rather than by reading
+> the word `DOMContentLoaded`:
+>
+> - **Block 2 (321 lines, the sort) binds nothing.** Its headers call
+>   `rrwSortHeaderClick(event, this)` through an inline `onclick`
+>   attribute in the markup, so the handler arrives *with* any
+>   re-rendered HTML and survives by construction. Its single
+>   `addEventListener` is `document.addEventListener('DOMContentLoaded',
+>   _rrwHydrateFromCookies)` — a one-time repaint of sort badges from
+>   cookies, which a swap would need to re-call. That is one function
+>   call, not 321 lines of re-homing. *Binding inside `DOMContentLoaded`
+>   and binding to elements are different claims, and the first was
+>   mistaken for the second.*
+> - **Blocks 5 and 6 are not table-relevant.** `[data-delete-confirm]`
+>   lives in the Operator actions and lock cards — in
+>   `session_reviewers.html`, lines 196 / 649 / 696, against the table
+>   card at 295–485 — and `.theme-toggle-opt` is chrome. A table swap
+>   never touches either.
+> - **Block 4 is delegated**, not load-time binding.
+>
+> **So exactly one block binds to elements inside the table card: block
+> 3, the column chips, at 127 lines** — and even it sits *above* the
+> table, so a table-body-only swap would leave it alone; only a
+> card-level re-render breaks it. No block in this file uses
+> property-style handlers (`el.onclick = …`), checked across all eight.
+>
+> The recommendation below — convert the element-bound blocks to
+> delegation — still stands, but it is **one block, not four**, and its
+> value is smaller in proportion. The original figure was carried from a
+> regex over the word `DOMContentLoaded` instead of from reading the
+> code, which is the failure this document elsewhere argues against.
 
 The roster pages also carry per-page state a swap has to decide about:
 row-selection checkboxes on five of seven pages, an inline edit mode on
@@ -153,11 +185,12 @@ If it is built, the first rung is the partial extraction, and it should
 land on its own with no behaviour change, so that the swap rung is a
 swap and not a rewrite.
 
-**One thing to fix regardless:** four of the five table-relevant script
-blocks bind directly to elements. Converting them to delegation is
-independently worth doing — it is what makes the table's behaviour
-survive *any* future re-render, and it can be done one block at a time
-without committing to the swap at all.
+**One thing to fix regardless:** ~~four of the five table-relevant script
+blocks bind directly to elements.~~ **One block does** — the column
+chips, 127 lines (corrected 2026-09-11; see §"what would break").
+Converting it to delegation is still independently worth doing — it is
+what makes the chip row survive *any* future re-render — but it is a
+morning's work rather than a project, and it commits to nothing.
 
 ## Decision — 2026-09-11
 
