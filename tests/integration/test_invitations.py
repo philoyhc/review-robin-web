@@ -932,7 +932,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     # In the table card, in the shared class.
     card = body[body.index("</form>") :]
     assert '<p class="muted table-showing-hint">' in card
-    assert "Showing 1 of 2 reviewers." in card
+    assert "Showing 1 reviewer." in card
 
     # Gone from the actions row, which keeps Clear and Apply. Scoped
     # to the rendered row: `base.html` inlines a CSS comment about
@@ -985,7 +985,7 @@ def test_invitations_filter_status_narrows_rows(
     # The count line renders — with the noun this page is organised
     # around. Invitations is one row per *reviewer*, so it says
     # "reviewers" even though the rows are invitations (19I Item 10).
-    assert "Showing 1 of 2 reviewers." in body
+    assert "Showing 1 reviewer." in body
 
 
 def test_invitations_filter_search_narrows_rows(

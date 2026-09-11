@@ -69,7 +69,15 @@ def _datalist_options(body: str) -> list[str]:
 
 
 def _showing(body: str) -> str | None:
-    m = re.search(r"Showing (\d+) of (\d+) assignments\.", body)
+    # 19J.5 rung 2 reshaped the sentence: a filtered view reports what
+    # it shows (`Showing 2 assignments.`), and adds the pool only when
+    # the 500 cap truncates it. Both shapes matched here so this helper
+    # keeps reading whichever the page renders.
+    m = re.search(
+        r"Showing [\d,]+(?: of [\d,]+)? assignments?"
+        r"(?:, [\d,]+ more not shown)?\.",
+        body,
+    )
     return m.group(0) if m else None
 
 
@@ -95,9 +103,15 @@ def test_a_picked_label_returns_that_person_and_not_the_lookalike(
         f"?q=Ana+Lim+%28ana%40example.edu%29&search_by=reviewer"
     ).text
 
-    assert _showing(by_name) is None, "both Anas — all three pairs, so no hint"
+    # Before 19J.5 a filter matching everything was quiet. It speaks
+    # now — the filter ran and excluded nothing — which makes this
+    # assertion stronger: the two searches are told apart by their
+    # counts rather than by presence versus absence.
     assert (
-        _showing(by_pick) == "Showing 2 of 3 assignments."
+        _showing(by_name) == "Showing 3 assignments."
+    ), "both Anas — all three pairs"
+    assert (
+        _showing(by_pick) == "Showing 2 assignments."
     ), "only the picked handle's pairs"
 
 
@@ -147,9 +161,11 @@ def test_a_picked_label_scopes_to_the_side(
         f"/operator/sessions/{s.id}/assignments?{picked}&search_by=reviewee"
     ).text
 
-    assert _showing(reviewer) is None, "both pairs — she reviews on each"
     assert (
-        _showing(reviewee) == "Showing 1 of 2 assignments."
+        _showing(reviewer) == "Showing 2 assignments."
+    ), "both pairs — she reviews on each"
+    assert (
+        _showing(reviewee) == "Showing 1 assignment."
     ), "only the self-review row"
 
 
@@ -224,4 +240,4 @@ def test_the_page_renders_the_pick(
         f"?q=Ana+Lim+%28ana%40example.edu%29&search_by=reviewer"
     ).text
 
-    assert "Showing 2 of 3 assignments." in body
+    assert "Showing 2 assignments." in body

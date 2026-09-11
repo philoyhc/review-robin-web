@@ -1,16 +1,21 @@
-"""The four branches of the shared preview-count sentence —
-Segment 19I Item 10.
+"""The preview-count sentence — Segment 19I Item 10, rewritten for
+19J.5.
 
-The sentence exists because a table's visible rows can fall short of
-the whole roster for two unrelated reasons, and the page that
-conflates them misleads. A filter *excluded* rows; a cap *withheld*
-them. Only the second is something the operator can do anything
-about, and only the second earns "more not shown".
+Item 10 made one sentence out of four, and its tests pinned the
+distinction it existed for: a **filter** excluded rows (they do not
+match, so "more not shown" would be a lie) while a **cap** withheld
+them (the operator needs to know before reading the table as
+complete).
 
-Every assertion here pins one of those distinctions, so a rewrite
-that collapses them fails rather than quietly shipping.
+19J.5 turned the cap into a page size, which settles that distinction
+rather than refining it. Where a pager renders, nothing is withheld
+and the sentence says nothing — the strip already states the position.
+So the sentence is now **the filter's**, and these tests pin the
+narrower contract plus the one branch that is on its way out.
 """
 from __future__ import annotations
+
+import inspect
 
 import pytest
 
@@ -18,119 +23,170 @@ from app.web.views import preview_count_line
 
 
 # --------------------------------------------------------------------------- #
-# The quiet case.
+# Unfiltered — the pager's territory.
 # --------------------------------------------------------------------------- #
 
 
-def test_nothing_trimmed_renders_nothing() -> None:
-    """`Showing 6 of 6 reviewers.` is noise — a table showing
-    everything needs no caption. Predates Item 10 (Item 4 set it);
-    pinned here because the helper now owns it."""
+def test_a_paged_view_says_nothing() -> None:
+    """The heart of the 19J.5 revision. 200 rows of 1,240 are on screen
+    and the other 1,040 are one click away, so a sentence about them
+    would be a second voice saying what the ranges already say."""
     assert (
-        preview_count_line(shown=6, matching=6, total=6, noun="reviewers")
+        preview_count_line(
+            shown=200, pool=1240, noun="reviewers", is_filtered=False, paged=True
+        )
+        is None
+    )
+
+
+def test_an_unfiltered_view_that_fits_says_nothing() -> None:
+    """`Showing 6 of 6 reviewers.` is noise. Predates Item 10 (Item 4
+    set it) and survives the rewrite untouched."""
+    assert (
+        preview_count_line(
+            shown=6, pool=6, noun="reviewers", is_filtered=False
+        )
         is None
     )
 
 
 def test_the_quiet_case_holds_at_zero_rows() -> None:
-    """An empty roster is not a trimmed one."""
     assert (
-        preview_count_line(shown=0, matching=0, total=0, noun="reviewers")
+        preview_count_line(
+            shown=0, pool=0, noun="reviewers", is_filtered=False
+        )
         is None
     )
 
 
 # --------------------------------------------------------------------------- #
-# Filter branch — rows excluded, nothing withheld.
+# Filtered, nothing withheld — the common case.
 # --------------------------------------------------------------------------- #
 
 
-def test_filtered_under_the_cap_says_neither_first_nor_withheld() -> None:
-    line = preview_count_line(
-        shown=3, matching=3, total=1240, noun="reviewers"
+def test_a_filtered_view_reports_what_it_shows() -> None:
+    assert (
+        preview_count_line(
+            shown=37, pool=37, noun="reviewers", is_filtered=True
+        )
+        == "Showing 37 reviewers."
     )
-    assert line == "Showing 3 of 1,240 reviewers."
+
+
+def test_the_filtered_sentence_carries_no_roster_denominator() -> None:
+    """Deliberate loss, recorded in 19J.5's Judgment calls: the
+    operator no longer reads how far the filter narrowed off this
+    sentence. The roster total is on the page anyway, in the info
+    card, and the sentence now has one job."""
+    line = preview_count_line(
+        shown=3, pool=3, noun="reviewers", is_filtered=True
+    )
+    assert line == "Showing 3 reviewers."
+    assert "1,240" not in line
+    assert " of " not in line
 
 
 def test_the_filter_branch_never_claims_rows_are_withheld() -> None:
-    """The distinction the whole helper turns on: 1,237 rows are
-    missing from the table, and none of them is being kept back."""
     line = preview_count_line(
-        shown=3, matching=3, total=1240, noun="reviewers"
+        shown=3, pool=3, noun="reviewers", is_filtered=True
     )
     assert "more not shown" not in line
     assert "first" not in line
 
 
-def test_a_filter_matching_nothing_still_reports_the_pool() -> None:
-    line = preview_count_line(
-        shown=0, matching=0, total=5, noun="observers"
+def test_a_filter_matching_nothing_still_speaks() -> None:
+    assert (
+        preview_count_line(
+            shown=0, pool=0, noun="observers", is_filtered=True
+        )
+        == "Showing 0 observers."
     )
-    assert line == "Showing 0 of 5 observers."
+
+
+def test_a_filter_that_excludes_nothing_is_still_a_filtered_view() -> None:
+    """``is_filtered`` is the route's flag, not ``shown < pool``. A
+    filter matching every row ran and excluded nothing, and saying so
+    is the honest answer — it also keeps the sentence and the pager
+    from disagreeing about which mode the page is in."""
+    assert (
+        preview_count_line(
+            shown=1240, pool=1240, noun="reviewers", is_filtered=True
+        )
+        == "Showing 1,240 reviewers."
+    )
 
 
 # --------------------------------------------------------------------------- #
-# Cap branch, unfiltered — the pool is the whole roster.
+# Filtered and capped — the 500 cap, which paging does not lift.
 # --------------------------------------------------------------------------- #
 
 
-def test_capped_and_unfiltered_names_the_roster_as_the_pool() -> None:
-    line = preview_count_line(
-        shown=200, matching=1240, total=1240, noun="reviewers"
-    )
-    assert line == (
-        "Showing first 200 of 1,240 reviewers; 1,040 more not shown."
-    )
-
-
-def test_capped_and_unfiltered_omits_the_word_matching() -> None:
-    """No filter ran, so calling the pool "matching" would invent a
-    narrowing the operator never asked for."""
-    line = preview_count_line(
-        shown=200, matching=1240, total=1240, noun="reviewers"
-    )
-    assert "matching" not in line
-
-
-# --------------------------------------------------------------------------- #
-# Cap branch, filtered — the pool is the matching set.
-#
-# The state no test covered before Item 10: `test_reviewers_page_
-# filter.py::test_filtered_cap_lifts_to_500` looks like it does, but
-# seeds 600 rows all of which match, so total == matching and the two
-# readings of the denominator coincide.
-# --------------------------------------------------------------------------- #
-
-
-def test_capped_and_filtered_counts_against_the_matching_set() -> None:
-    line = preview_count_line(
-        shown=500, matching=900, total=1240, noun="reviewers"
-    )
-    assert line == (
-        "Showing first 500 of 900 matching reviewers; 400 more not shown."
+def test_a_capped_filtered_view_names_the_matching_pool() -> None:
+    assert (
+        preview_count_line(
+            shown=500, pool=900, noun="reviewers", is_filtered=True
+        )
+        == "Showing 500 of 900 reviewers, 400 more not shown."
     )
 
 
 def test_the_withheld_count_is_drawn_from_the_matching_set() -> None:
-    """400, not 740. The 340 rows the filter excluded are not
-    withheld — counting them here would overstate what a lifted cap
-    would reveal."""
+    """400, not 740. The rows the filter excluded are not withheld;
+    counting them would overstate what a lifted cap would reveal."""
     line = preview_count_line(
-        shown=500, matching=900, total=1240, noun="reviewers"
+        shown=500, pool=900, noun="reviewers", is_filtered=True
     )
     assert "400 more not shown" in line
     assert "740" not in line
 
 
-def test_the_word_matching_appears_only_when_a_filter_narrowed() -> None:
-    narrowed = preview_count_line(
-        shown=500, matching=900, total=1240, noun="reviewers"
+def test_the_word_matching_is_gone() -> None:
+    """It disambiguated two pools. With the roster total gone, ``of
+    900`` can only mean the matching set, so it has nothing left to
+    disambiguate."""
+    line = preview_count_line(
+        shown=500, pool=900, noun="reviewers", is_filtered=True
     )
-    whole = preview_count_line(
-        shown=500, matching=1240, total=1240, noun="reviewers"
+    assert "matching" not in line
+
+
+def test_the_filtered_boundary_between_quiet_and_capped_is_one_row() -> None:
+    assert (
+        preview_count_line(
+            shown=500, pool=500, noun="reviewers", is_filtered=True
+        )
+        == "Showing 500 reviewers."
     )
-    assert "matching reviewers" in narrowed
-    assert "matching" not in whole
+    assert preview_count_line(
+        shown=499, pool=500, noun="reviewers", is_filtered=True
+    ) == "Showing 499 of 500 reviewers, 1 more not shown."
+
+
+# --------------------------------------------------------------------------- #
+# The branch with a removal date.
+# --------------------------------------------------------------------------- #
+
+
+def test_an_unpaged_view_keeps_the_old_withheld_notice() -> None:
+    """19J.5 wires the seven pages a rung at a time. A page whose
+    pager is still inert really does truncate, and still owes the
+    operator the notice."""
+    assert preview_count_line(
+        shown=200,
+        pool=10000,
+        noun="assignments",
+        is_filtered=False,
+        paged=False,
+    ) == "Showing first 200 of 10,000 assignments; 9,800 more not shown."
+
+
+def test_paged_defaults_to_false() -> None:
+    """So a caller that forgets it keeps the safe, noisier answer
+    rather than silently withholding rows in silence."""
+    assert (
+        inspect.signature(preview_count_line).parameters["paged"].default
+        is False
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -142,48 +198,84 @@ def test_the_word_matching_appears_only_when_a_filter_narrowed() -> None:
     "noun", ["reviewers", "reviewees", "relationships", "observers"]
 )
 def test_the_caller_chooses_the_noun(noun: str) -> None:
-    line = preview_count_line(
-        shown=200, matching=250, total=250, noun=noun
+    assert (
+        preview_count_line(shown=37, pool=37, noun=noun, is_filtered=True)
+        == f"Showing 37 {noun}."
     )
-    assert line == (
-        f"Showing first 200 of 250 {noun}; 50 more not shown."
+
+
+def test_the_noun_is_the_pages_subject_not_its_row_type() -> None:
+    """Invitations is one row per reviewer and says ``reviewers``;
+    Responses says ``reviewees``."""
+    assert (
+        preview_count_line(
+            shown=12, pool=12, noun="reviewers", is_filtered=True
+        )
+        == "Showing 12 reviewers."
     )
 
 
 def test_every_number_carries_thousands_separators() -> None:
-    """Four-figure roster counts are the norm on the pages that can
-    hit the cap at all; `1240` reads as a different order of
-    magnitude at a glance."""
-    line = preview_count_line(
-        shown=1000, matching=25000, total=30000, noun="assignments"
-    )
-    assert line == (
-        "Showing first 1,000 of 25,000 matching assignments; "
-        "24,000 more not shown."
-    )
+    """Four-figure counts are the norm on the pages that can hit a cap
+    at all; `1240` reads as a different order of magnitude at a
+    glance."""
+    assert preview_count_line(
+        shown=1000, pool=25000, noun="assignments", is_filtered=True
+    ) == "Showing 1,000 of 25,000 assignments, 24,000 more not shown."
 
 
-def test_the_boundary_between_quiet_and_capped_is_one_row() -> None:
-    """Off-by-one guard on the branch condition: 200 of 200 is
-    quiet, 199 of 200 is the cap branch."""
+def test_a_pool_smaller_than_shown_does_not_produce_a_negative() -> None:
+    """Defensive: the two numbers come from different expressions at
+    several call sites, and a negative withheld count would render as
+    ``-3 more not shown``."""
     assert (
         preview_count_line(
-            shown=200, matching=200, total=200, noun="reviewers"
+            shown=10, pool=4, noun="reviewers", is_filtered=True
         )
-        is None
+        == "Showing 10 reviewers."
     )
-    assert preview_count_line(
-        shown=199, matching=200, total=200, noun="reviewers"
-    ) == "Showing first 199 of 200 reviewers; 1 more not shown."
 
 
-def test_the_boundary_between_quiet_and_filtered_is_one_row() -> None:
+# --------------------------------------------------------------------------- #
+# Noun agreement.
+#
+# The old sentence put the noun against the pool (`Showing 1 of 2
+# reviewers.`) where the plural was always right. 19J.5 puts it against
+# the count, and `Showing 1 reviewers.` is the commonest case there is —
+# an operator searching for one person.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("plural", "singular"),
+    [
+        ("reviewers", "reviewer"),
+        ("reviewees", "reviewee"),
+        ("relationships", "relationship"),
+        ("observers", "observer"),
+        ("assignments", "assignment"),
+    ],
+)
+def test_a_count_of_one_takes_the_singular(plural: str, singular: str) -> None:
+    """All five nouns these pages pass, pinned — so a future noun the
+    trailing-`s` rule would mangle fails here rather than reaching an
+    operator."""
     assert (
-        preview_count_line(
-            shown=200, matching=200, total=200, noun="reviewers"
-        )
-        is None
+        preview_count_line(shown=1, pool=1, noun=plural, is_filtered=True)
+        == f"Showing 1 {singular}."
     )
+
+
+def test_zero_takes_the_plural() -> None:
+    assert (
+        preview_count_line(shown=0, pool=0, noun="reviewers", is_filtered=True)
+        == "Showing 0 reviewers."
+    )
+
+
+def test_the_withheld_sentence_keeps_the_plural_at_one_shown() -> None:
+    """There the noun belongs to the pool, not the count: 900 reviewers
+    exist and one is on screen."""
     assert preview_count_line(
-        shown=199, matching=199, total=200, noun="reviewers"
-    ) == "Showing 199 of 200 reviewers."
+        shown=1, pool=900, noun="reviewers", is_filtered=True
+    ) == "Showing 1 of 900 reviewers, 899 more not shown."

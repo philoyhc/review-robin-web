@@ -114,12 +114,17 @@ def test_the_hint_renders_above_the_table_it_describes(
 
     body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
 
-    # Filter branch (3 of 6 match, nothing capped): no "first", no
+    # Filter branch (3 of 6 match, nothing capped): no "first" and no
     # withheld clause — the three excluded rows are not being kept
     # back, they do not match. The noun is the page's own, which is
     # what makes this assertion page-specific rather than shared
     # boilerplate (Segment 19I Item 10).
-    assert f"Showing 3 of 6 {page}." in _table_card(body, page)
+    #
+    # 19J.5 rung 2 dropped the roster denominator: `of 6` said how far
+    # the filter narrowed, and that job moved to the info card when
+    # the sentence became the filter's rather than the table's.
+    assert f"Showing 3 {page}." in _table_card(body, page)
+    assert "of 6" not in _table_card(body, page)
 
 
 @pytest.mark.parametrize("page", PAGES)
