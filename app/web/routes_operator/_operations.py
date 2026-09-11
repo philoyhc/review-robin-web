@@ -467,6 +467,19 @@ def invitations_index(
             # number and only the filter branch ever fires. The
             # noun is the page's subject, not its row type: one
             # row per reviewer here, per reviewee on Responses.
+            # Segment 19J.5 rung 1 — the scaffold. The ranges are real,
+            # computed from the real count; the links are inert until a
+            # later rung supplies ``pager_url_base``. ``None`` while a
+            # filter is active is the suppression rule: the operator's
+            # own partition of the roster wins, and the count line
+            # speaks for that view instead. Both read the same filter
+            # flag, so the two affordances can never disagree about
+            # which mode the page is in.
+            "pager": (
+                None
+                if (status != "all" or q.strip())
+                else views.build_pager(total=len(all_rows))
+            ),
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
                 matching=len(rows),
@@ -791,6 +804,19 @@ def session_responses(
             # number and only the filter branch ever fires. The
             # noun is the page's subject, not its row type: one
             # row per reviewer here, per reviewee on Responses.
+            # Segment 19J.5 rung 1 — the scaffold. The ranges are real,
+            # computed from the real count; the links are inert until a
+            # later rung supplies ``pager_url_base``. ``None`` while a
+            # filter is active is the suppression rule: the operator's
+            # own partition of the roster wins, and the count line
+            # speaks for that view instead. Both read the same filter
+            # flag, so the two affordances can never disagree about
+            # which mode the page is in.
+            "pager": (
+                None
+                if (status != "all" or q.strip())
+                else views.build_pager(total=len(all_rows))
+            ),
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
                 matching=len(rows),

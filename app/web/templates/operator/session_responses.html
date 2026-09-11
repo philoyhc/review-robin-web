@@ -99,6 +99,7 @@
         {% endfor %}
       </p>
       {% endif %}
+      {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       {# `.table-scroll` (base.html) keeps a wide table's overflow
          inside its own card instead of pushing the whole page
@@ -185,6 +186,10 @@
         </tbody>
       </table>
       </div>
+      {# Second copy: a 200-row table is several screens tall, so the
+         pager belongs where the operator finishes reading as well as
+         where they start (19J.5). #}
+      {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
     </div>
     {# The slot -> column-class mapping is the page's own, by design:
        the shared primitive only toggles ``col-hidden-{slot}`` on the

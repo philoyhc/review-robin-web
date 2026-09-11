@@ -1402,6 +1402,44 @@
       .table-showing-hint {
         margin: 0 0 12px 0;
       }
+      /* Row pager for the seven roster-bearing tables (19J.5).
+         Rendered twice — where the count line sits, and again below
+         the table, because a 200-row table is several screens tall
+         and a pager only at the top makes the operator scroll back to
+         use it. Ranges rather than page numbers: `201–400` says where
+         you are in the roster, `page 2` makes you multiply. */
+      .table-pager {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-1) var(--space-2);
+        margin: 0 0 12px 0;
+        font-size: var(--fs-small);
+      }
+      /* Below the table the margin belongs above it, not below. */
+      .table-pager-bottom {
+        margin: 12px 0 0 0;
+      }
+      .table-pager-link {
+        padding: 2px var(--space-2);
+        border-radius: var(--radius-button);
+        text-decoration: none;
+      }
+      .table-pager-link.is-current {
+        background: var(--selected-bg);
+        color: var(--selected-fg);
+        font-weight: 600;
+      }
+      /* Inert while the scaffold rung is the only one landed: rendered
+         and readable, but nothing navigates. */
+      .table-pager-link[aria-disabled="true"] {
+        color: var(--text-dim);
+        cursor: default;
+      }
+      .table-pager-gap,
+      .table-pager-jump {
+        color: var(--text-dim);
+      }
       /* Second action row: the selected-count pill and the
          delete-confirmation checkbox, together and flush right
          (Segment 19I Item 2). Its own class rather than a change to
