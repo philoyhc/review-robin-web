@@ -4131,6 +4131,14 @@
       // path also reads the cookie so the initial HTML already
       // sits in the persisted order. Without this DOMContentLoaded
       // pass the badges wouldn't reflect the cookie.
+      // Called at load, and **callable again**: a re-rendered table
+      // arrives with no sort badges, because they are painted from
+      // cookies rather than carried in the markup. `spec/ui_elements.md`
+      // §10 names this and `_rrwHydrateColToggles` as the two hooks a
+      // re-render owes the table (19K.2). This block binds nothing —
+      // its headers call `rrwSortHeaderClick` through an inline
+      // `onclick`, so the handler arrives with the markup and survives
+      // a re-render by construction.
       function _rrwHydrateFromCookies() {
         var tables = document.querySelectorAll('table[data-rrw-sortable]');
         for (var i = 0; i < tables.length; i++) {
@@ -4313,23 +4321,42 @@
       //
       // Storage keys are the ones each page already used. Renaming
       // one would silently reset every operator's saved columns.
+      // Delegated on ``document`` since 19K.2. It used to bind a
+      // listener per chip at load, which meant any re-render of the
+      // table card silently lost the behaviour — no error, no console
+      // warning, a chip that stops responding. Nothing re-renders a
+      // card today; this is what makes one survivable, and it is the
+      // shape blocks 7 and 8 in this file already use.
+      //
+      // Two jobs, and only one of them is the listener:
+      //
+      //   * **Responding to a click** is delegated, so a chip that
+      //     arrives after load works with no registration.
+      //   * **Hydrating from storage** is inherently load-time, and a
+      //     re-render brings back chips the server rendered
+      //     all-visible. So it is a named function, called at load and
+      //     exposed as ``window._rrwHydrateColToggles`` — the same
+      //     arrangement the sort primitive above has with
+      //     ``_rrwHydrateFromCookies``. A future re-render calls both.
       (function () {
-        var rows = document.querySelectorAll("[data-col-toggles-for]");
-        if (!rows.length) return;
+        function rowsForTable(id) {
+          var out = [];
+          var rows = document.querySelectorAll("[data-col-toggles-for]");
+          // Filtered rather than selected by an attribute-value
+          // selector: a table id is page-authored, and building a
+          // selector out of one would make this depend on CSS escaping
+          // for no gain.
+          Array.prototype.forEach.call(rows, function (row) {
+            if (row.getAttribute("data-col-toggles-for") === id) {
+              out.push(row);
+            }
+          });
+          return out;
+        }
 
-        // Group the rows by the table they drive.
-        var byTable = {};
-        Array.prototype.forEach.call(rows, function (row) {
-          var id = row.getAttribute("data-col-toggles-for");
-          (byTable[id] = byTable[id] || []).push(row);
-        });
-
-        Object.keys(byTable).forEach(function (id) {
-          var table = document.getElementById(id);
-          if (!table) return;
-          var storageKey = table.getAttribute("data-rrw-col-toggles");
+        function chipsForTable(id) {
           var chips = [];
-          byTable[id].forEach(function (row) {
+          rowsForTable(id).forEach(function (row) {
             Array.prototype.push.apply(
               chips,
               Array.prototype.slice.call(
@@ -4337,66 +4364,118 @@
               )
             );
           });
-          if (!chips.length) return;
+          return chips;
+        }
 
-          var stored = null;
+        // A chip knows its row, the row names its table, and the table
+        // carries the storage key. Resolved at event time, which is
+        // what lets a chip rendered after load behave like any other.
+        function contextFor(chip) {
+          var row = chip.closest ? chip.closest("[data-col-toggles-for]") : null;
+          if (!row) return null;
+          var id = row.getAttribute("data-col-toggles-for");
+          var table = document.getElementById(id);
+          if (!table) return null;
+          return {
+            id: id,
+            table: table,
+            storageKey: table.getAttribute("data-rrw-col-toggles"),
+          };
+        }
+
+        function apply(table, slot, visible) {
+          table.classList.toggle("col-hidden-" + slot, !visible);
+        }
+
+        function setChip(table, chip, slot, visible) {
+          chip.classList.toggle("is-selected", visible);
+          chip.setAttribute("aria-pressed", visible ? "true" : "false");
+          apply(table, slot, visible);
+        }
+
+        function persist(ctx) {
+          var state = {};
+          chipsForTable(ctx.id).forEach(function (chip) {
+            state[chip.getAttribute("data-col-toggle")] =
+              chip.getAttribute("aria-pressed") === "true";
+          });
           try {
-            stored = JSON.parse(
-              window.localStorage.getItem(storageKey) || "null"
+            window.localStorage.setItem(
+              ctx.storageKey,
+              JSON.stringify(state)
             );
           } catch (e) {}
+        }
 
-          chips.forEach(function (chip) {
-            var slot = chip.getAttribute("data-col-toggle");
-            var visible = true;
-            if (
-              stored &&
-              Object.prototype.hasOwnProperty.call(stored, slot)
-            ) {
-              visible = !!stored[slot];
-            }
-            setChip(chip, slot, visible);
-            bind(chip, function () {
-              setChip(
-                chip,
-                slot,
-                chip.getAttribute("aria-pressed") !== "true"
-              );
-              persist();
-            });
-          });
+        function toggle(chip) {
+          var ctx = contextFor(chip);
+          if (!ctx) return;
+          setChip(
+            ctx.table,
+            chip,
+            chip.getAttribute("data-col-toggle"),
+            chip.getAttribute("aria-pressed") !== "true"
+          );
+          persist(ctx);
+        }
 
-          function bind(el, handler) {
-            el.addEventListener("click", handler);
-            el.addEventListener("keydown", function (e) {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handler();
-              }
-            });
-          }
-          function setChip(chip, slot, visible) {
-            chip.classList.toggle("is-selected", visible);
-            chip.setAttribute("aria-pressed", visible ? "true" : "false");
-            apply(slot, visible);
-          }
-          function apply(slot, visible) {
-            table.classList.toggle("col-hidden-" + slot, !visible);
-          }
-          function persist() {
-            var state = {};
-            chips.forEach(function (chip) {
-              state[chip.getAttribute("data-col-toggle")] =
-                chip.getAttribute("aria-pressed") === "true";
-            });
+        // Idempotent by construction: it reads storage and writes the
+        // same state onto whatever chips exist now, so calling it after
+        // a re-render restores the operator's columns.
+        function hydrate() {
+          var seen = {};
+          var rows = document.querySelectorAll("[data-col-toggles-for]");
+          Array.prototype.forEach.call(rows, function (row) {
+            var id = row.getAttribute("data-col-toggles-for");
+            if (seen[id]) return;
+            seen[id] = true;
+            var table = document.getElementById(id);
+            if (!table) return;
+            var storageKey = table.getAttribute("data-rrw-col-toggles");
+            var stored = null;
             try {
-              window.localStorage.setItem(
-                storageKey,
-                JSON.stringify(state)
+              stored = JSON.parse(
+                window.localStorage.getItem(storageKey) || "null"
               );
             } catch (e) {}
-          }
+            chipsForTable(id).forEach(function (chip) {
+              var slot = chip.getAttribute("data-col-toggle");
+              var visible = true;
+              if (
+                stored &&
+                Object.prototype.hasOwnProperty.call(stored, slot)
+              ) {
+                visible = !!stored[slot];
+              }
+              setChip(table, chip, slot, visible);
+            });
+          });
+        }
+
+        document.addEventListener("click", function (event) {
+          var target = event.target;
+          var chip = target && target.closest
+            ? target.closest("[data-col-toggle]")
+            : null;
+          // A page with no chip row reaches here on every click and
+          // leaves immediately, which is the whole cost of delegation.
+          if (!chip) return;
+          toggle(chip);
         });
+
+        document.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          var target = event.target;
+          var chip = target && target.closest
+            ? target.closest("[data-col-toggle]")
+            : null;
+          if (!chip) return;
+          event.preventDefault();
+          toggle(chip);
+        });
+
+        window._rrwHydrateColToggles = hydrate;
+        hydrate();
       })();
     </script>
 
