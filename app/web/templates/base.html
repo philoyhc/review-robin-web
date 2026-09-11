@@ -2460,8 +2460,35 @@
         cursor: pointer;
       }
       /* Tag-filter chips — clickable; the selected ones flip to a
-         filled accent so the active filter set reads at a glance. */
-      body.ui-v2 .tag-chip { cursor: pointer; }
+         filled accent so the active filter set reads at a glance.
+
+         Every chip carries the reserved accent shade as a 2px edge
+         (19J.7 rung 3). Until then the pill vocabulary said "clickable"
+         with nothing but ``cursor: pointer`` — invisible until the
+         pointer is already on the chip, absent on touch, and absent
+         from every screencap in the Guide.
+
+         The **background is deliberately left alone**. A Band 1 link
+         chip in the "not set" state is ``pill-empty tag-chip is-unset``,
+         and that amber is a status, not decoration; blanking it to a
+         transparent outline would trade one signal for another. Amber
+         says not set, the edge says you can fix it, and both are true.
+         So the edge is additive over whatever fill the modifier gives.
+
+         2px comes from an inset shadow rather than ``border-width`` so
+         the box never changes size, and ``.pill``'s 1px transparent
+         border (below) keeps a bordered chip exactly as tall as the
+         status label beside it in the same table cell.
+
+         ``[data-new-model-band2-pill]`` needs no selector of its own:
+         every Band 2 pill already renders ``pill tag-chip``. */
+      body.ui-v2 .tag-chip,
+      body.ui-v2 .pill.pill-tag-clear,
+      body.ui-v2 .pill.tag-mode-chip {
+        cursor: pointer;
+        border-color: var(--selected-bg);
+        box-shadow: inset 0 0 0 1px var(--selected-bg);
+      }
       body.ui-v2 .tag-chip.is-selected {
         background: var(--selected-bg);
         color: var(--selected-fg);
@@ -2504,10 +2531,15 @@
       body.ui-v2 .chip-group + .chip-group {
         margin-left: var(--space-4);
       }
+      /* The one ``.tag-chip`` that is not a control: it sets
+         ``cursor: default`` itself, so it must not wear the shade that
+         claims otherwise. Cancels both halves of the edge (19J.7). */
       body.ui-v2 .tag-chip.is-disabled {
         cursor: default;
         opacity: 0.55;
         text-decoration: line-through;
+        border-color: transparent;
+        box-shadow: none;
       }
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
@@ -2996,6 +3028,11 @@
         font-weight: 500;
         text-transform: uppercase;
         margin-right: var(--space-1);
+        /* Every pill reserves the space a chip's edge takes, so adding
+           one to the controls alone does not grow them by 2px and
+           reflow every table where a status label sits beside a
+           toggle (19J.7 rung 3). */
+        border: 1px solid transparent;
       }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {

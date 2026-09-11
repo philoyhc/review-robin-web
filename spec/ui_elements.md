@@ -613,6 +613,45 @@ the eye lands on the numbers without bolding the whole sentence.
 | `.pill-error` (red) | **`.pill-error-count`** — `accent-red-bg`, `accent-red` text | for validation-summary error counts |
 | `.pill-handle` (grey monospace) | **`.pill-handle`** — keep | tokenize colors |
 
+### Label or control
+
+A pill states a fact; a chip offers a click. They shared one look until
+2026-09-11, when the only difference was `cursor: pointer` — invisible
+until the pointer is already on the element, absent on touch, and absent
+from every screencap in the Guide.
+
+**Every interactive chip carries a 2px edge in the reserved accent
+shade** (`--blue-strong` / `--blue-glow` — see
+`spec/color_tokens.md` "Deliberate couplings"). That covers
+`.tag-chip` — which is every lobby tag filter, every column toggle and
+every Instruments Band 2 pill — plus the lobby's Clear and AND/OR chips.
+Static pills carry no edge.
+
+Three rules make that work:
+
+- **The fill is untouched.** The edge is additive over whatever a
+  modifier gives the chip, because a Band 1 link chip in the "not set"
+  state is `pill-empty tag-chip` and that amber is a *status*. Amber says
+  not set, the edge says you can fix it, and both are true at once. A
+  blanket `background: transparent` reads as the tidier rule and trades
+  one signal away for the other.
+- **Every `.pill` reserves the space.** The base rule carries
+  `border: 1px solid transparent`, and the 2px comes from an inset
+  shadow rather than `border-width`, so a chip is exactly as tall as the
+  status label beside it and adding an edge reflows nothing.
+- **`.tag-chip.is-disabled` cancels the edge.** It sets
+  `cursor: default` and is the one inert chip in the vocabulary; a chip
+  that says it cannot be clicked must not also say it can.
+
+`.severity-chip` on Validate is the precedent this generalises: an
+outlined pill since long before, with `.active` taking the shade on its
+border and text.
+
+`.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
+a chip says its filter is on, and it appears only on controls.
+`tests/integration/test_chip_edge.py` pins the treatment;
+`tests/unit/test_reserved_shade.py` keeps the shade off anything static.
+
 > **Lifecycle badges (specific to status strip)** — per
 > `spec/visual_style_rrw.md` "Lifecycle state colors":
 > - `draft` → warning amber (`accent-amber-dark` on `accent-amber-bg`)
