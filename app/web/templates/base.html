@@ -1477,6 +1477,128 @@
       .table-pager-jump {
         color: var(--text-dim);
       }
+      /* The page-turn cluster — 19J.9 rung 1, the scaffold.
+
+         `«‹ [range ▾] ›»`: five cells that reach any page without
+         stepping. It exists because the strip's reach is a constant
+         two pages per click whatever the roster size, so crossing a
+         long roster costs a number of clicks linear in its length —
+         5 to row 2,400 of 5,861, 50 to the middle of 40,000.
+
+         Nothing here reaches `--selected-bg`, deliberately: a page
+         the operator is already on is not a control (19J.7), and the
+         steps are navigation rather than selection. The menu is
+         marked by weight and a muted fill, like the strip's current
+         cell before it.
+
+         No drop shadow on the panel, following the rest of the
+         sheet — every `box-shadow` in here is a solid offset marker
+         or a focus ring. An opaque `--surface-card` and a border do
+         the separating. */
+      body.ui-v2 .table-pager-cluster {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--fs-small);
+      }
+      /* Below the table it is the only thing on its line, so it takes
+         the full width and pushes itself right. */
+      body.ui-v2 .table-pager-cluster-bottom {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: var(--space-3);
+      }
+      body.ui-v2 .table-pager-step {
+        padding: 0 var(--space-1);
+        font-size: 1em;
+        line-height: 1.4;
+        color: var(--text-subtle);
+      }
+      /* Inactive at the ends — in place, never absent, or the other
+         three cells shift sideways as the operator pages. */
+      body.ui-v2 .table-pager-step.is-inactive {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      body.ui-v2 .table-pager-menu {
+        position: relative;
+      }
+      body.ui-v2 .table-pager-menu > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 1px var(--space-2);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-button);
+        background: var(--surface-card);
+        color: var(--text-body);
+        /* Labels vary in width — `1–200` against `5,801–5,861` — and a
+           control that resizes as you page through it reads as broken.
+           Tabular figures plus a floor keep it still. */
+        font-variant-numeric: tabular-nums;
+        min-width: 9em;
+        text-align: center;
+      }
+      body.ui-v2 .table-pager-menu > summary::-webkit-details-marker {
+        display: none;
+      }
+      body.ui-v2 .table-pager-menu > summary::after {
+        content: " \25BE";
+        color: var(--text-subtle);
+      }
+      body.ui-v2 .table-pager-menu-panel {
+        position: absolute;
+        right: 0;
+        z-index: 20;
+        margin-top: 2px;
+        min-width: 100%;
+        max-height: 16em;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-1) 0;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-button);
+      }
+      /* Below the table, the panel opens upward: downward would put it
+         past the card's bottom edge and, on the last card of a page,
+         off the viewport. Measured in Chromium at 1280x900. */
+      body.ui-v2 .table-pager-cluster-bottom .table-pager-menu-panel {
+        top: auto;
+        bottom: 100%;
+        margin: 0 0 2px 0;
+      }
+      body.ui-v2 .table-pager-menu-item {
+        padding: 1px var(--space-3);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-body);
+      }
+      body.ui-v2 .table-pager-menu-item.is-current {
+        font-weight: 600;
+        background: var(--surface-muted);
+      }
+      /* The row the cluster owns, at the top of the table card. The
+         column chips join it when there are chips: a roster with no
+         tags in any slot renders no chip row at all, so the cluster
+         cannot be a passenger on one.
+
+         The chip row's width is operator data — tag labels come from
+         the session's CSV — so no width is safe to assume. The cluster
+         right-aligns and wraps to its own line rather than compressing,
+         and that line is the one the strip occupies today.
+
+         No margin of its own: both children carry the 12px, so an
+         empty row (no chips, no cluster) costs nothing. */
+      body.ui-v2 .table-card-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0 var(--space-4);
+      }
+      body.ui-v2 .table-card-toolbar > .table-pager-cluster {
+        margin: 0 0 12px auto;
+      }
       /* Second action row: the selected-count pill and the
          delete-confirmation checkbox, together and flush right
          (Segment 19I Item 2). Its own class rather than a change to

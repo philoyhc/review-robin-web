@@ -2601,6 +2601,58 @@ Added 2026-09-11 with the form, since it retires more than it adds:
 | Test assertions on `is-current` | 3, all in one file | `grep -rn --include='*.py' 'is-current' tests/` |
 | Chip groups on the widest page (Assignments) | 3 | `base.html`, `.chip-group` comment |
 
+### Status
+
+**Rung 1 landed 2026-09-11** — the scaffold, as planned: the cluster on
+all seven pages, in both places, inert, beside the strip that still
+works. No divergence from the ladder. What the build decided or
+discovered:
+
+- **`Pager.all_ranges` is new, and the plan did not name it.** The menu
+  needs every range; `build_pager` returns a window of five. A derived
+  property on `Pager` rather than a field, so `build_pager` — and with
+  it 19J.5's window, clamping and suppression — is genuinely untouched,
+  which is what the rung's *must not* line asked for. The current range
+  is read back off `links`, where the window always centers it.
+- **The steps are not keyboard-focusable in this rung.** They are
+  `<span>`s because they navigate nowhere; rung 2 makes them anchors,
+  which are focusable by construction. Adding `tabindex` to a span that
+  does nothing would be a worse scaffold, not a better one. The `<details>`
+  summary *is* focusable, so the menu can be opened from the keyboard
+  today.
+- **The placement question is answered, and measured.** Chromium at four
+  widths, against a 1,401-row roster: the cluster shares the chip line
+  at **1280px** and **900px** (cluster at x=1005 and x=625, chip row at
+  y=35 against the cluster's y=34), and **wraps to its own line at
+  560px and 400px**, still right-aligned. The page's horizontal overflow
+  at those widths is the 793px table, not the 217px cluster — checked
+  rather than assumed.
+- **An untagged roster confirms the row belongs to the cluster.** With
+  no chip row rendered, the cluster still sits flush at the toolbar's
+  right edge (both at x+w = 1222). The toolbar carries no margin of its
+  own, so a row with neither chips nor cluster costs nothing.
+- **2026-09-11 — the bottom menu opens upward.** Not in the plan;
+  found by looking. Downward put the panel past the card's bottom edge,
+  and on the last card of a page that is off the viewport. Four lines of
+  CSS on the bottom variant, no script.
+- **Every new guard was mutation-tested.** Six mutations — dropping a
+  template's bottom include, rendering the cluster unconditionally,
+  feeding the menu `pager.links` instead of `all_ranges`, making every
+  step active, turning a step into a live link, and breaking the
+  current-range lookup — each fails at least one test. `test_pager_link_style.py`'s
+  reserved-shade sweep already covers the new rules, because every new
+  class name starts with `.table-pager`; that was the reason to name
+  them that way.
+- **No drop shadow on the menu panel.** `base.html`'s own comment says
+  every `box-shadow` in the sheet is a solid offset marker or a focus
+  ring. An opaque `--surface-card` and a 1px border do the separating
+  instead.
+
+Still to come: rung 2 wires the cells and retires the strip.
+`test_pager_cluster.py::test_the_scaffold_navigates_nowhere` is written
+to be deleted by it, and says so — it pins the rung boundary rather than
+describing a property worth keeping.
+
 ### PR ladder
 
 Specified 2026-09-11 once the form was decided; the two rungs are the

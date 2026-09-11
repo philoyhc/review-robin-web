@@ -70,6 +70,36 @@ class Pager:
     page_size: int
     total: int
 
+    @property
+    def all_ranges(self) -> tuple[PagerLink, ...]:
+        """Every range in the table, not just the strip's window.
+
+        The strip shows five; the jump menu shows all of them (19J.9).
+        Derived from ``total`` and ``page_size`` rather than stored, so
+        ``build_pager`` — and with it 19J.5's window, clamping and
+        suppression rule — is untouched by the item that needs this.
+
+        The current range is read back off ``links`` rather than passed
+        in: the window is always centred on it, so it is always in
+        there. ``first`` and ``last`` are set only when that end sits
+        *outside* the window, which the current page never does.
+        """
+        current = next(
+            (link.offset for link in self.links if link.is_current), 0
+        )
+        page_count = (self.total + self.page_size - 1) // self.page_size
+        return tuple(
+            PagerLink(
+                label=_label(
+                    index * self.page_size + 1,
+                    min((index + 1) * self.page_size, self.total),
+                ),
+                offset=index * self.page_size,
+                is_current=index * self.page_size == current,
+            )
+            for index in range(page_count)
+        )
+
 
 def _label(start: int, end: int) -> str:
     return f"{start:,}–{end:,}"

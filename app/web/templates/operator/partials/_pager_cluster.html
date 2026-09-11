@@ -1,0 +1,65 @@
+{# The page-turn cluster — Segment 19J Item 9, rung 1 (the scaffold).
+
+   Five cells that reach any page without stepping: « first, ‹ back,
+   the range menu, › forward, » last. It exists because the strip's
+   reach is a constant two pages per click whatever the roster size —
+   5 clicks to row 2,400 on a 5,861-row table, 50 to the middle of a
+   40,000-row one — so the cost of crossing a roster is linear in its
+   length.
+
+   **Everything here is inert on purpose.** This is the scaffold rung:
+   the cluster renders in its final places, in both of its states, and
+   goes nowhere. The 19J.5 strip is still below it and still works, so
+   no page is left without a pager. Rung 2 turns the cells into the
+   anchors they will be — `<a href>`, not script — and retires the
+   strip in the same PR, because a wired cluster beside a working strip
+   is two pagers on one page.
+
+   One consequence of inertness worth naming rather than discovering:
+   the steps are `<span>`s here, so they are not keyboard-focusable
+   yet. Anchors are focusable by construction; adding `tabindex` to a
+   span that does nothing would be a worse scaffold, not a better one.
+
+   **Rendered only when the strip cannot show every range.**
+   `elided_before or elided_after` is exactly that test: with six pages
+   the strip shows five links plus Last and the operator can already
+   reach any of them in one click, so a jump control would be a second
+   way to do what one click does.
+
+   The menu is a `<details>` holding ranges, not a `<select>`: a select
+   navigating on `change` fires on every arrow key, so a keyboard user
+   reaching the fifth option would navigate five times. In rung 2 each
+   entry becomes an anchor, which also means the cluster needs no
+   script to work.
+
+   `pager.all_ranges` is every range in the table; `pager.links` is the
+   strip's five. #}
+{% macro _step(glyph, label, active) -%}
+  {%- if active -%}
+    <span class="btn-icon table-pager-step" aria-label="{{ label }}">{{ glyph }}</span>
+  {%- else -%}
+    <span class="btn-icon table-pager-step is-inactive"
+          aria-disabled="true" aria-label="{{ label }}">{{ glyph }}</span>
+  {%- endif -%}
+{%- endmacro %}
+{% if pager and (pager.elided_before or pager.elided_after) %}
+  {% set ranges = pager.all_ranges %}
+  {% set current = ranges | selectattr("is_current") | first %}
+  <div class="table-pager-cluster{% if cluster_extra_class %} {{ cluster_extra_class }}{% endif %}"
+       role="group"
+       aria-label="{{ pager_label | default('Table rows') }}">
+    {{ _step("«", "First rows", not ranges[0].is_current) }}
+    {{ _step("‹", "Previous rows", not ranges[0].is_current) }}
+    <details class="table-pager-menu">
+      <summary>{{ current.label if current else ranges[0].label }}</summary>
+      <div class="table-pager-menu-panel">
+        {% for link in ranges %}
+          <span class="table-pager-menu-item{% if link.is_current %} is-current{% endif %}"
+                {% if link.is_current %}aria-current="page"{% endif %}>{{ link.label }}</span>
+        {% endfor %}
+      </div>
+    </details>
+    {{ _step("›", "Next rows", not ranges[-1].is_current) }}
+    {{ _step("»", "Last rows", not ranges[-1].is_current) }}
+  </div>
+{% endif %}

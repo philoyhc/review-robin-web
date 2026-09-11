@@ -333,6 +333,9 @@
        column chips and the page links are both on screen with the
        new rows beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
+      <div class="table-card-toolbar">
+      {% include "operator/partials/_pager_cluster.html" %}
+      </div>{# .table-card-toolbar #}
       {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="observers-table">
@@ -429,6 +432,7 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5). #}
       {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
+      {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
     </div>
   {% elif total_row_count > 0 %}
     <div class="card">
