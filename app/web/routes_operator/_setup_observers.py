@@ -184,6 +184,19 @@ def _render_observers_page(
             # sentence the seven table pages share. The
             # branching lives in the view helper; the
             # template renders whatever string it returns.
+            # Segment 19J.5 rung 1 — the scaffold. The ranges are real,
+            # computed from the real count; the links are inert until a
+            # later rung supplies ``pager_url_base``. ``None`` while a
+            # filter is active is the suppression rule: the operator's
+            # own partition of the roster wins, and the count line
+            # speaks for that view instead. Both read the same
+            # ``is_filtered``, so the two affordances can never
+            # disagree about which mode the page is in.
+            "pager": (
+                None
+                if is_filtered
+                else views.build_pager(total=len(all_observers))
+            ),
             "preview_count_line": views.preview_count_line(
                 shown=displayed_row_count,
                 matching=len(filtered),

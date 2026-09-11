@@ -76,7 +76,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
-| **19J.5** | Row pagination on the seven roster-bearing pages | Planned 2026-09-11 |
+| **19J.5** | Row pagination on the seven roster-bearing pages | **Rung 1 of 4 landed 2026-09-11** — scaffold, inert |
 | 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 
 ---
@@ -1242,6 +1242,61 @@ $ grep -rln "Showing first\|200 unfiltered\|500 when" spec/ docs/    # 3
   Item 10)", and `spec/operations_pages.md`'s two uncapped statements
   (`:189`, `:291`).
 
+### Status
+
+**2026-09-11 — rung 1 landed: the scaffold, inert, on all seven pages.**
+Three rungs remain.
+
+**What the scaffold is.** `app/web/views/_pager.py` computes the
+ranges; `operator/partials/_preview_pager.html` renders them, twice per
+page. The ranges are real — 556 reviewers produce `1–200 / 201–400 /
+401–556` — and nothing navigates. A test asserts `offset=` appears
+nowhere on the page, which is the assertion rung 2 deletes; that
+expiry is the intended lifecycle of a scaffold test, not drift.
+
+**The suppression rule is enforced in the route, not the helper.**
+`build_pager` never learns about filters. The route passes `None` while
+one is active, reading the same `is_filtered` that summons the count
+line — so the two affordances cannot disagree about which mode the page
+is in, which the item's Semantics named as the thing to get right and
+is easiest to get wrong by letting each side compute its own answer.
+
+**Decisions confirmed at build:**
+
+- **Window of five ranges** before elision (the open question rung 1
+  was to settle). Five keeps the strip on one line at the narrowest
+  operator width, and the window **re-anchors rather than shrinks** at
+  the last page, so walking to the end does not change the strip's
+  width under the cursor.
+- **First / Last render as ranges, not as the words.** `« 1–200` and
+  `39,801–40,000 »` keep one vocabulary on the strip; the guillemets
+  carry "jump", the label carries "to where".
+- **No First anchor when the window already starts at the top** (and
+  the mirror at the end). Two ways to reach the same place is a strip
+  that has stopped saying anything.
+- **`clamp_offset` clamps rather than 404s** — past the end lands on
+  the last page, negative on the first. A link that was valid before
+  someone deleted forty rows should not be an error page. Landed in
+  rung 1 though nothing reads it yet, because it is the helper's own
+  contract and belongs with the arithmetic it guards.
+- **Page size stays 200** and is not operator-configurable, as planned.
+
+**Scope beyond the rung:** `spec/ui_elements.md` gained the §10
+primitive and a §7 pointer with this rung rather than at item close,
+because the surface it describes now exists. The three per-page specs
+(`setup_pages`, `assignments`, `operations_pages`) describe behaviour
+that is not wired and land with the rungs that wire it.
+
+**A test bug worth recording, because it nearly became a code bug.**
+The first suppression test passed `?search=` and saw a pager; the
+route's parameter is `q` (`status_filter` is aliased to `status`).
+Read as a failure of the suppression rule, the fix would have been in
+the route. The lesson is the same one the assertion on `table-pager`
+taught two minutes earlier — that string appears in `base.html`'s CSS
+on **every** page, so the first version of three tests asserted the
+presence of a stylesheet. Both were caught by expecting the test to
+fail for a reason I could name.
+
 ### PR ladder
 
 A pager is a navigation affordance, so per `CLAUDE.md` → Working
@@ -1250,6 +1305,7 @@ approach the surface lands inert before it moves anything.
 1. **Pager scaffold** — the partial, its two render positions on all
    seven pages, real ranges computed from the real counts, every link
    inert. Nothing paginates yet; the point is agreeing the shape.
+   **Landed 2026-09-11**, as planned.
 2. **The four Setup pages wired** — `offset` param, slice, clamping, the
    count line's revised filtered-only contract, the edit-row landing,
    filter suppression.

@@ -470,6 +470,8 @@ vocabulary as follows.
 
 ### 7. Tables
 
+> **Row pager** — a table longer than one page carries the strip described in §10 (`.table-pager`), above it and again below it. See there for the shape; `spec/setup_pages.md`, `spec/assignments.md` and `spec/operations_pages.md` carry the per-page behaviour.
+
 > **Default table** — header row in `bg-muted` with small
 > medium-weight `text-secondary` labels; body rows white with
 > `border-subtle` 1px bottom border per row; no zebra; subtle
@@ -641,6 +643,7 @@ spacing.
 | `.table-scroll` (`overflow-x: auto`) — a wide table's overflow stays inside its card instead of scrolling the page. On the three Operations preview tables, whose chip-hidden columns make them wider than the card by construction; the Setup rosters measure inside theirs and go without | — | — |
 | `.chip-group` — one labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips. Assignments has three | added 2026-09-10 | — |
 | `.bottom-grid > .grid-right` (`grid-column: 2`) — a lone card held to the right-hand column at half width. Without it a single child of a `1fr 1fr` grid lands in column 1 and reads as a card that failed to fill the row | added 2026-09-10 | — |
+| `.table-pager` (+ `.table-pager-bottom`, `.table-pager-link`, `.table-pager-gap`, `.table-pager-jump`) — the row pager on the seven roster-bearing tables, rendered above the table and again below it. Ranges (`201–400`), not page numbers, with First / Last hung off the ends and `…` marking each elided gap. Suppressed whenever a search or status filter is active | added 2026-09-11 | — |
 
 `.setup-nav` is a candidate for deletion (see §2).
 

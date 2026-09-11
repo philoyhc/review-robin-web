@@ -330,6 +330,7 @@
        the cohort editor below. #}
     {% set selectable = not edit_mode and not is_archived %}
     <div class="card">
+      {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="observers-table">
         <thead>
@@ -421,6 +422,10 @@
         {% endfor %}
         </tbody>
       </table>
+      {# Second copy: a 200-row table is several screens tall, so the
+         pager belongs where the operator finishes reading as well as
+         where they start (19J.5). #}
+      {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
     </div>
   {% elif total_row_count > 0 %}
     <div class="card">

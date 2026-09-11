@@ -1,0 +1,41 @@
+{# Row pager for the seven roster-bearing tables (Segment 19J.5).
+
+   Rendered twice per page — once where the count line sits, above the
+   table, and once directly below it. A 200-row table is several
+   screens tall, and a pager only at the top makes the operator scroll
+   back to use it.
+
+   ``pager`` is a ``views.Pager`` or ``None``; ``None`` means one page
+   and no strip, decided in ``views.build_pager``. The route suppresses
+   it entirely while a search or status filter is active — the
+   operator's own partition of the roster wins, and the count line
+   speaks for that view instead.
+
+   ``pager_url_base`` is the path the range links point at. While it is
+   unset the strip renders **inert**: the shape is on the page and the
+   ranges are real, but nothing navigates. That is the scaffold rung,
+   landed on its own so the surface could be agreed before any wiring
+   attached to it (``CLAUDE.md`` → Working approach). #}
+{% macro _cell(link, base) -%}
+  {%- if link.is_current -%}
+    <span class="table-pager-link is-current" aria-current="page">{{ link.label }}</span>
+  {%- elif base -%}
+    <a class="table-pager-link" href="{{ base }}offset={{ link.offset }}">{{ link.label }}</a>
+  {%- else -%}
+    <span class="table-pager-link" aria-disabled="true">{{ link.label }}</span>
+  {%- endif -%}
+{%- endmacro %}
+{% if pager %}
+  <nav class="table-pager{% if pager_extra_class %} {{ pager_extra_class }}{% endif %}"
+       aria-label="{{ pager_label | default('Table rows') }}">
+    {% if pager.first %}
+      <span class="table-pager-jump" aria-hidden="true">«</span>{{ _cell(pager.first, pager_url_base) }}
+      {% if pager.elided_before %}<span class="table-pager-gap" aria-hidden="true">…</span>{% endif %}
+    {% endif %}
+    {% for link in pager.links %}{{ _cell(link, pager_url_base) }}{% endfor %}
+    {% if pager.last %}
+      {% if pager.elided_after %}<span class="table-pager-gap" aria-hidden="true">…</span>{% endif %}
+      {{ _cell(pager.last, pager_url_base) }}<span class="table-pager-jump" aria-hidden="true">»</span>
+    {% endif %}
+  </nav>
+{% endif %}

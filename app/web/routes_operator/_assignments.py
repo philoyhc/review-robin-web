@@ -336,6 +336,19 @@ def _render_assignments_hub(
             # unique pairs.` line, and a `…and X more not shown.`
             # line below the table) collapse into the one
             # sentence the seven table pages share.
+            # Segment 19J.5 rung 1 — the scaffold. The ranges are real,
+            # computed from the real count; the links are inert until a
+            # later rung supplies ``pager_url_base``. ``None`` while a
+            # filter is active is the suppression rule: the operator's
+            # own partition of the roster wins, and the count line
+            # speaks for that view instead. Both read the same filter
+            # flag, so the two affordances can never disagree about
+            # which mode the page is in.
+            "pager": (
+                None
+                if (q or filter_status in _STATUS_VALUES)
+                else views.build_pager(total=assignment_count)
+            ),
             "preview_count_line": views.preview_count_line(
                 shown=len(pair_sample),
                 matching=matching_count,

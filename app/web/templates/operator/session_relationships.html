@@ -324,6 +324,7 @@
           {% endfor %}
         </p>
       {% endif %}
+      {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="relationships-table"
              data-rrw-col-toggles="rrw-relationship-tag-visibility"
@@ -506,6 +507,10 @@
         {% endfor %}
         </tbody>
       </table>
+      {# Second copy: a 200-row table is several screens tall, so the
+         pager belongs where the operator finishes reading as well as
+         where they start (19J.5). #}
+      {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
     </div>
   {% elif total_row_count > 0 %}
     {# Filter matched nothing — preserve the total-row context. #}
