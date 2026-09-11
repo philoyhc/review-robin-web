@@ -93,16 +93,20 @@ Each element entry follows the same shape:
 > when the next page paints, so a fast navigation never flashes it and
 > a slow one stops looking like a hang. Indeterminate by construction:
 > a page is one blocking response, so there is no progress to report.
-> *Current:* `.rrw-busy` / `.rrw-busy-fill` / `body.rrw-navigating` in
-> `base.html`, driven by a delegated listener in the same file.
-> Inherited by every template that extends `base.html`; there is no
-> per-page markup and no opt-in.
+> *Current:* `.rrw-busy` / `.rrw-busy-fill` / `body.rrw-navigating` /
+> `.rrw-navigating [aria-busy="true"]` in `base.html`, driven by a
+> delegated listener in the same file. Inherited by every template
+> that extends `base.html`; there is no per-page markup and no
+> opt-in.
 > *Excluded from arming:* modified and middle clicks, `target`
-> anything but `_self`, bare `#` fragments, cross-origin links, and
-> links carrying `download` — an attachment never replaces the page,
-> so no load event would arrive to clear the bar. Every anchor in the
-> app whose response is an attachment carries `download`; a unit test
-> scans the templates and fails on one that does not.
+> anything but `_self`, bare `#` fragments (and same-page links whose
+> href differs from the current URL only in its fragment),
+> `javascript:` hrefs, links marked `aria-disabled`, cross-origin
+> links, and links carrying `download` — an attachment never replaces
+> the page, so no load event would arrive to clear the bar. Every
+> anchor in the app whose response is an attachment carries
+> `download`; a unit test scans the templates and fails on one that
+> does not.
 > *Busy control:* the clicked link or submit button gets
 > `aria-busy="true"`, never `disabled` — a disabled control is not
 > serialized, so its `name`/`value` would vanish from the payload.
