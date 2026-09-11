@@ -1,9 +1,9 @@
 # Segment 19J — The assessment's three moves
 
 **Opened:** 2026-09-10 · **Theme:** the three recommended next moves in
-`guide/codebase_assessment_10sep.md` §8 · **Related:**
+`guide/archive/codebase_assessment_10sep.md` §8 · **Related:**
 `guide/archive/segment_19G_post_assessment.md` (the same shape, one
-assessment earlier), `guide/codebase_assessment_10sep.md`
+assessment earlier), `guide/archive/codebase_assessment_10sep.md`
 
 The 10sep snapshot closed with three recommended moves, capped at three
 by the assessment skill's own rule. This segment is those three and
@@ -201,7 +201,7 @@ $ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 file
   `docs/status.md`, `docs/practice-audit-2026-09-04.md`,
   `rrw_sdd_in_practice.md`, `guide/todo_master.md`,
   `guide/sweep_2026-09-05_spec-docs.md`, `guide/sweep_template.md`,
-  `guide/codebase_assessment_10sep.md`. Only `spec/README.md`'s
+  `guide/archive/codebase_assessment_10sep.md`. Only `spec/README.md`'s
   reference makes a claim about its currency.
 - **Known drift so far: 1** (§9.7). The sweep's job is to find out
   whether that number is 1 or 20, and **the honest reading of this plan
@@ -388,7 +388,7 @@ per Semantics), and any code.
 - `spec/README.md` — the `rrw_functional_spec.md` row's currency claim
   reworded to point at the sweep record rather than a hand-kept date
   (Item 1).
-- `guide/codebase_assessment_10sep.md` — §5's "least-audited live spec"
+- `guide/archive/codebase_assessment_10sep.md` — §5's "least-audited live spec"
   and "23 days stale" amended; nine edits and 1,106 changed lines say
   otherwise, and the real defect is piecemeal currency reading as
   whole-document currency (Item 1).
@@ -400,7 +400,7 @@ per Semantics), and any code.
 
 ### Opportunity
 
-`guide/codebase_assessment_10sep.md` §7 says the projection method
+`guide/archive/codebase_assessment_10sep.md` §7 says the projection method
 "models remaining features and does not model refinement", names a
 missing term of **"roughly +1.5k production per active week"**, and
 asks the next snapshot to carry it or record why not.
@@ -495,7 +495,7 @@ $ ls guide/archive/segment_*.md | wc -l
 
 - **6 data points.** No new measurement infrastructure needed — every
   figure is already in a sidecar or an archived plan.
-- **1 document changed** (`guide/codebase_assessment_10sep.md` §7),
+- **1 document changed** (`guide/archive/codebase_assessment_10sep.md` §7),
   plus the skill's own guidance if the finding generalises.
 - **No code, no spec.** This is arithmetic over existing artefacts.
 - **The one risk is a false rate from six points**, which the write-up
@@ -575,7 +575,7 @@ the negative one — *no stable term* — is the defensible answer.
 - the term is computed from the six sidecars with the commands recorded
 - feature and refinement windows are separated, with the classification
   per window stated
-- `guide/codebase_assessment_10sep.md` §7 carries the computed term, its
+- `guide/archive/codebase_assessment_10sep.md` §7 carries the computed term, its
   unit, and its weakness — or records that no stable term exists and
   what §7 does instead
 - `### Doc impact` section present and current
@@ -597,7 +597,7 @@ the negative one — *no stable term* — is the defensible answer.
 
 ### Doc impact
 
-- `guide/codebase_assessment_10sep.md` — §7's asserted "+1.5k per active
+- `guide/archive/codebase_assessment_10sep.md` — §7's asserted "+1.5k per active
   week" replaced by the computed term and its unit, or by an explicit
   finding that no stable term exists (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).
@@ -830,7 +830,7 @@ expensive — was answered by the measurement.
 
 ### Doc impact
 
-- `guide/codebase_assessment_10sep.md` — §5's and §9's
+- `guide/archive/codebase_assessment_10sep.md` — §5's and §9's
   `tools/close_check.py` entries: the split recorded, and the
   three-snapshot claim that the halves share `last_touched_ever`
   corrected with what it used to say (Item 3).

@@ -2768,7 +2768,7 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 ### Segment 19J — The assessment's three moves — ✅ complete + archived 2026-09-11 (**ten items**, 2026-09-10 → 2026-09-11, PRs #2281 → #2311; plan: `guide/archive/segment_19J_assessment_moves.md`)
 
 The three recommended next moves in
-`guide/codebase_assessment_10sep.md` §8, and nothing else. Same shape
+`guide/archive/codebase_assessment_10sep.md` §8, and nothing else. Same shape
 as 19G, which opened for an assessment's §8 and closed at ten items —
 **eight of them produced by the previous item's findings** rather than
 by the plan. So three is what was known at opening, not a prediction of
