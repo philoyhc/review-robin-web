@@ -2161,3 +2161,144 @@ Each rung carries its own spec edit; there is no trailing docs rung.
 - `guide/post_azure_todo_checklist.md` — screencap-retake row naming
   the four affected files (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).
+
+## Item 8 — The row pager keeps your place
+
+**Stub, opened 2026-09-11.** Split out of Item 7 rather than added to
+it: 19J.7 is a colour-and-edge item, and this is behaviour.
+
+### Opportunity
+
+Author, 2026-09-11: *"using the pagination links reloads the whole
+screen, usually forcing a jump to the top of the page. is there a way to
+not have that?"*
+
+The pager's ranges are plain `<a href="…?offset=N">`, so clicking one is
+an ordinary navigation and the browser lands at the top of the document.
+On the pages the pager exists for — a roster long enough to need 200-row
+pages — the table is well below the fold, under the filter card and the
+chip row. So the operator clicks **201–400**, the page reloads, and they
+are looking at the page header with the table they asked for somewhere
+below. Every page turn costs a scroll.
+
+### Decision
+
+**Anchor the range links at the table.** Author, 2026-09-11: *"cheap"*.
+
+Each range link gains a fragment — `…?offset=200#reviewers-table` — so
+the browser lands on the table instead of the document top. It is still
+a full reload; what goes away is the symptom the author reported.
+
+This is cheap because the seven pages already carry the id it needs.
+Measured below: every one has `id="<noun>-table"` on its table, with no
+exceptions and no naming drift, so the fragment is a value the route
+already knows how to name rather than markup this item has to invent.
+
+**Rejected: swapping the table in place** — fetch the next page, replace
+the table body and the two pager strips, push the URL with
+`history.pushState`. It is the fix that actually removes the reload, and
+it is several times the work: the tables carry column-toggle chips with
+their own `localStorage` state, per-page row selection, an inline edit
+mode and a delete-confirmation gate, all of which would have to survive
+or be re-bound on swap — in a codebase with no JS build step
+(`CLAUDE.md` → Templating conventions). Worth doing if page turns ever
+become the main way operators move through a roster; not worth it to
+stop a scroll jump. Recorded in `guide/deferred_consolidated.md` when
+this item closes.
+
+### Semantics
+
+- **The fragment rides on the link, not on a redirect.** The route is
+  untouched; `offset` still clamps and snaps exactly as 19J.5 left it.
+- **The anchor is the table, not the pager.** Landing on the top pager
+  strip would put the ranges at the viewport top and the first row just
+  under them, which reads as "here is the control you just used" rather
+  than "here is what you asked for". The table id it already has is the
+  right target.
+- **Back and forward are unaffected.** The browser restores scroll
+  position on history navigation regardless of the fragment.
+- **The bottom pager gets the same href.** Both strips render from one
+  macro; a reader clicking **401–600** at the bottom of page 2 lands at
+  the top of the table on page 3, which is where reading resumes.
+- **No sticky header to duck under.** The only fixed element in the app
+  is the 3px busy indicator, so the anchor lands clean; a small
+  `scroll-margin-top` is a nicety, not a correctness fix (see Judgment
+  calls).
+
+### Judgment calls — decided
+
+- **2026-09-11 — the anchor is passed, not derived.** The route supplies
+  `pager_anchor` alongside `pager_url_base` rather than the macro
+  guessing `<noun>-table` from the URL. The convention is uniform today,
+  and deriving it would make the pager silently land at the top again
+  the first time someone renames a table id — a failure with no error.
+- **2026-09-11 — `scroll-margin-top` on the anchored table**, so the
+  table's top edge is not flush against the viewport. A judgment call
+  and not a correctness one; if it looks worse on the dev slot, drop it.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `aa9240a1`.
+
+| What | Count | Command |
+|---|---:|---|
+| Routes passing `pager_url_base` | 7 | `grep -rn '"pager_url_base":' app/web/routes_operator/*.py` |
+| Templates with a `<noun>-table` id | 7 of 7, no drift | `grep -ao 'id="[a-z0-9-]*table[a-z0-9-]*"' app/web/templates/operator/session_*.html` |
+| Pager include sites | 14 (two per page) | `grep -rc "_preview_pager" app/web/templates/operator/*.html` |
+| Hrefs to change in the macro | 1 | `_preview_pager.html`, the `_cell` macro |
+| Existing `scroll-margin` rules | 0 | `grep -c "scroll-margin" app/web/templates/base.html` |
+| Fixed-position elements an anchor could hide under | 1, and 3px tall (`.rrw-busy`) | `grep -n "position: fixed" -A3 app/web/templates/base.html` |
+
+### PR ladder
+
+1. **The fragment.** Seven routes gain `pager_anchor`; `_cell` appends
+   `#{{ anchor }}`; `base.html` gains the `scroll-margin-top` rule.
+   Integration test asserting every rendered range href carries the
+   page's own anchor, and that the anchor names an id the same response
+   actually contains — the second half matters, because a fragment
+   pointing at nothing fails exactly like no fragment at all and looks
+   identical in a diff. *Must not* touch the route's offset handling or
+   the suppression rule.
+
+### Definition of done
+
+- Every range link on all seven pages ends in `#<noun>-table`.
+- The anchor each page emits matches an `id` present in that same
+  response.
+- `tests/integration/test_preview_pager.py` still passes unchanged in
+  substance — ranges, clamping, snapping and suppression are untouched.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `guide/post_azure_todo_checklist.md` carries a row: turn a page on a
+  600-row roster and land on the table, not the header.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19J.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Does the fragment belong in the URL the operator sees?** It will
+  show in the address bar and be carried into a copied link, which is
+  harmless but not free. **Author decides** whether that is a cost worth
+  a `scrollIntoView` on load instead — which trades a clean URL for a
+  visible jump after paint.
+
+### Out of scope
+
+- **Removing the reload.** The in-place swap is the real fix and is
+  rejected above with its reason; deferred rather than dropped.
+- **The busy indicator.** 19J.4 already covers the "is it hanging?"
+  half of a slow page turn. This item is only about where the new page
+  lands.
+- **Any other navigation in the app.** Breadcrumbs, the session nav and
+  the setup tabs all land at the top on purpose.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §10's `.table-pager` row gains the
+  landing-position sentence (Item 8).
+- `guide/post_azure_todo_checklist.md` — row for the page-turn landing
+  check (Item 8).
+- `docs/status.md` — row when the item closes (Item 8).
