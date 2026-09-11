@@ -2249,6 +2249,43 @@ Taken 2026-09-11 at `aa9240a1`.
 | Existing `scroll-margin` rules | 0 | `grep -c "scroll-margin" app/web/templates/base.html` |
 | Fixed-position elements an anchor could hide under | 1, and 3px tall (`.rrw-busy`) | `grep -n "position: fixed" -A3 app/web/templates/base.html` |
 
+### Status
+
+**2026-09-11 — rung 1 built.** The stub's single rung landed as planned;
+the ladder did not change shape.
+
+**The open question is answered.** Author: *"URL"* — the fragment goes
+in the address bar, rather than a `scrollIntoView` on load. So a copied
+link carries `#<noun>-table`, which is a cost the author accepted rather
+than one this plan talked them out of.
+
+Decisions confirmed at build:
+
+- **Passing the anchor rather than deriving it** paid for itself
+  immediately: it is only the safer choice if something checks the two
+  halves still agree, so
+  `test_every_pager_route_supplies_an_anchor_that_exists` reads the
+  seven routes and asserts each declared id exists in its own template.
+  That guard is what makes the decision real rather than a preference.
+- **`scroll-margin-top` kept.** Still a judgment call, still droppable
+  on the dev slot if it reads worse.
+
+Found at build, and not anticipated by the blast radius:
+
+- **Three assertions in `tests/integration/test_preview_pager.py` pin
+  the exact href**, so the fragment broke them — substance unchanged
+  (the offsets are identical), only the tail grew. Updated with a note
+  pointing at the file that owns the fragment.
+- **One assertion in `tests/integration/test_pager_link_style.py`
+  matched a literal space between `class` and `href`.** Wrapping the
+  macro's `href` onto its own line broke it. Loosened to `\s+`:
+  whitespace between attributes was never what that test meant to pin.
+- **An empty roster renders no table at all**, so the first draft of
+  the per-page test — which asserted the anchor id on all seven pages
+  from an unseeded session — failed on every one of them. Relationships
+  and Observers need a populated session even to render. Replaced with
+  the source-level check above, which covers the same failure for less.
+
 ### PR ladder
 
 1. **The fragment.** Seven routes gain `pager_anchor`; `_cell` appends

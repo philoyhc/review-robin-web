@@ -95,7 +95,12 @@ def test_range_links_are_anchors_with_no_style_of_their_own(
     """Every cell but the current one navigates, as a plain link."""
     strip = _strip(client, db, code="pager-style-1")
 
-    anchors = re.findall(r'<a class="table-pager-link" href="([^"]+)"', strip)
+    # ``\s+`` rather than a literal space: 19J.8 wrapped the ``href``
+    # onto its own line in the macro, and whitespace between attributes
+    # was never part of what this test means to pin.
+    anchors = re.findall(
+        r'<a class="table-pager-link"\s+href="([^"]+)"', strip
+    )
     assert len(anchors) >= 2
     assert all("offset=" in href for href in anchors)
 
