@@ -39,11 +39,16 @@ COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 # `spec/` and `docs/` only, so a bullet naming a `guide/` file was
 # silently dropped — not reported as unchecked, not counted, not warned
 # about, and the printed committed-path count was quietly smaller than
-# the manifest it had just read. Measured at that point: **67 such
-# commitments across 33 plans**, none reported. Two went unhonoured in
-# Segment 19J alone and nothing failed; both were caught by a person
-# reading the manifests at close, which is the control this tool exists
-# to replace.
+# the manifest it had just read. This parser finds **80 such commitments
+# across 35 plans**, none of them reported before 19K.1. Two went
+# unhonoured in Segment 19J alone and nothing failed; both were caught by
+# a person reading the manifests at close, which is the control this tool
+# exists to replace.
+#
+# (19K.1's plan opened with a hand-parsed 67 across 33. The two counts
+# are not reconciled and the plan keeps its figure; this comment carries
+# the parser's, because a comment on the regex should state what the
+# regex finds.)
 #
 # Why counted-but-not-verified rather than checked like a spec:
 #
@@ -54,12 +59,14 @@ COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 #     `post_azure_todo_checklist.md` was edited three times on
 #     2026-09-11 for three different items. A check that passes for the
 #     wrong reason is worse than one that abstains.
-#   * C2 ("exists and is live") is the wrong question too, and measurably
-#     so: of the 67, **12 point into `guide/archive/` and 13 at paths
-#     that have since moved there**. A plan file legitimately archives
-#     when its segment closes, so applying C2 would have turned 25
-#     correct, closed commitments into failures — including across
-#     `--archived`, which sweeps every archived plan.
+#   * C2 ("exists and is live") is the wrong question too. A plan file
+#     legitimately archives when its segment closes, so a bullet naming
+#     it goes stale by the segment closing correctly. Measured over the
+#     80: **11 have no file at the path the bullet names, and 8 of those
+#     are exactly that case** — the file is sitting in `guide/archive/`.
+#     Three are genuinely gone. So C2 would fail eight correct, closed
+#     commitments to catch three, and would do it across `--archived`,
+#     which sweeps every archived plan.
 #
 # So the tool reports them and says it is not checking them. The reader
 # closes that loop, exactly as they already do for a C3 warning.

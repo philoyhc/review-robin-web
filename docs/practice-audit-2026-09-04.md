@@ -129,12 +129,15 @@ The close check is the newest row and the one whose limits are easiest to
 misread, so they are stated here rather than left to its `--help`. Added
 2026-09-11 (Segment 19K Item 1).
 
-**What it verifies.** For the closing level's `Doc impact` manifest: that the
-section exists and the file uses one shape (segment-level or item-level, not
-both); that every committed path exists and is live; that every un-waived path
-was edited inside the segment's or item's own commit window; that each waiver
-carries a reason; and that each `cites:` marker names a path its bullet
-actually contains.
+**What it verifies.** Seven checks over the closing level's `Doc impact`
+manifest — **C1** the section exists and the file uses one shape (segment-level
+or item-level, not both); **C2** every committed path exists and is live;
+**C3** every un-waived path was edited inside the segment's or item's own
+commit window; **C4** each waiver carries a reason; **C5** the `guide/`
+commitments, counted and listed but not checked (below); **C6** a `Status`
+block is present at the closing level — a warning, not a failure, because
+items are sometimes logged after their work lands; **C7** each `cites:` marker
+names a path its bullet actually contains.
 
 **What it does not verify, and cannot.** It asks whether an edit *happened*,
 never whether it was *right* — that judgement belongs to the `spec-writer`
@@ -148,8 +151,11 @@ than pending:
   one day for three different items, so a touched-the-file check would pass for
   the wrong reason. A `guide/` path is also legitimately allowed to move into
   `guide/archive/` when its segment closes, which is why "exists and is live"
-  is the wrong question for it too: of the 67 such commitments measured on
-  2026-09-11, 25 would have failed that check while being entirely correct.
+  is the wrong question for it too. Of the **80** such commitments the tool's
+  own parser finds across 35 plans (2026-09-11), **11 have no file where the
+  bullet names one, and 8 of those are that exact case** — the file is sitting
+  in `guide/archive/`. So C2 would fail eight correct, closed commitments to
+  catch three genuinely broken ones.
 - **A `## Item <n>` heading that is not yet committed** leaves the window
   opening at the segment's own `Doc impact` commit, so the item can read clean
   on a sibling's edits. The check says so — it reports the result as

@@ -215,15 +215,23 @@ measure** ("reports **five** committed paths, not three"):
 
 **Two findings this item leaves behind.**
 
-*The `guide/` count depends on who is counting.* The Opportunity's table says
-67 across 33 plans, hand-parsed at `94aaa3b2`. The tool's own parser, run over
-the same corpus today, finds **80 across 35 plans** — 19 of them pointing into
-`guide/archive/` and 11 at a path that is not live where the bullet names it.
-19K's own plan contributes none of the difference. The two figures are not
-reconciled, and the Opportunity is left as written: the point it was making —
-that the number is large enough to fix rather than document — survives either
-way, and a hand count that disagrees with the tool built to replace it is
-worth leaving visible.
+*The `guide/` count depends on who is counting, and the hand count was wrong
+in both directions.* The Opportunity's table says 67 across 33 plans,
+hand-parsed at `94aaa3b2`. The tool's own parser, over the same corpus, finds
+**80 across 35**; 19K's own plan contributes none of the difference. Worse,
+the Opportunity's supporting figure — "12 point into `guide/archive/` and 13 at
+paths that have since moved there, so C2 would turn **25** correct commitments
+into failures" — does not survive measurement either: **11** of the 80 have no
+file where the bullet names one, and **8** of those are the archived-plan case
+the argument rests on. Three are genuinely broken. So C2 would fail eight
+correct commitments to catch three, which is still the right call and a
+materially smaller claim than the one the plan made.
+
+The Opportunity is left as written, per *never rewrite intent* — the point it
+was making survives either figure, and a hand count that disagrees with the
+tool built to replace it is worth leaving visible. Everywhere the number is
+*used* rather than recorded now carries the parser's: the `GUIDE_PATH` comment
+in `_manifest.py` and the `docs/practice-audit-2026-09-04.md` passage.
 
 *`--archived` reads one manifest per plan.* For an item-shaped plan it takes
 the **first** item's `Doc impact` and stops (`_archive.py`, the `next(...)`
@@ -234,6 +242,27 @@ sweep has been reporting one item's commitments per multi-item plan since it
 was written. Not fixed here: it moves the number the whole report is read for
 and deserves its own slice, with the before-and-after stated. Recorded as a
 candidate item for this segment.
+
+**`spec-writer` pass (checker, 2026-09-11) — two flags, both upheld.**
+
+1. *The practice-audit passage omitted C6.* It enumerated C1–C5 and C7 and
+   never mentioned the `Status`-block check, so the document promising "what
+   the tool does and does not verify" was missing one of seven. The passage is
+   now an explicit C1–C7 list.
+2. *The practice-audit repeated the hand count flatly while `docs/status.md`
+   was recording it as unreconciled.* Upheld, and re-measuring made it worse
+   than the flag: the 25-of-67 figure is 11-of-80, 8 of them the archiving
+   case. Corrected in the practice-audit **and** in the `GUIDE_PATH` comment,
+   which was the original source of the number — the tool's own comment
+   asserting a figure the tool's own parser contradicts.
+
+The second flag is the one worth keeping. This item's `Status` had already
+recorded that the hand count did not reconcile, and the same session then went
+on repeating it in the other committed document and left it standing in the
+code. *Recording that a number is unreliable does not stop you using it* —
+the correction has to reach every place the number is spent, not just the
+place it is confessed. Maker ≠ checker earned its keep here: the author read
+past this twice.
 
 ### PR ladder
 
