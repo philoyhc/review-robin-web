@@ -2557,11 +2557,15 @@ Added 2026-09-11 with the form:
 
 ### Judgment calls — decided
 
-- **2026-09-11 — the control appears only when the strip elides.** If
+- ~~**2026-09-11 — the control appears only when the strip elides.** If
   every range is already on screen, a jump control is a second way to do
   what one click does — noise, by the same argument that makes
   `build_pager` return `None` for a single page. `Pager` already knows:
-  `elided_before or elided_after`.
+  `elided_before or elided_after`.~~ **Unmade at rung 2**, where the
+  premise went: the argument was about a jump control sitting *beside* a
+  strip that already showed every range. Once the strip is gone the
+  cluster is the pager, and a three-page table would have had none at
+  all. It now renders whenever `pager` does.
 - **2026-09-11 — the four steps are `.btn-icon`, not a new class.**
   `spec/ui_elements.md` §6 already carries it for borderless inline
   actions, `base.html` styles it, and the move-up / move-down arrows it
@@ -2648,10 +2652,53 @@ discovered:
   ring. An opaque `--surface-card` and a 1px border do the separating
   instead.
 
-Still to come: rung 2 wires the cells and retires the strip.
-`test_pager_cluster.py::test_the_scaffold_navigates_nowhere` is written
-to be deleted by it, and says so — it pins the rung boundary rather than
-describing a property worth keeping.
+**Rung 2 landed 2026-09-11** — wired, and the 19J.5 range strip retired
+in the same PR. `test_the_scaffold_navigates_nowhere` was deleted by it,
+as written. Author on the scaffold: *"the placement is spot on"*.
+
+- **One judgment call had to be unmade, and it is struck above.**
+  "Only when the strip elides" was reasoning about a control sitting
+  *beside* a strip that already showed every range. Retiring the strip
+  retired the premise: the cluster is the pager now, and a three-page
+  table would have been left with nothing. It renders whenever `pager`
+  does — which is 19J.5's own condition, unchanged.
+- **2026-09-11 — the steps and menu rows drop the link underline**,
+  which is the one place this item deliberately contradicts 19J.7 rung
+  4. That rung took `text-decoration: none` *off* `.table-pager-link` so
+  a range would read as the link it was — right, for inline prose in a
+  strip. These are not that: the four steps are the `.btn-icon` role and
+  an underlined `»` reads as a typo; the menu's entries are rows in a
+  panel, where underlining every one makes a list harder to scan. Found
+  by measuring the computed style in Chromium, not by reading the rule.
+  Pinned by a test, because the reason is not visible from the CSS.
+- **`build_pager`'s window is now dead weight, and was left alone.**
+  `links` is still read — `all_ranges` finds the current page through it
+  — but `first`, `last`, `elided_before`, `elided_after` and `_WINDOW`
+  have no reader outside `tests/unit/test_pager.py`. Removing them is a
+  clean, separate slice; doing it inside the rung that retires the strip
+  would have widened a PR that already deletes a partial, seven include
+  pairs and four CSS rules. Recorded here so it is a decision rather
+  than an oversight.
+- **Seven mutations checked, each caught**: `«` pointing at the current
+  page, `›` stepping two, hrefs losing the `#…-table-card` fragment, the
+  ends never going inactive, the menu dropping its current-page span,
+  the elision condition coming back, and the step underline returning.
+- **The tests that survived say why.** `test_preview_pager.py` was
+  written against the strip and still passes: what it pins — renders
+  above and below, suppressed under a filter, absent for one page, a row
+  past the first page reachable, offsets clamping and snapping — was
+  never about markup. Only the probe changed.
+  `test_pager_link_style.py` lost the three tests about the strip's
+  treatment and kept the reserved-shade sweep, which now covers the
+  cluster, its steps and its menu for free: every new class name starts
+  with `.table-pager`, which is why they were named that way.
+
+Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
+(25 pages — the 5,861 in the author's screenshot exceeds
+`csv_imports.MAX_ROWS`, so it cannot be one import): 26 anchors in the
+top cluster, every range in the menu, the panel scrolling past ~11
+entries, and `2,401–2,600` — the author's example, once five clicks —
+reached in one.
 
 ### PR ladder
 

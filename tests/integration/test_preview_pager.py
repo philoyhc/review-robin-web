@@ -1,15 +1,17 @@
 """The row pager on the roster-bearing pages — Segment 19J.5.
 
-Rung 1 landed the surface: the ranges real, the links going nowhere.
-Rung 2 wired the four Setup pages, and the inertness assertion expired
-exactly as that rung predicted — it now asserts the opposite on those
-four, and survives unchanged on the three pages still waiting for
-rungs 3 and 4.
+What these pin is the operator-visible contract, and it has outlived
+two surfaces: the pager renders above and below the table, it
+disappears while a filter is active, it stays away when there is
+nothing to page, and — the point of the whole item — a row past the
+first page is reachable, at an offset that clamps and snaps.
 
-What these pin is the operator-visible contract: the strip renders
-above and below the table, it disappears while a filter is active, it
-stays away when there is nothing to page, and — the point of the whole
-item — a row past the first page is reachable.
+None of that is about markup, which is why these tests survived 19J.9
+rung 2 retiring the range strip they were written against. What changed
+is the probe: ``<nav class="table-pager">`` became the cluster's
+``<div class="table-pager-cluster">``. Where a test asserted something
+true only of the strip — its ranges all on screen at once — it says so
+and asserts the cluster's equivalent instead.
 """
 from __future__ import annotations
 
@@ -66,13 +68,15 @@ def test_a_roster_over_one_page_gets_a_pager_above_and_below_the_table(
 
     # Twice: a 200-row table is several screens tall, and a pager only
     # at the top makes the operator scroll back to use it.
-    assert body.count('<nav class="table-pager') == 2
+    assert body.count('<div class="table-pager-cluster') == 2
     # One of the two carries the bottom modifier. Counted on the
     # rendered element: the bare class name also appears in the CSS
     # ``base.html`` ships on every page.
-    assert body.count('<nav class="table-pager table-pager-bottom"') == 1
+    assert body.count('table-pager-cluster table-pager-cluster-bottom') == 1
 
     # Real ranges, computed from the real roster — not placeholders.
+    # They live in the menu now rather than strung across a strip, but
+    # the roster still decides them.
     assert "1–200" in body
     assert "201–400" in body
     assert "401–556" in body
@@ -92,9 +96,10 @@ def test_the_pager_is_suppressed_while_a_filter_is_active(
         f"/operator/sessions/{review_session.id}/reviewers?q=Reviewer+01"
     ).text
 
-    # ``table-pager`` alone would match the CSS in ``base.html``, which
-    # ships on every page — assert on the rendered element.
-    assert "<nav class=\"table-pager" not in body
+    # ``table-pager-cluster`` alone would match the CSS in
+    # ``base.html``, which ships on every page — assert on the rendered
+    # element.
+    assert '<div class="table-pager-cluster' not in body
     # …and the sentence is still there to say what the filter did.
     assert "table-showing-hint" in body
 
@@ -106,7 +111,7 @@ def test_a_roster_that_fits_one_page_gets_no_pager(
     _import_reviewers(client, review_session.id, 12)
 
     body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
-    assert "<nav class=\"table-pager" not in body
+    assert '<div class="table-pager-cluster' not in body
 
 
 def test_the_setup_pager_links_navigate(client: TestClient, db: Session) -> None:
@@ -197,9 +202,22 @@ def test_the_pager_carries_no_selection_across_a_page(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers?selected=1&selected=2"
     ).text
-    strip_start = body.index('<nav class="table-pager')
-    strip = body[strip_start : body.index("</nav>", strip_start)]
-    assert "selected=" not in strip
+    # The cluster's own markup, opening tag to the `</div>` that closes
+    # it: one for the menu panel, one for the cluster.
+    start = body.index('<div class="table-pager-cluster')
+    depth = 0
+    import re as _re
+
+    for tag in _re.finditer(r"<(/?)div\b", body[start:]):
+        depth += -1 if tag.group(1) else 1
+        if depth == 0:
+            cluster = body[start : start + tag.end() + 1]
+            break
+    assert "selected=" not in cluster
+    # Every page turn is in there, not just the neighbours — a menu
+    # entry that carried a selection would be the same bug one range
+    # further away.
+    assert cluster.count("offset=") >= 3
 
 
 def test_assignments_still_waits_for_its_rung(
@@ -343,7 +361,7 @@ def test_invitations_pages_and_reaches_the_rows_it_used_to_render_all_of(
     )
 
     first = client.get(f"/operator/sessions/{session_id}/invitations").text
-    assert '<nav class="table-pager' in first
+    assert '<div class="table-pager-cluster' in first
     assert (
         f'href="/operator/sessions/{session_id}/invitations'
         f'?offset=200#invitations-table-card"'
@@ -367,7 +385,7 @@ def test_responses_pages_on_the_same_terms(
     )
 
     first = client.get(f"/operator/sessions/{session_id}/responses").text
-    assert '<nav class="table-pager' in first
+    assert '<div class="table-pager-cluster' in first
     assert (
         f'href="/operator/sessions/{session_id}/responses'
         f'?offset=200#responses-table-card"'
@@ -410,7 +428,7 @@ def test_a_filtered_operations_view_carries_no_pager_and_stays_uncapped(
     body = client.get(
         f"/operator/sessions/{session_id}/invitations?q=Reviewer"
     ).text
-    assert '<nav class="table-pager' not in body
+    assert '<div class="table-pager-cluster' not in body
     # All 210 match, and all 210 render — nothing withheld, so the
     # sentence carries no withheld clause.
     assert "Showing 210 reviewers." in body
@@ -436,4 +454,4 @@ def test_a_filtered_operations_view_renders_every_matching_row(
         f"/operator/sessions/{session_id}/invitations?q=Reviewer"
     ).text
     assert _ops_row_count(body, "invitations") == 210
-    assert '<nav class="table-pager' not in body
+    assert '<div class="table-pager-cluster' not in body

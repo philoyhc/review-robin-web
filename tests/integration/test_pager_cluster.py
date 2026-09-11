@@ -1,23 +1,20 @@
-"""The page-turn cluster renders, in both places, and goes nowhere yet.
+"""The page pager: the cluster renders, in both places, and navigates.
 
-Segment 19J Item 9, rung 1 — the scaffold.
+Segment 19J Item 9, rung 2 — wired, and the 19J.5 range strip retired
+in the same rung, because a wired cluster beside a working strip is two
+pagers on one page.
 
-The strip's reach is a constant two pages per click whatever the roster
-size, so crossing a long roster costs a number of clicks linear in its
-length: 5 to row 2,400 of 5,861, 50 to the middle of 40,000. The cluster
-— ``«‹ [range ▾] ›»`` — reaches any page without stepping.
+The strip's reach was a constant two pages per click whatever the
+roster size, so crossing a long roster cost a number of clicks linear
+in its length: 5 to row 2,400 of 5,861, 50 to the middle of 40,000. The
+cluster — ``«‹ [range ▾] ›»`` — reaches any page in one.
 
-This rung lands it inert, beside the strip that still works. So these
-assertions are about **presence, placement and state**, not behaviour:
-that it renders twice, that it renders only where the strip cannot show
-every range, that the menu holds every range rather than the strip's
-five, that the ends are inactive at the ends — and that nothing in it
-navigates.
-
-``test_the_scaffold_navigates_nowhere`` is the one test here written to
-be **deleted** by rung 2. It pins the boundary between the two rungs so
-that wiring the cluster is a deliberate act rather than something that
-leaks in sideways.
+``test_the_scaffold_navigates_nowhere`` was written at rung 1 to be
+deleted here, and was. Its replacement,
+``test_every_cell_navigates_and_agrees_with_the_menu``, asserts the
+opposite: every cell is an anchor, and a step's destination is the same
+URL the menu entry for that range carries. Two ways to spell one page
+turn is how they drift.
 
 Assertions read the rendered cluster — the markup between
 ``<div class="table-pager-cluster`` and its closing ``</div>`` — rather
@@ -38,13 +35,20 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 from app.web.views import PAGE_SIZE
 
-#: Seven pages: the strip shows five links plus Last, so page 6 is
-#: unreachable and the cluster earns its place. Six pages would not —
-#: every range is on screen and one click already reaches any of them.
+#: Seven pages. Enough that the menu is visibly more than a strip's
+#: five-wide window would have been, which is the reason the cluster
+#: exists.
 PAGING_ROWS = 7 * PAGE_SIZE + 1
 
-#: Three pages. The strip shows all of them, so no cluster.
+#: Three pages. Still more than one, so still a pager: rung 1 rendered
+#: the cluster only where the strip elided, on the reasoning that a jump
+#: control is noise beside a strip already showing every range. Retiring
+#: the strip retired that reasoning, and a short multi-page table would
+#: otherwise have had no pager at all.
 SHORT_ROWS = 556
+
+#: One page. No pager, as it has been since 19J.5.
+ONE_PAGE_ROWS = 12
 
 TEMPLATES = (
     "session_reviewers.html",
@@ -72,7 +76,7 @@ def _make_session(
 
 
 def _reviewers_page(
-    client: TestClient, db: Session, *, code: str, rows: int
+    client: TestClient, db: Session, *, code: str, rows: int, offset: int = 0
 ) -> str:
     review_session = _make_session(client, db, code=code)
     csv = b"".join(
@@ -91,6 +95,7 @@ def _reviewers_page(
     assert response.status_code in (200, 303), response.status_code
     return client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
+        + (f"?offset={offset}" if offset else "")
     ).text
 
 
@@ -113,7 +118,7 @@ def _clusters(body: str) -> list[str]:
     return out
 
 
-def test_the_cluster_renders_twice_where_the_strip_cannot_reach(
+def test_the_cluster_renders_twice_on_a_table_that_pages(
     client: TestClient, db: Session
 ) -> None:
     """Both places, and that is not optional.
@@ -135,45 +140,74 @@ def test_the_cluster_renders_twice_where_the_strip_cannot_reach(
     # The top one sits in the row it owns, above the strip.
     toolbar = body.index('<div class="table-card-toolbar">')
     assert toolbar < body.index('<div class="table-pager-cluster')
+    # …and above the table it pages, where 19I Item 10 put the count
+    # sentence the strip used to sit beside.
     assert body.index('<div class="table-pager-cluster') < body.index(
-        '<nav class="table-pager'
+        'id="reviewers-table"'
     )
 
 
-def test_no_cluster_when_the_strip_already_shows_every_range(
+def test_a_short_multi_page_table_still_gets_a_pager(
     client: TestClient, db: Session
 ) -> None:
-    """A control that is a second way to do what one click does is
-    noise — the same argument that makes ``build_pager`` return ``None``
-    for a single page."""
+    """The judgment call rung 1 made, and rung 2 had to unmake.
+
+    Rung 1 rendered the cluster only where the strip elided: beside a
+    strip already showing every range, a jump control is a second way to
+    do what one click does. Retiring the strip retired that reasoning
+    with it — three pages and no pager would have been a regression the
+    condition was never meant to cause.
+    """
     body = _reviewers_page(client, db, code="cluster-2", rows=SHORT_ROWS)
 
-    assert _clusters(body) == []
-    # And the absence is about elision, not about the pager: the strip
-    # itself is right there. Without this the test would pass on a page
-    # that had lost its pager entirely.
-    assert '<nav class="table-pager' in body
+    clusters = _clusters(body)
+    assert len(clusters) == 2
+
+    entries = re.findall(
+        r'<(?:a|span) class="table-pager-menu-item[^"]*"[^>]*?>([^<]+)</(?:a|span)>',
+        clusters[0],
+        re.S,
+    )
+    assert entries == ["1–200", "201–400", f"401–{SHORT_ROWS}"]
 
 
-def test_the_menu_holds_every_range_not_the_strip_s_window(
+def test_one_page_still_gets_no_pager(
     client: TestClient, db: Session
 ) -> None:
-    """The whole point: the strip's five against the table's seven."""
+    """Unchanged since 19J.5, and worth pinning through a surface
+    change: a control that cannot go anywhere is noise."""
+    body = _reviewers_page(client, db, code="cluster-2b", rows=ONE_PAGE_ROWS)
+
+    assert _clusters(body) == []
+    assert "table-pager-cluster" not in body.split("</style>")[-1]
+
+
+def test_the_menu_holds_every_range_in_the_table(
+    client: TestClient, db: Session
+) -> None:
+    """The whole point: eight ranges reachable from any of them.
+
+    The strip it replaced showed a five-wide window, so the middle of a
+    long roster took repeated page loads to walk to.
+    """
     body = _reviewers_page(client, db, code="cluster-3", rows=PAGING_ROWS)
     cluster = _clusters(body)[0]
 
+    # Both kinds: every range but the one you are on is an anchor, and
+    # that one is a span. Matching only one kind would count seven and
+    # call it every range.
     entries = re.findall(
-        r'<span class="table-pager-menu-item[^"]*"[^>]*>([^<]+)</span>',
+        r'<(?:a|span) class="table-pager-menu-item[^"]*"[^>]*?>([^<]+)</(?:a|span)>',
         cluster,
+        re.S,
     )
     assert len(entries) == 8, entries
     assert entries[0] == "1–200"
     assert entries[-1] == f"1,401–{PAGING_ROWS:,}"
 
-    # Strictly more than the strip offers, which is the reason to exist.
-    strip = body[body.index('<nav class="table-pager') :]
-    strip = strip[: strip.index("</nav>")]
-    assert len(re.findall(r"table-pager-link", strip)) < len(entries)
+    # More than 19J.5's window, which is the reason to exist: five
+    # ranges could never reach the eighth without stepping.
+    assert len(entries) > 5
 
     # The summary names where you are, so the menu doubles as the
     # position indicator and the strip's bold cell can retire.
@@ -181,46 +215,138 @@ def test_the_menu_holds_every_range_not_the_strip_s_window(
     assert cluster.count('aria-current="page"') == 1
 
 
+def _glyph_states(cluster: str) -> dict[str, str]:
+    """Each step glyph against whether it navigates."""
+    out: dict[str, str] = {}
+    for tag, cls, glyph in re.findall(
+        r'<(a|span) class="btn-icon table-pager-step([^"]*)"[^>]*?>([^<]+)</\1>',
+        cluster,
+        re.S,
+    ):
+        out[glyph] = "active" if tag == "a" else "inactive"
+        assert ("is-inactive" in cls) == (tag == "span"), (
+            f"{glyph}: class and element disagree about its state"
+        )
+    return out
+
+
 def test_the_ends_are_inactive_at_the_ends(
     client: TestClient, db: Session
 ) -> None:
     """In place, never absent: absent buttons would shift the other
-    cells sideways as the operator pages."""
-    body = _reviewers_page(client, db, code="cluster-4", rows=PAGING_ROWS)
-    cluster = _clusters(body)[0]
+    cells sideways as the operator pages.
 
-    steps = re.findall(
-        r'<span class="btn-icon table-pager-step([^"]*)"[^>]*>([^<]+)</span>',
-        cluster,
-    )
-    assert [glyph for _, glyph in steps] == ["«", "‹", "›", "»"]
+    Read on the first page *and* the last, because a condition wrong in
+    one direction passes half of this test.
+    """
+    first = _clusters(
+        _reviewers_page(client, db, code="cluster-4", rows=PAGING_ROWS)
+    )[0]
+    assert _glyph_states(first) == {
+        "«": "inactive",
+        "‹": "inactive",
+        "›": "active",
+        "»": "active",
+    }
+    assert first.count('aria-disabled="true"') == 2
 
-    state = dict((glyph, cls) for cls, glyph in steps)
-    # On the first page, back and first cannot go anywhere.
-    assert "is-inactive" in state["«"] and "is-inactive" in state["‹"]
-    assert "is-inactive" not in state["›"] and "is-inactive" not in state["»"]
-    assert cluster.count('aria-disabled="true"') == 2
+    last = _clusters(
+        _reviewers_page(
+            client, db, code="cluster-4b", rows=PAGING_ROWS,
+            offset=7 * PAGE_SIZE,
+        )
+    )[0]
+    assert _glyph_states(last) == {
+        "«": "active",
+        "‹": "active",
+        "›": "inactive",
+        "»": "inactive",
+    }
+
+    # And in the middle every cell goes somewhere.
+    middle = _clusters(
+        _reviewers_page(
+            client, db, code="cluster-4c", rows=PAGING_ROWS,
+            offset=3 * PAGE_SIZE,
+        )
+    )[0]
+    assert set(_glyph_states(middle).values()) == {"active"}
 
 
-def test_the_scaffold_navigates_nowhere(
+def test_every_cell_navigates_and_agrees_with_the_menu(
     client: TestClient, db: Session
 ) -> None:
-    """**Rung 2 deletes this test.**
+    """Replaces rung 1's ``test_the_scaffold_navigates_nowhere``.
 
-    It pins the rung boundary: the scaffold is for looking at, and
-    wiring it should be a deliberate act in its own PR rather than
-    something that arrives sideways. Meanwhile the 19J.5 strip below is
-    still the working pager, which is why an inert cluster costs the
-    operator nothing.
+    Two things at once, because either alone would pass a broken pager:
+    every cell is an anchor, **and** a step's destination is the exact
+    URL the menu entry for that same range carries. Two ways to spell
+    one page turn is how they drift.
     """
-    body = _reviewers_page(client, db, code="cluster-5", rows=PAGING_ROWS)
+    body = _reviewers_page(
+        client, db, code="cluster-5", rows=PAGING_ROWS,
+        offset=3 * PAGE_SIZE,
+    )
+    cluster = _clusters(body)[0]
 
-    for cluster in _clusters(body):
-        assert "href" not in cluster
-        assert "<a " not in cluster
+    menu = dict(
+        (label, href)
+        for href, label in re.findall(
+            r'<a class="table-pager-menu-item"\s+href="([^"]+)">([^<]+)</a>',
+            cluster,
+        )
+    )
+    assert len(menu) == 7  # eight ranges, less the one you are on
 
-    # The strip still works, so the page is not without a pager.
-    assert re.search(r'<a class="table-pager-link"\s+href="[^"]+"', body)
+    steps = dict(
+        (glyph, href)
+        for href, glyph in re.findall(
+            r'<a class="btn-icon table-pager-step"\s+href="([^"]+)"[^>]*>'
+            r"([^<]+)</a>",
+            cluster,
+            re.S,
+        )
+    )
+    assert set(steps) == {"«", "‹", "›", "»"}
+
+    assert steps["«"] == menu["1–200"]
+    assert steps["‹"] == menu["401–600"]
+    assert steps["›"] == menu["801–1,000"]
+    assert steps["»"] == menu[f"1,401–{PAGING_ROWS:,}"]
+
+    # And every one of them lands on the table card (19J.8).
+    for href in list(menu.values()) + list(steps.values()):
+        assert href.endswith("#reviewers-table-card"), href
+
+
+def test_a_page_turn_from_the_menu_reaches_that_page(
+    client: TestClient, db: Session
+) -> None:
+    """One move to anywhere — the item's whole reason.
+
+    Follows the menu's own href rather than a URL the test builds, so
+    it fails if the link is wrong rather than only if the route is.
+    """
+    body = _reviewers_page(client, db, code="cluster-6", rows=PAGING_ROWS)
+    cluster = _clusters(body)[0]
+
+    href = dict(
+        (label, url)
+        for url, label in re.findall(
+            r'<a class="table-pager-menu-item"\s+href="([^"]+)">([^<]+)</a>',
+            cluster,
+        )
+    )["1,201–1,400"]
+
+    landed = client.get(href).text
+    table = landed[landed.index('id="reviewers-table"') :]
+    assert "Reviewer 01200" in table
+    assert "Reviewer 01399" in table
+    assert "Reviewer 01199" not in table
+
+    # The menu now says where you are, which is what let the strip's
+    # bold current cell retire.
+    assert "<summary>1,201–1,400</summary>" in landed
 
 
 def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
@@ -236,6 +362,9 @@ def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
     for name in TEMPLATES:
         markup = (root / name).read_text(encoding="utf-8", errors="replace")
         assert markup.count("_pager_cluster.html") == 2, name
+        assert "_preview_pager.html" not in markup, (
+            f"{name} still includes the retired range strip"
+        )
         assert markup.count('<div class="table-card-toolbar">') == 1, name
         assert (
             'cluster_extra_class = "table-pager-cluster-bottom"' in markup

@@ -127,10 +127,10 @@ def test_build_pager_clamps_rather_than_trusting_its_caller() -> None:
 # --------------------------------------------------------------------- #
 # All seven pages, not four
 #
-# The scaffold's whole point is that every roster-bearing table gets the
-# same strip. A page left out would look fine on its own and be found
-# months later by the operator who needed row 900 on exactly that page,
-# so the set is pinned here rather than trusted to the diff.
+# Every roster-bearing table gets the same pager. A page left out would
+# look fine on its own and be found months later by the operator who
+# needed row 900 on exactly that page, so the set is pinned here rather
+# than trusted to the diff.
 # --------------------------------------------------------------------- #
 
 from pathlib import Path  # noqa: E402
@@ -150,7 +150,11 @@ ROSTER_PAGES = [
     "session_responses.html",
 ]
 
-_PARTIAL = "operator/partials/_preview_pager.html"
+#: 19J.9 rung 2 retired ``_preview_pager.html`` — the range strip —
+#: and the cluster took its two render sites. The contract these three
+#: tests pin is unchanged: every roster page, twice, above the count
+#: line.
+_PARTIAL = "operator/partials/_pager_cluster.html"
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)
@@ -162,7 +166,22 @@ def test_every_roster_page_includes_the_pager_twice(page: str) -> None:
 @pytest.mark.parametrize("page", ROSTER_PAGES)
 def test_the_second_copy_carries_the_bottom_modifier(page: str) -> None:
     src = (OPERATOR_TEMPLATES / page).read_text(encoding="utf-8")
-    assert src.count('pager_extra_class = "table-pager-bottom"') == 1
+    assert src.count(
+        'cluster_extra_class = "table-pager-cluster-bottom"'
+    ) == 1
+
+
+@pytest.mark.parametrize("page", ROSTER_PAGES)
+def test_the_strip_it_replaced_is_gone(page: str) -> None:
+    """The retirement, pinned per page.
+
+    Leaving one template still including the strip would put two pagers
+    on that page and nowhere else — the state 19J.9 was explicit about
+    not leaving behind, and the kind that survives a diff read.
+    """
+    src = (OPERATOR_TEMPLATES / page).read_text(encoding="utf-8")
+    assert "_preview_pager.html" not in src
+    assert 'pager_extra_class = "table-pager-bottom"' not in src
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)

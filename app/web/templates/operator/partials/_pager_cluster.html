@@ -1,65 +1,73 @@
-{# The page-turn cluster — Segment 19J Item 9, rung 1 (the scaffold).
+{# The page pager — Segment 19J Item 9, rung 2 (wired).
 
-   Five cells that reach any page without stepping: « first, ‹ back,
-   the range menu, › forward, » last. It exists because the strip's
-   reach is a constant two pages per click whatever the roster size —
-   5 clicks to row 2,400 on a 5,861-row table, 50 to the middle of a
-   40,000-row one — so the cost of crossing a roster is linear in its
-   length.
+   Five cells that reach any page in one move: « first, ‹ back, the
+   range menu, › forward, » last. It replaced the 19J.5 range strip in
+   this rung, because the strip's reach was a constant two pages per
+   click whatever the roster size — 5 clicks to row 2,400 of 5,861, 50
+   to the middle of 40,000 — so crossing a roster cost a number of
+   clicks linear in its length.
 
-   **Everything here is inert on purpose.** This is the scaffold rung:
-   the cluster renders in its final places, in both of its states, and
-   goes nowhere. The 19J.5 strip is still below it and still works, so
-   no page is left without a pager. Rung 2 turns the cells into the
-   anchors they will be — `<a href>`, not script — and retires the
-   strip in the same PR, because a wired cluster beside a working strip
-   is two pagers on one page.
+   **Every cell is an anchor.** No script is involved in navigating:
+   `<details>` opens natively, the entries are links, and a page turn
+   is the same ordinary navigation it has always been. That is why the
+   menu is a disclosure rather than a `<select>` — a select navigating
+   on `change` fires on every arrow key, so a keyboard user reaching
+   the fifth option would navigate five times.
 
-   One consequence of inertness worth naming rather than discovering:
-   the steps are `<span>`s here, so they are not keyboard-focusable
-   yet. Anchors are focusable by construction; adding `tabindex` to a
-   span that does nothing would be a worse scaffold, not a better one.
+   **Rendered whenever there is a pager**, which since this rung means
+   whenever the table holds more than one page. Rung 1 rendered it only
+   where the strip elided, on the reasoning that a jump control is
+   noise beside a strip already showing every range; retiring the strip
+   retired that reasoning with it, and a two-page table would otherwise
+   have had no pager at all.
 
-   **Rendered only when the strip cannot show every range.**
-   `elided_before or elided_after` is exactly that test: with six pages
-   the strip shows five links plus Last and the operator can already
-   reach any of them in one click, so a jump control would be a second
-   way to do what one click does.
+   Each href carries the page's `#<noun>-table-card` fragment, so a
+   page turn lands on the card's top edge with the column chips, this
+   cluster and the new rows beneath it (19J.8). The route supplies the
+   id; nothing here derives it.
 
-   The menu is a `<details>` holding ranges, not a `<select>`: a select
-   navigating on `change` fires on every arrow key, so a keyboard user
-   reaching the fifth option would navigate five times. In rung 2 each
-   entry becomes an anchor, which also means the cluster needs no
-   script to work.
-
-   `pager.all_ranges` is every range in the table; `pager.links` is the
-   strip's five. #}
-{% macro _step(glyph, label, active) -%}
-  {%- if active -%}
-    <span class="btn-icon table-pager-step" aria-label="{{ label }}">{{ glyph }}</span>
+   `pager.all_ranges` is every range in the table. `pager.links` is
+   19J.5's five-wide window, which nothing renders any more. #}
+{% macro _step(glyph, label, target, base, anchor) -%}
+  {%- if target -%}
+    <a class="btn-icon table-pager-step"
+       href="{{ base }}offset={{ target.offset }}#{{ anchor }}"
+       aria-label="{{ label }}">{{ glyph }}</a>
   {%- else -%}
     <span class="btn-icon table-pager-step is-inactive"
           aria-disabled="true" aria-label="{{ label }}">{{ glyph }}</span>
   {%- endif -%}
 {%- endmacro %}
-{% if pager and (pager.elided_before or pager.elided_after) %}
+{% if pager %}
   {% set ranges = pager.all_ranges %}
-  {% set current = ranges | selectattr("is_current") | first %}
+  {% set index = ranges | map(attribute="is_current") | list %}
+  {% set here = index.index(True) if True in index else 0 %}
   <div class="table-pager-cluster{% if cluster_extra_class %} {{ cluster_extra_class }}{% endif %}"
        role="group"
        aria-label="{{ pager_label | default('Table rows') }}">
-    {{ _step("«", "First rows", not ranges[0].is_current) }}
-    {{ _step("‹", "Previous rows", not ranges[0].is_current) }}
+    {{ _step("«", "First rows", ranges[0] if here > 0 else None,
+             pager_url_base, pager_anchor) }}
+    {{ _step("‹", "Previous rows", ranges[here - 1] if here > 0 else None,
+             pager_url_base, pager_anchor) }}
     <details class="table-pager-menu">
-      <summary>{{ current.label if current else ranges[0].label }}</summary>
+      <summary>{{ ranges[here].label }}</summary>
       <div class="table-pager-menu-panel">
         {% for link in ranges %}
-          <span class="table-pager-menu-item{% if link.is_current %} is-current{% endif %}"
-                {% if link.is_current %}aria-current="page"{% endif %}>{{ link.label }}</span>
+          {%- if link.is_current -%}
+            <span class="table-pager-menu-item is-current"
+                  aria-current="page">{{ link.label }}</span>
+          {%- else -%}
+            <a class="table-pager-menu-item"
+               href="{{ pager_url_base }}offset={{ link.offset }}#{{ pager_anchor }}">{{ link.label }}</a>
+          {%- endif -%}
         {% endfor %}
       </div>
     </details>
-    {{ _step("›", "Next rows", not ranges[-1].is_current) }}
-    {{ _step("»", "Last rows", not ranges[-1].is_current) }}
+    {{ _step("›", "Next rows",
+             ranges[here + 1] if here < ranges | length - 1 else None,
+             pager_url_base, pager_anchor) }}
+    {{ _step("»", "Last rows",
+             ranges[-1] if here < ranges | length - 1 else None,
+             pager_url_base, pager_anchor) }}
   </div>
 {% endif %}
