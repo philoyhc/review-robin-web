@@ -214,7 +214,11 @@
         --lifecycle-draft-bg: var(--amber-pale);
         --lifecycle-draft-fg: var(--amber-deep);
         --lifecycle-validated-bg: var(--blue-pale);
-        --lifecycle-validated-fg: var(--blue-strong);
+        /* Not --blue-strong: that is --selected-bg's value, and
+           the pair is reserved for things you can act on (19J.7).
+           Validated is a lifecycle state, not a control, so it
+           takes the foreground --status-info-fg already uses. */
+        --lifecycle-validated-fg: var(--blue-deeper);
         --lifecycle-ready-bg: var(--green-pale);
         --lifecycle-ready-fg: var(--green-strong);
         --lifecycle-expired-bg: var(--red-pale);
@@ -353,7 +357,8 @@
         --lifecycle-draft-bg: var(--amber-abyss);
         --lifecycle-draft-fg: var(--amber-glow);
         --lifecycle-validated-bg: var(--blue-abyss);
-        --lifecycle-validated-fg: var(--blue-glow);
+        /* Was --blue-glow, which is --selected-bg in this theme. */
+        --lifecycle-validated-fg: var(--blue-soft);
         --lifecycle-ready-bg: var(--green-abyss-mid);
         --lifecycle-ready-fg: var(--green-bright);
         --lifecycle-expired-bg: var(--red-abyss);

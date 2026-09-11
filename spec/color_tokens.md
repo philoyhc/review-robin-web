@@ -254,7 +254,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--lifecycle-draft-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--lifecycle-draft-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--lifecycle-validated-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
-| `--lifecycle-validated-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--lifecycle-validated-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--lifecycle-ready-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
 | `--lifecycle-ready-fg` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
 | `--lifecycle-expired-bg` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
@@ -351,6 +351,28 @@ The same reason the help card has its own `-fg` rather than inheriting
 ---
 
 ## Deliberate couplings
+
+**`--blue-strong` / `--blue-glow` are reserved.** The pair
+`--selected-bg` resolves to — `#2563eb` light, `#4b8bf5` dark — means
+*you can act on this* on a pill, chip or row-pager surface: click it,
+or in Instruments Band 2, click and drag it. No static element on those
+surfaces carries it. `--text-link` is the same rule rather than an
+exception, since a link is actionable; `--focus-ring`,
+`--btn-primary-bg` and `--card-active-border` likewise sit on
+actionable or focus surfaces.
+
+The scope is deliberate and narrower than the whole sheet:
+`--status-info-border` resolves to the pair on a *static* info panel
+and is the one known inconsistency outside it, recorded rather than
+fixed (`guide/segment_19J_assessment_moves.md` Item 7). Every other
+blue stays freely available to static elements — `--status-info-bg`
+`#dbeafe`, `--status-info-fg` `#1e40af`, `--role-reviewer-fg`
+`#1d4ed8` — because the reservation is on the shade, not the hue.
+
+`tests/unit/test_reserved_shade.py` resolves every pill- and chip-facing
+token in both themes and fails if anything but a confirmed control
+lands on the pair. `--lifecycle-validated-fg` used to, which is why it
+now reads `--blue-deeper` / `--blue-soft` above.
 
 Registry of intentional semantic→semantic couplings (`@coupled` marker in
 `base.html`). Per the independent-slot rule, none exist yet — every slot maps
