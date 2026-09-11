@@ -2447,6 +2447,45 @@ before rung 1 rather than during it. Everything in Semantics holds
 whichever form wins — which is what makes it safe to decide the
 mechanism now.
 
+**Form decided, 2026-09-11.** Author: *"a `<<` button, a `<` button,
+dropdown, `>`, `>>`"* — one compact cluster in place of the range strip:
+
+| Cell | Goes to |
+|---|---|
+| `«` | the first page |
+| `‹` | back one page |
+| the dropdown | any page — and its summary says which one you are on |
+| `›` | forward one page |
+| `»` | the last page |
+
+Right-aligned, on the column-chip line at the top of the table card,
+and again below the table.
+
+It beats all three candidates the stub listed, for reasons that are
+about shape rather than taste:
+
+- **Constant width at any roster size**, so the depth problem and the
+  width problem close together — which is what neither the wider window
+  nor the doubling steps could do.
+- **The common case stays one click.** `›` never opens a menu. The
+  dropdown is for the jump, and the jump is the rarer move.
+- **It retires `.table-pager-link.is-current`.** The dropdown's summary
+  is the position indicator, so one element both says where you are and
+  takes you elsewhere. 19J.7 rung 4 spent a rung making that cell not
+  look like a control; this deletes the cell.
+- **It makes `«` and `»` honest.** They already render — `base.html`
+  `.table-pager-jump`, `aria-hidden` spans beside the First / Last
+  links — as affordances that look clickable and are not.
+
+**The dropdown is a `<details>` disclosure holding the same range
+anchors, not a `<select>`.** A `<select>` that navigates on `change`
+fires on every arrow key for a keyboard user, so reaching the fifth
+option would navigate five times. A disclosure whose panel holds
+`<a href>`s has no such trap, needs no script to navigate, and makes
+the whole cluster — steps and ranges alike — ordinary links. This is
+what settles the stub's second open question rather than answering it:
+there is no inert-without-JS control to accept or reject.
+
 Two alternatives were measured and rejected:
 
 - **A wider window.** Still linear — it changes the constant, not the
@@ -2488,6 +2527,34 @@ These hold whichever form the control takes.
   `2,401–2,600` and not `page 13`, and the control inherits that
   vocabulary whatever its shape.
 
+Added 2026-09-11 with the form:
+
+- **The cluster renders in both places, and that is not optional.**
+  `base.html`: *"a 200-row table is several screens tall and a pager
+  only at the top makes the operator scroll back to use it."* A
+  top-right-only cluster would mean reading to the bottom of 200 rows
+  and scrolling ~9,000px back up to advance — a worse version of the
+  jump 19J.8 was about. Two sites, as today.
+- **The ends go inactive, never absent.** `«` and `‹` on the first
+  page, `›` and `»` on the last, render in place and do not act. Absent
+  buttons would shift the other three sideways as the operator paged,
+  which is how a control row becomes unreadable. Inactive means
+  `aria-disabled`, no href, and — 19J.7's rule — **not** wearing the
+  reserved accent shade.
+- **Nothing about the chip line is guaranteed.** Its width is operator
+  data: tag labels are whatever the session's CSV carried, so no
+  measurement of one roster settles whether the cluster fits beside
+  them. It right-aligns and **wraps to its own line** rather than
+  compressing — which is the line the strip occupies today, so the
+  worst case costs nothing.
+- **And the chip line is conditional.** A roster with no tags in any
+  slot renders no chips at all (the row is guarded on a slot having
+  data). So the cluster cannot be a passenger on the chip row: the row
+  is the cluster's, and the chips join it when there are chips.
+- **No script is required to navigate.** Every cell is an anchor and
+  `<details>` opens natively. Script, if any, is for niceties like
+  closing the panel on an outside click.
+
 ### Judgment calls — decided
 
 - **2026-09-11 — the control appears only when the strip elides.** If
@@ -2495,6 +2562,21 @@ These hold whichever form the control takes.
   what one click does — noise, by the same argument that makes
   `build_pager` return `None` for a single page. `Pager` already knows:
   `elided_before or elided_after`.
+- **2026-09-11 — the four steps are `.btn-icon`, not a new class.**
+  `spec/ui_elements.md` §6 already carries it for borderless inline
+  actions, `base.html` styles it, and the move-up / move-down arrows it
+  serves are the closest thing in the app to a step control. Inventing
+  `.table-pager-step` would have needed the author's sign-off under
+  `CLAUDE.md` → Project conventions; reusing a canonical role does not.
+- **2026-09-11 — an inactive step is a `<span>`, not a dead `<a>`.**
+  Following `.nav-tab disabled` (`<span … aria-disabled="true">`), which
+  is how the app already spells an unavailable navigation cell. An
+  anchor without an href is focusable-but-inert in some browsers and not
+  others; a span is neither.
+- **2026-09-11 — the strip is retired in the wiring rung, not a third
+  one.** The moment the cluster navigates, the strip is a second pager
+  on the same page. Two pagers is a worse state to leave behind between
+  PRs than either end of the swap.
 
 ### Blast radius (measured)
 
@@ -2510,29 +2592,49 @@ Taken 2026-09-11 at `fd1e0d31`.
 | Test files naming the pager | 11 | `grep -rln --include='*.py' 'pager' tests/` |
 | `<select>` elements already in operator templates | 25 | `grep -rho '<select' app/web/templates/operator/*.html \| wc -l` |
 
-The last row matters for the open question: a `<select>` would not be a
-new primitive here, and `base.html` already styles them.
+Added 2026-09-11 with the form, since it retires more than it adds:
+
+| What | Count | Command |
+|---|---:|---|
+| `.btn-icon` users already in templates | 11 | `grep -rho 'btn-icon' app/web/templates --include='*.html' \| wc -l` |
+| Files carrying `.table-pager-jump` / `-gap` | 2 | `grep -rn 'table-pager-jump\|table-pager-gap' app/ --include='*.html'` |
+| Test assertions on `is-current` | 3, all in one file | `grep -rn --include='*.py' 'is-current' tests/` |
+| Chip groups on the widest page (Assignments) | 3 | `base.html`, `.chip-group` comment |
 
 ### PR ladder
 
-1. **The scaffold.** The control present on all seven pages in its
-   agreed form, inert — it renders, it is reachable by keyboard, and it
-   goes nowhere. `CLAUDE.md` → Working approach requires this for a new
-   navigation affordance, and this item is the case it was written for:
-   the form is the part still open, so it should be looked at before
-   anything is wired to it. *Must not* touch `build_pager`, the route's
-   offset handling, or the suppression rule.
-2. **The wiring.** The control navigates. Integration test asserting a
-   jump reaches an arbitrary page in one move, and that its destination
-   is byte-identical to the href the same range's link carries — the two
-   must not drift into two ways of spelling one URL.
+Specified 2026-09-11 once the form was decided; the two rungs are the
+ones the stub named, now with their contents.
+
+1. **The scaffold — buttons and panel, nothing underneath.** The
+   cluster renders on all seven pages, in both places, entirely inert:
+   `«‹›»` present with their inactive states, the panel opening to show
+   every range, the summary naming the current one. Nothing navigates;
+   the existing range strip stays and keeps working, so the pages are
+   never without a pager. `CLAUDE.md` → Working approach requires the
+   scaffold first for a new navigation affordance, and the placement
+   question — does it share the chip line or take its own? — is
+   answered by looking at this on the dev slot, not by arguing about it
+   now. *Must not* touch `build_pager`, the route's offset handling,
+   or the suppression rule.
+2. **The wiring, and the strip comes out.** Every cell navigates; the
+   range strip and `.table-pager-link.is-current` are retired in the
+   same rung, because a wired cluster beside a working strip is two
+   pagers on one page. Integration tests: a jump reaches an arbitrary
+   page in one move; each cell's destination is byte-identical to the
+   href the corresponding range link used to carry; the ends are
+   inactive on the first and last page and carry no reserved shade.
 
 ### Definition of done
 
 - From page 1 of a 30-page table, any page is reachable in **one**
   interaction.
-- The control renders on all seven pages, in both strips, and only when
-  the strip elides.
+- The cluster renders on all seven pages, in **both** places, and only
+  when the strip would have elided.
+- `«‹` are inactive on the first page and `›»` on the last, in place
+  rather than absent, and no inactive cell resolves to the reserved
+  accent pair.
+- Every cell is an anchor: the cluster navigates with scripting off.
 - Its destination is the same URL the corresponding range link uses,
   fragment included.
 - A filtered view still renders no pager and no control.
@@ -2550,9 +2652,13 @@ new primitive here, and `base.html` already styles them.
 
 ### Open questions
 
-- **What form does the control take? Author decides, before rung 1.**
-  The mechanism is settled; this is not. Three candidates, with what
-  each costs:
+- ~~**What form does the control take? Author decides, before rung 1.**~~
+  **Answered 2026-09-11** — the `«‹ dropdown ›»` cluster, above. None of
+  the three candidates below won outright: the `<select>`'s list of
+  ranges survives as the dropdown's contents, in a `<details>` rather
+  than a `<select>`, and the step buttons the author added are what
+  keeps the common case off the menu. Kept as written, because the
+  reason the cluster is better is visible only against them:
   - **A `<select>` of every range**, `Jump to: [2,401–2,600 ▾]`. One
     click to open, native keyboard type-ahead, cannot hold an invalid
     value, and 25 selects already ship. Costs markup — 200 options at
@@ -2567,10 +2673,16 @@ new primitive here, and `base.html` already styles them.
     the gap it stands for. Almost free, no new control, and turns the
     walk into a binary search — but that is still ~5 clicks at 200
     pages, so it improves the number without settling the question.
-- **Is a control that is inert without JS acceptable here?** Only live
-  if the `<select>` wins. `CLAUDE.md` permits targeted progressive
-  enhancement, and the strip itself keeps working, so the fallback is
-  today's behavior rather than a broken page. Still the author's call.
+- ~~**Is a control that is inert without JS acceptable here?**~~
+  **Moot, 2026-09-11.** It was contingent on the `<select>`. A
+  `<details>` of anchors navigates with scripting off, so there is
+  nothing to accept.
+- **Does the panel need a close-on-outside-click?** `<details>` does not
+  close when the operator clicks elsewhere, which is the one place this
+  cluster differs from a native menu. A few lines of delegated script
+  fixes it; whether it is worth them is a judgment to make on the
+  scaffold, looking at it, rather than now. Not a blocker either way —
+  the panel closes on its own summary, and on any navigation.
 
 ### Out of scope
 
@@ -2588,10 +2700,13 @@ new primitive here, and `base.html` already styles them.
 
 ### Doc impact
 
-- `spec/ui_elements.md` — §10's `.table-pager` row gains the jump
-  control and the elision-only rule. The primitive is described **once**
-  here; the two page specs below point at it rather than restating it
-  (Item 9).
+- `spec/ui_elements.md` — §10's `.table-pager` row is rewritten around
+  the cluster: the five cells, both render sites, the elision-only rule
+  and the inactive ends; the retired range strip and
+  `.table-pager-link.is-current` are struck. §6 gains the `.btn-icon`
+  inactive-anchor treatment the ends need. The primitive is described
+  **once** here; the two page specs below point at it rather than
+  restating it (Item 9).
 - `spec/setup_pages.md` — "The row pager (Segment 19J.5)" gains the
   control alongside the suppression and selection rules it already
   states for the five setup pages (Item 9).
