@@ -173,3 +173,57 @@ def test_the_pager_sits_with_the_count_line_it_replaces(page: str) -> None:
     first_pager = src.index(_PARTIAL)
     count_line = src.index("operator/partials/_preview_count_line.html")
     assert first_pager < count_line
+
+
+# ---------------------------------------------------------------------------
+# ``Pager.all_ranges`` — Segment 19J Item 9. The strip shows a window of
+# five; the jump menu shows the lot. Derived rather than stored, so
+# ``build_pager`` and with it 19J.5's window, clamping and suppression
+# rule are untouched by the item that needs it.
+
+
+def test_all_ranges_covers_the_whole_table() -> None:
+    pager = views.build_pager(total=1401, offset=0)
+    assert pager is not None
+
+    ranges = pager.all_ranges
+    assert len(ranges) == 8  # 1,401 rows at 200 a page
+    assert [r.label for r in ranges][:2] == ["1–200", "201–400"]
+    assert ranges[-1].label == "1,401–1,401"
+    assert [r.offset for r in ranges] == [i * 200 for i in range(8)]
+
+
+def test_all_ranges_is_strictly_more_than_the_strip_shows() -> None:
+    """The reason it exists: the strip cannot reach the middle of a long
+    roster, and the menu must."""
+    pager = views.build_pager(total=40000, offset=20000)
+    assert pager is not None
+
+    assert len(pager.links) == 5
+    assert len(pager.all_ranges) == 200
+
+
+def test_all_ranges_marks_the_current_page_and_only_that_one() -> None:
+    pager = views.build_pager(total=40000, offset=20000)
+    assert pager is not None
+
+    current = [r for r in pager.all_ranges if r.is_current]
+    assert len(current) == 1
+    assert current[0].offset == 20000
+    # And it agrees with the strip, which is what lets the menu's
+    # summary retire the strip's bold cell.
+    assert current[0].label == next(
+        link.label for link in pager.links if link.is_current
+    )
+
+
+def test_all_ranges_marks_the_current_page_after_a_clamp() -> None:
+    """``build_pager`` snaps an arbitrary offset onto a boundary, and
+    the menu has to agree with where it landed rather than with what was
+    asked for."""
+    pager = views.build_pager(total=1401, offset=1399)
+    assert pager is not None
+
+    current = [r for r in pager.all_ranges if r.is_current]
+    assert len(current) == 1
+    assert current[0].offset == 1200

@@ -301,6 +301,7 @@
        column chips and the page links are both on screen with the
        new rows beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
+      <div class="table-card-toolbar">
       {# Column show/hide chips (19I Item 12 rung 1). They sit in the
          table card, directly above the rows they govern, the way
          Invitations and Responses have had them since Item 11 —
@@ -324,6 +325,8 @@
           {% endfor %}
         </p>
       {% endif %}
+      {% include "operator/partials/_pager_cluster.html" %}
+      </div>{# .table-card-toolbar #}
       {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="reviewees-table"
@@ -501,6 +504,7 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5). #}
       {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
+      {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
     </div>
   {% elif total_row_count > 0 %}
     {# Filter matched nothing — preserve the total-row context so
