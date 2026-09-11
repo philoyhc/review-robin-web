@@ -1462,6 +1462,37 @@ resolver, and the `apply_cookie_sort` call all went with the sort
 itself. `pair_context_lookup` stays — the template still renders pair
 context — but it no longer has a second job.
 
+**2026-09-11 — a verification the author asked for, and the gap it
+found.** Asked to double-check that Invitations and Responses really
+stop at 200 rather than still rendering everything, I counted the
+rendered rows instead of re-reading the code. They do: a 210-row
+roster renders **200** on page 1 and 10 on page 2, on both pages.
+
+But the check found that **rung 3's own tests would not have caught the
+opposite.** They asserted a pager appears and that page 2 holds the
+right rows; none counted page 1. Drop the slice and every row renders
+with a pager sitting uselessly above it — `build_pager` keys off the
+total, not the window — and every assertion still passed. Counting is
+the assertion that fails, so the two tests now count, and a mutation
+confirmed it: with the slice removed, both fail.
+
+**What the same measurement says about the gain.** Query count is
+**identical** across unfiltered-paged, filtered-all-match and
+filtered-one-match — 873 in each at 210 reviewers. Paging cut the HTML
+and nothing else, which is what rung 3's entry above already claimed;
+this is that claim measured rather than asserted. At this scale even
+the HTML saving is small (417 KB against 427), because ~200 KB of the
+page is chrome and a row costs about 1.1 KB: the saving is real only
+where the roster is large, which is the case the item was for.
+
+**A test that pins a decision rather than a behaviour.** A filtered
+view still renders all 210 rows with no pager — rung 3's uncapped
+decision — and nothing said so in a test. It does now
+(`test_a_filtered_operations_view_renders_every_matching_row`), because
+that is the one way an operator can still reach the unbounded render
+these pages used to do always, and if it ever reads as a bug the test
+is where the decision lives.
+
 **A test bug worth recording, because it nearly became a code bug.**
 The first suppression test passed `?search=` and saw a pager; the
 route's parameter is `q` (`status_filter` is aliased to `status`).

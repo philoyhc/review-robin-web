@@ -13,6 +13,8 @@ item — a row past the first page is reachable.
 """
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -274,6 +276,22 @@ def _ops_table(body: str, page: str) -> str:
     return body[body.index(f'id="{table_id}"') :]
 
 
+def _ops_row_count(body: str, page: str) -> int:
+    """Rows actually rendered in the page's own table body.
+
+    Added 2026-09-11 after checking what the tests below really pinned:
+    they asserted a pager appears and page 2 holds the right rows, and
+    **none of them counted page 1**. Drop the slice and every row
+    renders with a pager sitting uselessly above it — ``build_pager``
+    keys off the total, not the window — and every assertion here still
+    passed. Counting is the assertion that fails.
+    """
+    table_id = "invitations-table" if page == "invitations" else "responses-table"
+    start = body.index(f'id="{table_id}"')
+    table = body[start : body.index("</table>", start)]
+    return len(re.findall(r"<tr[\s>]", table[table.index("<tbody") :]))
+
+
 def _seed_paged_operations_session(
     client: TestClient,
     db: Session,
@@ -344,11 +362,14 @@ def test_responses_pages_on_the_same_terms(
     first = client.get(f"/operator/sessions/{session_id}/responses").text
     assert '<nav class="table-pager' in first
     assert f'href="/operator/sessions/{session_id}/responses?offset=200"' in first
+    assert _ops_row_count(first, "responses") == 200
+    assert "Reviewee 0209" not in _ops_table(first, "responses")
 
     second = client.get(
         f"/operator/sessions/{session_id}/responses?offset=200"
     ).text
     table = _ops_table(second, "responses")
+    assert _ops_row_count(second, "responses") == 10
     assert "Reviewee 0209" in table
     assert "Reviewee 0000" not in table
 
@@ -384,3 +405,25 @@ def test_a_filtered_operations_view_carries_no_pager_and_stays_uncapped(
     # sentence carries no withheld clause.
     assert "Showing 210 reviewers." in body
     assert "more not shown" not in body
+
+
+def test_a_filtered_operations_view_renders_every_matching_row(
+    client: TestClient, db: Session
+) -> None:
+    """The other half of rung 3's filtered-cap decision, counted rather
+    than described: these two never had a cap, so a filtered view still
+    renders all 210 — and no pager appears to suggest otherwise.
+
+    Worth pinning because it is the one way an operator can still reach
+    the unbounded render these pages used to do always. If that ever
+    reads as a bug rather than a decision, this is the test that says
+    where the decision lives.
+    """
+    session_id = _seed_paged_operations_session(
+        client, db, code="ops-filtered-uncapped", reviewers=210
+    )
+    body = client.get(
+        f"/operator/sessions/{session_id}/invitations?q=Reviewer"
+    ).text
+    assert _ops_row_count(body, "invitations") == 210
+    assert '<nav class="table-pager' not in body
