@@ -781,8 +781,11 @@ filtered view, `Showing 500 of 900 assignments, 400 more not shown.`
 A count of one takes the singular. ~~*This page is not paged yet* —
 rung 4 wires it, once the sort question below is settled.~~ **Rung 4
 paged it** (2026-09-11): `?offset=` cuts a 200-row page out of the
-whole matching set, clamped rather than rejected, with the strip above
-and below the table and suppressed while a filter is active. It was
+whole matching set, clamped rather than rejected, with the pager above
+and below the table and suppressed while a filter is active. (The
+control was 19J.5's range strip until 19J.9 replaced it with the
+`.table-pager-cluster` on all seven pages at once — `spec/ui_elements.md`
+§10.) It was
 the last page to page, so the pre-19J.5 withheld notice retired with
 it — no table renders it anywhere now.
 

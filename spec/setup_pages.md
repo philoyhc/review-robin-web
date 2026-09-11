@@ -303,13 +303,21 @@ below the table.
 ### The row pager (Segment 19J.5)
 
 **The 200-row cap is a page size, not a truncation.** Each of the four
-roster pages renders the `.table-pager` strip (`spec/ui_elements.md`
-§10) **twice** — where the count line sits, above the table, and again
-below it, because a 200-row table is several screens tall. The strip
-lists ranges, not page numbers (`201–400`), with First / Last hung off
-the ends as ranges too and `…` marking each elided gap; the range the
-operator is on is a marker carrying `aria-current="page"`, not a link
-back to itself.
+roster pages renders the `.table-pager-cluster` (`spec/ui_elements.md`
+§10) **twice** — on the column-chip line above the table, and again
+below it, because a 200-row table is several screens tall. It is five
+cells — `«` first, `‹` back, a range menu, `›` forward, `»` last — so
+any page is one move away whatever the roster size. Ranges, not page
+numbers (`201–400`). The menu's summary names the range the operator
+is on, and that range appears inside as a marker carrying
+`aria-current="page"` rather than a link back to itself.
+
+~~The strip lists ranges, not page numbers (`201–400`), with First /
+Last hung off the ends as ranges too and `…` marking each elided
+gap.~~ **Retired 2026-09-11 (19J.9).** The window bounded the strip's
+*width* and left its *reach* at two pages per click whatever the
+roster size, so crossing a long roster cost a number of page loads
+linear in its length.
 
 `?offset=` selects the page. It is **clamped, never rejected**: past
 the end lands on the last page and a negative lands on the first, and
@@ -1209,8 +1217,9 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
 - ~~**Paging.** The 200-row (500-when-filtered) cap + the search /
   status filter cover the long-list case; there is no pager.~~
   **Shipped as Segment 19J.5** (2026-09-11): the unfiltered view pages
-  at 200 rows via `.table-pager` / `?offset=`; a filtered view keeps
-  the 500 cap and no pager. See "The row pager (Segment 19J.5)" above.
+  at 200 rows via `?offset=`; a filtered view keeps the 500 cap and no
+  pager. The control is the `.table-pager-cluster` since 19J.9. See
+  "The row pager (Segment 19J.5)" above.
 - **Assignments generation.** Moved to the Operations row in
   Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
 

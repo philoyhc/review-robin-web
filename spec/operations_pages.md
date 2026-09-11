@@ -191,10 +191,13 @@ reviewer (`build_invitations_rows` iterates
 many — there is no 200 / 500 window as on the rosters.~~ It rendered
 every matching row until rung 3, whatever the number, which is why it
 and Responses were the two that hurt most on a large roster. An
-unfiltered view now pages at **200**, with the `.table-pager` strip
+unfiltered view now pages at **200**, with the `.table-pager-cluster`
 (`spec/ui_elements.md` §10) above and below the table and `?offset=`
 clamped rather than rejected — the rosters' rules exactly, shared
-through `views.build_pager` and `_page_operations_rows`.
+through `views.build_pager` and `_page_operations_rows`. (Through rung
+3 this was the `.table-pager` strip; 19J.9 replaced it with the
+cluster on all seven pages at once, so these two never differed from
+the rosters here.)
 
 **A filtered view stays uncapped here**, which is the one place these
 two differ from the four Setup pages. Those carry a 500 filtered cap

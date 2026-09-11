@@ -1305,3 +1305,48 @@ of these error paths **reachable through the UI** — e.g. a bulk action
 that can legitimately partially fail (some rows accepted, some rejected)
 and needs to report which — at which point the page-level banner becomes
 a real operator-facing surface worth building across the four pages.
+
+### In-place page turns on the roster tables (19J.8 / 19J.9)
+
+**The idea.** Turn a page on one of the seven roster tables by
+fetching the next page and swapping the table body in place —
+`history.pushState` for the URL — rather than the full navigation a
+page turn is today.
+
+**Why it is off the roadmap.** Two reasons, and the second is the one
+that settles it.
+
+*Measured cost* (`guide/inplace_pagination_assessment.md`, 2026-09-11).
+A page turn is **413KB and 21ms** at 556 rows, 116ms at 5,000 — the
+reload is not slow. What a swap would break is: of the five
+table-relevant script blocks in `base.html`, **one** is delegated on
+`document`; the other four (~500 lines) bind to their elements at load
+and die with a re-rendered table. And a fragment endpoint cannot exist
+until **928 lines of table markup across seven templates** — none of it
+in a partial — is extracted, a refactor with no user-visible change
+that has to land first.
+
+*The reason it is off the roadmap rather than merely unscheduled.*
+The author settled it the day the assessment was written: the complaint
+the swap would answer is that a page turn moves the screen, and the
+only jarring case left after 19J.8's landing anchor is a click on the
+pager **below** the table. An operator who turns a page and stays on it
+is almost always intending to read the new range from its start, so the
+jump and the intent point the same way. Not a problem worth solving.
+
+**What is being done instead.** 19J.8 anchors the page turn on the
+table card, so it lands on the card's top edge with the column chips,
+the pager and the new rows beneath. 19J.9 replaced the range strip with
+a five-cell cluster that reaches any page in one move, which removes
+the repeated page turns the swap would have made cheaper.
+
+**What would move it back onto the roadmap.** Something the cheap
+options cannot give: live-updating rows, or a page turn that must not
+lose an in-progress edit. Re-take the assessment's numbers rather than
+trusting them if that day comes — particularly the round trips, which
+are local SQLite and not Azure Postgres.
+
+**Worth doing regardless, and independent of this.** Converting those
+four element-bound script blocks to delegation. It is what makes the
+table's behaviour survive *any* future re-render, it can be done one
+block at a time, and it commits to nothing.

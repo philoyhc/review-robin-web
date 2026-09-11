@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
-### Segment 19J — The assessment's three moves — 🔵 **live** (**three items open**, opened 2026-09-10; plan: `guide/segment_19J_assessment_moves.md`)
+### Segment 19J — The assessment's three moves — 🔵 **live** (**ten items, nine closed**, opened 2026-09-10; plan: `guide/segment_19J_assessment_moves.md`)
 
 The three recommended next moves in
 `guide/codebase_assessment_10sep.md` §8, and nothing else. Same shape
@@ -2813,6 +2813,49 @@ is 19H's finding arriving in the next segment.
   cheaper than the reason given three times for not doing it. There are
   also **three** jobs, not two: the close check (680 lines), the
   archive baseline (60), the sweep cadence (96).
+
+**What it became, as of 2026-09-11.** Ten items, not three — and the
+opening paragraph's own prediction is the reason it is not a surprise:
+"a fourth arriving from a finding is admitted". Seven arrived that way,
+each from the one before it. The three above closed 2026-09-10; the
+rest closed 2026-09-11 except the last.
+
+- **Item 4 — navigation busy indicator.** ✅ Built from 19J.2's
+  benchmark, which found Invitations and Responses N+1 (40,433 and
+  80,432 queries at 200×200). The indicator says "working"; the N+1 is
+  explicitly *not* fixed and is recorded as such so the two are never
+  confused.
+- **Item 5 — row pagination on the seven roster pages.** ✅ Four rungs.
+  The cap became a page size; the sort moved into SQL with an explicit
+  `COLLATE "C"` after a locale-aware Postgres was found to order seven
+  names differently from the Python sort the app had always used.
+- **Item 6 — session-nav hover standardised.** ✅ One literal
+  `rgba(255,255,255,0.7)` among otherwise tokenised nav colours. Took a
+  latent `:hover` bug on disabled tabs with it.
+- **Item 7 — pills rationalization.** ✅ One pill vocabulary served two
+  jobs with `cursor: pointer` the only thing telling them apart. Four
+  rungs; an accent **edge** now means "you can act on this", and the
+  shade is reserved for it.
+- **Item 8 — the row pager keeps your place.** ✅ A `#…-table-card`
+  fragment, so a page turn lands on the table rather than the document
+  top.
+- **Item 9 — reaching a distant page in one move.** ✅ The strip's
+  reach was two pages per click whatever the roster size — 50 clicks to
+  the middle of a 40,000-row table. Replaced by a five-cell cluster;
+  the strip retired.
+- **Item 10 — does the reserved shade stop at pills and chips?**
+  🔵 **open, stub.** Promoted from 19J.7's scoped-out question:
+  `--status-info-border` reaches the reserved pair on a static banner.
+  The item is the **scope question**, not a retarget — and closing it
+  by editing one spec paragraph is the likely and acceptable outcome.
+
+**Two findings worth carrying out of this segment.** `close_check`
+tracks `spec/` and `docs/` paths only, so a `guide/` commitment in a
+`Doc impact` manifest is unchecked — 19J.7's screencap row and 19J.8's
+`deferred_consolidated.md` entry both went unhonoured without failing
+anything. And C3's window for a *new* item starts at the segment's
+date, not the item's, so a fresh item can pass on a sibling's edits.
+Both are tool gaps, not plan failures; neither is scheduled.
 
 ---
 
