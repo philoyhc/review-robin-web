@@ -77,7 +77,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
 | **19J.5** | Row pagination on the seven roster-bearing pages | **Closed 2026-09-11** (4 rungs + a verification PR; seven of seven pages paged, sort in SQL) |
-| **19J.6** | Session-nav hover standardised to the selected style | **Closed 2026-09-11** (1 PR) |
+| **19J.6** | Session-nav hover standardised to the selected style | **Closed 2026-09-11** (1 PR; `close_check` C3 fails by construction — logged after it shipped, adjudicated in Status) |
 | **19J.7** | Pills rationalization — one vocabulary for two jobs | **Stub, opened 2026-09-11** — audit landed, decision open |
 | 19J.8+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Four items admitted 2026-09-11; the rule stands, the clock resets on each. | Open |
 
@@ -1719,6 +1719,32 @@ colours are dev-slot verification and were added as a row to
 rules say what they should, and the literal has not crept back — and
 was mutation-tested: restoring the old rule fails 2 of its 6.
 
+**`close_check 19J.6` fails C3, and cannot pass.** Both specs it names
+were edited in `c8aadf89` — the hover PR, merged earlier the same day —
+and the Item 6 heading landed in `c1aec996`, when this write-up was
+added. An item's window is dated from its heading, so for an item
+**logged after its work shipped** every honoured bullet reads as an
+un-honoured one. The check is asking "was this edited since the item
+existed?"; the answer is no, and the right answer is "it was edited
+before, by the work this item describes".
+
+Recorded rather than worked around. The two paths were **not** waived:
+a waiver means *dropped during the build*, and using it for *honoured
+early* would make the marker mean two opposite things — which is how a
+checker starts lying. Nor were the specs re-touched to move them into
+the window; inventing an edit to satisfy an arithmetic is the same
+failure with an extra commit. Everything C3 exists to catch is
+satisfied and verifiable by SHA: `spec/ui_elements.md` §2 gained the
+hover rule and `spec/color_tokens.md` lost `--nav-home-bg-hover`, both
+in `c8aadf89`.
+
+**This is a real limitation of the tool, not of this item.** 19J.3
+split `close_check` without changing what it asks, and what it asks is
+"did a file change inside a window" — a question that has no correct
+answer for a retroactive log. Whether that is worth fixing (an
+explicit `since:` marker on an item, say) is the author's call, and is
+noted here rather than assumed.
+
 **`close_check 19J.6`'s six notes, adjudicated.** All six name a route
 module touched in this item's window against a spec not in this item's
 manifest — `_assignments`, `_operations`, the four `_setup_*`. None of
@@ -1742,7 +1768,10 @@ edited with the rung that touched it. Nothing to add here.
 - a "coming soon" tab does not highlight
 - `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
 - `### Doc impact` section present and current
-- `python3 tools/close_check.py 19J.6` exits 0; any warning adjudicated
+- ~~`python3 tools/close_check.py 19J.6` exits 0; any warning
+  adjudicated~~ — **cannot pass for a retroactively logged item**; the
+  six notes and the C3 failure are adjudicated in `### Status` above,
+  with the honouring commit named by SHA
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `### Status` records intended vs done
 - `docs/status.md` row added
