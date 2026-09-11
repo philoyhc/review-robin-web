@@ -6,6 +6,12 @@ shows the minimal happy path.
 
 If you only want to run the tests once, jump to [§4 First-time setup](#4-first-time-setup).
 
+On a brand-new **Windows** machine with nothing installed yet (Python, Git,
+GitHub Desktop, PowerShell), start at
+[§10 Windows: setting up a new machine from scratch](#10-windows-setting-up-a-new-machine-from-scratch)
+— it walks the whole install-to-first-test path, then hands back to the
+sections below.
+
 ---
 
 ## 1. What you need installed
@@ -23,6 +29,7 @@ If you only want to run the tests once, jump to [§4 First-time setup](#4-first-
 | Tool          | Why                                                       |
 |---------------|-----------------------------------------------------------|
 | VS Code       | Recommended editor; works well with the FastAPI / Pydantic / SQLAlchemy stack. |
+| GitHub Desktop | GUI for clone / branch / commit / push / PR without the command line; handles GitHub sign-in for you. See [§10](#10-windows-setting-up-a-new-machine-from-scratch) for the Windows walkthrough. |
 | GitHub CLI (`gh`) | Easier branch and PR workflows.                       |
 | Azure CLI (`az`) | Needed only if you administer the dev App Service (e.g. tweaking Easy Auth settings via `az webapp auth`). Not needed for day-to-day app development. |
 
@@ -308,7 +315,195 @@ path above and this snippet are offered.
 
 ---
 
-## 10. Where to look next
+## 10. Windows: setting up a new machine from scratch
+
+The sections above lean on macOS/Linux shell syntax. This section is the
+**complete path for a fresh Windows 10 / 11 machine with nothing installed**
+— PowerShell, Python 3.12, Git, GitHub Desktop, and optionally VS Code —
+ending at a passing test run. Do the steps in order; the later steps assume
+the tools from the earlier ones are on `PATH`.
+
+Everything here is free. Each tool lists a one-line **winget** command (the
+built-in Windows Package Manager) *and* a manual download link — use
+whichever you prefer.
+
+> **About `winget`.** It ships with the "App Installer" package (preinstalled
+> on Windows 11 and recent Windows 10). If `winget` is "not recognized",
+> install **App Installer** from the Microsoft Store, then reopen the
+> terminal — or just use the manual download links.
+
+> **Reopen your terminal after each install.** Installers that add to `PATH`
+> only affect terminals opened *afterwards*. A "command not found" right
+> after an install almost always means the terminal predates it.
+
+### A. PowerShell 7 + Windows Terminal (recommended shell)
+
+Windows ships with **Windows PowerShell 5.1**, which runs everything in this
+guide fine. But **PowerShell 7** (the current version, invoked as `pwsh`) is
+worth installing, and **Windows Terminal** gives you a modern tabbed host.
+
+```powershell
+winget install --id Microsoft.PowerShell -e        # PowerShell 7 (pwsh)
+winget install --id Microsoft.WindowsTerminal -e   # tabbed terminal (preinstalled on Win 11)
+```
+
+Manual downloads: [PowerShell releases](https://github.com/PowerShell/PowerShell/releases)
+· [Windows Terminal](https://aka.ms/terminal). From here on, "PowerShell"
+means either 5.1 or 7 — the commands are identical.
+
+### B. Python 3.12 (install this version specifically)
+
+The project is pinned to **3.12+** in `pyproject.toml`. Install **3.12
+specifically** rather than grabbing whatever "latest Python" is — a newer
+minor (3.13 / 3.14) can lack wheels for a dependency and break the install.
+
+```powershell
+winget install --id Python.Python.3.12 -e
+```
+
+Or from python.org: [Windows downloads](https://www.python.org/downloads/windows/)
+→ take the latest **3.12.x** "Windows installer (64-bit)". In the installer,
+tick both:
+
+- ✅ **Add python.exe to PATH** (checkbox at the bottom of the first screen)
+- ✅ **py launcher** (installs the `py` version selector)
+
+Verify in a **new** terminal:
+
+```powershell
+py -0p                # lists every installed Python and its path
+py -3.12 --version    # -> Python 3.12.x
+```
+
+If 3.12 doesn't show up, re-run the installer with the two boxes ticked.
+
+> **Why `py -3.12` and not `python`.** A machine can carry several Pythons.
+> `py -3.12` always targets 3.12 no matter the `PATH` order, which is exactly
+> what you want when creating the virtualenv in step G.
+
+### C. Git
+
+```powershell
+winget install --id Git.Git -e
+```
+
+Or [Git for Windows](https://git-scm.com/download/win). The installer
+defaults are fine; two prompts worth a glance:
+
+- **Default branch name** — leave it as `main`.
+- **Line endings** — accept the default *"Checkout Windows-style, commit
+  Unix-style"* (`core.autocrlf=true`). The repo ships no `.gitattributes`,
+  so this keeps LF in history while letting Windows editors work normally.
+
+Verify, then set your identity once (use the email on your GitHub account):
+
+```powershell
+git --version
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
+```
+
+### D. GitHub Desktop (optional — GUI for clone / commit / push)
+
+If you'd rather not drive Git from the command line, GitHub Desktop handles
+clone / branch / commit / push / PR and signs you in to GitHub without any
+personal-access-token setup.
+
+```powershell
+winget install --id GitHub.GitHubDesktop -e
+```
+
+Or [desktop.github.com](https://desktop.github.com/). First run:
+
+1. **File ▸ Options ▸ Accounts ▸ Sign in** to GitHub.
+2. **File ▸ Clone repository…** → pick `philoyhc/review-robin-web` (or paste
+   the URL) and set the local path, e.g. `C:\GitHub\review-robin-web`.
+
+GitHub Desktop bundles its own Git, but installing Git for Windows (step C)
+as well puts `git` on your `PATH` for terminal use. The two coexist fine.
+
+### E. VS Code (optional editor)
+
+```powershell
+winget install --id Microsoft.VisualStudioCode -e
+```
+
+Or [code.visualstudio.com](https://code.visualstudio.com/). Recommended
+extensions: **Python** (`ms-python.python`) and **Ruff**
+(`charliermarsh.ruff`). After you create the venv (step G), VS Code will
+prompt to use `.venv\Scripts\python.exe` as the interpreter — accept it, or
+pick it via **Ctrl+Shift+P ▸ Python: Select Interpreter**.
+
+### F. Clone the repo (skip if you used GitHub Desktop)
+
+```powershell
+mkdir C:\GitHub -Force        # or wherever you keep code
+cd C:\GitHub
+git clone https://github.com/philoyhc/review-robin-web.git
+cd review-robin-web
+```
+
+### G. Create the venv, install, configure, migrate
+
+From the repo root (e.g. `C:\GitHub\review-robin-web`), in **PowerShell**:
+
+```powershell
+# 1. Virtualenv with Python 3.12 specifically
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 2. Dependencies (runtime + dev) — QUOTE the extras in PowerShell
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+
+# 3. Local env vars (fake auth is already enabled in the template)
+Copy-Item .env.example .env
+
+# 4. Create + migrate the local SQLite DB (.\review_robin_web.db)
+alembic upgrade head
+```
+
+CMD equivalents: `.venv\Scripts\activate.bat` and `copy .env.example .env`.
+
+When the venv is active your prompt shows `(.venv)`, and `where.exe python`
+points inside `...\review-robin-web\.venv\Scripts`.
+
+### H. Run the tests / the app
+
+```powershell
+pytest -n auto                    # full suite, ~35s
+ruff check .                      # lint
+uvicorn app.main:app --reload     # then open http://127.0.0.1:8000/health
+```
+
+Expect `{"status": "ok"}` at `/health`. That's the whole loop; from here the
+rest of this guide ([§5](#5-running-the-test-suite) onward) applies as
+written.
+
+### Windows-specific gotchas
+
+- **`Activate.ps1` blocked** — *"running scripts is disabled on this
+  system"*: PowerShell's execution policy. Loosen it for the current session
+  with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`,
+  or once for your user with `-Scope CurrentUser`. Alternatively use CMD and
+  `.venv\Scripts\activate.bat`.
+- **`pip install -e .[dev]` installs no dev tools** — PowerShell glob-expands
+  the bare `[dev]`. Quote it: `pip install -e ".[dev]"`. The symptom shows up
+  later as `No module named 'pytest'`.
+- **`py` or `python` "not recognized" in a fresh terminal** — the *Add
+  python.exe to PATH* box was missed, or the terminal predates the install.
+  Open a new terminal; if still missing, re-run the Python installer with the
+  box ticked.
+- **Long-path errors** during `pip install` or `clone` — enable long paths
+  (elevated PowerShell: `git config --system core.longpaths true`) and keep
+  the clone near the drive root (`C:\GitHub\...`) to keep paths short.
+- **Reset the local DB** — `Remove-Item .\review_robin_web.db` (PowerShell)
+  or `del review_robin_web.db` (CMD), then `alembic upgrade head`. There's
+  nothing valuable in a local SQLite file.
+
+---
+
+## 11. Where to look next
 
 - `docs/security_posture.md` — how Easy Auth identity is parsed; what the
   `/auth/me` and `/auth/me/debug` routes do.
