@@ -480,11 +480,16 @@ def invitations_index(
                 if (status != "all" or q.strip())
                 else views.build_pager(total=len(all_rows))
             ),
+            # 19J.5 rung 2 rewrote the helper's contract. This page is
+            # uncapped and not yet paged, so nothing is ever withheld
+            # and only the filter branch fires — as it always has.
+            # Rung 3 wires the pager and drops ``paged=False``.
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
-                matching=len(rows),
-                total=len(all_rows),
+                pool=len(rows),
                 noun="reviewers",
+                is_filtered=bool(status != "all" or q.strip()),
+                paged=False,
             ),
             "filter_status": status,
             "filter_search": q,
@@ -817,11 +822,16 @@ def session_responses(
                 if (status != "all" or q.strip())
                 else views.build_pager(total=len(all_rows))
             ),
+            # 19J.5 rung 2 rewrote the helper's contract. This page is
+            # uncapped and not yet paged, so nothing is ever withheld
+            # and only the filter branch fires — as it always has.
+            # Rung 3 wires the pager and drops ``paged=False``.
             "preview_count_line": views.preview_count_line(
                 shown=len(rows),
-                matching=len(rows),
-                total=len(all_rows),
+                pool=len(rows),
                 noun="reviewees",
+                is_filtered=bool(status != "all" or q.strip()),
+                paged=False,
             ),
             "filter_status": status,
             "filter_search": q,

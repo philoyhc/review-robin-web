@@ -1,42 +1,45 @@
-"""The one preview-count sentence the seven table pages share
-(Segment 19I Item 10).
+"""The preview-count sentence the seven table pages share
+(Segment 19I Item 10; rewritten for 19J.5).
 
-Before this module the seven pages carrying a row preview —
-Reviewers, Reviewees, Relationships, Observers, Assignments,
-Invitations, Responses — reported their row counts four different
-ways: two positions, two CSS classes, and on Assignments a second
-``…and X more not shown.`` line below the table. Worse, the one
-sentence they did share said two different things depending on
-which pool had shrunk.
+**What it used to be.** Before Item 10 the seven pages carrying a row
+preview — Reviewers, Reviewees, Relationships, Observers, Assignments,
+Invitations, Responses — reported their counts four different ways.
+Item 10 made it one sentence with four states, distinguishing a
+**filter** (rows excluded — they do not match, so "more not shown"
+would be a lie) from a **cap** (rows withheld — the operator needs to
+know before reading the table as complete).
 
-**Why the branches.** A table's visible rows can be short of the
-whole roster for two unrelated reasons, and conflating them
-misleads:
-
-- a **filter** excluded rows — those rows are not withheld, they do
-  not match, so "more not shown" would be a lie;
-- a **cap** truncated the window — those rows *are* withheld, and
-  the operator needs to know before they read the table as complete.
-
-So the sentence names the pool its numerator was drawn from, says
-``matching`` exactly when that pool is the filtered set rather than
-the whole roster, and adds the withheld clause only when the cap
-actually bit:
+**What 19J.5 made it.** The cap stopped being a truncation and became
+a page size. Where a pager renders, the operator can reach every row
+and a sentence saying so is the noise the quiet case exists to avoid —
+the strip already states the position. So the sentence stopped being
+the table's caption and became **the filter's**:
 
 ===========================  ==============================================
 State                        Sentence
 ===========================  ==============================================
-capped, unfiltered           ``Showing first 200 of 1,240 reviewers;
-                             1,040 more not shown.``
-capped, filtered             ``Showing first 500 of 900 matching
-                             reviewers; 400 more not shown.``
-filtered, under the cap      ``Showing 3 of 1,240 reviewers.``
-unfiltered, under the cap    *(nothing — see below)*
+filter active, under the cap ``Showing 37 reviewers.``
+filter active, capped        ``Showing 500 of 900 reviewers, 400 more
+                             not shown.``
+no filter, paged             *(nothing — the pager says where you are)*
+no filter, not yet paged     ``Showing first 200 of 10,000 assignments;
+                             9,800 more not shown.``
 ===========================  ==============================================
 
-The quiet case returns ``None`` rather than ``Showing 6 of 6``,
-which is noise: a table showing everything needs no caption. That
-rule predates this module (Segment 19I Item 4) and is preserved.
+The roster total went with the change. Under the filter branch ``of
+M`` can only mean the matching pool, so the word ``matching`` that
+Item 10 introduced to tell two pools apart has nothing left to
+disambiguate, and the denominator that used to say how far the filter
+narrowed is the info card's job rather than this sentence's.
+
+**``paged`` is transitional and has a removal date.** It marks a view
+whose pager is live, so nothing is withheld. 19J.5 wires the pages one
+rung at a time; a page that has not had its rung yet still truncates
+for real and still owes the operator the old notice. When the last
+rung lands, no caller passes ``paged=False`` on an unfiltered view,
+that branch is dead by construction, and it goes — along with this
+paragraph. ``tests/unit/test_preview_count_line.py`` carries the
+assertion that enforces it.
 """
 
 from __future__ import annotations
@@ -44,45 +47,64 @@ from __future__ import annotations
 __all__ = ["preview_count_line"]
 
 
+
+def _agree(count: int, noun: str) -> str:
+    """Singularize ``noun`` for a count of exactly one.
+
+    Needed only since 19J.5. The old sentence put the noun against the
+    *pool* — ``Showing 1 of 2 reviewers.`` — where the plural was
+    always right. The filtered sentence puts it against the count, and
+    ``Showing 1 reviewers.`` is the commonest case there is: an
+    operator searching for one person.
+
+    A trailing ``s`` covers every noun these pages pass — reviewers,
+    reviewees, relationships, observers, assignments — and
+    ``test_preview_count_line.py`` pins all five, so a future noun this
+    rule would mangle fails a test rather than reaching an operator.
+    """
+    if count == 1 and noun.endswith("s"):
+        return noun[:-1]
+    return noun
+
+
 def preview_count_line(
     *,
     shown: int,
-    matching: int,
-    total: int,
+    pool: int,
     noun: str,
+    is_filtered: bool,
+    paged: bool = False,
 ) -> str | None:
     """Compose the count line for a preview table, or ``None``.
 
-    ``shown`` is how many rows the cap window holds, ``matching``
-    how many survived the filter, and ``total`` how many the
-    session holds in all — so ``shown <= matching <= total``.
-    ``noun`` is the plural thing being counted from the operator's
-    point of view, which is not always the row's own type: the
-    Invitations table is one row per reviewer and says
-    ``reviewers``, and Responses says ``reviewees``.
+    ``shown`` is how many rows the table holds and ``pool`` how many
+    the view could hold — the matching set when a filter is active,
+    the whole roster otherwise. ``noun`` is the plural thing being
+    counted from the operator's point of view, which is not always the
+    row's own type: the Invitations table is one row per reviewer and
+    says ``reviewers``, and Responses says ``reviewees``.
 
-    Returns ``None`` when the table shows everything there is,
-    because a caption that says so is noise.
+    ``is_filtered`` is the route's own filter flag — the same one that
+    suppresses the pager, deliberately, so the two affordances cannot
+    disagree about which mode the page is in. It is **not** derived
+    from ``shown < pool`` here: a filter that happens to match every
+    row is still a filtered view, and reports as one.
     """
-    capped = shown < matching
-    filtered = matching < total
+    withheld = max(pool - shown, 0)
 
-    if not capped and not filtered:
+    if is_filtered:
+        if withheld == 0:
+            return f"Showing {shown:,} {_agree(shown, noun)}."
+        return (
+            f"Showing {shown:,} of {pool:,} {noun}, "
+            f"{withheld:,} more not shown."
+        )
+
+    # Unfiltered. A paged view reaches everything, so the pager speaks
+    # and this says nothing.
+    if paged or withheld == 0:
         return None
-
-    if not capped:
-        # The filter narrowed the table but the window held it all.
-        # ``total`` is the pool, so no ``matching`` and no withheld
-        # clause — the excluded rows do not match, they are not
-        # being kept back.
-        return f"Showing {matching:,} of {total:,} {noun}."
-
-    # The cap bit. Name the pool it truncated: the matching set when
-    # a filter is active, the whole roster otherwise.
-    pool = matching if filtered else total
-    qualifier = "matching " if filtered else ""
-    withheld = pool - shown
     return (
-        f"Showing first {shown:,} of {pool:,} {qualifier}{noun}; "
+        f"Showing first {shown:,} of {pool:,} {noun}; "
         f"{withheld:,} more not shown."
     )

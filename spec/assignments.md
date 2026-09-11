@@ -769,11 +769,20 @@ into the one sentence the seven preview pages share, rendered by
 `--fs-small`, which is why this page's line used to render a size
 smaller than the identical sentence on the rosters.
 
-The noun is **`assignments`**; `unique pairs` is retired. The four
+The noun is **`assignments`**; `unique pairs` is retired. The
 branches and the rule behind them are in `spec/setup_pages.md`,
 "Preview tables (shared toggle pattern)" — this page is capped by
-`PAIR_PREVIEW_LIMIT` (200, unlifted by a filter), so all four are
-reachable here.
+`PAIR_PREVIEW_LIMIT` (200, unlifted by a filter).
+
+**19J.5 reshaped the sentence.** Where a pager renders the line says
+nothing, because the ranges already state the position; the filtered
+branches read `Showing 2 assignments.` and, when the cap truncates a
+filtered view, `Showing 500 of 900 assignments, 400 more not shown.`
+A count of one takes the singular. *This page is not paged yet* — rung
+4 wires it, once the sort question below is settled — so it still
+renders the pre-19J.5 unfiltered notice (`Showing first 200 of 10,000
+assignments; 9,800 more not shown.`), which is true here and nowhere
+else, and its pager strip renders inert until then.
 
 **A search matching nothing renders no count line** — the shared
 rule, not a quirk of this page (`spec/setup_pages.md`, "Preview
@@ -781,7 +790,8 @@ tables"). The line sits inside the preview card's `pair_sample`
 gate, so there is no table for it to caption, and `No assignments
 match the search.` owns that state alone. Before Item 10 a
 `Showing 0 of 1.` also rendered in the filter row, which is what
-changed here.
+changed here. (Were the helper called in that state now it would
+return `Showing 0 assignments.`; the gate means it is not.)
 
 ### Preview table
 

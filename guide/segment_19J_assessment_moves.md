@@ -76,7 +76,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
-| **19J.5** | Row pagination on the seven roster-bearing pages | **Rung 1 of 4 landed 2026-09-11** — scaffold, inert |
+| **19J.5** | Row pagination on the seven roster-bearing pages | **Rungs 1–2 of 4 landed 2026-09-11** — scaffold, then the four Setup pages paged |
 | 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 
 ---
@@ -1287,6 +1287,76 @@ because the surface it describes now exists. The three per-page specs
 (`setup_pages`, `assignments`, `operations_pages`) describe behaviour
 that is not wired and land with the rungs that wire it.
 
+**2026-09-11 — rung 2 landed: the four Setup pages paged.** Two rungs
+remain.
+
+**The shape.** `_shared._setup_row_window` cuts the window for all
+four slices — clamping the offset, slicing, and landing an edit target
+on its own page — so the four routes share one implementation of a
+rule rather than four copies drifting apart. `?offset=` is the only
+new parameter, and it needs no filter state riding with it because the
+pager never renders on a filtered view.
+
+**The count line changed for all seven pages, not four.** It is one
+helper, so rung 2 could not rewrite its contract for the Setup pages
+alone. Its new signature takes `pool` (the matching set) and the
+route's own `is_filtered`, and drops `total` — the roster denominator
+retired with the branch that used it.
+
+**A deviation from this item's Decision, recorded rather than
+absorbed.** The plan said the capped-and-unfiltered sentence retires.
+It does — but *per page, as that page's pager goes live*, not at a
+stroke. Assignments really does still truncate at 200 with an inert
+strip, and taking its notice away at rung 2 would have left an
+operator with a pager whose links do nothing and no sentence saying
+rows were withheld. So `preview_count_line` carries a transitional
+`paged` argument, defaulting to the noisier `False`, and the three
+un-wired pages pass it. It is documented with its removal point in
+the module docstring and pinned by a test; rung 4 deletes it along
+with the branch it guards.
+
+**Noun agreement, which the change surfaced rather than caused.** The
+old sentence put the noun against the *pool* (`Showing 1 of 2
+reviewers.`) where the plural was always right. The new one puts it
+against the count, and `Showing 1 reviewers.` is the commonest case
+there is — an operator searching for one person. Added a trailing-`s`
+rule, with all five real nouns pinned so a future noun it would mangle
+fails a test instead of reaching an operator.
+
+**19 existing tests changed, and each was read before it was
+changed.** The risk in a rung like this is updating an assertion to
+whatever the code now prints. Two were not simple rewordings and are
+worth naming:
+
+- `test_unfiltered_cap_is_200` (×3 pages) asserted that a sentence
+  said 50 rows were withheld. Rather than deleting the assertion, it
+  now fetches `?offset=200` and proves the rows are *there* — the
+  claim the item exists to make, which the old test could not make.
+- Two `test_assignments_typeahead` assertions expected `None` from a
+  filter that matched every row. Under the new contract such a view
+  speaks (`Showing 3 assignments.`), so the two searches are now told
+  apart by their counts rather than by presence versus absence, which
+  is a stronger assertion than the one it replaces.
+
+**The scaffold test expired on schedule**, as rung 1 predicted:
+`test_rung_one_links_are_inert` is gone, replaced by its opposite on
+the Setup pages and by an unchanged inertness check on the three still
+waiting. The file is renamed from `test_preview_pager_scaffold.py`.
+
+**Third time for one trap.** Asserting on a bare class name matches
+`base.html`'s inline CSS, which ships on every page. It caught me
+again in this rung (`"table-showing-hint" not in body` passed for the
+wrong reason). Any class-name assertion in this codebase must target
+the rendered element — a property of a single-file inline-CSS app, and
+now noted in three consecutive Status blocks.
+
+**Not covered, and said rather than implied.** The per-page *behaviour*
+tests run against Reviewers. The other three Setup pages are covered
+by the shared helper's own tests and by the parameterized template
+assertions; their route wiring is identical code. A per-page
+behavioural sweep would need per-page seeding — Relationships needs
+pairs — and buys little against one shared implementation.
+
 **A test bug worth recording, because it nearly became a code bug.**
 The first suppression test passed `?search=` and saw a pager; the
 route's parameter is `q` (`status_filter` is aliased to `status`).
@@ -1308,7 +1378,8 @@ approach the surface lands inert before it moves anything.
    **Landed 2026-09-11**, as planned.
 2. **The four Setup pages wired** — `offset` param, slice, clamping, the
    count line's revised filtered-only contract, the edit-row landing,
-   filter suppression.
+   filter suppression. **Landed 2026-09-11**, as planned, plus the
+   helper rewrite it could not avoid (see `### Status`).
 3. **Invitations + Responses wired** — the two that change contract from
    uncapped; `spec/operations_pages.md` lands with them.
 4. **Assignments wired** — SQL `OFFSET`, plus whatever the sort question

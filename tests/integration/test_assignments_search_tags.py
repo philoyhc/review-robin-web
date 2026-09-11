@@ -142,7 +142,7 @@ def test_the_page_renders_tag_matches(
         f"/operator/sessions/{s.id}/assignments?q=Team+B&search_by=all"
     ).text
 
-    assert "Showing 1 of 2 assignments." in body
+    assert "Showing 1 assignment." in body
 
 
 def test_a_blank_term_yields_no_tag_predicates() -> None:

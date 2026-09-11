@@ -172,9 +172,24 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     # First 200 rendered (R0000-R0199).
     assert "R0000" in table
     assert "R0199" in table
-    assert "R0200" not in table  # past the cap
-    # "Showing N of M" message present.
-    assert "Showing first 200 of 250 reviewers; 50 more not shown." in body
+    assert "R0200" not in table  # past the page
+
+    # 19J.5 rung 2: the cap is a page size now, so the sentence that
+    # used to say 50 rows were withheld is gone — nothing is withheld.
+    # Asserted on the rendered element: the bare class name also
+    # appears in ``base.html``'s inline CSS, which ships on every page.
+    assert '<p class="muted table-showing-hint">' not in body
+    assert "more not shown" not in body
+    # What replaced it, and the proof it is not a lie: the range is
+    # linked, and the row past the page is one click away.
+    assert "201–250" in body
+    page_two = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?offset=200"
+    ).text
+    table_two = page_two[page_two.find('id="reviewers-table"') :]
+    assert "R0200" in table_two
+    assert "R0249" in table_two
+    assert "R0199" not in table_two
 
 
 def test_filtered_cap_lifts_to_500(
@@ -192,7 +207,9 @@ def test_filtered_cap_lifts_to_500(
     assert "R0000" in table
     assert "R0499" in table
     assert "R0500" not in table
-    assert "Showing first 500 of 600 reviewers; 100 more not shown." in body
+    # A filtered view carries no pager, so the 500 cap still
+    # truncates for real and still says so — in 19J.5's wording.
+    assert "Showing 500 of 600 reviewers, 100 more not shown." in body
 
 
 def test_capped_and_filtered_counts_against_the_matching_set(
@@ -226,13 +243,14 @@ def test_capped_and_filtered_counts_against_the_matching_set(
         f"/operator/sessions/{review_session.id}/reviewers?q=Keep"
     ).text
 
-    assert (
-        "Showing first 500 of 550 matching reviewers; 50 more not shown."
-        in body
-    )
+    assert "Showing 500 of 550 reviewers, 50 more not shown." in body
     # The two numbers a wrong denominator would produce.
-    assert "of 600 matching" not in body
+    assert "of 600" not in body
     assert "100 more not shown" not in body
+    # 19J.5 dropped the qualifier: with the roster total gone, `of 550`
+    # can only mean the matching set, so `matching` disambiguates
+    # nothing.
+    assert "matching reviewers" not in body
 
 
 # --------------------------------------------------------------------------- #

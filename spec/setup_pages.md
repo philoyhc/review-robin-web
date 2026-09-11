@@ -300,18 +300,68 @@ seven reported in four different ways: two positions, two CSS
 classes, and on Assignments a second `…and X more not shown.` line
 below the table.
 
-**The wording varies by branch, because the two reasons a table can
-fall short of the roster are not interchangeable.** A filter
-*excluded* rows — they do not match, so they are not being withheld.
-A cap *truncated* the window — those rows exist and are being kept
-back, which is the only case the operator can act on:
+### The row pager (Segment 19J.5)
+
+**The 200-row cap is a page size, not a truncation.** Each of the four
+roster pages renders the `.table-pager` strip (`spec/ui_elements.md`
+§10) **twice** — where the count line sits, above the table, and again
+below it, because a 200-row table is several screens tall. The strip
+lists ranges, not page numbers (`201–400`), with First / Last hung off
+the ends as ranges too and `…` marking each elided gap; the range the
+operator is on is a marker carrying `aria-current="page"`, not a link
+back to itself.
+
+`?offset=` selects the page. It is **clamped, never rejected**: past
+the end lands on the last page and a negative lands on the first, and
+an offset inside a page snaps down to that page's boundary. A link
+that was valid before someone deleted forty rows is not an error page.
+
+**The pager is suppressed whenever a search or status filter is
+active.** The operator's own partition of the roster wins, and a
+second partition stacked on it is two mental models for one table. A
+filtered view therefore keeps the **500 cap** it has always had, and
+keeps truncating for real — which is why the count line still has a
+withheld branch.
+
+**The pager carries no selection.** Selection is page-local: the
+checkboxes act on the rows in view, and carrying a hidden selection
+across a page boundary is how an operator deletes something they
+cannot see.
+
+**Editing a row off the current page lands the operator on that row's
+page**, rather than prepending the row to whatever page they were on
+(which is what the cap-era code did, having nowhere else to put it).
+A filtered view, and a row the filter itself excludes, keep the
+prepend.
+
+**The wording follows from that.** Where the pager renders, the
+operator can reach every row and the sentence says nothing — the
+ranges already state the position. So the count line stopped being the
+table's caption and became **the filter's**:
 
 | State | Line |
 |---|---|
-| Capped, unfiltered | `Showing first 200 of 1,240 reviewers; 1,040 more not shown.` |
-| Capped, filtered | `Showing first 500 of 900 matching reviewers; 400 more not shown.` |
-| Filtered, under the cap | `Showing 3 of 1,240 reviewers.` |
-| Neither | *(nothing renders)* |
+| Filter active, under the cap | `Showing 37 reviewers.` |
+| Filter active, capped | `Showing 500 of 900 reviewers, 400 more not shown.` |
+| No filter | *(nothing renders — the pager speaks)* |
+
+A count of exactly one takes the singular (`Showing 1 reviewer.`): the
+sentence now puts the noun against the count rather than against the
+pool, and a search matching one person is the commonest case there is.
+
+The roster denominator went with the change — `Showing 3 of 1,240
+reviewers.` became `Showing 3 reviewers.` — and so did the word
+`matching`, which existed to tell the roster and the matching set
+apart and has nothing left to disambiguate once `of M` can only mean
+the second. **A filter that happens to match every row is still a
+filtered view** and still reports (`Showing 1,240 reviewers.`): the
+sentence and the pager read the same flag, so they cannot disagree
+about which mode the page is in.
+
+*Pages not yet paged* — Assignments, Invitations and Responses, until
+19J.5's later rungs — keep the pre-19J.5 unfiltered notice
+(`Showing first 200 of 10,000 assignments; 9,800 more not shown.`),
+because they really do still truncate.
 
 **A filter matching nothing renders no count line, on any of the
 seven.** Each page gates its whole preview card on the row list and
@@ -320,12 +370,12 @@ falls through to a "No … match the current filter." message
 `{% elif total_row_count > 0 %}`, and the same shape on the other
 six). The line lives inside that gate, so there is no table for it
 to caption. This is the template's doing, not the helper's:
-`preview_count_line(shown=0, matching=0, total=5, …)` returns
-`Showing 0 of 5 …` if it is ever called.
+`preview_count_line(shown=0, pool=0, …, is_filtered=True)` returns
+`Showing 0 reviewers.` if it is ever called.
 
-In every branch **M is the pool the numerator was drawn from**; the
-word `matching` appears exactly when that pool is the filtered set
-rather than the whole roster; and the `; X more not shown` clause
+In every branch **M is the pool the numerator was drawn from** — since
+19J.5 always the matching set, since the unfiltered branches say
+nothing; and the withheld clause
 appears only when the cap actually bit. The noun is the page's
 subject: `reviewers`, `reviewees`, `relationships`, `observers`,
 `assignments`, and — because those tables are one row per person —
@@ -640,9 +690,11 @@ takes 500 and a delete leaves 100 behind **having looked complete** —
 the sharp edge of the partition workflow the search exists to enable.
 The confirmation therefore states the **selected** count and never the
 match count. Two numbers say the rest, and on that same 600-row tag
-they read: `Showing first 500 of 600 matching reviewers; 100 more not
-shown.` above the table — the window is not the match, and the line
-says so outright since Item 10 — against `500 of 500 selected` in the
+they read: `Showing 500 of 600 reviewers, 100 more not shown.` above
+the table — the window is not the match, and the line says so outright
+since Item 10 (rephrased by 19J.5, which left this branch in place
+because a filtered view carries no pager and so still truncates) —
+against `500 of 500 selected` in the
 status row — every rendered row is picked. Until Item 4 the hint sat in the status row
 beside the gate and carried that job by adjacency; it now sits with
 the table, and the pill states its own denominator, so the pairing

@@ -206,7 +206,11 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert "Showing first 200 of 250 relationships; 50 more not shown." in body
+    # 19J.5 rung 2: the cap is a page size, so nothing is withheld
+    # and the sentence that said otherwise is gone; the pager says
+    # where the remaining rows are.
+    assert '<p class="muted table-showing-hint">' not in body
+    assert "201–250" in body
 
 
 def test_clear_link_only_when_filtered(

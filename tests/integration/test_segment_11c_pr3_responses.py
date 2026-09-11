@@ -411,7 +411,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
 
     card = body[body.index("</form>") :]
     assert '<p class="muted table-showing-hint">' in card
-    assert "Showing 1 of 2 reviewees." in card
+    assert "Showing 1 reviewee." in card
 
     start = body.index('<div class="filter-actions">')
     actions = body[start : body.index("</div>", start)]
@@ -455,4 +455,4 @@ def test_responses_filter_search_narrows_rows(
     assert "dave@example.edu" not in body
     # One row per *reviewee* on this page, so that is the noun
     # (19I Item 10).
-    assert "Showing 1 of 2 reviewees." in body
+    assert "Showing 1 reviewee." in body

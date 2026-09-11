@@ -13,6 +13,7 @@ evolves.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
@@ -479,6 +480,94 @@ def _quick_setup_unlocked(
 # matches the operator's chosen order.
 _SETUP_DEFAULT_CAP: int = 200
 _SETUP_FILTERED_CAP: int = 500
+
+
+@dataclass(frozen=True)
+class SetupWindow:
+    """The slice of a roster one Setup page renders, plus what the
+    page needs to say about it (Segment 19J.5 rung 2).
+
+    ``edit_id`` comes back because resolving it can clear it: an id
+    naming a row that no longer exists drops edit mode rather than
+    rendering an editor over nothing.
+    """
+
+    rows: list
+    offset: int
+    pager: views.Pager | None
+    edit_id: int | None
+
+
+def _setup_row_window(
+    *,
+    filtered: list,
+    all_rows: list,
+    is_filtered: bool,
+    offset: int = 0,
+    edit_id: int | None = None,
+) -> SetupWindow:
+    """Cut the page the operator asked for out of a sorted, filtered
+    roster — shared by the four Setup roster slices.
+
+    **Unfiltered is paged**: 200 rows a page, ``offset`` clamped onto a
+    real boundary so a stale link lands on the last page rather than a
+    404, and a pager describing the whole roster.
+
+    **Filtered is not.** The operator's own partition of the roster
+    wins and a second one stacked on it is two mental models for one
+    table, so a filtered view keeps the 500 cap it has always had and
+    gets no pager — the count line speaks for it instead.
+
+    **The edit target is always on screen.** Before 19J.5 a row being
+    edited from outside the cap was prepended to the table, because
+    there was nowhere else to put it. On a paged view there now is:
+    the operator lands on the page that actually holds the row, which
+    also leaves the pager honest about where they are. The prepend
+    survives for the two cases that still need it — a filtered view,
+    and a row the filter itself excludes.
+    """
+    if is_filtered:
+        rows = filtered[:_SETUP_FILTERED_CAP]
+        offset = 0
+        pager = None
+    else:
+        offset = views.clamp_offset(
+            offset, total=len(filtered), page_size=_SETUP_DEFAULT_CAP
+        )
+        rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
+        pager = views.build_pager(
+            total=len(filtered), offset=offset, page_size=_SETUP_DEFAULT_CAP
+        )
+
+    if edit_id is None or edit_id in {r.id for r in rows}:
+        return SetupWindow(rows=rows, offset=offset, pager=pager, edit_id=edit_id)
+
+    # The edited row is off the current window. Resolve it against the
+    # *unfiltered* roster: an operator editing a row the filter hides
+    # is still editing a real row.
+    edited = next((r for r in all_rows if r.id == edit_id), None)
+    if edited is None:
+        return SetupWindow(rows=rows, offset=offset, pager=pager, edit_id=None)
+
+    if not is_filtered:
+        index = next(
+            (i for i, r in enumerate(filtered) if r.id == edit_id), None
+        )
+        if index is not None:
+            offset = (index // _SETUP_DEFAULT_CAP) * _SETUP_DEFAULT_CAP
+            rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
+            pager = views.build_pager(
+                total=len(filtered),
+                offset=offset,
+                page_size=_SETUP_DEFAULT_CAP,
+            )
+            return SetupWindow(
+                rows=rows, offset=offset, pager=pager, edit_id=edit_id
+            )
+
+    return SetupWindow(
+        rows=[edited, *rows], offset=offset, pager=pager, edit_id=edit_id
+    )
 
 
 def _redirect_keeping_selection(

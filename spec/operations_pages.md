@@ -188,10 +188,18 @@ reviewer (`build_invitations_rows` iterates
 
 **This page is uncapped.** It renders every matching row, however
 many — there is no 200 / 500 window as on the rosters. So only the
-filter branch can ever fire: `Showing 3 of 1,240 reviewers.`, or
-nothing at all. `first …` and `; X more not shown` are unreachable
-here by construction. A filter that matches every row renders
-nothing, because a table showing everything needs no caption.
+filter branch can ever fire: `Showing 3 reviewers.`, or nothing at
+all. The withheld clause is unreachable here by construction.
+
+Since **19J.5** a filter that matches every row still reports
+(`Showing 1,240 reviewers.`) rather than rendering nothing: the
+sentence and the pager read the same filter flag so they cannot
+disagree about which mode the page is in, and a filter that ran and
+excluded nothing is worth saying. An **unfiltered** view renders
+nothing, as it always did.
+
+*This page is not paged yet.* 19J.5 rung 3 wires its pager and retires
+the uncapped contract above; until then its pager strip renders inert.
 
 ### Table columns
 

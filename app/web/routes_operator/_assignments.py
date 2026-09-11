@@ -349,11 +349,17 @@ def _render_assignments_hub(
                 if (q or filter_status in _STATUS_VALUES)
                 else views.build_pager(total=assignment_count)
             ),
+            # 19J.5 rung 2 rewrote the helper's contract. This page is
+            # not paged yet — its pager scaffold is still inert — so it
+            # passes ``paged=False`` and keeps the withheld notice it
+            # has always shown. Rung 4 wires the page and the argument
+            # goes with the branch it guards.
             "preview_count_line": views.preview_count_line(
                 shown=len(pair_sample),
-                matching=matching_count,
-                total=assignment_count,
+                pool=matching_count,
                 noun="assignments",
+                is_filtered=bool(q or filter_status in _STATUS_VALUES),
+                paged=False,
             ),
             "filter_q": q,
             "filter_search_by": search_by,

@@ -38,8 +38,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
-    _SETUP_DEFAULT_CAP,
-    _SETUP_FILTERED_CAP,
+    _setup_row_window,
     _handle_import,
     _redirect_keeping_selection,
     _require_delete_confirm,
@@ -107,6 +106,7 @@ def _render_reviewees_page(
     review_session: ReviewSession,
     status_filter: str = "all",
     search: str = "",
+    offset: int = 0,
     edit_id: int | None = None,
     add_mode: bool = False,
     edit_values: dict[str, str] | None = None,
@@ -141,19 +141,22 @@ def _render_reviewees_page(
         all_reviewees, status=status_filter, search=search
     )
     is_filtered = status_filter != "all" or bool(search.strip())
-    cap = _SETUP_FILTERED_CAP if is_filtered else _SETUP_DEFAULT_CAP
-    capped = filtered[:cap]
-    displayed_row_count = len(capped)
-
-    reviewees = capped
-    if edit_id is not None and edit_id not in {r.id for r in reviewees}:
-        edited = next(
-            (r for r in all_reviewees if r.id == edit_id), None
-        )
-        if edited is None:
-            edit_id = None
-        else:
-            reviewees = [edited, *reviewees]
+    # Segment 19J.5 rung 2 — the cap became a page size. The shared
+    # helper cuts the window, clamps a stale ``offset`` onto a real
+    # boundary, and lands the operator on the page that holds the row
+    # they are editing instead of prepending it to whatever page they
+    # happened to be on.
+    window = _setup_row_window(
+        filtered=filtered,
+        all_rows=all_reviewees,
+        is_filtered=is_filtered,
+        offset=offset,
+        edit_id=edit_id,
+    )
+    reviewees = window.rows
+    offset = window.offset
+    edit_id = window.edit_id
+    displayed_row_count = len(reviewees)
 
     if edit_values is None and edit_id is not None:
         edited = next(
@@ -224,16 +227,25 @@ def _render_reviewees_page(
             # speaks for that view instead. Both read the same
             # ``is_filtered``, so the two affordances can never
             # disagree about which mode the page is in.
-            "pager": (
-                None
-                if is_filtered
-                else views.build_pager(total=len(all_reviewees))
+            "pager": window.pager,
+            # Only ever rendered on an unfiltered view, so the link
+            # carries no filter state to preserve — and deliberately
+            # not ``selected``: selection is page-local, and carrying
+            # a hidden one across a page boundary is how an operator
+            # deletes something they cannot see.
+            "pager_url_base": (
+                f"/operator/sessions/{review_session.id}/reviewees?"
             ),
+            # Segment 19J.5 rung 2 — the sentence is the filter's now,
+            # not the table's: where the pager renders, the ranges
+            # already say where the operator is. ``paged=True`` says
+            # this view reaches every row it counts.
             "preview_count_line": views.preview_count_line(
                 shown=displayed_row_count,
-                matching=len(filtered),
-                total=len(all_reviewees),
+                pool=len(filtered),
                 noun="reviewees",
+                is_filtered=is_filtered,
+                paged=True,
             ),
             "filter_status": status_filter,
             "filter_search": search,
@@ -292,6 +304,7 @@ def reviewees_list(
     request: Request,
     status_filter: str = Query(default="all", alias="status"),
     q: str = "",
+    offset: int = 0,
     edit_id: int | None = None,
     add: int = 0,
     selected: list[int] = Query(default=[]),
@@ -306,6 +319,7 @@ def reviewees_list(
         review_session=review_session,
         status_filter=status_filter,
         search=q,
+        offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
         selected_ids=set(selected),
