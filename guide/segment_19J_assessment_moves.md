@@ -2875,6 +2875,15 @@ cluster rather than the strip it replaced (`spec/ui_elements.md` §10
 and §6, `spec/setup_pages.md`, `spec/operations_pages.md`), with the
 retired class names struck and named rather than deleted.
 
+**The `spec-writer` check earned its place, which is the argument for
+maker ≠ checker.** It confirmed all four target files against the code
+and found a **fifth** spec the plan never named: `spec/assignments.md`
+§"The preview-count line" carries its own account of Assignments'
+rung-4 paging and still called the control "the strip". One clause,
+in the one file the manifest cited as a *pointer target* rather than a
+commitment — which is exactly where a maker stops looking. `Doc impact`
+gains the bullet.
+
 Seven merges: the scaffold, the wiring plus the strip's retirement, the
 window cleanup, two visual tweaks the author asked for, and the
 outside-click fix. Two of those tweaks each uncovered something the
@@ -3008,6 +3017,9 @@ ones the stub named, now with their contents.
   states for the five setup pages (Item 9).
 - `spec/operations_pages.md` — the pager paragraph (Invitations and
   Responses) gains the same (Item 9).
+- `spec/assignments.md` — "The preview-count line" describes Assignments'
+  own rung-4 paging and called the control "the strip"; added at close,
+  found by the `spec-writer` check rather than by the plan (Item 9).
 - `guide/post_azure_todo_checklist.md` — row for the one-move reach
   check on a 5,000-row roster (Item 9).
 - `docs/status.md` — row when the item closes (Item 9).
