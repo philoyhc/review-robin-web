@@ -846,6 +846,26 @@ between two parses, which is exactly why the pre-build number existed.
 Now extended one path at a time, with a test that a doubled bullet
 counts once.
 
+**This item's own manifest is read at 2 of its 3 bullets**, and the
+adjudication of that is the same shape as 19K.1's. `COMMITTED_PATH`
+matches `spec/` and `docs/` only, so the `tools/README.md` bullet — a
+real documentation commitment, kept — is invisible to C1–C7 exactly as
+`guide/` paths were until Item 1. This is **known rather than new**:
+19G.8's `docs/status.md` row already records that 19G.6's bullets "name
+`tools/` and `.claude/` paths the regex never matched". Measured
+2026-09-11 across every live and archived plan, **16 such commitments**:
+`tools/` 6 in 4 plans, `app/` 5 in 3, `.claude/` 3 in 2, `tests/` 1,
+`.github/` 1.
+
+Not fixed here, and deliberately not: extending the manifest regex is a
+decision about *which roots a plan may commit to*, which is a different
+question from how the sweep reads levels, and the segment-plan skill's
+rule against bundling independent changes applies. Recorded as a
+candidate item. What this item will not do is let the printed count
+stand unremarked — "the printed committed-path count quietly smaller
+than the manifest it had just read" is the sentence Item 1 was opened
+on, and it is true of this close too.
+
 **The finding worth keeping.** `_archive.py` had **no tests** — the
 blast-radius table's one zero — and that is not incidental to the
 defect, it is the whole explanation for it. The sweep was run on this
