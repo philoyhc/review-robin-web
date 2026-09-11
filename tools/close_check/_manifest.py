@@ -306,12 +306,41 @@ def pre_archive_path(plan: pathlib.Path) -> str:
     return relative.replace("guide/archive/", "guide/")
 
 
+# Memoised because `--archived` asks the same question once per manifest
+# level, and a plan has as many levels as it has items: `19I` ran the
+# identical `^## Doc impact$` pickaxe 13 times.
+#
+# Measured over the 98 archived plans (2026-09-11), reading every level
+# (19K.4) took `--archived` from 258 `git log` calls / 5.9s to 491 / 17.8s.
+# Memoisation brings it to **417 / 11.3s** — 15% fewer calls for 37% less
+# time, because the calls it removes are the `-G` pickaxes, which scan a
+# file's whole history, rather than the cheap ranged lookups.
+#
+# The rest of the gap over 5.9s is not waste: 274 paths are now checked
+# where 162 were, and each one is a `git log` that has to happen. Reading
+# more evidence costs more.
+#
+# Keyed on the plan path and the pattern, both of which fully determine
+# the answer for a given tree.
+_COMMIT_CACHE: dict[tuple[str, str], list[str] | None] = {}
+
+
 def _first_commit_matching(plan: pathlib.Path, pattern: str) -> list[str] | None:
     """[sha, date] of the first commit adding a line matching `pattern`.
 
     Searched on the pre-archive path first, never with ``--follow``, per the
     window rules in this module's docstring.
     """
+    key = (plan.as_posix(), pattern)
+    if key in _COMMIT_CACHE:
+        return _COMMIT_CACHE[key]
+    _COMMIT_CACHE[key] = _uncached_first_commit_matching(plan, pattern)
+    return _COMMIT_CACHE[key]
+
+
+def _uncached_first_commit_matching(
+    plan: pathlib.Path, pattern: str
+) -> list[str] | None:
     for candidate in dict.fromkeys(
         [pre_archive_path(plan), plan.relative_to(_shared.REPO).as_posix()]
     ):
@@ -403,11 +432,17 @@ def window(
         start = _later_commit(start, heading)
 
     if archived:
-        adds = [
-            row for row in _git(
-                "log", "--diff-filter=A", "--format=%H", "--", relative
-            ).split("\n") if row.strip()
-        ]
+        # Same memoisation, same reason: one question per plan, asked once
+        # per manifest level. The `A:` prefix keeps it out of the pickaxe
+        # keyspace, since the value means something different.
+        key = (plan.as_posix(), "A:" + relative)
+        if key not in _COMMIT_CACHE:
+            _COMMIT_CACHE[key] = [
+                row for row in _git(
+                    "log", "--diff-filter=A", "--format=%H", "--", relative
+                ).split("\n") if row.strip()
+            ]
+        adds = _COMMIT_CACHE[key]
         end = adds[0] if adds else "HEAD"
     else:
         end = "HEAD"

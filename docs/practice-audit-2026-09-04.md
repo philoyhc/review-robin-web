@@ -162,6 +162,12 @@ than pending:
   provisional — rather than passing quietly, which is what it did until
   2026-09-11.
 
+Both of the close check's two exclusions are printed at the point of use
+rather than recorded only here, because a documented blind spot has to be read
+by someone who already suspects it. The sweep's defect below is different in
+kind: it is fixed rather than reported, so its output says nothing about it and
+this document is where the history lives.
+
 A third limit was in the **sweep** rather than the close check, and is now
 fixed rather than documented. `--archived`, the report that produces the
 honoured-commitments baseline, read **one manifest per plan** from the day the
@@ -177,9 +183,6 @@ read. The figure it reports for the same corpus moves from 147/162 (91%) to
 **259/274 (95%)** — a correction, not a gain. The four baselines quoted in
 dated `docs/status.md` entries (85/101, 132/148, 133/148, 147/162) stand as
 what the tool said on those days.
-
-Both are printed at the point of use rather than recorded only here, because a
-documented blind spot has to be read by someone who already suspects it.
 
 One configuration detail worth correcting: `pyproject.toml` sets
 `line-length = 100`, but `ruff check` does not enforce it. Ruff's default rule

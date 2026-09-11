@@ -124,8 +124,10 @@ def plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     # point survives the carve; it just moved.
     monkeypatch.setattr(cc._shared, "REPO", root)
     cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
     yield plan
     cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
 
 
 def test_untagged_bullet_keeps_the_segment_window(plan_repo) -> None:

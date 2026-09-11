@@ -168,8 +168,10 @@ def archive_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(cc._shared, "REPO", root)
     cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
     yield root
     cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
 
 
 def _sweep(root: pathlib.Path) -> str:
@@ -225,3 +227,46 @@ def test_a_guide_path_named_twice_in_one_level_counts_once(
     )
     out = _sweep(archive_repo)
     assert "1 guide/ commitment(s)" in out
+
+
+def test_the_same_pickaxe_is_not_run_once_per_level(archive_repo) -> None:
+    """Reading every level asks each plan's ``^## Doc impact$`` question
+    once per item — 13 times for ``19I``. Measured over the 98 archived
+    plans, that took ``--archived`` from 258 ``git log`` calls to 491 and
+    from 5.9s to 17.8s; memoising returns it to 417 and 11.3s. The saving
+    is disproportionate to the call count because the removed calls are
+    the ``-G`` pickaxes, which scan a file's whole history.
+    """
+    from close_check import _manifest
+
+    calls: list[tuple] = []
+    real = _manifest._git
+
+    def spy(*args):
+        calls.append(args)
+        return real(*args)
+
+    _manifest._git = spy
+    try:
+        _sweep(archive_repo)
+    finally:
+        _manifest._git = real
+
+    pickaxes = [
+        c for c in calls
+        if "-G" in c and any("Doc impact" in str(arg) for arg in c)
+    ]
+    assert len(pickaxes) == 1, (
+        f"the Doc impact pickaxe ran {len(pickaxes)} times for one plan"
+    )
+
+
+def test_the_cache_still_answers_correctly_across_levels(archive_repo) -> None:
+    """The half that must not regress: a cache keyed too loosely would
+    hand every item the first item's heading, which is the 19A.2 false
+    pass wearing a different hat. Item 3's bullet must still be
+    unhonoured with the cache warm."""
+    first = _sweep(archive_repo)
+    second = _sweep(archive_repo)
+    assert "2/3" in first and "1 unhonoured" in first
+    assert second == first
