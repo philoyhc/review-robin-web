@@ -34,7 +34,6 @@ from app.services import (
     session_lifecycle as lifecycle,
 )
 from app.services._queries import tag_slot_presence
-from app.services.instruments import _instrument_label
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -63,6 +62,7 @@ def assignments_hub(
     prepare_confirm: str | None = Query(default=None),
     q: str = Query(default=""),
     search_by: str = Query(default="all"),
+    offset: int = Query(default=0),
     # `filter_status` rather than `status`: the module-level
     # `status` import (`status.HTTP_200_OK`) is in scope here, and a
     # parameter of that name shadows it. The alias keeps the URL
@@ -91,6 +91,7 @@ def assignments_hub(
         search=q,
         search_by=search_by,
         filter_status=filter_status,
+        offset=offset,
     )
 
 
@@ -154,6 +155,7 @@ def _render_assignments_hub(
     prepare_confirm: str | None = None,
     search: str = "",
     search_by: str = "all",
+    offset: int = 0,
     # `filter_status`, not `status`: the module-level `status` import
     # (`status.HTTP_200_OK`, used below) is in scope here and a
     # parameter of that name shadows it — caught by an
@@ -179,7 +181,22 @@ def _render_assignments_hub(
         q, roster_reviewers, roster_reviewees
     )
     assignment_count = assignments.existing_count(db, review_session.id)
-    if q or filter_status in _STATUS_VALUES:
+    # Segment 19J.5 rung 4 — decoded before the fetch now, because the
+    # sort is applied by the query rather than to its result.
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=f"rrw-sort-assignments-{review_session.id}",
+        valid_keys=_ASSIGNMENT_SORT_KEYS,
+    )
+    is_filtered = bool(q or filter_status in _STATUS_VALUES)
+    # A filtered view carries no pager, so it keeps the first window —
+    # the suppression rule the other six pages follow.
+    offset = (
+        0
+        if is_filtered
+        else views.clamp_offset(offset, total=assignment_count)
+    )
+    if is_filtered:
         matching_count = assignments.count_pairs(
             db,
             review_session.id,
@@ -193,6 +210,7 @@ def _render_assignments_hub(
             assignments.list_pairs(
                 db,
                 review_session.id,
+                sort=sort_spec,
                 search=q,
                 search_by=search_by,
                 status=filter_status,
@@ -205,7 +223,9 @@ def _render_assignments_hub(
     else:
         matching_count = assignment_count
         pair_sample = (
-            assignments.list_pairs(db, review_session.id)
+            assignments.list_pairs(
+                db, review_session.id, offset=offset, sort=sort_spec
+            )
             if assignment_count
             else []
         )
@@ -218,47 +238,6 @@ def _render_assignments_hub(
         else {}
     )
 
-    def _assignment_sort_value(assignment, key: str):
-        if key == "reviewer":
-            return assignment.reviewer.name if assignment.reviewer else None
-        if key == "reviewee":
-            return assignment.reviewee.name if assignment.reviewee else None
-        if key.startswith("reviewer_tag_"):
-            slot = key.rsplit("_", 1)[-1]
-            return getattr(assignment.reviewer, f"tag_{slot}", None)
-        if key.startswith("reviewee_tag_"):
-            slot = key.rsplit("_", 1)[-1]
-            return getattr(assignment.reviewee, f"tag_{slot}", None)
-        if key.startswith("pair_tag_"):
-            rel = pair_context_lookup.get(
-                (assignment.reviewer_id, assignment.reviewee_id)
-            )
-            if rel is None or getattr(rel, "status", None) != "active":
-                return None
-            slot = key.rsplit("_", 1)[-1]
-            return getattr(rel, f"tag_{slot}", None)
-        if key == "include":
-            # Render-text parity: assignment.include True → "yes",
-            # False → "no". Sort lexically so "no" < "yes" (asc =
-            # excluded first).
-            return "yes" if assignment.include else "no"
-        if key == "instrument":
-            inst = assignment.instrument
-            if inst is None:
-                return None
-            return _instrument_label(inst)
-        return None
-
-    sort_spec = views.decode_cookie_sort_spec(
-        cookies=dict(request.cookies),
-        cookie_name=f"rrw-sort-assignments-{review_session.id}",
-        valid_keys=_ASSIGNMENT_SORT_KEYS,
-    )
-    pair_sample = views.apply_cookie_sort(
-        pair_sample,
-        sort_spec,
-        value_resolver=_assignment_sort_value,
-    )
     status_code = (
         status.HTTP_400_BAD_REQUEST if (missing_confirm or is_blocked) else status.HTTP_200_OK
     )
@@ -346,20 +325,22 @@ def _render_assignments_hub(
             # which mode the page is in.
             "pager": (
                 None
-                if (q or filter_status in _STATUS_VALUES)
-                else views.build_pager(total=assignment_count)
+                if is_filtered
+                else views.build_pager(
+                    total=assignment_count, offset=offset
+                )
             ),
-            # 19J.5 rung 2 rewrote the helper's contract. This page is
-            # not paged yet — its pager scaffold is still inert — so it
-            # passes ``paged=False`` and keeps the withheld notice it
-            # has always shown. Rung 4 wires the page and the argument
-            # goes with the branch it guards.
+            "pager_url_base": (
+                f"/operator/sessions/{review_session.id}/assignments?"
+            ),
+            # 19J.5 rung 4 — the last page to page, so this is the
+            # last caller of ``paged``; the argument and the branch it
+            # guarded retire with this rung.
             "preview_count_line": views.preview_count_line(
                 shown=len(pair_sample),
                 pool=matching_count,
                 noun="assignments",
-                is_filtered=bool(q or filter_status in _STATUS_VALUES),
-                paged=False,
+                is_filtered=is_filtered,
             ),
             "filter_q": q,
             "filter_search_by": search_by,

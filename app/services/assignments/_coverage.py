@@ -9,8 +9,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import false as sa_false, func, or_, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import (
+    case,
+    collate,
+    String,
+    cast,
+    false as sa_false,
+    func,
+    literal,
+    nullslast,
+    or_,
+    select,
+)
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.db.models import (
     Assignment,
@@ -389,11 +400,184 @@ def _apply_pair_search(
     return stmt.where(or_(reviewer_match, reviewee_match))
 
 
+# --------------------------------------------------------------------- #
+# Sorting the pair list in SQL — Segment 19J.5 rung 4.
+#
+# Until rung 4 the Assignments page fetched 200 rows and sorted *those*
+# in Python, via ``views.apply_cookie_sort``. That was invisible while
+# 200 was all an operator could ever see; paging makes it a lie, because
+# page 2 would be sorted within page 2. So the sort moves into the
+# query, where it can order the whole matching set before the window is
+# cut.
+#
+# The contract to preserve is ``apply_cookie_sort``'s, exactly — the
+# operator's rows must not reshuffle on the day this lands:
+#
+#   1. an empty string is *not* a value; it collapses to NULL
+#      (``NULLIF(col, '')``);
+#   2. NULL sorts **last** whichever direction the column is sorted;
+#   3. text compares by code point, the way Python's ``<`` does;
+#   4. ties fall through to the next key, then to a stable order.
+#
+# Rule 3 is the one with teeth. Measured 2026-09-11 on Postgres 16:
+# under a locale-aware collation the same seven names order
+# ``_edge | alpha | ana lim | Ana Lim | Bravo | charlie | Delta``, and
+# under ``C`` (and SQLite's default BINARY) they order
+# ``Ana Lim | Bravo | Delta | _edge | alpha | ana lim | charlie`` — the
+# second being what this app has always rendered. The ``ci-postgres``
+# container initialises as ``C.UTF-8``, so an unqualified ORDER BY would
+# have passed CI and reordered every sorted table on a production
+# database with a locale-aware collation. Hence the explicit collation
+# below, applied on Postgres only: SQLite's default already is rule 3.
+# --------------------------------------------------------------------- #
+
+
+def _code_point(db: Session, expression):
+    """Order ``expression`` by code point on either dialect.
+
+    SQLite's default collation is BINARY, which already is code-point
+    order. Postgres follows its database collation, which may not be —
+    see the note above.
+    """
+    if db.get_bind().dialect.name == "postgresql":
+        return collate(expression, "C")
+    return expression
+
+
+def _instrument_label_sql(instrument):
+    """The SQL form of ``instruments._instrument_label``: the trimmed
+    ``short_label`` when it holds anything, else ``Instrument_{id}``.
+
+    Kept beside the Python original rather than derived from it,
+    because there is no way to derive it — and pinned against it by
+    ``tests/unit/test_pair_sort_sql.py`` so the two cannot drift.
+    """
+    trimmed = func.trim(func.coalesce(instrument.short_label, ""))
+    return case(
+        (trimmed != "", trimmed),
+        # ``||`` on both dialects: SQLite only grew a ``concat()``
+        # function in 3.44, and the operator has always worked.
+        else_=literal("Instrument_") + cast(instrument.id, String),
+    )
+
+
+def _pair_sort_order(db: Session, stmt, sort: list[tuple[str, str]] | None):
+    """Translate a cookie sort spec into ``ORDER BY``, joining only what
+    the active keys need — an unsorted page must stay the single-table
+    query it was.
+
+    Returns ``(stmt, order_clauses)``. Unknown keys are skipped: the
+    route validates them against ``_ASSIGNMENT_SORT_KEYS`` first, and a
+    cookie is operator-editable.
+    """
+    order: list = []
+    if not sort:
+        return stmt, order
+
+    joined: dict[str, Any] = {}
+
+    def _reviewer():
+        if "reviewer" not in joined:
+            alias = aliased(Reviewer)
+            joined["reviewer"] = alias
+            return alias, True
+        return joined["reviewer"], False
+
+    def _reviewee():
+        if "reviewee" not in joined:
+            alias = aliased(Reviewee)
+            joined["reviewee"] = alias
+            return alias, True
+        return joined["reviewee"], False
+
+    for key, direction in sort:
+        expression = None
+
+        if key == "reviewer" or key.startswith("reviewer_tag_"):
+            alias, fresh = _reviewer()
+            if fresh:
+                stmt = stmt.outerjoin(
+                    alias, Assignment.reviewer_id == alias.id
+                )
+            column = (
+                alias.name
+                if key == "reviewer"
+                else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
+            )
+            expression = _code_point(db, func.nullif(column, ""))
+
+        elif key == "reviewee" or key.startswith("reviewee_tag_"):
+            alias, fresh = _reviewee()
+            if fresh:
+                stmt = stmt.outerjoin(
+                    alias, Assignment.reviewee_id == alias.id
+                )
+            column = (
+                alias.name
+                if key == "reviewee"
+                else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
+            )
+            expression = _code_point(db, func.nullif(column, ""))
+
+        elif key.startswith("pair_tag_"):
+            # The pair's own tags live on ``relationships``, and only an
+            # *active* relationship contributes them — the Python
+            # resolver returned None for any other status, and the rule
+            # engine agrees. An assignment with no relationship row, or
+            # an inactive one, therefore sorts as NULL: last, which is
+            # where it landed before.
+            if "relationship" not in joined:
+                alias = aliased(Relationship)
+                joined["relationship"] = alias
+                stmt = stmt.outerjoin(
+                    alias,
+                    (alias.session_id == Assignment.session_id)
+                    & (alias.reviewer_id == Assignment.reviewer_id)
+                    & (alias.reviewee_id == Assignment.reviewee_id)
+                    & (alias.status == "active"),
+                )
+            alias = joined["relationship"]
+            column = getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
+            expression = _code_point(db, func.nullif(column, ""))
+
+        elif key == "instrument":
+            if "instrument" not in joined:
+                alias = aliased(Instrument)
+                joined["instrument"] = alias
+                stmt = stmt.outerjoin(
+                    alias, Assignment.instrument_id == alias.id
+                )
+            expression = _code_point(
+                db, _instrument_label_sql(joined["instrument"])
+            )
+
+        elif key == "include":
+            # Render-text parity: the Python resolver sorted the strings
+            # "no" < "yes", which is False < True. The column is NOT
+            # NULL, so null placement never arises.
+            expression = Assignment.include
+
+        if expression is None:
+            continue
+
+        clause = (
+            expression.desc() if direction == "desc" else expression.asc()
+        )
+        # Rule 2: NULL last in **both** directions — not the default
+        # either dialect would pick, and the reason every clause is
+        # wrapped rather than only the ascending ones.
+        order.append(nullslast(clause))
+
+    return stmt, order
+
+
 def list_pairs(
     db: Session,
     session_id: int,
     *,
     limit: int = PAIR_PREVIEW_LIMIT,
+    offset: int = 0,
+    sort: list[tuple[str, str]] | None = None,
     search: str | None = None,
     search_by: str = "all",
     status: str = "all",
@@ -403,10 +587,11 @@ def list_pairs(
     """Return saved Assignment rows with reviewer + reviewee + instrument
     eagerly loaded.
 
-    Ordered by (reviewer_id, reviewee_id, instrument_id) to match the
-    FullMatrix preview shape and keep instrument rows next to each
-    other within the same pair on the diagnostic Assignment-pairs
-    table. ``search`` (when set) filters to rows whose reviewer
+    Ordered by the operator's ``sort`` spec when one is given, then
+    always by (reviewer_id, reviewee_id, instrument_id) — which matches
+    the FullMatrix preview shape, keeps instrument rows next to each
+    other within the same pair, and gives the total order that
+    ``offset`` needs to be meaningful. ``search`` (when set) filters to rows whose reviewer
     and/or reviewee name / email matches the term, scoped by
     ``search_by`` (``all`` / ``reviewer`` / ``reviewee``).
     """
@@ -424,12 +609,22 @@ def list_pairs(
             picked_reviewee_handle,
         )
     stmt = _apply_status(stmt, status)
+    # Segment 19J.5 rung 4 — the operator's sort is applied here, not
+    # over the fetched window, so ``offset`` cuts a page out of the
+    # whole ordered set rather than out of an arbitrary 200.
+    stmt, sort_order = _pair_sort_order(db, stmt, sort)
     stmt = stmt.order_by(
+        # The pair order is the tie-breaker now, and it is what makes
+        # paging deterministic: without a total order two pages can
+        # show the same row or neither.
+        *sort_order,
         Assignment.reviewer_id,
         Assignment.reviewee_id,
         Assignment.instrument_id,
-    ).limit(limit)
-    return list(db.execute(stmt).scalars())
+    )
+    if offset:
+        stmt = stmt.offset(offset)
+    return list(db.execute(stmt.limit(limit)).unique().scalars())
 
 
 def count_pairs(
