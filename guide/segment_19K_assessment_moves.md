@@ -314,6 +314,66 @@ Taken 2026-09-11 at `94aaa3b2`.
 | Templates carrying a chip row | 7 | `grep -rl 'data-col-toggles-for' app/web/templates` |
 | Tests over column visibility | to be counted at rung 1 | `grep -rln col-toggle tests/` |
 
+### Status
+
+**Closed 2026-09-11**, both rungs, in one PR. The ladder held; the
+measurement in the Opportunity above held too, which after the ~4×
+correction that produced this item is worth saying explicitly.
+
+**The premise was verified, not assumed.** The same chip injected after
+load was driven in Chromium against both `main` and the branch: dead on
+`main`, live after the change. An item whose whole argument is "this
+breaks on a re-render" should not ship without someone having watched it
+break.
+
+Eight behaviours checked in Chromium at 1280×900 against a three-chip
+roster: a click hides the column and a second click restores it, Enter
+and Space each toggle, the state persists as
+`{"tag-1":true,"tag-2":false,"tag-3":false}` under the existing key,
+a reload restores it — and the two that matter here, **a chip injected
+after load toggles its column**, and **`_rrwHydrateColToggles()` restores
+the saved columns after the DOM is reset**.
+
+- **2026-09-11 — hydration is exposed, which the plan did not ask for.**
+  Delegation keeps a late chip *clickable*; it does not restore the
+  operator's columns, because a re-render brings chips back as the
+  server rendered them — all visible — and the `col-hidden-*` classes
+  are not in the markup either. So `hydrate` became a named function
+  called at load and assigned to `window._rrwHydrateColToggles`, which
+  is the arrangement the sort primitive already has with
+  `_rrwHydrateFromCookies`. Two lines, and without them the item
+  delivers half of what it claims. Recorded here rather than quietly,
+  because it is scope the plan did not name.
+- **2026-09-11 — rows are filtered, not selected by attribute value.**
+  Finding a table's chip rows could be
+  `querySelectorAll('[data-col-toggles-for="' + id + '"]')`, but a table
+  id is page-authored and that would make the primitive depend on CSS
+  escaping for no gain. It iterates and compares instead.
+- **2026-09-11 — the guard asserts the mechanism, and the item says so.**
+  The suite has no JavaScript runtime, so it cannot click a chip. A
+  per-chip listener and a delegated one are indistinguishable on a
+  freshly loaded page and differ completely on a re-rendered one, so
+  *where the listener is registered* is the honest thing to assert; the
+  behaviour is the browser run above. The same division 19J.4 used for
+  the busy indicator's arming.
+- **The receiver probe started from the fixed form.** 19J.9 shipped
+  `(\w+)\.addEventListener`, which does not match `menus[0].` — `]` is
+  not a word character — so the offending receiver dropped out of the
+  match set and the guard passed on the mutation it existed to catch.
+  This file uses the corrected pattern and asserts the match count
+  equals the number of registrations.
+- **Five mutations, each caught**: rebinding per chip (the pre-19K.2
+  shape), dropping the `keydown` half, resolving the target at load
+  instead of at event time, removing the hydration hook, and renaming
+  the storage key.
+
+**One thing rung 2 did that the plan framed as documentation only.**
+Block 2's comment now states that it binds nothing — its headers call
+`rrwSortHeaderClick` through an inline `onclick`, so the handler arrives
+with the markup — because that is the sentence whose absence caused the
+~4× error this item was opened to correct. The spec carries both hooks
+together, since a re-render owes the table both.
+
 ### PR ladder
 
 1. **Convert block 3 to delegation**, behaviour unchanged. Tests: a chip
