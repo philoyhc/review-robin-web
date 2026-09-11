@@ -170,7 +170,7 @@ those all pass. What no Python test can observe is whether the thing
 `--btn-primary-bg` and it sits fixed at the very top of the viewport,
 above the chrome. Neither was reviewable from a template diff.
 
-**Where this came from.** `guide/segment_19J_assessment_moves.md` Item
+**Where this came from.** `guide/archive/segment_19J_assessment_moves.md` Item
 4 (and, for the hover row, the hover standardisation of 2026-09-11 —
 same reason: a colour no Python test can see), whose Definition of done names these and whose index row holds the
 item **built, not closed**, until they are seen. Closing 19J.4 is this

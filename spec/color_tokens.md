@@ -354,24 +354,49 @@ The same reason the help card has its own `-fg` rather than inheriting
 
 **`--blue-strong` / `--blue-glow` are reserved.** The pair
 `--selected-bg` resolves to — `#2563eb` light, `#4b8bf5` dark — means
-*you can act on this* on a pill, chip or row-pager surface: click it,
-or in Instruments Band 2, click and drag it. No static element on those
-surfaces carries it. `--text-link` is the same rule rather than an
-exception, since a link is actionable; `--focus-ring`,
-`--btn-primary-bg` and `--card-active-border` likewise sit on
-actionable or focus surfaces.
+*you can act on this*: click it, or in Instruments Band 2, click and
+drag it. `--text-link` is the same rule rather than an exception, since
+a link is actionable.
 
-The scope is deliberate and narrower than the whole sheet:
-`--status-info-border` resolves to the pair on a *static* info panel
-and is the one known inconsistency outside it, recorded rather than
-fixed (`guide/segment_19J_assessment_moves.md` Item 7). Every other
-blue stays freely available to static elements — `--status-info-bg`
-`#dbeafe`, `--status-info-fg` `#1e40af`, `--role-reviewer-fg`
-`#1d4ed8` — because the reservation is on the shade, not the hue.
+**The scope is the ambiguity, not the element type** (author,
+2026-09-11, closing `guide/archive/segment_19J_assessment_moves.md` Item 10).
+The reservation exists because a pill and a chip have a **dual
+nature**: one rounded shape states a fact in one place and offers a
+click in another, and before Segment 19J.7 the only thing separating
+them was `cursor: pointer` — invisible until the pointer is on it,
+absent on touch, absent from every screenshot. The shade is what makes
+that difference visible.
 
-`tests/unit/test_reserved_shade.py` resolves every pill- and chip-facing
-token in both themes and fails if anything but a confirmed control
-lands on the pair. `--lifecycle-validated-fg` used to, which is why it
+It follows that the rule reaches **any element class carrying the same
+dual nature**, and does *not* reach a class that has no interactive
+twin to be confused with. Two consequences, and both were measured
+before being written here:
+
+- `--status-info-border` resolves to the pair on a static
+  `.banner-info`, and that is **not** an inconsistency. There is no
+  such thing as a clickable info banner that looks like a static one,
+  so the border misleads nobody. (Item 7 recorded it as a possible
+  violation and scoped it out; Item 10 measured it and settled that it
+  never was one.)
+- `.btn-icon` **acquired** the dual nature at 19J.9, when the row
+  pager's inactive steps began rendering as `<span class="btn-icon …">`
+  beside live ones that are anchors. It is in scope from that day, and
+  it holds: the inert form takes `--text-subtle` at 0.4 opacity and
+  never the accent.
+
+`--focus-ring`, `--btn-primary-bg` and `--card-active-border` sit on
+actionable or focus surfaces and are unambiguous either way. Every
+other blue stays freely available to static elements —
+`--status-info-bg` `#dbeafe`, `--status-info-fg` `#1e40af`,
+`--role-reviewer-fg` `#1d4ed8` — because the reservation is on the
+shade, not the hue.
+
+`tests/unit/test_reserved_shade.py` resolves every token in both themes
+and fails if anything but a confirmed control lands on the pair. Its
+selector filter is a **consequence** of the rule rather than the rule
+itself, and grows when a new element class acquires the dual nature —
+which is exactly what happened to `.btn-icon`.
+`--lifecycle-validated-fg` used to land on the pair, which is why it
 now reads `--blue-deeper` / `--blue-soft` above.
 
 Registry of intentional semantic→semantic couplings (`@coupled` marker in

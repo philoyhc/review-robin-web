@@ -9,7 +9,7 @@ question "how should they differ?" is unanswerable without knowing how
 many there are and which ones already disagree.
 
 It is an audit, not a plan. The decision lives in
-`guide/segment_19J_assessment_moves.md` Item 7.
+`guide/archive/segment_19J_assessment_moves.md` Item 7.
 
 ## How this was measured
 

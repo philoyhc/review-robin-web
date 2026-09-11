@@ -160,7 +160,7 @@ that both archived; live prose grew ~1,100 — `spec/setup_pages.md` +446,
 `spec/assignments.md` +201, `spec/lifecycle.md` +136, plus `docs/status.md` and
 `guide/todo_master.md`. 19J then added ~5,800 more, again mostly a plan, a
 record, and this document's own amendments:
-`guide/segment_19J_assessment_moves.md` (824),
+`guide/archive/segment_19J_assessment_moves.md` (824),
 `guide/sweep_2026-09-10_rrw_functional_spec.md` (515), and +584 here —
 against **+110 net** of live spec prose, which is what fifteen corrections to
 `spec/rrw_functional_spec.md` and a rewritten `spec/README.md` row come to once
@@ -604,7 +604,7 @@ would still be a backlog.
 
 **What the next snapshot should recommend instead** is left deliberately
 empty here. Three moves were named, three were done, and the findings they
-produced (below, and in `guide/segment_19J_assessment_moves.md`) are the
+produced (below, and in `guide/archive/segment_19J_assessment_moves.md`) are the
 input to the next snapshot's §8 — not to this one's.
 
 ---
