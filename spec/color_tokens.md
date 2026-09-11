@@ -15,7 +15,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 107 semantic tokens · 16 non-colour scale tokens.**
+**80 primitives · 106 semantic tokens · 16 non-colour scale tokens.**
 
 ---
 
@@ -272,7 +272,6 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--nav-strip-setup-bg` | `--blue-pale` | `--blue-abyss-soft` | `#dbeafe` | `#12283f` |
 | `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#ddf4e3` | `#0c2419` |
 | `--nav-home-bg` | `--gray-mist` | `--ink-muted` | `#e5e7eb` | `#232c3b` |
-| `--nav-home-bg-hover` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
 | `--nav-home-marker` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
 
 ### Config values [A]
@@ -380,7 +379,9 @@ Theme-agnostic; not redefined per theme.
 - **Migrated from flat tokens** over Segment 19C Item 6 (`guide/archive/semantic_tokens.md`);
   `base.html` is now fully two-tier — no flat colour-named token remains.
 - **Dropped as unused:** `--accent-red-soft` (never referenced) and the dead
-  standalone `.warning-banner` / `.danger-banner` rules.
+  standalone `.warning-banner` / `.danger-banner` rules. `--nav-home-bg-hover`
+  joined them on 2026-09-11, when session-nav hover was standardised to wear
+  the selected tab's colours and its one consumer went with it.
 - **Dark neutrals invert, accents stay hued:** e.g. `--text-on-accent` is white
   in both themes (label on the still-blue Primary), while `--text-on-amber` flips
   to near-black in dark.

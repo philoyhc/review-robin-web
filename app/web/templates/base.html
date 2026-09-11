@@ -228,7 +228,6 @@
         --nav-strip-setup-bg: var(--blue-pale);
         --nav-strip-ops-bg: var(--green-wash);
         --nav-home-bg: var(--gray-mist);
-        --nav-home-bg-hover: var(--blue-mist);
         --nav-home-marker: var(--blue-soft);
         /* Config values [A] */
         --config-value-bg: var(--blue-cyan-pale);
@@ -368,7 +367,6 @@
         --nav-strip-setup-bg: var(--blue-abyss-soft);
         --nav-strip-ops-bg: var(--green-abyss-faint);
         --nav-home-bg: var(--ink-muted);
-        --nav-home-bg-hover: var(--blue-abyss-faint);
         --nav-home-marker: var(--blue-bright);
         /* Config values [A] */
         --config-value-bg: var(--blue-cyan-abyss);
@@ -878,7 +876,7 @@
         position: relative;
       }
       .session-home-anchor:hover {
-        background: var(--nav-home-bg-hover);
+        background: var(--nav-tab-active-bg);
         color: var(--text-body);
       }
       .session-home-anchor.active {
@@ -992,9 +990,25 @@
         background: transparent;
         position: relative;
       }
-      .nav-tab:hover {
-        background: rgba(255, 255, 255, 0.7);
-        color: var(--text-body);
+      /* Hover wears the selected tab's colours (author, 2026-09-11:
+         "mouse hover over style = tab selected style"). Before this
+         the strip hovered to a hardcoded `rgba(255, 255, 255, 0.7)` —
+         70% white, which reads as a tinted near-white over the light
+         strips and as a glaring pale block over the dark ones, since
+         the value is a literal and cannot follow the theme.
+
+         The `::after` marker stays on `.active` alone: it is the
+         "you are here" signal, and painting it under the cursor would
+         leave the operator unable to tell which page they are on
+         while they hover. Everything else matches.
+
+         `:not()` rather than a later override, because
+         `body.ui-v2 .nav-tab:hover` (0,3,1) outranks
+         `.nav-tab.disabled:hover` (0,3,0) — a disabled tab has been
+         taking the hover background on every v2 page. */
+      .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
+        background: var(--nav-tab-active-bg);
+        color: var(--nav-tab-active-fg);
       }
       .nav-tab.active {
         background: var(--nav-tab-active-bg);
@@ -3130,7 +3144,7 @@
         color: var(--text-subtle);
       }
       body.ui-v2 .session-home-anchor:hover {
-        background: var(--nav-home-bg-hover);
+        background: var(--surface-page);
         color: var(--text-body);
       }
       body.ui-v2 .session-home-anchor.active {
@@ -3162,11 +3176,13 @@
         border-bottom-color: var(--border-subtle);
       }
       body.ui-v2 .nav-tab { color: var(--text-dim); font-weight: 600; }
-      /* Hover emphasises the tab text; the v1 :hover rule is
-         shadowed by the v2 base on equal specificity, so re-emit. */
-      body.ui-v2 .nav-tab:hover {
+      /* Hover wears the selected tab's colours; the v1 :hover rule is
+         shadowed by the v2 base on equal specificity, so re-emit.
+         v2's `.nav-tab.active` overrides only the colour and inherits
+         v1's background, so hover matches on both. */
+      body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
         color: var(--text-body);
-        background: rgba(255, 255, 255, 0.7);
+        background: var(--nav-tab-active-bg);
       }
       body.ui-v2 .nav-tab.active { color: var(--text-body); }
       /* Active-tab underline — match the row's tint family. Setup

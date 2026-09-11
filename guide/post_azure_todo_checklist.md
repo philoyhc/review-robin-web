@@ -158,12 +158,14 @@ those all pass. What no Python test can observe is whether the thing
 | Back button leaves no bar behind | Navigate to a slow page, wait for it, then press Back | The restored page shows **no** bar. This is the `pageshow` handler; bfcache restores the DOM exactly as it was, bar included, if it regresses |
 | Downloads do not arm it | Click **Download CSV** on the sys-admin audit log, and **Zip all** on Extract data | The file downloads and **no bar appears** — those links carry `download`, which the script reads. A bar that appears and stays is the twelve-anchor bug the build found |
 | Reduced motion | Set the OS "reduce motion" preference, repeat the first check | The bar is static and full-width rather than a travelling highlight |
+| Session-nav hover (2026-09-11) | Hover a Setup tab, an Operations tab, and the Home anchor, in **both** themes | Each paints the colours its own selected state uses — no tinted near-white on light, no pale block on dark. The active underline stays on the current tab only. A "coming soon" tab on the Previews page does **not** highlight |
 
 **Also worth a glance while you are there:** the bar's colour is
 `--btn-primary-bg` and it sits fixed at the very top of the viewport,
 above the chrome. Neither was reviewable from a template diff.
 
 **Where this came from.** `guide/segment_19J_assessment_moves.md` Item
-4, whose Definition of done names these and whose index row holds the
+4 (and, for the last row, the hover standardisation of 2026-09-11 —
+same reason: a colour no Python test can see), whose Definition of done names these and whose index row holds the
 item **built, not closed**, until they are seen. Closing 19J.4 is this
 check plus a dated line in its `### Status`.
