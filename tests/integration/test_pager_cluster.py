@@ -374,3 +374,47 @@ def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
         assert markup.index('id="{{ pager_anchor }}"') < markup.index(
             '<div class="table-card-toolbar">'
         ), name
+
+
+def test_the_outside_click_handler_is_delegated_on_the_document() -> None:
+    """19J.9's one open question, answered by using the thing: a
+    ``<details>`` stays open until its own summary is clicked again,
+    which is where an operator who has changed their mind is least
+    likely to aim.
+
+    What this pins is not that the behaviour exists — the suite cannot
+    click — but **how it is attached**. Of the five table-relevant
+    script blocks in ``base.html``, four bind to their elements at load
+    and would not survive a re-rendered table
+    (``guide/inplace_pagination_assessment.md`` measured that). This
+    one is written like the fifth. Converting it to a per-menu listener
+    would work today and rot the first time anything re-renders, which
+    is exactly the failure that leaves no trace.
+    """
+    base = Path("app/web/templates/base.html").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    marker = "The range menu closes on an outside click"
+    assert marker in base, "the outside-click block is gone"
+
+    block = base[base.index(marker) :]
+    block = block[: block.index("</script>")]
+
+    # Any receiver expression, not just a bare identifier: `\w+` misses
+    # `menus[0].addEventListener` — `]` is not a word character, so the
+    # offending receiver drops out of the match set and the assertion
+    # passes on the mutation it exists to catch. Found by running that
+    # mutation.
+    receivers = re.findall(r"([^\s;{}(]+)\.addEventListener\(", block)
+    assert len(receivers) == block.count(".addEventListener("), (
+        "a listener registration the receiver probe could not parse — "
+        "read it rather than trusting this test"
+    )
+    assert receivers, "the block registers no listener at all"
+    assert set(receivers) == {"document"}, (
+        f"bound to {sorted(set(receivers))}; every listener here must be "
+        "delegated on `document` so it survives a re-rendered table"
+    )
+    # Both halves: the click that closes it, and Escape for the
+    # keyboard, which is the path that strands focus if it is missed.
+    assert '"click"' in block and '"keydown"' in block
