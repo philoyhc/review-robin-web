@@ -206,14 +206,12 @@ def _render_observers_page(
             ),
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
-            # already say where the operator is. ``paged=True`` says
-            # this view reaches every row it counts.
+            # already say where the operator is.
             "preview_count_line": views.preview_count_line(
                 shown=displayed_row_count,
                 pool=len(filtered),
                 noun="observers",
                 is_filtered=is_filtered,
-                paged=True,
             ),
             "filter_status": status_filter,
             "filter_search": search,

@@ -466,9 +466,13 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     assert '<span class="muted">Showing' not in body
 
 
-def test_assignments_hub_truncates_large_pair_list(
+def test_assignments_hub_pages_a_large_pair_list(
     client: TestClient, db: Session
 ) -> None:
+    """Renamed at 19J.5 rung 4, because the page stopped truncating.
+    217 assignments used to mean 200 rendered and 17 unreachable; they
+    are now a second page, and the sentence that announced the loss is
+    gone with the loss."""
     review_session = _make_session(client, db)
     _seed_roster(
         client,
@@ -482,13 +486,24 @@ def test_assignments_hub_truncates_large_pair_list(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    # Segment 19I Item 10 — one sentence, not a top line plus a
-    # second `…and 17 more not shown.` below the table.
-    assert (
-        "Showing first 200 of 217 assignments; 17 more not shown." in body
-    )
+    # No withheld sentence: nothing is withheld. What was
+    # `Showing first 200 of 217 assignments; 17 more not shown.` until
+    # rung 4 is now a pager, and the 17 are on its second page.
+    assert '<p class="muted table-showing-hint">' not in body
+    assert "more not shown" not in body
     assert "unique pairs" not in body
-    assert "…and 17 more not shown." not in body
+
+    assert "1–200" in body
+    assert "201–217" in body
+    second = client.get(
+        f"/operator/sessions/{review_session.id}/assignments?offset=200"
+    ).text
+    # Scoped to this table's own markup: the page renders further
+    # tables below it, and an open-ended slice counts their rows too.
+    start = second.index('id="assignments-table"')
+    table = second[start : second.index("</table>", start)]
+    body_rows = table[table.index("<tbody") :]
+    assert body_rows.count("<tr") == 17
 
 
 def test_hub_renders_current_pairs_card_when_assignments_exist(

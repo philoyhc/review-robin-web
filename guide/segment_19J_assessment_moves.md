@@ -76,7 +76,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
-| **19J.5** | Row pagination on the seven roster-bearing pages | **Rungs 1–3 of 4 landed 2026-09-11** — six of seven pages paged; Assignments awaits its sort decision |
+| **19J.5** | Row pagination on the seven roster-bearing pages | **All 4 rungs landed 2026-09-11** — seven of seven pages paged; sort moved into SQL |
 | 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 
 ---
@@ -1395,6 +1395,73 @@ not error — it would have passed against a route that was never wired.
 Re-seeded to 210 reviewees, since Responses is one row per reviewee
 and overflows on the other side of the matrix from Invitations.
 
+**2026-09-11 — rung 4 landed: Assignments paged, sort moved into SQL.
+All four rungs are done.** The author chose the SQL sort.
+
+**The open question this rung existed to settle** — whether the cookie
+sort stays window-local, moves into SQL for the DB-backed keys, or
+fetches everything — resolved to the second, and then went further
+than the option was written. `pair_tag_*` was the key the option
+proposed leaving out, on the reasoning that it resolves through
+`pair_context_lookup` rather than a column. It resolves just as well
+through an outer join to `relationships` gated on `status = 'active'`,
+which is the condition the rule engine already applies. So every sort
+key is SQL-backed and no key behaves differently from its neighbours —
+which is worth more than the join costs.
+
+**A measured finding that changed the build, and would not have been
+found by writing the obvious code.** `apply_cookie_sort` compares text
+with Python's `<`: code point, case-significant. A database orders by
+*its* collation. Measured on Postgres 16 (2026-09-11), the same seven
+names order:
+
+- Python, and Postgres under `C`, and SQLite's default BINARY:
+  `Ana Lim | Bravo | Delta | _edge | alpha | ana lim | charlie`
+- Postgres under a locale-aware collation:
+  `_edge | alpha | ana lim | Ana Lim | Bravo | charlie | Delta`
+
+The first is what this app has always rendered, on every deployment,
+because the sort ran in Python. An unqualified `ORDER BY` would have
+silently adopted the second wherever the database is locale-aware —
+which Azure Postgres commonly is. Hence an explicit `COLLATE "C"`,
+applied on Postgres only.
+
+**Three more rules had to be carried across, each a branch a naive
+`ORDER BY` inverts.** An empty string is not a value (`NULLIF`);
+absent sorts last in *both* directions (`NULLS LAST` on every clause,
+not just ascending); ties fall through to a **total** order, without
+which two adjacent pages can show the same row or neither.
+
+**Verified against a database shaped like production, not just
+against CI's.** A Postgres 16 was started in the sandbox and a
+database created with an ICU `en-US` collation, so its default
+ordering is locale-aware. The full suite passes there — 3,682 passed,
+16 skipped, the whole Alembic chain — as it does on SQLite.
+
+**And the guard was mutation-tested, because a test that cannot fail
+certifies nothing.** With the `COLLATE "C"` removed: 2 of the 8
+ordering tests fail on the locale-aware database, and **all 8 pass on
+SQLite**. The SQLite suite is structurally blind to this class of bug.
+Whether `ci-postgres` would catch it depends on that container's
+locale, which could not be determined from the sandbox — an
+Ubuntu-packaged Postgres initialises as `C.UTF-8`, where the guard is
+invisible. Rather than depend on it, `tests/unit/test_pair_sort_sql.py`
+compiles the expression against the Postgres dialect and asserts the
+collation is emitted: that runs in the ordinary SQLite suite and holds
+whatever locale any server has. It was mutation-tested too — 2 of its
+3 fail with the guard removed.
+
+**The transitional `paged` argument retired exactly as rung 2 said it
+would.** Once this rung landed, no caller passed `paged=False`, so the
+branch was dead by construction rather than by anyone remembering to
+check. Both went, and `test_no_unfiltered_view_ever_speaks` replaced
+the removal-date note.
+
+**The route lost 41 lines.** `_assignment_sort_value`, the Python
+resolver, and the `apply_cookie_sort` call all went with the sort
+itself. `pair_context_lookup` stays — the template still renders pair
+context — but it no longer has a second job.
+
 **A test bug worth recording, because it nearly became a code bug.**
 The first suppression test passed `?search=` and saw a pager; the
 route's parameter is `q` (`status_filter` is aliased to `status`).
@@ -1423,7 +1490,9 @@ approach the surface lands inert before it moves anything.
    2026-09-11**, as planned, plus the filtered-cap decision the plan
    left open (see `### Status`).
 4. **Assignments wired** — SQL `OFFSET`, plus whatever the sort question
-   below resolves to.
+   below resolves to. **Landed 2026-09-11**: the author chose the SQL
+   sort, and it took every key rather than the DB-backed subset the
+   option described (see `### Status`).
 
 ### Definition of done
 
@@ -1446,14 +1515,15 @@ approach the surface lands inert before it moves anything.
 
 ### Open questions
 
-- **Assignments' sort under paging.** Today the cookie sort orders only
-  the fetched 200, so page 1 is already a window-local sort; paging
-  makes that visible rather than creating it. Three ways out: keep it
-  window-local (matches today exactly), push the sort into SQL for the
-  DB-backed keys and leave `pair_tag_*` — which resolves through
-  `pair_context_lookup` — out of it, or fetch-all-and-slice (ruled out
-  at 1,989 ms). **Author decides at rung 4**; the SQL sort is the
-  recommendation.
+- ~~**Assignments' sort under paging.** Today the cookie sort orders
+  only the fetched 200, so page 1 is already a window-local sort;
+  paging makes that visible rather than creating it. Three ways out:
+  keep it window-local (matches today exactly), push the sort into SQL
+  for the DB-backed keys and leave `pair_tag_*` — which resolves
+  through `pair_context_lookup` — out of it, or fetch-all-and-slice
+  (ruled out at 1,989 ms). **Author decides at rung 4**; the SQL sort
+  is the recommendation.~~ **Settled 2026-09-11: SQL sort** (author),
+  and `pair_tag_*` went in with the rest.
 - **A filtered set larger than 500** still truncates and still carries
   no pager, so rows 501–900 of a filtered view stay unreachable except
   by narrowing the search further. That follows from the suppression

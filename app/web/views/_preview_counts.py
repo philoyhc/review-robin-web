@@ -21,9 +21,7 @@ State                        Sentence
 filter active, under the cap ``Showing 37 reviewers.``
 filter active, capped        ``Showing 500 of 900 reviewers, 400 more
                              not shown.``
-no filter, paged             *(nothing — the pager says where you are)*
-no filter, not yet paged     ``Showing first 200 of 10,000 assignments;
-                             9,800 more not shown.``
+no filter                    *(nothing — the pager says where you are)*
 ===========================  ==============================================
 
 The roster total went with the change. Under the filter branch ``of
@@ -32,20 +30,20 @@ Item 10 introduced to tell two pools apart has nothing left to
 disambiguate, and the denominator that used to say how far the filter
 narrowed is the info card's job rather than this sentence's.
 
-**``paged`` is transitional and has a removal date.** It marks a view
-whose pager is live, so nothing is withheld. 19J.5 wires the pages one
-rung at a time; a page that has not had its rung yet still truncates
-for real and still owes the operator the old notice. When the last
-rung lands, no caller passes ``paged=False`` on an unfiltered view,
-that branch is dead by construction, and it goes — along with this
-paragraph. ``tests/unit/test_preview_count_line.py`` carries the
-assertion that enforces it.
+**The unfiltered branch is gone, on schedule.** Rung 2 left a
+transitional ``paged`` argument here so a page whose pager was still
+inert could keep the old ``Showing first 200 of 10,000 assignments;
+9,800 more not shown.`` notice. That page really did still truncate,
+and dropping the notice before the links worked would have left the
+operator with neither. Rung 4 paged the last page, so nothing passed
+``paged=False`` any more: the branch was dead by construction rather
+than by assertion, and both went with it (2026-09-11).
+``test_no_unfiltered_view_ever_speaks`` is what stops it coming back.
 """
 
 from __future__ import annotations
 
 __all__ = ["preview_count_line"]
-
 
 
 def _agree(count: int, noun: str) -> str:
@@ -68,12 +66,7 @@ def _agree(count: int, noun: str) -> str:
 
 
 def preview_count_line(
-    *,
-    shown: int,
-    pool: int,
-    noun: str,
-    is_filtered: bool,
-    paged: bool = False,
+    *, shown: int, pool: int, noun: str, is_filtered: bool
 ) -> str | None:
     """Compose the count line for a preview table, or ``None``.
 
@@ -90,21 +83,15 @@ def preview_count_line(
     from ``shown < pool`` here: a filter that happens to match every
     row is still a filtered view, and reports as one.
     """
-    withheld = max(pool - shown, 0)
-
-    if is_filtered:
-        if withheld == 0:
-            return f"Showing {shown:,} {_agree(shown, noun)}."
-        return (
-            f"Showing {shown:,} of {pool:,} {noun}, "
-            f"{withheld:,} more not shown."
-        )
-
-    # Unfiltered. A paged view reaches everything, so the pager speaks
-    # and this says nothing.
-    if paged or withheld == 0:
+    if not is_filtered:
+        # Every table that renders this is paged, so the operator can
+        # reach every row and the ranges already say where they are.
         return None
+
+    withheld = max(pool - shown, 0)
+    if withheld == 0:
+        return f"Showing {shown:,} {_agree(shown, noun)}."
     return (
-        f"Showing first {shown:,} of {pool:,} {noun}; "
+        f"Showing {shown:,} of {pool:,} {noun}, "
         f"{withheld:,} more not shown."
     )

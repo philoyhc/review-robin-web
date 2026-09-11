@@ -33,7 +33,7 @@ def test_a_paged_view_says_nothing() -> None:
     would be a second voice saying what the ranges already say."""
     assert (
         preview_count_line(
-            shown=200, pool=1240, noun="reviewers", is_filtered=False, paged=True
+            shown=200, pool=1240, noun="reviewers", is_filtered=False
         )
         is None
     )
@@ -167,26 +167,31 @@ def test_the_filtered_boundary_between_quiet_and_capped_is_one_row() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_an_unpaged_view_keeps_the_old_withheld_notice() -> None:
-    """19J.5 wires the seven pages a rung at a time. A page whose
-    pager is still inert really does truncate, and still owes the
-    operator the notice."""
-    assert preview_count_line(
-        shown=200,
-        pool=10000,
-        noun="assignments",
-        is_filtered=False,
-        paged=False,
-    ) == "Showing first 200 of 10,000 assignments; 9,800 more not shown."
+def test_no_unfiltered_view_ever_speaks() -> None:
+    """Rung 2 left a transitional ``paged`` argument so a page whose
+    pager was still inert could keep the withheld notice it had earned.
+    Rung 4 paged the last page, nothing passed ``paged=False`` any
+    more, and the branch was dead by construction — so it went.
+
+    This is what stops it coming back: whatever the numbers, an
+    unfiltered view says nothing, because every table that renders this
+    sentence can now reach every row it holds."""
+    for pool in (0, 1, 200, 10_000):
+        assert (
+            preview_count_line(
+                shown=min(pool, 200),
+                pool=pool,
+                noun="assignments",
+                is_filtered=False,
+            )
+            is None
+        )
 
 
-def test_paged_defaults_to_false() -> None:
-    """So a caller that forgets it keeps the safe, noisier answer
-    rather than silently withholding rows in silence."""
-    assert (
-        inspect.signature(preview_count_line).parameters["paged"].default
-        is False
-    )
+def test_the_transitional_argument_is_gone() -> None:
+    """Named rather than merely absent, so a reader meeting ``paged``
+    in an old plan or commit can tell it was retired on purpose."""
+    assert "paged" not in inspect.signature(preview_count_line).parameters
 
 
 # --------------------------------------------------------------------------- #

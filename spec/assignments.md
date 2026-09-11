@@ -778,12 +778,46 @@ branches and the rule behind them are in `spec/setup_pages.md`,
 nothing, because the ranges already state the position; the filtered
 branches read `Showing 2 assignments.` and, when the cap truncates a
 filtered view, `Showing 500 of 900 assignments, 400 more not shown.`
-A count of one takes the singular. *This page is not paged yet* — rung
-4 wires it, once the sort question below is settled — so it still
-renders the pre-19J.5 unfiltered notice (`Showing first 200 of 10,000
-assignments; 9,800 more not shown.`), and its pager strip renders
-inert until then. Since rung 3 it is the **only** page that does
-either: the other six page, so nothing is withheld on them.
+A count of one takes the singular. ~~*This page is not paged yet* —
+rung 4 wires it, once the sort question below is settled.~~ **Rung 4
+paged it** (2026-09-11): `?offset=` cuts a 200-row page out of the
+whole matching set, clamped rather than rejected, with the strip above
+and below the table and suppressed while a filter is active. It was
+the last page to page, so the pre-19J.5 withheld notice retired with
+it — no table renders it anywhere now.
+
+### Sorting the pair list (19J.5 rung 4)
+
+**The operator's sort is applied by the query, not to its result.**
+Until rung 4 the page fetched 200 rows and sorted *those* in Python
+(`views.apply_cookie_sort`). That was invisible while 200 was all an
+operator could see; paging makes it a lie, because page 2 would be
+sorted within page 2. Every sort key now translates to `ORDER BY` in
+`assignments.list_pairs`, including `pair_tag_*`, which reaches the
+pair's tags through an outer join to `relationships` gated on
+`status = 'active'` — the same condition the rule engine applies.
+
+**The translation preserves `apply_cookie_sort`'s semantics exactly**,
+because the alternative is every sorted table reshuffling on the day
+it lands:
+
+| Rule | In SQL |
+|---|---|
+| An empty string is not a value | `NULLIF(col, '')` |
+| Absent sorts **last**, in both directions | `NULLS LAST` on every clause |
+| Text compares by code point | explicit `COLLATE "C"` on Postgres; SQLite's default BINARY already does |
+| Ties fall through, then to a stable order | the sort keys, then `(reviewer_id, reviewee_id, instrument_id)` |
+
+The third rule is the one with teeth. Measured on Postgres 16
+(2026-09-11): under a locale-aware collation seven names order
+`_edge | alpha | ana lim | Ana Lim | Bravo | charlie | Delta`, and
+under `C` they order `Ana Lim | Bravo | Delta | _edge | alpha |
+ana lim | charlie` — the second being what this app has always
+rendered. Azure Postgres commonly carries a locale-aware collation,
+so the guard is load-bearing in production and invisible on SQLite.
+
+The fourth rule is what makes paging safe: without a **total** order
+two adjacent pages can show the same row or neither.
 
 **A search matching nothing renders no count line** — the shared
 rule, not a quirk of this page (`spec/setup_pages.md`, "Preview
