@@ -2286,6 +2286,64 @@ Found at build, and not anticipated by the blast radius:
   and Observers need a populated session even to render. Replaced with
   the source-level check above, which covers the same failure for less.
 
+**2026-09-11 — rung 1 corrected on the dev slot: the anchor moved from
+the table to the pager strip.** Author, seeing it deployed: *"put the
+anchor higher, so that the reload still shows the strip with the page
+links"*.
+
+The first anchor worked and did not help, which is the more useful kind
+of failure. Measured in Chromium against the running app, 556 reviewers,
+1280×900:
+
+| | |
+|---|---:|
+| document height | 10,775px |
+| table top | 670px |
+| share of the page above the table | **6.2%** |
+| screen movement, page turn from the bottom strip | **9,221px up** |
+
+So "the top of the table" and "the top of the page" are the same place
+to the eye — and worse, the page links then sat a viewport *above* the
+fold, so turning a second page meant scrolling back up to find them.
+
+**The plan's Opportunity asserted the table was "well below the fold
+under the filter card and the chip row" and never measured it.** That
+sentence is the whole error: everything downstream was sound, the tests
+passed, and the mutations were real, because none of them could see a
+premise that was wrong before the first line of code. Left standing
+above rather than edited — it is what the item was built on.
+
+**2026-09-11, third target — the card.** The strip was tried next and
+was also wrong, for a smaller reason: it put the links on screen but
+cropped the column-chip row above them and the card's own top border, so
+the page read as starting mid-card. Author: *"the table card top
+boundary should be visible"*.
+
+The anchor is the **table's card** — the element that already contains
+the chips, the strip and the table. Verified in Chromium, page turn from
+the bottom strip, 900px viewport:
+
+| | |
+|---|---:|
+| card top edge | 16px |
+| column chips | 34px |
+| page links | 69px |
+| table header | 99px |
+| first row of the new range | 145px |
+
+Everything the operator needs to turn the next page, on screen, without
+scrolling.
+
+**Why three targets and not one:** each was a guess at what "lands
+usefully" means, and only a browser could settle it. The suite can check
+that a fragment is emitted and names a real id — it cannot see a
+viewport. Landing position is a dev-slot check by nature, which is why
+the checklist row for it is the one that earns its place.
+
+`<noun>-table` → `<noun>-pager` → `<noun>-table-card` for the anchor id;
+the table ids stay as they are, since the column-toggle and sort hooks
+address them.
+
 ### PR ladder
 
 1. **The fragment.** Seven routes gain `pager_anchor`; `_cell` appends

@@ -1439,12 +1439,21 @@
       .table-pager-bottom {
         margin: 12px 0 0 0;
       }
-      /* A range link carries a ``#<noun>-table`` fragment so a page turn
-         lands on the rows instead of the page header (19J.8). Without
-         this the table's top edge sits flush against the viewport, which
-         reads as a page cut off rather than a page turned. A judgment
-         call, not a correctness one: nothing is hidden without it — the
-         only fixed element in the app is the 3px busy indicator. */
+      /* A range link carries a ``#<noun>-table-card`` fragment so a page
+         turn arrives at the **table's card**: its top edge, then the
+         column chips, then the page links, then the new rows (19J.8).
+
+         Two earlier targets were wrong, both measured in Chromium
+         against a 556-row roster at 1280x900. The **table** put its
+         header flush at the viewport top and the page links 31px above
+         the fold — and since only 670px of a 10,775px page sits above
+         the table, that is also indistinguishable from landing at the
+         top of the page. The **top strip** fixed the links but cropped
+         the chip row and the card's own boundary, so the page read as
+         starting mid-card.
+
+         The margin keeps the card's top border off the viewport's edge,
+         which is what makes it read as a boundary rather than a crop. */
       .table-pager-anchored {
         scroll-margin-top: var(--space-4);
       }

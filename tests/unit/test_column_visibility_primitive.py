@@ -142,7 +142,10 @@ def test_no_preview_card_carries_a_heading(name: str) -> None:
     """
     src = (OPERATOR / name).read_text()
     chips = src.index(CHIP_ROW)
-    card_open = src.rindex('<div class="card"', 0, chips)
+    # Unquoted: the card gained ``table-pager-anchored`` at 19J.8, and
+    # this probe means "the enclosing card's open tag", not "a card with
+    # exactly one class".
+    card_open = src.rindex('<div class="card', 0, chips)
     card_end = src.index("</table>", chips)
     assert card_open < chips < card_end
     assert "<h2" not in src[card_open:card_end]

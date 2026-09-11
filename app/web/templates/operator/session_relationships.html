@@ -305,7 +305,10 @@
       2: edit_mode or col_data["tag-2"],
       3: edit_mode or col_data["tag-3"],
     } %}
-    <div class="card">
+    {# The page turn lands here (19J.8): the card's top edge, so the
+       column chips and the page links are both on screen with the
+       new rows beneath them. #}
+    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
       {# Column show/hide chips (19I Item 12 rung 1). They sit in the
          table card, directly above the rows they govern, the way
          Invitations and Responses have had them since Item 11 —
@@ -326,7 +329,7 @@
       {% endif %}
       {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
-      <table id="relationships-table" class="table-pager-anchored"
+      <table id="relationships-table"
              data-rrw-col-toggles="rrw-relationship-tag-visibility"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
         <thead>

@@ -334,12 +334,13 @@ def _render_assignments_hub(
                 f"/operator/sessions/{review_session.id}/assignments?"
             ),
             # The fragment the range links land on (19J.8): the
-            # table, so a page turn shows the rows rather than the page
-            # header. Passed rather than derived from the URL — the
-            # ``<noun>-table`` convention is uniform today, and a macro
-            # guessing it would land silently at the top of the document
-            # the first time someone renamed an id.
-            "pager_anchor": "assignments-table",
+            # table's card, so a page turn arrives showing the card's
+            # top edge, the column chips, the page links and the new
+            # rows — in that order down the screen. Passed rather than
+            # derived: a macro guessing the id would land silently at
+            # the top of the document the first time someone renamed
+            # it, which is a failure with no error.
+            "pager_anchor": "assignments-table-card",
             # 19J.5 rung 4 — the last page to page, so this is the
             # last caller of ``paged``; the argument and the branch it
             # guarded retire with this rung.

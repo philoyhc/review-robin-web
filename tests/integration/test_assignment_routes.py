@@ -446,7 +446,8 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     # Top of the preview card. Anchored on the card itself rather
     # than on the chip row: since 19I Item 12 rung 3 a roster with no
     # tags at all renders no chip row, and this seed has none.
-    preview = body[body.rindex('<div class="card"', 0,
+    # Unquoted ``card``: it gained ``table-pager-anchored`` at 19J.8.
+    preview = body[body.rindex('<div class="card', 0,
                                body.index('id="assignments-table"')) :]
     assert '<p class="muted table-showing-hint">' in preview
     # The class the page used to use, and the wording that went with
