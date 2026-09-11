@@ -955,13 +955,82 @@ $ grep -rn -i "spinner|busy|loading" spec/ui_elements.md \
   loading or spinner state today, so §1 of `spec/ui_elements.md` gains
   an entry rather than amending one.
 
+### Status
+
+**2026-09-11 — landed in one rung, as planned, but in six files rather
+than one.** The ladder held; the blast radius did not.
+
+**What the blast radius missed, and how.** It counted the template the
+change lives in (1 touched, 34 inheriting) and never asked what a
+*navigation* is. Some links in this app are not navigations: **twelve
+anchors across five templates** point at routes that answer with
+`Content-Disposition: attachment`. The browser downloads the file and
+leaves the page where it was — so no load event ever arrives, and the
+bar would have run until the give-up timer on every export the operator
+clicks. The one bug this feature could plausibly ship, and the measured
+blast radius pointed straight past it, because it measured *where the
+code goes* rather than *what the code observes*.
+
+**How it was closed, and why not with a bespoke marker.** Two anchors
+already carried `download` — `reviewer/collation.html`'s CSV link and
+one on the Extract data page. So the exclusion the plan's Semantics
+already named is a convention this codebase had started and not
+finished, not a new signal: the other twelve were brought into line
+rather than given a `data-rrw-no-busy` of their own. That also makes the markup more
+correct independently of this feature.
+
+**Seven of the twelve were found by the test, not by me.** The first
+pass marked five anchors from a `grep` over `href="…download…"`. The
+scan in `tests/unit/test_busy_indicator.py` — which walks every
+template and fails on an attachment link without the attribute — then
+failed on four more in `session_extract_data.html`; re-reading that
+page for those four turned up three more, the `data-shape-download`
+anchors whose `href` is written at runtime and so matches no static
+scan at all. The scan carries its own anti-vacuity test (it finds 11
+attachment-href anchors today and asserts at least 5), because a regex
+that matched nothing would have passed silently and certified the very
+blindness it exists to prevent.
+
+**What the suite covers and what it cannot.** Nothing in pytest clicks
+a link, so the arming, the bfcache clear and the reduced-motion path
+are dev-slot verification and the PR says so plainly. What *is* covered
+is the regression a future editor is most likely to introduce:
+`disabled` on a submit button. It is the obvious way to stop a double
+submit, it looks harmless, and it drops the button's `name`/`value`
+from the payload — which the Workflow super-button and the roster bulk
+actions depend on. `test_the_script_never_disables_the_submitter`
+slices the IIFE out of `base.html` and asserts the string is absent, so
+the edit fails a test instead of failing in production.
+
+**Decisions confirmed at build:**
+
+- 200 ms arming delay and a 60 s give-up timer. The give-up value comes
+  from the measurement, not from taste: the slowest page measured for
+  this item was 16.1 s, so 60 s cannot cut a real load short and still
+  bounds a missed signal.
+- `aria-busy` on the clicked control, never `disabled` — as planned,
+  now test-pinned.
+- The bar ships `hidden` in the initial HTML and the live region does
+  not, because a region created and populated in the same tick is not
+  reliably announced.
+- Links already carrying `aria-disabled` are skipped too — the extract
+  page renders its Download buttons that way before a shape is wired,
+  and they navigate nowhere.
+
 ### PR ladder
 
 1. **The indicator** — CSS, the delegated script, and the `role="status"`
    region, all in `base.html`. One rung: the scaffold-first rule
    (`CLAUDE.md` → Working approach) governs new pages, cards and
-   navigation affordances, and this adds none of the three. Must not
-   touch any page template, any route, or the N+1.
+   navigation affordances, and this adds none of the three. ~~Must not
+   touch any page template~~, any route, or the N+1.
+
+   *Struck 2026-09-11 at build.* The one-rung shape held and the route
+   and N+1 exclusions held; the page-template exclusion did not survive
+   the attachment-link finding in `### Status` above. Nine anchors
+   across five templates gained a `download` attribute, which is the
+   signal the script reads and a convention `collation.html` had
+   already started.
 
 ### Definition of done
 

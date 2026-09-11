@@ -79,7 +79,14 @@ def test_the_guide_links_the_setup_templates_download(client: TestClient) -> Non
     target; the link resolves to the route that serves the zip."""
     body = client.get("/guide").text
 
-    assert 'href="/templates/starter.zip">template CSV files with mock data' in body
+    # ``download`` added by 19J.4: the navigation busy indicator reads it
+    # to tell an attachment link (which never replaces the page) from a
+    # navigation. Pinned here rather than loosened, so dropping it fails
+    # a test instead of leaving the bar spinning on every download.
+    assert (
+        'href="/templates/starter.zip" download>template CSV files with mock data'
+        in body
+    )
     assert client.get("/templates/starter.zip").status_code == 200
 
 

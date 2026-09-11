@@ -87,6 +87,30 @@ Each element entry follows the same shape:
 > verify type scale.
 > *PR:* D (chrome).
 
+> **Navigation busy indicator** — a 3px indeterminate bar fixed to the
+> top of the viewport, plus a visually-hidden `role="status"` region.
+> Arms ~200 ms after a same-origin link click or form submit and clears
+> when the next page paints, so a fast navigation never flashes it and
+> a slow one stops looking like a hang. Indeterminate by construction:
+> a page is one blocking response, so there is no progress to report.
+> *Current:* `.rrw-busy` / `.rrw-busy-fill` / `body.rrw-navigating` in
+> `base.html`, driven by a delegated listener in the same file.
+> Inherited by every template that extends `base.html`; there is no
+> per-page markup and no opt-in.
+> *Excluded from arming:* modified and middle clicks, `target`
+> anything but `_self`, bare `#` fragments, cross-origin links, and
+> links carrying `download` — an attachment never replaces the page,
+> so no load event would arrive to clear the bar. Every anchor in the
+> app whose response is an attachment carries `download`; a unit test
+> scans the templates and fails on one that does not.
+> *Busy control:* the clicked link or submit button gets
+> `aria-busy="true"`, never `disabled` — a disabled control is not
+> serialized, so its `name`/`value` would vanish from the payload.
+> *Reduced motion:* `prefers-reduced-motion` renders a static bar
+> rather than a travelling one.
+> *JS off:* nothing renders and nothing breaks.
+> *Segment:* 19J.4.
+
 ### 2. Session-scoped chrome
 
 > **`.session-nav-card`** — the two-row navigation card with the
