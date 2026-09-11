@@ -115,6 +115,16 @@ by attributes the eye cannot see — and because the static one carries
 `tag-chip`, it also inherits `cursor: pointer`, so the single existing
 affordance is pointing the wrong way on it.
 
+> **Fixed 2026-09-11 (19J.7 rung 1).** `b3_static_pill` now renders
+> `pill pill-count` and nothing else. Two corrections to the table
+> above, both caused by this document's own method: the macro's **1**
+> display use is really **5** — the scan reads `class="..."` strings,
+> so it counted the macro definition and could not see the five
+> `{{ b3_static_pill(...) }}` call sites — and those five have now left
+> the `pill pill-count tag-chip` row entirely, so every remaining use
+> of that combination is interactive. The rest of the audit is
+> unchanged and still describes the code.
+
 ## What is already right, and should survive any change
 
 - **The interactive pills are accessible.** They carry `role="button"`,

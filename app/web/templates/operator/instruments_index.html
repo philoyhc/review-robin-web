@@ -3892,8 +3892,17 @@
             "anonymized": "Anonymized responses",
             "summarized": "Anonymized summaries",
       } %}
+      {# A label, not a control (19J.7 rung 1). This macro used to
+         carry ``tag-chip is-selected`` — the *identical* class string
+         to ``b3_mode_cycle`` below it, so the five fixed cells were
+         indistinguishable from the clickable ones, and ``tag-chip``'s
+         ``cursor: pointer`` aimed the one affordance the pill
+         vocabulary has at the cells that do nothing. Dropping the two
+         classes also takes the reserved accent shade
+         (``is-selected`` → ``--selected-bg``) off an inert element,
+         which is the rule the rest of Item 7 builds on. #}
       {% macro b3_static_pill(label) %}
-        <span class="pill pill-count tag-chip is-selected"
+        <span class="pill pill-count"
               title="Fixed">{{ label }}</span>
       {% endmacro %}
       {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
