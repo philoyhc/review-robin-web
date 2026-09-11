@@ -1019,6 +1019,14 @@ the edit fails a test instead of failing in production.
   page renders its Download buttons that way before a shape is wired,
   and they navigate nowhere.
 
+**Closed 2026-09-11.** The dev-slot pass checked out: the bar arms on a
+slow page, never flashes on a fast one, leaves nothing behind after
+Back, and stays away on downloads; reduced motion renders it static.
+The plan's one open question — viewport top or content column —
+answered by the build and confirmed by eye: `position: fixed; top: 0`,
+above the chrome, which is the placement that survives a scrolled
+200-row table.
+
 ### PR ladder
 
 1. **The indicator** — CSS, the delegated script, and the `role="status"`
@@ -2037,6 +2045,65 @@ section) and `spec/ui_elements.md` §9 "Badges / pills".
 (`guide.html:303`, the Band 2 pill row). Retaking them is dev-slot
 work, not sandbox work.
 
+### Status
+
+**Closed 2026-09-11.** Four rungs, in order, each with its spec edit;
+the ladder held. What the build decided or found:
+
+- **Rung 1's blast radius was wrong, and the audit with it.**
+  `b3_static_pill` renders **5 times, not once** — a `class="…"` scan
+  finds a macro *definition* and not its call sites, which is how the
+  count came out at one. `guide/pill_style_audit.md` carries the dated
+  correction rather than a silent edit, because the audit's whole value
+  is that its numbers are checkable.
+- **The reserved-shade guard earned itself at rung 3**, which is the
+  argument for landing a test before the change it guards. It went red
+  the moment the chip rule landed, naming the new rule as an unexpected
+  selector; the allowlist gained it deliberately, with the reason
+  written beside it, instead of the rule arriving unremarked.
+- **2026-09-11 — the chip edge is additive over the fill.** A blanket
+  `background: transparent` on `.tag-chip` would have erased
+  `pill-empty`'s amber on Band 1 "not set" chips. `is-unset` is a JS
+  state marker with no CSS of its own, so amber-plus-edge is the
+  correct composition, not a collision. The dev-slot row confirmed it
+  reads right.
+- **Every pill reserves the edge's space.** `body.ui-v2 .pill` gained
+  `border: 1px solid transparent` so adding an edge to the controls
+  alone does not grow them by 2px and reflow every table where a status
+  label sits beside a toggle.
+- **Rung 4 removed a state no page could render.** `_preview_pager.html`
+  carried an inert `aria-disabled` third branch for an unset
+  `pager_url_base`; measured, all seven routes pass one
+  unconditionally, so restyling that branch would have been styling
+  something unreachable. It came out instead.
+
+**The screencap-retake commitment is waived, with the measurement.**
+All 16 screencaps were opened on 2026-09-11 and none is stale: no
+screencap shows a roster pager (they are card crops), every chip that
+appears is *selected* — where rung 3's edge is the same colour as the
+fill and therefore invisible — and none shows a validated lifecycle
+pill, so rung 2's token change shows nowhere. The four files the bullet
+named do not show what it claimed: `assignments-page.png` is the
+Per-instrument status card rather than the nine-chip toggle row, and
+`instrument-card-fields-and-visibility.png` is the Band 3 visibility
+grid rather than the Band 2 pill row. A blast-radius claim written from
+filenames rather than from the images.
+
+**And `close_check` never saw that commitment.** It tracks `spec/` and
+`docs/` paths only, so this manifest's five bullets are counted as
+three and both `guide/` commitments are invisible. The same mechanism
+let 19J.8's `deferred_consolidated.md` promise go unhonoured. Two in
+one segment; worth a tool item if it happens again.
+
+**Both scoped-out questions are answered above**, dated and struck: the
+instruments audience override stands as it is, and the info-panel
+finding became Item 10.
+
+**The dev-slot pass checked out** — five rows: the chip edge on
+Assignments, the lobby and Band 2 in both themes; amber surviving the
+edge; an inert chip staying inert; validated no longer accent blue; and
+the row pager reading as links.
+
 ### PR ladder
 
 Each rung carries its own spec edit; there is no trailing docs rung.
@@ -2356,6 +2423,24 @@ the checklist row for it is the one that earns its place.
 `<noun>-table` → `<noun>-pager` → `<noun>-table-card` for the anchor id;
 the table ids stay as they are, since the column-toggle and sort hooks
 address them.
+
+**Closed 2026-09-11.** The dev-slot pass confirmed the landing: a page
+turn from the strip below the table opens showing the table card's top
+edge, the column chips, the pager and the new rows, in that order. The
+plan's open question — whether the fragment belongs in the URL the
+operator sees — was answered **yes** by the author during the build,
+and shipped that way.
+
+**One commitment this item made and did not keep, now kept.** The
+Decision said the rejected in-place swap would be "recorded in
+`guide/deferred_consolidated.md` when this item closes". It was not,
+and nothing failed: that path is under `guide/`, and `close_check`
+tracks only `spec/` and `docs/`, so the promise was invisible to the
+tool from the day it was written. The entry exists now, in Part C
+rather than Part A — 19J.9's assessment settled the swap as *not worth
+solving* rather than deferred, so it is off-roadmap, not unscheduled.
+The lesson is not about this bullet: a `guide/` commitment in a
+`Doc impact` manifest is unchecked, and this segment made two.
 
 ### PR ladder
 
@@ -2781,6 +2866,23 @@ receiver dropped out of the match set and the test passed on the exact
 mutation it exists to catch. It now matches any receiver expression and
 asserts the match count equals the number of registrations, so a form it
 cannot parse fails loudly instead of disappearing.
+
+**Closed 2026-09-11.** The dev-slot pass checked out. Every open
+question is answered and struck above — the control's form, the no-JS
+question, and the outside click, the last of which the author found by
+using the thing rather than looking at it. The specs now describe the
+cluster rather than the strip it replaced (`spec/ui_elements.md` §10
+and §6, `spec/setup_pages.md`, `spec/operations_pages.md`), with the
+retired class names struck and named rather than deleted.
+
+Seven merges: the scaffold, the wiring plus the strip's retirement, the
+window cleanup, two visual tweaks the author asked for, and the
+outside-click fix. Two of those tweaks each uncovered something the
+suite could not see — a rule that had been dead since rung 1 on a
+specificity tie, and a panel whose `min-width: 100%` resolved against
+its content box. Both were invisible until a value changed enough to
+expose them, which is the argument for looking at shipped UI rather
+than only testing it.
 
 Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
 (25 pages — the 5,861 in the author's screenshot exceeds
