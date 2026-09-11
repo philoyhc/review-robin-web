@@ -265,7 +265,10 @@
              value="{{ filter_search_by }}">
     </form>
     {% endif %}
-    <div class="card">
+    {# The page turn lands here (19J.8): the card's top edge, so the
+       column chips and the page links are both on screen with the
+       new rows beneath them. #}
+    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
       {# No heading: this is the only preview-table card in the app
          that carried one (19I Item 12 rung 1). #}
       {% if not pair_sample %}

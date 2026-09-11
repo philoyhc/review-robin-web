@@ -2313,13 +2313,36 @@ passed, and the mutations were real, because none of them could see a
 premise that was wrong before the first line of code. Left standing
 above rather than edited — it is what the item was built on.
 
-Anchoring on the top strip instead, verified the same way: the strip
-lands at 16px, the table at 47px, and the first row of the new range at
-93px of a 900px viewport. The control the operator is about to use next
-is at the top of the screen with the new rows under it.
+**2026-09-11, third target — the card.** The strip was tried next and
+was also wrong, for a smaller reason: it put the links on screen but
+cropped the column-chip row above them and the card's own top border, so
+the page read as starting mid-card. Author: *"the table card top
+boundary should be visible"*.
 
-`<noun>-table` → `<noun>-pager` for the anchor id; the table ids stay as
-they are, since the column-toggle and sort hooks address them.
+The anchor is the **table's card** — the element that already contains
+the chips, the strip and the table. Verified in Chromium, page turn from
+the bottom strip, 900px viewport:
+
+| | |
+|---|---:|
+| card top edge | 16px |
+| column chips | 34px |
+| page links | 69px |
+| table header | 99px |
+| first row of the new range | 145px |
+
+Everything the operator needs to turn the next page, on screen, without
+scrolling.
+
+**Why three targets and not one:** each was a guess at what "lands
+usefully" means, and only a browser could settle it. The suite can check
+that a fragment is emitted and names a real id — it cannot see a
+viewport. Landing position is a dev-slot check by nature, which is why
+the checklist row for it is the one that earns its place.
+
+`<noun>-table` → `<noun>-pager` → `<noun>-table-card` for the anchor id;
+the table ids stay as they are, since the column-toggle and sort hooks
+address them.
 
 ### PR ladder
 

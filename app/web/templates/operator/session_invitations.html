@@ -102,7 +102,10 @@
   </div>
 
   {% if rows %}
-    <div class="card">
+    {# The page turn lands here (19J.8): the card's top edge, so the
+       column chips and the page links are both on screen with the
+       new rows beneath them. #}
+    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
       {# Tag columns and their show/hide chips (19I Item 11 rung 3).
          The chips drive the shared primitive in ``base.html``; a slot
          with no data anywhere renders disabled and its column stays

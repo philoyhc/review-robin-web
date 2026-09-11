@@ -43,13 +43,13 @@ ROUTE_TEMPLATES = {
 }
 
 ANCHOR_TEMPLATES = {
-    "reviewers-pager": "session_reviewers.html",
-    "reviewees-pager": "session_reviewees.html",
-    "relationships-pager": "session_relationships.html",
-    "observers-pager": "session_observers.html",
-    "assignments-pager": "session_assignments.html",
-    "invitations-pager": "session_invitations.html",
-    "responses-pager": "session_responses.html",
+    "reviewers-table-card": "session_reviewers.html",
+    "reviewees-table-card": "session_reviewees.html",
+    "relationships-table-card": "session_relationships.html",
+    "observers-table-card": "session_observers.html",
+    "assignments-table-card": "session_assignments.html",
+    "invitations-table-card": "session_invitations.html",
+    "responses-table-card": "session_responses.html",
 }
 
 
@@ -67,15 +67,26 @@ def _make_session(
     ).scalar_one()
 
 
-def _import_reviewers(client: TestClient, session_id: int, count: int) -> None:
+def _import_reviewers(
+    client: TestClient, session_id: int, count: int, *, tagged: bool = False
+) -> None:
+    """``tagged`` populates ``ReviewerTag1``, which is what makes the
+    column-chip row render: the row is guarded on a slot having data, so
+    an untagged roster shows the pager with no chips above it."""
+    header = b"ReviewerName,ReviewerEmail"
+    if tagged:
+        header += b",ReviewerTag1"
     rows = b"".join(
-        f"Reviewer {i:04d},r{i:04d}@example.edu\n".encode() for i in range(count)
+        (
+            f"Reviewer {i:04d},r{i:04d}@example.edu"
+            + (f",Tutor {i % 4}" if tagged else "")
+            + "\n"
+        ).encode()
+        for i in range(count)
     )
     response = client.post(
         f"/operator/sessions/{session_id}/reviewers/import",
-        files={
-            "file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")
-        },
+        files={"file": ("r.csv", header + b"\n" + rows, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code in (200, 303), response.status_code
@@ -100,9 +111,9 @@ def test_every_range_link_lands_on_the_table(
     assert len(hrefs) >= 4
 
     for href in hrefs:
-        assert href.endswith("#reviewers-pager"), href
+        assert href.endswith("#reviewers-table-card"), href
         # The fragment rides on the link; the offset is untouched.
-        assert re.search(r"offset=\d+#reviewers-pager$", href), href
+        assert re.search(r"offset=\d+#reviewers-table-card$", href), href
 
 
 def test_the_anchor_names_an_id_the_page_actually_has(
@@ -155,26 +166,28 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         markup = (templates / template).read_text(
             encoding="utf-8", errors="replace"
         )
-        assert f'id="{anchor.replace("-pager", "-table")}"' in markup, (
-            f"{template} has no table for its pager to sit above"
+        # The template writes the id through the context variable, so
+        # the source carries the binding rather than the literal. What
+        # matters is that it is on a card, and that the card is the one
+        # holding the pager.
+        assert 'class="card table-pager-anchored" id="{{ pager_anchor }}"' in markup, (
+            f"{template} does not anchor its table card"
         )
-        # The id and the landing margin both live in the shared
-        # partial now, so the per-template assertion is that the page
-        # includes it at all.
         assert "_preview_pager.html" in markup, (
             f"{template} does not render the pager partial"
         )
 
 
-def test_the_anchored_strip_keeps_a_landing_margin(
+def test_the_anchored_card_keeps_a_landing_margin(
     client: TestClient, db: Session
 ) -> None:
-    """Without it the strip sits flush against the viewport's edge,
-    which reads as the page starting there rather than as scrolled."""
+    """Without it the card's top border sits flush against the
+    viewport's edge, which reads as a crop rather than a boundary."""
     review_session = _make_session(client, db, code="anchor-margin")
-    # Enough rows to page: the anchored element is the strip, and the
-    # strip only renders when there is more than one page to offer.
-    _import_reviewers(client, review_session.id, 556)
+    # Enough rows to page, and tagged so the chip row renders — the
+    # card has to hold all three, and an untagged roster would leave
+    # the ordering assertion below with only two things to order.
+    _import_reviewers(client, review_session.id, 556, tagged=True)
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
@@ -185,11 +198,19 @@ def test_the_anchored_strip_keeps_a_landing_margin(
 
     # And it is on the element the fragment points at, not merely
     # declared somewhere in the sheet.
-    assert re.search(
-        r'<nav class="table-pager table-pager-anchored"\s+id="reviewers-pager"',
-        body,
+    assert (
+        '<div class="card table-pager-anchored" id="reviewers-table-card">'
+        in body
     )
-    # Exactly one element carries the id: the bottom copy must not, or
-    # the fragment would be ambiguous and the browser would pick the
-    # first — which is the top strip by luck rather than by design.
-    assert body.count('id="reviewers-pager"') == 1
+    # Exactly one element carries the id — a duplicate would make the
+    # fragment ambiguous and leave the landing point to the browser.
+    assert body.count('id="reviewers-table-card"') == 1
+
+    # And the card really encloses all three things the operator needs
+    # to see, in this order down the screen: chips, page links, rows.
+    card = body[body.index('id="reviewers-table-card"'):]
+    assert (
+        card.index("col-chip-row")
+        < card.index('<nav class="table-pager')
+        < card.index('id="reviewers-table"')
+    )

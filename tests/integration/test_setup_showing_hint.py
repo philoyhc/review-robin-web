@@ -95,7 +95,10 @@ def _seed(db: Session, s: ReviewSession, *, n: int) -> None:
 def _table_card(body: str, page: str) -> str:
     """The preview-table card, from its opening div to the table."""
     table_at = body.index(f'id="{page}-table"')
-    card_at = body.rindex('<div class="card">', 0, table_at)
+    # ``<div class="card`` without the closing quote: the preview card
+    # also carries ``table-pager-anchored`` since 19J.8, and this probe
+    # only ever meant "the enclosing card's open tag".
+    card_at = body.rindex('<div class="card', 0, table_at)
     return body[card_at:table_at]
 
 

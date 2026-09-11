@@ -329,7 +329,10 @@
        buttons can't fire — checkboxes during ``ready`` only drive
        the cohort editor below. #}
     {% set selectable = not edit_mode and not is_archived %}
-    <div class="card">
+    {# The page turn lands here (19J.8): the card's top edge, so the
+       column chips and the page links are both on screen with the
+       new rows beneath them. #}
+    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
       {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="observers-table">

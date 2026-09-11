@@ -244,12 +244,13 @@ def _render_reviewers_page(
                 f"/operator/sessions/{review_session.id}/reviewers?"
             ),
             # The fragment the range links land on (19J.8): the
-            # pager strip above the table, so a page turn arrives with
-            # the page links in view and the new rows beneath them.
-            # Passed rather than derived — a macro guessing the id would
-            # land silently at the top of the document the first time
-            # someone renamed it, which is a failure with no error.
-            "pager_anchor": "reviewers-pager",
+            # table's card, so a page turn arrives showing the card's
+            # top edge, the column chips, the page links and the new
+            # rows — in that order down the screen. Passed rather than
+            # derived: a macro guessing the id would land silently at
+            # the top of the document the first time someone renamed
+            # it, which is a failure with no error.
+            "pager_anchor": "reviewers-table-card",
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
             # already say where the operator is.

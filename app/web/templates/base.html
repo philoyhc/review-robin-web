@@ -1439,19 +1439,21 @@
       .table-pager-bottom {
         margin: 12px 0 0 0;
       }
-      /* A range link carries a ``#<noun>-pager`` fragment so a page turn
-         arrives at the **top pager strip** — the links in view, the new
-         rows beneath them — rather than at the page header (19J.8).
+      /* A range link carries a ``#<noun>-table-card`` fragment so a page
+         turn arrives at the **table's card**: its top edge, then the
+         column chips, then the page links, then the new rows (19J.8).
 
-         Anchoring at the table was the first attempt. It worked, and it
-         did not help: measured on a 556-row roster, only 670px of a
-         10,775px page sits above the table, so "the top of the table"
-         and "the top of the page" are the same place to the eye, and
-         the links were then a viewport above the fold.
+         Two earlier targets were wrong, both measured in Chromium
+         against a 556-row roster at 1280x900. The **table** put its
+         header flush at the viewport top and the page links 31px above
+         the fold — and since only 670px of a 10,775px page sits above
+         the table, that is also indistinguishable from landing at the
+         top of the page. The **top strip** fixed the links but cropped
+         the chip row and the card's own boundary, so the page read as
+         starting mid-card.
 
-         The margin keeps the strip off the viewport's very edge, so a
-         sliver of the chip row above stays visible and the page reads
-         as scrolled rather than as starting there. */
+         The margin keeps the card's top border off the viewport's edge,
+         which is what makes it read as a boundary rather than a crop. */
       .table-pager-anchored {
         scroll-margin-top: var(--space-4);
       }

@@ -289,7 +289,10 @@
        can fill / clear it; otherwise only when some row has data.
        Mirrors the Reviewees Setup page. #}
     {% set show_profile_link = edit_mode or has_photo %}
-    <div class="card">
+    {# The page turn lands here (19J.8): the card's top edge, so the
+       column chips and the page links are both on screen with the
+       new rows beneath them. #}
+    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
       {# Column show/hide chips (19I Item 12 rung 1). They sit in the
          table card, directly above the rows they govern, the way
          Invitations and Responses have had them since Item 11 —
