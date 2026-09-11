@@ -323,7 +323,7 @@
       {% endif %}
       {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
-      <table id="reviewees-table"
+      <table id="reviewees-table" class="table-pager-anchored"
              data-rrw-col-toggles="rrw-reviewee-tag-visibility"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
         <thead>

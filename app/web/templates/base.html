@@ -1439,6 +1439,15 @@
       .table-pager-bottom {
         margin: 12px 0 0 0;
       }
+      /* A range link carries a ``#<noun>-table`` fragment so a page turn
+         lands on the rows instead of the page header (19J.8). Without
+         this the table's top edge sits flush against the viewport, which
+         reads as a page cut off rather than a page turned. A judgment
+         call, not a correctness one: nothing is hidden without it — the
+         only fixed element in the app is the 3px busy indicator. */
+      .table-pager-anchored {
+        scroll-margin-top: var(--space-4);
+      }
       /* A range is a link and reads as one (19J.7 rung 4). There is no
          `.table-pager-link` rule any more, and that is the point: the
          anchors take `a { color: var(--text-link) }` and the user

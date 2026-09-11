@@ -522,6 +522,13 @@ def invitations_index(
             "pager_url_base": (
                 f"/operator/sessions/{review_session.id}/invitations?"
             ),
+            # The fragment the range links land on (19J.8): the
+            # table, so a page turn shows the rows rather than the page
+            # header. Passed rather than derived from the URL — the
+            # ``<noun>-table`` convention is uniform today, and a macro
+            # guessing it would land silently at the top of the document
+            # the first time someone renamed an id.
+            "pager_anchor": "invitations-table",
             # 19J.5 rung 3 — paged now, so the unfiltered branch says
             # nothing and the ranges speak instead. A filtered view is
             # uncapped here, so its sentence never carries a withheld
@@ -873,6 +880,13 @@ def session_responses(
             "pager_url_base": (
                 f"/operator/sessions/{review_session.id}/responses?"
             ),
+            # The fragment the range links land on (19J.8): the
+            # table, so a page turn shows the rows rather than the page
+            # header. Passed rather than derived from the URL — the
+            # ``<noun>-table`` convention is uniform today, and a macro
+            # guessing it would land silently at the top of the document
+            # the first time someone renamed an id.
+            "pager_anchor": "responses-table",
             # 19J.5 rung 3 — paged now, so the unfiltered branch says
             # nothing and the ranges speak instead. A filtered view is
             # uncapped here, so its sentence never carries a withheld

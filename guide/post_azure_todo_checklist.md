@@ -164,6 +164,7 @@ those all pass. What no Python test can observe is whether the thing
 | An inert chip stays inert | Same card, a Band 1 chip for a **link that is not active** (struck through, faded) | **No** accent edge on it. It sets `cursor: default`, so wearing the shade would be a lie |
 | Validated is no longer accent blue (2026-09-11, 19J.7) | Session Home's status row on a **validated** session, both themes | The pill reads a deeper blue (`#1e40af` light, `#93c5fd` dark) on the same pale fill — distinguishable at a glance from a chip's accent edge beside it |
 | Row pager reads as links (2026-09-11, 19J.7) | Any roster over 200 rows — Reviewers is easiest | Ranges are underlined links in the page's link colour, **not** tinted blocks. The current page is bold body text with no fill |
+| A page turn keeps your place (2026-09-11, 19J.8) | Same roster: scroll to the pager **below** the table and click the next range | The new page opens with the **table** at the top of the viewport, not the page header — and with a little space above it, not flush against the edge. The address bar shows the `#…-table` fragment, which is expected |
 
 **Also worth a glance while you are there:** the bar's colour is
 `--btn-primary-bg` and it sits fixed at the very top of the viewport,
@@ -180,3 +181,8 @@ pill rationalisation is entirely colour and edge, and the suite can
 check that a rule *declares* them but never that the result reads
 right. Closing 19J.7 is those five rows plus a dated line in its
 `### Status`.
+
+The 19J.8 row is here for a different reason: the suite can prove the
+fragment is emitted and that it names a real id, but not that the
+browser stops somewhere an operator finds useful. Closing 19J.8 is that
+row plus a dated line in its `### Status`.
