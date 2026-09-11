@@ -159,13 +159,24 @@ those all pass. What no Python test can observe is whether the thing
 | Downloads do not arm it | Click **Download CSV** on the sys-admin audit log, and **Zip all** on Extract data | The file downloads and **no bar appears** — those links carry `download`, which the script reads. A bar that appears and stays is the twelve-anchor bug the build found |
 | Reduced motion | Set the OS "reduce motion" preference, repeat the first check | The bar is static and full-width rather than a travelling highlight |
 | Session-nav hover (2026-09-11) | Hover a Setup tab, an Operations tab, and the Home anchor, in **both** themes | Each paints the colours its own selected state uses — no tinted near-white on light, no pale block on dark. The active underline stays on the current tab only. A "coming soon" tab on the Previews page does **not** highlight |
+| Chip edge (2026-09-11, 19J.7) | Open **Assignments** (column toggles), the **sessions lobby** (tag filters, Clear, AND/OR) and an instrument card's **Band 2** pill row, in **both** themes | Every chip carries a visible 2px accent edge at rest — no hovering needed. Selected chips are unchanged: solid accent fill. Nothing static beside them has an edge, and no table row has shifted height |
+| Amber survives the edge (2026-09-11, 19J.7) | On an instrument card, find a **Band 1 link chip that is not set** | It is still **amber**, now with an accent edge. Amber = not set, edge = you can fix it. If the amber is gone the rule blanked a status colour, which is the one outcome this rung was designed to avoid |
+| An inert chip stays inert | Same card, a Band 1 chip for a **link that is not active** (struck through, faded) | **No** accent edge on it. It sets `cursor: default`, so wearing the shade would be a lie |
+| Validated is no longer accent blue (2026-09-11, 19J.7) | Session Home's status row on a **validated** session, both themes | The pill reads a deeper blue (`#1e40af` light, `#93c5fd` dark) on the same pale fill — distinguishable at a glance from a chip's accent edge beside it |
+| Row pager reads as links (2026-09-11, 19J.7) | Any roster over 200 rows — Reviewers is easiest | Ranges are underlined links in the page's link colour, **not** tinted blocks. The current page is bold body text with no fill |
 
 **Also worth a glance while you are there:** the bar's colour is
 `--btn-primary-bg` and it sits fixed at the very top of the viewport,
 above the chrome. Neither was reviewable from a template diff.
 
 **Where this came from.** `guide/segment_19J_assessment_moves.md` Item
-4 (and, for the last row, the hover standardisation of 2026-09-11 —
+4 (and, for the hover row, the hover standardisation of 2026-09-11 —
 same reason: a colour no Python test can see), whose Definition of done names these and whose index row holds the
 item **built, not closed**, until they are seen. Closing 19J.4 is this
 check plus a dated line in its `### Status`.
+
+The five 19J.7 rows come from the same place for the same reason: the
+pill rationalisation is entirely colour and edge, and the suite can
+check that a rule *declares* them but never that the result reads
+right. Closing 19J.7 is those five rows plus a dated line in its
+`### Status`.

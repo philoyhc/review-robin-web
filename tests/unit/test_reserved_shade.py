@@ -35,7 +35,13 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   selected fill *is* the affordance saying the filter is on.
 #: - ``.severity-chip.active`` — the Validate page's severity filter,
 #:   an ``<a>``. Already an outlined pill; active takes the shade on its
-#:   border and text.
+#:   border and text, and is the precedent rung 3 generalised.
+#: - the three-selector chip rule — every ``.tag-chip`` (which is every
+#:   Band 2 pill too), plus the lobby's Clear and AND/OR chips. Added at
+#:   rung 3, which is what gives a chip its edge. Checked before it
+#:   landed: every element carrying ``.tag-chip`` in the app is
+#:   interactive, and ``is-disabled`` — the one inert variant — cancels
+#:   the edge rather than inheriting it.
 #:
 #: A new entry means a new control surface, and belongs here only once
 #: someone has confirmed it is one. A static pill appearing in this set
@@ -43,6 +49,10 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 CONTROL_SELECTORS = {
     "body.ui-v2 .tag-chip.is-selected",
     "body.ui-v2 .severity-chip.active",
+    (
+        "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
+        "body.ui-v2 .pill.tag-mode-chip"
+    ),
 }
 
 
