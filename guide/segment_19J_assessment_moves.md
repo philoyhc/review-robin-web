@@ -75,7 +75,7 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Closed 2026-09-10** (3 rungs; 15 findings) |
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
-| **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification: the suite cannot click a link |
+| **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
 | **19J.5** | Row pagination on the seven roster-bearing pages | Planned 2026-09-11 |
 | 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 

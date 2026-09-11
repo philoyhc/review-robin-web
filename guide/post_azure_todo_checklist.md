@@ -24,6 +24,18 @@ note, not a task.
 describes what is owed *after* deploying, in an order nobody has fixed
 yet.
 
+**Admission widened by the author, 2026-09-11.** Item 3 is the first
+entry here whose blocker is *a* deploy rather than *the* institutional
+one — a UI behaviour no test can reach, waiting on the dev slot.
+Recorded rather than quietly filed, because the rule above says
+"blocked on the deployment itself" and this is blocked on something
+cheaper. The justification is the same one that makes the rule work:
+this author runs nothing locally (`CLAUDE.md` → Where work runs), so a
+check that needs a browser needs a deploy, and a check that needs a
+deploy needs a file like this one or it is forgotten. Items of this
+kind leave as soon as they are settled and do not wait for the
+cutover.
+
 ---
 
 ## 1. Run the visibility-grid audit against real data, before any reviewee-facing window opens
@@ -116,3 +128,42 @@ to list the Azure-deployment documents and found that nothing tracked
 what the cutover would do to them — the same shape as item 1: an
 obligation created by a plan, recorded nowhere the person executing that
 plan would look.
+
+
+---
+
+## 3. Verify the navigation busy indicator in a browser
+
+**Status:** open. Blocked on a deploy — the **dev slot is enough**; this
+does not wait for the institutional cutover.
+
+**What.** Segment 19J.4 shipped a busy indicator in `base.html`: a 3px
+indeterminate bar plus a visually-hidden `role="status"` region, armed
+~200 ms after a same-origin link click or form submit. Three of its
+behaviours have never run in a browser.
+
+**Why it cannot be checked here.** Nothing in pytest clicks a link. The
+suite pins what it can reach — the markup renders on operator and
+reviewer pages, the bar ships `hidden`, every attachment anchor carries
+`download`, and the script never sets `disabled` on a submitter — and
+those all pass. What no Python test can observe is whether the thing
+*behaves*, which is the whole feature.
+
+**Done when** each of these has been seen, on the deployed slot:
+
+| Check | How | Passes when |
+|---|---|---|
+| Arms on a slow page | Open a session with a large roster, click **Invitations** or **Responses** | The bar appears and runs until the new page paints |
+| Never flashes on a fast page | Click between two small pages — Session Home → Reviewers on a small session | No bar appears at all. A flash on every navigation is the failure this feature would be worth reverting for |
+| Back button leaves no bar behind | Navigate to a slow page, wait for it, then press Back | The restored page shows **no** bar. This is the `pageshow` handler; bfcache restores the DOM exactly as it was, bar included, if it regresses |
+| Downloads do not arm it | Click **Download CSV** on the sys-admin audit log, and **Zip all** on Extract data | The file downloads and **no bar appears** — those links carry `download`, which the script reads. A bar that appears and stays is the twelve-anchor bug the build found |
+| Reduced motion | Set the OS "reduce motion" preference, repeat the first check | The bar is static and full-width rather than a travelling highlight |
+
+**Also worth a glance while you are there:** the bar's colour is
+`--btn-primary-bg` and it sits fixed at the very top of the viewport,
+above the chrome. Neither was reviewable from a template diff.
+
+**Where this came from.** `guide/segment_19J_assessment_moves.md` Item
+4, whose Definition of done names these and whose index row holds the
+item **built, not closed**, until they are seen. Closing 19J.4 is this
+check plus a dated line in its `### Status`.
