@@ -1495,19 +1495,32 @@
          same borderless glyph button as the move-up / move-down arrows,
          and an underlined `»` reads as a typo. The hover darkening is
          what says it is live. */
-      body.ui-v2 .table-pager-step {
+      /* `.btn-icon.table-pager-step`, not `.table-pager-step`, and the
+         extra class is load-bearing rather than decorative:
+         `body.ui-v2 .btn-icon` further down this sheet is (0,2,1) — the
+         same specificity — so at the shorter selector it wins on order
+         and this rule's `font-size` and `color` never apply. They were
+         dead from 19J.9 rung 1 and nobody could see it, because both
+         declarations happened to match what `.btn-icon` already set.
+         Raising the size is what made it visible. */
+      body.ui-v2 .btn-icon.table-pager-step {
         padding: 0 var(--space-1);
-        font-size: 1em;
-        line-height: 1.4;
+        /* Larger than the range label beside it (author, 2026-09-11):
+           a guillemet at body size is a small target for the app's
+           most-used page turn, and these four carry the stepping the
+           menu does not. `line-height: 1` keeps the taller glyph from
+           growing the row the column chips share. */
+        font-size: 1.5em;
+        line-height: 1;
         color: var(--text-subtle);
         text-decoration: none;
       }
-      body.ui-v2 a.table-pager-step:hover {
+      body.ui-v2 a.btn-icon.table-pager-step:hover {
         color: var(--text-body);
       }
       /* Inactive at the ends — in place, never absent, or the other
          three cells shift sideways as the operator pages. */
-      body.ui-v2 .table-pager-step.is-inactive {
+      body.ui-v2 .btn-icon.table-pager-step.is-inactive {
         opacity: 0.4;
         cursor: not-allowed;
       }
