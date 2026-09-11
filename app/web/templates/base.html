@@ -1427,18 +1427,6 @@
          and a pager only at the top makes the operator scroll back to
          use it. Ranges rather than page numbers: `201–400` says where
          you are in the roster, `page 2` makes you multiply. */
-      .table-pager {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: var(--space-1) var(--space-2);
-        margin: 0 0 12px 0;
-        font-size: var(--fs-small);
-      }
-      /* Below the table the margin belongs above it, not below. */
-      .table-pager-bottom {
-        margin: 12px 0 0 0;
-      }
       /* A range link carries a ``#<noun>-table-card`` fragment so a page
          turn arrives at the **table's card**: its top edge, then the
          column chips, then the page links, then the new rows (19J.8).
@@ -1457,30 +1445,22 @@
       .table-pager-anchored {
         scroll-margin-top: var(--space-4);
       }
-      /* A range is a link and reads as one (19J.7 rung 4). There is no
-         `.table-pager-link` rule any more, and that is the point: the
-         anchors take `a { color: var(--text-link) }` and the user
-         agent's underline, so the strip matches every other link on the
-         page by construction rather than by a value someone has to keep
-         in sync. What the rule used to add — `padding`, a radius and
-         `text-decoration: none` — made a range read as a tinted block
-         instead; the strip's own `gap` does the spacing the padding did.
+      /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
+         `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
+         rung 2. It could only reach two pages per click whatever the
+         roster size, so crossing a long roster cost a linear number of
+         page loads; the cluster below reaches any page in one.
 
-         The current cell keeps `aria-current="page"` and is marked by
-         weight alone. It used to be a solid `--selected-bg` fill, which
-         put the reserved accent shade on the one cell in the strip that
-         does *not* navigate — the collision Item 7 exists to remove. */
-      .table-pager-link.is-current {
-        font-weight: 600;
-      }
-      .table-pager-gap,
-      .table-pager-jump {
-        color: var(--text-dim);
-      }
-      /* The page-turn cluster — 19J.9 rung 1, the scaffold.
+         Two of its rules died with it rather than moving:
+         `.table-pager-link.is-current` marked the one cell in the strip
+         that did *not* navigate, and the menu's summary now says where
+         you are while also being the way to leave — one element for
+         one job. And `.table-pager-jump` styled `«` / `»` as decorative
+         `aria-hidden` spans beside the First / Last links: affordances
+         that looked clickable and were not. They are buttons now. */
+      /* The page pager — 19J.9.
 
-         `«‹ [range ▾] ›»`: five cells that reach any page without
-         stepping. It exists because the strip's reach is a constant
+         `«‹ [range ▾] ›»`: five cells that reach any page in one move. It exists because the strip's reach is a constant
          two pages per click whatever the roster size, so crossing a
          long roster costs a number of clicks linear in its length —
          5 to row 2,400 of 5,861, 50 to the middle of 40,000.
@@ -1508,11 +1488,22 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
+      /* `text-decoration: none` here, even though 19J.7 rung 4 took
+         exactly that property *off* `.table-pager-link` — the two are
+         different surfaces. A range in a strip was inline prose and had
+         to read as the link it was; these are the `.btn-icon` role, the
+         same borderless glyph button as the move-up / move-down arrows,
+         and an underlined `»` reads as a typo. The hover darkening is
+         what says it is live. */
       body.ui-v2 .table-pager-step {
         padding: 0 var(--space-1);
         font-size: 1em;
         line-height: 1.4;
         color: var(--text-subtle);
+        text-decoration: none;
+      }
+      body.ui-v2 a.table-pager-step:hover {
+        color: var(--text-body);
       }
       /* Inactive at the ends — in place, never absent, or the other
          three cells shift sideways as the operator pages. */
@@ -1568,11 +1559,19 @@
         bottom: 100%;
         margin: 0 0 2px 0;
       }
+      /* Menu rows, not prose links: a list where every row is
+         underlined is harder to scan, not easier, and the panel's own
+         shape already says these are choices. Hover fills the row, the
+         way a menu does. */
       body.ui-v2 .table-pager-menu-item {
         padding: 1px var(--space-3);
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
         color: var(--text-body);
+        text-decoration: none;
+      }
+      body.ui-v2 a.table-pager-menu-item:hover {
+        background: var(--surface-muted);
       }
       body.ui-v2 .table-pager-menu-item.is-current {
         font-weight: 600;

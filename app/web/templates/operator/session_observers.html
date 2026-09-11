@@ -336,7 +336,6 @@
       <div class="table-card-toolbar">
       {% include "operator/partials/_pager_cluster.html" %}
       </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_pager.html" %}
       {% include "operator/partials/_preview_count_line.html" %}
       <table id="observers-table">
         <thead>
@@ -430,8 +429,7 @@
       </table>
       {# Second copy: a 200-row table is several screens tall, so the
          pager belongs where the operator finishes reading as well as
-         where they start (19J.5). #}
-      {% with pager_extra_class = "table-pager-bottom" %}{% include "operator/partials/_preview_pager.html" %}{% endwith %}
+         where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
     </div>
   {% elif total_row_count > 0 %}

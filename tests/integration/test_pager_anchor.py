@@ -9,6 +9,12 @@ cost a scroll.
 Each range link now carries a ``#<noun>-table`` fragment. It is still a
 full reload; the fragment only decides where the browser stops.
 
+19J.9 rung 2 replaced the range strip with the cluster, and the
+contract came with it: *every* href the pager renders carries the
+fragment — the four step buttons as well as the menu's ranges, which is
+strictly more links than the strip had. The probe below reads them all
+rather than the strip's one class.
+
 The assertion that matters is the **pair**: every range href ends in the
 page's anchor, *and* that anchor names an id the same response actually
 contains. A fragment pointing at nothing fails exactly like no fragment
@@ -93,8 +99,17 @@ def _import_reviewers(
 
 
 def _ranges(body: str) -> list[str]:
-    """Every range href in the rendered strips, both of them."""
-    return re.findall(r'<a class="table-pager-link"\s+href="([^"]+)"', body)
+    """Every href the pager renders, across both clusters.
+
+    Steps and menu entries alike: `table-pager-step` and
+    `table-pager-menu-item` are the two anchor classes the cluster
+    emits, and a fragment missing from either is the same failure.
+    """
+    return re.findall(
+        r'<a class="table-pager-(?:step|menu-item)"[^>]*?href="([^"]+)"',
+        body,
+        re.S,
+    )
 
 
 def test_every_range_link_lands_on_the_table(
@@ -173,7 +188,7 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         assert 'class="card table-pager-anchored" id="{{ pager_anchor }}"' in markup, (
             f"{template} does not anchor its table card"
         )
-        assert "_preview_pager.html" in markup, (
+        assert "_pager_cluster.html" in markup, (
             f"{template} does not render the pager partial"
         )
 
@@ -211,6 +226,6 @@ def test_the_anchored_card_keeps_a_landing_margin(
     card = body[body.index('id="reviewers-table-card"'):]
     assert (
         card.index("col-chip-row")
-        < card.index('<nav class="table-pager')
+        < card.index('<div class="table-pager-cluster')
         < card.index('id="reviewers-table"')
     )

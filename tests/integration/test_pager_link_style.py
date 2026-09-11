@@ -1,22 +1,26 @@
-"""The row pager reads as links, not as tinted blocks.
+"""The pager reaches the reserved shade nowhere.
 
-Segment 19J Item 7 rung 4. The 19J.5 pager is not a pill, but
-``.table-pager-link`` wore the pill's habits — ``padding``, a radius and
-``text-decoration: none`` — so a range rendered as a block; and
-``.table-pager-link.is-current`` was a solid ``--selected-bg`` fill,
-putting the reserved accent shade on the one cell in the strip that does
-**not** navigate.
+Segment 19J Item 7 rung 4, carried forward. That rung stripped
+``.table-pager-link`` of the pill's habits — ``padding``, a radius,
+``text-decoration: none`` — and took the solid ``--selected-bg`` off
+``.table-pager-link.is-current``, which had put the reserved accent
+shade on the one cell in the strip that did **not** navigate.
 
-So the pager loses a treatment rather than gaining one: ranges are
-anchors and take the page's own ``a { color: var(--text-link) }`` plus
-the user agent's underline, and the current cell is marked by weight.
+19J.9 rung 2 then retired the strip outright, so the three tests about
+its treatment went with it: there is no range strip to read as a row of
+tinted blocks, and no current cell to mark, because the menu's summary
+says where you are while also being the way to leave.
 
-These assertions read the **rendered strip** — the markup between
-``<nav class="table-pager"`` and its ``</nav>`` — and the declaration
-blocks in ``base.html``'s inline CSS, never a bare class name in the
-page body: every one of these class names appears in that inline CSS on
-every response, so a substring check over the whole body is vacuous
-(19J.5 hit that three times).
+What survives is the rung's actual contract, and it now covers more
+than it did: **no rule whose selector mentions the pager resolves to
+the reserved pair** — not the cluster, not the steps, not the menu. The
+new classes were named ``.table-pager-*`` precisely so this sweep would
+pick them up without anyone remembering to add them.
+
+The assertions read declaration blocks in ``base.html``'s inline CSS,
+never a bare class name in the page body: every one of these names
+appears in that CSS on every response, so a substring check over the
+whole body is vacuous (19J.5 hit that three times).
 """
 
 from __future__ import annotations
@@ -49,36 +53,9 @@ def _make_session(
     ).scalar_one()
 
 
-def _import_reviewers(client: TestClient, session_id: int, count: int) -> None:
-    rows = b"".join(
-        f"Reviewer {i:04d},r{i:04d}@example.edu\n".encode() for i in range(count)
-    )
-    response = client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
-        files={
-            "file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code in (200, 303), response.status_code
-
-
-def _strip(client: TestClient, db: Session, *, code: str) -> str:
-    """The rendered pager strip, markup only."""
-    review_session = _make_session(client, db, code=code)
-    _import_reviewers(client, review_session.id, 556)
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
-    ).text
-    start = body.index('<nav class="table-pager')
-    return body[start : body.index("</nav>", start)]
-
-
 def _rule(css: str, selector: str) -> str | None:
     """The declaration block for an exact selector, or None if absent."""
-    match = re.search(
-        re.escape(selector) + r"\s*\{([^}]*)\}", css
-    )
+    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css)
     return match.group(1) if match else None
 
 
@@ -89,63 +66,21 @@ def _stylesheet(client: TestClient, db: Session) -> str:
     ).text
 
 
-def test_range_links_are_anchors_with_no_style_of_their_own(
+def test_the_retired_strip_left_no_rules_behind(
     client: TestClient, db: Session
 ) -> None:
-    """Every cell but the current one navigates, as a plain link."""
-    strip = _strip(client, db, code="pager-style-1")
-
-    # ``\s+`` rather than a literal space: 19J.8 wrapped the ``href``
-    # onto its own line in the macro, and whitespace between attributes
-    # was never part of what this test means to pin.
-    anchors = re.findall(
-        r'<a class="table-pager-link"\s+href="([^"]+)"', strip
-    )
-    assert len(anchors) >= 2
-    assert all("offset=" in href for href in anchors)
-
-    # Structural, so it stays true rather than merely being true today:
-    # every cell in the strip is either an anchor that navigates or the
-    # one current-page span. The inert ``aria-disabled`` third kind the
-    # scaffold rung left behind has no room in that count.
-    cells = re.findall(r'<(\w+) class="table-pager-link[^"]*"', strip)
-    assert cells.count("a") == len(anchors)
-    assert cells.count("span") == 1
-    assert len(cells) == len(anchors) + 1
-
-
-def test_the_current_cell_is_marked_by_weight_not_by_the_reserved_shade(
-    client: TestClient, db: Session
-) -> None:
-    """It is a ``<span>``: the one cell in the strip that cannot be
-    clicked, so it must not wear the shade that means "you can"."""
-    strip = _strip(client, db, code="pager-style-2")
-
-    assert strip.count('class="table-pager-link is-current"') == 1
-    assert 'aria-current="page"' in strip
-
+    """A rule for markup nothing renders is worse than no rule: the next
+    reader has to work out whether it is dead or whether they have
+    missed the page that uses it."""
     css = _stylesheet(client, db)
-    block = _rule(css, ".table-pager-link.is-current")
-    assert block is not None, "the current cell lost its only marking"
-    assert "font-weight: 600" in block
-    assert "background" not in block
-    assert "--selected-bg" not in block
 
-
-def test_the_pager_link_rule_carries_no_block_styling(
-    client: TestClient, db: Session
-) -> None:
-    """``padding`` / ``border-radius`` / ``text-decoration: none`` are
-    what made a range read as a chip. The bare ``.table-pager-link``
-    rule is expected to be gone entirely; if some later change brings it
-    back, it must not bring those three with it."""
-    css = _stylesheet(client, db)
-    block = _rule(css, ".table-pager-link")
-
-    if block is not None:
-        assert "padding" not in block
-        assert "border-radius" not in block
-        assert "text-decoration: none" not in block
+    for selector in (
+        ".table-pager-link",
+        ".table-pager-link.is-current",
+        ".table-pager-gap",
+        ".table-pager-bottom",
+    ):
+        assert _rule(css, selector) is None, f"{selector} outlived the strip"
 
 
 def test_no_pager_rule_reaches_the_reserved_shade(
@@ -155,18 +90,56 @@ def test_no_pager_rule_reaches_the_reserved_shade(
 
     Reads every declaration block whose selector mentions the pager and
     asserts none of them resolves to the reserved pair — directly, or
-    through ``--selected-bg``.
+    through ``--selected-bg``. Since 19J.9 that sweep covers the cluster,
+    its four steps and its range menu, because every one of those class
+    names starts with ``.table-pager``.
     """
     css = _stylesheet(client, db)
     blocks = re.findall(r"(\.table-pager[^{}]*)\{([^}]*)\}", css)
     assert blocks, "no pager rules found — the selector probe is broken"
+    # The cluster alone is more rules than the strip ever had; a probe
+    # that silently matched two of them would pass while covering
+    # nothing.
+    assert len(blocks) >= 8, f"only {len(blocks)} pager rules scanned"
 
     for selector, block in blocks:
         assert "--selected-bg" not in block, (
             f"{selector.strip()} reaches the reserved shade via "
-            "--selected-bg; the pager is not a control surface"
+            "--selected-bg; the pager is not a selection surface"
         )
         for hex_value in RESERVED_SHADE:
             assert hex_value not in block.lower(), (
                 f"{selector.strip()} hard-codes {hex_value}"
             )
+
+
+def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
+    client: TestClient, db: Session
+) -> None:
+    """The one place 19J.9 deliberately contradicts 19J.7 rung 4.
+
+    That rung took ``text-decoration: none`` **off** ``.table-pager-link``
+    so a range would read as the link it was — correct, for inline prose
+    in a strip. The cluster's cells are not that: the four steps are the
+    ``.btn-icon`` role, the same borderless glyph button as the
+    move-up / move-down arrows, and an underlined ``»`` reads as a typo;
+    the menu's entries are rows in a panel, where underlining every one
+    makes a list harder to scan rather than easier.
+
+    Both are anchors, so the page's own ``a`` rule underlines them
+    unless something says otherwise. This is the something, and it is
+    pinned because the reason is not visible from the rule.
+    """
+    css = _stylesheet(client, db)
+
+    for selector in (".table-pager-step", ".table-pager-menu-item"):
+        block = _rule(css, f"body.ui-v2 {selector}")
+        assert block is not None, f"{selector} lost its rule"
+        assert "text-decoration: none" in block, (
+            f"{selector} would take the page's link underline"
+        )
+
+    # And each has a hover state, so an anchor that looks like neither a
+    # link nor a button still says it is live.
+    assert _rule(css, "body.ui-v2 a.table-pager-step:hover") is not None
+    assert _rule(css, "body.ui-v2 a.table-pager-menu-item:hover") is not None
