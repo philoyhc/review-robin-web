@@ -8,6 +8,10 @@ about it when it rejected the idea.
 Every figure below was produced by a command in one session against the
 running app. The reproduction notes are at the end.
 
+**The question is settled — see `Decision` below. Decided not worth
+solving, 2026-09-11.** The measurement stands as the support for that
+decision rather than as an open enquiry.
+
 ## The question
 
 Turning a page on a roster table is a full navigation. Should it instead
@@ -154,6 +158,29 @@ blocks bind directly to elements. Converting them to delegation is
 independently worth doing — it is what makes the table's behaviour
 survive *any* future re-render, and it can be done one block at a time
 without committing to the swap at all.
+
+## Decision — 2026-09-11
+
+**Not worth solving.** Decided by the author the day this was written,
+and it turns on the operator's intent rather than on any number above.
+
+Landing on the table card's top edge is fine when the link clicked was
+the strip *above* the table: the screen barely moves, and starting the
+new range from the card's boundary is what you wanted anyway. The one
+case that is mildly jarring is a click on the **bottom** strip, which
+does send the viewport back up. But an operator who turns a page and
+then stays on it is almost always intending to read the new range from
+its start — so the jump and the intent point the same way.
+
+That is a firmer reason to stop than the cost tables are. The costs
+argue for *not yet*, which invites the question to be re-opened every
+few segments; this argues for **not at all** — build the swap only if
+something else comes to need it (live-updating rows, or a page turn
+that must not lose an in-progress edit), never to fix the scroll.
+
+Unaffected by this: the fix the recommendation names as worth doing
+either way. Converting the four element-bound script blocks to
+delegation never depended on the swap, and its case is unchanged.
 
 ## Reproducing the numbers
 

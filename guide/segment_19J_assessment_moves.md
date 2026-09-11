@@ -2397,3 +2397,206 @@ address them.
 - `guide/post_azure_todo_checklist.md` — row for the page-turn landing
   check (Item 8).
 - `docs/status.md` — row when the item closes (Item 8).
+
+## Item 9 — Reaching a distant page in one move
+
+**Stub, opened 2026-09-11.** The third pager item, and the first about
+*reach* rather than about appearance (19J.7 rung 4) or landing position
+(19J.8).
+
+### Opportunity
+
+Author, 2026-09-11, looking at a 5,861-row Assignments table: *"When the
+number of rows is big enough, the pagination links can't even show all
+the links at once. Let's say you are trying to go to around 2,400 — it
+will take a good number of clicks."*
+
+It is worse than "a good number". `_WINDOW = 5` centers five ranges on
+the current page, so from page *n* the farthest the strip can send you
+is *n ± 2*. **Reach is a constant two pages per click, whatever the
+roster size** — so the cost of crossing a roster is linear in its
+length, and every click is a full page load.
+
+Measured 2026-09-11 at `fd1e0d31`, by walking `build_pager`'s own output
+greedily toward a target:
+
+| Table | Pages | Clicks to row 2,400 | Worst case |
+|---|---:|---:|---:|
+| the author's roster, 5,861 rows | 30 | **5** | **7** |
+| a 40,000-row Assignments table | 200 | 5 | **50** |
+
+From page 1 the reachable set is `{1, 2, 3, 4, 5, last}` — five
+neighbors and the far end, and nothing in between, which is precisely
+the region the operator is aiming at.
+
+19J.5's elision fixed the strip's **width** and left its **depth**
+untouched. That was the half that showed; this is the half that costs.
+A strip too wide to read announces itself, and a strip too shallow to
+traverse does not.
+
+### Decision
+
+**A jump control at the end of the strip.** Author, 2026-09-11: *"jump
+control is the clear option, though the exact way to implement in ux
+remains to be fixed."*
+
+So this item decides the **mechanism** and defers the **form**: the
+operator gets one affordance that reaches any page without stepping,
+and what that affordance looks like is an open question below, settled
+before rung 1 rather than during it. Everything in Semantics holds
+whichever form wins — which is what makes it safe to decide the
+mechanism now.
+
+Two alternatives were measured and rejected:
+
+- **A wider window.** Still linear — it changes the constant, not the
+  shape — and it breaks the one-line constraint that put `_WINDOW` at
+  five in the first place.
+- **Doubling steps** (current ±1, ±2, ±4, ±8 … plus both ends). This is
+  the clever fix and it genuinely works: **3 clicks worst case at 30
+  pages, 4 at 200**, logarithmic rather than linear, and it touches
+  nothing but `build_pager`. It loses on width — the strip reaches **12
+  cells at 30 pages and 18 at 200**, around 200 characters, so it fails
+  the same constraint that rejected the wider window. It also asks the
+  operator to read a strip whose gaps are uneven, which is a harder
+  thing to glance at than a run of neighbors. Recorded here rather than
+  in `guide/deferred_consolidated.md`: it is superseded, not deferred —
+  a jump control makes it unnecessary rather than premature.
+
+### Semantics
+
+These hold whichever form the control takes.
+
+- **The target snaps like any other offset.** Whatever the control
+  emits goes through `clamp_offset` exactly as a typed `?offset=` does:
+  out of range clamps to the last page, negative to the first, and any
+  row inside a page snaps to that page's boundary. The control cannot
+  produce a state a URL could not.
+- **The URL is the one the links already build.** Measured below: all
+  seven `pager_url_base` values are a bare `…?`, because the pager only
+  renders on an unfiltered view and sort travels by cookie. So the
+  control's destination is `{base}offset=N#{anchor}` — the same string
+  `_cell` writes. No route change, no hidden fields, no parameter
+  plumbing.
+- **It lives and dies with the strip.** The route already suppresses the
+  whole pager while a search or status filter is active; the control is
+  inside that decision, not beside it. A filtered view has no pager and
+  so has nothing to jump within.
+- **Both strips carry it.** Like the ranges, it renders from the one
+  macro, top and bottom.
+- **Ranges, not page numbers.** 19J.5 decided the operator reads
+  `2,401–2,600` and not `page 13`, and the control inherits that
+  vocabulary whatever its shape.
+
+### Judgment calls — decided
+
+- **2026-09-11 — the control appears only when the strip elides.** If
+  every range is already on screen, a jump control is a second way to do
+  what one click does — noise, by the same argument that makes
+  `build_pager` return `None` for a single page. `Pager` already knows:
+  `elided_before or elided_after`.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `fd1e0d31`.
+
+| What | Count | Command |
+|---|---:|---|
+| Routes passing `pager_url_base` | 7 | `grep -rn '"pager_url_base":' app/web/routes_operator/*.py` |
+| …that carry any filter or sort state in it | **0** — all bare `?` | read the seven literals |
+| Pager include sites | 14 (two per page) | `grep -rho "_preview_pager" app/web/templates/operator/*.html \| wc -l` |
+| Files the macro change touches | 1 | `_preview_pager.html` |
+| `_WINDOW` readers | 3, all in one function | `grep -rn --include='*.py' '_WINDOW' app/web/views/_pager.py` |
+| Test files naming the pager | 11 | `grep -rln --include='*.py' 'pager' tests/` |
+| `<select>` elements already in operator templates | 25 | `grep -rho '<select' app/web/templates/operator/*.html \| wc -l` |
+
+The last row matters for the open question: a `<select>` would not be a
+new primitive here, and `base.html` already styles them.
+
+### PR ladder
+
+1. **The scaffold.** The control present on all seven pages in its
+   agreed form, inert — it renders, it is reachable by keyboard, and it
+   goes nowhere. `CLAUDE.md` → Working approach requires this for a new
+   navigation affordance, and this item is the case it was written for:
+   the form is the part still open, so it should be looked at before
+   anything is wired to it. *Must not* touch `build_pager`, the route's
+   offset handling, or the suppression rule.
+2. **The wiring.** The control navigates. Integration test asserting a
+   jump reaches an arbitrary page in one move, and that its destination
+   is byte-identical to the href the same range's link carries — the two
+   must not drift into two ways of spelling one URL.
+
+### Definition of done
+
+- From page 1 of a 30-page table, any page is reachable in **one**
+  interaction.
+- The control renders on all seven pages, in both strips, and only when
+  the strip elides.
+- Its destination is the same URL the corresponding range link uses,
+  fragment included.
+- A filtered view still renders no pager and no control.
+- `tests/unit/test_pager.py` passes unchanged in substance — ranges,
+  clamping, snapping and the window are untouched by this item.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `guide/post_azure_todo_checklist.md` carries a row: on a roster of
+  5,000+ rows, reach a middle page in one move.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19J.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **What form does the control take? Author decides, before rung 1.**
+  The mechanism is settled; this is not. Three candidates, with what
+  each costs:
+  - **A `<select>` of every range**, `Jump to: [2,401–2,600 ▾]`. One
+    click to open, native keyboard type-ahead, cannot hold an invalid
+    value, and 25 selects already ship. Costs markup — 200 options at
+    ~40 bytes, twice per page, is ~16KB on a 413KB page — and it needs
+    a listener to navigate on change, so it does nothing without JS.
+  - **A number input plus Go**, `Go to row: [____]`. Works as a plain
+    GET form with no JS at all, and is bounded markup at any roster
+    size. But it asks the operator for a number they do not have — the
+    complaint was *"around 2,400"*, and "around" is what a list of
+    ranges answers and a text box does not.
+  - **Clickable elision markers**, the `…` jumping to the midpoint of
+    the gap it stands for. Almost free, no new control, and turns the
+    walk into a binary search — but that is still ~5 clicks at 200
+    pages, so it improves the number without settling the question.
+- **Is a control that is inert without JS acceptable here?** Only live
+  if the `<select>` wins. `CLAUDE.md` permits targeted progressive
+  enhancement, and the strip itself keeps working, so the fallback is
+  today's behavior rather than a broken page. Still the author's call.
+
+### Out of scope
+
+- **Removing the reload.** Settled 2026-09-11 in
+  `guide/inplace_pagination_assessment.md` — not worth solving. A jump
+  control makes the reload rarer, which is the whole of this item's
+  relationship to it.
+- **Changing `PAGE_SIZE`.** Smaller pages would shrink the walk and
+  lengthen the strip; it is a different trade and 19J.5 already settled
+  200.
+- **Search and sort.** Finding a *person* is search's job and always
+  was. This item is about reaching a *position*.
+- **The other six ways to navigate the app.** Breadcrumbs, session nav
+  and setup tabs are untouched.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §10's `.table-pager` row gains the jump
+  control and the elision-only rule. The primitive is described **once**
+  here; the two page specs below point at it rather than restating it
+  (Item 9).
+- `spec/setup_pages.md` — "The row pager (Segment 19J.5)" gains the
+  control alongside the suppression and selection rules it already
+  states for the five setup pages (Item 9).
+- `spec/operations_pages.md` — the pager paragraph (Invitations and
+  Responses) gains the same (Item 9).
+- `guide/post_azure_todo_checklist.md` — row for the one-move reach
+  check on a 5,000-row roster (Item 9).
+- `docs/status.md` — row when the item closes (Item 9).
