@@ -16,6 +16,7 @@ this repository's history can run in CI.
 from __future__ import annotations
 
 import importlib.util
+import io
 import pathlib
 import subprocess
 
@@ -330,3 +331,212 @@ def test_a_cites_that_covers_a_real_path_is_not_reported_as_absent() -> None:
         "  <!-- cites: spec/architecture.md -->"
     )
     assert _bullet(bullet)["cited_absent"] == []
+
+
+# --------------------------------------------------------------------
+# guide/ commitments, counted and not verified (19K.1)
+
+
+def _guide(bullet_text: str) -> list[str]:
+    """The ``guide/`` paths ``parse_bullets`` collects from one bullet."""
+    lines = bullet_text.splitlines()
+    bullets = cc.parse_bullets(lines, 0, len(lines))
+    return [path for bullet in bullets for path in bullet["guide_paths"]]
+
+
+def test_a_guide_path_is_collected_rather_than_dropped() -> None:
+    """The defect 19K.1 closed. ``COMMITTED_PATH`` matched ``spec/`` and
+    ``docs/`` only, so a bullet naming a ``guide/`` file was silently
+    dropped: not verified, not counted, not warned about, and the
+    printed committed-path count smaller than the manifest just read.
+    67 such commitments across 33 plans, none reported.
+    """
+    assert _guide("- `guide/todo_master.md` — mark 19K.1 done.") == [
+        "guide/todo_master.md"
+    ]
+
+
+def test_a_guide_path_is_not_a_committed_path() -> None:
+    """The half that makes the count honest. Collecting them must not
+    fold them into C2/C3: of the 67, 12 point into ``guide/archive/``
+    and 13 at paths since moved there, so C2 would turn 25 correct
+    closed commitments into failures.
+    """
+    bullet = "- `guide/todo_master.md` — mark 19K.1 done."
+    assert _paths(bullet) == []
+    assert _guide(bullet) == ["guide/todo_master.md"]
+
+
+def test_a_bullet_names_both_kinds_and_each_lands_in_its_own_list() -> None:
+    """The common shape: a doc commitment and a checklist row together."""
+    bullet = "- `docs/status.md` — row; `guide/todo_master.md` — tick."
+    assert _paths(bullet) == ["docs/status.md"]
+    assert _guide(bullet) == ["guide/todo_master.md"]
+
+
+def test_an_archived_guide_path_is_still_collected() -> None:
+    """Why C2 is the wrong question for these, stated as a test: a plan
+    file legitimately archives when its segment closes."""
+    assert _guide("- `guide/archive/segment_19J_x.md` — cross-ref.") == [
+        "guide/archive/segment_19J_x.md"
+    ]
+
+
+def test_a_guide_path_satisfies_a_cites_marker() -> None:
+    """C7 asks whether a ``cites:`` names a path its bullet contains.
+    Before 19K.1 a ``guide/`` path was invisible to that question, so
+    citing one read as stale and C7 failed a correct marker."""
+    bullet = (
+        "- `docs/README.md` — the `guide/todo_master.md` pointer moves.\n"
+        "  <!-- cites: guide/todo_master.md -->"
+    )
+    assert _bullet(bullet)["cited_absent"] == []
+
+
+def _checks(plan: pathlib.Path, manifest: str) -> dict[str, dict]:
+    """Run the checks over a manifest written into ``plan``'s worktree.
+
+    The ``## Doc impact`` heading is already in ``plan``'s history, which
+    is what ``window`` pickaxes for; the bullets under it are read from
+    the worktree, so a manifest can be varied without a commit per case.
+    """
+    plan.write_text("# Segment ZZ\n\n## Doc impact\n\n" + manifest + "\n")
+    found = cc.find_manifests(plan.read_text())
+    body = cc._section(found["lines"], found["segment"], 2)
+    result = cc.check_manifest(plan, found, 2, body, "segment", True)
+    return {check["id"]: check for check in result["checks"]}
+
+
+def test_a_waiver_on_a_guide_only_bullet_still_needs_a_reason(plan_repo) -> None:
+    """C4 iterates bullets, not committed paths. A bullet whose only
+    path is a ``guide/`` one was invisible to C4 as well — it could be
+    waived with an empty reason and nothing said so."""
+    checks = _checks(
+        plan_repo, "- `guide/todo_master.md` — tick. <!-- doc-impact-waived: -->"
+    )
+    assert checks["C4"]["status"] == cc.FAIL
+
+
+def test_a_reasoned_waiver_on_a_guide_only_bullet_passes(plan_repo) -> None:
+    """The half that must not regress: widening C4 to every bullet must
+    not fail the waivers that do carry a reason."""
+    checks = _checks(
+        plan_repo,
+        "- `guide/todo_master.md` — tick. "
+        "<!-- doc-impact-waived: the checklist retired -->",
+    )
+    assert checks["C4"]["status"] == cc.PASS
+
+
+def test_c5_lists_the_guide_commitments_without_judging_them(plan_repo) -> None:
+    """The status that abstains. C5 names each ``guide/`` path and its
+    line, and its status is never FAIL — which is what makes it safe to
+    switch on for 33 plans at once without reddening a correct close."""
+    checks = _checks(
+        plan_repo,
+        "- `docs/status.md` — row.\n- `guide/todo_master.md` — tick.",
+    )
+    assert checks["C5"]["status"] == cc.NOTED
+    assert any("guide/todo_master.md" in line for line in checks["C5"]["detail"])
+    assert checks["C5"]["status"] != cc.FAIL
+
+
+def test_c5_is_absent_when_the_manifest_names_no_guide_path(plan_repo) -> None:
+    """A check that appears on every plan is noise on the 63 that have
+    nothing to say. C5 exists only where there is something to read."""
+    assert "C5" not in _checks(plan_repo, "- `docs/status.md` — row.")
+
+
+def test_a_guide_path_does_not_reach_c2_or_c3(plan_repo) -> None:
+    """End to end, over the real check bodies rather than the parser: a
+    ``guide/`` path that does not exist and was never edited must not
+    fail either check. ``guide/archive/`` is where a quarter of the 67
+    live, and C2 would call every one of them missing."""
+    checks = _checks(plan_repo, "- `guide/no_such_plan.md` — tick.")
+    assert checks["C2"]["status"] == cc.PASS
+    assert checks["C3"]["status"] == cc.PASS
+
+
+# --------------------------------------------------------------------
+# an uncommitted item heading (19K.1)
+
+
+def test_an_uncommitted_item_heading_is_provisional(plan_repo) -> None:
+    """The silent pass a stub gets. ``_later_commit`` falls back to the
+    segment's own ``Doc impact`` commit when an item's heading is not in
+    history, so the item inherits every sibling's edits and C3 reads
+    clean. Observed twice on 2026-09-11 — 19J.9 and 19J.10 each reported
+    PASS uncommitted and FAIL once their headings landed, and the PASS
+    was reported to the author both times.
+    """
+    plan_repo.write_text(plan_repo.read_text() + "\n## Item 9 — a stub\n")
+    _, _, _, provisional = cc.window(plan_repo, 2, item=9)
+    assert provisional is True
+
+
+def test_a_committed_item_heading_is_not_provisional(plan_repo) -> None:
+    """The half that must not regress: warning on every item would make
+    the warning worth nothing."""
+    _, _, _, provisional = cc.window(plan_repo, 2, item=2)
+    assert provisional is False
+
+
+def test_the_segment_level_window_is_never_provisional(plan_repo) -> None:
+    """``item=None`` asks no item question, so it cannot answer one."""
+    _, _, _, provisional = cc.window(plan_repo, 2)
+    assert provisional is False
+
+
+def test_a_provisional_window_still_starts_at_the_doc_impact_commit(
+    plan_repo,
+) -> None:
+    """The warning says so rather than changing the window. Narrowing it
+    instead — to HEAD, say — would turn every stub into a wall of C3
+    failures at exactly the moment the author is still drafting."""
+    plan_repo.write_text(plan_repo.read_text() + "\n## Item 9 — a stub\n")
+    base = cc._first_commit_matching(plan_repo, "^## Doc impact$")
+    start, _, _, _ = cc.window(plan_repo, 2, item=9)
+    assert start == base[0]
+
+
+def _report(plan: pathlib.Path, manifest: str) -> str:
+    """The printed report for a manifest written into ``plan``.
+
+    Asserted on the text, not on the result dict: the committed total is
+    computed in ``report`` itself, so a dict-level assertion passes on
+    the very mutation it exists to catch (measured 2026-09-11).
+    """
+    plan.write_text("# Segment ZZ\n\n## Doc impact\n\n" + manifest + "\n")
+    buffer = io.StringIO()
+    cc.report(cc.run("ZZ", None), buffer)
+    return buffer.getvalue()
+
+
+def test_the_committed_total_includes_the_guide_paths(plan_repo) -> None:
+    """The Definition of done's own measure: 19J.7's five-bullet manifest
+    read ``3 committed path(s)`` and exited 0. Counted and verified are
+    separate axes; the total counts, and C5 says what is not verified."""
+    out = _report(
+        plan_repo, "- `spec/a.md` — x.\n- `guide/todo_master.md` — tick."
+    )
+    assert "2 committed path(s), 1 noted," in out
+
+
+def test_a_manifest_with_no_guide_path_prints_no_noted_clause(plan_repo) -> None:
+    """The half that keeps 54 of the 85 plans byte-identical: the clause
+    appears only where there is something to say."""
+    out = _report(plan_repo, "- `spec/a.md` — x.")
+    assert "1 committed path(s), 0 waived," in out
+    assert "noted" not in out
+
+
+def test_a_waived_guide_bullet_counts_as_waived(plan_repo) -> None:
+    """Consistency with the total above. Excluding them printed
+    ``5 committed path(s), 0 waived`` for a manifest whose own C5 lines
+    marked one of the five waived."""
+    plan_repo.write_text(
+        "# Segment ZZ\n\n## Doc impact\n\n"
+        "- `guide/todo_master.md` — tick. "
+        "<!-- doc-impact-waived: the checklist retired -->\n"
+    )
+    assert cc.run("ZZ", None)["levels"][0]["waived"] == ["guide/todo_master.md"]

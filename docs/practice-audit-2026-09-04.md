@@ -123,6 +123,41 @@ recorded rather than recommended against.
 | Type checking | — | **None configured** (no mypy/pyright config or dependency) | — | — |
 | PR template | — | **None** (no `pull_request_template.md` anywhere) | — | — |
 | `CONTRIBUTING.md` checklist | `CONTRIBUTING.md` §"Pull request checklist" | No — prose only, not rendered into a PR body | — | **No** |
+| `python3 tools/close_check.py <id>` | run by hand at a segment or item close | No — not wired into either CI workflow | one plan's `Doc impact` manifest | **No** — advisory; the reader adjudicates the warnings |
+
+The close check is the newest row and the one whose limits are easiest to
+misread, so they are stated here rather than left to its `--help`. Added
+2026-09-11 (Segment 19K Item 1).
+
+**What it verifies.** For the closing level's `Doc impact` manifest: that the
+section exists and the file uses one shape (segment-level or item-level, not
+both); that every committed path exists and is live; that every un-waived path
+was edited inside the segment's or item's own commit window; that each waiver
+carries a reason; and that each `cites:` marker names a path its bullet
+actually contains.
+
+**What it does not verify, and cannot.** It asks whether an edit *happened*,
+never whether it was *right* — that judgement belongs to the `spec-writer`
+pass that follows it, and to the reader. Two exclusions are deliberate rather
+than pending:
+
+- **`guide/` commitments are counted and listed, not checked** — reported
+  under a `NOTED` status that never fails. A `guide/` commitment is typically
+  "add a row to a checklist", and no diff-shaped check can confirm the row was
+  the right one; `guide/post_azure_todo_checklist.md` was edited three times in
+  one day for three different items, so a touched-the-file check would pass for
+  the wrong reason. A `guide/` path is also legitimately allowed to move into
+  `guide/archive/` when its segment closes, which is why "exists and is live"
+  is the wrong question for it too: of the 67 such commitments measured on
+  2026-09-11, 25 would have failed that check while being entirely correct.
+- **A `## Item <n>` heading that is not yet committed** leaves the window
+  opening at the segment's own `Doc impact` commit, so the item can read clean
+  on a sibling's edits. The check says so — it reports the result as
+  provisional — rather than passing quietly, which is what it did until
+  2026-09-11.
+
+Both are printed at the point of use rather than recorded only here, because a
+documented blind spot has to be read by someone who already suspects it.
 
 One configuration detail worth correcting: `pyproject.toml` sets
 `line-length = 100`, but `ruff check` does not enforce it. Ruff's default rule

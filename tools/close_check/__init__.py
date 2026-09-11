@@ -115,10 +115,16 @@ import sys
 
 from ._archive import archived_report
 from ._manifest import (
+    FAIL,
+    NOTED,
+    PASS,
+    WARN,
     _first_commit_matching,
     _ITEM_START_CACHE,
+    _section,
     bullet_window_start,
     check_manifest,
+    find_manifests,
     honoured,
     item_heading_start,
     parse_bullets,
@@ -132,14 +138,20 @@ from ._shared import REPO, Unresolvable, _git
 from ._sweep import last_sweep_date, stale_report, sweep_scope
 
 __all__ = [
+    "FAIL",
+    "NOTED",
+    "PASS",
     "REPO",
     "Unresolvable",
+    "WARN",
     "_ITEM_START_CACHE",
     "_first_commit_matching",
     "_git",
+    "_section",
     "archived_report",
     "bullet_window_start",
     "check_manifest",
+    "find_manifests",
     "honoured",
     "item_heading_start",
     "last_sweep_date",

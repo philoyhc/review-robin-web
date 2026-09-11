@@ -32,6 +32,39 @@ from ._shared import Unresolvable, _git
 # description ("Per-Part spec docs as the scope settles — A, B, C").
 COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 
+# A `guide/` commitment. Counted and listed, never verified — which is a
+# decision about what this tool can honestly say, not an omission.
+#
+# It was invisible until 2026-09-11 (19K.1): `COMMITTED_PATH` matched
+# `spec/` and `docs/` only, so a bullet naming a `guide/` file was
+# silently dropped — not reported as unchecked, not counted, not warned
+# about, and the printed committed-path count was quietly smaller than
+# the manifest it had just read. Measured at that point: **67 such
+# commitments across 33 plans**, none reported. Two went unhonoured in
+# Segment 19J alone and nothing failed; both were caught by a person
+# reading the manifests at close, which is the control this tool exists
+# to replace.
+#
+# Why counted-but-not-verified rather than checked like a spec:
+#
+#   * A `guide/` commitment is typically "add a row to a checklist", and
+#     no diff-shaped check can confirm the row was the *right* one. C3
+#     would pass on "the file was touched", which for a shared checklist
+#     is nearly always true for unrelated reasons —
+#     `post_azure_todo_checklist.md` was edited three times on
+#     2026-09-11 for three different items. A check that passes for the
+#     wrong reason is worse than one that abstains.
+#   * C2 ("exists and is live") is the wrong question too, and measurably
+#     so: of the 67, **12 point into `guide/archive/` and 13 at paths
+#     that have since moved there**. A plan file legitimately archives
+#     when its segment closes, so applying C2 would have turned 25
+#     correct, closed commitments into failures — including across
+#     `--archived`, which sweeps every archived plan.
+#
+# So the tool reports them and says it is not checking them. The reader
+# closes that loop, exactly as they already do for a C3 warning.
+GUIDE_PATH = re.compile(r"`(guide/[A-Za-z0-9._/-]+\.md)[^`]*`")
+
 # A bare filename, matched **only in the bullet's leading position** —
 # before the em-dash that separates the path from its description.
 #
@@ -109,6 +142,11 @@ ITEM_TAG_NUMBER = re.compile(r"\bItem\s+(\d+)")
 SEGMENT_ID = re.compile(r"^([A-Za-z0-9]+)(?:\.(\d+))?$")
 
 PASS, FAIL, WARN, SKIP = "pass", "fail", "warn", "skip"
+# Counted, listed, and deliberately not judged. Never affects the exit
+# code: `report()` fails only on FAIL, so a NOTED line can never turn a
+# correct close red — which is what makes it safe to switch on for 33
+# plans at once.
+NOTED = "noted"
 
 # --------------------------------------------------------------------
 # resolution
@@ -204,7 +242,7 @@ def _all_paths(bullet: dict) -> list[str]:
         resolve_committed(raw)
         for raw in COMMITTED_PATH.findall(bullet["text"])
         + COMMITTED_BARE.findall(head)
-    ]
+    ] + GUIDE_PATH.findall(bullet["text"])
 
 
 def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
@@ -236,6 +274,11 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
             if path not in seen and path not in cited:
                 seen.append(path)
         bullet["paths"] = seen
+        guide_seen: list[str] = []
+        for raw in GUIDE_PATH.findall(bullet["text"]):
+            if raw not in guide_seen and raw not in cited:
+                guide_seen.append(raw)
+        bullet["guide_paths"] = guide_seen
         bullet["cited_absent"] = [
             name for name in cited if name not in seen and name not in _all_paths(bullet)
         ]
@@ -321,8 +364,8 @@ def bullet_window_start(
 
 def window(
     plan: pathlib.Path, depth: int, item: int | None = None
-) -> tuple[str | None, str, str | None]:
-    """(start commit, end commit, start date) for the manifest's level.
+) -> tuple[str | None, str, str | None, bool]:
+    """(start commit, end commit, start date, provisional) for the level.
 
     For an item, the window opens at the later of the ``### Doc impact``
     heading and that item's own ``## Item <n>`` heading. The heading
@@ -338,8 +381,19 @@ def window(
     start = _first_commit_matching(
         plan, "^" + ("###" if depth == 3 else "##") + " Doc impact$"
     )
+    provisional = False
     if item is not None:
-        start = _later_commit(start, _first_commit_matching(plan, f"^## Item {item} "))
+        heading = _first_commit_matching(plan, f"^## Item {item} ")
+        # An item heading that is not yet in history leaves `_later_commit`
+        # returning the segment's own `Doc impact` commit, so the item
+        # inherits every sibling's edits and C3 reads clean. That is
+        # exactly the state a stub is in when its author runs this check
+        # on it: observed twice on 2026-09-11, where 19J.9's and 19J.10's
+        # stubs each reported PASS uncommitted and FAIL once their
+        # headings landed — and the PASS was reported to the author both
+        # times before being corrected. Say so rather than pass quietly.
+        provisional = heading is None and start is not None
+        start = _later_commit(start, heading)
 
     if archived:
         adds = [
@@ -351,7 +405,7 @@ def window(
     else:
         end = "HEAD"
 
-    return (start[0] if start else None, end, start[1] if start else None)
+    return (start[0] if start else None, end, start[1] if start else None, provisional)
 
 
 def honoured(path: str, start: str, end: str) -> str | None:
@@ -441,7 +495,7 @@ def check_manifest(
 ) -> dict:
     lines = found["lines"]
     bullets = parse_bullets(lines, *body)
-    start, end, start_date = window(plan, depth, item)
+    start, end, start_date, provisional = window(plan, depth, item)
 
     base = [start, start_date] if start else None
     committed: list[dict] = []
@@ -511,6 +565,13 @@ def check_manifest(
                 f"{entry['path']} not modified in window "
                 f"(last modified {ever}, line {entry['line']})"
             )
+        if provisional:
+            c3_warn.append(
+                f"Item {item}'s heading is not committed yet, so the window "
+                "starts at the segment's own Doc impact and this item can "
+                "read clean on a sibling's edits — provisional until the "
+                "heading lands"
+            )
         checks.append({
             "id": "C3", "what": "paths modified in window",
             "status": FAIL if c3 else (WARN if c3_warn else PASS),
@@ -518,15 +579,42 @@ def check_manifest(
         })
 
     # C4 — every waiver reasoned.
+    # Bullets, not paths: a waiver is per-bullet, and a bullet whose only
+    # path is a `guide/` one still needs its reason.
     c4 = [
-        f"line {entry['line']}: waiver has no reason"
-        for entry in committed
-        if entry["waived"] and not entry["reason"]
+        f"line {bullet['line']}: waiver has no reason"
+        for bullet in bullets
+        if bullet["waived"]
+        and not bullet["reason"]
+        and (bullet["paths"] or bullet["guide_paths"])
     ]
     checks.append({
         "id": "C4", "what": "waivers carry a reason",
         "status": FAIL if c4 else PASS, "detail": c4,
     })
+
+    # C5 — guide/ commitments, counted and named, not verified.
+    noted = [
+        {
+            "path": path,
+            "line": bullet["line"],
+            "waived": bullet["waived"],
+        }
+        for bullet in bullets
+        for path in bullet["guide_paths"]
+    ]
+    if noted:
+        checks.append({
+            "id": "C5",
+            "what": "guide/ commitments (counted, not verified)",
+            "status": NOTED,
+            "detail": [
+                f"{entry['path']}"
+                + (" (waived)" if entry["waived"] else "")
+                + f" (line {entry['line']})"
+                for entry in noted
+            ],
+        })
 
     # C6 — Status block at the closing level. Warn only in v1.
     checks.append({
@@ -554,7 +642,12 @@ def check_manifest(
         "level": label,
         "window": {"start": start, "start_date": start_date, "end": end},
         "paths": [entry["path"] for entry in committed],
-        "waived": [e["path"] for e in committed if e["waived"]],
+        "noted": [entry["path"] for entry in noted],
+        # `guide/` waivers count here too. The total above includes
+        # them, so excluding them would print "5 committed path(s),
+        # 0 waived" for a manifest whose C5 lines say otherwise.
+        "waived": [e["path"] for e in committed if e["waived"]]
+        + [e["path"] for e in noted if e["waived"]],
         "honoured": honoured_count,
         "checked": checked,
         "checks": checks,
@@ -660,9 +753,17 @@ def report(result: dict, stream) -> bool:
             f"{win['start_date']} .. {win['end'][:9] if win['end'] != 'HEAD' else 'HEAD'}"
             if win["start"] else "no window"
         )
+        # The total counts `guide/` paths; the parenthetical says how
+        # many of them the tool is not verifying. Counted and verified
+        # are separate axes, and printing only the verified subtotal is
+        # the defect 19K.1 closed — 19J.7 read "3 committed path(s)"
+        # against a five-bullet manifest and exited 0.
+        noted = level.get("noted") or []
         print(
-            f"  [{level['level']}] {len(level['paths'])} committed path(s), "
-            f"{len(level['waived'])} waived, window {span}",
+            f"  [{level['level']}] "
+            f"{len(level['paths']) + len(noted)} committed path(s), "
+            + (f"{len(noted)} noted, " if noted else "")
+            + f"{len(level['waived'])} waived, window {span}",
             file=stream,
         )
         for check in level["checks"]:
