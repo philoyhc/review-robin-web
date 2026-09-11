@@ -2744,6 +2744,31 @@ sheet has no global `box-sizing` reset — five rules set it
 individually — and the panel now does too. Summary and panel measure
 1035..1179 in both states.
 
+**2026-09-11 — the range menu closes on an outside click.** ~24 lines
+in `base.html`, delegated on `document` — written like the one
+table-relevant block of five that already is, so it survives whatever
+re-renders the markup beneath it, and so one listener serves both of a
+page's clusters. Escape closes too and hands focus back to the summary,
+which is the path that otherwise strands a keyboard user inside a panel
+that is no longer showing. Everything else still works with scripting
+off, because every cell is an anchor; losing this leaves a menu that
+closes on its own summary, which is where it started.
+
+Seven cases checked in Chromium, not just the reported one: the outside
+click, the summary still toggling, a range still navigating with its
+default action intact, opening one cluster closing the other, Escape
+plus focus return, and a column chip in the same row counting as
+outside.
+
+**The guard for it had a hole, found by mutating it.** The test asserts
+every listener in the block is registered on `document`, and its
+receiver probe was `(\w+)\.addEventListener`. `menus[0].addEventListener`
+does not match that — `]` is not a word character — so the offending
+receiver dropped out of the match set and the test passed on the exact
+mutation it exists to catch. It now matches any receiver expression and
+asserts the match count equals the number of registrations, so a form it
+cannot parse fails loudly instead of disappearing.
+
 Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
 (25 pages — the 5,861 in the author's screenshot exceeds
 `csv_imports.MAX_ROWS`, so it cannot be one import): 26 anchors in the
@@ -2827,12 +2852,18 @@ ones the stub named, now with their contents.
   **Moot, 2026-09-11.** It was contingent on the `<select>`. A
   `<details>` of anchors navigates with scripting off, so there is
   nothing to accept.
-- **Does the panel need a close-on-outside-click?** `<details>` does not
+- ~~**Does the panel need a close-on-outside-click?** `<details>` does not
   close when the operator clicks elsewhere, which is the one place this
   cluster differs from a native menu. A few lines of delegated script
   fixes it; whether it is worth them is a judgment to make on the
   scaffold, looking at it, rather than now. Not a blocker either way —
-  the panel closes on its own summary, and on any navigation.
+  the panel closes on its own summary, and on any navigation.~~
+  **Answered 2026-09-11 by using it**, author: *"you can only close it
+  by clicking on the menu button itself; clicking somewhere else on the
+  page doesn't close it."* Yes, it needs one. Deciding this from the
+  scaffold was the right call and produced the wrong answer — the cost
+  is visible when you are looking at the control, and the annoyance is
+  only visible when you are using it to do something else.
 
 ### Out of scope
 

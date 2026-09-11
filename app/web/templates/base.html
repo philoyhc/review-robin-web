@@ -4594,5 +4594,60 @@
         window.addEventListener("pageshow", clear);
       })();
     </script>
+    {# The range menu closes on an outside click (Segment 19J Item 9).
+
+       `<details>` has no such behaviour of its own: once open it stays
+       open until its own summary is clicked again — the one place an
+       operator who has changed their mind is least likely to aim. This
+       was 19J.9's one open question, answered by using the thing.
+
+       **Delegated on `document`, deliberately.** Four of the five
+       table-relevant script blocks in this file bind to their elements
+       at load and would not survive a re-rendered table
+       (`guide/inplace_pagination_assessment.md` measured that); this is
+       written like the fifth, so it keeps working whatever replaces the
+       markup beneath it, and it is one listener for both of a page's
+       clusters rather than one per menu.
+
+       Everything else about the cluster still works with scripting
+       off — every cell is an anchor. Losing this leaves a menu that
+       closes on its own summary, which is where it started. #}
+    <script>
+      (function () {
+        var OPEN_MENUS = "details.table-pager-menu[open]";
+
+        function closeAll(except) {
+          var open = document.querySelectorAll(OPEN_MENUS);
+          for (var i = 0; i < open.length; i++) {
+            if (open[i] !== except) open[i].removeAttribute("open");
+          }
+        }
+
+        document.addEventListener("click", function (event) {
+          var target = event.target;
+          var inside = target && target.closest
+            ? target.closest("details.table-pager-menu")
+            : null;
+          /* A click on a menu's own summary is the native toggle, and
+             one on a range inside it is a page turn — leave that menu
+             alone. Every *other* open menu closes, which is also what
+             stops a page's top and bottom clusters being open at
+             once. */
+          closeAll(inside);
+        });
+
+        /* Escape closes and hands focus back to the control, so a
+           keyboard user is not left focused inside a panel that is no
+           longer showing. */
+        document.addEventListener("keydown", function (event) {
+          if (event.key !== "Escape" && event.key !== "Esc") return;
+          var open = document.querySelectorAll(OPEN_MENUS);
+          if (!open.length) return;
+          var summary = open[0].querySelector("summary");
+          closeAll(null);
+          if (summary && summary.focus) summary.focus();
+        });
+      })();
+    </script>
   </body>
 </html>
