@@ -672,3 +672,258 @@ Taken 2026-09-11 at `94aaa3b2`.
   and what was decided about it, so the next reader finds it on the
   page's own spec rather than in a closed plan (Item 3).
 - `docs/status.md` — row when the item closes (Item 3).
+
+---
+
+## Item 4 — `--archived` reads one manifest per plan
+
+### Opportunity
+
+`--archived` is the sweep that answers "is this practice actually
+kept?" across every closed plan. Its headline figure —
+`147/162 live committed paths honoured (91%)` — has been quoted into
+`docs/status.md` four times as the measure of the phase rule's exit.
+
+It is computed over a subset of the evidence. `archived_report`
+(`tools/close_check/_archive.py:38-44`) picks **one** manifest per
+plan: the segment-level `## Doc impact` if there is one, otherwise the
+**first** item-level `### Doc impact` it finds, and stops.
+
+```python
+line = found["segment"] if depth == 2 else next(
+    (i["doc"] for i in found["items"].values() if i["doc"] is not None),
+    found["stray"][0] if found["stray"] else None,
+)
+```
+
+A segment-level manifest spans the whole plan, so those 35 plans are
+read whole. The five item-shaped plans are not:
+
+| Plan | manifests | read today |
+|---|---:|---:|
+| `segment_19A_spec_documentation.md` | 2 | 1 |
+| `segment_19G_post_assessment.md` | 10 | 1 |
+| `segment_19H_additional_refinements.md` | 7 | 1 |
+| `segment_19I_roster_search_and_row_delete.md` | 13 | 1 |
+| `segment_19J_assessment_moves.md` | 10 | 1 |
+
+**37 of the 42 item manifests in the archive have never been read by
+the sweep.** 19I is judged on 1 of its 13.
+
+Measured 2026-09-11 at `0e2850e1`, reading every level with each item's
+own window:
+
+| | today | every level |
+|---|---:|---:|
+| live committed paths honoured | 147/162 (**91%**) | **259/274 (95%)** |
+| plans fully honoured | 30 of 40 | 30 of 40 |
+| committed paths no longer existing | 9 | 9 |
+| plans with no manifest | 58 | 58 |
+| `guide/` commitments in the footer | 58 across 33 | 63 across 33 |
+
+**Every one of the 112 hidden paths is honoured** — 259−147 = 112 and
+274−162 = 112 — so all 15 unhonoured paths live in the older,
+segment-shaped plans. The sweep has been **understating** the practice,
+and understating it more as the plans got better: item-shaped manifests
+are the newer convention, so the shape that closes item-by-item is
+exactly the shape the sweep cannot read.
+
+The defect has been present since the tool was written
+(`851bb88f`, 2026-09-05), so it is in every `--archived` figure ever
+quoted: 85/101, 132/148, 133/148, 147/162. **`_archive.py` has no
+tests** — `grep -rln "archived_report\|--archived" tests/` returns
+nothing — which is how a one-of-thirteen read survived six days of
+the tool being used on itself.
+
+### Decision
+
+**Read every manifest level in the plan, each with its own window.**
+The level set is the one `check_manifest` already uses: the
+segment-level manifest if present, otherwise every item-level
+`### Doc impact` plus any stray. Each item level passes its own item
+number to `window()`, so an item's window opens at its own
+`## Item <n>` heading — without that, fixing the read would import the
+19A.2 false pass into the sweep, where a newer item's commitment could
+be satisfied by an older item's edit.
+
+**One line per plan stays.** The row is summed across levels, with the
+manifest count shown when it is more than one, and the date column
+showing the earliest level's window start.
+
+**Rejected: a line per manifest level.** It is the same information,
+and it takes the report from 98 rows to 135 — burying the ten plans
+that have a finding under the ninety that do not. The report is read
+as one row per plan and should stay that way.
+
+**Rejected: leaving it and documenting the caveat.** That was the
+answer 19K.1 gave, correctly, because 19K.1 was about something else
+and the fix moves the number the whole report is read for. It is not
+the answer twice.
+
+### Semantics
+
+- **The ratio moves, and the move is a correction rather than an
+  improvement.** 91% → 95% is the same practice measured properly. The
+  item must say so where the figure is recorded, or the next reader
+  will read a 4-point jump as the practice getting better in a day.
+- **A segment-level plan's output is unchanged.** Those 35 are already
+  read whole; byte-identical is the assertion, not the hope.
+- **Each item level keeps its own window.** An item's window opens at
+  the later of the manifest heading and that item's own heading, as
+  `check_manifest` does.
+- **A stray `### Doc impact`** — outside any `## Item n` block, as 11E
+  has under `## Follow-on` — has no item number and takes the
+  manifest's own window.
+- **`fully honoured` becomes every level's paths honoured**, not the
+  first level's. It happens not to move, which is worth stating: the
+  five plans were fully honoured on their first item and are fully
+  honoured in full.
+- **The per-plan `guide/` dedup stays per plan**, not per level, so the
+  footer keeps counting what it counts today.
+
+### Judgment calls — decided
+
+- **2026-09-11 — the four already-quoted figures stay as written.**
+  85/101, 132/148, 133/148 and 147/162 are in dated `docs/status.md`
+  entries recording what the tool said on that day, which is what a
+  changelog is for. Only the places that state the figure as *current*
+  are corrected.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `0e2850e1`.
+
+| What | Count | Command |
+|---|---:|---|
+| Lines in `tools/close_check/_archive.py` | 107 | `wc -l` |
+| Tests naming `archived_report` or `--archived` | **0** | `grep -rln 'archived_report\|--archived' tests/` |
+| Archived plans | 98 | `ls guide/archive/segment_*.md` |
+| …segment-shaped (read whole today) | 35 | the parse above |
+| …item-shaped (read at one level today) | 5 | the parse above |
+| …with no manifest | 58 | the parse above |
+| Item manifests the sweep never reads | 37 | the parse above |
+| `window()` call sites | 2 | `grep -rn 'window(' tools/close_check/*.py` |
+| Live docs stating the ratio as current | 1 (`tools/README.md`) | `grep -rn '147/162' docs/ tools/ spec/` |
+
+### Status — 2026-09-11
+
+Landed as the one rung planned. Every predicted figure held against the
+build, which is the first time in this segment that has been true of a
+blast-radius table: 259/274 (95%), 30 of 40 fully honoured, 9 missing,
+58 with no manifest, and the five item-shaped plans read at 2, 10, 7, 13
+and 10 manifests.
+
+**Decisions confirmed at build:**
+
+- **`manifest_levels` is its own function**, not a loop inline in
+  `archived_report`. It is the one thing in this module that has a rule
+  worth stating, and the rule is testable without a git repo — six of
+  the ten tests need no fixture at all.
+- **The row gained `N manifests`** only where N > 1, so the 35
+  segment-shaped rows stay byte-identical rather than gaining a
+  `1 manifests` suffix.
+- **The date column shows the earliest level's window start**, which for
+  an item-shaped plan is its first item's. The alternative — the latest
+  — would have made a thirteen-item plan look as though its window
+  opened the day it closed.
+
+**Measured, not assumed:**
+
+| Claim | Measurement |
+|---|---|
+| Segment-shaped plans unchanged | 40 plan rows diffed against `origin/main`: **35 byte-identical, 5 changed**, and the 5 are exactly the item-shaped plans. |
+| The ratio | 147/162 (91%) → **259/274 (95%)**. 274−162 = 112 and 259−147 = 112, so **every hidden path was honoured** and all 15 unhonoured ones are in the older segment-shaped plans. |
+| Guards are not vacuous | **7 mutations, 7 caught** — one manifest per plan (the defect), `item=None` windows, the manifest count dropped from the row, stray levels dropped, manifest-less items counted as levels, both-shapes preferring items, and the dedup regression below. |
+
+**One bug in this item's own code, caught by a one-off.** The footer
+came out at **64** `guide/` commitments where the pre-build measurement
+said 63. The accumulator was a comprehension —
+`noted_here += [p for … if p not in noted_here]` — whose membership test
+is evaluated against the list as it stood *before* `+=` extends it, so a
+path named twice inside one level slips through. One duplicate in the
+whole corpus: small enough to wave through as a rounding difference
+between two parses, which is exactly why the pre-build number existed.
+Now extended one path at a time, with a test that a doubled bullet
+counts once.
+
+**This item's own manifest is read at 2 of its 3 bullets**, and the
+adjudication of that is the same shape as 19K.1's. `COMMITTED_PATH`
+matches `spec/` and `docs/` only, so the `tools/README.md` bullet — a
+real documentation commitment, kept — is invisible to C1–C7 exactly as
+`guide/` paths were until Item 1. This is **known rather than new**:
+19G.8's `docs/status.md` row already records that 19G.6's bullets "name
+`tools/` and `.claude/` paths the regex never matched". Measured
+2026-09-11 across every live and archived plan, **16 such commitments**:
+`tools/` 6 in 4 plans, `app/` 5 in 3, `.claude/` 3 in 2, `tests/` 1,
+`.github/` 1.
+
+Not fixed here, and deliberately not: extending the manifest regex is a
+decision about *which roots a plan may commit to*, which is a different
+question from how the sweep reads levels, and the segment-plan skill's
+rule against bundling independent changes applies. Recorded as a
+candidate item. What this item will not do is let the printed count
+stand unremarked — "the printed committed-path count quietly smaller
+than the manifest it had just read" is the sentence Item 1 was opened
+on, and it is true of this close too.
+
+**The finding worth keeping.** `_archive.py` had **no tests** — the
+blast-radius table's one zero — and that is not incidental to the
+defect, it is the whole explanation for it. The sweep was run on this
+repository roughly daily for six days, its output pasted into
+`docs/status.md` four times, and it was reading 1 of 13 manifests for
+the plan with the most commitments in the archive. Nothing in a report
+that always exits 0 tells you it read less than it should; only a test
+that constructs a plan with three manifests and counts them does. *A
+report that cannot fail needs tests more than a check that can*, not
+less.
+
+### PR ladder
+
+1. **Read every level, and test the sweep at all.** The level loop, the
+   per-item windows, the summed row — plus the first tests
+   `_archive.py` has ever had, since an untested sweep is how this
+   survived. *Must not* change `check_manifest` or the single-id
+   output.
+
+### Definition of done
+
+- `--archived` reads every manifest level in every archived plan, each
+  with its own window.
+- The 35 segment-shaped plans produce byte-identical rows — asserted,
+  not assumed.
+- The report states its own figures: 259/274, and the 5 plans read at
+  more than one level show how many.
+- `_archive.py` has tests, and each guard is mutation-checked.
+- The ratio's move is recorded as a correction, not a gain.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The three shape choices — every level, one row per plan, per-item
+windows — are settled above with their rejected alternatives.
+
+### Out of scope
+
+- **The `guide/` dedup scope.** Per plan today, per plan after. Changing
+  it would move the footer for a second reason in one change and make
+  neither move readable.
+- **Making `--archived` fail on anything.** It is report-only and always
+  exits 0; that is a deliberate property of a sweep and this item does
+  not touch it.
+
+### Doc impact
+
+- `tools/README.md` — the `close_check.py` row states what `--archived`
+  reads, since it is the one live document that describes the sweep and
+  currently implies it reads each plan whole (Item 4).
+- `docs/practice-audit-2026-09-04.md` — the close-check passage gains
+  the sweep's own limitation alongside the two 19K.1 recorded, so the
+  document that says what gates a merge does not describe a checker
+  reading more evidence than it does (Item 4).
+- `docs/status.md` — row when the item closes (Item 4).

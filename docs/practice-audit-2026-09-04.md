@@ -162,6 +162,22 @@ than pending:
   provisional — rather than passing quietly, which is what it did until
   2026-09-11.
 
+A third limit was in the **sweep** rather than the close check, and is now
+fixed rather than documented. `--archived`, the report that produces the
+honoured-commitments baseline, read **one manifest per plan** from the day the
+tool was written (2026-09-05) until 2026-09-11 (Segment 19K Item 4): the
+segment-level manifest where there is one, otherwise the *first* item's. Since
+a segment-level manifest spans its whole plan, the 35 plans using that shape
+were read whole and the five item-shaped ones were not — hiding **37 of the 42
+item manifests** in the archive, with `19I` judged on 1 of its 13. Every one of
+the 112 committed paths it hid was honoured, so the baseline **understated**
+the practice, and understated it more as the plans got better: closing
+item-by-item is the newer convention and was the shape the sweep could not
+read. The figure it reports for the same corpus moves from 147/162 (91%) to
+**259/274 (95%)** — a correction, not a gain. The four baselines quoted in
+dated `docs/status.md` entries (85/101, 132/148, 133/148, 147/162) stand as
+what the tool said on those days.
+
 Both are printed at the point of use rather than recorded only here, because a
 documented blind spot has to be read by someone who already suspects it.
 
