@@ -26,8 +26,9 @@
    cluster and the new rows beneath it (19J.8). The route supplies the
    id; nothing here derives it.
 
-   `pager.all_ranges` is every range in the table. `pager.links` is
-   19J.5's five-wide window, which nothing renders any more. #}
+   `pager.ranges` is every range in the table, one of them current.
+   19J.5's five-wide window went with the strip; `Pager` now carries
+   the offset and the total and nothing else. #}
 {% macro _step(glyph, label, target, base, anchor) -%}
   {%- if target -%}
     <a class="btn-icon table-pager-step"
@@ -39,9 +40,8 @@
   {%- endif -%}
 {%- endmacro %}
 {% if pager %}
-  {% set ranges = pager.all_ranges %}
-  {% set index = ranges | map(attribute="is_current") | list %}
-  {% set here = index.index(True) if True in index else 0 %}
+  {% set ranges = pager.ranges %}
+  {% set here = pager.offset // pager.page_size %}
   <div class="table-pager-cluster{% if cluster_extra_class %} {{ cluster_extra_class }}{% endif %}"
        role="group"
        aria-label="{{ pager_label | default('Table rows') }}">

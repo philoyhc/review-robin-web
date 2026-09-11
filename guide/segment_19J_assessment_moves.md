@@ -2678,7 +2678,7 @@ as written. Author on the scaffold: *"the placement is spot on"*.
   clean, separate slice; doing it inside the rung that retires the strip
   would have widened a PR that already deletes a partial, seven include
   pairs and four CSS rules. Recorded here so it is a decision rather
-  than an oversight.
+  than an oversight. **Done 2026-09-11, as its own slice** — see below.
 - **Seven mutations checked, each caught**: `«` pointing at the current
   page, `›` stepping two, hrefs losing the `#…-table-card` fragment, the
   ends never going inactive, the menu dropping its current-page span,
@@ -2692,6 +2692,26 @@ as written. Author on the scaffold: *"the placement is spot on"*.
   treatment and kept the reserved-shade sweep, which now covers the
   cluster, its steps and its menu for free: every new class name starts
   with `.table-pager`, which is why they were named that way.
+
+**The window retired 2026-09-11**, in the separate slice rung 2 named.
+`Pager` was seven fields and is now three — `offset`, `page_size`,
+`total` — with the ranges derived on demand. `links`, `first`, `last`,
+`elided_before`, `elided_after` and `_WINDOW` are gone, and so are the
+four elision tests, which covered code rather than behaviour: nothing
+the operator can do changed. Net −42 lines in `_pager.py`.
+
+- **`all_ranges` became `ranges`.** The `all_` existed to distinguish it
+  from `links`, a partial list. With no partial list left, the prefix
+  was a fossil of a distinction — exactly the kind of thing a cleanup
+  slice is for.
+- **The template got simpler too.** Finding the current page meant
+  mapping `is_current` over the ranges and taking the first `True`,
+  because `Pager` did not carry where it was. It does now:
+  `pager.offset // pager.page_size`.
+- **Five mutations, each caught**, including a stale field creeping back
+  onto `Pager` — `test_the_pager_carries_only_what_the_cluster_reads`
+  asserts the field set rather than the absence of one name, so it holds
+  against whatever gets added rather than against what was removed.
 
 Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
 (25 pages — the 5,861 in the author's screenshot exceeds

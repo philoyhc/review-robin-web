@@ -9,11 +9,6 @@ ranges to link.
 **Ranges, not page numbers** (author, 2026-09-11). ``201–400`` says
 where the operator is in the roster; ``page 2`` makes them multiply.
 
-**Elision.** A 40,000-row assignments table is 200 ranges. The pager
-shows a window around the current page and hangs First / Last off the
-ends, with an ellipsis marking each gap — so the row count a session
-can reach is not also the width of its navigation.
-
 **One page is no pager.** ``build_pager`` returns ``None`` when
 everything fits, for the same reason ``preview_count_line`` returns
 ``None`` when a table shows everything: a control that cannot go
@@ -24,13 +19,23 @@ active — but that is the *route's* call, not this module's, because
 the same flag suppresses the pager and summons the count line and the
 two must never disagree. This module is only asked once the route has
 decided a pager belongs.
+
+**What used to be here** (19J.5, retired 2026-09-11 at 19J.9): a
+five-wide window of links centred on the current page, with First and
+Last hung off the ends and an ellipsis marking each gap, so a
+40,000-row table was not 200 links wide. It went with the strip that
+rendered it. The window bounded the strip's *width* and left its
+*depth* alone — reach was two pages per click whatever the roster
+size, so crossing a long roster cost a number of clicks linear in its
+length. ``Pager`` now carries where you are and how big the table is,
+and the cluster renders every range in a menu.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["PAGE_SIZE", "PagerLink", "Pager", "build_pager"]
+__all__ = ["PAGE_SIZE", "PagerLink", "Pager", "build_pager", "clamp_offset"]
 
 
 # The cap the five capped tables already used, now read as a page size.
@@ -39,15 +44,10 @@ __all__ = ["PAGE_SIZE", "PagerLink", "Pager", "build_pager"]
 # persistence question for a need nobody has stated.
 PAGE_SIZE = 200
 
-# Ranges shown either side of the current one before the ellipsis
-# takes over. Five keeps the strip inside one line at the narrowest
-# operator width the app supports.
-_WINDOW = 5
-
 
 @dataclass(frozen=True)
 class PagerLink:
-    """One range in the strip. ``offset`` is the row index it starts
+    """One range in the menu. ``offset`` is the row index it starts
     at, which is what the route reads back off the query string."""
 
     label: str
@@ -57,36 +57,20 @@ class PagerLink:
 
 @dataclass(frozen=True)
 class Pager:
-    """What the template renders. ``first`` and ``last`` are ``None``
-    when that end is already inside ``links`` — an elision marker and
-    a First anchor pointing at a range the strip already shows would
-    be two ways to reach the same place."""
+    """Where the operator is, and how much table there is.
 
-    links: tuple[PagerLink, ...]
-    first: PagerLink | None
-    last: PagerLink | None
-    elided_before: bool
-    elided_after: bool
+    Three scalars and a derived list: the ranges are computed on
+    demand rather than stored, because they are markup's business and
+    a 40,000-row table has 200 of them.
+    """
+
+    offset: int
     page_size: int
     total: int
 
     @property
-    def all_ranges(self) -> tuple[PagerLink, ...]:
-        """Every range in the table, not just the strip's window.
-
-        The strip shows five; the jump menu shows all of them (19J.9).
-        Derived from ``total`` and ``page_size`` rather than stored, so
-        ``build_pager`` — and with it 19J.5's window, clamping and
-        suppression rule — is untouched by the item that needs this.
-
-        The current range is read back off ``links`` rather than passed
-        in: the window is always centred on it, so it is always in
-        there. ``first`` and ``last`` are set only when that end sits
-        *outside* the window, which the current page never does.
-        """
-        current = next(
-            (link.offset for link in self.links if link.is_current), 0
-        )
+    def ranges(self) -> tuple[PagerLink, ...]:
+        """Every range in the table, in order, one of them current."""
         page_count = (self.total + self.page_size - 1) // self.page_size
         return tuple(
             PagerLink(
@@ -95,7 +79,7 @@ class Pager:
                     min((index + 1) * self.page_size, self.total),
                 ),
                 offset=index * self.page_size,
-                is_current=index * self.page_size == current,
+                is_current=index * self.page_size == self.offset,
             )
             for index in range(page_count)
         )
@@ -127,38 +111,12 @@ def clamp_offset(offset: int, *, total: int, page_size: int = PAGE_SIZE) -> int:
 def build_pager(
     *, total: int, offset: int = 0, page_size: int = PAGE_SIZE
 ) -> Pager | None:
-    """The strip for a table of ``total`` rows positioned at ``offset``,
+    """The pager for a table of ``total`` rows positioned at ``offset``,
     or ``None`` when the table holds one page or less."""
     if page_size <= 0 or total <= page_size:
         return None
-
-    offset = clamp_offset(offset, total=total, page_size=page_size)
-    page_count = (total + page_size - 1) // page_size
-    current_index = offset // page_size
-
-    def link(index: int) -> PagerLink:
-        start = index * page_size
-        end = min(start + page_size, total)
-        return PagerLink(
-            label=_label(start + 1, end),
-            offset=start,
-            is_current=index == current_index,
-        )
-
-    half = _WINDOW // 2
-    window_start = max(0, current_index - half)
-    window_end = min(page_count - 1, window_start + _WINDOW - 1)
-    # Re-anchor when the window runs off the end, so the strip keeps a
-    # constant width instead of shrinking near the last page.
-    window_start = max(0, window_end - _WINDOW + 1)
-
-    links = tuple(link(i) for i in range(window_start, window_end + 1))
     return Pager(
-        links=links,
-        first=link(0) if window_start > 0 else None,
-        last=link(page_count - 1) if window_end < page_count - 1 else None,
-        elided_before=window_start > 1,
-        elided_after=window_end < page_count - 2,
+        offset=clamp_offset(offset, total=total, page_size=page_size),
         page_size=page_size,
         total=total,
     )

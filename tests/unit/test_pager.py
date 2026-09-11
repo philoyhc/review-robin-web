@@ -4,6 +4,13 @@ The arithmetic is small and entirely boundary conditions, which is
 exactly the shape that ships wrong: an off-by-one here shows up as a
 roster row nobody can reach, and no other test in the suite would
 notice.
+
+The four **elision** tests that used to sit here retired with the code
+they covered (19J.9, 2026-09-11): ``Pager`` no longer computes a
+five-wide window, First / Last anchors or ellipsis flags, because the
+strip that rendered them is gone and the cluster shows every range.
+What is left is what never depended on the strip — where the ranges
+fall, and what an out-of-range offset does.
 """
 from __future__ import annotations
 
@@ -13,7 +20,7 @@ from app.web import views
 
 
 def _labels(pager: views.Pager) -> list[str]:
-    return [link.label for link in pager.links]
+    return [link.label for link in pager.ranges]
 
 
 # --------------------------------------------------------------------- #
@@ -56,45 +63,19 @@ def test_labels_carry_thousands_separators() -> None:
 
 def test_exactly_one_range_is_current() -> None:
     pager = views.build_pager(total=556, offset=200)
-    current = [link for link in pager.links if link.is_current]
+    current = [link for link in pager.ranges if link.is_current]
     assert len(current) == 1
     assert current[0].label == "201–400"
 
 
-# --------------------------------------------------------------------- #
-# Elision — a 40,000-row table must not be 200 links wide
-# --------------------------------------------------------------------- #
-
-
-def test_a_large_table_shows_a_window_with_first_and_last_hung_off_the_ends() -> None:
+def test_a_large_table_is_every_range_not_a_window() -> None:
+    """What replaced elision. The strip capped its own width at five
+    and left its reach at two pages a click; the menu holds the lot, so
+    the middle of a 40,000-row table is one move away."""
     pager = views.build_pager(total=40000, offset=20000)
-    assert len(pager.links) == 5
-    assert pager.first.label == "1–200"
-    assert pager.last.label == "39,801–40,000"
-    assert pager.elided_before and pager.elided_after
-
-
-def test_no_first_anchor_when_the_window_already_starts_at_the_top() -> None:
-    """A First link pointing at a range the strip already shows would be
-    two ways to reach the same place."""
-    pager = views.build_pager(total=40000, offset=0)
-    assert pager.first is None
-    assert pager.links[0].label == "1–200"
-    assert pager.last is not None
-
-
-def test_no_last_anchor_when_the_window_already_reaches_the_end() -> None:
-    pager = views.build_pager(total=40000, offset=39800)
-    assert pager.last is None
-    assert pager.links[-1].label == "39,801–40,000"
-    assert pager.first is not None
-
-
-def test_the_window_keeps_its_width_at_the_last_page() -> None:
-    """Re-anchored rather than allowed to shrink, so the strip does not
-    change width as the operator walks to the end."""
-    pager = views.build_pager(total=40000, offset=39800)
-    assert len(pager.links) == 5
+    assert len(pager.ranges) == 200
+    assert pager.ranges[0].label == "1–200"
+    assert pager.ranges[-1].label == "39,801–40,000"
 
 
 # --------------------------------------------------------------------- #
@@ -120,8 +101,22 @@ def test_clamping_an_empty_table_is_zero_not_a_crash() -> None:
 
 def test_build_pager_clamps_rather_than_trusting_its_caller() -> None:
     pager = views.build_pager(total=556, offset=99999)
-    current = [link for link in pager.links if link.is_current]
+    assert pager.offset == 400
+    current = [link for link in pager.ranges if link.is_current]
     assert current[0].label == "401–556"
+
+
+def test_the_pager_carries_only_what_the_cluster_reads() -> None:
+    """The retirement, pinned.
+
+    ``links``, ``first``, ``last`` and the two ``elided_*`` flags were
+    the strip's. Leaving them as unread fields is how a reader comes to
+    believe there is still a window somewhere deciding what renders.
+    """
+    pager = views.build_pager(total=40000, offset=20000)
+    assert {f for f in pager.__dataclass_fields__} == {
+        "offset", "page_size", "total"
+    }
 
 
 # --------------------------------------------------------------------- #
@@ -195,54 +190,44 @@ def test_the_pager_sits_with_the_count_line_it_replaces(page: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# ``Pager.all_ranges`` — Segment 19J Item 9. The strip shows a window of
-# five; the jump menu shows the lot. Derived rather than stored, so
-# ``build_pager`` and with it 19J.5's window, clamping and suppression
-# rule are untouched by the item that needs it.
+# ``Pager.ranges`` — Segment 19J Item 9. Derived on demand rather than
+# stored: the ranges are markup's business, and a 40,000-row table has
+# 200 of them. Added at rung 1 as ``all_ranges``, beside 19J.5's
+# ``links``; renamed when rung 2's follow-up retired the window, since
+# there is no longer a partial list to distinguish it from.
 
 
-def test_all_ranges_covers_the_whole_table() -> None:
+def test_ranges_covers_the_whole_table() -> None:
     pager = views.build_pager(total=1401, offset=0)
     assert pager is not None
 
-    ranges = pager.all_ranges
+    ranges = pager.ranges
     assert len(ranges) == 8  # 1,401 rows at 200 a page
     assert [r.label for r in ranges][:2] == ["1–200", "201–400"]
     assert ranges[-1].label == "1,401–1,401"
     assert [r.offset for r in ranges] == [i * 200 for i in range(8)]
 
 
-def test_all_ranges_is_strictly_more_than_the_strip_shows() -> None:
-    """The reason it exists: the strip cannot reach the middle of a long
-    roster, and the menu must."""
+def test_ranges_marks_the_current_page_and_only_that_one() -> None:
     pager = views.build_pager(total=40000, offset=20000)
     assert pager is not None
 
-    assert len(pager.links) == 5
-    assert len(pager.all_ranges) == 200
-
-
-def test_all_ranges_marks_the_current_page_and_only_that_one() -> None:
-    pager = views.build_pager(total=40000, offset=20000)
-    assert pager is not None
-
-    current = [r for r in pager.all_ranges if r.is_current]
+    current = [r for r in pager.ranges if r.is_current]
     assert len(current) == 1
     assert current[0].offset == 20000
-    # And it agrees with the strip, which is what lets the menu's
-    # summary retire the strip's bold cell.
-    assert current[0].label == next(
-        link.label for link in pager.links if link.is_current
-    )
+    # And it agrees with the offset the pager was built at, which is
+    # what the menu's summary renders.
+    assert current[0].offset == pager.offset
+    assert current[0].label == "20,001–20,200"
 
 
-def test_all_ranges_marks_the_current_page_after_a_clamp() -> None:
+def test_ranges_marks_the_current_page_after_a_clamp() -> None:
     """``build_pager`` snaps an arbitrary offset onto a boundary, and
     the menu has to agree with where it landed rather than with what was
     asked for."""
     pager = views.build_pager(total=1401, offset=1399)
     assert pager is not None
 
-    current = [r for r in pager.all_ranges if r.is_current]
+    current = [r for r in pager.ranges if r.is_current]
     assert len(current) == 1
     assert current[0].offset == 1200
