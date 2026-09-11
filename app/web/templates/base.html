@@ -1434,21 +1434,21 @@
       .table-pager-bottom {
         margin: 12px 0 0 0;
       }
-      .table-pager-link {
-        padding: 2px var(--space-2);
-        border-radius: var(--radius-button);
-        text-decoration: none;
-      }
+      /* A range is a link and reads as one (19J.7 rung 4). There is no
+         `.table-pager-link` rule any more, and that is the point: the
+         anchors take `a { color: var(--text-link) }` and the user
+         agent's underline, so the strip matches every other link on the
+         page by construction rather than by a value someone has to keep
+         in sync. What the rule used to add — `padding`, a radius and
+         `text-decoration: none` — made a range read as a tinted block
+         instead; the strip's own `gap` does the spacing the padding did.
+
+         The current cell keeps `aria-current="page"` and is marked by
+         weight alone. It used to be a solid `--selected-bg` fill, which
+         put the reserved accent shade on the one cell in the strip that
+         does *not* navigate — the collision Item 7 exists to remove. */
       .table-pager-link.is-current {
-        background: var(--selected-bg);
-        color: var(--selected-fg);
         font-weight: 600;
-      }
-      /* Inert while the scaffold rung is the only one landed: rendered
-         and readable, but nothing navigates. */
-      .table-pager-link[aria-disabled="true"] {
-        color: var(--text-dim);
-        cursor: default;
       }
       .table-pager-gap,
       .table-pager-jump {
