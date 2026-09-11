@@ -2110,15 +2110,28 @@ Each rung carries its own spec edit; there is no trailing docs rung.
 
 ### Open questions
 
-- **Does the reservation extend past pill and chip surfaces?**
+- ~~**Does the reservation extend past pill and chip surfaces?**
   `--status-info-border` resolves to the reserved pair on a static info
   panel. Scoped out of this item deliberately. **Author decides**
-  whether it becomes 19J.8, a deferred entry, or nothing.
-- **The instruments audience override.** `instruments_index.html:125-126`
+  whether it becomes 19J.8, a deferred entry, or nothing.~~
+  **Answered 2026-09-11: its own item, now `19J.10`.** Real drift
+  rather than a curiosity — a static panel wearing the shade reserved
+  for things that act is the collision this item exists to remove, one
+  surface out from where it looked.
+- ~~**The instruments audience override.** `instruments_index.html:125-126`
   leaves two chip rows filled rather than outlined, at 0.4 opacity.
   They are clickable so the rule is not violated, but the treatment is
   inconsistent. **Author decides** whether that is a visibility-grid
-  item rather than a pill one.
+  item rather than a pill one.~~ **Answered 2026-09-11: nothing to do.**
+  The chips are clickable and they carry the shade, which is what the
+  reservation requires; the inconsistency is cosmetic. Worth recording
+  what the build found while putting the question: the override sets
+  only `background`, `color` and `opacity`, so those chips **already
+  carry the accent edge** — it is invisible because the fill beneath it
+  is the same colour. Removing the fill would reveal an edge that is
+  there rather than add one. Declined anyway: the 0.4 opacity is a
+  row-internal match to the greyed What / When cycle chips beside it,
+  and that is a real reason, not an oversight.
 - **Band 1 `is-unset` chips.** They are clickable, so the rule says they
   take the outline — but they would then carry an amber fill with a blue
   edge, which no other chip does. **Needs a look on the dev slot** before
@@ -2159,7 +2172,7 @@ Each rung carries its own spec edit; there is no trailing docs rung.
   same rule; §10's `.table-pager` row gains the link-style sentence
   (Item 7).
 - `guide/post_azure_todo_checklist.md` — screencap-retake row naming
-  the four affected files (Item 7).
+  the four affected files (Item 7). <!-- doc-impact-waived: all 16 screencaps opened 2026-09-11; none is stale. No screencap shows a roster pager (they are card crops), every chip that appears is *selected* so rung 3's same-coloured edge is invisible on it, and no screencap shows a validated lifecycle pill. The four files this bullet named do not show what it claimed — see Status. -->
 - `docs/status.md` — row when the item closes (Item 7).
 
 ## Item 8 — The row pager keeps your place
@@ -2896,3 +2909,125 @@ ones the stub named, now with their contents.
 - `guide/post_azure_todo_checklist.md` — row for the one-move reach
   check on a 5,000-row roster (Item 9).
 - `docs/status.md` — row when the item closes (Item 9).
+
+## Item 10 — Does the reserved shade stop at pills and chips?
+
+**Stub, opened 2026-09-11.** Promoted from 19J.7's first open question,
+which that item scoped out deliberately and left for the author. The
+answer was "its own item"; this is it.
+
+### Opportunity
+
+19J.7 reserved one pair — `--blue-strong` `#2563eb` light,
+`--blue-glow` `#4b8bf5` dark, reached through `--selected-bg` — to mean
+*you can act on this*, and stated the reservation's scope as **pill and
+chip surfaces**. Something outside that scope reaches the same pair.
+
+Measured 2026-09-11 at `HEAD`:
+
+| What | Where |
+|---|---|
+| `--status-info-border` resolves to the reserved pair | `base.html:187` (light), `:330` (dark) |
+| Its one consumer | `body.ui-v2 .banner.banner-info` (`base.html:3294`), `border-color` only |
+| Rendered on | `reviewer/review_surface.html` ×2, `reviewer/pre_open.html` ×1 |
+| Caught by `test_reserved_shade.py`? | **No** — the sweep filters selectors on `\.(?:[a-z0-9-]*(?:pill\|chip))\b`, so a banner is out of scope by construction |
+
+Two things worth noticing before deciding anything. Every consumer is a
+**reviewer** surface, not an operator one — the audience 19J.7 never
+looked at. And `base.html`'s own comment above the banner rules says
+*"Defined for completeness; not rendered on this page"*, which is true
+of the page it sits on and false of the app.
+
+### Decision
+
+**Not yet made — that is the item.** The question is not "which token
+do we retarget"; it is **what the reservation is a reservation of**,
+and the honest answer decides whether there is anything to fix:
+
+- If the rule is *this shade means an affordance, anywhere*, then a
+  static banner wearing it is drift, and either the token retargets or
+  the banner does.
+- If the rule is *this shade on a **chip-sized** thing means an
+  affordance*, then a 1px border on a full-width panel was never in
+  scope, nothing is wrong, and the fix is to **say so in
+  `spec/color_tokens.md`** rather than to change a colour.
+
+The second reading is the one the evidence leans toward: nobody reads a
+panel's border as a click target, and the collision 19J.7 actually
+removed was a *pill* that looked like a control and was not. But 19J.7
+wrote the scope as "pill and chip surfaces" without testing the
+boundary, and this item is that test.
+
+**Whatever wins, the guard follows it.** `test_reserved_shade.py`'s
+pill/chip selector filter currently encodes the narrow reading as an
+implementation detail of a regex. If the broad reading wins, the filter
+widens and the allowlist grows; if the narrow one wins, the filter is
+correct and should say in its docstring that it is a *choice* rather
+than a convenience.
+
+### Semantics
+
+- **A decision that changes no pixels is a real outcome here**, and the
+  more likely one. This item may close having edited one spec
+  paragraph and one test docstring.
+- **Reviewer surfaces are in scope for the question** even though
+  19J.7's audit was operator-only — the reservation is a
+  whole-app claim or it is not a claim.
+- **No other token is implicated until measured.** The table above
+  names the one found; the item starts by re-running the resolution
+  over *every* token rather than trusting that.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `HEAD`.
+
+| What | Count | Command |
+|---|---:|---|
+| Tokens resolving to the reserved pair | to be re-measured as rung 1 | the resolver in `tests/unit/test_reserved_shade.py` |
+| `.banner-info` render sites | 3, all reviewer | `grep -rno "banner-info" app/web/templates --include='*.html'` |
+| Rules the guard currently scans | 36 pill/chip | `test_only_controls_reach_the_reserved_shade` |
+
+### PR ladder
+
+1. **Measure, then decide.** Re-run the token resolution over every
+   token in both themes and list everything reaching the reserved pair
+   — not just the one 19J.7 noticed. Put the list to the author with
+   the two readings above. *Must not* change a colour before the
+   scope question is answered.
+2. **Whatever follows from that** — a spec paragraph, or a retarget
+   plus a widened guard. Sized once rung 1 has the list.
+
+### Definition of done
+
+- Every token reaching the reserved pair is listed, in both themes.
+- `spec/color_tokens.md` states the reservation's scope explicitly
+  enough that the next reader does not have to re-derive it.
+- `tests/unit/test_reserved_shade.py`'s selector filter matches the
+  decided scope, and its docstring says the scope is a choice.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent
+  container before pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19J.10` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Which reading of the reservation is right?** The item exists to put
+  that to the author with a full list rather than the one example.
+  **Author decides at rung 1.**
+
+### Out of scope
+
+- **The lifecycle and chip work 19J.7 shipped.** Settled and closed;
+  this item only asks where the rule's edge is.
+- **Any other reviewer-surface colour.** The reviewer surfaces have
+  never had a colour audit; that is a larger thing and naming it here
+  would make this item pretend to be it.
+
+### Doc impact
+
+- `spec/color_tokens.md` — "Deliberate couplings" states the
+  reservation's scope explicitly, whichever reading wins (Item 10).
+- `docs/status.md` — row when the item closes (Item 10).
