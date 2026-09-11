@@ -1055,9 +1055,11 @@ it and every page gets it from one edit.
 **Suppressed whenever the roster is already partitioned by the filter
 strip** (author, 2026-09-11): a search or status filter is the
 operator's own partition of the roster, and a second partition stacked
-on it is two mental models for one table. Filtered views keep today's
+on it is two mental models for one table. ~~Filtered views keep today's
 behaviour exactly — the 500 cap and its `Showing first 500 of 900
-matching reviewers; 400 more not shown.` line.
+matching reviewers; 400 more not shown.` line.~~ Filtered views keep the
+500 cap; their **wording changes** — see the count-line semantics below,
+revised by the author 2026-09-11.
 
 **Rejected: an infinite-scroll or "load more" control.** It cannot say
 where you are, cannot be linked to, and cannot be jumped from; the
@@ -1071,13 +1073,40 @@ above.
 - **Page size is the existing cap**, 200. The unfiltered cap stops being
   a truncation and becomes a page size. The filtered 500 stays a
   truncation, because filtered views carry no pager.
-- **The count line changes shape.** `Showing first 200 of 1,240
+- **The count line stops being the table's caption and becomes the
+  filter's** (author, 2026-09-11). ~~`Showing first 200 of 1,240
   reviewers; 1,040 more not shown.` describes rows being withheld, and
   stops being true once they are reachable. The paged line states a
   position — `Showing 201–400 of 1,240 reviewers.` — so
   `app/web/views/_preview_counts.py`'s four-state table gains a fifth
-  state. The withheld clause survives for the filtered-and-capped case,
-  which still truncates.
+  state.~~ Where the pager renders, **no line renders at all**: the
+  ranges already say where the operator is, and a sentence repeating
+  them is the noise the quiet case was introduced to avoid (19I Item 4).
+  The sentence is needed *more* on filtered views, which carry no pager,
+  and it reads:
+
+  | State | Sentence |
+  |---|---|
+  | filter active, under the cap | `Showing 37 reviewers.` |
+  | filter active, capped | `Showing 500 of 900 reviewers, 400 more not shown.` |
+  | no filter (pager renders, or the roster fits one page) | *(nothing)* |
+
+  So `app/web/views/_preview_counts.py` does not gain a fifth state. Of
+  the three states that produce a sentence today, **one retires**
+  (capped-and-unfiltered, now the pager's job) and two survive reworded;
+  the quiet state absorbs every unfiltered case. The helper only ever
+  fires when a filter is active. Its `total` argument goes with the
+  retired state — nothing left counts against the roster — and the word
+  `matching` goes with it too: once `of M` can only mean the matching
+  pool, the qualifier the current docstring introduced to disambiguate
+  the two pools has nothing left to disambiguate.
+- **One flag drives both.** The pager's suppression and the count line's
+  appearance key off the same `is_filtered` the routes already compute —
+  not off `matching < total`, which is what `preview_count_line` tests
+  today. A filter that happens to match every row is still a filtered
+  view: it renders `Showing 1,240 reviewers.` and no pager, which is the
+  honest answer (the filter ran and excluded nothing) and keeps the two
+  affordances from ever disagreeing about which mode the page is in.
 - **Out-of-range offsets clamp, they do not 404**: past the end lands on
   the last page, negative on the first. A stale link after a delete is
   not an error page.
@@ -1105,6 +1134,18 @@ above.
   the operator scroll back to use it.
 - **Ranges, not page numbers** (author, 2026-09-11) — `201–400` says
   where you are in the roster; `page 2` makes the reader multiply.
+- **No count line where the pager renders** (author, 2026-09-11) — the
+  pager states the position, so the sentence would be a second voice
+  saying the same thing. This supersedes the "fifth state" written into
+  this item the day it was planned; struck above rather than edited out,
+  because the superseded shape was a real decision.
+- **The filtered sentence drops the roster total** (author, 2026-09-11)
+  — `Showing 37 reviewers.` replaces today's `Showing 3 of 1,240
+  reviewers.`. Worth naming what that costs: the operator loses the
+  denominator that says how far the filter narrowed. Against it, the
+  roster total is on the page anyway (the info card) and the sentence
+  now has one job. Flagged to the author at rung 2 if the loss reads
+  worse in practice than it does here.
 - **Page size is not operator-configurable** (2026-09-11) — one number,
   already specified and already tested. A selector is a setting, an
   inventory row in `spec/settings_inventory.md` and a persistence
@@ -1125,7 +1166,8 @@ $ grep -rln "Showing first\|200 unfiltered\|500 when" spec/ docs/    # 3
   (Invitations and Responses live in the same module).
 - **11 test files** name a cap or the count line;
   `tests/unit/test_preview_count_line.py` is the contract test for the
-  sentence itself and is where the fifth state gets pinned.
+  sentence itself, and is where the surviving two states and the two
+  `None` branches get pinned.
 - **3 spec files**: `spec/setup_pages.md` "Preview tables (shared toggle
   pattern)", `spec/assignments.md` "The preview-count line (Segment 19I
   Item 10)", and `spec/operations_pages.md`'s two uncapped statements
@@ -1140,7 +1182,8 @@ approach the surface lands inert before it moves anything.
    seven pages, real ranges computed from the real counts, every link
    inert. Nothing paginates yet; the point is agreeing the shape.
 2. **The four Setup pages wired** — `offset` param, slice, clamping, the
-   count line's fifth state, the edit-row landing, filter suppression.
+   count line's revised filtered-only contract, the edit-row landing,
+   filter suppression.
 3. **Invitations + Responses wired** — the two that change contract from
    uncapped; `spec/operations_pages.md` lands with them.
 4. **Assignments wired** — SQL `OFFSET`, plus whatever the sort question
@@ -1150,11 +1193,14 @@ approach the surface lands inert before it moves anything.
 
 - every row is reachable by the pager on all seven pages: row 1,201 of
   1,240 is visible without searching for it
-- a filtered view renders no pager and keeps today's `Showing first 500
-  of …` sentence unchanged
+- a filtered view renders no pager and the revised sentence: `Showing N
+  <noun>.` under the cap, `Showing N of M <noun>, X more not shown.` when
+  the 500 cap bites
+- an unfiltered view renders the pager and **no** count line
 - an out-of-range `offset` clamps — no 4xx, no 5xx
 - the pager renders identically above and below the table
-- `tests/unit/test_preview_count_line.py` covers the paged state
+- `tests/unit/test_preview_count_line.py` covers the two surviving
+  states and pins that the unfiltered branches return `None`
 - `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
 - `### Doc impact` section present and current
 - `python3 tools/close_check.py 19J.5` exits 0; any warning adjudicated
@@ -1192,10 +1238,11 @@ approach the surface lands inert before it moves anything.
 ### Doc impact
 
 - `spec/setup_pages.md` — the "Preview tables (shared toggle pattern)"
-  section: the pager, the paged count-line state, and the
-  filter-suppression rule (Item 5).
+  section: the pager, the filter-suppression rule, and the count line's
+  retreat to filtered views only, including its two retired states
+  (Item 5).
 - `spec/assignments.md` — "The preview-count line (Segment 19I Item 10)":
-  the same two changes as they land on the Assignments table (Item 5).
+  the same three changes as they land on the Assignments table (Item 5).
 - `spec/operations_pages.md` — the two **uncapped** statements retired;
   Invitations and Responses page on the same terms as the rest (Item 5).
 - `spec/ui_elements.md` — §10 Layout primitives gains the pager; §7
