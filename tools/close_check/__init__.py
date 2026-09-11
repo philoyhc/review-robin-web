@@ -113,7 +113,7 @@ import argparse
 import json
 import sys
 
-from ._archive import archived_report
+from ._archive import archived_report, manifest_levels
 from ._manifest import (
     FAIL,
     NOTED,
@@ -155,6 +155,7 @@ __all__ = [
     "honoured",
     "item_heading_start",
     "last_sweep_date",
+    "manifest_levels",
     "main",
     "parse_bullets",
     "parse_id",
