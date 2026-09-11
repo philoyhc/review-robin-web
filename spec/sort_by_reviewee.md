@@ -290,17 +290,22 @@ The Display Fields available to sort are scoped to the instrument's own display 
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.
-- **Wrapper rows need a resolver.** The four rosters and
-  Assignments hand `apply_cookie_sort` rows whose sort keys are
-  their own attributes, so a plain `getattr` suffices. Invitations
-  and Responses do not: their rows are per-reviewer / per-reviewee
-  **view wrappers**, so `_operations.py` passes a resolver that
-  reaches through (`row.reviewer.name`, `row.reviewee.tag_1`) and
-  derives the progress keys as a **completion percentage** rather
-  than a raw count. `apply_cookie_sort` collapses `""` to `None`
-  and sorts `None` last in both directions, matching the client
-  comparator — so a row with nothing to do lands in the same place
-  server-side and after a click.
+- **Wrapper rows need a resolver.** The four rosters hand
+  `apply_cookie_sort` rows whose sort keys are their own attributes,
+  so a plain `getattr` suffices. Invitations and Responses do not:
+  their rows are per-reviewer / per-reviewee **view wrappers**, so
+  `_operations.py` passes a resolver that reaches through
+  (`row.reviewer.name`, `row.reviewee.tag_1`) and derives the
+  progress keys as a **completion percentage** rather than a raw
+  count. `apply_cookie_sort` collapses `""` to `None` and sorts
+  `None` last in both directions, matching the client comparator —
+  so a row with nothing to do lands in the same place server-side
+  and after a click. **Assignments left this group in Segment
+  19J.5 rung 4** (2026-09-11): its sort now translates to `ORDER BY`
+  in `assignments.list_pairs` rather than running through
+  `apply_cookie_sort` at all, so paging and sorting compose over the
+  whole matching set instead of a fetched page — see
+  `spec/assignments.md` "Sorting the pair list".
 - **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
   carrying the canonical
   `[{"key": "...", "dir": "asc|desc"}, ...]` shape,

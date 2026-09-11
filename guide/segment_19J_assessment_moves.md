@@ -76,8 +76,10 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
 | **19J.4** | Navigation busy indicator, once in the chrome | **Built 2026-09-11** (1 rung; `close_check` PASS) — held open for dev-slot verification, now tracked as item 3 of `guide/post_azure_todo_checklist.md` |
-| **19J.5** | Row pagination on the seven roster-bearing pages | **All 4 rungs landed 2026-09-11** — seven of seven pages paged; sort moved into SQL |
-| 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
+| **19J.5** | Row pagination on the seven roster-bearing pages | **Closed 2026-09-11** (4 rungs + a verification PR; seven of seven pages paged, sort in SQL) |
+| **19J.6** | Session-nav hover standardised to the selected style | **Closed 2026-09-11** (1 PR) |
+| **19J.7** | Pills rationalization — one vocabulary for two jobs | **Stub, opened 2026-09-11** — audit landed, decision open |
+| 19J.8+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Four items admitted 2026-09-11; the rule stands, the clock resets on each. | Open |
 
 ---
 
@@ -1493,6 +1495,38 @@ that is the one way an operator can still reach the unbounded render
 these pages used to do always, and if it ever reads as a bug the test
 is where the decision lives.
 
+**2026-09-11 — closed.** Four rungs, all landed, plus a fifth PR that
+counted what the rung-3 tests had only implied. The ladder held as
+written; two things it did not anticipate are recorded above — the
+transitional `paged` argument that rung 2 needed and rung 4 retired,
+and the collation finding that changed how rung 4 had to be built.
+
+Intended versus done, in one line each:
+
+| Rung | Intended | Done |
+|---|---|---|
+| 1 | Scaffold, inert, all seven pages | As planned |
+| 2 | Four Setup pages wired | As planned, **plus** the count-line contract, which is one helper and could not be rewritten for four pages alone |
+| 3 | Invitations + Responses, spec edit | As planned, **plus** a decision the plan left open: a filtered view on those two stays uncapped |
+| 4 | Assignments + the sort question | As planned; the author chose the SQL sort, and it took every key rather than the DB-backed subset the option described |
+
+**One spec the plan never named, found by the close pass.**
+`spec/sort_by_reviewee.md` grouped Assignments with the four rosters as
+surfaces whose sort runs through `apply_cookie_sort` — which rung 4
+made false, and which nothing in the build pointed at because the rung
+touched `_assignments.py` and `_coverage.py`, not that spec. `close_check`
+could not catch it either: it asks whether the paths a manifest *names*
+were edited, never which paths the edit implied. `spec-writer` found it
+at step 3 of the close, which is the step that exists for exactly this.
+The bullet is added above rather than waived, per the rule that
+undeclared spec impact is the failure mode that section prevents.
+
+`python3 tools/close_check.py 19J.5` passes; its standing note
+(`_operations` touched, `spec/validate_page.md` and
+`spec/preview_hub.md` not in the manifest) is adjudicated as it was at
+rung 2 — neither documents the count line, and `preview_hub.md`'s only
+"Showing" is an out-of-scope bullet about submission state.
+
 **A test bug worth recording, because it nearly became a code bug.**
 The first suppression test passed `?search=` and saw a pager; the
 route's parameter is `q` (`status_filter` is aliased to `status`).
@@ -1584,4 +1618,215 @@ approach the surface lands inert before it moves anything.
   Invitations and Responses page on the same terms as the rest (Item 5).
 - `spec/ui_elements.md` — §10 Layout primitives gains the pager; §7
   Tables points at it (Item 5).
+- `spec/sort_by_reviewee.md` — the "wrapper rows need a resolver"
+  bullet: Assignments left that group at rung 4, since its sort is now
+  `ORDER BY` rather than `apply_cookie_sort`. **Added at close**, not
+  at planning — see `### Status` (Item 5).
 - `docs/status.md` — row when the item closes (Item 5).
+
+---
+
+## Item 6 — Session-nav hover standardised to the selected style
+
+### Opportunity
+
+Author, 2026-09-11: *"the hover over style for the setup and operations
+tabs are different from that for Session home tab. standardize to —
+mouse hover over style = tab selected style"*.
+
+They were different in a way no template diff would show. Every nav
+colour came from a theme token except one: the tab strip hovered to a
+literal `rgba(255, 255, 255, 0.7)`. Seventy per cent white reads as a
+tinted near-white over the light Setup / Operations strips and as a
+glaring pale block over the dark ones, because a literal cannot follow
+the theme — the strip has a dark-mode token, the hover did not.
+
+### Decision
+
+Every session-nav target paints its **own selected colours** on hover:
+`--nav-tab-active-bg` / `--nav-tab-active-fg` for a tab, and the
+anchor's selected background for Home (the shared tab token on v1, the
+page surface on v2, matching each version's own active rule).
+
+**The active underline is excluded**, confirmed by the author when the
+question was put back to them. The `::after` marker stays on `.active`
+alone: painted under the cursor it would leave the operator unable to
+tell which page they are on while hovering.
+
+**Rejected: a new hover token.** A third colour would have kept the
+three targets distinguishable from each other and from selected, which
+is precisely the drift being removed — and it would need a dark value
+of its own, which is how the current one went wrong.
+
+### Semantics
+
+- **Hover matches selected completely, bar the underline.** Verifiable
+  rather than approximate: of the ten rules targeting `.nav-tab.active`,
+  one sets background / colour / weight, one sets colour under
+  `body.ui-v2`, and the other eight are `::after`.
+- **The one property hover does not restate is unreachable.** v1's
+  `.nav-tab.active { font-weight: 500 }` loses to
+  `body.ui-v2 .nav-tab { font-weight: 600 }` on specificity (0,2,0
+  against 0,2,1), and every template rendering a nav tab sets `ui-v2`.
+- **A disabled tab never hovers.** The rules carry
+  `:not(.disabled):not([aria-disabled="true"])`.
+
+### Judgment calls — decided
+
+- **`:not()` rather than a later override** (2026-09-11) —
+  `body.ui-v2 .nav-tab:hover` is (0,3,1) against
+  `.nav-tab.disabled:hover`'s (0,3,0), so the disabled guard has been
+  losing on every v2 page and "coming soon" tabs have been taking a
+  hover background. `:not()` settles it by never matching rather than
+  by out-ranking, which cannot be undone by a future rule's position.
+- **The dead token goes with it** — `--nav-home-bg-hover` lost its only
+  consumer, so it was dropped from both themes and the catalogue under
+  `spec/color_tokens.md`'s existing "Dropped as unused" convention.
+
+### Blast radius (measured)
+
+```
+$ grep -c "rgba(255, 255, 255, 0.7)" app/web/templates/base.html   # 2 rules
+$ grep -rl "session_top_nav.html\|class=\"nav-tab" app/web/templates/operator/*.html \
+    | xargs grep -L "body_class.*ui-v2"                            # none — all v2
+$ grep -rn -- "--nav-home-bg-hover" app/web/templates/base.html    # 2 (both defs)
+```
+
+- **1 stylesheet**, 4 rules (two hover pairs, v1 and v2).
+- **Every** nav-tab template is `ui-v2`; the v1 rules are reachable by
+  nothing, which is what makes the font-weight gap above harmless.
+- **1 token retired**, semantic count 107 → 106.
+
+### Status
+
+**2026-09-11 — landed in one PR, as a chrome fix rather than a
+feature.** Two things it turned up that the request did not name:
+
+- **A latent bug.** The disabled-tab guard has been losing to the v2
+  hover rule on specificity, so reserved "coming soon" tabs on the
+  Previews page have been highlighting on hover. Fixed in passing,
+  because leaving it would have meant a disabled tab taking the *full
+  selected* treatment once hover matched selected — the change would
+  have made an existing bug louder.
+- **A token retired itself**, and the semantic-count test caught the
+  drift rather than anyone noticing: `spec/color_tokens.md` claimed 107
+  where the stylesheet declared 106.
+
+**What the suite cannot reach.** Nothing in pytest renders CSS, so the
+colours are dev-slot verification and were added as a row to
+`guide/post_azure_todo_checklist.md` item 3 rather than claimed.
+`tests/unit/test_session_nav_hover.py` pins what is checkable — the
+rules say what they should, and the literal has not crept back — and
+was mutation-tested: restoring the old rule fails 2 of its 6.
+
+**`close_check 19J.6`'s six notes, adjudicated.** All six name a route
+module touched in this item's window against a spec not in this item's
+manifest — `_assignments`, `_operations`, the four `_setup_*`. None of
+them is this item's work: they were touched by **19J.5's four rungs**,
+which landed the same day, and the window is dated from the item
+heading rather than from the first commit that mentions the item. A
+same-day sibling is indistinguishable from a scope leak to a date
+comparison. Each of those specs is in **19J.5's** manifest and was
+edited with the rung that touched it. Nothing to add here.
+
+### PR ladder
+
+1. **The standardisation**, in `base.html`, with the spec entry and the
+   browser-checklist row. **Landed 2026-09-11.**
+
+### Definition of done
+
+- hover on a Setup tab, an Operations tab and the Home anchor paints
+  that target's selected colours, in both themes (dev slot)
+- the active underline shows on the current tab only
+- a "coming soon" tab does not highlight
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The one that mattered — whether hover should match selected
+*completely* — was put to the author and answered: yes, minus the
+underline.
+
+### Out of scope
+
+- **The rest of the pill / chip vocabulary.** Hover is one affordance;
+  whether a rounded pill reads as clickable at all is Item 7.
+- **v1's unreachable nav rules.** They are dead by the `ui-v2` sweep
+  above, not by this change, and deleting them is a separate tidy-up
+  with its own blast radius.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §2 Session-scoped chrome gains the
+  hover-equals-selected rule, the underline exclusion and the
+  disabled-tab guard (Item 6).
+- `spec/color_tokens.md` — `--nav-home-bg-hover` removed from the
+  catalogue and named in "Dropped as unused"; the headline count moves
+  107 → 106 (Item 6).
+- `guide/post_azure_todo_checklist.md` — item 3 gains the hover row,
+  since no Python test renders CSS (Item 6).
+- `docs/status.md` — row when the item closes (Item 6).
+
+---
+
+## Item 7 — Pills rationalization: one vocabulary for two jobs
+
+**Stub, opened 2026-09-11.** The audit is done; the decision is not.
+
+### Opportunity
+
+Author, 2026-09-11: *"currently, the UI uses pill style both for pure
+display and also for clickable chips. thinking of how to visually
+distinguish between the two cases."*
+
+Measured before proposing anything, in
+`guide/pill_style_audit.md`: **250 pill/chip elements across 28
+templates**, 32 distinct class combinations, split **189 display** to
+**61 interactive**.
+
+The finding that makes this worth an item rather than a tidy-up:
+**the only thing distinguishing a clickable pill from a label today is
+`cursor: pointer` on `.tag-chip`** — invisible until the pointer is
+already over it, absent on touch, absent from every screenshot,
+including the Guide's. And six class combinations are used both ways,
+the worst being `pill pill-count tag-chip` at 44 interactive against 1
+display. That one display case is `b3_static_pill`
+(`instruments_index.html:3896`), which carries the *identical* class
+string to the column-visibility toggle and therefore also inherits the
+pointer cursor — the single existing affordance pointing the wrong way.
+
+### Decision
+
+**Not taken.** The audit's §"Open questions for the decision" carries
+the five the author needs to settle, of which the first two are the
+shape of the whole item:
+
+1. **Which side moves** — 189 display against 61 interactive says the
+   label is the default reading and the control is the exception, so
+   the control is what should look different. Restyling 189 labels is
+   three times the diff for the same result.
+2. **What carries the signal** — border, background, affordance glyph,
+   or shape (pill for labels, something squarer for controls).
+
+### Out of scope, already
+
+- **Accessibility is not the problem here.** The interactive pills
+  already carry `role="button"`, `tabindex="0"` and `aria-pressed`, so
+  a screen reader and a keyboard distinguish what the eye cannot.
+  Whatever is chosen must not become a reason to drop those.
+- **Status colours are not entangled.** The semantic modifiers
+  (`pill-info` / `-success` / `-warning` / `-error` / `-super`) are
+  display-only in all 50 of their uses, so a control treatment need not
+  negotiate with them.
+
+### Doc impact
+
+- `guide/pill_style_audit.md` — the measured audit this item starts
+  from (Item 7).
+- `docs/status.md` — row when the item closes (Item 7).

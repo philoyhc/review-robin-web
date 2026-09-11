@@ -1206,8 +1206,11 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   its own justification now that the selection mechanism carries it.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
-- **Paging.** The 200-row (500-when-filtered) cap + the search /
-  status filter cover the long-list case; there is no pager.
+- ~~**Paging.** The 200-row (500-when-filtered) cap + the search /
+  status filter cover the long-list case; there is no pager.~~
+  **Shipped as Segment 19J.5** (2026-09-11): the unfiltered view pages
+  at 200 rows via `.table-pager` / `?offset=`; a filtered view keeps
+  the 500 cap and no pager. See "The row pager (Segment 19J.5)" above.
 - **Assignments generation.** Moved to the Operations row in
   Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
 
