@@ -26,8 +26,11 @@
     {{ row.label }}{% if row.show_count %} <span class="muted">({{ row.count }})</span>{% endif %}
   </p>
   {% if row.is_wired and row.download_url %}
+    {# `download` marks this as an attachment link: it never replaces
+       the page, so the 19J.4 busy indicator must skip it. Matches
+       the reviewer collation page, which already carried it. #}
     <a class="btn secondary"
-       href="{{ row.download_url }}">Download</a>
+       href="{{ row.download_url }}" download>Download</a>
   {% else %}
     <a class="btn secondary"
        role="button"

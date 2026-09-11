@@ -2632,6 +2632,56 @@
       .skip-link:focus {
         top: 8px;
       }
+      /* ── Navigation busy indicator (Segment 19J.4) ──────────────
+         An indeterminate bar that arms ~200 ms after a same-origin
+         link click or form submit and clears when the next page
+         paints. Indeterminate on purpose: a page is one blocking
+         TemplateResponse, so there is no progress to report and a
+         bar that invented one would be a lie the operator can catch
+         by watching it.
+
+         Why it exists: on a large roster the Invitations and
+         Responses pages take seconds to render (19J.4's measured
+         table), and until now the app said nothing while the old
+         page sat there looking live. */
+      .rrw-busy {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        z-index: 2000;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .rrw-busy-fill {
+        height: 100%;
+        width: 40%;
+        background: var(--btn-primary-bg);
+        animation: rrw-busy-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes rrw-busy-slide {
+        0%   { margin-left: -40%; }
+        100% { margin-left: 100%; }
+      }
+      /* Reduced motion: a static full-width bar still says "working",
+         without the travelling highlight. */
+      @media (prefers-reduced-motion: reduce) {
+        .rrw-busy-fill {
+          width: 100%;
+          margin-left: 0;
+          animation: none;
+          opacity: 0.8;
+        }
+      }
+      body.rrw-navigating { cursor: progress; }
+      /* The control the operator actually clicked. Never `disabled` —
+         see the script's note: a disabled control is not serialized,
+         so its name/value would vanish from the payload. */
+      .rrw-navigating [aria-busy="true"] {
+        cursor: progress;
+        opacity: 0.72;
+      }
       /* Screen-reader-only text: removed from the visual layout but
          still in the accessibility tree (e.g. a label for an
          icon-only or visually-empty cell). */
@@ -3583,6 +3633,12 @@
   </head>
   <body class="{% block body_class %}{% endblock %}">
     <a class="skip-link" href="#main-content">Skip to main content</a>
+    {# Navigation busy indicator (19J.4). The bar is hidden until a
+       navigation outlives the arming delay; the status region is in
+       the DOM from first paint because a live region created and
+       populated in the same tick is not reliably announced. #}
+    <div class="rrw-busy" data-rrw-busy-bar hidden><div class="rrw-busy-fill"></div></div>
+    <span class="visually-hidden" role="status" data-rrw-busy-status></span>
     {# Operator top bar is the default; reviewer templates override
        this block to render the lighter "Review Robin" chrome
        (spec/visual_style_rrw.md "Reviewer-facing pages → Top bar"). #}
@@ -4172,6 +4228,107 @@
           });
         });
         sync();
+      })();
+    </script>
+    {# Navigation busy indicator (19J.4) — progressive enhancement, in
+       the idiom the rest of this file uses: no framework, no build
+       step, inert with JS off.
+
+       Four rules earned their place and must survive edits:
+
+       1. ARM ON A DELAY, not on the event. A page that returns in
+          60 ms must never flash a bar; a page slower than the delay
+          is exactly the page this exists for.
+       2. NEVER `disabled` THE SUBMITTER. A disabled control is not
+          serialized, so its name/value disappears from the payload —
+          and this app's forms carry meaning in exactly that slot (the
+          Workflow super-button, the roster bulk actions). Busy state
+          is `aria-busy`, which changes nothing about serialization.
+          `tests/unit/test_busy_indicator.py` fails if this regresses.
+       3. DISARM ON `pageshow`. The back button restores from bfcache
+          with the DOM exactly as it was, bar included — without this
+          the operator lands on a finished page that claims to be
+          loading.
+       4. SKIP DOWNLOADS. A link whose response is an attachment never
+          replaces the page, so no load event ever arrives to clear
+          the bar. Those links carry the standard `download`
+          attribute, which is also the signal this script reads. #}
+    <script>
+      (function () {
+        var ARM_MS = 200;
+        /* Last-resort clear. Well past the slowest page measured for
+           19J.4 (16.1 s, Responses at 200x200), so it never cuts a
+           real load short — it only stops a missed signal from
+           leaving the bar running forever. */
+        var GIVE_UP_MS = 60000;
+        var bar = document.querySelector("[data-rrw-busy-bar]");
+        var statusRegion = document.querySelector("[data-rrw-busy-status]");
+        if (!bar) return;
+        var armTimer = null;
+        var giveUpTimer = null;
+
+        function show() {
+          armTimer = null;
+          bar.hidden = false;
+          document.body.classList.add("rrw-navigating");
+          if (statusRegion) statusRegion.textContent = "Loading\u2026";
+        }
+        function arm() {
+          if (armTimer || !bar.hidden) return;
+          armTimer = window.setTimeout(show, ARM_MS);
+          giveUpTimer = window.setTimeout(clear, GIVE_UP_MS);
+        }
+        function clear() {
+          if (armTimer) { window.clearTimeout(armTimer); armTimer = null; }
+          if (giveUpTimer) { window.clearTimeout(giveUpTimer); giveUpTimer = null; }
+          bar.hidden = true;
+          document.body.classList.remove("rrw-navigating");
+          if (statusRegion) statusRegion.textContent = "";
+          var busy = document.querySelectorAll('[aria-busy="true"]');
+          for (var i = 0; i < busy.length; i++) {
+            busy[i].removeAttribute("aria-busy");
+          }
+        }
+        function markBusy(el) {
+          /* aria-busy only. See rule 2 above. */
+          if (el && el.setAttribute) el.setAttribute("aria-busy", "true");
+        }
+
+        document.addEventListener("click", function (event) {
+          if (event.defaultPrevented) return;
+          if (event.button !== 0) return;
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          var target = event.target;
+          var link = target && target.closest ? target.closest("a[href]") : null;
+          if (!link) return;
+          if (link.hasAttribute("download")) return;
+          if (link.hasAttribute("aria-disabled")) return;
+          if (link.target && link.target !== "_self") return;
+          var href = link.getAttribute("href") || "";
+          if (!href || href.charAt(0) === "#") return;
+          if (href.toLowerCase().indexOf("javascript:") === 0) return;
+          if (link.origin && link.origin !== window.location.origin) return;
+          /* Same document, only the fragment differs — no navigation. */
+          if (href.indexOf("#") !== -1
+              && link.href.split("#")[0] === window.location.href.split("#")[0]) {
+            return;
+          }
+          markBusy(link);
+          arm();
+        });
+
+        document.addEventListener("submit", function (event) {
+          if (event.defaultPrevented) return;
+          var form = event.target;
+          if (!form) return;
+          var formTarget = form.getAttribute("target");
+          if (formTarget && formTarget !== "_self") return;
+          markBusy(event.submitter || document.activeElement || form);
+          arm();
+        });
+
+        /* Fires on first paint and on every bfcache restore. */
+        window.addEventListener("pageshow", clear);
       })();
     </script>
   </body>

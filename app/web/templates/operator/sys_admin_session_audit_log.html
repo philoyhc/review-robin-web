@@ -91,7 +91,7 @@
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
       <h2 style="margin-top: 0;">Audit log — {{ audit_session.name }}</h2>
-      <a class="btn secondary" href="{{ filter_form.download_csv_url }}">Download CSV</a>
+      <a class="btn secondary" href="{{ filter_form.download_csv_url }}" download>Download CSV</a>
     </div>
     <p class="muted">
       Append-only record of every mutating action on this
