@@ -205,12 +205,12 @@ def _render_observers_page(
                 f"/operator/sessions/{review_session.id}/observers?"
             ),
             # The fragment the range links land on (19J.8): the
-            # table, so a page turn shows the rows rather than the page
-            # header. Passed rather than derived from the URL — the
-            # ``<noun>-table`` convention is uniform today, and a macro
-            # guessing it would land silently at the top of the document
-            # the first time someone renamed an id.
-            "pager_anchor": "observers-table",
+            # pager strip above the table, so a page turn arrives with
+            # the page links in view and the new rows beneath them.
+            # Passed rather than derived — a macro guessing the id would
+            # land silently at the top of the document the first time
+            # someone renamed it, which is a failure with no error.
+            "pager_anchor": "observers-pager",
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
             # already say where the operator is.

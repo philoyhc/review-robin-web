@@ -1439,12 +1439,19 @@
       .table-pager-bottom {
         margin: 12px 0 0 0;
       }
-      /* A range link carries a ``#<noun>-table`` fragment so a page turn
-         lands on the rows instead of the page header (19J.8). Without
-         this the table's top edge sits flush against the viewport, which
-         reads as a page cut off rather than a page turned. A judgment
-         call, not a correctness one: nothing is hidden without it — the
-         only fixed element in the app is the 3px busy indicator. */
+      /* A range link carries a ``#<noun>-pager`` fragment so a page turn
+         arrives at the **top pager strip** — the links in view, the new
+         rows beneath them — rather than at the page header (19J.8).
+
+         Anchoring at the table was the first attempt. It worked, and it
+         did not help: measured on a 556-row roster, only 670px of a
+         10,775px page sits above the table, so "the top of the table"
+         and "the top of the page" are the same place to the eye, and
+         the links were then a viewport above the fold.
+
+         The margin keeps the strip off the viewport's very edge, so a
+         sliver of the chip row above stays visible and the page reads
+         as scrolled rather than as starting there. */
       .table-pager-anchored {
         scroll-margin-top: var(--space-4);
       }

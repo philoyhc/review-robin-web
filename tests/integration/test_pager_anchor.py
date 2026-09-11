@@ -43,13 +43,13 @@ ROUTE_TEMPLATES = {
 }
 
 ANCHOR_TEMPLATES = {
-    "reviewers-table": "session_reviewers.html",
-    "reviewees-table": "session_reviewees.html",
-    "relationships-table": "session_relationships.html",
-    "observers-table": "session_observers.html",
-    "assignments-table": "session_assignments.html",
-    "invitations-table": "session_invitations.html",
-    "responses-table": "session_responses.html",
+    "reviewers-pager": "session_reviewers.html",
+    "reviewees-pager": "session_reviewees.html",
+    "relationships-pager": "session_relationships.html",
+    "observers-pager": "session_observers.html",
+    "assignments-pager": "session_assignments.html",
+    "invitations-pager": "session_invitations.html",
+    "responses-pager": "session_responses.html",
 }
 
 
@@ -100,9 +100,9 @@ def test_every_range_link_lands_on_the_table(
     assert len(hrefs) >= 4
 
     for href in hrefs:
-        assert href.endswith("#reviewers-table"), href
+        assert href.endswith("#reviewers-pager"), href
         # The fragment rides on the link; the offset is untouched.
-        assert re.search(r"offset=\d+#reviewers-table$", href), href
+        assert re.search(r"offset=\d+#reviewers-pager$", href), href
 
 
 def test_the_anchor_names_an_id_the_page_actually_has(
@@ -155,23 +155,26 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         markup = (templates / template).read_text(
             encoding="utf-8", errors="replace"
         )
-        assert f'id="{anchor}"' in markup, (
-            f"{template} has no id=\"{anchor}\" for its pager to land on"
+        assert f'id="{anchor.replace("-pager", "-table")}"' in markup, (
+            f"{template} has no table for its pager to sit above"
         )
-        assert "table-pager-anchored" in markup, (
-            f"{template} carries the id but not the landing margin"
+        # The id and the landing margin both live in the shared
+        # partial now, so the per-template assertion is that the page
+        # includes it at all.
+        assert "_preview_pager.html" in markup, (
+            f"{template} does not render the pager partial"
         )
 
 
-def test_the_anchored_table_keeps_a_landing_margin(
+def test_the_anchored_strip_keeps_a_landing_margin(
     client: TestClient, db: Session
 ) -> None:
-    """Without it the table's top edge sits flush against the viewport,
-    which reads as a page cut off rather than a page turned."""
+    """Without it the strip sits flush against the viewport's edge,
+    which reads as the page starting there rather than as scrolled."""
     review_session = _make_session(client, db, code="anchor-margin")
-    # Enough rows to render the table at all — an empty roster shows the
-    # empty-state card instead, and there is nothing to land on.
-    _import_reviewers(client, review_session.id, 3)
+    # Enough rows to page: the anchored element is the strip, and the
+    # strip only renders when there is more than one page to offer.
+    _import_reviewers(client, review_session.id, 556)
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
@@ -183,5 +186,10 @@ def test_the_anchored_table_keeps_a_landing_margin(
     # And it is on the element the fragment points at, not merely
     # declared somewhere in the sheet.
     assert re.search(
-        r'<table id="reviewers-table" class="[^"]*table-pager-anchored', body
+        r'<nav class="table-pager table-pager-anchored"\s+id="reviewers-pager"',
+        body,
     )
+    # Exactly one element carries the id: the bottom copy must not, or
+    # the fragment would be ambiguous and the browser would pick the
+    # first — which is the top strip by luck rather than by design.
+    assert body.count('id="reviewers-pager"') == 1

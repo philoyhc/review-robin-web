@@ -2286,6 +2286,41 @@ Found at build, and not anticipated by the blast radius:
   and Observers need a populated session even to render. Replaced with
   the source-level check above, which covers the same failure for less.
 
+**2026-09-11 — rung 1 corrected on the dev slot: the anchor moved from
+the table to the pager strip.** Author, seeing it deployed: *"put the
+anchor higher, so that the reload still shows the strip with the page
+links"*.
+
+The first anchor worked and did not help, which is the more useful kind
+of failure. Measured in Chromium against the running app, 556 reviewers,
+1280×900:
+
+| | |
+|---|---:|
+| document height | 10,775px |
+| table top | 670px |
+| share of the page above the table | **6.2%** |
+| screen movement, page turn from the bottom strip | **9,221px up** |
+
+So "the top of the table" and "the top of the page" are the same place
+to the eye — and worse, the page links then sat a viewport *above* the
+fold, so turning a second page meant scrolling back up to find them.
+
+**The plan's Opportunity asserted the table was "well below the fold
+under the filter card and the chip row" and never measured it.** That
+sentence is the whole error: everything downstream was sound, the tests
+passed, and the mutations were real, because none of them could see a
+premise that was wrong before the first line of code. Left standing
+above rather than edited — it is what the item was built on.
+
+Anchoring on the top strip instead, verified the same way: the strip
+lands at 16px, the table at 47px, and the first row of the new range at
+93px of a 900px viewport. The control the operator is about to use next
+is at the top of the screen with the new rows under it.
+
+`<noun>-table` → `<noun>-pager` for the anchor id; the table ids stay as
+they are, since the column-toggle and sort hooks address them.
+
 ### PR ladder
 
 1. **The fragment.** Seven routes gain `pager_anchor`; `_cell` appends

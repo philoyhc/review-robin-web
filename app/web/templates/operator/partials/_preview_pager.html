@@ -23,11 +23,17 @@
    the current cell is the one here that cannot be. It is marked by
    weight instead (``spec/ui_elements.md`` §10).
 
-   ``pager_anchor`` is the id a range link lands on — the table, so a
-   page turn shows the rows rather than the page header (19J.8). Turning
-   a page is still a full navigation; the fragment only decides where
-   the browser stops. The route supplies the id; nothing here derives
-   it. #}
+   ``pager_anchor`` is the id a range link lands on: **this strip**, on
+   its top copy only (19J.8). Anchoring at the table instead was the
+   first attempt and landed a viewport lower with the links off-screen,
+   so the operator had to scroll back up to turn the next page. Landing
+   on the strip puts the control they are about to use at the top of the
+   viewport and the new rows directly beneath it.
+
+   Turning a page is still a full navigation; the fragment only decides
+   where the browser stops. The route supplies the id; nothing here
+   derives it. The bottom copy takes no id — two elements cannot share
+   one, and it is the top strip you want to arrive at. #}
 {% macro _cell(link, base, anchor) -%}
   {%- if link.is_current -%}
     <span class="table-pager-link is-current" aria-current="page">{{ link.label }}</span>
@@ -37,7 +43,8 @@
   {%- endif -%}
 {%- endmacro %}
 {% if pager %}
-  <nav class="table-pager{% if pager_extra_class %} {{ pager_extra_class }}{% endif %}"
+  <nav class="table-pager{% if pager_extra_class %} {{ pager_extra_class }}{% else %} table-pager-anchored{% endif %}"
+       {% if not pager_extra_class %}id="{{ pager_anchor }}"{% endif %}
        aria-label="{{ pager_label | default('Table rows') }}">
     {% if pager.first %}
       <span class="table-pager-jump" aria-hidden="true">«</span>{{ _cell(pager.first, pager_url_base, pager_anchor) }}

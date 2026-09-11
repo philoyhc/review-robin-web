@@ -118,12 +118,12 @@ def test_the_setup_pager_links_navigate(client: TestClient, db: Session) -> None
 
     body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
     base = f"/operator/sessions/{review_session.id}/reviewers?offset="
-    # The ``#reviewers-table`` tail is 19J.8's landing fragment; the
+    # The ``#reviewers-pager`` tail is 19J.8's landing fragment; the
     # offsets it rides on are exactly the ones this test has always
     # asserted. ``tests/integration/test_pager_anchor.py`` owns the
     # fragment itself.
-    assert f'href="{base}200#reviewers-table"' in body
-    assert f'href="{base}400#reviewers-table"' in body
+    assert f'href="{base}200#reviewers-pager"' in body
+    assert f'href="{base}400#reviewers-pager"' in body
     # The page you are on is a marker, not a link back to itself.
     assert 'aria-current="page"' in body
 
@@ -346,7 +346,7 @@ def test_invitations_pages_and_reaches_the_rows_it_used_to_render_all_of(
     assert '<nav class="table-pager' in first
     assert (
         f'href="/operator/sessions/{session_id}/invitations'
-        f'?offset=200#invitations-table"'
+        f'?offset=200#invitations-pager"'
     ) in first
 
     second = client.get(
@@ -370,7 +370,7 @@ def test_responses_pages_on_the_same_terms(
     assert '<nav class="table-pager' in first
     assert (
         f'href="/operator/sessions/{session_id}/responses'
-        f'?offset=200#responses-table"'
+        f'?offset=200#responses-pager"'
     ) in first
     assert _ops_row_count(first, "responses") == 200
     assert "Reviewee 0209" not in _ops_table(first, "responses")
