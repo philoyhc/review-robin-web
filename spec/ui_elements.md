@@ -136,6 +136,26 @@ Each element entry follows the same shape:
 > to palette tokens.
 > *PR:* D (chrome).
 
+> **Hover = selected** (2026-09-11). Hovering any session-nav target —
+> a Setup or Operations tab, or the Home anchor — paints it in that
+> target's own **selected** colours: `--nav-tab-active-bg` /
+> `--nav-tab-active-fg` for a tab, and the anchor's selected
+> background for Home (`--nav-tab-active-bg` on v1, `--surface-page`
+> on v2). Standardised because the three had drifted: the tab strip
+> hovered to a literal `rgba(255, 255, 255, 0.7)`, which reads as a
+> tinted near-white over the light strips and a pale block over the
+> dark ones, a value being unable to follow the theme.
+> **The active underline is not part of it.** The `::after` marker
+> stays on `.active` alone — painted under the cursor it would leave
+> the operator unable to tell which page they are on while hovering.
+> **Disabled tabs never hover.** The rules carry
+> `:not(.disabled):not([aria-disabled="true"])` rather than relying on
+> a later override: `body.ui-v2 .nav-tab:hover` is specificity (0,3,1)
+> against `.nav-tab.disabled:hover`'s (0,3,0), so the guard had been
+> losing on every v2 page.
+> *Current:* `base.html`, pinned by
+> `tests/unit/test_session_nav_hover.py`.
+
 > **Status strip (`.status-row`)** — horizontal compact strip of
 > "Lifecycle · Reviewers · Reviewees · Assignments · Instruments ·
 > Email Template" sitting inside the nav card.
