@@ -1530,8 +1530,14 @@
       body.ui-v2 .table-pager-menu > summary {
         list-style: none;
         cursor: pointer;
-        padding: 1px var(--space-2);
-        border: 1px solid var(--border-default);
+        /* 2px rather than a hairline (author, 2026-09-11): this is the
+           cluster's only box, and at 1px it read as a text field
+           beside four bare glyphs rather than as the control it is.
+           The padding drops by the 1px the border gains, so the box
+           keeps its height and the row the column chips share does
+           not move. */
+        padding: 0 calc(var(--space-2) - 1px);
+        border: 2px solid var(--border-default);
         border-radius: var(--radius-button);
         background: var(--surface-card);
         color: var(--text-body);
@@ -1554,6 +1560,12 @@
         right: 0;
         z-index: 20;
         margin-top: 2px;
+        /* `border-box` so `min-width: 100%` means the summary's width
+           and not the summary's width plus two borders — at a hairline
+           the 2px overhang was invisible, and at 2px it is not. This
+           sheet has no global box-sizing reset; five other rules set it
+           the same way. */
+        box-sizing: border-box;
         min-width: 100%;
         max-height: 16em;
         overflow-y: auto;
@@ -1561,7 +1573,10 @@
         flex-direction: column;
         padding: var(--space-1) 0;
         background: var(--surface-card);
-        border: 1px solid var(--border-default);
+        /* Matches the summary's 2px. They are one control in two
+           states, and a hairline panel hanging off a 2px box reads as
+           two things that failed to line up. */
+        border: 2px solid var(--border-default);
         border-radius: var(--radius-button);
       }
       /* Below the table, the panel opens upward: downward would put it

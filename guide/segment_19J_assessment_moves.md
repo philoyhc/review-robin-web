@@ -2729,6 +2729,21 @@ selector is now `body.ui-v2 .btn-icon.table-pager-step` and the test
 names it in full, so a future simplification fails loudly rather than
 dropping silently back to the icon-button defaults.
 
+**2026-09-11 — the range menu's border thickened**, author: *"make the
+border of the dropdown thicker"*. 1px to 2px on the summary and on the
+panel both — they are one control in two states, and a hairline panel
+hanging off a 2px box reads as two things that failed to line up. The
+summary's horizontal padding drops by the 1px the border gains, so the
+box keeps its 144x22.9px and the row the column chips share does not
+move (chip row y=640, cluster y=639, unchanged).
+
+Thickening exposed a second thing that a hairline had hidden: the
+panel's `min-width: 100%` was resolving against its *content* box, so
+it sat 4px wider than the summary and overhung it on the left. This
+sheet has no global `box-sizing` reset — five rules set it
+individually — and the panel now does too. Summary and panel measure
+1035..1179 in both states.
+
 Measured after wiring, Chromium at 1280x900 against a 5,000-row roster
 (25 pages — the 5,861 in the author's screenshot exceeds
 `csv_imports.MAX_ROWS`, so it cannot be one import): 26 anchors in the
