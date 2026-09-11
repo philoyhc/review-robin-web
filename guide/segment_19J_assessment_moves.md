@@ -50,6 +50,15 @@ open is the author's and not the document's. **The next item admitted
 here resets the clock; if none arrives, the next assessment snapshot
 closes it.**
 
+**The clock reset, 2026-09-11.** Two items arrived from the author the
+day after the queue emptied — 19J.4 and 19J.5, both out of one
+operator-experience report about large rosters. They are the first
+exercise of the widened admission rule: neither is a finding of
+19J.1–3, so under the struck original neither would have been admitted
+here. The close trigger is live again and unchanged — this segment
+closes when 19J.4 and 19J.5 close, or at the next assessment snapshot,
+whichever comes first.
+
 **Already, before the first build.** Measuring the blast radius of
 these three corrected **three claims** that were carried in prose,
 two of them mine from the snapshot published hours ago. Each correction
@@ -66,7 +75,9 @@ and `### Status` and there is no segment-level `## Doc impact`.
 | **19J.1** | `spec/rrw_functional_spec.md` swept against the code | **Closed 2026-09-10** (3 rungs; 15 findings) |
 | **19J.2** | The refinement allowance, measured rather than asserted | **Closed 2026-09-10** (1 rung; no stable term) |
 | **19J.3** | `tools/close_check.py` — split it or stop mentioning it | **Closed 2026-09-10** (1 rung; split) |
-| 19J.4+ | Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot. | Open — **empty** |
+| **19J.4** | Navigation busy indicator, once in the chrome | Planned 2026-09-11 |
+| **19J.5** | Row pagination on the seven roster-bearing pages | Planned 2026-09-11 |
+| 19J.6+ | ~~Open to further items, any source (author, 2026-09-10). Closes when the queue empties or at the next snapshot.~~ Two items admitted 2026-09-11; the rule stands, the clock is reset. | Open |
 
 ---
 
@@ -822,3 +833,371 @@ expensive — was answered by the measurement.
   three-snapshot claim that the halves share `last_touched_ever`
   corrected with what it used to say (Item 3).
 - `docs/status.md` — row when the item closes (Item 3).
+
+---
+
+## Item 4 — Navigation busy indicator, once in the chrome
+
+### Opportunity
+
+Operator report, 2026-09-11: *"When the rosters get large, assignments,
+invitations, and responses take longer to load. It's not a big deal but
+would be nice if there's on screen [feedback] to reassure operator that
+the app is not hanging."*
+
+Measured in the session container before writing this item — full-matrix
+sessions seeded through the real import + generate routes, timing the
+three pages and counting SQL statements per render:
+
+| roster | assignments | Assignments | Invitations | Responses |
+|---|---:|---|---|---|
+| 25×25 | 625 | 182 ms / **43 q** | 295 ms / 708 q | 274 ms / 1,332 q |
+| 50×50 | 2,500 | 165 ms / **43 q** | 506 ms / 2,633 q | 999 ms / 5,132 q |
+| 100×100 | 10,000 | 76 ms / **43 q** | 2,209 ms / 10,233 q | 3,947 ms / 20,232 q |
+| 200×200 | 40,000 | 516 ms / **43 q** | 9,323 ms / 40,433 q | 16,125 ms / 80,432 q |
+
+SQLite, in-process, ≈0.2 ms per query. Production Postgres pays a
+network round trip per query, so **the query count is the portable
+number and these times are a floor, not a ceiling.**
+
+Assignments is flat at 43 queries at every scale — its `LIMIT 200` and
+its indexes hold. Invitations and Responses are N+1:
+`app/services/responses/_core.py:804` issues one `SELECT responses WHERE
+assignment_id = :id` per assignment inside the per-reviewer loop, and
+`app/services/monitoring.py:283` (`_assignment_complete`) does the same
+per assignment on the reviewee side. Responses pays both, because it
+builds its rows from `per_reviewee_coverage` **and** calls
+`summary_counts` (`app/web/routes_operator/_operations.py:757`) — a
+second full per-reviewer pass whose only consumer is one integer,
+`incomplete_count` (`:814`).
+
+So these pages are slow for a fixable reason, and **this item is not
+that fix** (see Out of scope). It is the affordance worth having
+regardless: a cold slot, a large extract, a generate over 40,000 pairs
+will always take seconds, and today the app offers the operator nothing
+but the browser's own tab spinner while the old page sits there looking
+live.
+
+### Decision
+
+One **global navigation busy indicator** in
+`app/web/templates/base.html`: a delegated listener over same-origin
+link clicks and form submits that arms a short timer and then marks the
+document busy — an indeterminate progress bar in the page chrome, plus a
+busy state on the control that was clicked. No per-page work and no
+per-route opt-in; all 34 templates that extend `base.html` inherit it,
+including every page added after it.
+
+**Rejected: per-page async table loading** (render the shell, fetch the
+table into it). Better on the two worst pages, but it splits each page
+into two routes, doubles the round trips, and pushes the sort / filter /
+POST-redirect flows through a second code path — a large change to buy
+on three pages what the chrome buys on all of them. Reconsider only if
+the N+1 fix does not land.
+
+**Rejected: a determinate progress bar.** A single blocking
+`TemplateResponse` has no progress to report, and a bar that invents one
+is a lie the operator can catch by watching it.
+
+### Semantics
+
+- **Arms on a delay, not on the event** — ~200 ms, so a page that
+  returns in 60 ms never flashes. A page slower than the delay is
+  exactly the page this exists for.
+- **What counts as a navigation**: an unmodified left click on a
+  same-origin `a[href]`, and a form `submit`. Excluded — modified and
+  middle clicks, `target="_blank"`, `download`, and bare `#` fragments.
+  None of them replace the page.
+- **Disarms on `pageshow`.** The back button restores from bfcache with
+  the DOM as it was; without this the bar is still running on a page
+  that finished loading minutes ago.
+- **Never `disabled` a submit button synchronously.** A disabled control
+  is not serialized, so its `name`/`value` disappears from the payload —
+  and this codebase's forms carry meaning in exactly that slot (the
+  super-button, the roster bulk actions). Mark busy after the submit is
+  dispatched, or use `aria-disabled` + `pointer-events: none`.
+- **Double-submit suppression** is a consequence of the busy state, not
+  its goal, and must not be bought with the mechanism ruled out above.
+- **`prefers-reduced-motion`** gets a static bar, not an animated one.
+- **Assistive tech**: the bar carries a polite `role="status"` region.
+  No focus is moved and nothing is trapped.
+- **JS off**: nothing renders, nothing breaks. Progressive enhancement
+  over a server-rendered page, in the idiom `base.html` already uses six
+  times.
+
+### Judgment calls — decided
+
+- **In `base.html`, not a static asset** (2026-09-11) — CSS and JS stay
+  inline there by the templating convention; `app/web/static/` exists
+  for the Guide's screencaps and is deliberately not an asset pipeline.
+- **One indicator, not one per slow page** (2026-09-11) — the report
+  names three pages, but the affordance belongs to the chrome; a
+  per-page one has to be remembered on every page added afterwards.
+- **Indeterminate** — see Decision.
+
+### Blast radius (measured)
+
+```
+$ wc -l app/web/templates/base.html                              # 4,178
+$ grep -c "<script" app/web/templates/base.html                  # 6
+$ grep -rln 'extends "base.html"' app/web/templates | wc -l      # 34
+$ grep -rl 'method="post"' app/web/templates | wc -l             # 26 templates
+$ grep -rho 'method="post"' app/web/templates | wc -l            # 73 forms
+$ grep -rn -i "spinner|busy|loading" spec/ui_elements.md \
+      spec/operator_ui_concept.md                                # 0 hits
+```
+
+- **1 template touched**; **34 inherit** the result.
+- **73 forms across 26 templates** are the submit surface — the reason
+  the `disabled`-serialization rule above is a semantics line and not a
+  footnote.
+- **No existing convention to extend**: neither UI spec mentions a busy,
+  loading or spinner state today, so §1 of `spec/ui_elements.md` gains
+  an entry rather than amending one.
+
+### PR ladder
+
+1. **The indicator** — CSS, the delegated script, and the `role="status"`
+   region, all in `base.html`. One rung: the scaffold-first rule
+   (`CLAUDE.md` → Working approach) governs new pages, cards and
+   navigation affordances, and this adds none of the three. Must not
+   touch any page template, any route, or the N+1.
+
+### Definition of done
+
+- the bar arms on a slow navigation and never on a fast one — dev slot,
+  and the PR description says plainly that this half is dev-slot
+  verified rather than test-covered
+- a back-button restore shows no bar
+- a submit button's `name`/`value` still reaches its route: a test posts
+  through a form whose branch depends on the button's value
+- the `prefers-reduced-motion` path is present
+- JS off: every page renders as it does today
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Where the bar sits** — fixed to the viewport top, or the top of the
+  content column. Author decides at the rung; fixed survives a scrolled
+  page, which is the case that matters on a 200-row table.
+
+### Out of scope
+
+- **The N+1 fix on Invitations and Responses.** Measured above and named
+  here so it is not lost. It is a service-layer change with its own
+  contract — a prefetched response map threaded through
+  `_state_from_assignments` and `_assignment_complete` — and its own
+  test surface. Prototyped in the session container: Invitations
+  **2,348 → 666 ms, 10,233 → 333 queries**; Responses only 1.6× until
+  `per_reviewee_coverage` gets the same treatment. A candidate item for
+  this segment, not part of this one.
+- **The `summary_counts` second pass on Responses**, which costs about
+  half that page's queries to produce one integer. Same reason.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §1 Page chrome gains the busy-indicator entry:
+  when it arms, what it renders, and the reduced-motion and JS-off
+  behaviour (Item 4).
+- `docs/status.md` — row when the item closes (Item 4).
+
+---
+
+## Item 5 — Row pagination on the seven roster-bearing pages
+
+### Opportunity
+
+Author, 2026-09-11: the pages that stop at 200 rows should offer a row
+of range links — `1–200`, `201–400`, `401–556` — across **all seven
+pages that carry a roster table**, not only the capped ones.
+
+Where those seven stand today:
+
+- **Reviewers / Reviewees / Relationships / Observers** — `200`
+  unfiltered, `500` filtered (`_SETUP_DEFAULT_CAP` /
+  `_SETUP_FILTERED_CAP`, `app/web/routes_operator/_shared.py:480`).
+  Rows past the cap are unreachable except by searching for them.
+- **Assignments** — `PAIR_PREVIEW_LIMIT = 200`
+  (`app/services/assignments/_coverage.py:28`), applied as a SQL
+  `LIMIT`.
+- **Invitations / Responses** — uncapped by decision
+  (`spec/operations_pages.md:189`), which is why they are the two that
+  hurt at scale (19J.4's table).
+
+The measured shape decides the cost, and it differs by page:
+
+- The four Setup pages already load the **whole** roster, sort it in
+  Python and filter it in Python, and only then slice `[:cap]`
+  (`_setup_reviewers.py:148–152` and its three siblings). The cap is a
+  rendering slice over a list already in memory — paging them costs an
+  offset and a pager, and not one extra query.
+- Assignments caps in SQL, so `OFFSET` is cheap — measured
+  `list_pairs(limit=200)` at **12 ms** against 40,000 assignments. But
+  its cookie sort runs in Python *after* the fetch. Fetching everything
+  and slicing instead — the Setup pages' shape — measured **1,989 ms**
+  to hydrate 40,000 pairs with three joined loads, against **23 ms** to
+  sort them. The cost is hydration, not ordering.
+
+### Decision
+
+A **pager on all seven pages**, rendered **twice** — at the existing
+count-line position and again below the table — as a row of range links
+with first / last jumps inline at each end.
+`app/web/templates/operator/partials/_preview_count_line.html` is
+already included by all seven, so the pager ships as one partial beside
+it and every page gets it from one edit.
+
+**Suppressed whenever the roster is already partitioned by the filter
+strip** (author, 2026-09-11): a search or status filter is the
+operator's own partition of the roster, and a second partition stacked
+on it is two mental models for one table. Filtered views keep today's
+behaviour exactly — the 500 cap and its `Showing first 500 of 900
+matching reviewers; 400 more not shown.` line.
+
+**Rejected: an infinite-scroll or "load more" control.** It cannot say
+where you are, cannot be linked to, and cannot be jumped from; the
+request is explicitly for a row of ranges.
+
+**Rejected: fetch-all-and-slice on Assignments** — 1,989 ms, measured
+above.
+
+### Semantics
+
+- **Page size is the existing cap**, 200. The unfiltered cap stops being
+  a truncation and becomes a page size. The filtered 500 stays a
+  truncation, because filtered views carry no pager.
+- **The count line changes shape.** `Showing first 200 of 1,240
+  reviewers; 1,040 more not shown.` describes rows being withheld, and
+  stops being true once they are reachable. The paged line states a
+  position — `Showing 201–400 of 1,240 reviewers.` — so
+  `app/web/views/_preview_counts.py`'s four-state table gains a fifth
+  state. The withheld clause survives for the filtered-and-capped case,
+  which still truncates.
+- **Out-of-range offsets clamp, they do not 404**: past the end lands on
+  the last page, negative on the first. A stale link after a delete is
+  not an error page.
+- **Invitations and Responses gain a cap they never had.**
+  `spec/operations_pages.md` calls both uncapped, deliberately; paging
+  them changes that contract, so the spec edit is part of this item
+  rather than a consequence of it.
+- **The pager drops `selected=`.** Selection stays page-local: the
+  checkboxes act on rows in view, and carrying a hidden selection across
+  a page boundary is how an operator deletes something they cannot see.
+- **Sort is a cookie** and survives paging unchanged on the four Setup
+  pages, which sort the whole roster before slicing. On Assignments it
+  does not — see Open questions.
+- **The edit-row force-include** (`_setup_reviewers.py:154–161`, which
+  prepends an edited row that falls outside the window) should instead
+  land the operator on the page that holds the row.
+- **Elision.** 40,000 assignments is 200 range links. The pager renders
+  a window around the current page with first and last always present;
+  the window size is a rung-1 decision.
+
+### Judgment calls — decided
+
+- **Two pagers, above and below the table** (author, 2026-09-11) — a
+  200-row table is many screens tall, and a pager only at the top makes
+  the operator scroll back to use it.
+- **Ranges, not page numbers** (author, 2026-09-11) — `201–400` says
+  where you are in the roster; `page 2` makes the reader multiply.
+- **Page size is not operator-configurable** (2026-09-11) — one number,
+  already specified and already tested. A selector is a setting, an
+  inventory row in `spec/settings_inventory.md` and a persistence
+  question, for a need nobody has stated.
+
+### Blast radius (measured)
+
+```
+$ grep -rln "_preview_count_line.html" app/web/templates             # 7
+$ grep -rn "views.preview_count_line" app/web/routes_operator/*.py   # 7
+$ grep -rln "preview_count_line\|Showing first\|_SETUP_DEFAULT_CAP\
+      \|PAIR_PREVIEW_LIMIT\|table-showing-hint" tests/ --include=*.py # 11
+$ grep -rln "Showing first\|200 unfiltered\|500 when" spec/ docs/    # 3
+```
+
+- **7 templates, 7 route call sites, 6 route modules** — the four
+  `_setup_*.py` slices, `_assignments.py`, and `_operations.py` twice
+  (Invitations and Responses live in the same module).
+- **11 test files** name a cap or the count line;
+  `tests/unit/test_preview_count_line.py` is the contract test for the
+  sentence itself and is where the fifth state gets pinned.
+- **3 spec files**: `spec/setup_pages.md` "Preview tables (shared toggle
+  pattern)", `spec/assignments.md` "The preview-count line (Segment 19I
+  Item 10)", and `spec/operations_pages.md`'s two uncapped statements
+  (`:189`, `:291`).
+
+### PR ladder
+
+A pager is a navigation affordance, so per `CLAUDE.md` → Working
+approach the surface lands inert before it moves anything.
+
+1. **Pager scaffold** — the partial, its two render positions on all
+   seven pages, real ranges computed from the real counts, every link
+   inert. Nothing paginates yet; the point is agreeing the shape.
+2. **The four Setup pages wired** — `offset` param, slice, clamping, the
+   count line's fifth state, the edit-row landing, filter suppression.
+3. **Invitations + Responses wired** — the two that change contract from
+   uncapped; `spec/operations_pages.md` lands with them.
+4. **Assignments wired** — SQL `OFFSET`, plus whatever the sort question
+   below resolves to.
+
+### Definition of done
+
+- every row is reachable by the pager on all seven pages: row 1,201 of
+  1,240 is visible without searching for it
+- a filtered view renders no pager and keeps today's `Showing first 500
+  of …` sentence unchanged
+- an out-of-range `offset` clamps — no 4xx, no 5xx
+- the pager renders identically above and below the table
+- `tests/unit/test_preview_count_line.py` covers the paged state
+- `.venv/bin/pytest` and `.venv/bin/ruff check .` both pass
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19J.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Assignments' sort under paging.** Today the cookie sort orders only
+  the fetched 200, so page 1 is already a window-local sort; paging
+  makes that visible rather than creating it. Three ways out: keep it
+  window-local (matches today exactly), push the sort into SQL for the
+  DB-backed keys and leave `pair_tag_*` — which resolves through
+  `pair_context_lookup` — out of it, or fetch-all-and-slice (ruled out
+  at 1,989 ms). **Author decides at rung 4**; the SQL sort is the
+  recommendation.
+- **A filtered set larger than 500** still truncates and still carries
+  no pager, so rows 501–900 of a filtered view stay unreachable except
+  by narrowing the search further. That follows from the suppression
+  rule rather than contradicting it, but it is the one place the rule
+  costs something. **Author decides** whether to accept it or raise the
+  filtered cap.
+- **Pager window size** before elision — rung 1.
+
+### Out of scope
+
+- **The N+1 on Invitations and Responses.** Paging those two reduces the
+  HTML they emit, not the work behind it: every row is built before any
+  slice happens. Recorded with its measurement in 19J.4's Out of scope.
+- **Operator-configurable page size** — see Judgment calls.
+- **Server-side sort on the four Setup pages.** They sort the whole
+  roster before slicing, so paging is already correct there.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the "Preview tables (shared toggle pattern)"
+  section: the pager, the paged count-line state, and the
+  filter-suppression rule (Item 5).
+- `spec/assignments.md` — "The preview-count line (Segment 19I Item 10)":
+  the same two changes as they land on the Assignments table (Item 5).
+- `spec/operations_pages.md` — the two **uncapped** statements retired;
+  Invitations and Responses page on the same terms as the rest (Item 5).
+- `spec/ui_elements.md` — §10 Layout primitives gains the pager; §7
+  Tables points at it (Item 5).
+- `docs/status.md` — row when the item closes (Item 5).
