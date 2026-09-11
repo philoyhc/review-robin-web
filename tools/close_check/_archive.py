@@ -27,6 +27,7 @@ def archived_report(stream) -> None:
     plans = sorted((_shared.REPO / "guide" / "archive").glob("segment_*.md"))
     total_paths = total_honoured = 0
     fully = considered = no_manifest = missing = 0
+    noted_paths = noted_plans = 0
 
     print(f"ARCHIVED PLANS ({len(plans)})", file=stream)
     for plan in plans:
@@ -45,11 +46,23 @@ def archived_report(stream) -> None:
         bullets = parse_bullets(found["lines"], *body)
         paths = [p for bullet in bullets for p in bullet["paths"] if not bullet["waived"]]
         paths = list(dict.fromkeys(paths))
+        # Counted for the footer, kept out of the honour ratio: a
+        # `guide/` commitment is not verified (see `GUIDE_PATH` in
+        # `_manifest.py`), and folding unverifiable paths into a
+        # percentage would make the percentage mean less, not more.
+        noted_here = list(dict.fromkeys(
+            path for bullet in bullets for path in bullet["guide_paths"]
+        ))
+        if noted_here:
+            noted_paths += len(noted_here)
+            noted_plans += 1
         if not paths:
             no_manifest += 1
             continue
 
-        start, end, start_date = window(plan, depth)
+        # `provisional` is an item-level concern; this driver is
+        # segment-level and always passes `item=None`.
+        start, end, start_date, _ = window(plan, depth)
         considered += 1
         # Missing paths are C2's business, not C3's — keep them out of the
         # honour denominator so the two code paths divide the work the same
@@ -70,6 +83,15 @@ def archived_report(stream) -> None:
         print(
             f"  {plan.name:58s} {hits:3d}/{len(live):<3d} "
             f"{start_date or '(no window)'}{flag}",
+            file=stream,
+        )
+
+    if noted_paths:
+        print(
+            f"\n  {noted_paths} guide/ commitment(s) across {noted_plans} plan(s) "
+            "counted, not verified\n"
+            "  (excluded from the ratio below, which is therefore unchanged "
+            "— see `GUIDE_PATH` in `_manifest.py`)",
             file=stream,
         )
 

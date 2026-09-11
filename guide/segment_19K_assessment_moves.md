@@ -150,6 +150,120 @@ Taken 2026-09-11 at `94aaa3b2`.
 | Existing tests over the tool | to be counted at rung 1 | `grep -rln close_check tests/` |
 | Plans whose `--archived` ratio moves | ≤ 33 | the same parse |
 
+### Status — 2026-09-11
+
+**Both rungs landed in one PR.** Rung 2 is nine lines and shares `window()`'s
+return signature with rung 1; shipping rung 1 alone would have landed a
+4-tuple whose fourth field nothing read, which is a worse intermediate state
+than either end.
+
+**Decisions confirmed at build:**
+
+- **The status word is `noted`** (Author, 2026-09-11, from rendered samples of
+  all three candidates on 19J.7's manifest). The deciding evidence was
+  arithmetic rather than taste: the status column is five wide, so `noted` is
+  the only candidate that keeps C5 aligned with `PASS` / `FAIL` / `WARN` /
+  `SKIP`. `unverified` says the thing most precisely and costs ten characters;
+  the label beside it — "guide/ commitments (counted, not verified)" — carries
+  that meaning without spending the column on it.
+- **C5 is the check id**, reusing a genuine hole in the numbering: the tool
+  had C1–C4, C6, C7 and no C5.
+- **C5 never fails.** `report()` fails only on `FAIL`, which is what made it
+  safe to switch on for 31 plans at once without reddening a correct close.
+- **C5 is emitted only where there is something to say.** A row on all 85
+  plans would be noise on the 54 with no `guide/` bullet.
+
+**Where this diverged from the plan, and why:**
+
+- **The `--archived` honour ratio does not move.** `## Semantics` predicted
+  147/162 would change "when 67 previously invisible commitments enter the
+  denominator". They deliberately do not enter it: folding unverifiable paths
+  into a percentage makes the percentage mean less, not more, and the same
+  reasoning that keeps them out of C2 and C3 keeps them out of the ratio. The
+  `--archived` footer says so **at the print site**, which is what that
+  Semantics bullet actually required.
+- **The `docs/practice-audit-2026-09-04.md` bullet assumed a close-check entry
+  to extend.** There was none — the tool was absent from the inventory of
+  automated checks entirely, which is its own small finding about a document
+  whose subject is what gates a merge. The bullet is honoured by adding the
+  row *and* the limits paragraph rather than by editing a paragraph that did
+  not exist.
+
+**Scope beyond the ladder, both forced by the Definition of done's own
+measure** ("reports **five** committed paths, not three"):
+
+- The committed total now **includes** the `guide/` paths, with the noted
+  subtotal named beside it: `5 committed path(s), 2 noted, 1 waived`. Counted
+  and verified are separate axes, and printing only the verified subtotal is
+  the defect itself.
+- The **waived** count now includes waived `guide/` bullets. Without it 19J.7
+  printed `5 committed path(s), 0 waived` while its own C5 lines marked one of
+  the five waived.
+- `FAIL`, `NOTED`, `PASS`, `WARN`, `_section` and `find_manifests` are
+  re-exported from the package, so the tests can name the statuses they assert
+  on instead of hardcoding the strings a rename would slip past.
+
+**Measured, not assumed:**
+
+| Claim | Measurement |
+|---|---|
+| Existing inputs unchanged | 85 segment ids run against `HEAD` in a worktree: **54 byte-identical, 31 differ, and every one of the 31 differences is a C5 block**. Zero unexpected diffs. |
+| No exit code moves | **0 flips** across the same 85. |
+| `--archived` | gains exactly the two footer lines; the plan table and the ratio are byte-identical. |
+| 19J.7's manifest | `5 committed path(s), 2 noted, 1 waived` — the Definition of done's own number, against the 3 it printed before. |
+| Guards are not vacuous | **9 mutations, 9 caught.** Two were caught only after the test was rewritten: the first versions asserted on the result dict, and the committed total is computed inside `report()`, so the dict-level assertion passed on the very mutation it existed to catch. That is 19I's *a negative assertion is only as strong as the string it matches* at the seam level — an assertion is only as strong as the layer it reads. |
+
+**Two findings this item leaves behind.**
+
+*The `guide/` count depends on who is counting, and the hand count was wrong
+in both directions.* The Opportunity's table says 67 across 33 plans,
+hand-parsed at `94aaa3b2`. The tool's own parser, over the same corpus, finds
+**80 across 35**; 19K's own plan contributes none of the difference. Worse,
+the Opportunity's supporting figure — "12 point into `guide/archive/` and 13 at
+paths that have since moved there, so C2 would turn **25** correct commitments
+into failures" — does not survive measurement either: **11** of the 80 have no
+file where the bullet names one, and **8** of those are the archived-plan case
+the argument rests on. Three are genuinely broken. So C2 would fail eight
+correct commitments to catch three, which is still the right call and a
+materially smaller claim than the one the plan made.
+
+The Opportunity is left as written, per *never rewrite intent* — the point it
+was making survives either figure, and a hand count that disagrees with the
+tool built to replace it is worth leaving visible. Everywhere the number is
+*used* rather than recorded now carries the parser's: the `GUIDE_PATH` comment
+in `_manifest.py` and the `docs/practice-audit-2026-09-04.md` passage.
+
+*`--archived` reads one manifest per plan.* For an item-shaped plan it takes
+the **first** item's `Doc impact` and stops (`_archive.py`, the `next(...)`
+over `found["items"]`), which is why its footer says 58 `guide/` commitments
+where the same regex over every level finds 76 in that directory. This is
+pre-existing and affects the headline `147/162` ratio the same way — the
+sweep has been reporting one item's commitments per multi-item plan since it
+was written. Not fixed here: it moves the number the whole report is read for
+and deserves its own slice, with the before-and-after stated. Recorded as a
+candidate item for this segment.
+
+**`spec-writer` pass (checker, 2026-09-11) — two flags, both upheld.**
+
+1. *The practice-audit passage omitted C6.* It enumerated C1–C5 and C7 and
+   never mentioned the `Status`-block check, so the document promising "what
+   the tool does and does not verify" was missing one of seven. The passage is
+   now an explicit C1–C7 list.
+2. *The practice-audit repeated the hand count flatly while `docs/status.md`
+   was recording it as unreconciled.* Upheld, and re-measuring made it worse
+   than the flag: the 25-of-67 figure is 11-of-80, 8 of them the archiving
+   case. Corrected in the practice-audit **and** in the `GUIDE_PATH` comment,
+   which was the original source of the number — the tool's own comment
+   asserting a figure the tool's own parser contradicts.
+
+The second flag is the one worth keeping. This item's `Status` had already
+recorded that the hand count did not reconcile, and the same session then went
+on repeating it in the other committed document and left it standing in the
+code. *Recording that a number is unreliable does not stop you using it* —
+the correction has to reach every place the number is spent, not just the
+place it is confessed. Maker ≠ checker earned its keep here: the author read
+past this twice.
+
 ### PR ladder
 
 1. **Count `guide/`, report it as unverifiable-but-committed.** The
