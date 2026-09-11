@@ -359,7 +359,7 @@ drag it. `--text-link` is the same rule rather than an exception, since
 a link is actionable.
 
 **The scope is the ambiguity, not the element type** (author,
-2026-09-11, closing `guide/segment_19J_assessment_moves.md` Item 10).
+2026-09-11, closing `guide/archive/segment_19J_assessment_moves.md` Item 10).
 The reservation exists because a pill and a chip have a **dual
 nature**: one rounded shape states a fact in one place and offers a
 click in another, and before Segment 19J.7 the only thing separating

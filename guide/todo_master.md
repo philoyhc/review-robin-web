@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
-### Segment 19J — The assessment's three moves — 🔵 **live** (**ten items, nine closed**, opened 2026-09-10; plan: `guide/segment_19J_assessment_moves.md`)
+### Segment 19J — The assessment's three moves — ✅ complete + archived 2026-09-11 (**ten items**, 2026-09-10 → 2026-09-11, PRs #2281 → #2311; plan: `guide/archive/segment_19J_assessment_moves.md`)
 
 The three recommended next moves in
 `guide/codebase_assessment_10sep.md` §8, and nothing else. Same shape
@@ -2843,13 +2843,19 @@ rest closed 2026-09-11 except the last.
   reach was two pages per click whatever the roster size — 50 clicks to
   the middle of a 40,000-row table. Replaced by a five-cell cluster;
   the strip retired.
-- **Item 10 — does the reserved shade stop at pills and chips?**
-  🔵 **open, stub.** Promoted from 19J.7's scoped-out question:
-  `--status-info-border` reaches the reserved pair on a static banner.
-  The item is the **scope question**, not a retarget — and closing it
-  by editing one spec paragraph is the likely and acceptable outcome.
+- **Item 10 — does the reserved shade stop at pills and chips?** ✅
+  Promoted from 19J.7's scoped-out question. The answer is **neither**
+  of the readings the plan framed: the scope is the **ambiguity**, not
+  the element type. A pill and a chip share one rounded shape for
+  stating a fact and for offering a click, so the rule reaches any
+  class carrying that dual nature and no class without an interactive
+  twin — which is why the static `.banner-info` that prompted the item
+  was never a violation. Closed by editing one spec paragraph, as
+  predicted. Found on the way: `.btn-icon` acquired the dual nature at
+  19J.9 and the guard could not see it.
 
-**Two findings worth carrying out of this segment.** `close_check`
+**Two findings worth carrying out of this segment**, both tool gaps
+rather than plan failures, neither scheduled. `close_check`
 tracks `spec/` and `docs/` paths only, so a `guide/` commitment in a
 `Doc impact` manifest is unchecked — 19J.7's screencap row and 19J.8's
 `deferred_consolidated.md` entry both went unhonoured without failing
