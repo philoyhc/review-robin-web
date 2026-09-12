@@ -122,6 +122,11 @@ def per_reviewer_progress(
     group_key_by_assignment = responses_service.group_keys(
         db, assignments=all_assignments, session_id=review_session.id
     )
+    # Same idea as the group keys above, for the response rows: one
+    # query for the session instead of one per assignment per reviewer.
+    responses_by_assignment = responses_service.responses_by_assignment(
+        db, session_id=review_session.id
+    )
     out: list[ReviewerProgress] = []
     for reviewer in reviewers:
         state = responses_service.reviewer_session_state(
@@ -129,6 +134,7 @@ def per_reviewer_progress(
             reviewer=reviewer,
             session_id=review_session.id,
             group_key_by_assignment=group_key_by_assignment,
+            responses_by_assignment=responses_by_assignment,
         )
         invitation = invitations.get(reviewer.id)
         out.append(
@@ -201,7 +207,10 @@ def _classify_coverage(completed: int, total: int) -> str:
 
 
 def _assignment_complete(
-    db: Session, assignment: Assignment, fields: list[InstrumentResponseField]
+    db: Session,
+    assignment: Assignment,
+    fields: list[InstrumentResponseField],
+    responses_by_assignment: dict[int, list["Response"]] | None = None,
 ) -> tuple[bool, datetime | None]:
     """Returns ``(is_complete, latest_submitted_at)`` for one assignment.
 
@@ -209,11 +218,14 @@ def _assignment_complete(
     response field has a non-empty value with a non-null ``submitted_at``.
     The second tuple element is the most recent ``submitted_at`` across
     all response rows on the assignment (or ``None``)."""
-    rows = list(
-        db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars()
-    )
+    if responses_by_assignment is not None:
+        rows = responses_by_assignment.get(assignment.id, [])
+    else:
+        rows = list(
+            db.execute(
+                select(Response).where(Response.assignment_id == assignment.id)
+            ).scalars()
+        )
     if not rows:
         return False, None
     required_ids = {f.id for f in fields if f.required}
@@ -261,6 +273,13 @@ def per_reviewee_coverage(
         ).scalars():
             fields_by_instrument.setdefault(f.instrument_id, []).append(f)
 
+    # One query for every response row in the session, in place of one
+    # per assignment inside the loop below. 40,404 of the Responses
+    # page's 80,432 queries at a 200x200 roster (19K.3).
+    responses_by_assignment = responses_service.responses_by_assignment(
+        db, session_id=review_session.id
+    )
+
     by_reviewee: dict[int, list[Assignment]] = {}
     for a in assignments:
         by_reviewee.setdefault(a.reviewee_id, []).append(a)
@@ -280,7 +299,9 @@ def per_reviewee_coverage(
         latest: datetime | None = None
         for a in rs:
             fields = fields_by_instrument.get(a.instrument_id, [])
-            is_complete, last_at = _assignment_complete(db, a, fields)
+            is_complete, last_at = _assignment_complete(
+                db, a, fields, responses_by_assignment
+            )
             if is_complete:
                 completed += 1
             if last_at is not None and (latest is None or last_at > latest):
