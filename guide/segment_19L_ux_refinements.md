@@ -210,12 +210,125 @@ leave a half-marked row in `main`.
 - **The panel's own styling**, which already carries `--surface-muted`
   and is not what is weak.
 
+### Status — 2026-09-12 (item closed)
+
+**Built as candidate D — edge *and* fill**, chosen by the author from a
+rendered specimen board rather than from the plan's prose. The board
+showed all four candidates in both the single and the bulk case, in both
+themes, using the app's real tokens; candidate D was not one of the
+plan's three, and was added to the board because it is what
+`.tag-chip.is-selected` already does. *Open question 1 was answered by
+producing the thing it asked for.*
+
+**One spec the plan did not name.** `--chip-selected-bg` resolves to the
+right primitives, and reusing it on a `<tr>` would have shipped without a
+new token. It would also have meant a row silently inheriting a repoint
+aimed at chips, which is the drift the two-tier system exists to stop. So
+`--row-selected-bg` was added as its own role — same primitives today,
+its own name — and `spec/color_tokens.md` gains a Tier-2 row and a
+corrected count. The `Doc impact` manifest gained the bullet; recorded
+here per *undeclared spec impact is the failure this section prevents*.
+
+**Two of this repository's own guards made the change correct rather than
+merely plausible**, both from 19K.7:
+
+- the Tier-2 catalogue check failed the moment the token landed and again
+  when only the row was added, because `spec/color_tokens.md` also states
+  **80 primitives · 106 semantic** in prose — now 107. A catalogue that
+  counts itself is harder to leave half-updated than one that only lists.
+- the generated-tools check failed because `theme_customizer.html` and
+  `theme_preview.html` are generated *from* `base.html`; both regenerated.
+  A new token is invisible in the customizer until they are.
+
+**The reserved-shade guard passed unmutated, which was the plan's
+requirement, and the reason is worth keeping.** Reading it rather than
+assuming: its selector filter is `pill` / `chip` / `btn-icon`, because its
+subject is elements with a **dual nature** — the same shape that states a
+fact in one place and offers a click in another. A `<tr>` has one nature,
+and a selected row is precisely the thing the panel's actions will act
+on, which is what `--selected-bg` means. So the shade is *correct* here,
+not tolerated.
+
+**Verified in Chromium, not asserted.** The suite has no JS runtime, so
+the rendered page was driven directly through eight paths: at rest,
+single tick, bulk tick, un-tick one, un-tick all, select-all, clear
+select-all, and the computed style — `rgb(37, 99, 235) 3px inset` over
+`rgb(219, 234, 254)`, which is `--selected-bg` over `--row-selected-bg`
+exactly. Two further paths were driven because a code comment claimed
+them: the expander's **Unselect all** (3 marked → 0) and **Unselect
+others** (2 → 1). *A claim in a comment is a claim.*
+
+**Select-all is the path that justified the placement.** It sets
+`checked` programmatically and fires no row change events, so a listener
+on the checkboxes would have missed it entirely — marking lives in
+`refreshExpander()`, the one funnel every path already meets.
+
+**No hydration, and that is a finding rather than a gap.** The plan's
+Semantics asked what a re-render owes this state. Measured: the tag
+filter and search set `style.display` rather than re-rendering, so a
+filtered row keeps both its tick and its mark; and selection is not
+persisted — the lobby's only `localStorage` key is
+`rrw-lobby-tag-filter`. A server re-render returns unchecked boxes and an
+unmarked table. Recorded in `spec/sessions_overview.md` with the
+condition that would change it.
+
+**8 mutations, 8 caught.** Marking removed from the funnel; clear/apply
+order swapped; fill dropped; edge turned into a border; the dark token
+declaration dropped; the dark token pointed at the light primitive; the
+edge thinned below the chip's 2px; the fill repointed to
+`--chip-selected-bg`. The guard states at its own definition what it
+cannot do — it holds the mechanism, never that a row *becomes* marked.
+
+**The `spec-writer` pass found one overstatement of mine and one false
+number I had helped entrench.** Both are corrected above rather than
+noted.
+
+*Overstated:* the edge-and-fill pairing was described as "the pair
+`.tag-chip.is-selected` already uses". It is not. A chip's edge sits on
+the **bare `.tag-chip` selector** — every chip carries it, selected or
+not, because that edge means *clickable*, which is 19J.7's entire point
+— and only the fill is gated on `.is-selected`. The row gates **both**
+halves on selection, since a row is not clickable by being a row. The
+rendered look is the same; the mechanism is not, and "already uses"
+claimed a reuse that does not exist.
+
+*False, and older than this item:* **a chip's edge is 1px, not 2px.**
+The rule has always been `inset 0 0 0 1px`, while `base.html`'s comment
+and `spec/ui_elements.md` have both said 2px since 19J.7. This item's
+first version of `test_the_row_style_carries_both_an_edge_and_a_fill`
+then justified its own `>= 2` floor as *"the 2px a selected chip
+carries"* — **restating the wrong figure in a third place, inside a test,
+where it reads as verified.** The floor survives on its own reason (a
+hairline on a full-width row reads as one of the table's rules, not as a
+state); the premise did not. Both pre-existing statements corrected with
+the discrepancy named, in a spec this manifest already commits to.
+
+*The pattern is the one this repository keeps recording*, and this is its
+sharpest instance yet: a number was wrong in two places, and the act of
+writing a **new guard** put it in a third. A test that cites a figure it
+does not check is not a check of that figure.
+
+**Open questions 2 and 3 are left open, deliberately.** Whether
+select-all marking fifty rows reads as signal or as a new background
+wants a fifty-row render, which this item did not need. Whether the
+marking becomes a shared primitive is answered *not yet*: it has one
+caller, and the second is a speculative page in an ideas file.
+Open question 4 (the panel's count-only title) was out of scope and
+stays so.
+
+**UI-visible: verify on the dev slot after deploy** — the suite cannot
+see a rendered colour, and Chromium here rendered a file rather than the
+deployed page.
+
 ### Doc impact
 
 - `spec/sessions_overview.md` — the row-expander section records what a
   selected row looks like, not only that ticking opens a panel (Item 1).
 - `spec/ui_elements.md` — §10 gains the selected-row state if it becomes
   a named primitive, and records what a re-render owes it (Item 1).
+- `spec/color_tokens.md` — the Tier-2 catalogue gains `--row-selected-bg`
+  and its count is corrected. Not named at planning time; added when the
+  build chose a new role over reusing the chip's token (Item 1).
 - `guide/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
   (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).

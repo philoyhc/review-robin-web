@@ -265,6 +265,37 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **Selected rows are marked** (19L.1). Every selected row carries
+  `session-row-selected`, styled in `base.html` as an edge **and** a
+  fill — `--selected-bg` as a 3px inset shadow on the first cell,
+  `--row-selected-bg` as the row's interior. Either half alone was a
+  candidate that was considered and not chosen.
+
+  The look echoes a selected chip, but **the mechanism deliberately
+  differs and the echo should not be read as reuse**: a chip's edge sits
+  on the bare `.tag-chip` selector, so *every* chip carries it whether
+  selected or not — that edge means "clickable", which is 19J.7's whole
+  point — and only the fill is gated on `.is-selected`. A row is not
+  clickable-by-being-a-row, so both halves gate on selection here and an
+  unselected row carries neither. The edge is an
+  inset shadow rather than a border so selecting a row does not change
+  its height and reflow the table under the pointer.
+
+  The class is applied in `refreshExpander()`, which is the one funnel
+  every selection path meets: a row tick, a select-all (which sets
+  `checked` programmatically and fires no row events), and the
+  expander's own Unselect-all / Unselect-others buttons (which fire
+  synthetic ones). Each pass clears the class from every row before
+  applying it to the selected set, so no un-tick can leave a stale mark.
+
+  **No hydration is needed, which is a property of the page rather than
+  an omission.** The tag filter and search hide rows with
+  `style.display` rather than re-rendering them, so a filtered row keeps
+  its checkbox state and its marking; and selection is not persisted
+  (the lobby's only `localStorage` key is `rrw-lobby-tag-filter`), so a
+  server re-render returns unchecked boxes and an unmarked table. If
+  selection ever becomes restorable, the marking has to be restored with
+  it.
 - **Select-row checkbox** carries:
   - `name="session_ids"` (array semantics — every ticked row
     submits its id)

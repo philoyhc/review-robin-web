@@ -251,6 +251,11 @@
         --chip-active-fg: var(--blue-strong);
         --chip-active-bg: var(--blue-wash);
         --chip-selected-bg: var(--blue-pale);
+        /* A selected table row (19L.1). Its own role rather than a
+           reuse of --chip-selected-bg: same primitives today, but a
+           row and a chip are different things and a repoint of one
+           should not silently move the other. */
+        --row-selected-bg: var(--blue-pale);
         /* ===== end design tokens ===== */
       }
       /* Dark palette — overrides the light :root values above when the
@@ -380,6 +385,7 @@
         --chip-active-fg: var(--blue-glow);
         --chip-active-bg: var(--blue-abyss-soft);
         --chip-selected-bg: var(--blue-abyss);
+        --row-selected-bg: var(--blue-abyss);
         /* ===== end design tokens ===== */
       }
       html { font-size: 100%; background: var(--surface-page); }
@@ -2607,8 +2613,10 @@
       /* Tag-filter chips — clickable; the selected ones flip to a
          filled accent so the active filter set reads at a glance.
 
-         Every chip carries the reserved accent shade as a 2px edge
-         (19J.7 rung 3). Until then the pill vocabulary said "clickable"
+         Every chip carries the reserved accent shade as a 1px edge
+         (19J.7 rung 3; the figure read "2px" here and in
+         ``spec/ui_elements.md`` from 19J.7 until 19L.1, against a rule
+         that has always been ``inset 0 0 0 1px``). Until then the pill vocabulary said "clickable"
          with nothing but ``cursor: pointer`` — invisible until the
          pointer is already on the chip, absent on touch, and absent
          from every screencap in the Guide.
@@ -2686,6 +2694,32 @@
         border-color: transparent;
         box-shadow: none;
       }
+      /* A selected lobby row (19L.1). Edge *and* fill, which is what
+         `.tag-chip.is-selected` already does — the reserved shade as a
+         3px edge, its pale companion as the interior. Before this the
+         only row-level signal was the checkbox's own tick, a ~13px mark
+         at one end of a full-width row: adequate at the instant of
+         clicking, and the weakest thing in the pattern by the time a
+         bulk selection is scattered down the table or a tall panel has
+         pushed the row off-screen.
+
+         The edge sits on the first cell only, as an inset shadow rather
+         than a border, so the row's height does not change when it is
+         selected and the table does not reflow under the pointer.
+
+         Not caught by `tests/unit/test_reserved_shade.py`, and not an
+         exemption: that guard scans selectors carrying pill / chip /
+         btn-icon classes, because its subject is elements with a dual
+         nature. A `<tr>` has one nature, and a selected row is the
+         thing the panel's actions will act on — which is what the
+         reserved shade means. */
+      body.ui-v2 tr.session-row-selected > td {
+        background: var(--row-selected-bg);
+      }
+      body.ui-v2 tr.session-row-selected > td:first-child {
+        box-shadow: inset 3px 0 0 var(--selected-bg);
+      }
+
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
       body.ui-v2 .session-expander > td {
@@ -3967,7 +4001,7 @@
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Read-only preview of base.html's real two-tier palette
-      (80 primitives · 106 semantic).
+      (80 primitives · 107 semantic).
       Design tool only — not wired into the app. To edit, use theme_customizer.</span>
   </div>
 
@@ -4383,7 +4417,7 @@
         <tr><td class="pv-name">card help border<code>--card-help-border</code></td><td><span class="pv-dot" style="background: var(--card-help-border);"></span><code>--gray</code> <span class="pv-hex">#9ca3af</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>
         <tr><td class="pv-name">card help fg<code>--card-help-fg</code></td><td><span class="pv-dot" style="background: var(--card-help-fg);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 10</summary>
+      <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 11</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">selected bg<code>--selected-bg</code></td><td><span class="pv-dot" style="background: var(--selected-bg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
@@ -4396,6 +4430,7 @@
         <tr><td class="pv-name">chip active fg<code>--chip-active-fg</code></td><td><span class="pv-dot" style="background: var(--chip-active-fg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
         <tr><td class="pv-name">chip active bg<code>--chip-active-bg</code></td><td><span class="pv-dot" style="background: var(--chip-active-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
         <tr><td class="pv-name">chip selected bg<code>--chip-selected-bg</code></td><td><span class="pv-dot" style="background: var(--chip-selected-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
+        <tr><td class="pv-name">row selected bg<code>--row-selected-bg</code></td><td><span class="pv-dot" style="background: var(--row-selected-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
       </tbody></table></details>
     </section>
   </div>

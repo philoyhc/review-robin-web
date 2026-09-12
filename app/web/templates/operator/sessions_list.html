@@ -551,9 +551,26 @@
           return node;
         }
 
+        // 19L.1 — mark the selected row(s), not only the panel. Done
+        // here rather than in the change listener because this is the
+        // one funnel every path already runs through: a row tick, a
+        // select-all (which fires no row events), and the expander's
+        // own Unselect-all / Unselect-others buttons.
+        function markSelectedRows(selected) {
+          rowCheckboxes.forEach(function (cb) {
+            var row = cb.closest("tr");
+            if (row) row.classList.remove("session-row-selected");
+          });
+          selected.forEach(function (cb) {
+            var row = cb.closest("tr");
+            if (row) row.classList.add("session-row-selected");
+          });
+        }
+
         function refreshExpander() {
           removeExpander();
           var selected = selectedCheckboxes();
+          markSelectedRows(selected);
           if (selected.length === 0) return;
           if (selected.length === 1) {
             var row = selected[0].closest("tr");
