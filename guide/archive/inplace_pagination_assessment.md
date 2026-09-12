@@ -212,8 +212,18 @@ something else comes to need it (live-updating rows, or a page turn
 that must not lose an in-progress edit), never to fix the scroll.
 
 Unaffected by this: the fix the recommendation names as worth doing
-either way. Converting the four element-bound script blocks to
-delegation never depended on the swap, and its case is unchanged.
+either way. Converting ~~the four element-bound script blocks~~ **the one
+element-bound block** to delegation never depended on the swap, and its
+case was unchanged. **Shipped 2026-09-11 as Segment 19K Item 2** — the
+column-visibility chips are now one delegated listener per event type on
+`document`, with `window._rrwHydrateColToggles` restoring the operator's
+columns after a re-render (`spec/ui_elements.md` §10).
+
+*(The count correction is dated 2026-09-11 and was already made twice in
+this file — in §"what would break" and in the recommendation above — and
+still stood uncorrected here until 2026-09-12. Three sections, two
+updated. Left visible rather than tidied: it is the same failure the
+document's own corrections describe.)*
 
 ## Reproducing the numbers
 

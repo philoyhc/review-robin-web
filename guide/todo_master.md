@@ -2388,7 +2388,7 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   slice (two-tier + data-driven) and surfaced real `base.html` fixes (nav
   tab-strip backgrounds tokenized; nav chrome → `--surface-page`; primitive
   families rationalized: sky→`--blue-cyan-*`, danger→`--red-warm-*`, neutrals as
-  one family). PRs #2065–#2083. Full plan: `guide/theme_customizer.md` "Plan A —
+  one family). PRs #2065–#2083. Full plan: `guide/archive/theme_customizer.md` "Plan A —
   First". The operator-facing **Stretch** half remains deferred
   (`guide/deferred_consolidated.md` Part A "Operator theming").
 

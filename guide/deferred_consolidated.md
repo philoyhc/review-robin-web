@@ -952,7 +952,7 @@ per-deployment.
 
 #### 19C — Operator theme tweaker (Stretch)
 
-> Carved from the theme-customizer design (`guide/theme_customizer.md`
+> Carved from the theme-customizer design (`guide/archive/theme_customizer.md`
 > "Plan B — Stretch") 2026-08-22. **First** — the developer designer — **✅
 > v1 shipped as 19C Item 5 (2026-09-04, PRs #2065–#2083)** on the two-tier
 > token system (Item 6): a three-part `tools/theme_customizer.html` — Part A
@@ -987,11 +987,43 @@ parked until operators actually ask to adjust colours.
 **Lift trigger.** A pilot operator wants to tweak the palette (readability, mild
 brand alignment) for their own view.
 
-**Wire-up.** `guide/theme_customizer.md` "Plan B — Stretch" (settings host,
-seeds-only depth, the `rrw-theme-custom` key, runtime-apply placement,
-scaffold-first slices, AA gate). A DB-backed **shared / persistent** theme
-(cross-user, pushed to participants) is a further future beyond Stretch — it's
-the only part that needs a migration (a `themes` table + scope + governance).
+**Wire-up.** Self-contained below as of 2026-09-12, when the design was
+archived; read `guide/archive/theme_customizer.md` "Plan B — Stretch" for the
+fuller design discussion, not for anything this entry needs.
+
+- **Host** — a Display-mode section on `/operator/settings` (settled: not a
+  dedicated route), server-rendered, with the shared editor core unchanged.
+  **Depth is seeds only**; the per-primitive grid and semantic-remap panel stay
+  developer-only.
+- **Runtime-apply, and the one placement that works.** A small synchronous
+  script in `base.html`'s `<head>` reads `rrw-theme-custom` and injects
+  `<style id="rrw-custom-theme">` carrying both a `:root` and a
+  `:root[data-theme="dark"]` block, so the light/dark toggle keeps working. It
+  must sit **after `base.html`'s own `<style>`** and still before `</head>` —
+  before first paint, but later in source order. The override wins on *order at
+  equal specificity*, nothing else: put it beside the no-FOUC script, which sits
+  **before** the `<style>`, and `base.html` overwrites the operator's theme with
+  no error to show for it.
+- **Reading the defaults is not `getComputedStyle`.** Stretch must read
+  `base.html`'s declared `:root` rule through the **CSSOM**
+  (`document.styleSheets`), because once a custom theme is applied the *computed*
+  value is the custom one while the declared rule is still the true default — so
+  "Reset to defaults" built on `getComputedStyle` resets to the thing it is
+  trying to undo. (The archived plan states this twice with the reason and once,
+  in its reuse-contract section, contradicts itself; the CSSOM version is the
+  correct one and is recorded here so the contradiction is not what survives.)
+- **Two separate escapes** — *Revert to last saved* discards in-progress edits
+  and reloads `rrw-theme-custom`; *Reset to defaults* clears the key entirely and
+  returns to `base.html`'s palette. Both are always available.
+- **Save is hard-gated on AA**, since the editor is in non-designer hands.
+- **Slices, scaffold-first** per `CLAUDE.md`: (1) the Display-mode section with
+  real layout and copy, seed controls **inert**; (2) host the editor core, live
+  read + preview; (3) localStorage Save + runtime-apply + Reset; (4) the AA
+  save-gate; (5) export/import + Revert + seed polish.
+
+A DB-backed **shared / persistent** theme (cross-user, pushed to participants) is
+a further future beyond Stretch — it's the only part that needs a migration (a
+`themes` table + scope + governance).
 
 ---
 
@@ -1316,7 +1348,7 @@ page turn is today.
 **Why it is off the roadmap.** Two reasons, and the second is the one
 that settles it.
 
-*Measured cost* (`guide/inplace_pagination_assessment.md`, 2026-09-11).
+*Measured cost* (`guide/archive/inplace_pagination_assessment.md`, 2026-09-11).
 A page turn is **413KB and 21ms** at 556 rows, 116ms at 5,000 — the
 reload is not slow. What a swap would break is: of the five
 table-relevant script blocks in `base.html`, **one** is delegated on

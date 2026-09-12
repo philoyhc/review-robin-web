@@ -386,7 +386,7 @@ def test_the_outside_click_handler_is_delegated_on_the_document() -> None:
     click — but **how it is attached**. Of the five table-relevant
     script blocks in ``base.html``, four bind to their elements at load
     and would not survive a re-rendered table
-    (``guide/inplace_pagination_assessment.md`` measured that). This
+    (``guide/archive/inplace_pagination_assessment.md`` measured that). This
     one is written like the fifth. Converting it to a per-menu listener
     would work today and rot the first time anything re-renders, which
     is exactly the failure that leaves no trace.
