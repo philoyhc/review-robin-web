@@ -111,8 +111,18 @@ COMMITTED_BARE = re.compile(r"`([A-Za-z0-9._-]+\.md)[^`]*`")
 # which is how bare names work: resolution-on-disk would make a *deleted*
 # path silently stop being a commitment, which is precisely what C2 exists
 # to catch.
+# At least one character after the root's slash. A bare `` `tools/` `` is a
+# folder named in prose — "the `tools/` and `.claude/` paths the regex never
+# matched" — not a path, and `*` matched four of those across the archive.
+# Harmless while they all sat after the dash, and a commitment to an entire
+# top-level directory the first time one led a bullet. A trailing-slash
+# *path* still matches: `.github/workflows/` has `workflows/` after the root.
+#
+# Found because the published count (16 paths, 3 leading, 13 citations) did
+# not reproduce against the shipped regex, which gave 20/3/17. The prose was
+# right and the code was wrong — the four extra were these.
 COMMITTED_ROOT = re.compile(
-    r"`((?:app|tests|tools|alembic|\.github|\.claude)/[A-Za-z0-9._/-]*)[^`]*`"
+    r"`((?:app|tests|tools|alembic|\.github|\.claude)/[A-Za-z0-9._/-]+)[^`]*`"
 )
 
 # The em-dash (or en-dash) that ends a manifest bullet's path list.

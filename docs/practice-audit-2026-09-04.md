@@ -131,7 +131,7 @@ misread, so they are stated here rather than left to its `--help`. Added
 
 **What it verifies.** Seven checks over the closing level's `Doc impact`
 manifest — **C1** the section exists and the file uses one shape (segment-level
-or item-level, not both); **C2** every committed path exists and is live;
+or item-level, not both); **C2** every committed path exists and is live — a committed *directory* counts, so this asks whether the path exists rather than whether it is a file;
 **C3** every un-waived path was edited inside the segment's or item's own
 commit window; **C4** each waiver carries a reason; **C5** the `guide/`
 commitments, counted and listed but not checked (below); **C6** a `Status`
@@ -160,7 +160,9 @@ than pending:
   the wrong reason. A `guide/` path is also legitimately allowed to move into
   `guide/archive/` when its segment closes, which is why "exists and is live"
   is the wrong question for it too. Of the **80** such commitments the tool's
-  own parser finds across 35 plans (2026-09-11), **11 have no file where the
+  own parser found across 35 plans when this was written (2026-09-11; 78
+  across 35 a day later — the corpus moves, and the shape of the argument does
+  not), **11 have no file where the
   bullet names one, and 8 of those are that exact case** — the file is sitting
   in `guide/archive/`. So C2 would fail eight correct, closed commitments to
   catch three genuinely broken ones.

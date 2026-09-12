@@ -646,3 +646,24 @@ def test_c2_still_fails_a_root_path_that_does_not_exist(plan_repo) -> None:
     must not make C2 accept everything."""
     checks = _checks(plan_repo, "- `tools/no_such_file.md` — gone.")
     assert checks["C2"]["status"] == cc.FAIL
+
+
+def test_a_bare_root_folder_in_prose_is_not_a_path() -> None:
+    """`` `tools/` `` names a folder in a sentence — "the `tools/` and
+    `.claude/` paths the regex never matched" — rather than committing to
+    one. Four such mentions across the archive matched under the `*` this
+    shipped with; harmless while they sat after the dash, and a
+    commitment to an entire top-level directory the first time one led a
+    bullet. Found by the published count not reproducing against the
+    code: the prose said 16/3/13 and the regex gave 20/3/17.
+    """
+    assert _paths("- `tools/` — the whole folder.") == []
+
+
+def test_a_directory_path_still_matches_with_its_trailing_slash() -> None:
+    """The half that must not regress: requiring a character after the
+    root's slash must not lose `.github/workflows/`, which is a real
+    committed directory and ends in a slash of its own."""
+    assert _paths("- `.github/workflows/` — the postgres job.") == [
+        ".github/workflows/"
+    ]

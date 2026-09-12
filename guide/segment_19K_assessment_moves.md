@@ -1097,6 +1097,47 @@ unreachable before it and both found by a test rather than by reading:
 | The 2 that changed | `18Q` 12 → 14 committed paths, `19K.4` 2 → 3. Exactly the 3 leading-position paths, in the 2 plans that carry them. |
 | Guards are not vacuous | **5 mutations, 5 caught** — matched anywhere, dropped entirely, `is_file` restored, a root missing from the list, and `_all_paths` back to head-only. |
 
+**`spec-writer` pass (checker, 2026-09-12) — and it found a bug in the
+shipped regex by disbelieving a number.**
+
+The published count — 16 paths, 3 leading, 13 citations — **did not
+reproduce against the code**: the checker got 20/3/17. Re-measuring at
+the pinned SHA settled which was wrong, and it was the code. The shipped
+`COMMITTED_ROOT` ended `[A-Za-z0-9._/-]*`, so a bare `` `tools/` `` matched
+— a folder named in a sentence ("the `tools/` and `.claude/` paths the
+regex never matched"), not a path. Four such mentions across the archive,
+and they are exactly the gap between the two counts. Harmless while they
+all sat after the dash, and a commitment to an **entire top-level
+directory** the first time one led a bullet. Now `+`, with a test for
+both directions; `.github/workflows/` still matches, its `workflows/`
+coming after the root.
+
+With that fixed, 3/13/16 reproduces at `c42b9b4f` exactly as published.
+**The prose was right and the code was wrong** — the reverse of the usual
+drift, and only findable by someone recomputing the number rather than
+reading around it. This is the third consecutive item where the useful
+finding came from a figure refusing to reconcile.
+
+Three documentation gaps, all upheld:
+
+- **`.claude/skills/segment-plan/SKILL.md` and
+  `guide/segment_plan_template.md` state two of the four path rules** —
+  missing `guide/`'s `NOTED` (19K.1) and this item's roots. These are
+  what a plan author actually reads, so they were the live drift, and
+  the manifest gained both bullets. The skill file is committable at all
+  only because of this item, which is a neat closing of the loop.
+- **`tools/README.md` never documented C5**, three touches after it was
+  added.
+- `docs/practice-audit-2026-09-04.md`'s C2 line did not say a directory
+  counts, and its `guide/` figure (80 across 35) now measures 78 across
+  35 — corpus drift on a dated measurement, now dated in the prose
+  rather than corrected into a second undated one.
+
+**The re-run after the fix:** 144 ids, **139 byte-identical, 2 changed
+(`18Q`, `19K.4`), 2 date-only** (`docs/status.md`'s date rolled to
+2026-09-12 inside an unrelated C3 message), **1 expected flip** —
+`19K.5`, which does not exist on `main`.
+
 **The trial was checked for vacuity before its result was believed.**
 The first sweep reported *0 verdict flips*, which is the answer a rule
 that does nothing also gives. Confirming the rule bit — 19K.4 reading
@@ -1151,4 +1192,11 @@ measurements that rejected them.
   manifest may commit to and that the rule is leading-position (Item 5).
 - `docs/practice-audit-2026-09-04.md` — the close-check passage's "what
   it verifies" list gains the widened path rule (Item 5).
+- `.claude/skills/segment-plan/SKILL.md` — the `Doc impact contract`
+  section states all four path rules, not the two it had; this is the
+  file a plan-writing agent reads to know what counts as a commitment,
+  so it is the one that matters most (Item 5). *Committable at all only
+  because of this item.*
+- `guide/segment_plan_template.md` — the same two-clause description,
+  in the comment a new plan is copied from (Item 5).
 - `docs/status.md` — row when the item closes (Item 5).
