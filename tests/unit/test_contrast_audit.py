@@ -49,16 +49,19 @@ token exists that it does not name.
 itself made twice. ``test_the_ratio_matches_published_values`` pins the
 arithmetic instead.
 
-**Seven pairs still fall under AA: four open, three accepted.** The
-four open ones are one root cause — white on `--blue-glow` in dark —
-and are pinned at the value they were recorded at, so a fix must
-delete the entry and a regression fails the suite. The three accepted
-are light button labels that dip only under the pointer; their
-exemption is stored as its *premise* (the resting pair) and re-checked
-on every run, not as a conclusion. Four further pairs closed by
-collapsing a tier: see "Collapsing a tier" in `spec/color_tokens.md`.
-Fixing them is a design decision per family (see
-``docs/known_limitations.md``), not a follow-on to this item.
+**Three pairs fall under AA, all accepted; none is open.** Since
+19K.10 the palette clears AA normal against every pair it forms, in
+both themes, and ``OPEN_SHORTFALLS`` is empty. The three accepted are
+light button labels that dip only under the pointer; their exemption is
+stored as its *premise* (the resting pair) and re-checked on every run,
+rather than as a conclusion.
+
+The empty dict is kept, not deleted with its tests: an empty record is
+a claim — *nothing is outstanding* — and
+``test_every_pair_clears_aa_but_for_the_recorded_shortfalls`` is what
+keeps it true. Two of the tests below are consequently **inert until an
+entry returns**, and say so at their own definitions rather than
+looking like live guards.
 
 **Scope, stated so it can be argued with.** WCAG 1.4.3 governs *text*;
 a divider and a gradient stop are not text and carry no ratio floor,
@@ -142,6 +145,8 @@ OPEN_SHORTFALLS: dict[tuple[str, str, str], float] = {}
 RECORDED = set(OPEN_SHORTFALLS) | set(harness.ACCEPTED_BELOW_AA)
 
 #: Tolerance on a recorded shortfall before it counts as movement.
+#: Unused while ``OPEN_SHORTFALLS`` is empty — its only consumer is the
+#: loop in ``test_the_recorded_shortfalls_are_still_what_was_recorded``.
 #: Two hundredths: enough to absorb nothing at all, since both sides
 #: are exact hexes and the arithmetic is deterministic, and small
 #: enough that any real repoint trips it.
@@ -275,6 +280,13 @@ def test_every_pair_clears_aa_but_for_the_recorded_shortfalls() -> None:
 
 def test_the_recorded_shortfalls_are_still_what_was_recorded() -> None:
     """Neither worse nor quietly fixed.
+
+    **Inert while ``OPEN_SHORTFALLS`` is empty** — every loop below runs
+    zero times, so this asserts nothing today. Said here rather than
+    left for a reader to work out, because a test that proves nothing
+    and looks like a guard is worse than no test: it is the shape of
+    the vacuity this file has caught twice already. It becomes live the
+    moment an entry returns, which is why it is kept.
 
     A shortfall that improved past AA should lose its entry here and
     its line in ``docs/known_limitations.md`` together; leaving a
@@ -474,6 +486,10 @@ def test_accepted_pairs_still_earn_their_acceptance() -> None:
 
 def test_no_pair_is_both_accepted_and_open() -> None:
     """Two records, one truth.
+
+    **Inert while ``OPEN_SHORTFALLS`` is empty** — the intersection is
+    trivially empty, so this proves nothing about ``ACCEPTED_BELOW_AA``
+    today. Kept for the same reason as the test above.
 
     A pair in both sets would be reported as settled by one test and
     outstanding by the other, and `docs/known_limitations.md` would

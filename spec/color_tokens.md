@@ -292,12 +292,20 @@ Two limits, both following the rules above rather than taste:
   (`--green-bright`, `--red-bright`) and already clear AA, so
   collapsing them would change appearance to fix nothing.
 
-**This does not close the remaining four**, and the distinction is the
-point: those are white on `--blue-glow` in dark, a single value with
-no second tier to collapse into. A hierarchy collapse is available
-when the palette has already produced the answer; when it has not, the
-value has to move, and that is a different decision with its own blast
-radius.
+**This did not close the remaining four**, and the distinction is the
+point: those were white on `--blue-glow` in dark, a single value with
+no second tier to collapse into. A hierarchy collapse is available only
+where the palette has already produced a passing tier to collapse
+*into*.
+
+*This paragraph originally continued "when it has not, the value has to
+move". 19K.10 closed those four without moving it* — by inverting the
+**foreground** onto `--ink`, following the amber family (above). So the
+limit stated here was right that a collapse was unavailable and wrong
+about what the alternative had to be: there was a third move, and
+naming only two made the harder one look inevitable. Corrected rather
+than deleted, because the mistake is the useful part — *a rule that
+names the options it can see will make the unseen one look impossible.*
 
 **To look at the audit rather than read it**, open
 `tools/theme_customizer.html`: its Contrast panel lists all 73 pairs,

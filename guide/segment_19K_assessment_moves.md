@@ -2734,6 +2734,41 @@ reads **0 open in light and 0 open in dark**, with the three accepted
 hover dips still dashed in light. That is the first time in this
 segment the panel has shown no red anywhere.
 
+**The `spec-writer` pass reproduced every ratio and found two stale
+passages, one of them worse than stale.**
+
+- **The module docstring, for the third time in this file.** It still
+  read "Seven pairs still fall under AA: four open, three accepted"
+  while `OPEN_SHORTFALLS` sat empty sixty lines below it — and the
+  block comment *immediately above the dict* had been rewritten
+  correctly in the same commit. This exact file, this exact failure,
+  three items running: 19K.7 fixed it once after the first checker
+  pass, once more after the split, and now again. *The fix is not
+  remembering harder; it is that the docstring and the dict are one
+  claim in two places, and nothing checks they agree.* Recorded as a
+  candidate, not fixed here — a consistency check over a module's own
+  prose is its own piece of work.
+- **`spec/color_tokens.md`'s "Collapsing a tier" made a prediction this
+  item falsified.** It closed with "when [a collapse] is not
+  [available], **the value has to move**" — and 19K.10 closed those
+  four without moving `--blue-glow` at all, by inverting the
+  foreground. The limit it stated was right that no collapse was
+  available and **wrong about what the alternative had to be**: there
+  was a third move, and naming only two made the harder one look
+  inevitable. Corrected rather than deleted, with the mistake kept
+  visible, because *a rule that names the options it can see will make
+  the unseen one look impossible* — and that is the more useful line
+  than the rule it sits under.
+
+Also upheld: **two tests are inert while `OPEN_SHORTFALLS` is empty**
+(`test_the_recorded_shortfalls_are_still_what_was_recorded` and
+`test_no_pair_is_both_accepted_and_open`), along with `DRIFT`. That is
+the intended consequence of keeping the dict, but neither said so at
+its own definition, and a test that proves nothing while looking like a
+guard is the shape of the vacuity this file has caught twice. All three
+now name it. And one US-spelling slip in the new `docs/status.md` row,
+fixed.
+
 **Decisions confirmed at build:**
 
 - The inversion is three mappings, not a token collapse. They share a
