@@ -23,7 +23,7 @@ deleted without ceremony.
 ## 1. One Rosters page, replacing four
 
 **Proposed 2026-09-12 by the author.** The **first move of a two-move
-consolidation** — entry 3 is the second, folding Previews, Invitations
+consolidation** — entry 2 is the second, folding Previews, Invitations
 and Responses into Monitoring on the same structure. Assignments is
 deliberately in neither.
 
@@ -244,9 +244,14 @@ existing primitive** — and the honest reading is that the lobby is a
 precedent for the *fan-out*, and an example of the gap for the *marking*.
 
 The author's view is that the lobby's own marking wants improving too,
-**separately** — recorded as entry 2 below rather than folded in here,
-because it stands on its own and this entry should not acquire a
-dependency it does not need.
+**separately** — and it since has been, as Items 1 and 2 of
+`guide/segment_19L_ux_refinements.md`, which is why it is not an entry in
+this file. It stood on its own, and this entry never acquired the
+dependency. What the lobby now has is a *bracket* rather than a fill: a
+rail at each end of the selected row, carried through the action panel.
+Whether that is the right primitive for a Rosters table is open — it was
+designed for one wide row in a tall table, which is not obviously the
+same problem.
 
 **The reason it is load-bearing rather than a nicety.** Today, "which
 roster am I acting on" is answered by ambient context nobody had to
@@ -411,71 +416,14 @@ Not answered here; recorded so they are not rediscovered.
 
 ---
 
-## 2. The lobby's selected row is marked only by its checkbox
-
-**Raised by the author, 2026-09-12**, while discussing entry 1, and
-**explicitly separable from it**: this stands whether or not the Rosters
-consolidation ever happens, and entry 1 should not wait on it.
-
-> **✅ Graduated 2026-09-12 to `guide/segment_19L_ux_refinements.md`
-> Item 1**, on the author's instruction. The plan is authoritative for
-> the work; this entry stays as the record of how the observation arose
-> and why it was judged separable. Entry 1 remains an idea, not an item.
-
-### The observation
-
-On the sessions lobby, selecting a row injects an action panel beneath it
-— and the only thing distinguishing the *selected row itself* from its
-neighbours is that its checkbox is ticked. Verified at `496cc183`: the
-panel's `<td>` takes `background: var(--surface-muted)`, and no class is
-applied to the source `<tr>` at any point.
-
-### Why it is worth improving
-
-A ticked checkbox is a small mark at one edge of a full-width row. It is
-adequate while the panel sits directly beneath it and the operator has
-just clicked. It degrades in exactly the conditions the lobby invites:
-
-- **bulk selection**, where several rows are selected and the panel
-  states only a count, so *which* rows are in that count is carried
-  entirely by scattered checkbox states;
-- **a tall panel**, which pushes the source row toward or past the top of
-  the viewport;
-- **returning to the page**, where selection may be restored without the
-  click that created it.
-
-The panel's actions include **Purge and archive** and **Delete** — the
-Delete button ships disabled today, and the expander is a placeholder,
-but the intended action set is destructive, and target-clarity matters
-most where the action is irreversible.
-
-### What this is not
-
-Not a proposal for a mechanism, and not an argument that the lobby is
-currently unsafe — its destructive buttons are not wired. It records that
-**the row-marking is the weakest link in a pattern the app is likely to
-reuse**, which is the reason to fix it before it is copied rather than
-after.
-
-### Relationship to entry 1
-
-If both are ever done, this one is the **cheaper and lower-risk** of the
-two and could land first: it improves a shipped page in place, needs no
-route or service change, and would give entry 1 the primitive it
-otherwise has to invent. That is an argument for sequence, not for
-bundling — entry 1 remains gated on pilot evidence, and this one is not.
-
----
-
-## 3. One Monitoring page, replacing three
+## 2. One Monitoring page, replacing three
 
 **Proposed 2026-09-12 by the author**, immediately after entry 1 and as
-part of the same programme. *The author called this "Item 2", meaning the
-**second move of the consolidation**, not the second entry in this file —
-entry 2 is the lobby row marking, which has already graduated to
-`guide/segment_19L_ux_refinements.md`. Filed as entry 3 to keep the
-file's numbering stable; say the word if the programme numbering should
-win instead.*
+part of the same programme — the author's "Item 2", the second move of
+the consolidation. *It was briefly filed as entry 3, behind a lobby
+row-marking entry that has since been removed from this file: session
+lobby work is segment work, not an idea awaiting pilot evidence. With
+that gone the programme numbering and the file numbering agree.*
 
 ### The idea, as put
 

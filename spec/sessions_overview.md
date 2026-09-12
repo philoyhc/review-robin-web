@@ -265,21 +265,37 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
-- **Selected rows are marked** (19L.1). Every selected row carries
-  `session-row-selected`, styled in `base.html` as an edge **and** a
-  fill — `--selected-bg` as a 3px inset shadow on the first cell,
-  `--row-selected-bg` as the row's interior. Either half alone was a
-  candidate that was considered and not chosen.
+- **Selected rows are marked** (19L.1, restyled by 19L.2). Every
+  selected row carries `session-row-selected`, styled in `base.html` as
+  a **rail at each end and no fill** — `--selected-bg` as a 6px inset
+  shadow on `td:first-child` and the mirror of it on `td:last-child`.
+  Both rails are inset shadows rather than borders, so selecting a row
+  does not change its height and reflow the table under the pointer.
+  The bracket has no top or bottom cap for the same reason: caps would
+  cost 4px of height on selection.
 
-  The look echoes a selected chip, but **the mechanism deliberately
-  differs and the echo should not be read as reuse**: a chip's edge sits
-  on the bare `.tag-chip` selector, so *every* chip carries it whether
-  selected or not — that edge means "clickable", which is 19J.7's whole
-  point — and only the fill is gated on `.is-selected`. A row is not
-  clickable-by-being-a-row, so both halves gate on selection here and an
-  unselected row carries neither. The edge is an
-  inset shadow rather than a border so selecting a row does not change
-  its height and reflow the table under the pointer.
+  **The row has no background, and that is the design.** 19L.1 shipped
+  an edge *and* a fill; the fill was `--row-selected-bg`, resolving to
+  the same primitives as `--status-info-bg`, which under `body.ui-v2`
+  backs both `.pill-count` and `.pill-info` from a single rule. A lobby
+  row carries four to six of those — Created by, Created, Deadline,
+  Timezone, one per tag — so on a selected row every one of them
+  vanished, along with a Validated status pill. No replacement fill
+  escapes it: the six pale pill fills occupy relative luminance
+  0.810–0.914 against a 1.000 card, leaving no clearance above the band
+  and only a too-dark clearance below. The rails carry the whole signal
+  instead, at roughly 5.2 against the card in light and 4.9 in dark,
+  where no fill in this palette reaches 2.6.
+
+  **The panel closes the bracket.** The injected expander row carries
+  `session-expander-bracketed`, which gives its single `colspan` cell
+  both rails — the cell is first and last child at once — and fills it
+  with `--selection-panel-bg`, the renamed token whose primitives used
+  to be the row's. The panel renders no pills, so the shade is safe
+  there; see `spec/ui_elements.md` §6 for the pill-free-zone condition
+  that creates. The archived-sessions page injects a panel with the
+  same `session-expander` class names from its own script and marks no
+  rows, so it deliberately does **not** carry the opt-in class.
 
   The class is applied in `refreshExpander()`, which is the one funnel
   every selection path meets: a row tick, a select-all (which sets

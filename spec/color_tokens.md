@@ -485,7 +485,7 @@ The same reason the help card has its own `-fg` rather than inheriting
 | `--chip-active-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--chip-active-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
 | `--chip-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
-| `--row-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--selection-panel-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 
 ---
 
