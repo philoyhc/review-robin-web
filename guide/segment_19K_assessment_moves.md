@@ -1397,9 +1397,9 @@ may be intentional.
 **Rejected: extracting a stylesheet — on relevance, not on cost.** The
 first draft of this item rejected it as "a large diff", which is wrong
 and worth correcting rather than quietly fixing: `base.html` has **one**
-`<style>` block, 3,885 of its 4,732 lines, containing **zero** Jinja
-constructs, and `app/main.py` already mounts `/static` with cache
-handling. Extraction is close to a cut-and-paste.
+`<style>` element — lines 24–3894, **3,869 lines** of its 4,732 —
+containing **zero** Jinja constructs, and `app/main.py` already mounts
+`/static` with cache handling. Extraction is close to a cut-and-paste.
 
 It is rejected because it **does not touch the cascade**. A tie at
 (0,2,1) resolves by source order in a `.css` file exactly as in a
@@ -1407,8 +1407,11 @@ It is rejected because it **does not touch the cascade**. A tie at
 tooling rescue it: stylelint's `no-descending-specificity`, the
 canonical rule for this family, flags a *lower*-specificity selector
 following a higher one — 19J.9 was an **equal**-specificity tie, which
-it does not cover — and the repo has no JS toolchain at all, so the rule
-would arrive with npm and a node CI step attached.
+it does not cover. **That last is asserted, not run**: there is no
+stylelint in this repo to test it against, so treat it as a reading of
+the rule rather than a measurement, and check it before relying on it.
+There is also no JS toolchain at all here, so the rule would
+arrive with npm and a node CI step attached.
 
 There **is** a real argument for extraction, and it is about page weight
 rather than correctness. It is 19K.9's, judged on its own terms; smuggling
@@ -1862,7 +1865,9 @@ real pages through `TestClient` and measuring the response body:
 
 The **157.7 KB is byte-identical on all four** — it is the same block,
 paid again on every navigation, and it cannot be cached separately
-because it is not a separate thing.
+because it is not a separate thing. (Three of the four are operator
+pages; `/guide` is "operator **and participant** documentation"
+(`app/web/routes_guide.py`), so the cost is not the operator's alone.)
 
 **`app/main.py` registers no compression middleware.** Whether the Azure
 front end gzips responses on the way out is **not knowable from here**,
@@ -1897,7 +1902,7 @@ used, which is what turned a deferral into a cheap fix there.
    than the CSS alone — the HTML around it is 38–86 KB per page.
 3. **Extract the stylesheet.** The only option that makes the CSS
    *cacheable*, so a repeat view pays a 304 rather than the bytes. It is
-   mechanically cheap — one `<style>` block, 3,885 lines, zero Jinja —
+   mechanically cheap — one `<style>` element, 3,869 lines, zero Jinja —
    and it is the one that changes the architecture, so it needs the
    strongest evidence.
 
@@ -1932,6 +1937,23 @@ afterwards which one was worth it.
 
 ### Judgment calls — decided
 
+- **2026-09-12 — the item's own CSS figures were wrong, and the document
+  already contained the right ones.** The first draft said 3,885 lines /
+  158.4 KB / 39.5 KB. `base.html:9` carries a Jinja comment whose text
+  includes the literal string `` <style> ``, so a non-greedy
+  `<style[^>]*>(.*?)</style>` over the raw template matched **that** as
+  the opening tag and swallowed 15 lines of comment and the no-FOUC
+  `<script>` as if they were CSS. The real element is lines 24–3894:
+  **3,869 lines, 157.7 KB raw, 39.2 KB gzipped**.
+
+  The instructive part is not the regex. **The page-weight table in this
+  same item already said 157.7 KB** — it is measured from a rendered
+  response, where Jinja has stripped the comment before any regex runs,
+  so it was never exposed to the bug. Two measurements of one quantity,
+  taken by two methods, disagreeing by 0.7 KB in one document, and
+  nobody compared them. Measuring twice is worth nothing if the two
+  results are never put beside each other.
+
 - **2026-09-12 — measure before choosing, even though option 2 is one
   line.** Landing compression without knowing whether the platform
   already compresses would be a change whose effect nobody could state,
@@ -1946,12 +1968,12 @@ Taken 2026-09-12 at `11cad9c1`.
 |---|---:|---|
 | Templates extending `base.html` | **34** | `grep -rl 'extends "base.html"' app/web/templates \| wc -l` |
 | `<style>` blocks in `base.html` | **1** | parse |
-| CSS lines / file lines | **3,885 / 4,732** | parse + `wc -l` |
+| CSS lines / file lines | **3,869 / 4,732** | `<style>` spans lines 24–3894 |
 | Jinja constructs inside the CSS | **0** | parse |
-| Inline CSS, raw / gzipped | **158.4 KB / 39.5 KB** | `len()` + `gzip.compress` |
+| Inline CSS, raw / gzipped | **157.7 KB / 39.2 KB** | `len()` + `gzip.compress` on the element's content |
 | CSS share of a rendered page | **64.6–80.5%** | the table above |
 | Compression middleware in `app/main.py` | **0** | `grep -n Middleware app/main.py` |
-| Existing static mount | 1 (`/static`, revalidating) | `app/main.py:42,90` |
+| Existing static mount | 1 (`/static`, revalidating) | `app/main.py:42` (class), `:97` (mount) |
 
 ### PR ladder
 

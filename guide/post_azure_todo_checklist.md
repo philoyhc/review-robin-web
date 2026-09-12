@@ -196,8 +196,10 @@ does not wait for the institutional cutover.
 
 **What.** Take one number: does a response from the deployed app come
 back with `Content-Encoding: gzip`, and what is its wire size. Segment
-19K Item 9 cannot choose among its three options without it, and two of
-the three are architecture changes that should not be made on a guess.
+19K Item 9 cannot choose among its three options without it, and **one
+of the three changes the architecture** — extracting the stylesheet —
+which should not be done on a guess. (The other two are "do nothing"
+and one line of middleware.)
 
 **Why it cannot be checked here.** Compression in transit is a property
 of the platform, not of the code — `app/main.py` registers no
@@ -230,6 +232,7 @@ signed-in page instead, which is the more faithful measurement anyway.
 **Where this came from.** `guide/segment_19K_assessment_moves.md` Item 9,
 whose rung 1 *is* this measurement and whose three candidate answers
 stay open until it exists. The item records the container-side numbers
-already taken: the same 157.7 KB of inline CSS is **64.6–80.5% of every
-operator page**, byte-identical across four pages, re-sent on every
-navigation across 34 templates.
+already taken: the same 157.7 KB of inline CSS is **64.6–80.5% of four rendered
+pages**, byte-identical across all of them, re-sent on every navigation
+across 34 templates. Three are operator pages; `/guide` serves
+participants too.
