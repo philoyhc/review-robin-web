@@ -123,6 +123,7 @@ recorded rather than recommended against.
 | Type checking | — | **None configured** (no mypy/pyright config or dependency) | — | — |
 | PR template | — | **None** (no `pull_request_template.md` anywhere) | — | — |
 | `CONTRIBUTING.md` checklist | `CONTRIBUTING.md` §"Pull request checklist" | No — prose only, not rendered into a PR body | — | **No** |
+| `tests/integration/test_cascade_ties.py` | `ci.yml` job `test` + `ci-postgres.yml` | Yes | same-specificity ties among canonical classes in `base.html` | **No** — reports via the suite; `main` is unprotected |
 | `python3 tools/close_check.py <id>` | run by hand at a segment or item close | No — not wired into either CI workflow | one plan's `Doc impact` manifest | **No** — advisory; the reader adjudicates the warnings |
 
 The close check is the newest row and the one whose limits are easiest to
