@@ -139,6 +139,14 @@ block is present at the closing level — a warning, not a failure, because
 items are sometimes logged after their work lands; **C7** each `cites:` marker
 names a path its bullet actually contains.
 
+Which paths a manifest may commit to widened on 2026-09-11 (Segment 19K): a
+`spec/` or `docs/` path counts anywhere in a bullet; a root-level document
+(`constitution.md`, `CLAUDE.md`) or a path under `app/`, `tests/`, `tools/`,
+`alembic/`, `.github/` or `.claude/` counts in the **leading position only**,
+because a path after the dash is nearly always the *content* of the edit
+rather than its target — measured, 13 of 16 such paths are citations of that
+kind. A `guide/` path is counted but not verified, per C5 below.
+
 **What it does not verify, and cannot.** It asks whether an edit *happened*,
 never whether it was *right* — that judgement belongs to the `spec-writer`
 pass that follows it, and to the reader. Two exclusions are deliberate rather

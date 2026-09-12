@@ -100,7 +100,7 @@ def archived_report(stream) -> None:
             # Missing paths are C2's business, not C3's — keep them out of
             # the honour denominator so the two code paths divide the work
             # the same way, and report them on their own.
-            live = [path for path in paths if (_shared.REPO / path).is_file()]
+            live = [path for path in paths if (_shared.REPO / path).exists()]
             plan_missing += len(paths) - len(live)
             plan_hits += sum(
                 1 for path in live if start and honoured(path, start, end)

@@ -954,3 +954,201 @@ windows — are settled above with their rejected alternatives.
   document that says what gates a merge does not describe a checker
   reading more evidence than it does (Item 4).
 - `docs/status.md` — row when the item closes (Item 4).
+
+---
+
+## Item 5 — a manifest can only commit to `spec/` and `docs/`
+
+### Opportunity
+
+`COMMITTED_PATH` (`tools/close_check/_manifest.py:33`) is
+`` `((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*` ``. Item 1 made `guide/`
+paths visible; every other root is still silently dropped, including
+`tools/README.md` — **the one live document that describes the close
+check itself**.
+
+19K.4's own close reported `2 committed path(s)` against a three-bullet
+manifest, which is the sentence Item 1 was opened on, one item later.
+
+This is **known rather than new**. 19G.8's `docs/status.md` row records
+that 19G.6's bullets "name `tools/` and `.claude/` paths the regex never
+matched", and three archived manifests carry an explicit aside —
+*(for the human — outside the script's `spec/` + `docs/` regex)* — which
+is the author writing a prose escape hatch around the tool, the shape
+19G.8 removed for `cites:`.
+
+Measured 2026-09-11 across every live and archived plan: **16** such
+paths. But the count is the least interesting thing about them.
+
+| Where in the bullet | Count |
+|---|---:|
+| Leading position — a commitment | **3** |
+| After the dash — a citation | **13** |
+
+The 13 are bullets committing to a `spec/` file and naming a code path
+as the *content* of the edit: "name the `app/services/assignments/`
+package, not the retired module path"; "one sentence, new routing
+modules must be registered in `app/web/spec_registry.py`". **Matching
+anywhere would invent 13 commitments nobody made**, and one of them —
+`tests/integration/test_extracts_round_trip.py` — no longer exists, so
+C2 would fail an archived plan that did nothing wrong.
+
+### Decision
+
+**A path under a known repo root counts in the leading position only,
+and is verified like a `spec/` path.**
+
+The leading-position rule is 19G.4's, already settled for bare
+root-level names, and it is right here for the same measured reason: a
+path before the dash is the bullet's subject, a path after it is nearly
+always prose.
+
+**Verified rather than `NOTED`.** `guide/` abstains because a plan file
+legitimately archives and a checklist row cannot be confirmed by a diff.
+Neither applies to `tools/README.md` or a workflow file: they stay where
+they are, and "was this edited in the window" is exactly the right
+question. Measured, it is also the answer that works — 19K.4's bullet
+passes C2 and C3 on the real edit.
+
+**Rejected: matching a root path anywhere in the bullet**, as
+`spec/` and `docs/` paths are matched. Rejected on measurement, not
+taste: 13 of the 16 would become commitments the author never made.
+
+**Rejected: "any backticked path that resolves on disk", with no root
+list.** That is how bare names resolve (19G.4, "no list to maintain"),
+and it is wrong here in a way that is invisible: a *deleted* path would
+stop resolving and silently stop being a commitment, which is precisely
+what C2 exists to catch.
+
+### Semantics
+
+- **The root list is explicit**: `app`, `tests`, `tools`, `alembic`,
+  `.github`, `.claude`. `spec/` and `docs/` keep their own rule,
+  `guide/` keeps `NOTED`.
+- **A directory is a commitment.** Manifests commit to packages and
+  folders — `.github/workflows/`, `app/services/assignments/` — so C2's
+  existence test is `exists`, not `is_file`. `is_file` called every one
+  of them missing; the bug was unreachable until these became
+  commitments.
+- **`cites:` reaches the new paths**, and C7 asks whether the bullet
+  *names* a path rather than whether it commits to it — so `_all_paths`
+  searches the whole bullet for root paths even though only the head
+  makes a commitment. Head-only there would fail C7 on every correct use
+  of the escape for a root path: unusable exactly where the 13
+  citations need it.
+- **No existing verdict moves.** Asserted over every id, not hoped for.
+
+### Judgment calls — decided
+
+- **2026-09-11 — the three archived "for the human" asides stay as
+  written.** They sit after the dash, so they remain invisible, and
+  making them commitments would retro-apply C3 to closed plans. They are
+  a record of the gap, and they read better as one.
+
+### Blast radius (measured)
+
+Taken 2026-09-11 at `c42b9b4f`.
+
+| What | Count | Command |
+|---|---:|---|
+| Non-`spec`/`docs` paths in manifests | 16 | the parse above |
+| …in the leading position (become commitments) | **3** | the parse above |
+| …after the dash (stay prose) | 13 | the parse above |
+| Plans affected | 2 (`18Q`, `19K.4`) | the id sweep |
+| Ids checked for verdict movement | 143 | every segment + item manifest |
+| Repo roots, excluding build artefacts | 6 | `ls -d */ .*/ ` |
+
+### Status — 2026-09-11
+
+Landed as the one rung planned. Every figure in the blast-radius table
+held: 3 leading-position paths, 13 citations, 2 plans affected, 0
+verdicts moved across 143 ids.
+
+**Decisions confirmed at build:**
+
+- **Verified, not `NOTED`.** The abstaining status Item 1 built exists
+  because a `guide/` path legitimately archives and a checklist row
+  cannot be confirmed by a diff. Neither is true of `tools/README.md`,
+  and the measurement agreed: 19K.4's bullet passes C2 and C3 on the
+  real edit.
+- **An explicit root list**, against the bare-name precedent of
+  resolving on disk. Resolution would make a deleted path *silently*
+  stop being a commitment, which is the one failure mode C2 exists for.
+
+**Two bugs the item surfaced that the plan did not predict**, both
+unreachable before it and both found by a test rather than by reading:
+
+1. **C2 used `is_file`**, so every committed directory read as missing —
+   `.github/workflows/` in 18Q, `app/services/assignments/` in 19C. It
+   could not bite while such paths were invisible; making them
+   commitments made it reachable in the same change.
+2. **C7 would have failed every correct `cites:` on a root path.**
+   `_all_paths` answers "does the bullet name this path", which is C7's
+   question, and searching only the head for root paths made the escape
+   unusable exactly where the 13 after-dash citations need it. Found
+   because a test asserted the escape worked, not because the code was
+   re-read.
+
+**Measured, not assumed:**
+
+| Claim | Measurement |
+|---|---|
+| No verdict moves | **143 ids** — every segment and item manifest in the repo — run against `origin/main`. **141 byte-identical, 2 changed, 0 exit-code flips.** |
+| The 2 that changed | `18Q` 12 → 14 committed paths, `19K.4` 2 → 3. Exactly the 3 leading-position paths, in the 2 plans that carry them. |
+| Guards are not vacuous | **5 mutations, 5 caught** — matched anywhere, dropped entirely, `is_file` restored, a root missing from the list, and `_all_paths` back to head-only. |
+
+**The trial was checked for vacuity before its result was believed.**
+The first sweep reported *0 verdict flips*, which is the answer a rule
+that does nothing also gives. Confirming the rule bit — 19K.4 reading
+`3 committed path(s)` where it had read 2 — is what made the zero
+meaningful, and it immediately exposed bug 1 above. A clean result and
+a no-op are indistinguishable until you check which one you have.
+
+**One caveat on the zero.** 18Q gains a C2 failure under the naive
+`is_file` version and its exit code still does not move, because 18Q was
+already failing C3 on `docs/azure_provision.md` for an unrelated,
+pre-existing reason. The zero was true but partly lucky, and it is
+recorded as such rather than banked.
+
+### PR ladder
+
+1. **Leading-position root paths, verified.** The regex, the `exists`
+   fix, the `cites:`/C7 interaction, and tests. *Must not* change the
+   `spec/`/`docs/` rule, the bare-name rule, or `guide/`'s `NOTED`.
+
+### Definition of done
+
+- A leading-position path under a known root is a committed path;
+  the same path after the dash is not.
+- A committed directory passes C2.
+- `cites:` works on a root path, in both positions.
+- No verdict moves across all 143 ids — asserted, not assumed.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The two shape choices — leading position only, verified rather
+than noted — are settled above with their rejected alternatives and the
+measurements that rejected them.
+
+### Out of scope
+
+- **Retro-fitting the three archived "for the human" asides.** See
+  Judgment calls.
+- **The module-coverage `note` lines**, which warn about touched `app/`
+  modules missing from a manifest. A different mechanism answering a
+  different question, untouched.
+
+### Doc impact
+
+- `tools/README.md` — the `close_check.py` row states which roots a
+  manifest may commit to and that the rule is leading-position (Item 5).
+- `docs/practice-audit-2026-09-04.md` — the close-check passage's "what
+  it verifies" list gains the widened path rule (Item 5).
+- `docs/status.md` — row when the item closes (Item 5).

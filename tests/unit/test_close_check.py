@@ -542,3 +542,107 @@ def test_a_waived_guide_bullet_counts_as_waived(plan_repo) -> None:
         "<!-- doc-impact-waived: the checklist retired -->\n"
     )
     assert cc.run("ZZ", None)["levels"][0]["waived"] == ["guide/todo_master.md"]
+
+
+# --------------------------------------------------------------------
+# commitments outside spec/ and docs/ (19K.5)
+
+
+def test_a_tools_path_in_the_leading_position_is_a_commitment() -> None:
+    """The gap: `COMMITTED_PATH` matched `spec/` and `docs/` only, so a
+    bullet committing to `tools/README.md` — a real document, and the
+    only one describing the close check — was invisible to every check.
+    19K.4's own manifest was read at 2 of its 3 bullets.
+    """
+    assert _paths("- `tools/README.md` — the close_check row.") == [
+        "tools/README.md"
+    ]
+
+
+def test_the_same_path_after_the_dash_is_prose() -> None:
+    """Why leading-position-only, measured rather than assumed. Of the 16
+    such paths across every live and archived plan, **3** are in the
+    leading position; the other 13 are citations — the bullet commits to
+    a `spec/` file and names a code path as the *content* of the edit.
+    Matching anywhere would invent 13 commitments nobody made.
+    """
+    bullet = (
+        "- `spec/architecture.md` — new routing modules must be registered "
+        "in `app/web/spec_registry.py`."
+    )
+    assert _paths(bullet) == ["spec/architecture.md"]
+
+
+def test_a_skill_file_is_a_commitment() -> None:
+    """`.claude/skills/segment-plan/SKILL.md` states the window rule, and
+    three archived manifests committed to editing it inside a
+    *(for the human — outside the script's regex)* aside: the author
+    working around the tool in prose, which is the shape 19G.8 removed
+    for `cites:`."""
+    assert _paths("- `.claude/skills/segment-plan/SKILL.md` — step 2.") == [
+        ".claude/skills/segment-plan/SKILL.md"
+    ]
+
+
+def test_a_directory_is_a_commitment() -> None:
+    """Manifests commit to packages and workflow folders, not only files:
+    `.github/workflows/` in 18Q, `app/services/assignments/` in 19C."""
+    assert _paths("- `.github/workflows/` — the postgres job.") == [
+        ".github/workflows/"
+    ]
+
+
+def test_a_root_path_can_be_cited_rather_than_committed() -> None:
+    """The escape has to reach the new paths too, or the only way to name
+    one without committing to it is to drop the backticks — the prose
+    distortion 19G.8 was opened to remove."""
+    bullet = (
+        "- `tools/README.md` — the row pointing at `tools/close_check.py`.\n"
+        "  <!-- cites: tools/close_check.py -->"
+    )
+    parsed = _bullet(bullet)
+    assert parsed["paths"] == ["tools/README.md"]
+    assert parsed["cited_absent"] == []
+
+
+def test_an_unlisted_root_is_still_prose() -> None:
+    """The list is explicit rather than "any path that resolves on disk".
+    Resolution-on-disk would make a *deleted* path silently stop being a
+    commitment, which is exactly what C2 exists to catch."""
+    assert _paths("- `review_robin_web.egg-info/PKG-INFO` — nothing.") == []
+
+
+def test_c7_does_not_fail_a_cites_on_an_after_dash_root_path() -> None:
+    """The half the escape depends on. Commitments come from the head
+    only, but C7 asks whether the bullet *names* the path — and the 13
+    after-dash citations are exactly the ones an author would mark. If
+    `_all_paths` were head-only for root paths, every correct use of the
+    escape on one would fail C7: unusable where it is needed."""
+    bullet = (
+        "- `spec/assignments.md` — name the `app/services/assignments/` "
+        "package.\n  <!-- cites: app/services/assignments/ -->"
+    )
+    parsed = _bullet(bullet)
+    assert parsed["paths"] == ["spec/assignments.md"]
+    assert parsed["cited_absent"] == []
+
+
+def test_c2_accepts_a_directory(plan_repo) -> None:
+    """`is_file` called every committed directory missing —
+    `.github/workflows/` in 18Q, `app/services/assignments/` in 19C.
+    Invisible until 19K.5 made such paths commitments at all, and not
+    caught by asserting on the parse: the existence question lives in
+    C2, so a parse-level test passes on the mutation that restores
+    `is_file`."""
+    root = plan_repo.parent.parent
+    (root / "tools" / "sub").mkdir(parents=True)
+    (root / "tools" / "sub" / "x.md").write_text("x\n")
+    checks = _checks(plan_repo, "- `tools/sub/` — a directory commitment.")
+    assert checks["C2"]["status"] == cc.PASS
+
+
+def test_c2_still_fails_a_root_path_that_does_not_exist(plan_repo) -> None:
+    """The half that must not regress: widening `is_file` to `exists`
+    must not make C2 accept everything."""
+    checks = _checks(plan_repo, "- `tools/no_such_file.md` — gone.")
+    assert checks["C2"]["status"] == cc.FAIL
