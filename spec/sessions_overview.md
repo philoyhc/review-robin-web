@@ -296,8 +296,19 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   pill-free-zone condition that creates. (Named rather than numbered: it
   is in §10 Layout primitives today, and this citation said §6 — which
   is Buttons — until `spec-writer` caught it.) The archived-sessions page injects a panel with the
-  same `session-expander` class names from its own script and marks no
-  rows, so it deliberately does **not** carry the opt-in class.
+  same `session-expander` class names from its own script, so the opt-in
+  class is what keeps the two pages separable. **Since 19L.3 it opts in
+  too**: its rows take the same `session-row-selected` marking from its
+  own `refreshExpander()`, and its bulk panel carries the same opt-in
+  class, so both pages bracket a selection identically. It needed no new
+  CSS — 19L.2's rules were already written against the class. The class
+  remains the gate; what it gates is two pages, not one. *The two scripts
+  stay separate on purpose (this page has a single bulk panel; the lobby
+  has a single and a bulk one with editable fields and purge options), so
+  the marking function is duplicated rather than shared.*
+
+  This page has no section of its own in this spec, so its selection
+  behaviour is recorded here rather than pointed at.
 
   The class is applied in `refreshExpander()`, which is the one funnel
   every selection path meets: a row tick, a select-all (which sets

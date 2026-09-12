@@ -132,7 +132,7 @@
        below the last-selected row whenever one or more rows are
        ticked. #}
     <template id="archived-bulk-expander">
-      <tr class="session-expander session-expander-bulk">
+      <tr class="session-expander session-expander-bracketed session-expander-bulk">
         <td colspan="9">
           <div class="session-expander-body">
             <p class="session-expander-title">
@@ -363,9 +363,35 @@
           }
           return node;
         }
+        // 19L.3 — mark the selected row(s), not only the panel. The
+        // lobby carries the identical function; the two scripts are
+        // deliberately separate (this page has one bulk panel, the lobby
+        // has a single and a bulk one with editable fields and purge
+        // options), so ten duplicated lines beat a shared module built
+        // for its second caller.
+        //
+        // It lives here rather than on the checkboxes because
+        // refreshExpander is the one funnel every path meets — including
+        // select-all, which sets `checked` programmatically and fires no
+        // row events, and the panel's own Unselect all, which fires
+        // synthetic ones.
+        function markSelectedRows(selected) {
+          rowCheckboxes.forEach(function (cb) {
+            var row = cb.closest("tr");
+            if (row) row.classList.remove("session-row-selected");
+          });
+          selected.forEach(function (cb) {
+            var row = cb.closest("tr");
+            if (row) row.classList.add("session-row-selected");
+          });
+        }
+
         function refreshExpander() {
           removeExpander();
           var selected = selectedCheckboxes();
+          // Before the early return: dropping to zero selected must
+          // clear every mark, not leave the last one behind.
+          markSelectedRows(selected);
           if (selected.length === 0) return;
           var anchor = currentAnchor() || selected[selected.length - 1];
           anchor.closest("tr").insertAdjacentElement(
