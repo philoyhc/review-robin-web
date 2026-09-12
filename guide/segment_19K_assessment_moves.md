@@ -2692,3 +2692,178 @@ Taken 2026-09-12 at `11cad9c1`.
 - `guide/post_azure_todo_checklist.md` — item 4, carrying rung 1's
   measurement so it survives outside this plan (Item 9).
 - `docs/status.md` — row when the item closes (Item 9).
+
+---
+
+## Item 10 — the last four AA failures are one shade, and the palette already knows the answer
+
+### Opportunity
+
+19K.7 swept every foreground/background pair the palette forms and left
+**four** under WCAG AA normal. They are the whole of the outstanding
+accessibility debt, and they are not four problems:
+
+| Ratio | Theme | Pair |
+|---|---|---|
+| **2.54** | dark | `--btn-primary-fg` on `--btn-primary-bg-hover` |
+| **3.33** | dark | `--btn-primary-fg` on `--btn-primary-bg` |
+| **3.33** | dark | `--selected-fg` on `--selected-bg` |
+| **3.33** | dark | `--text-on-accent` on `--btn-primary-bg` |
+
+Every one is **white on `--blue-glow`** (`#4b8bf5`) — the reserved
+"you can act on this" shade — or on its hover step
+`--blue-glow-soft`. The 2.54 reads like a transient hover dip and is
+not: the same control is 3.33 at rest, so it is the worst point of a
+button already below the line. That is why 19K.7 accepted three light
+hover dips and left these open (`OPEN_SHORTFALLS`).
+
+**None is large text**, so AA large's 3:1 does not apply:
+`body.ui-v2 .btn` is `--fs-small` (0.875rem, weight 500) and
+`--selected-fg` renders on chips at `--fs-tiny`, on the theme toggle
+at 0.8em and on `.skip-link` at inherited body size — 16px at weight
+400 at the largest, against AA large's 18.66px.
+
+**19K.7's collapse policy cannot reach this one**, and that is the
+reason it is its own item rather than a fifth bullet there: a collapse
+works where the palette has already produced a passing tier to collapse
+*into*. Here there is one value, used by nine dark tokens, and no
+second tier. The value has to move, or the foreground does.
+
+### Decision
+
+**Invert the foreground, not the fill: dark `--btn-primary-fg`,
+`--selected-fg` and `--text-on-accent` take `--ink` instead of
+`--white`.** All four pairs clear AA at once — 5.33, 5.33, 5.33 and
+**6.98** for the hover that is worst today — and no primitive moves.
+
+**This is the pattern the palette already uses**, which is what makes
+it a decision rather than a preference. The amber family does exactly
+this: `--text-on-amber` is `--white` in light and **`--ink` in dark**,
+and `--btn-alert-fg` likewise, because `--btn-alert-bg` in dark is
+`--amber-glow` — a bright fill, like `--blue-glow`. The accent family
+is the **outlier**, still carrying white onto a bright dark fill, and
+that outlier is precisely the failure.
+
+**Rejected: darkening the fill.** White on `--blue-strong` (`#2563eb`)
+reaches 5.17 and would work, but it is the *only* step that does:
+`--blue-deep` gives 6.70 for the label and drops the fill to **2.76**
+against `--surface-page`, under the **3:1** WCAG 1.4.11 asks of a
+control boundary — trading a text failure for a boundary one. So the
+fill route has exactly one usable value, and taking it moves
+`--blue-glow` itself, which nine dark tokens resolve to
+(`--focus-ring`, `--selected-bg`, `--status-info-border`,
+`--card-active-border`, `--icon-btn-action-fg`, `--chip-active-border`,
+`--chip-active-fg`, `--btn-primary-bg`, `--btn-primary-border`) and
+which `tests/unit/test_reserved_shade.py` pins as the reserved pair.
+Three mappings against nine tokens and a pinned constant is not a close
+call.
+
+**Rejected: accepting them, as the three light hover dips were.** That
+acceptance rested on a stated, machine-checked premise — the control is
+comfortably legible at rest. These fail *at rest*, so the premise is
+absent, and `ACCEPTED_BELOW_AA` would be recording a preference where
+it currently records a measurement.
+
+### Semantics
+
+- **The threshold is AA normal (4.5:1)** throughout; none of the four
+  is large text (sizes above).
+- **Light is untouched.** Its accent pairs pass (5.17 at rest) and the
+  inversion is a dark-mode answer to a dark-mode problem.
+- **The reserved shade keeps its meaning and its value.**
+  `--blue-glow` still says *you can act on this*; what changes is what
+  is written on it. `spec/color_tokens.md`'s "Deliberate couplings"
+  needs no change to the coupling, only a note that the accent
+  family's foreground now follows the amber family's.
+- **`--btn-primary-border` stays on `--blue-glow`.** It is a boundary
+  at 3:1, which it clears, and 19K.7's line — only text is held to the
+  text floor — applies here as it did to `--decor-muted` and
+  `--status-success-border`.
+- **A disabled primary button is out of reach of this**: `body.ui-v2
+  .btn-cta.disabled` uses `opacity: 0.5` over the same fill, and WCAG
+  1.4.3 exempts inactive components.
+
+### Judgment calls — decided
+
+- **2026-09-12 — three mappings, not one token.** `--btn-primary-fg`,
+  `--selected-fg` and `--text-on-accent` are separate tokens that
+  happen to share a value; collapsing them into one is a different
+  question (19K.7's policy) and mixing it in would make this item's
+  diff impossible to read as a contrast fix.
+
+### Blast radius (measured)
+
+Taken 2026-09-12 at `509a6d2f`.
+
+| What | Count | Command |
+|---|---:|---|
+| Dark tokens resolving to `--blue-glow` (the rejected route's cost) | **9** | `grep -n 'var(--blue-glow)' app/web/templates/base.html` |
+| `var(--btn-primary-fg)` uses | **6** | `grep -c` in `base.html`; 0 elsewhere |
+| `var(--selected-fg)` uses | **3** | `grep -c` in `base.html`; 0 elsewhere |
+| `var(--text-on-accent)` uses | **1** + 1 file | `grep -rl … app/web/templates` |
+| Templates rendering a primary button or chip | **11** | `grep -rln 'btn-cta\|tag-chip' app/web/templates` |
+| Tests naming these tokens or the dark reserved hex | **4** | `test_reserved_shade`, `test_contrast_audit`, `test_pager_link_style`, `test_chip_edge` |
+| Specs/docs naming them | **3** | `spec/color_tokens.md`, `docs/known_limitations.md`, `docs/status.md` |
+
+The four tests are the ones to read before cutting: `test_reserved_shade`
+pins `#4b8bf5` as the dark reserved *background*, which this item does
+not move, but it also asserts `--selected-fg`'s partner, so the
+expectation needs re-reading rather than assuming.
+
+### PR ladder
+
+1. **The three dark foreground mappings, with the audit record
+   updated.** `OPEN_SHORTFALLS` empties; `docs/known_limitations.md`
+   loses its open table and says the palette clears AA in both themes;
+   `spec/color_tokens.md` records the accent family joining the amber
+   pattern. One PR — three one-line mappings that must move together,
+   since any two of them leave a pair failing.
+
+### Definition of done
+
+- Every pair the sweep forms clears AA normal in **both** themes;
+  `OPEN_SHORTFALLS` is empty and the test that reads it says so rather
+  than being deleted.
+- `ACCEPTED_BELOW_AA` still holds exactly the three light hover dips,
+  unchanged.
+- The customizer's Contrast panel shows **0 open** in both themes,
+  verified in a browser and recorded with the counts.
+- `docs/known_limitations.md`'s Accessibility section no longer lists
+  an open contrast table, and says what remains unmeasured.
+- Flagged in the PR as **UI-visible and verified on the dev slot after
+  deploy** — a dark primary button changing its label colour is the
+  most visible change this segment has made.
+- `.venv/bin/pytest` and `ruff check .` pass in the container.
+- `spec-writer` run **before** pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.10` exits 0; any warning adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether `--ink` is the right dark foreground, or a softer one.**
+  `--ink` (`#111827`) gives 5.33; `--ink-deep` (`#1a212e`) gives 4.85
+  and would read less stark against the blue. Author decides from a
+  rendered sample — a ratio is a floor, not a design, and the amber
+  family's precedent points at `--ink` without settling it.
+
+### Out of scope
+
+- **Moving `--blue-glow`.** Rejected above, with the measurement.
+- **Collapsing `--btn-primary-fg` / `--selected-fg` / `--text-on-accent`
+  into one token.** They share a value in both themes and may not need
+  three names, but that is 19K.7's collapse policy applied to a
+  question of naming rather than contrast; recorded here, not done.
+- **The rest of the WCAG audit.** `docs/known_limitations.md` still
+  records keyboard navigation, screen-reader output and focus order as
+  unmeasured. This item closes the contrast line, not the section.
+
+### Doc impact
+
+- `spec/color_tokens.md` — the accent family's dark foreground joins the
+  amber pattern; "The AA floor on text" records that the palette clears
+  AA in both themes (Item 10).
+- `docs/known_limitations.md` — the open-shortfall table goes; the
+  entry says what is measured and what is not (Item 10).
+- `docs/status.md` — row when the item closes (Item 10).

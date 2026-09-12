@@ -2765,7 +2765,7 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
-### Segment 19K — The 11sep assessment's three moves — 🔵 **live** (**three items open**, opened 2026-09-11; plan: `guide/segment_19K_assessment_moves.md`)
+### Segment 19K — The 11sep assessment's three moves — 🔵 **live** (**ten items, three open** — 8, 9, 10; opened 2026-09-11; plan: `guide/segment_19K_assessment_moves.md`)
 
 The three next moves in `guide/codebase_assessment_11sep.md` §8, and
 whatever those three produce. Same shape as 19J, which opened for an
