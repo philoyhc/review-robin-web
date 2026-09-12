@@ -2724,6 +2724,11 @@
          than a border, so the row's height does not change when it is
          selected and the table does not reflow under the pointer.
 
+         6px, doubled from 3px on the author's call once it was seen
+         rendered (19L.1 follow-up). A row is a wide, tall target and the
+         edge is competing with a full width of content; what reads as a
+         deliberate marker on a chip reads as a hairline on a table row.
+
          Not caught by `tests/unit/test_reserved_shade.py`, and not an
          exemption: that guard scans selectors carrying pill / chip /
          btn-icon classes, because its subject is elements with a dual
@@ -2734,7 +2739,7 @@
         background: var(--row-selected-bg);
       }
       body.ui-v2 tr.session-row-selected > td:first-child {
-        box-shadow: inset 3px 0 0 var(--selected-bg);
+        box-shadow: inset 6px 0 0 var(--selected-bg);
       }
 
       /* Inline row-expander — a full-width action panel injected
