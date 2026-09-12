@@ -84,7 +84,6 @@ PAIRS = [
     ("Body / page", "--text-body", "--surface-page"),
     ("Body / card", "--text-body", "--surface-card"),
     ("Subtle / card", "--text-subtle", "--surface-card"),
-    ("Dim / card", "--text-dim", "--surface-card"),
     ("Link / page", "--text-link", "--surface-page"),
     ("Primary btn", "--btn-primary-fg", "--btn-primary-bg"),
     ("Alert btn", "--btn-alert-fg", "--btn-alert-bg"),
@@ -131,12 +130,12 @@ TARGETS = [
     (".signout", "Sign out button", [("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
     (".breadcrumb a", "Breadcrumb link", [("text", "fg", "--text-link")]),
     ('.breadcrumb [aria-current="page"]', "Breadcrumb (current)", [("text", "fg", "--text-body")]),
-    (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-dim")]),
+    (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-subtle")]),
     # Session navigation
     (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-dim")]),
+    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")]),
     (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
@@ -210,9 +209,9 @@ TARGETS = [
     # inactive tabs are transparent, so their visible fill is the strip behind
     # them — and the Setup / Operations strips are independent tokens.
     (".tab-strip-setup .nav-tab:not(.active)", "Nav tab · Setup",
-     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-setup-bg")]),
+     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-setup-bg")]),
     (".tab-strip-ops .nav-tab:not(.active)", "Nav tab · Operations",
-     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-ops-bg")]),
+     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")]),
     (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
     (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
@@ -395,23 +394,23 @@ editor_css = r"""
       background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 10px;
       box-shadow: 0 10px 34px rgba(0,0,0,0.20); padding: 10px; }
     .tc-pp-group { margin-bottom: 8px; }
-    .tc-pp-glabel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 4px; }
+    .tc-pp-glabel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); margin: 0 0 4px; }
     .tc-pp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
     .tc-pp-sw { -webkit-appearance: none; appearance: none; width: 100%; aspect-ratio: 1; padding: 0;
       border: 1px solid var(--border-subtle); border-radius: 4px; cursor: pointer; }
     .tc-pp-sw:hover { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
     .tc-pp-sw.is-current { outline: 2px solid var(--text-body); outline-offset: 1px; }
     .tc-facet-h .tc-facet-name { text-transform: capitalize; }
-    .tc-facet-h .tc-facet-prop { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; }
+    .tc-facet-h .tc-facet-prop { color: var(--text-subtle); font-weight: 400; font-size: 0.72rem; }
     .tc-c-row { display: grid; grid-template-columns: 84px 1fr; gap: 4px 10px; font-size: 0.78rem; align-items: baseline; }
-    .tc-c-row dt { color: var(--text-dim); }
+    .tc-c-row dt { color: var(--text-subtle); }
     .tc-c-row dd { margin: 0; }
     .tc-c-row code { font-family: ui-monospace, monospace; font-size: 0.74rem; color: var(--text-body); }
     .tc-c-chain { color: var(--text-subtle); }
-    .tc-c-hex { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-dim); margin-left: 4px; }
+    .tc-c-hex { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-subtle); margin-left: 4px; }
     .tc-c-users { list-style: none; margin: 0; padding: 0; }
     .tc-c-users li { font-size: 0.76rem; color: var(--text-body); padding: 1px 0; }
-    .tc-c-users .tc-c-none { color: var(--text-dim); font-style: italic; }
+    .tc-c-users .tc-c-none { color: var(--text-subtle); font-style: italic; }
     /* Literal red for the same reason as .tc-orphan — diagnostic chrome must
        not be editable out of visibility by the palette it reports on. */
     .tc-c-orphan { font-size: 0.76rem; color: #dc2626; border: 1px solid #dc2626;
@@ -428,7 +427,7 @@ editor_css = r"""
     .tc-seed { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; text-transform: capitalize; }
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
-    .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
+    .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); margin: 0 0 6px; }
     .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--tc-gap); }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
     .tc-chip.tc-picked { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -446,7 +445,7 @@ editor_css = r"""
     .tc-cluster { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 4px 12px; }
     .tc-cluster summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; padding: 4px 0; }
     .tc-remap-head, .tc-remap { display: grid; grid-template-columns: 1.4fr 24px 1fr 1fr; gap: 8px; align-items: center; }
-    .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 4px 0; }
+    .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); padding: 4px 0; }
     .tc-remap { padding: 3px 0; border-top: 1px solid var(--border-subtle); }
     .tc-remap.is-coupled { box-shadow: inset 2px 0 0 0 var(--status-warning-accent); }
     .tc-remap-name { font-size: 0.76rem; }

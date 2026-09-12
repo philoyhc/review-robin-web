@@ -1797,6 +1797,23 @@ rounding error. The two get separate answers.
 - **2026-09-12 — the entry is corrected rather than struck.** It
   records a real fault under a wrong name; deleting it would lose the
   fault, and striking it would imply the fault went away.
+- **2026-09-12 — the name is `--decor-muted`, for what it does rather
+  than where it sits.** It lands in the Borders & focus cluster beside
+  `--marker-neutral`, which is the same kind of thing; naming it for
+  the cluster (`--border-*`) would have claimed it paints boundaries,
+  which it does not.
+- **2026-09-12 — `--slate` was edited rather than a near-duplicate
+  primitive added.** Repointing was forced for `--text-dim`, whose move
+  is large enough to wreck `--card-help-border`; it was not forced for
+  `--text-subtle`, whose only other consumer is
+  `--btn-secondary-border`, a boundary held to 3:1 that the same edit
+  improves from 4.83 to 5.61. A second gray 0.03 of luminance from the
+  first would cost a reader more than it buys.
+- **2026-09-12 — `--text-link` was folded in; the other eleven were
+  not.** Author, mid-build. The link fix needed no new primitive
+  (`--blue-glow-soft` already existed) and no design decision. The
+  remaining eleven each move a *family* — the reserved accent, or every
+  status tint at once — and belong to whoever takes that decision.
 
 ### Blast radius (measured)
 
@@ -1809,6 +1826,113 @@ Taken 2026-09-12 at `40a0b663`.
 | Uses of `--text-subtle` in `base.html` | **34** | `grep -c` |
 | Templates outside `base.html` using `--text-dim` | 2 | `instruments_index.html`, `session_observers.html` |
 | Existing tests over the colour tokens | **1** | `tests/unit/test_reserved_shade.py` |
+
+### Status — 2026-09-12
+
+**The shape changed: two answers became one token.** The Decision said
+"the two get separate answers" and rejected "a blanket darkening of
+both tokens". Neither is what shipped. Asked for the options if the
+hierarchy were abbreviated instead, the measurement said the collapse
+is both cheaper and cleaner: `--text-dim` retired, its 20 text uses
+taking `--text-subtle`, its decorative uses taking a new
+`--decor-muted` that holds the *same* primitives so nothing decorative
+moves. That is a shape change rather than a value choice, which is why
+it is recorded here and the Decision stands as written.
+
+**Two errors in this item's own blast radius, both found by running
+the commands rather than reading them.**
+
+- The table's `grep 'color: var(--text-dim)'` counts **21** because it
+  also matches `border-color:` at `base.html:784`. The real split is
+  **20 text, 7 non-text** — not 21 and 6.
+- Of the 7 non-text uses, **2 were dead code**. `.btn-cta.disabled`
+  painted `--text-dim` as a *fill*, and is overridden on every page by
+  `body.ui-v2 .btn-cta.disabled`; all **34** templates extending
+  `base.html` carry `ui-v2`, none doesn't. The rule was deleted rather
+  than repointed. Residue: **5** live decorative uses.
+
+**The Opportunity's central claim is half right, and the other half is
+the better finding.** "There is no `--text-muted` token" is true today
+and was false when the entry was written: `guide/archive/semantic_tokens.md`
+records `--slate-soft #9ca3af → --text-muted` in the flat scheme, and
+`docs/status.md`'s 14A PR 5 row names the token and the ratio
+(`~2.5:1`) that still measures 2.54 on white. 19C Item 6 renamed it to
+`--text-dim` and nothing updated the entry. So it was **stale, not
+fictitious** — the entry was not recorded against a token nobody can
+find, it was recorded against a token that was later renamed out from
+under it. Per *never rewrite intent* the Opportunity keeps its words.
+
+**The blast radius omitted `tools/` entirely.**
+`tools/theme_preview.html` and `tools/theme_customizer.html` are
+generated from `base.html` and carry the whole palette; both regenerate.
+Their generators carry hand-written references the lift does not
+reach — the customizer's "Dim / card" contrast row, 4 element-facet
+map entries, and 12 uses in the two tools' own chrome CSS — and
+`tools/theme_variants.gen.py` carried a docstring asserting
+`--slate-dim` is also `--text-dim` in dark. **Nothing tests
+generator-versus-output drift**, so every one of these was silent.
+
+**The scope widened twice, each time because the narrower version was
+shown to be lying by omission.** This is the finding of the item.
+
+1. Checking the fix on the token under repair found **`--text-link`
+   at 4.22** on `--surface-muted` in dark — a second live AA failure,
+   in the same cluster, that four months of an entry naming one token
+   had never mentioned. Fixed here at the author's instruction:
+   `--blue-glow` → `--blue-glow-soft`, an existing primitive, **5.53**.
+2. Widening to *the Text cluster against every surface* found nothing
+   further — and was **still wrong**. `--nav-home-bg` (`#e5e7eb`) is
+   darker than any `--surface-*` token and carries muted text on the
+   Session Home anchor: **3.90** before this item, **4.04** after the
+   first fix. A cluster-versus-cluster sweep scores 4.56 there and
+   cannot see it. *A check whose scope is a token list will pass while
+   the thing it is named for fails.*
+
+So the check became a sweep over **every pair the palette forms**,
+gathered four ways rather than listed — 73 pairs, 146 theme-resolved
+pairings — and `--slate` went to `#616874` rather than `#667080`, so
+the floor holds against all of them with margin instead of against the
+enumerated ones by 0.06.
+
+**The full audit: 12 failures, of which 1 is now fixed and 11 are
+recorded.** None of the 11 is body text; they are accent fills
+(2.54–3.68, six pairs, all resolving through the reserved
+`--blue-glow`) and saturated text on its own pale tint (3.32–3.95,
+five pairs, two shared values). Each is pinned in `KNOWN_SHORTFALLS`
+at its measured ratio, in **both** directions: a regression fails, and
+so does a fix, because a fix must delete the entry rather than leave a
+stale number behind it — which is precisely how the entry this item
+repaired went wrong.
+
+**A vacuity caught in my own negative probe.** The first mutation run
+reported 9 of 9 caught, and the one *negative* probe — `border-color`
+must not trip the text check — reported a failure. It was not a false
+positive: an earlier mutation had been reverted with `git checkout`,
+which restored the file to `HEAD` and silently undid this item's edits,
+so mutations 3–9 all ran against a dirty tree and every "2 failed" was
+one intended failure plus one contaminant. Re-run clean from a
+snapshot: **11 mutations, 11 caught by the intended test, the negative
+probe silent.** *Reverting a mutation with the version-control tool
+reverts the work as well when the work is not yet committed.*
+
+**Decisions confirmed at build:**
+
+- The decorative uses are outside the floor by rule, not judgment
+  (WCAG 1.4.3 governs text) — and now by construction, since
+  `--decor-muted` is a separate token and a `color:` declaration
+  naming it fails a test.
+- Repointing rather than editing a primitive was forced for
+  `--text-dim` (`--gray` also feeds `--card-help-border`) and for
+  `--text-link` (`--blue-glow` has ten dark consumers, among them the
+  reserved `--selected-bg`), and *not* forced for `--text-subtle`; see
+  Judgment calls.
+- `spec/color_tokens.md`'s "Deliberate couplings" recorded
+  `--text-link` as resolving to the reserved pair in both themes.
+  That contract is now one step off in dark, and the spec says so
+  rather than being quietly left wrong.
+- The parser was extracted to `tests/unit/_base_css.py` rather than
+  copied: `test_reserved_shade.py` had already paid for three traps in
+  it, and 19K.6 added a third reader of the same stylesheet.
 
 ### PR ladder
 
@@ -1856,6 +1980,13 @@ Taken 2026-09-12 at `40a0b663`.
   floor the muted text tokens are held to, and that the decorative uses
   are outside it (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).
+- `tools/theme_variants.gen.py` — the `palette_only_variant` docstring
+  named `--text-dim` as sharing `--slate-dim` in dark; it is
+  `--decor-muted` that does now (Item 7).
+- `tools/theme_customizer.gen.py` / `tools/theme_preview.gen.py` — the
+  hand-written references the `base.html` lift does not reach: the
+  customizer's "Dim / card" contrast row, its element-facet map, and
+  both tools' own chrome CSS (Item 7).
 
 ---
 

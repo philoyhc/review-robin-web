@@ -79,24 +79,24 @@ EXTRA_CSS = """
       color: var(--text-subtle); border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
     .pv-hue { margin: 14px 0; }
     .pv-hue-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--text-dim); margin: 0 0 6px; }
+      color: var(--text-subtle); margin: 0 0 6px; }
     .pv-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
     .pv-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle);
       border-radius: 8px; padding: 5px 7px; }
     .pv-sw { width: 30px; height: 26px; border-radius: 4px; flex: none; border: 1px solid var(--border-subtle); }
     .pv-lbl { display: flex; flex-direction: column; min-width: 0; }
     .pv-lbl code { font-size: 0.68rem; color: var(--text-body); word-break: break-all; }
-    .pv-lbl span { font-family: ui-monospace, monospace; font-size: 0.64rem; color: var(--text-dim); }
+    .pv-lbl span { font-family: ui-monospace, monospace; font-size: 0.64rem; color: var(--text-subtle); }
     .pv-cluster { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 4px 12px; }
     .pv-cluster summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; padding: 4px 0; }
     table.pv-sem { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    table.pv-sem th { text-align: left; color: var(--text-dim); font-weight: 600;
+    table.pv-sem th { text-align: left; color: var(--text-subtle); font-weight: 600;
       border-bottom: 1px solid var(--border-subtle); padding: 4px 6px; }
     table.pv-sem td { padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
     .pv-name { display: flex; flex-direction: column; }
-    .pv-name code { font-size: 0.66rem; color: var(--text-dim); }
+    .pv-name code { font-size: 0.66rem; color: var(--text-subtle); }
     .pv-sem code { font-family: ui-monospace, monospace; font-size: 0.72rem; }
-    .pv-hex { font-family: ui-monospace, monospace; font-size: 0.68rem; color: var(--text-dim); }
+    .pv-hex { font-family: ui-monospace, monospace; font-size: 0.68rem; color: var(--text-subtle); }
     .pv-dot { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: middle;
       margin-right: 4px; border: 1px solid var(--border-subtle); }
 """
