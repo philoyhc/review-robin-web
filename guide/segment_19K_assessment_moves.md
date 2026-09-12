@@ -1566,6 +1566,98 @@ Taken 2026-09-12 at `72e88096`, and the reason the method changed:
 | `playwright` declared as a dependency | **no** | absent from `pyproject.toml` and `requirements.txt` |
 | Multi-class elements on one rendered page | present, e.g. `pill + pill-empty`, `btn + disabled` | `TestClient` + `re` over `class="…"` |
 
+### Status — 2026-09-12
+
+Built as the one rung planned: `tests/integration/test_cascade_ties.py`,
+**16 tests**, no browser, no new dependency, running in both CI tracks.
+
+**The mandatory mutation passes.** 19J.9's collision reintroduced into
+the real `base.html` — `body.ui-v2 .btn-icon.table-pager-step` reduced to
+`body.ui-v2 .table-pager-step`, which is what the selector looked like
+while the rule was dead — and the end-to-end check fails, naming both
+rules and **both** dead properties (`color`, `font-size`). `base.html`
+restored; `git diff` clean.
+
+**The check found a live tie on its first run, and it improved the
+design rather than the stylesheet.** `body.ui-v2 .table-pager-cluster`
+(`display: inline-flex`) and `body.ui-v2 .table-pager-cluster-bottom`
+(`display: flex`) both tie at (0,2,1) on an element carrying both
+classes, and the `-bottom` rule wins on order. It is **deliberate**, and
+`base.html` says so in a comment beside it: below the table the cluster
+is the only thing on its line, so it takes full width.
+
+That is the discriminator the plan did not have. A **variant that comes
+later and wins** is the CSS idiom working. A **specialisation that comes
+earlier and loses** is 19J.9. `_is_variant_of` encodes it on the repo's
+own naming convention (`X-bottom` extends `X`, matched on the `-`
+boundary), and two tests pin both directions — because suppressing
+variants outright would hide exactly the defect the item exists for.
+**Nothing in `base.html` changed**, per the ladder.
+
+**Two vacuity findings, both caught before pushing.**
+
+1. **The end-to-end check could not see the defect it was built for.**
+   With an empty session the fixture collected 46 class sets and **not
+   one** carried `btn-icon` or `table-pager-step` — the pager renders
+   only above the page size. The check would have passed against 19J.9's
+   own collision. Fixed with a 220-row roster, and the guard is now a
+   **separate named test** asserting the classes are covered: a
+   mutation proved that an assertion living inside the check it guards
+   can be deleted invisibly.
+2. **The `@media` test pinned nothing.** With a single rule inside the
+   block, the brace walk drops the nested rule whether or not the
+   at-rule is skipped, so the test passed with the skip mutated away.
+   A *second* rule inside the block is what leaks; the fixture now
+   carries one.
+
+**Measured, not assumed:**
+
+| Claim | Measurement |
+|---|---|
+| The arithmetic is right | `_specificity` reproduces the two values `spec/ui_elements.md` §6 states in prose — `body.ui-v2 .btn-icon` (0,2,1), `body.ui-v2 .btn-icon.table-pager-step` (0,3,1). |
+| It runs where it matters | No browser, no new dependency. The check resolves **236** selectors — those that are both simple and outside `@media`. The first draft of this row said *253 of 618 … simple enough to resolve*, which counted simple selectors **including** the 17 inside `@media` blocks that `_top_level_rules` deliberately discards. "Simple enough to resolve" implied the check reaches them; it does not. |
+| Guards are not vacuous | **9 mutations on the resolver, 9 caught** — specificity ignoring classes, `@media` rules treated as unconditional, combinators accepted as simple, the variant rule applied in both directions, the canonical filter removed, the `<style>` element located by the naive regex, and the roster shrunk below the page size. Plus the collision mutation above, on the real file. |
+| Nothing broke | Full suite **3,790 passed**, 16 skipped. |
+
+**`spec-writer` pass (checker, 2026-09-12) — it found a false positive,
+which is the one kind this check cannot afford.** Two upheld findings:
+
+1. **`!important` beat the resolver, not the other way round.** Given two
+   tied rules where the *earlier* one carries `!important`, real CSS
+   gives it the win — and `find_ties` reported it dead. That contradicts
+   the module docstring's central promise, *"none can make it report a
+   tie that is not there"*, and a false positive is the failure mode the
+   exclusions are chosen to avoid. **Fixed rather than documented**:
+   importance is compared before order, with tests for both directions,
+   because skipping every property that mentions `!important` would
+   silence a real defect. `base.html` has **zero** `!important` today,
+   so the case was latent — a checker constructed it.
+2. **A count that implied more coverage than it had.** "253 of 618
+   selectors are simple enough to resolve" counted simple selectors
+   anywhere in the sheet, including the 17 inside `@media` that the
+   parser discards on purpose. The check resolves **236**. Corrected
+   with what it used to say.
+
+It also **disconfirmed the suspicion this item was most worried about**:
+`_ELEMENT` does not over-count inside hyphenated class names, because it
+requires a boundary character that `.` is not. Verified against `.a.b.c`,
+`.a[data-x]`, `div.a` and every canonical selector.
+
+**One dormant looseness, recorded rather than fixed.** `_is_variant_of`
+matches on the `-` boundary, so `.btn-row`, `.btn-pair`, `.btn-reset`
+and `.danger-solid` all read as "variants" of `.btn` / `.danger` by
+name, which they are not. It costs nothing today — none of those pairs
+co-occurs on a rendered element at equal specificity — but the next
+`.btn-*` class that *does* co-occur with a bare `.btn` would be
+suppressed silently. Whoever adds one should check this first.
+
+**A note for whoever extends this.** The `<style>` element is located by
+walking lines, not by regex, because `base.html:9` carries a Jinja
+comment whose *text* contains the literal string `<style>` — a
+non-greedy regex matches that and swallows the no-FOUC script as CSS.
+That cost a wrong figure in 19K.9's own plan, and the mutation which
+restores the naive regex is one of the seven.
+
 ### PR ladder
 
 1. **Resolve the canonical roles against the cascade, in Python**, in
