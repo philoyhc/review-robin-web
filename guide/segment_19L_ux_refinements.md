@@ -255,6 +255,19 @@ leave a half-marked row in `main`.
    by 19L.3 below: the archived page adopting the same convention is a
    second caller inside the same lobby family, not a promotion of the
    class to a general primitive.
+
+   *Reopened as a recorded deferral later the same day, not as a reversal.*
+   The author: *"the promotion question is worth reconsidering, especially
+   if, in the future, session lobby, archive page, and the roster pages all
+   make use of the same convention."* The answer above stands — nothing
+   about the evidence changed — but the question now has a **named trigger**
+   instead of a vague "if Rosters is ever built", and the trigger is the
+   first caller **outside** this surface family rather than a third caller
+   of any kind. It also separates two things this question conflated: the
+   spec/CSS naming promotion, and extracting the now-duplicated
+   `markSelectedRows()`. Both are written up in
+   `guide/deferred_consolidated.md` Part C, with what promotion would cost
+   measured rather than guessed.
 4. ~~**Does the panel keep its count-only title?**~~ **Yes, untouched** —
    the author's words, 2026-09-12. Out of scope at planning time and
    still out of scope: 19L.2 changed the panel's fill and gave it rails,
