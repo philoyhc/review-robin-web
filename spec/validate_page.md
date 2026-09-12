@@ -57,6 +57,15 @@ inventories the current session against the rule set.
 
 ---
 
+
+**Documented in the Guide.** `/guide`'s **Check readiness** section
+(`guide.html`, section key `validate`) tells an operator what this page
+is for, that its issues carry "Fix on … ↗" deep links, that warnings are
+acknowledged at activation rather than cleared here, and that the body
+below the Workflow card is read-only. Added at 19K.8; before that the
+Guide named the page only in passing inside neighbouring sections, so a
+reader learned it existed without learning what it shows them.
+
 ## 2. Page body (top to bottom)
 
 ### 2.0 Chrome + Workflow card
@@ -207,7 +216,7 @@ first duplicate row's `#reviewer-row-{id}`).
 | `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
-| `instruments.stale_generated` | instruments | warning | Pinned instrument's eligible-pair count diverges from its generated row count (roster / rule changed post-Generate). |
+| `instruments.stale_generated` | instruments | warning | **Retired in Wave 5 PR 5.1** — the check returns nothing. Pre-PR-5.1 it compared a pinned instrument's eligible-pair count against its generated row count, via `session_library.evaluate_session_rule_eligibility`; that helper retired with the operator-library tier, and the Workflow card plus the Generate button already cover the "pinned a rule but never generated" case it was catching. The rule key stays registered so audit history remains addressable. *(Annotated at 19K.8 — the row had described the retired behaviour as live, unlike `instruments.no_rule_pinned` above, which was correctly marked. Found while checking which rules carry a `fix_anchor` for the Guide's new Validate copy.)* |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
 | `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. Shipped W8 (PR #1758). |
 

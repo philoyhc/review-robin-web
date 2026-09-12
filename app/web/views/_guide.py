@@ -55,6 +55,11 @@ SECTIONS: tuple[GuideSection, ...] = (
     GuideSection("what_it_does", OPERATOR),
     GuideSection("create_and_set_up", OPERATOR),
     GuideSection("prepare_and_launch", OPERATOR),
+    # The Validate page is the pre-activation gate and an operator
+    # returns to it; before 19K.8 the Guide mentioned it only in passing
+    # inside neighbouring sections, so a reader learned it existed
+    # without learning what it shows them.
+    GuideSection("validate", OPERATOR),
     GuideSection("give_access", OPERATOR),
     GuideSection("watch_progress", OPERATOR),
     GuideSection("close_and_share", OPERATOR),
