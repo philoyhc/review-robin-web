@@ -141,9 +141,18 @@ state.
 
 ### 2.4 Issues card
 
-Groups issues by `source` (e.g. `session`, `reviewers`,
-`instruments`), one group heading per source with an inline
-`{count_summary}` aside. Each issue renders:
+Groups issues by `(gate, source)` — an `<h2 id="gate-{gate}">`
+*"Setup gate"* / *"Operations gate"* heading (setup always first),
+and within it an `<h3>` per source (e.g. `session`, `reviewers`,
+`instruments`) with an inline `{count_summary}` aside. A source
+whose rules span both gates appears under each, so the source
+headings are not unique; the `id="issue-source-{source}"` anchor
+renders on the **first** appearance only, keeping the Setup
+coverage matrix's deep-link target stable. Gates come from
+`gate_for_rule_key` in `app/web/views/_validate.py`; within a
+gate, source order follows `REGISTERED_RULES`.
+
+Each issue renders:
 
 - **Severity pill** (`pill-error` / `pill-warning` / `pill-info`).
 - **Row number** (when the issue points at a specific roster
