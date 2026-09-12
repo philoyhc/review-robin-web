@@ -117,6 +117,49 @@ different, smaller, and safer proposal than one that unifies the
 services behind it — and this idea, as described, is the presentation
 one. Worth keeping those separable if it is ever taken up.
 
+### A constraint the author has set — 2026-09-12
+
+**If this is ever built, the UX must display which roster is selected and
+being worked on, unmistakably, at every moment.** Set in response to the
+objection above.
+
+It is worth being precise about which half of that objection this
+answers. Codex's warning has two halves: a shared *implementation* can
+hide that reviewees are not reviewers, and a shared *page* can hide it
+from the operator. This constraint governs the second. The first is still
+open, and is why the presentation/services split above matters.
+
+**The reason it is load-bearing rather than a nicety.** Today, "which
+roster am I acting on" is answered by ambient context nobody had to
+design: the URL, the Setup nav highlight, the page heading, the
+breadcrumb. Four pages means the page *is* the answer, continuously and
+for free. Consolidate to one page and that signal disappears — the only
+remaining cue is which row the operator expanded, and a row can scroll
+out of view above a long preview table.
+
+**Where that bites hardest is the destructive actions**, and the proposed
+structure puts two of them inside the expandable row: **Clear all**, and
+**Upload CSV** where it replaces. Those are the actions where getting the
+roster wrong is unrecoverable or expensive.
+
+The guarding checkboxes the proposal already names gate *intent* — "yes,
+I mean to delete these rows". They do not gate *target*. A checkbox
+reading *"I understand this removes every row"* reads identically
+whichever roster happens to be expanded, so on a consolidated page the
+guard stops being a guard against the error that page newly makes
+possible. **So the implication is that a guard must name its roster**,
+not merely its action: the confirm text, the button label, and the Danger
+Zone heading all have to carry the roster's name. That is a stronger
+requirement than the four pages have today, precisely because today the
+page supplies it.
+
+Not a design here, deliberately. Candidate mechanisms — a persistent
+header stating the selected roster, the expanded row visually owning the
+page, the roster name interpolated into every destructive control — are
+for whoever takes this up. The constraint is that **the answer must be
+visible without scrolling and present in the confirm step**, and a design
+that satisfies it only while the row is on screen does not satisfy it.
+
 ### Open questions
 
 Not answered here; recorded so they are not rediscovered.
@@ -160,6 +203,12 @@ Not answered here; recorded so they are not rediscovered.
 - The deep-link contract has an answer, because Validate's fix links are
   a shipped affordance and breaking them silently would be worse than
   the duplication.
+- The selected-roster constraint above has a design that holds **at the
+  confirm step of a destructive action**, not merely while the expanded
+  row is on screen. This one is a gate rather than a preference: four
+  pages get target-clarity free, and a consolidation that does not buy it
+  back has made the app easier to get wrong in exchange for making the
+  source shorter.
 
 ---
 
