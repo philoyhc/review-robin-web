@@ -222,18 +222,20 @@ The point of the separate token is that the failing value cannot drift
 back onto a label: a `color:` declaration naming `--decor-muted` fails
 the test.
 
-**Eleven pairs still fall short and are recorded rather than fixed.**
-None is body text; they are accent fills and pill tints, in two
-families. White on a mid-tone accent (**2.54–3.68**) covers the dark
-primary button and its hover, the light primary and alert hovers, and
-the dark selected state — the dark fill is `--blue-glow`, the reserved
-shade, so moving it moves nine other dark tokens with it. Saturated
-text on its own pale tint (**3.32–3.95**) covers the green `#059669`
-on `#d1fae5` shared by the ready lifecycle pill, the reviewee role
-chip and the success pill, and the red `#dc2626` on `#fee2e2` shared
-by the expired pill and the destructive button's hover. Each is listed
-with its measured ratio in `docs/known_limitations.md` and pinned in
-`KNOWN_SHORTFALLS`, so none can worsen, and a fix has to delete its
+**Eleven pairs fall short of AA normal; eight are open and three are
+accepted.** None is body prose. The eight open ones all fail *at rest*
+and at the size they render — the ui-v2 pills are `--fs-tiny`
+(0.75rem, weight 500), so AA large's 3:1 is not their line. Four are
+dark accent (**2.54–3.33**, all resolving through `--blue-glow`, the
+reserved shade, so moving it moves nine other dark tokens); four are
+saturated text on its own pale tint (**3.32–3.95**, two shared values
+across the lifecycle, role and status families). The three accepted
+are light button labels dipping **only under the pointer** —
+3.19/3.68/3.95 on hover against 7.09/5.17/4.83 at rest — and that
+acceptance is conditional on the resting pair, which the suite
+asserts rather than assumes. Every one is listed in
+`docs/known_limitations.md` and pinned in `OPEN_SHORTFALLS` or
+`ACCEPTED_BELOW_AA`, so none can worsen, and a fix has to delete its
 entry rather than leave a stale number behind.
 
 **To look at the audit rather than read it**, open

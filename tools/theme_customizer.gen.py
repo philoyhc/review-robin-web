@@ -361,8 +361,20 @@ def _cx_row(label, fg, bg, provenance, ratio):
     # what you would grep for. Without this the panel shows a red 3.32 and
     # not what it belongs to, which is no use for inspection.
     title = f"{fg} on {bg} \u00b7 shipped {shipped}:1 (light) \u00b7 found by: {hint}"
+    # Acceptance is per theme: the same pair can be an accepted hover dip
+    # in light and an open failure in dark.
+    accepted = {
+        th: entry["reason"]
+        for (th, a, b), entry in hc.ACCEPTED_BELOW_AA.items()
+        if (a, b) == (fg, bg)
+    }
+    for th, reason in accepted.items():
+        title += f" \u00b7 accepted in {th}: {reason}"
+    acc_attr = "".join(
+        f' data-accepted-{th}="{reason}"' for th, reason in accepted.items()
+    )
     return (
-        f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}" title="{title}">'
+        f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}"{acc_attr} title="{title}">'
         f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
         f'<span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span>'
         f'<span class="tc-cx-shipped" title="ratio as shipped, light theme">{shipped}</span></div>'
@@ -542,6 +554,10 @@ editor_css = r"""
        ratio itself and survives both themes. */
     .tc-cx-ratio.below-aa { outline: 2px solid var(--status-error-fg); outline-offset: 1px;
       border-radius: 3px; font-weight: 700; }
+    /* Accepted: still marked, never red. A dashed edge reads as "known"
+       where the solid one reads as "look at this". */
+    .tc-cx-ratio.accepted-below-aa { outline: 1px dashed var(--border-default);
+      outline-offset: 1px; border-radius: 3px; }
     .tc-cx-shipped { font-family: ui-monospace, monospace; font-size: 0.66rem;
       color: var(--text-subtle); min-width: 34px; text-align: right; opacity: 0.75; }
     .tc-cx-summary { font-size: 0.78rem; font-weight: 600; padding: 6px 10px; margin: 0 0 8px;
@@ -669,8 +685,14 @@ editor_js = r"""  <script>
         // The red outline is the panel's whole point, so it is driven from
         // the same number the badge is, not from a class baked in at
         // generation time — remap a token and it moves with you.
+        // Red is reserved for a shortfall nobody has accepted. An
+        // accepted one still shows — muted, never hidden — because a
+        // panel that stops displaying what it has excused is how the
+        // excuse outlives its reason.
         var ratioEl = row.querySelector(".tc-cx-ratio");
-        ratioEl.classList.toggle("below-aa", r < 4.5);
+        var excused = row.getAttribute("data-accepted-" + mode) != null;
+        ratioEl.classList.toggle("below-aa", r < 4.5 && !excused);
+        ratioEl.classList.toggle("accepted-below-aa", r < 4.5 && excused);
       });
       // Hoisted; counts read the classes the loop above just set.
       updateContrastCounts();
@@ -678,20 +700,25 @@ editor_js = r"""  <script>
 
     // Per-group and overall counts, recomputed with the rows above.
     function updateContrastCounts() {
-      var groupShort = 0, groupTotal = 0;
+      var groupShort = 0, groupTotal = 0, groupAccepted = 0;
       document.querySelectorAll(".tc-cx-count").forEach(function (el) {
         var box = el.closest("details"), s = 0, t = 0;
         box.querySelectorAll(".tc-cx-ratio").forEach(function (r) {
           t++; if (r.classList.contains("below-aa")) { s++; }
         });
-        el.textContent = s ? "· " + s + " under AA" : "";
-        groupShort += s; groupTotal += t;
+        var a = box.querySelectorAll(".tc-cx-ratio.accepted-below-aa").length;
+        el.textContent = s ? "· " + s + " under AA" + (a ? " (+" + a + " accepted)" : "")
+                           : (a ? "· " + a + " accepted" : "");
+        groupShort += s; groupTotal += t; groupAccepted += a;
       });
       var sum = document.getElementById("tc-cx-summary");
       if (!sum) { return; }
+      var tail = groupAccepted
+        ? ", plus " + groupAccepted + " accepted (transient; legible at rest)"
+        : "";
       sum.textContent = groupShort
-        ? groupShort + " of " + groupTotal + " pairs under AA normal (4.5:1) in this theme"
-        : "all " + groupTotal + " pairs clear AA normal (4.5:1) in this theme";
+        ? groupShort + " of " + groupTotal + " pairs open under AA normal (4.5:1)" + tail
+        : "no open pairs under AA normal (4.5:1) in this theme" + tail;
       sum.className = "tc-cx-summary " + (groupShort ? "short" : "clean");
     }
 

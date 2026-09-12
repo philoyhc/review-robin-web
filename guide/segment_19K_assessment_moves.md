@@ -2059,6 +2059,58 @@ more than one source — **31 of the 73** — shows only the first, so
 `tools/README.md` now says that is provenance rather than exclusivity.
 
 
+**Eleven became eight open and three accepted** (author, 2026-09-12,
+after looking at the panel — which is the panel doing its job: it was
+built to be looked at, and the first look changed a decision).
+
+The author's reading was that anything above 3:1 is fine, and that the
+2.54 is fine too because it is a hover style. Two corrections, and
+then the call stood:
+
+- **The 2.54 is not a transient dip.** It is the dark primary button
+  on hover, and the same control measures **3.33 at rest** — the worst
+  point of a button already below the line, not a momentary one.
+- **3:1 is not these pairs' line.** The ui-v2 pills render at
+  `--fs-tiny` (0.75rem, weight 500); AA large wants 18.66px or 14pt
+  bold. Accepting 3.32 for a 12px label is a substantive decision, not
+  a technicality.
+
+So the split went by *transience*, not by threshold: three light
+button labels that dip only under the pointer, against resting states
+of 7.09, 5.17 and 4.83, are accepted; the eight that fail at rest stay
+open. **The thresholds did not move.** Moving the measurement would
+have made the panel stop telling the truth, and a check that flags
+nothing is the one that rots — which is the whole subject of this
+item. What moved is the *record*: two sets instead of one, and the
+panel marking an accepted pair with a dashed edge rather than red
+instead of falling silent about it.
+
+**The acceptance is stored as its premise, not its conclusion.** Each
+entry in `ACCEPTED_BELOW_AA` names the *resting* pair it rests on, and
+`test_accepted_pairs_still_earn_their_acceptance` fails if that pair
+stops clearing AA — so darkening a button's resting fill voids the
+hover exemption automatically. Pinning the hover ratio to a magic
+number instead would have recorded the conclusion and thrown away the
+premise, which is exactly how the entry this item repaired outlived
+its own reason by four months. Mutation-proved: dropping
+`--btn-alert-bg` to `--amber-strong` takes the resting pair to 3.19
+and the exemption dies with it.
+
+**Two mutations in this round were no-ops before they were
+mutations.** M1 and M2 reported "12 passed" — which reads as a hole in
+the guards until you notice the `sed` patterns named
+`--amber-strong`/`--amber-soft` where the file says `--amber-deep`. So
+nothing was changed and the suite was right. Re-run against the real
+token names: both caught. *The same lesson as 19K.5's zero and this
+item's own contaminated probe — a clean result and a no-op are
+indistinguishable until you check which one you have.*
+
+Verified in Chromium: light **4 open (red) + 3 accepted (dashed)**,
+dark **4 open + 0 accepted**, summaries reading "4 of 73 pairs open
+under AA normal (4.5:1), plus 3 accepted (transient; legible at
+rest)". 5 mutations on the new guards, 5 caught.
+
+
 **Decisions confirmed at build:**
 
 - The decorative uses are outside the floor by rule, not judgment

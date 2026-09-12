@@ -4003,6 +4003,10 @@
        ratio itself and survives both themes. */
     .tc-cx-ratio.below-aa { outline: 2px solid var(--status-error-fg); outline-offset: 1px;
       border-radius: 3px; font-weight: 700; }
+    /* Accepted: still marked, never red. A dashed edge reads as "known"
+       where the solid one reads as "look at this". */
+    .tc-cx-ratio.accepted-below-aa { outline: 1px dashed var(--border-default);
+      outline-offset: 1px; border-radius: 3px; }
     .tc-cx-shipped { font-family: ui-monospace, monospace; font-size: 0.66rem;
       color: var(--text-subtle); min-width: 34px; text-align: right; opacity: 0.75; }
     .tc-cx-summary { font-size: 0.78rem; font-weight: 600; padding: 6px 10px; margin: 0 0 8px;
@@ -4396,9 +4400,9 @@
       <div class="tc-cx-summary" id="tc-cx-summary">—</div>
       <details class="tc-cluster" open><summary>Buttons [P] · 10 <span class="tc-cx-count" data-cluster="Buttons [P]"></span></summary>
       <div class="tc-cx-grid">
-        <div class="tc-cx" data-fg="--btn-alert-fg" data-bg="--btn-alert-bg-hover" title="--btn-alert-fg on --btn-alert-bg-hover · shipped 3.19:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.danger-solid:hover"><span class="tc-cx-sample" style="background: var(--btn-alert-bg-hover); color: var(--btn-alert-fg)">Aa — btn alert fg → btn alert bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.19</span></div>
-        <div class="tc-cx" data-fg="--btn-primary-fg" data-bg="--btn-primary-bg-hover" title="--btn-primary-fg on --btn-primary-bg-hover · shipped 3.68:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn:hover, body.ui-v2 button.btn:hover, body.u"><span class="tc-cx-sample" style="background: var(--btn-primary-bg-hover); color: var(--btn-primary-fg)">Aa — btn primary fg → btn primary bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.68</span></div>
-        <div class="tc-cx" data-fg="--btn-destructive-fg" data-bg="--btn-destructive-bg-hover" title="--btn-destructive-fg on --btn-destructive-bg-hover · shipped 3.95:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.destructive:hover"><span class="tc-cx-sample" style="background: var(--btn-destructive-bg-hover); color: var(--btn-destructive-fg)">Aa — btn destructive fg → btn destructive bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.95</span></div>
+        <div class="tc-cx" data-fg="--btn-alert-fg" data-bg="--btn-alert-bg-hover" data-accepted-light="hover dip; the alert button's label is 7.09:1 at rest" title="--btn-alert-fg on --btn-alert-bg-hover · shipped 3.19:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.danger-solid:hover · accepted in light: hover dip; the alert button's label is 7.09:1 at rest"><span class="tc-cx-sample" style="background: var(--btn-alert-bg-hover); color: var(--btn-alert-fg)">Aa — btn alert fg → btn alert bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.19</span></div>
+        <div class="tc-cx" data-fg="--btn-primary-fg" data-bg="--btn-primary-bg-hover" data-accepted-light="hover dip; the primary button's label is 5.17:1 at rest" title="--btn-primary-fg on --btn-primary-bg-hover · shipped 3.68:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn:hover, body.ui-v2 button.btn:hover, body.u · accepted in light: hover dip; the primary button's label is 5.17:1 at rest"><span class="tc-cx-sample" style="background: var(--btn-primary-bg-hover); color: var(--btn-primary-fg)">Aa — btn primary fg → btn primary bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.68</span></div>
+        <div class="tc-cx" data-fg="--btn-destructive-fg" data-bg="--btn-destructive-bg-hover" data-accepted-light="hover dip; the destructive button's label is 4.83:1 at rest" title="--btn-destructive-fg on --btn-destructive-bg-hover · shipped 3.95:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.destructive:hover · accepted in light: hover dip; the destructive button's label is 4.83:1 at rest"><span class="tc-cx-sample" style="background: var(--btn-destructive-bg-hover); color: var(--btn-destructive-fg)">Aa — btn destructive fg → btn destructive bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">3.95</span></div>
         <div class="tc-cx" data-fg="--btn-destructive-fg" data-bg="--btn-destructive-bg" title="--btn-destructive-fg on --btn-destructive-bg · shipped 4.83:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.destructive"><span class="tc-cx-sample" style="background: var(--btn-destructive-bg); color: var(--btn-destructive-fg)">Aa — btn destructive fg → btn destructive bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">4.83</span></div>
         <div class="tc-cx" data-fg="--btn-primary-fg" data-bg="--btn-primary-bg" title="--btn-primary-fg on --btn-primary-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn, body.ui-v2 button.btn, body.ui-v2 a.btn"><span class="tc-cx-sample" style="background: var(--btn-primary-bg); color: var(--btn-primary-fg)">Aa — btn primary fg → btn primary bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
         <div class="tc-cx" data-fg="--btn-amber-fg" data-bg="--btn-amber-bg-hover" title="--btn-amber-fg on --btn-amber-bg-hover · shipped 5.69:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.alert:hover"><span class="tc-cx-sample" style="background: var(--btn-amber-bg-hover); color: var(--btn-amber-fg)">Aa — btn amber fg → btn amber bg hover</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.69</span></div>
@@ -4773,8 +4777,14 @@
         // The red outline is the panel's whole point, so it is driven from
         // the same number the badge is, not from a class baked in at
         // generation time — remap a token and it moves with you.
+        // Red is reserved for a shortfall nobody has accepted. An
+        // accepted one still shows — muted, never hidden — because a
+        // panel that stops displaying what it has excused is how the
+        // excuse outlives its reason.
         var ratioEl = row.querySelector(".tc-cx-ratio");
-        ratioEl.classList.toggle("below-aa", r < 4.5);
+        var excused = row.getAttribute("data-accepted-" + mode) != null;
+        ratioEl.classList.toggle("below-aa", r < 4.5 && !excused);
+        ratioEl.classList.toggle("accepted-below-aa", r < 4.5 && excused);
       });
       // Hoisted; counts read the classes the loop above just set.
       updateContrastCounts();
@@ -4782,20 +4792,25 @@
 
     // Per-group and overall counts, recomputed with the rows above.
     function updateContrastCounts() {
-      var groupShort = 0, groupTotal = 0;
+      var groupShort = 0, groupTotal = 0, groupAccepted = 0;
       document.querySelectorAll(".tc-cx-count").forEach(function (el) {
         var box = el.closest("details"), s = 0, t = 0;
         box.querySelectorAll(".tc-cx-ratio").forEach(function (r) {
           t++; if (r.classList.contains("below-aa")) { s++; }
         });
-        el.textContent = s ? "· " + s + " under AA" : "";
-        groupShort += s; groupTotal += t;
+        var a = box.querySelectorAll(".tc-cx-ratio.accepted-below-aa").length;
+        el.textContent = s ? "· " + s + " under AA" + (a ? " (+" + a + " accepted)" : "")
+                           : (a ? "· " + a + " accepted" : "");
+        groupShort += s; groupTotal += t; groupAccepted += a;
       });
       var sum = document.getElementById("tc-cx-summary");
       if (!sum) { return; }
+      var tail = groupAccepted
+        ? ", plus " + groupAccepted + " accepted (transient; legible at rest)"
+        : "";
       sum.textContent = groupShort
-        ? groupShort + " of " + groupTotal + " pairs under AA normal (4.5:1) in this theme"
-        : "all " + groupTotal + " pairs clear AA normal (4.5:1) in this theme";
+        ? groupShort + " of " + groupTotal + " pairs open under AA normal (4.5:1)" + tail
+        : "no open pairs under AA normal (4.5:1) in this theme" + tail;
       sum.className = "tc-cx-summary " + (groupShort ? "short" : "clean");
     }
 

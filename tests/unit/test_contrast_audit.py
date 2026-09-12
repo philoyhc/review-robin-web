@@ -110,39 +110,46 @@ ON_FILL = {
     "--text-on-amber": "--btn-alert-bg",
 }
 
-#: Pairs that do not clear AA normal, each mapped to the ratio it
-#: measured on 2026-09-12 at 19K.7. Every one is pre-existing; none is
-#: body text. They fall into three families, and each family is one
-#: decision rather than one fix:
+#: Pairs under AA normal that are **open** — not accepted, and listed
+#: in `docs/known_limitations.md` as outstanding. Each mapped to the
+#: ratio it measured on 2026-09-12.
 #:
-#: - **White on a mid-tone accent fill** (6): the dark primary button
-#:   and its hover, the light primary and alert hovers, and the dark
-#:   selected state. The dark fill is ``--blue-glow``, the reserved
-#:   "you can act on this" shade, so moving it moves ``--selected-bg``,
-#:   ``--focus-ring`` and seven more dark tokens together.
-#: - **Saturated text on its own pale tint** (5): the green
-#:   ``#059669`` on ``#d1fae5`` shared by the ready lifecycle pill, the
-#:   reviewee role chip and the success pill, and the red ``#dc2626``
-#:   on ``#fee2e2`` shared by the expired pill and the destructive
-#:   button's hover. Deepening the text or paling the tint is a palette
-#:   decision across every status family at once.
+#: Author's call, 2026-09-12, after reviewing the panel: the three
+#: *transient* dips are accepted (see `ACCEPTED_BELOW_AA` in the shared
+#: harness); these eight are not, because every one fails **at rest**,
+#: and at the size they actually render. The ui-v2 pills are
+#: `--fs-tiny` (0.75rem, weight 500) — AA large needs 18.66px or 14pt
+#: bold, so 3:1 is not their line and 4.5 is.
 #:
-#: A floor rather than an equality in both directions: a regression
-#: fails, and so does a fix, because a fix should delete the entry
-#: rather than leave a stale number behind it.
-KNOWN_SHORTFALLS = {
+#: Two families, and each is one decision rather than eight fixes:
+#:
+#: - **Dark accent, 4 pairs** (2.54-3.33). All resolve through
+#:   `--blue-glow`, the reserved "you can act on this" shade — the dark
+#:   primary button's own label sits at 3.33 at rest. Moving it moves
+#:   `--selected-bg`, `--focus-ring` and seven more dark tokens.
+#: - **Light pale tints, 4 pairs** (3.32-3.95). The green `#059669` on
+#:   `#d1fae5` shared by the ready lifecycle pill, the reviewee role
+#:   chip and the success pill; the red `#dc2626` on `#fee2e2` shared by
+#:   the expired pill. Deepening the text or paling the tint is one
+#:   change across every status family.
+#:
+#: A floor in both directions: a regression fails, and so does a fix,
+#: because a fix should delete the entry rather than leave a stale
+#: number behind it.
+OPEN_SHORTFALLS = {
     ("dark", "--btn-primary-fg", "--btn-primary-bg-hover"): 2.54,
-    ("light", "--btn-alert-fg", "--btn-alert-bg-hover"): 3.19,
     ("light", "--lifecycle-ready-fg", "--lifecycle-ready-bg"): 3.32,
     ("light", "--role-reviewee-fg", "--role-reviewee-bg"): 3.32,
     ("light", "--status-success-accent", "--status-success-bg"): 3.32,
     ("dark", "--btn-primary-fg", "--btn-primary-bg"): 3.33,
     ("dark", "--selected-fg", "--selected-bg"): 3.33,
     ("dark", "--text-on-accent", "--btn-primary-bg"): 3.33,
-    ("light", "--btn-primary-fg", "--btn-primary-bg-hover"): 3.68,
-    ("light", "--btn-destructive-fg", "--btn-destructive-bg-hover"): 3.95,
     ("light", "--lifecycle-expired-fg", "--lifecycle-expired-bg"): 3.95,
 }
+
+#: Every pair under AA, however recorded. A pair under AA and in
+#: neither set is new, and fails.
+RECORDED = set(OPEN_SHORTFALLS) | set(harness.ACCEPTED_BELOW_AA)
 
 #: Tolerance on a recorded shortfall before it counts as movement.
 #: Two hundredths: enough to absorb nothing at all, since both sides
@@ -257,21 +264,22 @@ def test_the_sweep_finds_the_palette_it_claims_to() -> None:
 def test_every_pair_clears_aa_but_for_the_recorded_shortfalls() -> None:
     """The rule, over the whole palette.
 
-    Anything failing that is not in ``KNOWN_SHORTFALLS`` is new, and
-    the message carries where it came from so it can be judged rather
-    than merely added to the list.
+    Anything under AA that is in neither ``OPEN_SHORTFALLS`` nor
+    ``ACCEPTED_BELOW_AA`` is new, and the message carries where the pair
+    came from so it can be judged rather than merely added to a list.
     """
     failures = [
         f"{ratio:5.2f}  {theme:5} {fg} on {bg}   [{provenance}]"
         for ratio, theme, fg, bg, provenance in sorted(measured())
-        if ratio < AA_NORMAL and (theme, fg, bg) not in KNOWN_SHORTFALLS
+        if ratio < AA_NORMAL and (theme, fg, bg) not in RECORDED
     ]
 
     assert not failures, (
         "token pairs under AA normal (4.5:1) and not recorded:\n  "
         + "\n  ".join(failures)
-        + "\nEither fix the pair or add it to KNOWN_SHORTFALLS with its "
-        "measured ratio and a reason in docs/known_limitations.md."
+        + "\nEither fix the pair, or record it: OPEN_SHORTFALLS with its measured "
+        "ratio plus a line in docs/known_limitations.md, or ACCEPTED_BELOW_AA "
+        "with the resting pair its acceptance rests on."
     )
 
 
@@ -285,11 +293,11 @@ def test_the_recorded_shortfalls_are_still_what_was_recorded() -> None:
     """
     now = {(theme, fg, bg): ratio for ratio, theme, fg, bg, _ in measured()}
 
-    missing = sorted(k for k in KNOWN_SHORTFALLS if k not in now)
+    missing = sorted(k for k in OPEN_SHORTFALLS if k not in now)
     assert not missing, f"recorded shortfalls no longer pair at all: {missing}"
 
     moved, fixed = [], []
-    for key, recorded in KNOWN_SHORTFALLS.items():
+    for key, recorded in OPEN_SHORTFALLS.items():
         ratio = now[key]
         if ratio >= AA_NORMAL:
             fixed.append(f"{key[1]} on {key[2]} ({key[0]}) now {ratio:.2f}")
@@ -297,7 +305,7 @@ def test_the_recorded_shortfalls_are_still_what_was_recorded() -> None:
             moved.append(f"{key[1]} on {key[2]} ({key[0]}) {recorded} -> {ratio:.2f}")
 
     assert not fixed, (
-        "these now clear AA — delete their KNOWN_SHORTFALLS entries and their "
+        "these now clear AA — delete their OPEN_SHORTFALLS entries and their "
         "docs/known_limitations.md lines:\n  " + "\n  ".join(fixed)
     )
     assert not moved, (
@@ -433,5 +441,49 @@ def test_the_customizer_panel_can_show_a_shortfall() -> None:
     assert 'classList.toggle("below-aa"' in page, "nothing toggles the sub-AA class"
 
     rendered = set(re.findall(r'data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page))
-    unrowed = sorted((fg, bg) for _, fg, bg in KNOWN_SHORTFALLS if (fg, bg) not in rendered)
+    unrowed = sorted((fg, bg) for _, fg, bg in RECORDED if (fg, bg) not in rendered)
     assert not unrowed, f"recorded shortfalls with no row to flag: {unrowed}"
+
+
+def test_accepted_pairs_still_earn_their_acceptance() -> None:
+    """The reason for each exemption, checked rather than trusted.
+
+    Three pairs are accepted (`ACCEPTED_BELOW_AA`, in the shared
+    harness) on one stated ground: the control's label is comfortably
+    legible at rest and dips only while the pointer is on it. That
+    ground is a *measurement*, not an opinion, so it is asserted —
+    darken a button's resting fill and the hover exemption dies with
+    it, and this test says so before anyone ships it.
+
+    Writing the reason into a comment and pinning the hover ratio to a
+    magic number would have recorded the conclusion and thrown away the
+    premise. This item exists because a recorded conclusion outlived
+    its premise by four months.
+    """
+    tokens = token_maps(css())
+
+    for (theme, fg, hover_bg), entry in harness.ACCEPTED_BELOW_AA.items():
+        hover = contrast(tokens[theme][fg], tokens[theme][hover_bg])
+        resting = contrast(tokens[theme][fg], tokens[theme][entry["resting_bg"]])
+
+        assert hover < AA_NORMAL, (
+            f"{theme} {fg} on {hover_bg} now measures {hover:.2f} and clears AA — "
+            "delete its ACCEPTED_BELOW_AA entry, it needs no exemption"
+        )
+        assert resting >= AA_NORMAL, (
+            f"{theme} {fg} on {entry['resting_bg']} has fallen to {resting:.2f}. "
+            f"The hover exemption for {hover_bg} rests on that pair clearing AA "
+            f"({entry['reason']}) — it no longer does, so the exemption is void: "
+            "fix the resting pair, or move this entry to OPEN_SHORTFALLS."
+        )
+
+
+def test_no_pair_is_both_accepted_and_open() -> None:
+    """Two records, one truth.
+
+    A pair in both sets would be reported as settled by one test and
+    outstanding by the other, and `docs/known_limitations.md` would
+    list it twice under contradictory headings.
+    """
+    both = sorted(set(OPEN_SHORTFALLS) & set(harness.ACCEPTED_BELOW_AA))
+    assert not both, f"recorded as both accepted and open: {both}"
