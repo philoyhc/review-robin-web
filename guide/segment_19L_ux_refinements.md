@@ -13,6 +13,18 @@ they are noticed, in the shape 19J and 19K used.
 and `### Status`, and there is **no segment-level `## Doc impact`**.
 `python3 tools/close_check.py 19L.1` reads Item 1's manifest.
 
+**Segment status — 2026-09-12.** Items 1 and 2 have both closed, and
+**the segment stays open** on the author's instruction. Nothing moves to
+`guide/archive/` until it closes; that is the rule for an item close and
+it is also what an open segment means. Two things are on record as
+candidate next items rather than as loose ends: whether the archived
+sessions page should carry the bracket (19L.2 open question 2, closed
+undecided), and whether the bulk expander's title and Tags rows should
+merge (mocked up and declined, 19L.2 Decision).
+
+*There is no Item 3.* If a request names one, it is naming work that has
+not been logged here yet.
+
 **What belongs here.** A refinement to a surface that already ships:
 a visual state, a copy fix, an affordance that is present but weak. Work
 that adds a page, a card, or a navigation affordance is a segment of its
@@ -198,21 +210,33 @@ leave a half-marked row in `main`.
 - `### Status` records intended vs done
 - `docs/status.md` row added
 
-### Open questions
+### Open questions — closed 2026-09-12
 
-1. **What is the expression?** Candidates, none chosen: a pale fill
-   (`--chip-selected-bg`'s row analogue); a left edge in `--selected-bg`,
-   which echoes the chip's 2px edge without filling the row; a weight or
-   rule change. Decided by rendering them, not by argument — the theme
-   customizer exists for exactly this.
-2. **Does select-all mark every row?** Semantically yes; at 50 rows it
-   may read as noise rather than signal. Worth rendering before deciding.
-3. **Does the marking become a shared primitive?** If the Rosters idea is
-   ever built it needs the same thing. Naming it in `spec/ui_elements.md`
-   §10 makes it reusable; leaving it lobby-local avoids designing for one
-   speculative caller.
-4. **Does the panel keep its count-only title?** Out of scope here, but
-   the two decisions interact.
+1. ~~**What is the expression?**~~ **Answered twice.** The author chose
+   edge *and* fill from a rendered specimen board — and 19L.2 then
+   removed the fill, because it was `--status-info-bg`'s own primitive
+   and was erasing every pill on the row. The live answer is the bracket:
+   a rail at each end, no fill. *The question was right to insist on a
+   rendering; one rendering was not enough, because the board showed the
+   candidates against each other and not against a row's own contents.*
+2. ~~**Does select-all mark every row?**~~ **Yes, and the fifty-row
+   worry is now moot rather than answered.** It was a worry about *fill*
+   — fifty tinted rows reading as a new background. 19L.2 left no fill to
+   tint with, and a rail at each end of an otherwise untouched row cannot
+   become the page's background. The author's dev-slot pass covered the
+   lobby and raised nothing here.
+3. ~~**Does the marking become a shared primitive?**~~ **No — still
+   lobby-local, and now for a better-evidenced reason.** It has one
+   caller. The speculative second, the Rosters index, is recorded in
+   `guide/new_ux_ideas.md` with the transfer question stated rather than
+   assumed: the bracket was designed for one wide row in a tall table of
+   *like* things, and a Rosters index is four *unlike* things where one
+   action is Clear all. Promoting it now would export a primitive to a
+   page whose requirements have not been established.
+4. ~~**Does the panel keep its count-only title?**~~ **Yes, untouched.**
+   Out of scope at planning time and still out of scope: 19L.2 changed
+   the panel's fill and gave it rails, and deliberately did not touch its
+   copy.
 
 ### Out of scope
 
@@ -344,7 +368,12 @@ deployed page.
   and its count is corrected. Not named at planning time; added when the
   build chose a new role over reusing the chip's token (Item 1).
 - `guide/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
-  (Item 1).
+  (Item 1). *Honoured, then superseded: Item 2 removed entry 2 outright
+  on the author's instruction — session lobby work is segment work, not
+  an idea awaiting pilot evidence — so a reader following this bullet
+  today will find no entry 2 to inspect. The annotation existed; the
+  entry it annotated does not. Left as written rather than rewritten,
+  per* never rewrite intent.
 - `docs/status.md` — row when the item closes (Item 1).
 
 ---
@@ -532,16 +561,32 @@ so a reviewer can object to it on its own.
 - `## Status` records intended vs done
 - `docs/status.md` row added
 
-### Open questions
+### Open questions — closed 2026-09-12
 
-1. **Does a scattered selection read as clutter on a fifty-row lobby?**
-   Decided by the author on the dev slot; the static specimens cannot
-   settle it.
-2. **Should the archived page follow?** Its rows have never been marked,
-   so it is consistent with itself today. A follow-up item if the
-   divergence bothers the author on the dev slot.
-3. **Does the rail alone hold a lone selected row whose panel is
-   off-screen?** Two marks ~900px apart with nothing between. Dev slot.
+The author ran the dev slot (local host) and reported: *"Session Lobby
+checks out."* That is a pass on the lobby, and it is recorded as exactly
+that — a pass, not a per-question report. Questions 1 and 3 were both
+"does this look wrong once rendered at real scale", and the surface they
+asked about was looked at and did not look wrong.
+
+1. ~~**Does a scattered selection read as clutter on a fifty-row
+   lobby?**~~ **Not raised on the dev slot.** Closed on that pass rather
+   than on a measurement, and the distinction matters: nothing here
+   establishes that a fifty-row scattered selection was *exercised*, only
+   that the lobby was used and nothing about it was reported wrong. If it
+   grates later it is a new item, not a reopened one.
+2. **Should the archived page follow?** — **closes undecided, which is
+   not the same as decided no.** The dev-slot pass covered the session
+   lobby; the archived sessions page is a different page and the author
+   said nothing about it. So the divergence 19L.2 deliberately created
+   stands: the lobby brackets its selection, the archived page does not
+   mark rows at all. It is self-consistent and it was self-consistent
+   before, so nothing is broken — but the two pages no longer look alike,
+   and no one has yet looked at the second one. **A new item in 19L if it
+   bothers anyone**, which is part of why the segment stays open.
+3. ~~**Does the rail alone hold a lone selected row whose panel is
+   off-screen?**~~ **Not raised on the dev slot**, on the same footing as
+   question 1.
 
 ### Out of scope
 
