@@ -466,6 +466,75 @@ toggle"*, modelled on Quick Setup's footer. Recorded as a question
 rather than decided: the author said Edit, and the app's most recent
 decision at this exact scope said Lock / Unlock.
 
+#### The controls, specified — 2026-09-12
+
+The author, answering open questions 4 and 6 and setting out the control
+set. *"Individual row" here means a row in the preview table, confirmed
+by the author.*
+
+**Q4 — nothing is active on load.** The first act is always a deliberate
+choice of roster.
+
+**Q6 — Lock / Unlock, not Edit.** Which also resolves the collision that
+made it a question: the row-level **Edit** keeps its name, and the
+roster-level control takes the vocabulary the Instruments card already
+uses at this exact scope.
+
+**The index row carries two controls**, and they stage the work:
+
+| control | state | what it does |
+|---|---|---|
+| selection checkbox | one roster at a time | shows that roster's search card and preview table below; activates its Unlock |
+| **Unlock** | inactive until the checkbox is ticked | reveals the roster-level action row |
+
+**The roster-level action row**, revealed by Unlock and hidden again by
+Lock: edit the friendly labels (**except Observers**), delete all data in
+the roster, upload a replacement CSV, download the current one. The
+guarding checkboxes the first constraint describes still apply to the two
+destructive ones.
+
+**In the preview table, arity differs by action**, and the split has a
+reason worth stating so it does not later look arbitrary:
+
+- **Edit column values — one row at a time.** Editing is data entry
+  against *this* row's values; two rows have different ones.
+- **Flip status active / inactive, or delete — several rows together.**
+  These are uniform operations; applying one to twenty is the same act
+  twenty times.
+
+**That rule is not new — it is exactly what ships today**, checked at
+`04323d44` in `session_reviewers.html` rather than recalled:
+
+```js
+setBtn(editBtn, n !== 1);        // Edit needs exactly one row
+setBtn(inactivateBtn, n === 0);  // status flips need at least one
+setBtn(reactivateBtn, n === 0);
+```
+
+So the consolidation **preserves the operator's existing muscle memory
+here rather than asking for relearning**, and the rule already has tests
+and a spec entry. Worth knowing: it is one of the few parts of this idea
+that costs nothing to carry across.
+
+**"Except Observers" is also a shipped fact, not a new exception.**
+`spec/setup_pages.md` lists the friendly-label editor as Reviewers and
+Relationships (a 3-cell row) and Reviewees (a 2-row stacked grid);
+`session_observers.html` has no label editor at all. **This is open
+question 2's first named, concrete instance** — the per-roster divergence
+that question is about is no longer hypothetical, and the consolidated
+design has to carry at least this one on day one. A shared row that
+renders three label editors and one blank is the shape to avoid.
+
+**One small divergence from the Instruments analogy, worth a deliberate
+call.** The author's rule is that the action row *does not show* when
+locked; the Instruments page keeps its gated region in the DOM and
+neutralises it with `inert` plus an opacity fade. Hiding avoids the
+"why is this greyed out" question; `inert` keeps the page height stable,
+which is the reflow concern 19L.2 took seriously one level down. Hiding
+is probably right here — an absent row has nothing to explain — but the
+page will grow on unlock, and the Unlock button should not move under
+the pointer that just clicked it.
+
 ### A candidate mechanism — the lobby's row expander
 
 **Proposed by the author, 2026-09-12:** take a leaf from the session
@@ -547,7 +616,12 @@ Not answered here; recorded so they are not rediscovered.
    author's sketch says *"all rosters and their columns"* and that is not
    mine to overrule — but the ragged-versus-union problem mostly
    evaporates if the index is a chooser.
-2. **Where do the per-roster exceptions live?** This is now the load-
+2. **Where do the per-roster exceptions live?** **A first concrete one
+   is now named**: friendly-label editing exists for Reviewers,
+   Reviewees and Relationships and **not for Observers** — shipped
+   today, not introduced by the consolidation. So the shared row must
+   already render three label editors and one nothing. This is now the
+   load-
    bearing question rather than one of six, because the author has
    confirmed Observers will carry unique features — today's cohort match
    rule and more to come. The shape has to answer it *before* the shared
@@ -566,11 +640,10 @@ Not answered here; recorded so they are not rediscovered.
    `spec/reviewer-surface.md`, so two surfaces would want it and it
    should be built once. See "What the Instrument-card analogy does and
    does not supply".
-4. **Is anything active when the page first loads?** Nothing, so the
-   first action is always a deliberate choice; or a default roster, which
-   is faster and is how the wrong-roster mistake starts. *Still open —
-   the refinement settles what selection does, not what is selected
-   before anyone has chosen.*
+4. ~~**Is anything active when the page first loads?**~~ **Answered
+   2026-09-12: nothing.** The first act is always a deliberate choice of
+   roster. The click it costs is the point — it is the click that stops
+   the wrong-roster mistake.
 5. ~~**Are *select to edit* and *select to preview* one selection or
    two?**~~ **Answered 2026-09-12: neither.** There is one selection, the
    active roster, which opens the search card and the preview; edit is a
@@ -578,13 +651,20 @@ Not answered here; recorded so they are not rediscovered.
    roster's surface while it is open. The question offered two options
    and the answer was a third — selection and editing are different kinds
    of act, which is why framing both as selections felt awkward.
-6. **Is the roster-level control called Edit, or Lock / Unlock?** The
-   author said *Edit*; the roster pages already ship an **Edit** button
-   at **row** level, which this proposal keeps but moves; and the closest
-   analogue at this exact scope — the Instruments card — retired
-   *Edit / Cancel* in favour of *Lock / Unlock* in its Wave 4. Two
-   buttons named Edit at two scopes on one page is the thing to avoid,
-   whichever way it goes.
+6. ~~**Is the roster-level control called Edit, or Lock / Unlock?**~~
+   **Answered 2026-09-12: Lock / Unlock**, matching the Instruments card
+   at the same scope. The row-level **Edit** keeps its name, so the
+   collision that made this a question does not arise.
+7. **Does the index use checkboxes or radios?** The author says
+   checkboxes, one at a time. A checkbox that is mutually exclusive is
+   conventionally a radio, which is honest about exclusivity and gets
+   keyboard arrow navigation free — **but a radio group has no native
+   "none" state**, and question 4 has just made "nothing selected" both
+   the initial state and, presumably, one an operator can return to by
+   un-ticking. That is a real argument for the checkbox; the cost is that
+   the same control shape means *many* in the sessions lobby and *one*
+   here. Recorded so the choice reads as a decision rather than an
+   oversight.
 3. ~~**What happens to deep links?**~~ **Answered 2026-09-12 — and it is
    now a requirement rather than a question.** The Validate *Fix on … ↗*
    links and the Setup coverage matrix must still reach *this roster,
