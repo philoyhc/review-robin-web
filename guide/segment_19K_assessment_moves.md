@@ -1360,8 +1360,8 @@ not propose reversing it.
 
 What it costs is recorded in the 11sep assessment's §5 as **the single
 largest structural risk**, and the evidence is a defect rather than a
-worry. During 19J.9 the rule `body.ui-v2 .table-pager-step` was **dead
-for two rungs**: it and `body.ui-v2 .btn-icon` are both specificity
+worry. During 19J.9 the rule `body.ui-v2 .table-pager-step` was **dead from
+rung 1 until the fifth of the item's seven merges**: it and `body.ui-v2 .btn-icon` are both specificity
 (0,2,1), so source order decided, and `.btn-icon` sits later. Nobody
 could see it, because the loser's declarations happened to match what the
 winner already set. It surfaced only when someone asked for a bigger
@@ -1374,7 +1374,7 @@ Measured 2026-09-12 at `40a0b663`:
 | Lines in `base.html` | 4,732 | `wc -l` |
 | Rule selectors | 618 | `grep -c '^\s*[.#a-z][^{]*{'` |
 | …carrying `body.ui-v2` | 410 | `grep -c 'body\.ui-v2'` |
-| Existing tests over its tokens | 2 | `test_reserved_shade.py`, `test_participant_tokens.py` |
+| Existing tests over its CSS tokens | **1** | `tests/unit/test_reserved_shade.py` |
 
 **Two-thirds of the rules live in one `body.ui-v2` layer**, which is
 exactly the condition that makes ties common: a `body.ui-v2 .a` and a
@@ -1586,7 +1586,7 @@ Taken 2026-09-12 at `40a0b663`.
 | Decorative uses of `--text-dim` (out of scope) | **6** | `grep -rn 'background: var(--text-dim)\|var(--text-dim) [0-9]'` |
 | Uses of `--text-subtle` in `base.html` | **34** | `grep -c` |
 | Templates outside `base.html` using `--text-dim` | 2 | `instruments_index.html`, `session_observers.html` |
-| Existing token tests | 2 | `test_reserved_shade.py`, `test_participant_tokens.py` |
+| Existing tests over the colour tokens | **1** | `tests/unit/test_reserved_shade.py` |
 
 ### PR ladder
 
@@ -1630,8 +1630,9 @@ Taken 2026-09-12 at `40a0b663`.
 
 - `docs/known_limitations.md` — the Accessibility entry rewritten
   against the real tokens and ratios (Item 7).
-- `spec/ui_elements.md` — the token table records the AA floor the two
-  muted tokens are held to (Item 7).
+- `spec/color_tokens.md` — the two-tier token catalogue records the AA
+  floor the muted text tokens are held to, and that the decorative uses
+  are outside it (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).
 
 ---
@@ -1644,19 +1645,25 @@ Taken 2026-09-12 at `40a0b663`.
 canonical since 19E rung 2. It is **front-loaded to the point of
 imbalance**, measured 2026-09-12 at `40a0b663`:
 
-| Section | Lines | Screencaps |
+| Section | Lines | Screencapped surfaces |
 |---|---:|---:|
-| Create and set up | ~290 | 9 |
-| Prepare and activate | ~85 | 4 |
-| **Watch progress** (Invitations + Responses) | **12** | **0** |
-| **Download responses** (Extract data) | **17** | **0** |
-| For reviewers | 13 | 0 |
-| For observers | 11 | 0 |
-| For reviewees | 9 | 0 |
+| Create and set up | 295 | 11 |
+| Prepare and activate | 86 | 5 |
+| **Watch progress** (Invitations + Responses) | **16** | **0** |
+| **Download responses** (Extract data) | **18** | **0** |
+| Give access | 21 | 0 |
+| Tips / Sample session | 34 / 36 | 0 |
+| For reviewers / observers / reviewees | 12 / 12 / 11 | 0 |
+
+11 + 5 = the 16 surfaces behind the 32 committed files, so the two
+documented sections hold every image in the Guide.
 
 All **16** screencapped surfaces are setup surfaces. The word
 "Invitations" appears **once** in the whole Guide; "Extract data" once.
-**Validate is never described as a page.**
+**Validate has no section of its own** — it surfaces only as passing
+mentions inside "Prepare and activate" and "Tips" (`guide.html:363`,
+`:500`, `:509`, `:538`), so an operator learns it exists but never what
+the page shows them.
 
 So the Guide teaches how to *build* a session in detail and how to *run*
 one in four paragraphs — and running it is the half an operator does
@@ -1668,9 +1675,14 @@ lines.
 the range strip became a pager cluster, the column chips were
 delegated, and 19K.3 took Invitations and Responses from 40,433 and
 80,432 queries to 434 each. Screencaps taken now are of the current UI.
-Screencaps taken before 19J would already be stale, and **19J.7
-committed to a screencap-retake row and never wrote it** — that debt is
-still open and this item is where it gets paid.
+
+**These are new captures, not retakes.** 19J.7's screencap-retake
+commitment was **waived with a measurement**, not left unpaid: all 16
+were opened on 2026-09-11 and none is stale, because none shows a
+roster pager (they are card crops), every chip in them is *selected*
+where the new edge is invisible, and none shows a validated lifecycle
+pill. So the existing 16 are current and this item adds to them rather
+than replacing any.
 
 ### Decision
 
@@ -1720,6 +1732,32 @@ will re-read whatever this item writes.
 
 ### Judgment calls — decided
 
+- **2026-09-12 — this item's own first draft was wrong in seven places,
+  and the pattern is worth carrying into the build.** A pre-push checker
+  recomputed every figure above and found: a section-line table with
+  three wrong counts whose per-section screencap totals did not sum to
+  the item's own correctly-stated 16; `tests/unit/test_participant_tokens.py`
+  listed in two items as a colour-token test when it tests
+  anonymous-participant *access tokens* — a pure word match; "Validate is
+  never described as a page" when the Guide says "the Validate page"
+  twice; a `Doc impact` naming `spec/ui_elements.md` for a token table
+  that lives in `spec/color_tokens.md`; `spec/operations_pages.md`
+  credited with four surfaces when it covers two, with
+  `spec/validate_page.md` and `spec/extract_data.md` uncited; and a
+  blast-radius row whose own command could not reproduce its number.
+
+  **The worst of them is instructive.** The draft said 19J.7 "committed
+  to a screencap-retake row and never wrote it — that debt is still
+  open." It was **waived, with a measurement**: all 16 opened, none
+  stale. Worse, the archive entry recording that waiver ends *"a
+  blast-radius claim written from filenames rather than from the
+  images"* — and this draft repeated the identical error while citing
+  that document, then also claimed a file's status without opening it.
+  The Opportunity sections were written from impressions and formatted
+  as measurements, which is precisely what the blast-radius convention
+  exists to prevent. Every figure above is now recomputed; the build
+  should trust none of the prose it did not re-run.
+
 - **2026-09-12 — Validate gets a section of its own** rather than a
   paragraph inside "Prepare and activate". It is a page an operator
   returns to, and the Guide currently never tells them it exists.
@@ -1734,7 +1772,7 @@ Taken 2026-09-12 at `40a0b663`.
 | Screencap files committed | 32 (16 surfaces × 2 themes) | `ls app/web/static/guide/` |
 | …of an Operations surface | **0** | the same listing |
 | Lines in the screencap test | 285 | `wc -l tests/integration/test_guide_screencaps.py` |
-| Specs to write from | 4 surfaces, 24–35 files mentioning each | `grep -rli` per surface |
+| Spec files mentioning each surface | 23 / 18 / 24 / 11 | `grep -rlF '<surface>' spec/ \| wc -l` |
 | New screencaps this item adds | 8 (4 surfaces × 2 themes) | the Decision |
 
 ### PR ladder
@@ -1755,8 +1793,7 @@ Taken 2026-09-12 at `40a0b663`.
   `test_guide_screencaps.py` passes in both directions.
 - Nothing in the new copy describes behaviour that is not wired, or it
   carries the same caveat the reminder sentence already does.
-- 19J.7's outstanding screencap-retake commitment is either satisfied
-  by this item's captures or explicitly re-scoped in `## Status`.
+- The existing 16 screencaps are left alone; this item only adds.
 - `.venv/bin/pytest` and `ruff check .` both pass in the agent container
   before pushing.
 - `spec-writer` run **before** pushing.
@@ -1778,16 +1815,14 @@ Taken 2026-09-12 at `40a0b663`.
   dropped.
 - **Segment 20's currency pass**, which re-reads the Guide against the
   deployed reality and is correctly blocked on the host.
-- **Screencap retakes of the 16 setup surfaces.** They are current as of
-  19J; only 19J.7's specific retake commitment is in scope, and only to
-  be settled either way.
+- **Screencap retakes of the 16 setup surfaces.** Measured current at
+  19J.7's close and untouched here.
 
 ### Doc impact
 
 - `app/web/templates/guide.html` — the four new sections (Item 8).
-- `spec/operations_pages.md` — records that the Guide documents these
-  four surfaces, so the spec and the operator-facing copy point at each
-  other (Item 8).
-- `guide/archive/segment_19J_assessment_moves.md` — 19J.7's screencap
-  commitment settled, since this item is where it lands (Item 8).
+- `spec/operations_pages.md` — records that the Guide documents
+  Invitations and Responses, the two surfaces this spec covers (Item 8).
+- `spec/validate_page.md` — the same, for Validate (Item 8).
+- `spec/extract_data.md` — the same, for Extract data (Item 8).
 - `docs/status.md` — row when the item closes (Item 8).
