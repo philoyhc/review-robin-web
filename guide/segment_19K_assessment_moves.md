@@ -866,6 +866,33 @@ stand unremarked — "the printed committed-path count quietly smaller
 than the manifest it had just read" is the sentence Item 1 was opened
 on, and it is true of this close too.
 
+**`spec-writer` pass (checker, 2026-09-11) — two flags, both upheld, both
+after the PR had merged.** It verified every figure above independently
+(147/162, 259/274, the two 112s, 37 of 42, 19I's 1 of 13, 35 of 40
+byte-identical) by re-running the tool at `0e2850e1` in a worktree, and
+found:
+
+1. *A performance regression the item did not measure.* Reading every
+   level asks each plan's `Doc impact` pickaxe once per item — 13 times
+   for 19I — taking `--archived` from **258 `git log` calls / 5.9s** to
+   **491 / 17.8s**. Memoising `_first_commit_matching` on
+   `(plan, pattern)` brings it to **417 / 11.3s**: 15% fewer calls for
+   37% less time, because the calls it removes are the `-G` pickaxes,
+   which scan a file's whole history rather than a range. The rest of the
+   gap is not waste — 274 paths are checked where 162 were. The
+   `~3s` in `tools/README.md` was the tool's own first-commit figure and
+   was already wrong at 5.9s before this item touched it.
+2. *A referent broken by insertion.* The sweep paragraph was inserted
+   between the close check's two-exclusion list and the sentence "Both
+   are printed at the point of use", so "Both" followed three limits —
+   and wrongly, since the sweep's defect is fixed rather than printed.
+   The paragraph now sits after that sentence, which says which two.
+
+**That both landed after the merge is the cost of running the checker in
+parallel with the push.** The alternative is a slower close, and the
+corrections are a commit rather than a rewrite, so the trade held here —
+but it is a trade, not a free win, and worth naming as one.
+
 **The finding worth keeping.** `_archive.py` had **no tests** — the
 blast-radius table's one zero — and that is not incidental to the
 defect, it is the whole explanation for it. The sweep was run on this
