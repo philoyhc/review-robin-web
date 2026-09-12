@@ -331,6 +331,11 @@ Not answered here; recorded so they are not rediscovered.
 **explicitly separable from it**: this stands whether or not the Rosters
 consolidation ever happens, and entry 1 should not wait on it.
 
+> **✅ Graduated 2026-09-12 to `guide/segment_19L_ux_refinements.md`
+> Item 1**, on the author's instruction. The plan is authoritative for
+> the work; this entry stays as the record of how the observation arose
+> and why it was judged separable. Entry 1 remains an idea, not an item.
+
 ### The observation
 
 On the sessions lobby, selecting a row injects an action panel beneath it
