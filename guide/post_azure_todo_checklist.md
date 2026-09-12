@@ -186,3 +186,50 @@ The 19J.8 row is here for a different reason: the suite can prove the
 fragment is emitted and that it names a real id, but not that the
 browser stops somewhere an operator finds useful. Closing 19J.8 is that
 row plus a dated line in its `### Status`.
+
+---
+
+## 4. Measure whether the deployed slot compresses a response
+
+**Status:** open. Blocked on a deploy — the **dev slot is enough**; this
+does not wait for the institutional cutover.
+
+**What.** Take one number: does a response from the deployed app come
+back with `Content-Encoding: gzip`, and what is its wire size. Segment
+19K Item 9 cannot choose among its three options without it, and two of
+the three are architecture changes that should not be made on a guess.
+
+**Why it cannot be checked here.** Compression in transit is a property
+of the platform, not of the code — `app/main.py` registers no
+compression middleware, so whichever answer comes back is Azure's, and
+`grep` cannot see it. The agent container also cannot ask: its network
+policy refuses the slot, returning `403 CONNECT tunnel failed`
+(tried 2026-09-12). This is the second entry here whose blocker is *a*
+deploy rather than *the* institutional one, and unlike Item 3 it is not
+a thing to look at — it is a header to read.
+
+**Done when** this has been run once, from any machine that can reach
+the slot, and the answer is written into 19K Item 9's `## Status`:
+
+```
+curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
+  https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/operator/sessions
+```
+
+| Record | Where to find it | What it decides |
+|---|---|---|
+| `Content-Encoding` present or absent | the response headers above, or devtools → Network → Response Headers | Present → the ~200 KB page is ~50 KB on the wire, and 19K.9's answer is probably "do nothing, measured". Absent → the whole 200 KB goes out uncompressed on an F1 plan, and compression middleware is one line |
+| `Content-Length` | the same headers; devtools shows it as "transferred" beside "resource" size | The actual wire cost, against the 195.9–244.1 KB rendered sizes measured in the container |
+
+Easy Auth sits in front, so an unauthenticated `curl` may return a
+redirect to the login page rather than the operator page. **That answer
+still counts if the response is large enough to be worth compressing** —
+if it is a short redirect, take the reading from devtools on a real
+signed-in page instead, which is the more faithful measurement anyway.
+
+**Where this came from.** `guide/segment_19K_assessment_moves.md` Item 9,
+whose rung 1 *is* this measurement and whose three candidate answers
+stay open until it exists. The item records the container-side numbers
+already taken: the same 157.7 KB of inline CSS is **64.6–80.5% of every
+operator page**, byte-identical across four pages, re-sent on every
+navigation across 34 templates.
