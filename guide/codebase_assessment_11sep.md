@@ -269,12 +269,12 @@ routed surfaces, and this segment did not touch one.
 | Sys-admin + three-tier roles | `spec/permissions.md`, `docs/security_posture.md` | ✓ shipped |
 | Light/dark mode | `spec/visual_style_rrw.md` | ✓ shipped 2026-08-21 |
 | Two-tier semantic colour tokens | `spec/color_tokens.md` | ✓ shipped 2026-08-23 |
-| Theme customizer (developer) | `guide/theme_customizer.md` | ✓ v1.1 shipped 2026-09-06 |
+| Theme customizer (developer) | `guide/archive/theme_customizer.md` | ✓ v1.1 shipped 2026-09-06 |
 | Email template editor | `spec/email_template_editor.md` | ✓ shipped 2026-09-05 |
-| Operator theming (in-app tweaker) | `guide/theme_customizer.md` Stretch | ⏸ planned — `guide/deferred_consolidated.md` Part A |
+| Operator theming (in-app tweaker) | `guide/archive/theme_customizer.md` Stretch | ⏸ planned — `guide/deferred_consolidated.md` Part A |
 | Email dispatch / invitations | `guide/segment_14B_email_infrastructure.md` | ⛔ blocked — SMTP backend + outbox rows exist, no live send |
 | Blob storage | `spec/blob_storage.md`, `guide/segment_18Q_blob.md` | ⏸ planned — awaiting institutional storage account |
-| **In-place table page turns** | **`guide/inplace_pagination_assessment.md`** | **⏸ off-roadmap by decision 2026-09-11 — `guide/deferred_consolidated.md` Part C, with the trigger that would move it back** |
+| **In-place table page turns** | **`guide/archive/inplace_pagination_assessment.md`** (decision promoted to `spec/ui_elements.md` §10, 2026-09-12) | **⏸ off-roadmap by decision 2026-09-11 — `guide/deferred_consolidated.md` Part C, with the trigger that would move it back** |
 | Technical-support contact (global) | none — stub in `guide/todo_master.md` | ⏸ planned; unhomed since 2026-09-08 |
 
 **No ⚠ drift rows.** The 10sep table's only one (the Assignments "Self-reviews

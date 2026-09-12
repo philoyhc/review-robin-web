@@ -715,6 +715,34 @@ roster size: five clicks to row 2,400 of 5,861, fifty to the middle of
 messages from 19J.5 through 19J.8, and a reader who greps for one should
 find out that it is gone rather than that the spec is silent.
 
+**A page turn reloads the page, and that is settled rather than
+pending.** Swapping the table in place — a fragment endpoint per page,
+the table markup extracted to a partial, history handling — was measured
+against the reload and **rejected outright, not deferred**.
+
+Measured 2026-09-11, on local SQLite rather than Azure Postgres: the
+reload costs ~413 KB and 21 ms at 556 rows (116 ms at 5,000), and the
+swap's real precondition is 928 lines of table markup inline across
+seven templates, none of it in a partial. Treat those figures as a
+dated snapshot — the assessment they come from was wrong once already,
+and corrected itself twice.
+
+But the deciding argument is intent, not cost. The one case a reload is
+mildly jarring is a click on the **bottom** pager strip, which sends the
+viewport back up; an operator who turns a page and then stays on it is
+almost always intending to read the new range from its start, so the
+jump and the intent point the same way. That is a firmer reason to stop
+than the cost tables are: cost argues *not yet* and invites the question
+back every few segments, whereas this argues **not at all**.
+
+Build the swap only if something else comes to need it — live-updating
+rows, or a page turn that must not lose an in-progress edit — never to
+fix the scroll. If it is ever built, the partial extraction lands first
+on its own with no behaviour change, so the swap rung is a swap and not
+a rewrite. The measurements and the three cheaper options considered are
+in `guide/archive/inplace_pagination_assessment.md`; re-take the numbers
+rather than trusting them, as that document itself says.
+
 `.setup-nav` is a candidate for deletion (see §2).
 
 **`.subcard-row`.** A row of equal-width tiles laid across the inside
@@ -883,6 +911,12 @@ can still read the migration shape.
 
 The pilot resolved the original Open questions and surfaced a few
 new patterns:
+
+- **A page turn reloads, and that is settled.** The in-place table swap
+  was measured and rejected outright rather than deferred — build it only
+  if something else comes to need it, never to fix the scroll. Stated in
+  full in §10 beside `.table-pager-cluster`, because it governs the pager
+  every roster-bearing page shares rather than any one page's spec.
 
 - **Hover by fill** (now `visual_style_general.md` P6). Filled controls
   lighten on hover; outline controls darken with a subtle bg
