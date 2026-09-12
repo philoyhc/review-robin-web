@@ -2791,13 +2791,14 @@ admitted, anything else gets its own segment.
   `rrwSortHeaderClick` through an inline `onclick`, so the handler
   arrives with the markup — and two of the four named blocks are not
   table-relevant at all.
-- **Item 3 — decide whether the Invitations / Responses N+1 gets an
-  item.** `monitoring.py:275` loops reviewees, then their assignments,
-  issuing one `select(Response)` per assignment: 40,433 and 80,432
-  queries at 200×200. Paging cut the HTML, not the work. The item is the
-  **decision**, and "not yet, and here is the trigger" is a permitted
-  answer; it must be recorded outside a plan's Out of scope wherever it
-  lands.
+- ~~**Item 3 — decide whether the Invitations / Responses N+1 gets an
+  item.**~~ **Done 2026-09-12 — decided and fixed.** The re-measurement
+  held exactly (paging had changed the HTML and not the work), and it
+  located ~99% of both pages in two call sites, so the decision came out
+  "fix it now" rather than "defer with a trigger". One prefetch per
+  session in place of one query per assignment: **40,433 → 434 and
+  80,432 → 434** at 200×200. Recorded in `spec/operations_pages.md`,
+  which is where the next reader looks.
 
 **The first finding arrived before the first build**, which is the
 argument for measuring blast radius at planning time: Item 2's premise

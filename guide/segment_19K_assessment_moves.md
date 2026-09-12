@@ -732,6 +732,37 @@ other session rows.
 true.* Writing the test after the mutation escaped did not stop it
 happening again; only running the mutation a second time did.
 
+**`spec-writer` pass (checker, 2026-09-12) — run *before* the push, for
+the first time.** The three previous items ran it in parallel with the
+push and each collected corrections after the merge; the Author changed
+the order for this item. It found three things, all fixed here rather
+than as a follow-up:
+
+1. **The new function's docstring contradicted the rest of the change.**
+   It said the per-assignment lookup "scaled linearly" — the whole point
+   is that it scaled with the *square* of the roster and the prefetch is
+   what makes it linear — and it attached the 50×50 figure to a sentence
+   about 200×200. Rewritten with both roster sizes named.
+2. **`guide/todo_master.md` still listed Item 3 as open roadmap work**,
+   and `guide/codebase_assessment_11sep.md` still called the N+1
+   "measured and unfixed" in §6 and recommended deciding it in §8 — a
+   snapshot overtaken one day after it was written. Struck and annotated
+   rather than rewritten, per the assessment convention, and both gained
+   manifest bullets. They are visible to `close_check` at all because of
+   19K.1, and nameable in a manifest because of 19K.5.
+3. An alphabetical-ordering slip in `responses/__init__.py`.
+
+It also **verified something this item had not**: the last-write-wins
+concern in `_assignment_complete`'s `by_field` dict is moot, because
+`Response` carries `UniqueConstraint("assignment_id",
+"response_field_id")` — two rows cannot share a field id on one
+assignment, so row order cannot matter in either path. That is a
+correctness question the item had reasoned about and not checked.
+
+**Running the checker before the push cost about eight minutes and
+changed what landed.** Three items in a row had merged with corrections
+outstanding; this one merged correct.
+
 **One mutation was reclassified rather than fixed.** Dropping the
 `session_id` filter is **not** a correctness bug: assignment ids are
 globally unique, so a superset keyed by assignment id answers every
@@ -781,6 +812,11 @@ test.
 - `spec/operations_pages.md` — records what the two pages cost to render
   and what was decided about it, so the next reader finds it on the
   page's own spec rather than in a closed plan (Item 3).
+- `guide/todo_master.md` — the Item 3 roadmap entry struck and marked
+  done, since it still described the decision as open (Item 3).
+- `guide/codebase_assessment_11sep.md` — §6's "measured and unfixed"
+  weakness and §8's third recommended move, both settled the day after
+  they were written; struck and annotated rather than rewritten (Item 3).
 - `docs/status.md` — row when the item closes (Item 3).
 
 ---

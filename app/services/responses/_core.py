@@ -854,10 +854,17 @@ def responses_by_assignment(
     """Every response row in a session, keyed by assignment id.
 
     One query where the per-assignment lookup it replaces issues one
-    *per assignment*. Measured 2026-09-12 at a 200x200 roster (40,000
-    assignments), that lookup was 2,500 of the Invitations page's 2,633
-    queries at 50x50 and scaled linearly: **40,433 and 80,432 queries**
-    to render Invitations and Responses once.
+    *per assignment*, which is why the pages it serves scaled with the
+    **square** of the roster: a reviewer rollup walks every reviewer,
+    and each reviewer's assignments are proportional to the roster too.
+
+    Measured 2026-09-12 through the real routes. At 50x50 (2,500
+    assignments) that lookup was 2,500 of the Invitations page's 2,633
+    queries; at 200x200 (40,000 assignments), rendering Invitations and
+    Responses once cost **40,433 and 80,432 queries**. With this
+    prefetch both are **434** — linear in the roster rather than
+    quadratic in it, the residual being roughly two queries per
+    reviewer.
 
     Joined on ``Assignment.session_id`` rather than an ``in_`` over the
     ids: the id list is the assignment count, which is the thing that
