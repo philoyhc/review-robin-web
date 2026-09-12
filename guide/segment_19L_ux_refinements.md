@@ -13,6 +13,20 @@ they are noticed, in the shape 19J and 19K used.
 and `### Status`, and there is **no segment-level `## Doc impact`**.
 `python3 tools/close_check.py 19L.1` reads Item 1's manifest.
 
+**Segment status — 2026-09-12.** Items 1 and 2 have both closed, and
+**the segment stays open** on the author's instruction. Nothing moves to
+`guide/archive/` until it closes; that is the rule for an item close and
+it is also what an open segment means. Two things are on record as
+candidate next items rather than as loose ends: whether the archived
+sessions page should carry the bracket (19L.2 open question 2, closed
+undecided), and whether the bulk expander's title and Tags rows should
+merge (mocked up and declined, 19L.2 Decision).
+
+**Item 3 opened 2026-09-12**, on the author's ruling that the archived
+sessions page should follow the same conventions — which reversed 19L.2's
+open question 2, closed hours earlier as undecided. The other candidate,
+merging the bulk expander's title and Tags rows, stays declined.
+
 **What belongs here.** A refinement to a surface that already ships:
 a visual state, a copy fix, an affordance that is present but weak. Work
 that adds a page, a card, or a navigation affordance is a segment of its
@@ -198,21 +212,53 @@ leave a half-marked row in `main`.
 - `### Status` records intended vs done
 - `docs/status.md` row added
 
-### Open questions
+### Open questions — closed 2026-09-12
 
-1. **What is the expression?** Candidates, none chosen: a pale fill
-   (`--chip-selected-bg`'s row analogue); a left edge in `--selected-bg`,
-   which echoes the chip's 2px edge without filling the row; a weight or
-   rule change. Decided by rendering them, not by argument — the theme
-   customizer exists for exactly this.
-2. **Does select-all mark every row?** Semantically yes; at 50 rows it
-   may read as noise rather than signal. Worth rendering before deciding.
-3. **Does the marking become a shared primitive?** If the Rosters idea is
-   ever built it needs the same thing. Naming it in `spec/ui_elements.md`
-   §10 makes it reusable; leaving it lobby-local avoids designing for one
-   speculative caller.
-4. **Does the panel keep its count-only title?** Out of scope here, but
-   the two decisions interact.
+1. ~~**What is the expression?**~~ **Answered twice**, and stated by the
+   author on 2026-09-12 in the form that now governs:
+
+   > Edge on both selected row(s) and action row; selected row no
+   > additional infill; action row blue infill; action row should not
+   > host any pills.
+
+   Four clauses, and each is load-bearing: the rail runs on the row
+   **and** the panel, or there is no bracket; the row takes **no** fill,
+   which is the whole of the 19L.2 fix; the panel takes the blue the row
+   gave up; and the panel's freedom to wear that blue is **conditional on
+   it never rendering a pill**, since the fill is `--status-info-bg`'s own
+   primitive. *Recorded here as the governing statement rather than
+   paraphrased — the fourth clause is a constraint on future work, not a
+   description of present work, and it is the one a paraphrase would
+   drop.*
+
+   The route there is worth keeping: the author first chose edge *and*
+   fill from a rendered specimen board, and 19L.2 removed the fill once
+   it was seen erasing every pill on the row. *The question was right to
+   insist on a rendering; one rendering was not enough, because the board
+   showed the candidates against each other and not against a row's own
+   contents.*
+2. ~~**Does select-all mark every row?**~~ **Yes, and the fifty-row
+   worry is now moot rather than answered.** It was a worry about *fill*
+   — fifty tinted rows reading as a new background. 19L.2 left no fill to
+   tint with, and a rail at each end of an otherwise untouched row cannot
+   become the page's background. **Confirmed by the author, 2026-09-12:
+   "Correct."**
+3. ~~**Does the marking become a shared primitive?**~~ **No — still
+   lobby-local, and now for a better-evidenced reason.** It has one
+   caller. The speculative second, the Rosters index, is recorded in
+   `guide/new_ux_ideas.md` with the transfer question stated rather than
+   assumed: the bracket was designed for one wide row in a tall table of
+   *like* things, and a Rosters index is four *unlike* things where one
+   action is Clear all. Promoting it now would export a primitive to a
+   page whose requirements have not been established. **Confirmed by the
+   author, 2026-09-12: "Local lobby."** Note this is *not* contradicted
+   by 19L.3 below: the archived page adopting the same convention is a
+   second caller inside the same lobby family, not a promotion of the
+   class to a general primitive.
+4. ~~**Does the panel keep its count-only title?**~~ **Yes, untouched** —
+   the author's words, 2026-09-12. Out of scope at planning time and
+   still out of scope: 19L.2 changed the panel's fill and gave it rails,
+   and deliberately did not touch its copy.
 
 ### Out of scope
 
@@ -344,7 +390,12 @@ deployed page.
   and its count is corrected. Not named at planning time; added when the
   build chose a new role over reusing the chip's token (Item 1).
 - `guide/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
-  (Item 1).
+  (Item 1). *Honoured, then superseded: Item 2 removed entry 2 outright
+  on the author's instruction — session lobby work is segment work, not
+  an idea awaiting pilot evidence — so a reader following this bullet
+  today will find no entry 2 to inspect. The annotation existed; the
+  entry it annotated does not. Left as written rather than rewritten,
+  per* never rewrite intent.
 - `docs/status.md` — row when the item closes (Item 1).
 
 ---
@@ -532,16 +583,31 @@ so a reviewer can object to it on its own.
 - `## Status` records intended vs done
 - `docs/status.md` row added
 
-### Open questions
+### Open questions — closed 2026-09-12
 
-1. **Does a scattered selection read as clutter on a fifty-row lobby?**
-   Decided by the author on the dev slot; the static specimens cannot
-   settle it.
-2. **Should the archived page follow?** Its rows have never been marked,
-   so it is consistent with itself today. A follow-up item if the
-   divergence bothers the author on the dev slot.
-3. **Does the rail alone hold a lone selected row whose panel is
-   off-screen?** Two marks ~900px apart with nothing between. Dev slot.
+The author ran the dev slot (local host), reported *"Session Lobby checks
+out,"* and then answered each question directly.
+
+1. ~~**Does a scattered selection read as clutter on a fifty-row
+   lobby?**~~ **No — author, 2026-09-12: "It's fine."** *An earlier
+   version of this block closed the question on the general pass alone
+   and said so, noting that nothing established a fifty-row scattered
+   selection had actually been exercised. The author's direct answer
+   replaces that hedge, and the hedge is left on the record here because
+   the two are different grades of evidence and the file should not
+   pretend it always had the better one.*
+2. ~~**Should the archived page follow?**~~ **Yes — author, 2026-09-12:
+   "Archive page should follow the same conventions."** *This reverses
+   what this block said hours earlier.* It had closed **undecided**, on
+   the reasoning that the dev-slot pass covered the lobby and said
+   nothing about a different page, so the divergence 19L.2 deliberately
+   created should stand until someone looked at it. That was the right
+   call on the evidence then available and the wrong answer: the author
+   had a convention in mind, not a per-page verdict. **Opened as Item 3**
+   rather than folded in here, because 19L.2 has closed and its Status is
+   a record of what shipped.
+3. ~~**Does the rail alone hold a lone selected row whose panel is
+   off-screen?**~~ **No problem — author, 2026-09-12: "It's fine."**
 
 ### Out of scope
 
@@ -642,3 +708,147 @@ row whose panel is off-screen.
   is segment work, not an idea awaiting evidence, and the entry has been
   superseded twice over (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).
+
+---
+
+## Item 3 — the archived page did not follow the lobby out of 19L.2
+
+### Opportunity
+
+19L.2 gave the sessions lobby a selection bracket and deliberately kept
+it off `sessions_archived.html`, whose expander carries **the same two
+class names** (`session-expander session-expander-bulk`) from its own
+script and whose rows have never been marked at all. An unscoped rule
+would have given that page the closing half of a bracket with no opening
+half, so the lobby opted in by class instead.
+
+That was correct as a mechanism and wrong as an outcome. The two pages
+are siblings — the archived page is reached from the lobby's *Go to
+Archive*, renders the same table shape, and injects a bulk panel of the
+same construction — and they now select differently. **The author's
+ruling, 2026-09-12: *"Archive page should follow the same
+conventions."***
+
+The gap is narrow because 19L.2 built for it without meaning to: the
+opt-in class exists, the CSS behind it exists, and the archived page's
+`refreshExpander()` is the same shape as the lobby's, anchor and
+tick-order included.
+
+### Decision
+
+**Adopt the lobby's convention wholesale on the archived page**: mark
+selected rows with `session-row-selected` from that page's own
+`refreshExpander()`, and add `session-expander-bracketed` to its
+expander template.
+
+**No new CSS.** Every rule this needs shipped in 19L.2 — the rails, the
+panel fill, the opt-in class. This item is a template class and a
+JavaScript function.
+
+**Rejected — generalising the marking into a shared primitive.** Item 1's
+open question 3 asked exactly this and the author answered *"Local
+lobby"* on the same day. A second caller inside the same lobby family is
+not the general primitive that question declined; promoting the class to
+`spec/ui_elements.md` as a reusable layout primitive is still not done,
+and the Rosters transfer question in `guide/new_ux_ideas.md` still stands
+unanswered.
+
+**Rejected — sharing one script between the two pages.** They have
+diverged deliberately: the lobby has single *and* bulk expanders, editable
+fields, a purge-options block and a duplicate action; the archived page
+has one bulk panel with Unarchive and Delete. Factoring a common selection
+module is a larger change than this item, and would be the kind of
+abstraction-for-a-second-caller that Item 1's question 3 warned about.
+Duplicating ~10 lines of marking is the cheaper mistake to unwind.
+
+### Semantics
+
+- **No selection** — unchanged; no rails, no panel.
+- **One or more rows** — each selected row takes rails at both ends; the
+  panel, anchored after the most recently ticked row still selected,
+  takes both rails and `--selection-panel-bg`.
+- **Select-all** — the archived page's select-all sets `checked`
+  programmatically and fires no row `change` events, exactly as the
+  lobby's does. The marking must therefore live in `refreshExpander()`,
+  which both its handlers already call, and not on the row checkboxes.
+- **The panel must render no pill.** Its fill is `--status-info-bg`'s
+  primitive. The archived panel's title is `<strong>N</strong> sessions
+  selected` in plain text today, and must stay that way.
+- **The page's own pills are unaffected**, because the rows take no fill
+  — which is the point of the 19L.2 design and the reason this item is
+  safe to apply to a page whose every row carries four `.pill-count`s and
+  a grey `.pill-lifecycle-archived`.
+
+### Judgment calls — decided
+
+- **Duplicate `markSelectedRows` rather than extract it.** Ten lines
+  against a shared module between two scripts that have deliberately
+  diverged. 2026-09-12.
+- **The archived page's `<template>` gains the class in markup**, as the
+  lobby's two did, rather than having the script add it after cloning —
+  same mechanism on both pages, and greppable. 2026-09-12.
+
+### Blast radius (measured)
+
+Commands run at `2d51c18e`, 2026-09-12:
+
+- `grep -n "session-expander\|refreshExpander\|archived-list-select-row" app/web/templates/operator/sessions_archived.html`
+  — **13** hits in the one template: a `<template id="archived-bulk-expander">`,
+  its `<tr class="session-expander session-expander-bulk">`, and a
+  `refreshExpander()` with the same `currentAnchor()` / `tickOrder`
+  shape as the lobby's.
+- `grep -n 'class="pill' app/web/templates/operator/sessions_archived.html`
+  — **9**: four `.pill-count` per row (Created by, Created, Archived,
+  Timezone) plus one per tag, and a `.pill-lifecycle-archived`. None is
+  inside the expander.
+- `grep -rln "session-row-selected" app/ spec/ tests/` — **5**, none of
+  them the archived page.
+- CSS needed: **0 new rules.**
+
+### PR ladder
+
+One rung. A class and a function; splitting it would ship a page that
+marks rows under a panel that does not close the bracket, or the reverse.
+
+### Definition of done
+
+- `sessions_archived.html`'s expander `<tr>` carries
+  `session-expander-bracketed`.
+- Its `refreshExpander()` calls a `markSelectedRows()` that clears every
+  row before marking the selected set.
+- No CSS added to `base.html`.
+- A guard covers the archived page, and the 19L.2 guard that asserts the
+  archived page does **not** carry the class is updated rather than
+  deleted — its reason has changed, and a test that silently disappears
+  takes its reason with it.
+- `.venv/bin/pytest` green; `ruff check .` clean.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19L.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+1. **Does the archived page want the single-row expander too?** It has
+   only a bulk panel today, so a lone selected row gets a panel headed
+   *"1 sessions selected"* — a pre-existing wrinkle this item does not
+   touch. Decided by the author if it grates.
+
+### Out of scope
+
+- **Extracting a shared selection module** — rejected above.
+- **Promoting `.session-row-selected` to a general layout primitive** —
+  Item 1 question 3 declined it and this item does not reopen it.
+- **The archived panel's copy**, including the *"1 sessions selected"*
+  plural. Pre-existing; open question 1.
+
+### Doc impact
+
+- `spec/sessions_overview.md` — the archived-sessions child page section
+  records that it now marks selected rows on the lobby's convention, and
+  the note saying it deliberately does not is corrected (Item 3).
+- `spec/ui_elements.md` — the `.session-row-selected` entry's "lobby-local"
+  wording gains its second caller, without promoting it to a primitive
+  (Item 3).
+- `docs/status.md` — row when the item closes (Item 3).
