@@ -99,7 +99,14 @@ def parse_semantic(base_css):
 #: A rule's text colour. The lookbehind is load-bearing: ``border-color``
 #: ends in ``color`` and is a boundary, not text.
 _FG_RE = re.compile(r"(?<![-\w])color\s*:\s*var\((--[a-z0-9-]+)\)")
-_BG_RE = re.compile(r"background(?:-color)?\s*:\s*[^;]*?var\((--[a-z0-9-]+)\)")
+#: A gradient's first ``var()`` is a colour *stop*, not the fill behind
+#: text, so a rule pairing ``color:`` with a gradient would otherwise
+#: yield a pair that never renders. Latent when this was written —
+#: ``base.html``'s two gradient rules set no ``color:`` — and wrong the
+#: first time one does.
+_BG_RE = re.compile(
+    r"background(?:-color)?\s*:\s*(?![^;]*gradient\()[^;]*?var\((--[a-z0-9-]+)\)"
+)
 
 #: Every innermost ``selector { declarations }`` pair. ``[^{}]*`` cannot
 #: cross a brace, so it lands inside ``@media`` wrappers rather than on
@@ -130,9 +137,13 @@ def resolve_semantic(sem_map, prims, token, depth=0):
 def collect_contrast_pairs(base_css):
     """``{(fg_token, bg_token): provenance}`` — every pair the palette forms.
 
-    Gathered rather than listed, because a hand-kept list of pairs decays:
-    the twelve this replaced had drifted to include a token that no longer
-    exists, and missed the pair that carried a live AA failure.
+    Gathered rather than listed, because a hand-kept list of pairs decays
+    two ways, and the one this replaced showed both — though not at the
+    same moment, and the distinction is worth keeping straight. It named
+    ``--text-dim`` until 19K.7 retired that token and removed the row; and
+    it was, separately and throughout, missing 62 of the 73 pairs the
+    palette forms, one of them carrying a live AA failure. The twelve
+    actually replaced here were correct, and incomplete.
 
     Four sources, and the provenance string says which, because knowing
     where a pair comes from is most of judging it:

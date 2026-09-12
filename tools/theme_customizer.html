@@ -3996,6 +3996,8 @@
     .tc-cx-badge.pass { background: var(--status-success-bg); color: var(--status-success-fg); }
     .tc-cx-badge.warn { background: var(--status-warning-bg); color: var(--status-warning-fg); }
     .tc-cx-badge.fail { background: var(--status-error-bg); color: var(--status-error-fg); }
+    .tc-cx-badge.unresolved { background: var(--surface-muted); color: var(--text-subtle);
+      border: 1px dashed var(--border-default); }
     /* The one thing this panel exists to make obvious: a pair under AA
        normal. An outline rather than a colour swap, so it reads on the
        ratio itself and survives both themes. */
@@ -4747,7 +4749,20 @@
     function updateContrast() {
       document.querySelectorAll(".tc-cx").forEach(function (row) {
         var fg = resolve(row.getAttribute("data-fg")), bg = resolve(row.getAttribute("data-bg"));
-        if (!fg || !bg) return;
+        if (!fg || !bg) {
+          // A remap can leave a token unmapped or cyclic, and `resolve`
+          // returns null. Returning here left the row painted with its
+          // last-good ratio AND its last-good red outline — a stale row
+          // reading as current, in the one case where recomputing is the
+          // whole point. Clear it instead, and say why.
+          var ur = row.querySelector(".tc-cx-ratio");
+          ur.textContent = "—"; ur.classList.remove("below-aa");
+          var ub = row.querySelector(".tc-cx-badge");
+          ub.textContent = "?"; ub.className = "tc-cx-badge unresolved";
+          ub.title = "one side of this pair does not resolve to a colour — "
+            + "an unmapped token, or a coupling cycle";
+          return;
+        }
         var r = contrast(fg, bg), pass = r >= 3.0;
         row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
         var b = row.querySelector(".tc-cx-badge");

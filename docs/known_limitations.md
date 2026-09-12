@@ -118,7 +118,8 @@ bugs — they trace to the Segment 14A plan and
   recomputes live as tokens are remapped.
 - **What the sweep cannot see.** A pair is found only where one
   rule sets both halves, the token names match (`--x-fg` /
-  `--x-bg`), or the background is a `--surface-*`. Text inheriting
+  `--x-bg`), the background is a `--surface-*`, or the foreground
+  is one of the two the `ON_FILL` map names. Text inheriting
   a background from a distant ancestor is invisible to all three
   and no static reading of the stylesheet will find it.
 - **Not yet measured at all:** keyboard-only navigation end to

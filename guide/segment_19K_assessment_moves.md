@@ -1969,8 +1969,8 @@ four documents and enforced in one test; the 135 *passing* pairings
 were recorded nowhere — the audit could be enforced but not looked at.
 The customizer's Contrast panel already existed for exactly this and
 was carrying **12** hand-listed pairs, which is the same defect one
-level up: it had drifted to include `--text-dim`, retired by this
-item, and it missed the `--nav-home-bg` pair that was failing AA. So
+level up: it was missing 62 of the palette's pairs, including the
+`--nav-home-bg` one that was failing AA. So
 the panel now renders a row per pair from `hc.collect_contrast_pairs`
 — the single definition, which the test imports rather than
 re-implements — with sub-AA outlined in red, a live count per group
@@ -2004,6 +2004,59 @@ The first render was wrong in a way only looking could catch: at three
 columns the labels ellipsised to `subtle → ti…`, so a reader could see
 a red 3.32 and not what it belonged to. Cells widened, and the tooltip
 now carries the token names rather than only the provenance.
+
+
+**The second `spec-writer` pass, on the panel, found the bug the first
+one could not have.** Five flags; the one that matters is a defect in
+the panel's own JavaScript.
+
+- **A stale row reading as current.** When a remap leaves a token
+  unmapped or in a coupling cycle, `resolve` returns null and
+  `updateContrast` **returned** — leaving that row painted with its
+  last-good ratio *and* its last-good red outline, while the counts
+  summed the stale class and agreed with it. So the panel stayed
+  internally consistent and collectively wrong, in exactly the case
+  where recomputing is the point, against prose promising it
+  "recomputes live as tokens are remapped". Reproduced against the
+  pre-fix page before fixing: unmapping `--lifecycle-ready-fg`, which
+  carries one of the 7 outlined rows, left the count at **7**. After:
+  **6**, the row cleared to `—` with a dashed `?` badge. *The promise
+  a tool makes in prose is the first place to look for the case it
+  does not handle.*
+- **A claim of mine that does not survive `git log`**, and the most
+  useful flag of the five. "The twelve had drifted to include
+  `--text-dim`" is false of the twelve actually replaced: **this
+  item's own earlier commit `6f39accd` had already removed that row**,
+  taking the list 13 → 12. Both things are true — the list named a
+  retired token, and the list was missing 62 pairs — but they were
+  true a few commits apart, and compressing them into one sentence
+  invented a state that never existed. Corrected in five places, the
+  canonical one being `collect_contrast_pairs`' docstring that the
+  rest echo. The commit message keeps the original wording; the
+  correction rides the next commit rather than an amend, because the
+  correction is itself part of the record.
+- **One of the twelve is genuinely absent from the 73**, and the
+  checker was right to refuse my "no coverage lost" framing until it
+  was checked: the old list paired `--btn-destructive-fg` with
+  `--surface-page`, where the rule actually sets
+  `--btn-destructive-bg`. Measured both themes — the two resolve
+  identically (`#ffffff` light, `#0f141b` dark) — so the old row was
+  an approximation the derived pair supersedes, and nothing moves.
+- **A latent wrong pair.** `_BG_RE` would match a gradient's first
+  colour *stop* as if it were the fill behind text. Not triggered —
+  `base.html`'s two gradient rules set no `color:` — and wrong the
+  first time one does. Guarded; the count stays 73, which is what
+  "latent" should look like.
+- **`docs/known_limitations.md` still enumerated three sources** where
+  there are four. The identical omission the first pass caught in the
+  test's docstring, never propagated to the document a reader meets
+  first — and sitting four lines under text this item had just
+  edited. *A correction reaches the place it was found and no further
+  unless someone walks it.*
+
+Also upheld and not changed: `setdefault` means a pair reachable by
+more than one source — **31 of the 73** — shows only the first, so
+`tools/README.md` now says that is provenance rather than exclusivity.
 
 
 **Decisions confirmed at build:**
