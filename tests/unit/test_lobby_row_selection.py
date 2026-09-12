@@ -1,4 +1,4 @@
-"""A selection is marked by a bracket, not by a fill. Segment 19L Items 1-2.
+"""A selection is marked by a bracket, not by a fill. Segment 19L Items 1-3.
 
 19L.1 gave the selected row an edge and a fill. The fill was
 ``--row-selected-bg``, which resolves to the *same primitives as*
@@ -17,6 +17,14 @@ rail at **each** end, and the injected action panel takes the same pair,
 so the selection and the controls that act on it read as one bracket.
 The retired fill's primitives move to that panel, where there are no
 pills to erase.
+
+19L.3 carries the same convention to the archived sessions page, which
+19L.2 had deliberately left out: it injects a panel with the *same* class
+names from its own script, so an unscoped rule would have given it the
+closing half of a bracket whose rows were unmarked. It opts in now, by
+the same class, with its own copy of the marking function — the two
+scripts have diverged on purpose and a shared module built for its second
+caller is the more expensive mistake to unwind.
 
 **What these assert, and what they cannot.** The suite has no JavaScript
 runtime, so nothing here proves a row *becomes* marked when ticked — that
@@ -186,13 +194,23 @@ def test_the_rails_do_not_change_the_row_height() -> None:
 
 
 def test_the_panel_closes_the_bracket_and_opts_in_by_class() -> None:
-    """The lobby's panel takes both rails; the archived page's does not.
+    """The panel takes both rails, and the class is what grants them.
 
     ``sessions_archived.html`` injects a panel carrying the *same*
     ``session-expander session-expander-bulk`` classes from its own
-    script, and its rows have never been marked. A rule on
-    ``.session-expander`` alone would hand that page a bracket with no
-    top to it.
+    script. A rule on ``.session-expander`` alone would style both pages
+    at once, which is why the bracket is opt-in.
+
+    **The reason changed under this test, and the test changed with it.**
+    Until 19L.3 it asserted that the archived page did *not* carry the
+    class, because that page marked no rows and would have rendered the
+    closing half of a bracket with no opening half. 19L.3 gave it the
+    marking, so it now opts in too — see
+    ``test_the_archived_page_follows_the_same_convention``. The class is
+    still the gate; what it gates is now two pages rather than one.
+    Written out rather than deleted: a guard that vanishes takes its
+    reason with it, and the next person to wonder why this is opt-in at
+    all would have nothing to read.
     """
     css = _base()
     block = re.search(rf"\.{BRACKET} > td \{{(.*?)\}}", css, re.S)
@@ -220,10 +238,9 @@ def test_the_panel_closes_the_bracket_and_opts_in_by_class() -> None:
         f"expected both lobby expander templates to carry .{BRACKET}; "
         f"found {lobby.count(BRACKET)}"
     )
-    assert BRACKET not in ARCHIVED.read_text(), (
-        "the archived sessions page opted into the bracket, but its rows "
-        "carry no selection marking — it would render the closing half "
-        "of a bracket that has no opening half"
+    assert ARCHIVED.read_text().count(BRACKET) == 1, (
+        "the archived sessions page's single bulk expander should carry "
+        f".{BRACKET} exactly once (19L.3)"
     )
 
 
@@ -327,3 +344,106 @@ def test_the_spec_and_the_stylesheet_agree_on_the_rail_width() -> None:
         f"the stylesheet ships a {width}px rail; spec/ui_elements.md "
         f"states {sorted(set(quoted))}px"
     )
+
+
+def _archived() -> str:
+    return ARCHIVED.read_text()
+
+
+def test_the_archived_page_follows_the_same_convention() -> None:
+    """19L.3 — the sibling page marks rows and closes its bracket.
+
+    The two pages are reached from one another and render the same table
+    shape, so selecting differently on each is the inconsistency this
+    item removed. The page needed no new CSS: 19L.2's rules were already
+    written against the opt-in class.
+    """
+    body = _archived()
+    match = re.search(
+        r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S
+    )
+    assert match, "refreshExpander() not found — the archived script moved"
+    assert "markSelectedRows(" in match.group(1), (
+        "the archived page's refreshExpander no longer marks its selected "
+        "rows, so its select-all — which fires no row change events — "
+        "would inject a panel while leaving every row unmarked"
+    )
+    assert BRACKET in body, (
+        f"the archived page's expander no longer carries .{BRACKET}, so "
+        "its panel does not close the bracket its rows now open"
+    )
+
+
+def test_the_archived_marking_clears_before_it_applies() -> None:
+    """The same ordering the lobby needs, asserted on its own copy.
+
+    Duplicated code needs duplicated guards: a shared assertion over one
+    of the two would let the other rot silently, which is the cost this
+    item accepted when it chose duplication over a shared module.
+    """
+    body = _archived()
+    match = re.search(
+        r"function markSelectedRows\(selected\) \{(.*?)\n        \}", body, re.S
+    )
+    assert match, "markSelectedRows() not found on the archived page"
+    fn = match.group(1)
+    clear_at = fn.find(f'classList.remove("{MARK}")')
+    apply_at = fn.find(f'classList.add("{MARK}")')
+    assert clear_at != -1, "nothing clears the mark on the archived page"
+    assert apply_at != -1, "nothing applies the mark on the archived page"
+    assert clear_at < apply_at, (
+        "the archived page applies the mark before the sweep that clears "
+        "it, so the sweep would erase the row it just marked"
+    )
+
+
+def test_the_archived_marking_runs_before_the_empty_early_return() -> None:
+    """Un-ticking the last row must clear the marks, not leave one behind.
+
+    ``refreshExpander`` returns early when nothing is selected. If the
+    marking sits after that return, the final un-tick removes the panel
+    and leaves the row still bracketed — confidently wrong, which is
+    worse than unmarked. The lobby is covered by the same ordering; this
+    pins the copy.
+    """
+    body = _archived()
+    match = re.search(
+        r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S
+    )
+    assert match, "refreshExpander() not found — the archived script moved"
+    fn = match.group(1)
+    mark_at = fn.find("markSelectedRows(selected)")
+    return_at = fn.find("if (selected.length === 0) return;")
+    assert mark_at != -1 and return_at != -1, fn
+    assert mark_at < return_at, (
+        "markSelectedRows runs after the empty-selection early return, so "
+        "un-ticking the last row leaves it marked with no panel"
+    )
+
+
+def test_the_archived_panel_hosts_no_pill() -> None:
+    """The pill-free-zone condition, enforced where it is now load-bearing.
+
+    ``--selection-panel-bg`` is ``--status-info-bg``'s own primitive, so
+    a ``.pill-count`` inside a bracketed panel would be invisible against
+    it — the 19L.2 collision, one storey down. Both pages' panels are in
+    scope; the archived page's rows carry four ``.pill-count``s and a
+    lifecycle pill, which is exactly the material that must not migrate
+    into the panel.
+
+    The author stated the condition as part of the design: *"action row
+    should not host any pills."*
+    """
+    for name, body in (("archived", _archived()), ("lobby", _lobby())):
+        for match in re.finditer(
+            r"<template[^>]*>(.*?)</template>", body, re.S
+        ):
+            block = match.group(1)
+            if BRACKET not in block:
+                continue
+            assert "pill" not in block, (
+                f"a bracketed expander template on the {name} page renders "
+                "a pill. Its background is --status-info-bg\'s primitive, "
+                "so the pill has no visible boundary — the collision 19L.2 "
+                "moved that token off the row to escape"
+            )

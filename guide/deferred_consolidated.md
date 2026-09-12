@@ -1382,3 +1382,70 @@ are local SQLite and not Azure Postgres.
 four element-bound script blocks to delegation. It is what makes the
 table's behaviour survive *any* future re-render, it can be done one
 block at a time, and it commits to nothing.
+
+### Promoting the selection bracket to a shared primitive (19L)
+
+**The idea.** `.session-row-selected` and `.session-expander-bracketed`
+express one convention — a rail at each end of a selected row, no fill,
+carried through the action panel, which fills with
+`--selection-panel-bg` and hosts no pills. Promote it: give the classes
+surface-neutral names, and document a general contract in
+`spec/ui_elements.md` §10 rather than the lobby-local entry it has today.
+
+**Raised by the author, 2026-09-12**, after 19L.3: *"the promotion
+question is worth reconsidering, especially if, in the future, session
+lobby, archive page, and the roster pages all make use of the same
+convention."*
+
+**Why it is off the roadmap for now.** Item 1's open question 3 asked
+exactly this and the author answered *"Local lobby"* the same day, with
+19L.3's second caller already in view. The reason still holds: **two
+callers in one surface family is a pattern used twice, not a primitive.**
+The sessions lobby and its archived child share a table shape, a panel
+construction and a script shape; neither tests whether the convention
+generalises.
+
+And the third caller is not established. `guide/new_ux_ideas.md` entry 1
+records the transfer question rather than assuming it: the bracket was
+designed for **one wide row in a tall table of like things**, where the
+panel names a count and the operator is choosing among sessions. A
+Rosters index is **four unlike things** where one of the actions is Clear
+all. It may want a different primitive, and fixing a general contract
+around an imagined caller is the mistake question 3 declined.
+
+**What the promotion would actually be, measured at `b787c139`.** Less
+than it sounds, which is why it is worth stating rather than leaving to
+be re-discovered:
+
+- **The CSS is already surface-neutral.** The rules reference only
+  `--selected-bg` and `--selection-panel-bg`; nothing in them is about
+  sessions. Only the *selector names* say `session-`.
+- **Each class lives in six files** — two templates, `base.html`, two
+  specs, one test — and grows by roughly one template and one test per
+  caller. The mechanical rename stays cheap.
+- **So promotion is a rename plus a contract, not a redesign.**
+
+**The cost of waiting is not mechanical.** It is the misnomer: a Rosters
+page adopting this convention before the rename would have roster rows
+carrying `.session-row-selected`. That is the kind of name that makes the
+next reader assume the class is session-scoped and write a parallel one —
+which is how a project ends up with two primitives doing one job. The
+rename does not get much more expensive; the wrong name does.
+
+**Promotion and rename are one moment**, not two. Doing them in separate
+passes means crossing the same six files twice.
+
+**What would move it back onto the roadmap.** The **first caller outside
+the sessions-lobby family** — a roster page, most likely. Not "three
+callers": the lobby and the archive page are siblings, and a third
+sibling would change nothing about the argument. The trigger is the first
+*unlike* caller, because that is the first evidence that the convention
+generalises at all.
+
+**A separate question with its own trigger, currently conflated with this
+one.** `markSelectedRows()` is now **duplicated in two templates**
+(19L.3, which rejected extraction on the grounds that ten duplicated
+lines beat a shared module built for its second caller). That reasoning
+expires at a **third copy**, and it expires independently of the naming
+question: code extraction and spec promotion could land in either order,
+and Item 1's question 3 treated them as one thing.

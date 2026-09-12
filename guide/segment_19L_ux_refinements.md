@@ -255,6 +255,19 @@ leave a half-marked row in `main`.
    by 19L.3 below: the archived page adopting the same convention is a
    second caller inside the same lobby family, not a promotion of the
    class to a general primitive.
+
+   *Reopened as a recorded deferral later the same day, not as a reversal.*
+   The author: *"the promotion question is worth reconsidering, especially
+   if, in the future, session lobby, archive page, and the roster pages all
+   make use of the same convention."* The answer above stands — nothing
+   about the evidence changed — but the question now has a **named trigger**
+   instead of a vague "if Rosters is ever built", and the trigger is the
+   first caller **outside** this surface family rather than a third caller
+   of any kind. It also separates two things this question conflated: the
+   spec/CSS naming promotion, and extracting the now-duplicated
+   `markSelectedRows()`. Both are written up in
+   `guide/deferred_consolidated.md` Part C, with what promotion would cost
+   measured rather than guessed.
 4. ~~**Does the panel keep its count-only title?**~~ **Yes, untouched** —
    the author's words, 2026-09-12. Out of scope at planning time and
    still out of scope: 19L.2 changed the panel's fill and gave it rails,
@@ -843,12 +856,103 @@ marks rows under a panel that does not close the bracket, or the reverse.
 - **The archived panel's copy**, including the *"1 sessions selected"*
   plural. Pre-existing; open question 1.
 
+### Status — 2026-09-12 (item closed)
+
+**Landed as planned, in one rung, and it was as small as the blast
+radius said.** A class on the archived page's `<template>`, a ten-line
+`markSelectedRows()`, and the call to it placed before
+`refreshExpander`'s empty-selection early return. **Zero new CSS rules**
+— 19L.2's were already written against the opt-in class, which is the
+whole reason this item was cheap.
+
+**Decisions confirmed at build:**
+
+- The duplication is ten lines, as estimated. The two scripts remain
+  separate.
+- Placing the call *before* the early return is load-bearing, not
+  stylistic: after it, un-ticking the last row removes the panel and
+  leaves that row still bracketed. It has its own guard.
+
+**The 19L.2 guard was rewritten, not deleted.** It asserted that the
+archived page did **not** carry the class, and that assertion is now
+false. Its reason — the class is the gate — is still true, so the test
+keeps its name and its explanation and flips what it expects, with the
+history written into the docstring. *A guard that vanishes takes its
+reason with it, and the next reader wondering why the bracket is opt-in
+at all would have had nothing to read.*
+
+**Mutation testing: 5 run, 5 caught.** The marking call removed; the
+call moved after the early return; the opt-in class dropped from the
+template; the clear-sweep turned into a second apply; a `.pill-count`
+rendered inside the panel.
+
+**That last mutation is the author's fourth clause made executable.**
+*"Action row should not host any pills"* was stated as part of the
+design in Item 1's answer; it now fails a test on **both** pages, by
+scanning every `<template>` carrying the opt-in class. Before this it
+lived in a comment beside the token and in prose — true in both places
+and checked in neither.
+
+**A planned doc target did not exist.** The manifest committed to "the
+archived-sessions child page section" of `spec/sessions_overview.md`.
+There is no such section: that page is named only in the status block
+and the implementation pointers. The behaviour is recorded inline in the
+lobby's own passage instead, the bullet is corrected to say so, and the
+absence is stated in the spec rather than pointed at — *a draft of this
+edit had written "see the archived child page below", which would have
+been the same dangling cross-reference `spec-writer` caught one item
+ago, reintroduced by the person who had just fixed it.*
+
+**Not a promotion of `.session-row-selected` to a general primitive.**
+Item 1's question 3 declined that on the same day (*"Local lobby"*).
+Two callers in one surface family is not generality, and
+`spec/ui_elements.md` now says so explicitly rather than leaving
+"exactly one caller" to rot.
+
+**The `spec-writer` pass found four things; one of them is the third
+instance of this session's recurring failure, and the sharpest.**
+
+Three were small and are fixed: `spec/sessions_overview.md`'s bullet
+still attributed the mechanism to *"19L.1, restyled by 19L.2"* while its
+body described 19L.3 at length; its sentence explaining *why* the bracket
+is opt-in had gone elliptical once both pages carried the class, where
+`spec/ui_elements.md`'s parallel sentence still said it plainly; and that
+entry still opened *"a selected row on the sessions lobby"*, correcting
+itself only three sentences later.
+
+The fourth was **undeclared doc impact**. `guide/new_ux_ideas.md` carried
+two clauses this item falsified — *"the archived page injects the same
+panel without it"* and *"the archived sessions page — which injects the
+same classes and marks no rows — still renders that way"* — and the
+manifest did not name the file, so nothing would have caught it.
+
+*Both clauses were written four commits earlier, by me, in a commit
+titled "bring entry 1's account of the lobby up to date" — whose entire
+purpose was fixing exactly this kind of staleness in exactly this file.*
+They were true when written and false two items later. **The lesson is
+not "check that file"; it is that a statement of present fact about
+another surface acquires a maintenance obligation the moment it is
+written, and the manifest is the only place that obligation can be
+recorded.** The bullet is added above, after the fact, which is the
+weaker version of having declared it.
+
+**UI-visible: verify on the dev slot after deploy** — the suite has no
+JavaScript runtime and cannot see a rendered colour.
+
 ### Doc impact
 
-- `spec/sessions_overview.md` — the archived-sessions child page section
-  records that it now marks selected rows on the lobby's convention, and
-  the note saying it deliberately does not is corrected (Item 3).
+- `spec/sessions_overview.md` — the note saying the archived page
+  deliberately does *not* carry the opt-in class is corrected, and its
+  selection behaviour recorded (Item 3). *Planned as "the archived child
+  page section"; there is no such section in this spec — the page is
+  named only in the status block and the implementation pointers — so the
+  behaviour is stated inline in the lobby's own passage and the absence
+  of a section is said out loud rather than pointed at.*
 - `spec/ui_elements.md` — the `.session-row-selected` entry's "lobby-local"
   wording gains its second caller, without promoting it to a primitive
   (Item 3).
+- `guide/new_ux_ideas.md` — entry 1's account of the lobby expander said
+  the archived page injects the panel *without* the opt-in class and
+  marks no rows. Both clauses corrected (Item 3). *Not named at planning
+  time; added when `spec-writer` found them — see `Status`.*
 - `docs/status.md` — row when the item closes (Item 3).
