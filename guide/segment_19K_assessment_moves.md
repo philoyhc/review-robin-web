@@ -2675,6 +2675,115 @@ pins `#4b8bf5` as the dark reserved *background*, which this item does
 not move, but it also asserts `--selected-fg`'s partner, so the
 expectation needs re-reading rather than assuming.
 
+### Status — 2026-09-12
+
+**Built as planned, and the plan's one open question answered by
+producing the thing it asked for.** It said `--ink` or `--ink-deep`,
+"author decides from a rendered sample". The sample did not exist, so
+it was rendered: both candidates through `theme_preview.gen.py`, dark
+mode, the real canonical-role button gallery, screenshotted and put
+side by side. **They are near-indistinguishable** — `#111827` against
+`#1a212e` on a `#4b8bf5` fill — so the choice collapses onto the only
+axis that separates them, and `--ink` (5.33) takes it over
+`--ink-deep` (4.85). *An open question that asks for a sample can be
+closed by making the sample, not only by waiting for one.*
+
+The sample also confirmed visually what the Decision argued from the
+token table: the dark Primary button now reads the same way as Alert
+and Amber beside it, which have carried dark-on-bright in dark all
+along. The outlier stopped looking like one.
+
+**Every number the plan predicted reproduced exactly**: 5.33 at rest
+for all three pairs and **6.98** for the hover that had been the
+palette's worst at 2.54. Nothing needed re-measuring at build.
+
+**The audit's own test told me what to do next, in the right order.**
+Inverting the three mappings did not make the suite pass — it made
+`test_the_recorded_shortfalls_are_still_what_was_recorded` fail with
+"these now clear AA — delete their `OPEN_SHORTFALLS` entries and their
+`docs/known_limitations.md` lines", naming all four with their new
+ratios. That is the both-directions pin from 19K.7 working as intended:
+a fix fails the suite until its record is updated, so a stale number
+cannot outlive the thing it described.
+
+**`OPEN_SHORTFALLS` is now empty and was kept rather than deleted.** An
+empty record is a claim — *nothing is outstanding* — and
+`test_every_pair_clears_aa_but_for_the_recorded_shortfalls` is what
+keeps it true: a new sub-AA pair fails there rather than being quietly
+added. Deleting the machinery on the day it first reads empty is how
+the next failure goes unnoticed.
+
+**19K.7's Tier-2 catalogue guard caught this item one day after it was
+written.** The three mappings moved and `spec/color_tokens.md` still
+said `--white` / `#ffffff` in its dark columns;
+`test_every_semantic_token_is_catalogued_with_its_shipped_mapping`
+failed and named all three. That guard exists because 19K.7's own
+collapse left four Tier-2 rows stale and a review bot found them. It
+has now paid for itself on the very next item.
+
+**4 mutations, 4 correct.** Reverting one or all three of the mappings
+fails the sweep; smuggling an accepted pair into the empty open set
+fails the both-sets guard. The instructive one is **M3**: setting
+`--ink-deep` instead passes the AA sweep — it clears 4.85, and the
+sweep should not care which passing value is used — while failing the
+catalogue check, because the spec says `--ink`. Two checks, two
+different jobs, neither doing the other's.
+
+**Verified in Chromium, not asserted:** the customizer's Contrast panel
+reads **0 open in light and 0 open in dark**, with the three accepted
+hover dips still dashed in light. That is the first time in this
+segment the panel has shown no red anywhere.
+
+**The `spec-writer` pass reproduced every ratio and found two stale
+passages, one of them worse than stale.**
+
+- **The module docstring, for the third time in this file.** It still
+  read "Seven pairs still fall under AA: four open, three accepted"
+  while `OPEN_SHORTFALLS` sat empty sixty lines below it — and the
+  block comment *immediately above the dict* had been rewritten
+  correctly in the same commit. This exact file, this exact failure,
+  three items running: 19K.7 fixed it once after the first checker
+  pass, once more after the split, and now again. *The fix is not
+  remembering harder; it is that the docstring and the dict are one
+  claim in two places, and nothing checks they agree.* Recorded as a
+  candidate, not fixed here — a consistency check over a module's own
+  prose is its own piece of work.
+- **`spec/color_tokens.md`'s "Collapsing a tier" made a prediction this
+  item falsified.** It closed with "when [a collapse] is not
+  [available], **the value has to move**" — and 19K.10 closed those
+  four without moving `--blue-glow` at all, by inverting the
+  foreground. The limit it stated was right that no collapse was
+  available and **wrong about what the alternative had to be**: there
+  was a third move, and naming only two made the harder one look
+  inevitable. Corrected rather than deleted, with the mistake kept
+  visible, because *a rule that names the options it can see will make
+  the unseen one look impossible* — and that is the more useful line
+  than the rule it sits under.
+
+Also upheld: **two tests are inert while `OPEN_SHORTFALLS` is empty**
+(`test_the_recorded_shortfalls_are_still_what_was_recorded` and
+`test_no_pair_is_both_accepted_and_open`), along with `DRIFT`. That is
+the intended consequence of keeping the dict, but neither said so at
+its own definition, and a test that proves nothing while looking like a
+guard is the shape of the vacuity this file has caught twice. All three
+now name it. And one US-spelling slip in the new `docs/status.md` row,
+fixed.
+
+**Decisions confirmed at build:**
+
+- The inversion is three mappings, not a token collapse. They share a
+  value in both themes and may not need three names, but that is
+  19K.7's policy applied to naming rather than contrast, and mixing it
+  in would make this diff unreadable as a contrast fix (Judgment calls).
+- `--btn-primary-border` stays on `--blue-glow`: a boundary at 3:1,
+  which it clears, by the line that keeps `--decor-muted` and
+  `--status-success-border` outside the text floor.
+- Light is untouched. Its accent pairs pass at 5.17 and this is a
+  dark-mode answer to a dark-mode problem.
+- `spec/color_tokens.md`'s "Deliberate couplings" needed no change: the
+  reserved shade keeps its meaning and its value, and what changed is
+  what is written on it.
+
 ### PR ladder
 
 1. **The three dark foreground mappings, with the audit record
