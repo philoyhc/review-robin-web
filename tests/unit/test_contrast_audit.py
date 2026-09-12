@@ -49,10 +49,14 @@ token exists that it does not name.
 itself made twice. ``test_the_ratio_matches_published_values`` pins the
 arithmetic instead.
 
-**Eleven pairs still fail and are named, not excused.** They are
-pre-existing, they are all buttons, pill tints and selected states
-rather than body text, and each is pinned at the value it was recorded
-at — so a fix must delete its entry and a regression fails the suite.
+**Seven pairs still fall under AA: four open, three accepted.** The
+four open ones are one root cause — white on `--blue-glow` in dark —
+and are pinned at the value they were recorded at, so a fix must
+delete the entry and a regression fails the suite. The three accepted
+are light button labels that dip only under the pointer; their
+exemption is stored as its *premise* (the resting pair) and re-checked
+on every run, not as a conclusion. Four further pairs closed by
+collapsing a tier: see "Collapsing a tier" in `spec/color_tokens.md`.
 Fixing them is a design decision per family (see
 ``docs/known_limitations.md``), not a follow-on to this item.
 
@@ -114,37 +118,33 @@ ON_FILL = {
 #: in `docs/known_limitations.md` as outstanding. Each mapped to the
 #: ratio it measured on 2026-09-12.
 #:
-#: Author's call, 2026-09-12, after reviewing the panel: the three
-#: *transient* dips are accepted (see `ACCEPTED_BELOW_AA` in the shared
-#: harness); these eight are not, because every one fails **at rest**,
-#: and at the size they actually render. The ui-v2 pills are
-#: `--fs-tiny` (0.75rem, weight 500) — AA large needs 18.66px or 14pt
-#: bold, so 3:1 is not their line and 4.5 is.
+#: **All four are one root cause**: white on `--blue-glow`, the
+#: reserved "you can act on this" shade, in dark. The dark primary
+#: button's own label sits at 3.33 at rest and 2.54 on hover — so the
+#: 2.54 is not a transient dip but the worst point of a control already
+#: below the line. Closing this means moving `--blue-glow` (which
+#: `--selected-bg`, `--focus-ring` and seven more dark tokens resolve
+#: to) or changing the foreground off white; either is a decision about
+#: the reserved shade, and belongs to whoever takes it.
 #:
-#: Two families, and each is one decision rather than eight fixes:
-#:
-#: - **Dark accent, 4 pairs** (2.54-3.33). All resolve through
-#:   `--blue-glow`, the reserved "you can act on this" shade — the dark
-#:   primary button's own label sits at 3.33 at rest. Moving it moves
-#:   `--selected-bg`, `--focus-ring` and seven more dark tokens.
-#: - **Light pale tints, 4 pairs** (3.32-3.95). The green `#059669` on
-#:   `#d1fae5` shared by the ready lifecycle pill, the reviewee role
-#:   chip and the success pill; the red `#dc2626` on `#fee2e2` shared by
-#:   the expired pill. Deepening the text or paling the tint is one
-#:   change across every status family.
+#: **None of the four is large text**, so AA large's 3:1 is not their
+#: line: `body.ui-v2 .btn` sets `--fs-small` (0.875rem, weight 500),
+#: and `--selected-fg` renders on chips at `--fs-tiny`, on the theme
+#: toggle at 0.8em and on `.skip-link` at inherited body size. AA large
+#: wants 18.66px, or 14pt bold; the largest of these is 16px at weight
+#: 400.
 #:
 #: A floor in both directions: a regression fails, and so does a fix,
 #: because a fix should delete the entry rather than leave a stale
 #: number behind it.
+#:
+#: Four more closed on 2026-09-12 by collapsing a tier rather than
+#: moving a value — see "Collapsing a tier" in `spec/color_tokens.md`.
 OPEN_SHORTFALLS = {
     ("dark", "--btn-primary-fg", "--btn-primary-bg-hover"): 2.54,
-    ("light", "--lifecycle-ready-fg", "--lifecycle-ready-bg"): 3.32,
-    ("light", "--role-reviewee-fg", "--role-reviewee-bg"): 3.32,
-    ("light", "--status-success-accent", "--status-success-bg"): 3.32,
     ("dark", "--btn-primary-fg", "--btn-primary-bg"): 3.33,
     ("dark", "--selected-fg", "--selected-bg"): 3.33,
     ("dark", "--text-on-accent", "--btn-primary-bg"): 3.33,
-    ("light", "--lifecycle-expired-fg", "--lifecycle-expired-bg"): 3.95,
 }
 
 #: Every pair under AA, however recorded. A pair under AA and in
@@ -439,6 +439,10 @@ def test_the_customizer_panel_can_show_a_shortfall() -> None:
 
     assert ".tc-cx-ratio.below-aa" in page, "the sub-AA outline rule is gone"
     assert 'classList.toggle("below-aa"' in page, "nothing toggles the sub-AA class"
+    assert ".tc-cx-ratio.accepted-below-aa" in page, "the accepted-pair rule is gone"
+    assert 'classList.toggle("accepted-below-aa"' in page, (
+        "nothing toggles the accepted class — an accepted pair would show red"
+    )
 
     rendered = set(re.findall(r'data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page))
     unrowed = sorted((fg, bg) for _, fg, bg in RECORDED if (fg, bg) not in rendered)
@@ -487,3 +491,47 @@ def test_no_pair_is_both_accepted_and_open() -> None:
     """
     both = sorted(set(OPEN_SHORTFALLS) & set(harness.ACCEPTED_BELOW_AA))
     assert not both, f"recorded as both accepted and open: {both}"
+
+
+def test_the_panel_marks_every_accepted_pair_in_its_own_theme() -> None:
+    """The accepted pairs reach the page, keyed by the theme they were
+    accepted in.
+
+    The previous pass caught that nothing asserted this: the panel test
+    checked only the red outline, so the whole accepted mechanism — the
+    `data-accepted-<theme>` attributes and the class they drive — rested
+    on one manual look in a browser. An accepted pair silently losing
+    its attribute would show as red, which is the failure this split
+    exists to prevent.
+
+    Per-theme is the load-bearing part. All three acceptances are
+    light-only, and the same pair unaccepted in dark must stay red
+    there — so the attribute is `data-accepted-light`, never a bare
+    `data-accepted`.
+    """
+    page = (
+        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
+    ).read_text(encoding="utf-8")
+
+    for (theme, fg, bg), entry in harness.ACCEPTED_BELOW_AA.items():
+        row = re.search(
+            rf'<div class="tc-cx" data-fg="{re.escape(fg)}" data-bg="{re.escape(bg)}"([^>]*)>',
+            page,
+        )
+        assert row, f"no row for the accepted pair {fg} on {bg}"
+        assert f'data-accepted-{theme}="' in row.group(1), (
+            f"{fg} on {bg} is accepted in {theme} but its row carries no "
+            f"data-accepted-{theme} — it would render red. Regenerate the page."
+        )
+        assert entry["reason"][:24] in row.group(1), (
+            f"the row for {fg} on {bg} does not carry the acceptance reason"
+        )
+
+    # A pair accepted in one theme must not claim acceptance in the other.
+    for theme in ("light", "dark"):
+        accepted_here = {k for k in harness.ACCEPTED_BELOW_AA if k[0] == theme}
+        in_page = len(re.findall(rf'data-accepted-{theme}="', page))
+        assert in_page == len(accepted_here), (
+            f"{in_page} rows claim acceptance in {theme}, "
+            f"but {len(accepted_here)} pairs are accepted there"
+        )

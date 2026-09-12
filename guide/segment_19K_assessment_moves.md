@@ -2111,6 +2111,66 @@ under AA normal (4.5:1), plus 3 accepted (transient; legible at
 rest)". 5 mutations on the new guards, 5 caught.
 
 
+**Collapsing a tier became policy, and closed four of the eight**
+(author, 2026-09-12): *it is fine to solve an AA failure by collapsing
+a hierarchy, as `--text-dim` into `--text-subtle`.* Stated as general
+policy, it turned out to be immediately concrete — the audit had put
+the evidence side by side without anyone reading it that way.
+
+Both failing light families carried **two text tiers on one tint, and
+the darker one already passed**: `--status-success-fg` was already
+`--green-deep` and `--status-error-fg` already `--red-deep`, while
+`--lifecycle-ready-fg`, `--role-reviewee-fg`,
+`--status-success-accent` and `--lifecycle-expired-fg` sat on
+`--green-strong` / `--red-strong` and failed. One surface, two text
+colours of the same hue, one passing and one failing, for no reason a
+reader could state. Repointed: **3.32 → 6.29** and **3.95 → 6.80**.
+`--status-success-border` stays on `--green-strong` — a boundary at
+1.4.11's 3:1, which it clears — by the same line that keeps
+`--decor-muted` outside the text floor. Dark was left alone: its
+mappings differ and already pass, so collapsing there would change
+appearance to fix nothing.
+
+**Light mode now has no open shortfall at all**; all four remaining
+are dark, and all four are one root cause — white on `--blue-glow`.
+That is the useful shape: what is left is a single question about the
+reserved shade, not a mixed bag. And it is *not* collapsible, which is
+the limit the policy needs stated beside it: a collapse is available
+when the palette has already produced the answer elsewhere; where it
+has not, the value has to move.
+
+**The third `spec-writer` pass**, on the accepted/open split, confirmed
+every ratio and found three things:
+
+- **A stale module docstring** the split had missed. It still said
+  "Eleven pairs still fail and are named, **not excused**" — while
+  three of them had just been excused. The block comment twenty lines
+  below it had been rewritten and the file's own opening had not.
+  *A correction reaches the paragraph it was found in and no further
+  unless someone walks it* — the second time this item has recorded
+  that, and it caught me the second time too.
+- **My size evidence was wrong for half the set.** "The ui-v2 pills
+  render at `--fs-tiny` (0.75rem, weight 500)" is true of the four
+  tint pairs and false of the button ones: `body.ui-v2 .btn` sets
+  `--fs-small` (0.875rem), and `--selected-fg` also renders on the
+  theme toggle at 0.8em and on `.skip-link` at inherited body size.
+  The conclusion held — 14px at weight 500 and 16px at weight 400 both
+  fail AA large's 18.66px bar — but the number quoted as evidence did
+  not apply to the pairs it was quoted for. *Citing one measurement
+  for a set you have not checked is how a true conclusion acquires a
+  false reason.* The collapse then removed all four pill pairs, so the
+  corrected prose covers only the buttons.
+- **Nothing asserted the accepted marking.** The panel test checked
+  the red outline only, so the whole `data-accepted-<theme>` mechanism
+  rested on one manual look in a browser — and an accepted pair losing
+  its attribute would render red, the exact failure the split exists
+  to prevent. Now tested, per theme, including that an acceptance in
+  light does not leak into dark.
+
+4 mutations on the collapse and the new marking, 4 caught. Verified in
+Chromium: light **0 open + 3 accepted**, dark **4 open + 0**.
+
+
 **Decisions confirmed at build:**
 
 - The decorative uses are outside the floor by rule, not judgment

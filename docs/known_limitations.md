@@ -76,22 +76,12 @@ bugs — they trace to the Segment 14A plan and
   grip — moved to `--decor-muted` and are outside the text floor
   by rule, WCAG 1.4.3 governing text. Details in
   `spec/color_tokens.md`, "The AA floor on text".
-- **Eight colour pairs fall short of AA normal (4.5:1) and are
-  open.** Found by the audit that checked the fix above; all
-  pre-existing, none of them body prose.
+- **Four colour pairs fall short of AA normal (4.5:1) and are
+  open**, and all four are **one root cause**: white on
+  `--blue-glow` in dark, the reserved "you can act on this" shade.
   `tests/unit/test_contrast_audit.py` sweeps all 73
-  foreground/background pairs the palette forms and pins these eight
-  at the ratios below, so none can worsen unnoticed. Each family is
-  one design decision rather than several fixes, and closing any of
-  them should delete its line here.
-
-  Every one fails **at rest**, at the size it actually renders — the
-  ui-v2 pills are `--fs-tiny` (0.75rem, weight 500), and AA *large*
-  (3:1) needs 18.66px or 14pt bold, so 3:1 is not their line.
-
-  *Dark accent* — all four resolve through `--blue-glow`, the
-  reserved "you can act on this" shade, so moving it moves
-  `--selected-bg`, `--focus-ring` and seven more dark tokens with it:
+  foreground/background pairs the palette forms and pins these at the
+  ratios below, so none can worsen unnoticed.
 
   | Ratio | Theme | Pair |
   |---|---|---|
@@ -100,20 +90,25 @@ bugs — they trace to the Segment 14A plan and
   | **3.33** | dark | `--selected-fg` on `--selected-bg` |
   | **3.33** | dark | `--text-on-accent` on `--btn-primary-bg` |
 
-  The 2.54 is a hover state, but it is not a transient dip: the same
-  control measures **3.33 at rest**, so it is the worst point of a
-  button already below the line, not a momentary one.
+  The 2.54 is a hover state but not a transient dip: the same control
+  measures **3.33 at rest**, so it is the worst point of a button
+  already below the line. Closing this means moving `--blue-glow`,
+  which `--selected-bg`, `--focus-ring` and seven more dark tokens
+  resolve to, or taking the foreground off white — a decision about
+  the reserved shade rather than four separate fixes.
 
-  *Saturated text on its own pale tint* — two shared values, four
-  pairs; deepening the text or paling the tint is one change across
-  every status family at once:
+  **None is large text**, so AA large's 3:1 is not their line:
+  `body.ui-v2 .btn` sets `--fs-small` (0.875rem, weight 500), and
+  `--selected-fg` renders on chips at `--fs-tiny`, on the theme
+  toggle at 0.8em and on `.skip-link` at inherited body size. AA
+  large wants 18.66px, or 14pt bold.
 
-  | Ratio | Theme | Pair |
-  |---|---|---|
-  | **3.32** | light | `--lifecycle-ready-fg` on `--lifecycle-ready-bg` |
-  | **3.32** | light | `--role-reviewee-fg` on `--role-reviewee-bg` |
-  | **3.32** | light | `--status-success-accent` on `--status-success-bg` |
-  | **3.95** | light | `--lifecycle-expired-fg` on `--lifecycle-expired-bg` |
+- **Four more were open until 2026-09-12 and were closed by
+  collapsing a tier**, not by moving a value: the light lifecycle,
+  role and status greens took `--green-deep` (3.32 → 6.29) and the
+  expired red took `--red-deep` (3.95 → 6.80), both of which the same
+  tints already used for text elsewhere. See "Collapsing a tier" in
+  `spec/color_tokens.md`.
 
 - **Three further pairs are under AA and accepted** (author,
   2026-09-12, reviewing the panel). Each is a button label dipping
