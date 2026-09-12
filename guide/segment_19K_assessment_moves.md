@@ -1958,7 +1958,12 @@ Taken 2026-09-12 at `11cad9c1`.
 1. **Measure the deployed response — Author, not agent**, and record the
    answer here. The dev slot exists and every push to `main` deploys to
    it, so this needs no provisioning; it needs a request the container
-   cannot make. One line, from any machine that can reach the slot:
+   cannot make. **Filed as item 4 of
+   `guide/post_azure_todo_checklist.md`**, whose admission rule the
+   author widened on 2026-09-11 for exactly this case — a check blocked
+   on *a* deploy rather than *the* institutional one, which "needs a
+   file like this one or it is forgotten". One line, from any machine
+   that can reach the slot:
 
    ```
    curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
@@ -1994,10 +1999,13 @@ Taken 2026-09-12 at `11cad9c1`.
   measurement rather than from the container's.
 - **Whether this item belongs in 19K at all.** It was opened alongside
   6–8 as "unblocked work while Azure is outstanding", and that framing
-  is only two-thirds right: it is unblocked by *provisioning* and gated
-  on a request the agent cannot make. If rung 1's number sits
-  unmeasured, this is the item to move rather than the one to hold the
-  segment open for.
+  was only two-thirds right: it is unblocked by *provisioning* and gated
+  on a request the agent cannot make. **Settled 2026-09-12** by
+  splitting it — the measurement is checklist item 4, which is that
+  file's whole job, and the decision stays here, which is this file's.
+  The same split 19J.4 used: its browser verification lives in the
+  checklist and its reasoning never left its plan. So 19K.9 can close
+  without the segment waiting on a header.
 
 ### Out of scope
 
@@ -2014,4 +2022,6 @@ Taken 2026-09-12 at `11cad9c1`.
   reasoning beside the rule rather than in a closed plan (Item 9).
 - `docs/known_limitations.md` — the F1-plan entry gains the page-weight
   measurement if rung 1 finds the platform does not compress (Item 9).
+- `guide/post_azure_todo_checklist.md` — item 4, carrying rung 1's
+  measurement so it survives outside this plan (Item 9).
 - `docs/status.md` — row when the item closes (Item 9).
