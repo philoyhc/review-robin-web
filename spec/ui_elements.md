@@ -718,10 +718,14 @@ find out that it is gone rather than that the spec is silent.
 **A page turn reloads the page, and that is settled rather than
 pending.** Swapping the table in place — a fragment endpoint per page,
 the table markup extracted to a partial, history handling — was measured
-against the reload in September 2026 and **rejected outright, not
-deferred**. The reload costs 413 KB and 21 ms at 556 rows (116 ms at
-5,000), and the swap's real precondition is 928 lines of table markup
-inline across seven templates, none of it in a partial.
+against the reload and **rejected outright, not deferred**.
+
+Measured 2026-09-11, on local SQLite rather than Azure Postgres: the
+reload costs ~413 KB and 21 ms at 556 rows (116 ms at 5,000), and the
+swap's real precondition is 928 lines of table markup inline across
+seven templates, none of it in a partial. Treat those figures as a
+dated snapshot — the assessment they come from was wrong once already,
+and corrected itself twice.
 
 But the deciding argument is intent, not cost. The one case a reload is
 mildly jarring is a click on the **bottom** pager strip, which sends the
@@ -907,6 +911,12 @@ can still read the migration shape.
 
 The pilot resolved the original Open questions and surfaced a few
 new patterns:
+
+- **A page turn reloads, and that is settled.** The in-place table swap
+  was measured and rejected outright rather than deferred — build it only
+  if something else comes to need it, never to fix the scroll. Stated in
+  full in §10 beside `.table-pager-cluster`, because it governs the pager
+  every roster-bearing page shares rather than any one page's spec.
 
 - **Hover by fill** (now `visual_style_general.md` P6). Filled controls
   lighten on hover; outline controls darken with a subtle bg
