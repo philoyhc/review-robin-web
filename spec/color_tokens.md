@@ -15,7 +15,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 106 semantic tokens · 16 non-colour scale tokens.**
+**80 primitives · 107 semantic tokens · 16 non-colour scale tokens.**
 
 ---
 
@@ -485,6 +485,7 @@ The same reason the help card has its own `-fg` rather than inheriting
 | `--chip-active-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--chip-active-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
 | `--chip-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--row-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 
 ---
 

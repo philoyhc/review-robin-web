@@ -268,6 +268,11 @@
         --chip-active-fg: var(--blue-strong);
         --chip-active-bg: var(--blue-wash);
         --chip-selected-bg: var(--blue-pale);
+        /* A selected table row (19L.1). Its own role rather than a
+           reuse of --chip-selected-bg: same primitives today, but a
+           row and a chip are different things and a repoint of one
+           should not silently move the other. */
+        --row-selected-bg: var(--blue-pale);
         /* ===== end design tokens ===== */
       }
       /* Dark palette — overrides the light :root values above when the
@@ -397,6 +402,7 @@
         --chip-active-fg: var(--blue-glow);
         --chip-active-bg: var(--blue-abyss-soft);
         --chip-selected-bg: var(--blue-abyss);
+        --row-selected-bg: var(--blue-abyss);
         /* ===== end design tokens ===== */
       }
       html { font-size: 100%; background: var(--surface-page); }
@@ -2703,6 +2709,32 @@
         border-color: transparent;
         box-shadow: none;
       }
+      /* A selected lobby row (19L.1). Edge *and* fill, which is what
+         `.tag-chip.is-selected` already does — the reserved shade as a
+         3px edge, its pale companion as the interior. Before this the
+         only row-level signal was the checkbox's own tick, a ~13px mark
+         at one end of a full-width row: adequate at the instant of
+         clicking, and the weakest thing in the pattern by the time a
+         bulk selection is scattered down the table or a tall panel has
+         pushed the row off-screen.
+
+         The edge sits on the first cell only, as an inset shadow rather
+         than a border, so the row's height does not change when it is
+         selected and the table does not reflow under the pointer.
+
+         Not caught by `tests/unit/test_reserved_shade.py`, and not an
+         exemption: that guard scans selectors carrying pill / chip /
+         btn-icon classes, because its subject is elements with a dual
+         nature. A `<tr>` has one nature, and a selected row is the
+         thing the panel's actions will act on — which is what the
+         reserved shade means. */
+      body.ui-v2 tr.session-row-selected > td {
+        background: var(--row-selected-bg);
+      }
+      body.ui-v2 tr.session-row-selected > td:first-child {
+        box-shadow: inset 3px 0 0 var(--selected-bg);
+      }
+
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
       body.ui-v2 .session-expander > td {
