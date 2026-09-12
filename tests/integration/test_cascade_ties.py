@@ -30,9 +30,16 @@ dead. It is deliberately narrow:
 * **exact property names**, so a shorthand overriding a longhand
   (``background`` against ``background-color``) is not seen.
 
+``!important`` is **handled rather than excluded**: it beats source
+order, so a later rule does not kill an earlier `!important` one. That
+distinction is not decoration — without it the check reports a dead rule
+that in fact wins. `base.html` has none today, so the case was latent
+until a checker constructed it.
+
 Each exclusion can make the check *silent*; none can make it report a
 tie that is not there. That asymmetry is the point: a false negative
-costs what we already have, a false positive would cost trust.
+costs what we already have, a false positive would cost trust — and it
+is why `!important` had to be handled instead of listed.
 """
 
 from __future__ import annotations
@@ -213,6 +220,16 @@ def find_ties(
                 if _is_variant_of(live_names, dead_names):
                     continue  # the variant wins, which is the intent
                 for prop in sorted(set(dead_decls) & set(live_decls)):
+                    # `!important` beats source order. Without this the
+                    # check reports a dead rule that in fact wins —
+                    # a false positive, which is the one failure mode
+                    # the exclusions above are chosen to avoid. Found by
+                    # a checker constructing the case; `base.html` has
+                    # no `!important` today, so it was latent.
+                    dead_loud = "!important" in dead_decls[prop]
+                    live_loud = "!important" in live_decls[prop]
+                    if dead_loud and not live_loud:
+                        continue
                     entry = (dead, winner, prop)
                     if entry not in found:
                         found.append(entry)
@@ -439,3 +456,29 @@ def test_the_fixture_renders_the_classes_the_check_needs(
             f"no rendered element carries `{required}`, so the cascade check "
             f"cannot see a tie involving it. Covered: {sorted(covered)}"
         )
+
+
+def test_an_important_earlier_rule_is_not_reported_as_dead() -> None:
+    """`!important` beats source order, so the earlier rule wins and
+    nothing is dead. Reporting it would be a **false positive** — the
+    one failure mode this check's exclusions are chosen to avoid, and
+    the one its docstring promises against. `base.html` has no
+    `!important` today; the case was latent until constructed."""
+    css = (
+        "body.ui-v2 .table-pager-step { font-size: 1.5em !important; }\n"
+        "body.ui-v2 .btn-icon { font-size: 1em; }\n"
+    )
+    assert find_ties(css, {frozenset({"btn-icon", "table-pager-step"})}) == []
+
+
+def test_important_on_both_still_resolves_by_order() -> None:
+    """The half that must not regress: when both shout, order decides
+    again, so the earlier one really is dead. Skipping every property
+    that mentions `!important` would silence a real defect."""
+    css = (
+        "body.ui-v2 .table-pager-step { font-size: 1.5em !important; }\n"
+        "body.ui-v2 .btn-icon { font-size: 1em !important; }\n"
+    )
+    assert find_ties(css, {frozenset({"btn-icon", "table-pager-step"})}) == [
+        ("body.ui-v2 .table-pager-step", "body.ui-v2 .btn-icon", "font-size")
+    ]
