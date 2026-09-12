@@ -3,51 +3,33 @@
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "7f4b3d42",
-    "since": "5df1b77c",
-    "merge_commits": 27,
-    "non_merge_commits": 42,
+    "head": "ba7b37e7",
+    "since": "7f4b3d42",
+    "merge_commits": 9,
+    "non_merge_commits": 13,
     "pr_numbers": [
-      2286,
-      2287,
-      2288,
-      2289,
-      2290,
-      2291,
-      2292,
-      2293,
-      2294,
-      2295,
-      2296,
-      2297,
-      2298,
-      2299,
-      2300,
-      2301,
-      2302,
-      2303,
-      2304,
-      2305,
-      2306,
-      2307,
-      2308,
-      2309,
-      2310,
-      2311,
-      2312
+      2313,
+      2314,
+      2315,
+      2316,
+      2317,
+      2318,
+      2319,
+      2320,
+      2321
     ],
-    "pr_range": "#2286\u2013#2312",
-    "first_date": "2026-09-10",
-    "last_date": "2026-09-11"
+    "pr_range": "#2313\u2013#2321",
+    "first_date": "2026-09-11",
+    "last_date": "2026-09-12"
   },
   "areas": {
     "docs": {
-      "files": 244,
-      "loc": 144454
+      "files": 247,
+      "loc": 150392
     },
     "production": {
       "files": 205,
-      "loc": 59386
+      "loc": 59455
     },
     "migrations": {
       "files": 77,
@@ -55,15 +37,15 @@
     },
     "templates": {
       "files": 64,
-      "loc": 25141
+      "loc": 25220
     },
     "tests": {
-      "files": 304,
-      "loc": 102666
+      "files": 307,
+      "loc": 103719
     },
     "tooling": {
       "files": 14,
-      "loc": 11781
+      "loc": 12056
     }
   },
   "biggest_production": [
@@ -88,6 +70,11 @@
       "area": "production"
     },
     {
+      "path": "app/services/responses/_core.py",
+      "loc": 1020,
+      "area": "production"
+    },
+    {
       "path": "app/web/views/_instruments.py",
       "loc": 1009,
       "area": "production"
@@ -105,11 +92,6 @@
     {
       "path": "app/services/audit.py",
       "loc": 978,
-      "area": "production"
-    },
-    {
-      "path": "app/services/responses/_core.py",
-      "loc": 974,
       "area": "production"
     },
     {
@@ -788,7 +770,7 @@
       "production"
     ],
     "app/services/monitoring.py": [
-      309,
+      330,
       "production"
     ],
     "app/services/observer_cohort.py": [
@@ -824,11 +806,11 @@
       "production"
     ],
     "app/services/responses/__init__.py": [
-      83,
+      85,
       "production"
     ],
     "app/services/responses/_core.py": [
-      974,
+      1020,
       "production"
     ],
     "app/services/responses/_group_reconciliation.py": [
@@ -1196,7 +1178,7 @@
       "templates"
     ],
     "app/web/templates/base.html": [
-      4653,
+      4732,
       "templates"
     ],
     "app/web/templates/error.html": [
@@ -1584,7 +1566,7 @@
       "docs"
     ],
     "docs/local_setup.md": [
-      322,
+      517,
       "docs"
     ],
     "docs/operations_runbook.md": [
@@ -1592,7 +1574,7 @@
       "docs"
     ],
     "docs/practice-audit-2026-09-04.md": [
-      776,
+      846,
       "docs"
     ],
     "docs/security_posture.md": [
@@ -1600,7 +1582,7 @@
       "docs"
     ],
     "docs/status.md": [
-      1170,
+      1177,
       "docs"
     ],
     "docs/troubleshooting.md": [
@@ -1620,7 +1602,7 @@
       "docs"
     ],
     "guide/archive/README.md": [
-      181,
+      182,
       "docs"
     ],
     "guide/archive/assumptions_ui_legacy.md": [
@@ -1661,6 +1643,14 @@
     ],
     "guide/archive/codebase_assessment_09may.md": [
       373,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_10sep.json": [
+      3732,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_10sep.md": [
+      641,
       "docs"
     ],
     "guide/archive/codebase_assessment_11may.md": [
@@ -2231,12 +2221,12 @@
       47,
       "docs"
     ],
-    "guide/codebase_assessment_10sep.json": [
-      3732,
+    "guide/codebase_assessment_11sep.json": [
+      3756,
       "docs"
     ],
-    "guide/codebase_assessment_10sep.md": [
-      641,
+    "guide/codebase_assessment_11sep.md": [
+      449,
       "docs"
     ],
     "guide/deferred_consolidated.md": [
@@ -2244,7 +2234,7 @@
       "docs"
     ],
     "guide/inplace_pagination_assessment.md": [
-      208,
+      241,
       "docs"
     ],
     "guide/pill_style_audit.md": [
@@ -2263,12 +2253,16 @@
       352,
       "docs"
     ],
+    "guide/segment_19K_assessment_moves.md": [
+      1348,
+      "docs"
+    ],
     "guide/segment_20_operator_polish_and_documentation.md": [
       134,
       "docs"
     ],
     "guide/segment_plan_template.md": [
-      128,
+      129,
       "docs"
     ],
     "guide/sweep_2026-09-05_spec-docs.md": [
@@ -2288,7 +2282,7 @@
       "docs"
     ],
     "guide/todo_master.md": [
-      3233,
+      3276,
       "docs"
     ],
     "new_project_practices_setup.md": [
@@ -2376,7 +2370,7 @@
       "docs"
     ],
     "spec/operations_pages.md": [
-      437,
+      471,
       "docs"
     ],
     "spec/operator_button_audit.md": [
@@ -2456,7 +2450,7 @@
       "docs"
     ],
     "spec/ui_elements.md": [
-      913,
+      914,
       "docs"
     ],
     "spec/validate_page.md": [
@@ -2625,6 +2619,10 @@
     ],
     "tests/integration/test_chrome_invitations_state.py": [
       152,
+      "tests"
+    ],
+    "tests/integration/test_col_toggle_delegation.py": [
+      154,
       "tests"
     ],
     "tests/integration/test_data_shapes_routes.py": [
@@ -2813,6 +2811,10 @@
     ],
     "tests/integration/test_me_surface_role_chips.py": [
       335,
+      "tests"
+    ],
+    "tests/integration/test_monitoring_prefetch.py": [
+      290,
       "tests"
     ],
     "tests/integration/test_next_action_generate_resolver.py": [
@@ -3388,7 +3390,11 @@
       "tests"
     ],
     "tests/unit/test_close_check.py": [
-      332,
+      669,
+      "tests"
+    ],
+    "tests/unit/test_close_check_archived.py": [
+      272,
       "tests"
     ],
     "tests/unit/test_cohort_rule_view_helpers.py": [
@@ -3708,15 +3714,15 @@
       "tooling"
     ],
     "tools/close_check/__init__.py": [
-      197,
+      212,
       "tooling"
     ],
     "tools/close_check/_archive.py": [
-      85,
+      155,
       "tooling"
     ],
     "tools/close_check/_manifest.py": [
-      682,
+      872,
       "tooling"
     ],
     "tools/close_check/_shared.py": [
@@ -3752,5 +3758,5 @@
       "tooling"
     ]
   },
-  "prior": "codebase_assessment_10sep"
+  "prior": "codebase_assessment_11sep"
 }
