@@ -22,7 +22,10 @@ deleted without ceremony.
 
 ## 1. One Rosters page, replacing four
 
-**Proposed 2026-09-12 by the author.**
+**Proposed 2026-09-12 by the author.** The **first move of a two-move
+consolidation** — entry 2 is the second, folding Previews, Invitations
+and Responses into Monitoring on the same structure. Assignments is
+deliberately in neither.
 
 Consolidate the four roster Setup pages — **Reviewers**, **Reviewees**,
 **Relationships**, **Observers** — into a single **Rosters** page.
@@ -56,6 +59,80 @@ As described, and kept as described:
 
 So the page is one index plus two expandable modes, rather than four
 pages each carrying its own full set of cards.
+
+### The structure, refined — 2026-09-12
+
+The author's elaboration, kept as put. It resolves most of what the
+sketch above left implicit.
+
+**Select to preview** puts two cards below the roster table:
+
+1. a **search box card**, half width, right;
+2. beneath it a **full-width preview table card**, close to the one the
+   Setup pages carry today — the same table, its column chips, its row
+   pager, and the rest.
+
+**Only one roster's preview is open at a time.** Selecting another
+roster's preview closes the previous one. That is the answer to the
+"ragged table or union" question the sketch raised for *previews*: the
+preview is per-roster, so its columns are that roster's, and no
+reconciliation is needed. (The **index** table at the top still has to
+answer it — see the open questions.)
+
+**Select to edit** keeps the inline row beneath the roster, as sketched,
+and gains a defined scope: **roster-level metadata edits all live
+there** — friendly labels, Clear all, Upload / Download CSV, and their
+guarding checkboxes. Roster-level, not row-level.
+
+**Row-level work moves to where the rows are.** Selecting one or more
+rows *in the preview table* opens a **new action row carrying the
+row-level buttons**, in the manner of the sessions lobby's expander.
+
+**So the Operator actions card splits, and this is the part with a
+measurement behind it.** `spec/setup_pages.md`'s "Operator actions card"
+describes a card doing **two jobs at once** — a *search and filter strip*
+(Status, Search by, Search, Clear) **and** an *action row* (Edit,
+Inactivate, Activate, Delete, Save / Cancel, and the destructive set).
+Under this proposal it keeps the first and sheds the second:
+
+| | today | proposed |
+|---|---|---|
+| Search, filter, partition | Operator actions card | **the search box card** |
+| Row-level actions | Operator actions card | **an action row under the selected rows** |
+
+Each job gets a place, and the row actions sit next to the rows they act
+on rather than in a card above the table — which is the same argument
+19L.1 made for marking a selected row, applied one level up.
+
+**A requirement, not an open question: the Validate deep links must
+survive.** Validate's *Fix on … ↗* links land on a Setup page at a row
+anchor, and the Setup coverage matrix links in the same way. The author
+has stated this is to be preserved, so it moves out of the open
+questions and into the requirements: a consolidated page must still be
+addressable at *this roster, this row*.
+
+**What the two consolidations leave in the session nav.** Measured
+against the shipped nav at `453546c4` — `session_top_nav.html` carries
+**13 destinations**: Session Home, then a **Setup** group (Reviewers,
+Reviewees, Relationships, Observers, Instruments, Email Template) and an
+**Operations** group (Assignments, Validate, Previews, Invitations,
+Responses, Extract data).
+
+The author's target:
+
+> Home · Rosters · Instruments · Email Template · Assignments · Validate
+> · Monitoring · Data Extract
+
+**Eight.** The arithmetic holds: four roster pages become one (−3) and
+three Operations pages become one (−2), 13 − 5 = 8.
+
+Two consequences worth naming because the list makes them rather than
+states them. It is a **flat list**, so the Setup / Operations grouping
+disappears — arguably the point, since eight items may not need
+grouping, but it is a change to the page chrome and not only to the page
+count. And the last item is written **Data Extract** where the app says
+**Extract data**; recorded as a possible rename rather than silently
+adopting either spelling.
 
 ### What the rationale rests on — measured 2026-09-12 at `578ab82f`
 
@@ -167,9 +244,14 @@ existing primitive** — and the honest reading is that the lobby is a
 precedent for the *fan-out*, and an example of the gap for the *marking*.
 
 The author's view is that the lobby's own marking wants improving too,
-**separately** — recorded as entry 2 below rather than folded in here,
-because it stands on its own and this entry should not acquire a
-dependency it does not need.
+**separately** — and it since has been, as Items 1 and 2 of
+`guide/segment_19L_ux_refinements.md`, which is why it is not an entry in
+this file. It stood on its own, and this entry never acquired the
+dependency. What the lobby now has is a *bracket* rather than a fill: a
+rail at each end of the selected row, carried through the action panel.
+Whether that is the right primitive for a Rosters table is open — it was
+designed for one wide row in a tall table, which is not obviously the
+same problem.
 
 **The reason it is load-bearing rather than a nicety.** Today, "which
 roster am I acting on" is answered by ambient context nobody had to
@@ -275,10 +357,13 @@ on.
 
 Not answered here; recorded so they are not rediscovered.
 
-1. **Does the top table show columns per roster, or the union?** Four
-   rosters with different column sets in one table is either a ragged
-   table or a union with many empty cells. The description says "all
-   rosters and their columns" without settling which.
+1. **Does the top *index* table show columns per roster, or the union?**
+   Four rosters with different column sets in one table is either a
+   ragged table or a union with many empty cells. **Narrowed 2026-09-12**:
+   the refinement settles it for the *preview* (one roster at a time, so
+   its own columns), which leaves the question only for the index table
+   at the top — where "all rosters and their columns" still has to mean
+   something.
 2. **Where do the per-roster exceptions live?** This is now the load-
    bearing question rather than one of six, because the author has
    confirmed Observers will carry unique features — today's cohort match
@@ -291,17 +376,23 @@ Not answered here; recorded so they are not rediscovered.
    consolidation covering the three that genuinely are alike. That last
    option is not a failure of the idea — three-into-one still removes the
    duplication the rationale is about.
-3. **What happens to deep links?** The Validate page's *Fix on … ↗* links
-   land on specific Setup pages with a row anchor
-   (`spec/validate_page.md` §2.4), and the setup coverage matrix links in
-   too. A single page changes every one of those targets.
+3. ~~**What happens to deep links?**~~ **Answered 2026-09-12 — and it is
+   now a requirement rather than a question.** The Validate *Fix on … ↗*
+   links and the Setup coverage matrix must still reach *this roster,
+   this row*. What is still open is the **mechanism**: a fragment that
+   opens the right roster's preview and scrolls to the row, a query
+   parameter the server honours, or something else. Whatever it is,
+   `spec/validate_page.md` §2.4 and the coverage matrix change with it.
 4. **Does the row pager survive?** Each roster page currently pages
    independently, and `spec/ui_elements.md` §10 settles that a page turn
    reloads. One page hosting four pageable previews needs that answered
    again.
-5. **Is the nav still four items?** Consolidating the pages does not
-   necessarily consolidate the navigation, and the Setup nav is how
-   operators currently know the four rosters exist at all.
+5. ~~**Is the nav still four items?**~~ **Answered 2026-09-12: one
+   item.** The author's target nav is eight destinations, flat, with the
+   four rosters behind *Rosters*. The residual question is the one that
+   answer creates: the Setup nav is how an operator currently learns the
+   four rosters exist, and an index table inside a page teaches that only
+   once they arrive. Whether that matters is a pilot question.
 6. **What does this do to Quick Setup?** `_quick_setup.py` orchestrates
    across these rosters and is already near the size watchlist.
 
@@ -325,62 +416,88 @@ Not answered here; recorded so they are not rediscovered.
 
 ---
 
-## 2. The lobby's selected row is marked only by its checkbox
+## 2. One Monitoring page, replacing three
 
-**Raised by the author, 2026-09-12**, while discussing entry 1, and
-**explicitly separable from it**: this stands whether or not the Rosters
-consolidation ever happens, and entry 1 should not wait on it.
+**Proposed 2026-09-12 by the author**, immediately after entry 1 and as
+part of the same programme — the author's "Item 2", the second move of
+the consolidation. *It was briefly filed as entry 3, behind a lobby
+row-marking entry that has since been removed from this file: session
+lobby work is segment work, not an idea awaiting pilot evidence. With
+that gone the programme numbering and the file numbering agree.*
 
-> **✅ Graduated 2026-09-12 to `guide/segment_19L_ux_refinements.md`
-> Item 1**, on the author's instruction. The plan is authoritative for
-> the work; this entry stays as the record of how the observation arose
-> and why it was judged separable. Entry 1 remains an idea, not an item.
+### The idea, as put
 
-### The observation
+Consolidate **Previews**, **Invitations** and **Responses** into a single
+**Monitoring** page, **with a similar structure** to the Rosters page in
+entry 1: an index at the top, a preview mode, and row-level actions that
+appear beside the rows.
 
-On the sessions lobby, selecting a row injects an action panel beneath it
-— and the only thing distinguishing the *selected row itself* from its
-neighbours is that its checkbox is ticked. Verified at `496cc183`: the
-panel's `<td>` takes `background: var(--surface-muted)`, and no class is
-applied to the source `<tr>` at any point.
+**Assignments stays on its own.** The author's judgment: it is
+sufficiently different. That is worth recording as a *decision*, because
+it is the one page a naive "consolidate the Operations group" would have
+swept in — and the Operations group is exactly where Assignments sits
+today.
 
-### Why it is worth improving
+### What it rests on
 
-A ticked checkbox is a small mark at one edge of a full-width row. It is
-adequate while the panel sits directly beneath it and the operator has
-just clicked. It degrades in exactly the conditions the lobby invites:
+Measured at `453546c4`. The three pages are siblings in the nav's
+**Operations** group, and the two the Guide documents together —
+Invitations and Responses — are already described by **one spec**,
+`spec/operations_pages.md`, which covers both and nothing else. A spec
+that already treats two of the three as one subject is the same signal
+entry 1 draws on, where `spec/setup_pages.md` asserts a shared body shape
+across the four rosters.
 
-- **bulk selection**, where several rows are selected and the panel
-  states only a count, so *which* rows are in that count is carried
-  entirely by scattered checkbox states;
-- **a tall panel**, which pushes the source row toward or past the top of
-  the viewport;
-- **returning to the page**, where selection may be restored without the
-  click that created it.
+Previews is the third, and the loosest fit of the three: it is a
+*rendering* of what participants will see rather than a *monitor* of what
+they have done. Whether "Monitoring" is the right name for a page that
+also previews is an open question below.
 
-The panel's actions include **Purge and archive** and **Delete** — the
-Delete button ships disabled today, and the expander is a placeholder,
-but the intended action set is destructive, and target-clarity matters
-most where the action is irreversible.
+### The case against
 
-### What this is not
+The same objection entry 1 carries, and it has not been re-measured for
+these three. The 2026-09-12 Codex assessment's warning was about roster
+routes specifically; **nobody has checked whether Previews, Invitations
+and Responses duplicate each other the way Reviewers and Reviewees do.**
+Entry 1's rationale is backed by a measured 5,816 lines and an identical
+card sequence. This entry has no equivalent figure yet, and should not
+borrow entry 1's.
 
-Not a proposal for a mechanism, and not an argument that the lobby is
-currently unsafe — its destructive buttons are not wired. It records that
-**the row-marking is the weakest link in a pattern the app is likely to
-reuse**, which is the reason to fix it before it is copied rather than
-after.
+`_operations.py` is already on the size watchlist at **1,038 lines**, and
+the 12sep assessment's note on it is *"two page families; split
+Invitations from Responses if it grows"* — which points the opposite way
+from merging a third page in. Not fatal: a UI consolidation need not
+merge the services behind it, and entry 1 makes the same
+presentation-versus-services split. But it is a live tension and the
+assessment said it first.
 
-### Relationship to entry 1
+### Open questions
 
-If both are ever done, this one is the **cheaper and lower-risk** of the
-two and could land first: it improves a shipped page in place, needs no
-route or service change, and would give entry 1 the primitive it
-otherwise has to invent. That is an argument for sequence, not for
-bundling — entry 1 remains gated on pilot evidence, and this one is not.
+1. **Is "Monitoring" the right name**, given Previews renders rather than
+   monitors? The alternative is that Previews does not belong in this
+   consolidation at all.
+2. **What is the index table's row?** On Rosters a row is a roster. Here
+   it is less obvious: a participant, an instrument, a phase, or the
+   three source pages themselves.
+3. **Does the Validate deep-link requirement reach here too?** Validate
+   links at Setup pages today; whether any of its rules point into
+   Operations needs checking before this is planned.
+4. **Does the duplication that justifies entry 1 exist here?** Unmeasured,
+   and the first thing to measure if this is ever picked up.
+
+### What would have to be true before this is worth scheduling
+
+- **Entry 1 has shipped and been used.** This is explicitly the second
+  move; doing it first would be building the pattern twice before
+  learning whether it works once.
+- The duplication question above has an actual number.
+- The Previews-versus-monitoring naming question has an answer, because a
+  page named for something it half does is worse than three pages named
+  correctly.
+
 
 ---
 
-*Further ideas go below as `## 3.`, `## 4.`, … each with the same shape:
+*Further ideas go below as `## 4.`, `## 5.`, … each with the same shape:
 the idea as put, what it rests on, the case against, open questions.
 Entries are independent unless one says otherwise.*

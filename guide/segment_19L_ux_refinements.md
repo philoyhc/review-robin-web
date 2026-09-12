@@ -85,6 +85,20 @@ on `.tag-chip.is-selected`, which takes the strong shade as a 2px edge
 and the pale one as fill. A selected row wants the same semantic in a
 row-shaped expression.
 
+> **Two errors in the paragraph above, left standing per *never rewrite
+> intent* and corrected in `Status`.** (1) The edge is **1px**, not 2px —
+> the rule has always been `inset 0 0 0 1px`; the figure was wrong in
+> `base.html` and `spec/ui_elements.md` from 19J.7 and this plan
+> inherited it. (2) The pair is **not** "used together on
+> `.tag-chip.is-selected`": the edge sits on the bare `.tag-chip`
+> selector and means *clickable*, carried selected or not, with only the
+> fill gated on `.is-selected`. The reasoning the Decision rests on
+> survives both — the vocabulary does model a strong edge plus a pale
+> interior — but it is a resemblance, not a reuse. *Annotated here on
+> 2026-09-12 because the correction had reached the specs, the test and
+> `base.html` and stopped one document short: the failure this plan's own
+> Status describes, happening to the plan.*
+
 **Rejected: strengthening the copy instead** — a panel title that names
 the selected sessions rather than counting them. It would help, and it is
 not the ask: it fails for the fast operator, does nothing when the panel
@@ -332,3 +346,299 @@ deployed page.
 - `guide/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
   (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
+
+---
+
+## Item 2 — the selected row's fill hides the pills it carries
+
+### Opportunity
+
+19L.1 gave the selected row an edge and a fill. The fill is
+`--row-selected-bg`, which resolves to `--blue-pale` / `--blue-abyss` —
+**the same primitives as `--status-info-bg`**, which backs both
+`.pill-count` and `.pill-info` under `body.ui-v2` (one rule, two class
+names, `base.html:3238`). A lobby row carries four to six of those:
+Created by, Created, Deadline, Timezone, and one per tag. On a selected
+row every one of them disappears.
+
+Measured against the five pill fills a lobby row can render — archived is
+not among them, `routes_operator/_lobby.py:90` filters archived sessions
+to their own page:
+
+| light fill | count / info | Draft | Activated | Closed | vs card |
+|---|---|---|---|---|---|
+| `--blue-pale` (shipping) | 1.00 | 1.10 | 1.08 | 1.00 | 1.22 |
+| `--gray-mist` | 1.01 | 1.11 | 1.09 | 1.01 | 1.24 |
+| `--gray-soft` | 1.21 | 1.32 | 1.30 | 1.21 | 1.47 |
+| `--blue-wash` | 1.12 | 1.02 | 1.04 | 1.12 | 1.09 |
+
+WCAG 2.x relative luminance; under ~1.15 a pill has no visible boundary.
+The deployed screenshot confirms it: *Local Operator*, both timestamps,
+*GMT+8*, *TESTING* and *VALIDATED* all render as bare text, while *DRAFT*
+keeps its amber at 1.10.
+
+**The constraint that kills every alternative fill.** The six pale pill
+fills occupy luminance 0.810–0.914; the card is 1.000. There is no room
+above the band — `--blue-wash` at 0.915 lands on its ceiling, which is
+why it reads as too faint — and today's `--blue-pale` sits at the band's
+*floor*, so lightening it moves *through* Activated (0.876) and Draft
+(0.893) rather than away from them. Only `--gray` #9ca3af clears every
+pill, and at 2.54 against the card it stops reading as a highlight.
+
+### Decision
+
+**Remove the row fill entirely.** Put `--selected-bg` as a 6px inset
+rail at **both** ends of the selected row, and carry the same pair of
+rails through the injected expander row, so the selection and the panel
+that acts on it read as one bracketed object.
+
+The pill problem is then not traded but void: a selected row's pills sit
+on `--surface-card` at exactly the ratios an *un*selected row's already
+have. The signal moves to the rail, at **5.17** against the card in
+light and **4.85** in dark — four to five times what any fill in this
+palette reaches.
+
+**`--row-selected-bg` is renamed, not retired.** Its two primitives move
+to the expander panel as `--selection-panel-bg`, replacing
+`--surface-muted` there. The panel holds no pills; what it holds is four
+text inputs and up to seven buttons whose faces are `--surface-page`,
+and against `--surface-muted` those faces score **1.09** — the same
+invisibility, already shipping inside the panel, legible only by their
+`--border-default` outline. On the blue they reach **1.22** light and
+**1.41** dark. The token moves to the surface it suits and repairs a
+defect on the way.
+
+**Rejected — a grey fill** (`--gray-soft` / `--slate-deep`, worst pill
+1.21 / 1.28). It works, and it was the recommendation until the fill was
+questioned at all. It keeps a fill whose only job is to mark the row,
+when a rail marks it four times better; and at 1.21 the pills are
+*separated* from the row rather than contrasted against it.
+
+**Rejected — caps.** A 2px rule above the row and below the panel closes
+the bracket into a box, but costs 4px of height on selection. 19L.1
+chose an inset shadow precisely so selection never reflows the table
+under a pointer aimed at a destructive control. Author declined,
+2026-09-12.
+
+**Rejected — bordering the blue pill instead.** Every pill already
+reserves `border: 1px solid transparent` (19J.7 rung 3), so a visible
+border is free of layout cost — but it would make `.pill-count` the only
+bordered pill in the app. Author declined, 2026-09-12.
+
+**Also in scope: a missed margin reset.** `.session-expander-fields
+label` (`base.html:2761`) sets display, gap, font and flex but no
+margin, so `body.ui-v2 label`'s `margin: var(--space-3) 0 var(--space-1)
+0` still reaches it per property. The panel's own rhythm is a 12px flex
+gap; the label adds 12px more, giving **24px above the field row and
+16px below**. Neither was chosen. `.exp-allow-delete` two rules away
+already carries `margin: 0` with a comment naming this hazard; the field
+label was missed. It is here rather than in its own item because it is
+one declaration inside a rule this item is already editing, and the
+author found it while inspecting this item's mockups.
+
+**Rejected — merging the bulk panel's Tags label onto the title row.**
+It would close the other half of what looked wrong (a title row
+three-quarters empty beside a right-hugging field) and save a row of
+height, but only the bulk expander can take it: the single expander's
+fields row holds four boxes at flex-grow 3 / 2 / 2 / 3 across the full
+width, leaving no half-row to lift the title into, so the two panels
+would stop being structurally alike. Author declined after inspecting
+both in the lobby, 2026-09-12.
+
+### Semantics
+
+- **No selection** — no rails anywhere, no panel. Unchanged.
+- **One row** — rails on that row's first and last cells, and on the
+  panel's single `colspan` cell, which is both first and last child and
+  so takes both shadows in one declaration.
+- **Several contiguous rows** — one tall bracket; the rows' own
+  separator rules stay, because they are still distinct rows inside one
+  selection.
+- **Several scattered rows** — several brackets, only one containing the
+  panel, which is anchored after the most recently ticked row still
+  selected (`sessions_list.html:581`). Accepted as correct rather than
+  worked around: two non-contiguous selections *are* two things.
+- **A row whose panel is off-screen** — the rails still mark it; this is
+  the case 19L.1 existed for and nothing here weakens it.
+- **The archived page** — has its own expander with the same class names
+  and no row marking at all. It must not pick up a blue panel and rails
+  while its rows stay unmarked, so the lobby opts in by class.
+
+### Judgment calls — decided
+
+- **A new class, `session-expander-bracketed`, on the two lobby expander
+  templates** rather than scoping by `#sessions-list-form`. Both work —
+  the injected row does live inside that form — but a class names the
+  intent, survives a form rename, and can be asserted. 2026-09-12.
+- **The rail stays 6px**, the width 19L.1 landed after the author asked
+  for 2×. Nothing measured argues for changing it, and a second width
+  change in two days would be churn. 2026-09-12.
+- **`--selection-panel-bg` is a new name, not a reuse of
+  `--row-selected-bg` in place.** The role changed; a token that says
+  *row* on a panel is how the two-tier system starts lying. Same two
+  primitives, so `spec/color_tokens.md`'s count is unchanged.
+  2026-09-12.
+- **The panel becomes a pill-free zone by contract**, because its fill
+  is `--status-info-bg`'s primitive. Recorded in the spec and guarded in
+  the test rather than left to be rediscovered. 2026-09-12.
+
+### Blast radius (measured)
+
+Commands run at `31e2e5bd`, 2026-09-12:
+
+- `grep -rn -- "--row-selected-bg" app/ spec/ tests/` — **6**:
+  `base.html` ×3 (two declarations, one consumer), `spec/ui_elements.md`,
+  `spec/sessions_overview.md`, `spec/color_tokens.md`.
+- `grep -rln "session-expander" app/ spec/ tests/ docs/` — **5**:
+  `base.html`, `operator/sessions_list.html`,
+  `operator/sessions_archived.html`, `spec/sessions_overview.md`,
+  `tests/integration/test_operator_sessions.py`.
+- `grep -rln "session-row-selected" app/ spec/ tests/ docs/` — **5**:
+  `base.html`, `operator/sessions_list.html`, `spec/ui_elements.md`,
+  `spec/sessions_overview.md`, `tests/unit/test_lobby_row_selection.py`.
+- `grep -c "session-expander-fields" app/web/templates/base.html` — **9**.
+
+`sessions_archived.html` is the one the count would have missed: it
+carries `session-expander session-expander-bulk`, the *same* classes as
+the lobby's, with its own `refreshExpander()` and no row marking. A
+class-free rule would have given it half a bracket.
+
+### PR ladder
+
+One rung. The fill removal, the rails and the panel repoint are a single
+visual state — landing the rail without removing the fill would ship a
+row wearing both, and removing the fill without the rail would ship a
+selected row marked by nothing but its checkbox, which is the 19L.1
+defect restored. The margin reset rides along because it edits a rule
+inside the same block; it is separable and is called out in the PR body
+so a reviewer can object to it on its own.
+
+### Definition of done
+
+- `body.ui-v2 tr.session-row-selected > td` no longer sets a background.
+- Rails on `td:first-child` and `td:last-child`, both `--selected-bg`,
+  both 6px, both inset shadows.
+- `.session-expander-bracketed > td` carries both rails and
+  `--selection-panel-bg`; the archived page's expander carries neither.
+- `--row-selected-bg` is neither declared nor consumed in `app/`;
+  the name survives only in the comment recording where it went.
+- `.session-expander-fields label` declares `margin: 0`.
+- `tests/unit/test_lobby_row_selection.py` asserts the new mechanism and
+  states what it cannot see.
+- `.venv/bin/pytest` green; `ruff check .` clean.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19L.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+1. **Does a scattered selection read as clutter on a fifty-row lobby?**
+   Decided by the author on the dev slot; the static specimens cannot
+   settle it.
+2. **Should the archived page follow?** Its rows have never been marked,
+   so it is consistent with itself today. A follow-up item if the
+   divergence bothers the author on the dev slot.
+3. **Does the rail alone hold a lone selected row whose panel is
+   off-screen?** Two marks ~900px apart with nothing between. Dev slot.
+
+### Out of scope
+
+- **The archived page's expander** — see open question 2; it keeps
+  `--surface-muted` and no rails.
+- **Merging the bulk panel's title and Tags rows** — declined above;
+  recorded here rather than in `guide/deferred_consolidated.md` because
+  it was decided against, not deferred.
+- **Any change to a pill token.** The point of this item is that none is
+  needed.
+
+### Status — 2026-09-12 (item closed)
+
+**Landed as planned, in one rung.** Fill removed, rails at both ends,
+the bracket carried through the panel by opt-in class, the token renamed
+onto the panel, and the label margin reset. Suite 3,857 → 3,862 (the
+rewritten guard went from 5 tests to 10); `ruff` clean.
+
+**Decisions confirmed at build:**
+
+- The opt-in class was the right call and the blast radius proved why.
+  `sessions_archived.html` carries `session-expander
+  session-expander-bulk` — *the same two classes as the lobby's bulk
+  panel* — with its own `refreshExpander()` and no row marking at all.
+  A rule on `.session-expander` would have given that page the closing
+  half of a bracket with no opening half. Nothing in the plan's first
+  four grep lines would have surfaced it; the fifth did.
+- The rename left `spec/color_tokens.md`'s count at **107**, as a rename
+  should. Confirmed by regenerating both theme pages, which report
+  "107 semantic".
+
+**A stale figure found and fixed, not introduced.** 19L.1 doubled the
+edge from 3px to 6px in `base.html` and in the guard's floor, and left
+**both** `spec/ui_elements.md` and `spec/sessions_overview.md` saying
+3px. It survived a day because the guard asserted `>= 2` — *a range
+cannot pin a figure*. Both specs are corrected here (they were being
+rewritten anyway), and
+`test_the_spec_and_the_stylesheet_agree_on_the_rail_width` now reads the
+shipped width and requires the spec's stated width to equal it. This is
+the same lesson 19L.1's own Status recorded one item earlier, arriving
+by a different door: last time a test restated a wrong number, this time
+a test permitted a range and let two documents drift inside it.
+
+**Mutation testing: 8 run, 7 caught, 1 escaped and fixed.** Dropping the
+right rail; the two rails set to different widths; the panel losing its
+class; the row fill restored; the margin reset removed; the pill-free
+warning deleted; the rail thinned back to 3px (caught by the new
+spec-agreement guard, which is the drift above reproduced deliberately).
+
+**The escape is worth naming.** Reverting the panel's background from
+`--selection-panel-bg` to `--surface-muted` — undoing *half of this
+item* — passed all ten tests. Every guard checked the rails; not one
+checked the interior. The panel's fill is not decoration: it is where
+the row's retired fill went, and it is what lifts the panel's own
+inputs and buttons off 1.09 against their background. An assertion was
+added and the mutation now fails. **The pattern: a test suite written
+around the striking half of a change will pass the half nobody
+photographed.**
+
+**What the guards cannot do**, stated at their own definition: there is
+no JavaScript runtime, so nothing proves a row *becomes* bracketed when
+ticked; and nothing here sees a rendered colour. Every contrast ratio in
+this item is from the plan's measurements, not from a check.
+
+**The `spec-writer` pass found one defect, and it is mine twice over.**
+`spec/sessions_overview.md` pointed at *"`spec/ui_elements.md` §6"* for
+the pill-free-zone condition. §6 is Buttons; the `.session-row-selected`
+entry is in §10, Layout primitives. Worse, **I repeated the same wrong
+number in the brief I gave `spec-writer`** — describing the edit as "the
+`.session-row-selected` table row in §6" — so the agent was handed my
+error as a premise and caught it anyway, and said so. The citation now
+**names the primitive instead of the section**, because a section number
+is precisely the kind of reference that drifts as sections are added.
+
+*Two items running, two stale cross-references, both of them numbers
+standing in for names.* 19L.1's was a pixel width restated in three
+places; this one is a section index. The repo's own habit of quoting
+identifiers rather than positions is the defence, and it was not applied
+here.
+
+**Open questions 1-3 stay open**, all three being dev-slot questions —
+scattered selections on a fifty-row lobby, whether the archived page
+should follow, and whether two rails ~900px apart hold a lone selected
+row whose panel is off-screen.
+
+**UI-visible: verify on the dev slot after deploy.**
+
+### Doc impact
+
+- `spec/ui_elements.md` — the `.session-row-selected` row is rewritten:
+  no fill, rails at both ends, the bracket through the panel, and the
+  panel's pill-free-zone condition (Item 2).
+- `spec/sessions_overview.md` — the row-expander section records the
+  bracket and the panel's new fill (Item 2).
+- `spec/color_tokens.md` — `--row-selected-bg` becomes
+  `--selection-panel-bg`; same primitives, count unchanged (Item 2).
+- `guide/new_ux_ideas.md` — entry 2 removed entirely: session lobby work
+  is segment work, not an idea awaiting evidence, and the entry has been
+  superseded twice over (Item 2).
+- `docs/status.md` — row when the item closes (Item 2).

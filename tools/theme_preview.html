@@ -251,11 +251,21 @@
         --chip-active-fg: var(--blue-strong);
         --chip-active-bg: var(--blue-wash);
         --chip-selected-bg: var(--blue-pale);
-        /* A selected table row (19L.1). Its own role rather than a
-           reuse of --chip-selected-bg: same primitives today, but a
-           row and a chip are different things and a repoint of one
-           should not silently move the other. */
-        --row-selected-bg: var(--blue-pale);
+        /* The interior of a selection's action panel (19L.2). Was
+           --row-selected-bg, the selected row's fill, until that fill
+           was found to erase every pill the row carries: these are
+           --status-info-bg's primitives, and .pill-count wears them.
+           The panel holds no pills, so the shade is safe here — and
+           better than the --surface-muted it replaces, which left the
+           panel's own inputs and buttons at 1.09 against it, legible
+           only by their borders. Its own role rather than a reuse of
+           --chip-selected-bg: same primitives today, but a repoint of
+           one should not silently move the other.
+
+           This makes the panel a PILL-FREE ZONE. Render a .pill-count
+           inside it — a count, a validation badge — and the collision
+           this token was moved to escape reappears one storey down. */
+        --selection-panel-bg: var(--blue-pale);
         /* ===== end design tokens ===== */
       }
       /* Dark palette — overrides the light :root values above when the
@@ -385,7 +395,7 @@
         --chip-active-fg: var(--blue-glow);
         --chip-active-bg: var(--blue-abyss-soft);
         --chip-selected-bg: var(--blue-abyss);
-        --row-selected-bg: var(--blue-abyss);
+        --selection-panel-bg: var(--blue-abyss);
         /* ===== end design tokens ===== */
       }
       html { font-size: 100%; background: var(--surface-page); }
@@ -2718,11 +2728,23 @@
          nature. A `<tr>` has one nature, and a selected row is the
          thing the panel's actions will act on — which is what the
          reserved shade means. */
-      body.ui-v2 tr.session-row-selected > td {
-        background: var(--row-selected-bg);
-      }
+      /* No fill (19L.2). The row's background is whatever an unselected
+         row's is, deliberately: the fill this rule used to set was
+         --status-info-bg's own primitive, so every .pill-count and
+         .pill-info on the row — Created by, Created, Deadline, Timezone,
+         one per tag — vanished into it, along with a Validated status
+         pill. Measured at 1.00 against the pill, where under ~1.15 a
+         pill has no visible boundary. No other fill escapes: the six
+         pale pill fills occupy luminance 0.810-0.914 against a 1.000
+         card, so there is no room above the band and the only clearance
+         below it is dark enough to stop reading as a highlight. The
+         rails carry the whole signal instead, at 5.17 against the card
+         in light and 4.85 in dark. */
       body.ui-v2 tr.session-row-selected > td:first-child {
         box-shadow: inset 6px 0 0 var(--selected-bg);
+      }
+      body.ui-v2 tr.session-row-selected > td:last-child {
+        box-shadow: inset -6px 0 0 var(--selected-bg);
       }
 
       /* Inline row-expander — a full-width action panel injected
@@ -2730,6 +2752,18 @@
       body.ui-v2 .session-expander > td {
         background: var(--surface-muted);
         padding: var(--space-3) var(--space-4);
+      }
+      /* The bracket's closing half (19L.2). Opt-in by class, not by
+         .session-expander alone: the archived sessions page injects a
+         panel carrying the SAME class names from its own script, and
+         its rows have never been marked — an unscoped rule would give
+         that page a bracket with no top to it. The panel's single
+         colspan cell is both first and last child, so it takes both
+         rails in one declaration. */
+      body.ui-v2 .session-expander-bracketed > td {
+        background: var(--selection-panel-bg);
+        box-shadow: inset 6px 0 0 var(--selected-bg),
+                    inset -6px 0 0 var(--selected-bg);
       }
       body.ui-v2 .session-expander-body {
         display: flex;
@@ -2748,6 +2782,13 @@
         font-size: var(--fs-small);
         flex: 1 1 0;
         min-width: 0;
+        /* Reset the global body.ui-v2 label margin, as .exp-allow-delete
+           below already does. Without it the label's own 12px top margin
+           stacked on .session-expander-body's 12px flex gap, putting the
+           field row 24px below the title in a panel whose stated rhythm
+           is 12px — and 16px above the action row, from the same rule's
+           4px bottom. Neither number was chosen (19L.2). */
+        margin: 0;
       }
       body.ui-v2 .session-expander-fields input { width: 100%; }
       body.ui-v2 .exp-fields-right { justify-content: flex-end; }
@@ -4435,7 +4476,7 @@
         <tr><td class="pv-name">chip active fg<code>--chip-active-fg</code></td><td><span class="pv-dot" style="background: var(--chip-active-fg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
         <tr><td class="pv-name">chip active bg<code>--chip-active-bg</code></td><td><span class="pv-dot" style="background: var(--chip-active-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
         <tr><td class="pv-name">chip selected bg<code>--chip-selected-bg</code></td><td><span class="pv-dot" style="background: var(--chip-selected-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
-        <tr><td class="pv-name">row selected bg<code>--row-selected-bg</code></td><td><span class="pv-dot" style="background: var(--row-selected-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
+        <tr><td class="pv-name">selection panel bg<code>--selection-panel-bg</code></td><td><span class="pv-dot" style="background: var(--selection-panel-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
       </tbody></table></details>
     </section>
   </div>
