@@ -2045,7 +2045,7 @@
               members = roster;
             } else {
               var keyOf = function (r) {
-                return fields.map(function (f) { return r[f] || ''; }).join(' ');
+                return fields.map(function (f) { return r[f] || ''; }).join('\u0000');
               };
               var sampleKey = keyOf(sample);
               members = roster.filter(function (r) { return keyOf(r) === sampleKey; });
