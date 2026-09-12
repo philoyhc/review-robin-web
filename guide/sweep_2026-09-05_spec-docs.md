@@ -8,6 +8,8 @@
 `guide/sweep_template.md`, to validate the template (Segment 19A Item 2
 PR 3).
 
+<!-- sweep-scope: corpus -->
+
 **Deliberately partial.** This sweep reconciles the three prior sweeps and
 reads the files staleness flagged. It does not read the other 51. Section
 7 says which.

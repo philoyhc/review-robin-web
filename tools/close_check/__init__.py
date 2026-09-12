@@ -136,7 +136,7 @@ from ._manifest import (
     window,
 )
 from ._shared import REPO, Unresolvable, _git
-from ._sweep import last_sweep_date, stale_report, sweep_scope
+from ._sweep import dated_sweeps, last_sweep_date, stale_report, sweep_scope
 
 __all__ = [
     "FAIL",
@@ -156,6 +156,7 @@ __all__ = [
     "find_manifests",
     "honoured",
     "item_heading_start",
+    "dated_sweeps",
     "last_sweep_date",
     "manifest_levels",
     "main",

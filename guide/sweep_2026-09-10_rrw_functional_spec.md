@@ -7,6 +7,8 @@ this file was not among its findings) · **Trigger:** Segment
 19J Item 1, from `guide/archive/codebase_assessment_10sep.md` §8
 recommended move #1.
 
+<!-- sweep-scope: partial -->
+
 **A single-file sweep, deliberately.** The folder-scoped cadence
 (19A Item 2, 8 weeks or 500 merges) covers `spec/` and `docs/` as
 a corpus. This one reads one document end to end because the

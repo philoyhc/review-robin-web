@@ -27,6 +27,10 @@ SWEEP_INTERVAL_MERGES = 500
 # what a plan may *commit* to; this bounds what a reader must *read*.
 SWEEP_SCOPE_DIRS = ("spec", "docs")
 SWEEP_DATED_NAME = re.compile(r"^sweep_(\d{4}-\d{2}-\d{2})_")
+# A sweep declares its own scope; the filename's <scope> slug is free
+# text ("spec-docs", "rrw_functional_spec") that no rule can classify.
+# Only a `corpus` sweep resets the cadence — see `dated_sweeps()`.
+SWEEP_SCOPE_MARKER = re.compile(r"<!--\s*sweep-scope:\s*(corpus|partial)\s*-->")
 
 
 def sweep_scope() -> list[str]:
@@ -41,19 +45,53 @@ def sweep_scope() -> list[str]:
     return sorted(paths)
 
 
+def dated_sweeps() -> list[tuple[str, str, str]]:
+    """Every dated sweep as ``(date, scope, filename)``, oldest first.
+
+    Scope comes from the document's own ``<!-- sweep-scope: … -->``
+    marker, not from the filename: the ``<scope>`` slug is free text
+    ("spec-docs", "rrw_functional_spec") and no rule can classify it. A
+    dated sweep carrying no marker raises rather than being guessed at —
+    guessing is the failure this function exists to stop.
+
+    Distinct from ``sweep_scope()`` above, which lists the *files a sweep
+    must read*; this lists *the sweeps themselves*.
+    """
+    found = []
+    for path in sorted((_shared.REPO / "guide").glob("sweep_*.md")):
+        match = SWEEP_DATED_NAME.match(path.name)
+        if not match:
+            continue
+        marker = SWEEP_SCOPE_MARKER.search(path.read_text())
+        if marker is None:
+            raise Unresolvable(
+                f"guide/{path.name} carries no "
+                "'<!-- sweep-scope: corpus|partial -->' marker, so whether it "
+                "resets the sweep cadence cannot be determined. Add one — see "
+                "guide/sweep_template.md."
+            )
+        found.append((match.group(1), marker.group(1), path.name))
+    return sorted(found)
+
+
 def last_sweep_date() -> str | None:
-    """Newest `guide/sweep_<YYYY-MM-DD>_*.md`, or None if none exists yet.
+    """Newest **corpus** `guide/sweep_<YYYY-MM-DD>_*.md`, or None.
+
+    The cadence is defined over ``spec/`` + ``docs/`` as a corpus, so
+    only a sweep that read the corpus can reset it. Before 2026-09-12
+    this returned the newest dated sweep of any kind, and the
+    single-file 2026-09-10 sweep — which says in its own opening that
+    the folder-scoped cadence is a separate thing — reset the clock
+    from **230 merges / 7 days to 61 / 2**, measured at ``bb38111f``.
+    Nothing misfired, because neither figure was near 500 / 56; the
+    error would have compounded with every later partial sweep.
 
     Only the dated convention is read. The three pre-convention sweeps
     (`spec_sweep_11may.md` and friends) carry no parseable date, so
     guessing one would be worse than asking for ``--since``.
     """
-    dates = [
-        match.group(1)
-        for path in (_shared.REPO / "guide").glob("sweep_*.md")
-        if (match := SWEEP_DATED_NAME.match(path.name))
-    ]
-    return max(dates) if dates else None
+    corpus = [date for date, scope, _ in dated_sweeps() if scope == "corpus"]
+    return max(corpus) if corpus else None
 
 
 def stale_report(since: str | None, stream) -> int:
