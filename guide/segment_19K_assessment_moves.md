@@ -1865,10 +1865,19 @@ paid again on every navigation, and it cannot be cached separately
 because it is not a separate thing.
 
 **`app/main.py` registers no compression middleware.** Whether the Azure
-front end gzips responses on the way out is **not known from here**, and
-that unknown is the whole reason this item is measurement-first: if the
-platform already compresses, the wire cost is ~50 KB rather than ~200 KB
-and the case is much weaker.
+front end gzips responses on the way out is **not knowable from here**,
+and that unknown is the whole reason this item is measurement-first: if
+the platform already compresses, the wire cost is ~50 KB rather than
+~200 KB and the case is much weaker.
+
+**Not knowable from here, literally.** The agent container's network
+policy blocks the dev slot — a request to
+`app-review-robin-web-dev-…azurewebsites.net` returns
+`403 CONNECT tunnel failed` (tried 2026-09-12). So rung 1 is not agent
+work at all, and this item is **the only one of 19K.6–9 whose first
+rung cannot start in the container**. Items 6, 7 and 8 are all "build
+here, verify on the slot after deploy"; this one needs the number
+*before* there is anything to build.
 
 Context that makes it worth asking: the deployment is an **F1 free App
 Service plan with no Always On** (`docs/known_limitations.md`), so this
@@ -1904,9 +1913,11 @@ afterwards which one was worth it.
 ### Semantics
 
 - **The measurement is taken against the deployed slot**, not the
-  container. Whether a response is compressed in transit is a property
-  of the platform, and `CLAUDE.md` already says end-to-end verification
-  happens there.
+  container, and the distinction that matters is *which* Azure. The dev
+  slot is **live** (`docs/known_limitations.md`: one dev slot, a push to
+  `main` deploys straight to it); what is outstanding is the
+  institutional host, which blocks Segment 20 and not this. So this item
+  is gated on **a request**, not on provisioning.
 - **`_RevalidatingStaticFiles` sets `Cache-Control: no-cache`** (19H
   Item 4), so an extracted stylesheet would *revalidate* rather than be
   cached hard — a 304 on repeat views, not a skipped request. That is
@@ -1944,9 +1955,19 @@ Taken 2026-09-12 at `11cad9c1`.
 
 ### PR ladder
 
-1. **Measure the deployed response**, and record the answer. Whether
-   `Content-Encoding: gzip` comes back from the dev slot, and the wire
-   size of one operator page with and without it. *Must not* change
+1. **Measure the deployed response — Author, not agent**, and record the
+   answer here. The dev slot exists and every push to `main` deploys to
+   it, so this needs no provisioning; it needs a request the container
+   cannot make. One line, from any machine that can reach the slot:
+
+   ```
+   curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
+     https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/operator/sessions
+   ```
+
+   What to record: the `Content-Encoding` header (present or absent) and
+   `Content-Length`. Browser devtools' Network tab gives the same two,
+   with "transferred" against "resource" size. *Must not* change
    `app/main.py` or `base.html`.
 2. **Whatever rung 1 selects**, sized once the number exists.
 
@@ -1971,6 +1992,12 @@ Taken 2026-09-12 at `11cad9c1`.
 
 - **Which of the three.** Author decides at rung 1, from the deployed
   measurement rather than from the container's.
+- **Whether this item belongs in 19K at all.** It was opened alongside
+  6–8 as "unblocked work while Azure is outstanding", and that framing
+  is only two-thirds right: it is unblocked by *provisioning* and gated
+  on a request the agent cannot make. If rung 1's number sits
+  unmeasured, this is the item to move rather than the one to hold the
+  segment open for.
 
 ### Out of scope
 
