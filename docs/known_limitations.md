@@ -112,6 +112,10 @@ bugs — they trace to the Segment 14A plan and
 
   All eleven clear AA *large* (3:1) except the first, and all are
   button labels, pill text or selected states rather than prose.
+  To inspect them rather than read them, open
+  `tools/theme_customizer.html` — its Contrast panel lists all 73
+  pairs with the sub-AA ones outlined in red, per theme, and
+  recomputes live as tokens are remapped.
 - **What the sweep cannot see.** A pair is found only where one
   rule sets both halves, the token names match (`--x-fg` /
   `--x-bg`), or the background is a `--surface-*`. Text inheriting

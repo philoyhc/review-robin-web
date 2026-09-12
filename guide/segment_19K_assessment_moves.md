@@ -1963,6 +1963,49 @@ That last is worth its own line — this item's finding was that
 hand what no check does.
 
 
+**The panel became the place the audit is read** (author, after the
+push of the first three commits). The 11 shortfalls were recorded in
+four documents and enforced in one test; the 135 *passing* pairings
+were recorded nowhere — the audit could be enforced but not looked at.
+The customizer's Contrast panel already existed for exactly this and
+was carrying **12** hand-listed pairs, which is the same defect one
+level up: it had drifted to include `--text-dim`, retired by this
+item, and it missed the `--nav-home-bg` pair that was failing AA. So
+the panel now renders a row per pair from `hc.collect_contrast_pairs`
+— the single definition, which the test imports rather than
+re-implements — with sub-AA outlined in red, a live count per group
+and overall, the shipped ratio beside the live one, and the four
+sources named in each row's tooltip.
+
+Two things make that more than a bigger list. **The flagging is
+computed in the browser from the live model**, so grouping is
+structural (by the foreground's cluster) rather than by pass/fail: a
+static "failures first" layout would be wrong the moment you remap.
+And **a test asserts the generated page carries a row for every
+audited pair** — not the generator's source, which would pass while
+the committed page was stale. That is the generator-versus-output
+drift this item found nothing tests; it is now tested for this one
+surface.
+
+**Verified in a browser, not asserted.** The suite has no JS runtime,
+so the panel was driven in Chromium against the committed page: 73
+rows, **0 unresolved**, **7 outlined in light and 4 in dark — 11,
+exactly `KNOWN_SHORTFALLS`** — with the per-group counts summing to
+the same. Then the live promise: repointing `--text-subtle` to
+`--gray`, the value `--text-dim` used to carry, takes the count from
+**7 to 17**, and restoring returns it to 7. Playwright is installed in
+this container but **declared in neither `pyproject.toml` nor
+`requirements.txt`**, so this cannot become a test without a
+dependency decision — the same finding 19K.6 recorded, and the reason
+the two new tests assert the *mechanism* (the class is defined,
+something toggles it, every recorded shortfall has a row) and say so.
+
+The first render was wrong in a way only looking could catch: at three
+columns the labels ellipsised to `subtle → ti…`, so a reader could see
+a red 3.32 and not what it belonged to. Cells widened, and the tooltip
+now carries the token names rather than only the provenance.
+
+
 **Decisions confirmed at build:**
 
 - The decorative uses are outside the floor by rule, not judgment
@@ -2033,8 +2076,14 @@ hand what no check does.
   `--decor-muted` that does now (Item 7).
 - `tools/theme_customizer.gen.py` / `tools/theme_preview.gen.py` — the
   hand-written references the `base.html` lift does not reach: the
-  customizer's "Dim / card" contrast row, its element-facet map, and
-  both tools' own chrome CSS (Item 7).
+  customizer's element-facet map and both tools' own chrome CSS. The
+  customizer's Contrast panel becomes the audit's inspection surface:
+  every pair, sub-AA outlined in red (Item 7).
+- `tools/_harness_common.py` — `collect_contrast_pairs`, the one
+  definition of the pair set, shared by the panel and the test (Item 7).
+- `tools/README.md` — the Contrast-panel paragraph rewritten: what the
+  panel now lists, that the pairs are derived rather than listed, and
+  that a test asserts the generated page matches the audited set (Item 7).
 
 ---
 

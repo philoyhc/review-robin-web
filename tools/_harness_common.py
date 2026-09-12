@@ -84,6 +84,107 @@ def parse_semantic(base_css):
     }
 
 
+# ---------------------------------------------------------------------------
+# Contrast pairs — the one definition of "which foreground sits on which
+# background", shared by the theme customizer's Contrast panel and by
+# tests/unit/test_contrast_audit.py. Added at 19K.7.
+#
+# It lives here rather than in either caller because the two must agree: the
+# panel is where a person *inspects* the audit and the test is what *enforces*
+# it, and a panel listing fewer pairs than the test checks would be a tool
+# that quietly under-reports. The test asserts the generated page carries a
+# row for every pair this returns.
+# ---------------------------------------------------------------------------
+
+#: A rule's text colour. The lookbehind is load-bearing: ``border-color``
+#: ends in ``color`` and is a boundary, not text.
+_FG_RE = re.compile(r"(?<![-\w])color\s*:\s*var\((--[a-z0-9-]+)\)")
+_BG_RE = re.compile(r"background(?:-color)?\s*:\s*[^;]*?var\((--[a-z0-9-]+)\)")
+
+#: Every innermost ``selector { declarations }`` pair. ``[^{}]*`` cannot
+#: cross a brace, so it lands inside ``@media`` wrappers rather than on
+#: them, and needs no anchor — adding one (``(?:^|[{}])``) consumes the
+#: delimiter and silently skips every second rule.
+_RULE_RE = re.compile(r"([^{}]*)\{([^{}]*)\}")
+
+#: The fill each ``--text-on-*`` token belongs to. The one hand-kept entry
+#: in the gatherer, because these pairings are derivable no other way: the
+#: names do not match (``--text-on-amber`` / ``--btn-alert-bg``) and no
+#: single rule sets both halves.
+ON_FILL = {
+    "--text-on-accent": "--btn-primary-bg",
+    "--text-on-amber": "--btn-alert-bg",
+}
+
+
+def resolve_semantic(sem_map, prims, token, depth=0):
+    """Follow a ``var()`` chain from a semantic token to a literal hex."""
+    if token in prims:
+        return prims[token]
+    nxt = sem_map.get(token)
+    if nxt is None or depth > 16:
+        return None
+    return resolve_semantic(sem_map, prims, nxt, depth + 1)
+
+
+def collect_contrast_pairs(base_css):
+    """``{(fg_token, bg_token): provenance}`` — every pair the palette forms.
+
+    Gathered rather than listed, because a hand-kept list of pairs decays:
+    the twelve this replaced had drifted to include a token that no longer
+    exists, and missed the pair that carried a live AA failure.
+
+    Four sources, and the provenance string says which, because knowing
+    where a pair comes from is most of judging it:
+
+    1. ``rule:<selector>`` — a rule setting a ``color`` and a
+       ``background`` in one block. The only source that finds a pairing
+       no naming convention predicts, and the one that caught muted text
+       on ``--nav-home-bg``, which is not a surface token.
+    2. ``name`` — ``--x-fg`` with ``--x-bg``. The pill, chip, lifecycle
+       and role families, whose halves are almost never set by one rule.
+    3. ``surface`` — every text token against every surface, since which
+       surface a label lands on is a template's choice and changes
+       without touching either token.
+    4. ``fill`` — ``ON_FILL``, above.
+    """
+    css = re.sub(r"/\*.*?\*/", " ", base_css, flags=re.S)
+    sem = parse_semantic(css)
+    prims = dict(parse_primitives(css))
+    light = dict(sem["light"])
+    names = [n for n, _ in sem["light"]]
+
+    def literal(token):
+        value = resolve_semantic(light, prims, token)
+        return value if value and value.startswith("#") else None
+
+    pairs = {}
+    for selector, body in (m.groups() for m in _RULE_RE.finditer(css)):
+        fg, bg = _FG_RE.search(body), _BG_RE.search(body)
+        if fg and bg:
+            pairs.setdefault(
+                (fg.group(1), bg.group(1)), "rule:" + " ".join(selector.split())[:58]
+            )
+
+    for name in names:
+        if name.endswith("-fg") and (name[:-3] + "-bg") in light:
+            pairs.setdefault((name, name[:-3] + "-bg"), "name")
+
+    surfaces = [n for n in names if n.startswith("--surface-") and literal(n)]
+    for name in names:
+        if not name.startswith("--text-") or name.startswith("--text-on-"):
+            continue
+        if not literal(name):
+            continue
+        for surface in surfaces:
+            pairs.setdefault((name, surface), "surface")
+
+    for name, fill in ON_FILL.items():
+        pairs.setdefault((name, fill), "fill")
+
+    return pairs
+
+
 def parse_clusters(base_css):
     """Ordered `[(cluster_label, [sem_token, …])]` from the light Tier-2
     `/* Label */` comments — the data-driven cluster grouping."""

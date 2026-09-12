@@ -73,9 +73,15 @@ the dev slot is for.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
-from ._base_css import css, rules, token_maps
+from ._base_css import BASE_HTML, css, rules, token_maps
+
+# ``tools/`` is not a package on the default path; ``test_close_check.py``
+# reaches into it the same way.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+import _harness_common as harness  # noqa: E402
 
 #: WCAG 2.1 SC 1.4.3. Normal text is 4.5:1; large text (>=18.66px, or
 #: >=14pt bold) is 3:1. Muted labels render at ``--fs-tiny`` (0.75rem)
@@ -170,62 +176,22 @@ def _literals(tokens: dict[str, str], prefix: str) -> dict[str, str]:
     }
 
 
-_FG = re.compile(r"(?<![-\w])color\s*:\s*var\((--[a-z0-9-]+)\)")
-_BG = re.compile(r"background(?:-color)?\s*:\s*[^;]*?var\((--[a-z0-9-]+)\)")
-
-
 def collect_pairs() -> dict[tuple[str, str], str]:
     """Every foreground/background token pair the palette forms.
 
-    Gathered rather than listed — three passes, plus one hand-kept
-    map — because a list of pairs decays exactly as the hand-kept
-    entry in ``known_limitations.md`` did:
+    Delegated to ``tools/_harness_common.collect_contrast_pairs`` rather
+    than defined here, because the theme customizer's Contrast panel
+    renders a row per pair from the same call. The panel is where a
+    person *inspects* the audit; this file is what *enforces* it, and two
+    definitions would let the panel under-report while the suite stayed
+    green — which is the shape of the defect this whole item is about.
+    ``test_the_customizer_panel_lists_every_audited_pair`` closes the loop
+    from the other end.
 
-    1. **Rules** that set a ``color`` and a ``background`` in the same
-       block — the only pass that sees a pairing no naming convention
-       predicts, and the one that caught muted text on
-       ``--nav-home-bg``.
-    2. **Name siblings** ``--x-fg`` / ``--x-bg`` — the pill, chip,
-       lifecycle and role families, whose two halves are almost never
-       set by one rule.
-    3. **Text against every surface**, since which surface a label
-       lands on is a template's choice and changes without touching
-       either token.
-    4. **``ON_FILL``**, the one hand-kept map: two foregrounds whose
-       fill none of the three passes can reach. It is the exception
-       that the coverage test polices rather than the rule.
-
-    The value is one selector or a marker, kept for the failure
-    message: knowing *where* a pair comes from is most of diagnosing
-    it.
+    The four sources and why each exists are documented on
+    ``collect_contrast_pairs``.
     """
-    tokens = token_maps(css())
-    pairs: dict[tuple[str, str], str] = {}
-
-    for selector, body in rules(css()):
-        fg, bg = _FG.search(body), _BG.search(body)
-        if fg and bg:
-            pairs.setdefault((fg.group(1), bg.group(1)), selector.strip()[:58])
-
-    for name in tokens["light"]:
-        if name.endswith("-fg") and (sibling := name[:-3] + "-bg") in tokens["light"]:
-            pairs.setdefault((name, sibling), "(token pair by name)")
-
-    for name in _literals(tokens["light"], "--text-"):
-        # ``--text-on-*`` are foregrounds for a specific fill — white on
-        # the primary button, ink on amber — and never sit on a surface.
-        # Pairing them with one measures a combination that does not
-        # render. ``ON_FILL`` below pairs them with the fill they do
-        # sit on, so skipping them here loses no coverage.
-        if name.startswith("--text-on-"):
-            continue
-        for surface in _literals(tokens["light"], "--surface-"):
-            pairs.setdefault((name, surface), "(text x surface)")
-
-    for name, fill in ON_FILL.items():
-        pairs.setdefault((name, fill), "(foreground for a named fill)")
-
-    return pairs
+    return harness.collect_contrast_pairs(harness.lift_base_style(BASE_HTML.read_text(encoding="utf-8")))
 
 
 def measured() -> list[tuple[float, str, str, str, str]]:
@@ -278,12 +244,14 @@ def test_the_sweep_finds_the_palette_it_claims_to() -> None:
     for name, fill in ON_FILL.items():
         assert (name, fill) in pairs, f"{name} on {fill} was not collected"
 
-    provenances = set(pairs.values())
-    assert "(token pair by name)" in provenances
-    assert "(text x surface)" in provenances
-    assert any(p not in {"(token pair by name)", "(text x surface)"} for p in provenances), (
-        "no pair came from a CSS rule — the pass that caught --nav-home-bg is dead"
+    # All four sources alive. The rule pass is the one that found the
+    # failure a cluster-versus-cluster sweep could not see, so its death
+    # is called out by name rather than folded into a count.
+    kinds = {p.split(":", 1)[0] for p in pairs.values()}
+    assert "rule" in kinds, (
+        "no pair came from a CSS rule — the source that caught --nav-home-bg is dead"
     )
+    assert {"name", "surface", "fill"} <= kinds, f"sources missing: {sorted({'name', 'surface', 'fill'} - kinds)}"
 
 
 def test_every_pair_clears_aa_but_for_the_recorded_shortfalls() -> None:
@@ -414,3 +382,56 @@ def test_the_muted_token_absorbed_the_retired_one() -> None:
     assert counts["base.html"] >= 46, counts["base.html"]
     assert counts["instruments_index.html"] >= 8, counts["instruments_index.html"]
     assert counts["session_observers.html"] >= 1, counts["session_observers.html"]
+
+
+def test_the_customizer_panel_lists_every_audited_pair() -> None:
+    """The inspection surface and the enforced set are the same set.
+
+    `tools/theme_customizer.html` is where a person reads this audit, and
+    it is generated. Before 19K.7 its Contrast panel carried a hand-kept
+    list of **12** pairs — which had drifted to include `--text-dim`,
+    retired by this item, and omitted the `--nav-home-bg` pair that was
+    failing AA. Both halves of that are the same defect: a list nobody
+    re-derives.
+
+    So the panel now renders a row per pair from the same
+    `collect_contrast_pairs` this file enforces, and this test asserts the
+    *generated output* carries them — not the generator's source, which
+    would pass while the committed page was stale. Nothing else in the
+    repo tests generator-versus-output drift.
+    """
+    page = (
+        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
+    ).read_text(encoding="utf-8")
+
+    rendered = set(re.findall(r'class="tc-cx" data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page))
+    audited = set(collect_pairs())
+
+    assert rendered == audited, (
+        "the customizer's Contrast panel is out of step with the audit — "
+        "run `python3 tools/theme_customizer.gen.py`.\n"
+        f"  missing from the page: {sorted(audited - rendered)}\n"
+        f"  on the page but not audited: {sorted(rendered - audited)}"
+    )
+
+
+def test_the_customizer_panel_can_show_a_shortfall() -> None:
+    """The red outline has something to attach to, and a hook to drive it.
+
+    Asserts the mechanism, and says so: there is no JS runtime in this
+    suite, so this cannot prove the outline paints. What it can prove is
+    that the class the script toggles is defined in the stylesheet and
+    that every recorded shortfall has a row to be toggled on — which is
+    where a silent failure would otherwise sit, the panel rendering 73
+    rows and flagging none of them.
+    """
+    page = (
+        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
+    ).read_text(encoding="utf-8")
+
+    assert ".tc-cx-ratio.below-aa" in page, "the sub-AA outline rule is gone"
+    assert 'classList.toggle("below-aa"' in page, "nothing toggles the sub-AA class"
+
+    rendered = set(re.findall(r'data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page))
+    unrowed = sorted((fg, bg) for _, fg, bg in KNOWN_SHORTFALLS if (fg, bg) not in rendered)
+    assert not unrowed, f"recorded shortfalls with no row to flag: {unrowed}"

@@ -236,6 +236,13 @@ with its measured ratio in `docs/known_limitations.md` and pinned in
 `KNOWN_SHORTFALLS`, so none can worsen, and a fix has to delete its
 entry rather than leave a stale number behind.
 
+**To look at the audit rather than read it**, open
+`tools/theme_customizer.html`: its Contrast panel lists all 73 pairs,
+outlines in red any that fall under AA in the active theme, and
+recomputes as you remap, so the cost of a palette change is visible
+before it is made. The panel and the test derive their pairs from the
+same function.
+
 **Border colours do not paint fills.** A surface takes a token from the
 Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
 read acceptably only while that token was very light; at 3:1-plus the body text
