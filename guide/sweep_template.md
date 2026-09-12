@@ -5,10 +5,32 @@
 under this template") · **Trigger:** <weeks elapsed / merges since, from
 `--stale`>
 
+<!-- sweep-scope: PICK-corpus-OR-partial -->
+
 <!--
 Copy to guide/sweep_<YYYY-MM-DD>_<scope>.md. The date in the filename is
 read by tools/close_check.py --stale to find the last sweep, so keep the
 YYYY-MM-DD_ shape exactly.
+
+SET THE sweep-scope MARKER ABOVE, and set it honestly. It ships as
+PICK-corpus-OR-partial, which is deliberately not a valid value: --stale
+refuses to run until you choose, so forgetting is loud. A template that
+defaulted to `corpus` would make the commonest mistake — copying it for a
+narrow sweep and not editing the marker — silently re-create the bug the
+marker exists to fix.
+
+  corpus  — reads spec/ + docs/ + root as a whole. Only a corpus sweep
+            resets the 8-weeks / 500-merges cadence.
+  partial — anything narrower: one file, one folder, one question.
+            Recorded and listed, but it does NOT reset the cadence.
+
+The marker exists because the filename's <scope> slug is free text that
+no tool can classify. Before 2026-09-12 --stale took the newest dated
+sweep of any kind, so the single-file 2026-09-10 sweep reset the corpus
+clock from 230 merges / 7 days to 61 / 2 (measured at bb38111f) —
+running the cadence from the wrong event. Neither figure was near the trigger, so nothing misfired;
+the error would simply have compounded with every later partial sweep.
+A sweep with no marker is rejected rather than guessed at.
 
 A sweep is not a segment plan. It produces findings; the fixes ship
 afterwards as ordinary work. It carries no "Doc impact" section and
