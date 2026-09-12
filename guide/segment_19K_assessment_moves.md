@@ -2438,6 +2438,81 @@ Taken 2026-09-12 at `40a0b663`.
 | Spec files mentioning each surface | 23 / 18 / 24 / 11 | `grep -rlF '<surface>' spec/ \| wc -l` |
 | New screencaps this item adds | 8 (4 surfaces × 2 themes) | the Decision |
 
+### Status — 2026-09-12 (rung 1)
+
+**Rung 1 landed as planned: words only, no screencaps.** The plan's own
+ladder says landing the words first means the shape is agreed before
+eight binary assets are committed to it. The author saw a rendered
+mock-up before any of it was written — the four sections in the Guide's
+real markup under the app's real stylesheet, both themes, with dashed
+boxes where rung 2's images go — and approved it as a v1. *A
+scaffold-first rule for documentation is cheap to honour when the
+scaffold can be rendered rather than described.*
+
+**The balance this item exists to correct, measured before and after
+with one command:**
+
+| Section | Before | After |
+|---|---:|---:|
+| `validate` | **0** | 23 |
+| `watch_progress` | 15 | 28 |
+| `close_and_share` | 17 | 24 |
+| **Operational total** | **32** | **75** |
+| Setup total | 379 | 379 (untouched) |
+
+Both columns come from the same parser over the same file, one from
+`git show HEAD:`. That is deliberate: this item's Judgment calls record
+a sibling item quoting two measurements of one quantity, taken by two
+methods, that disagreed by 0.7 KB in one document with nobody comparing
+them. The plan's own table gave 16 and 18 lines for the two existing
+sections where this parser gives 15 and 17 — a boundary convention, not
+a discrepancy worth chasing, and named here rather than silently
+reconciled.
+
+**Three shape decisions the plan left to the build:**
+
+- **The Validate card is titled "Check readiness", not "Validate".**
+  Every other heading is a verb phrase — "Create and set up a session",
+  "Watch progress", "Download responses" — and a bare page name in that
+  sequence reads like a button rather than a step.
+- **Invitations and Responses stay in one card.** They are one job seen
+  from two angles, and the plan asked only that each get what the setup
+  surfaces get. Splitting would also have retired a live section key for
+  no reader's benefit.
+- **Close and Release moved to the top of "Download responses".** They
+  were second, which reads as an afterthought when neither the Extract
+  data page nor the participants' own pages do anything useful before
+  them.
+
+**Every claim in the new copy traces to a spec read during the build** —
+`spec/validate_page.md` for the deep links and the read-only body,
+`spec/operations_pages.md` for the eight counters and the three coverage
+counts, `spec/extract_data.md` for the lens-and-chips framing and the
+"not an analysis tool" line. None was written from memory of the pages.
+That is this item's own instruction to itself: its first draft was wrong
+in seven places because its prose was written from impressions and
+formatted as measurements, and it told the build to trust none of the
+prose it did not re-run.
+
+**The email caveat is carried, not dropped.** `spec/operations_pages.md`
+records that four of the eight Invitations counters cannot move until
+Segment 14B ships email delivery. The new copy says so, in the same
+register the existing Guide already uses for reminders — the plan's
+Semantics required exactly this rather than describing a feature the
+operator cannot use.
+
+**Adding a section is three files, and the suite says so before the
+build does.** Registering `validate` in `SECTIONS` and its heading in
+`SECTION_HEADINGS` without writing the card failed two tests
+immediately — `test_every_committed_section_exists_in_the_template` and
+`test_guide_renders_exactly_the_sections_its_viewer_is_owed`. The
+scaffold is pinned in both directions, which is why growing the Guide is
+safe.
+
+**Rung 2 is not started.** No `<figure>` was added: `test_guide_screencaps.py`
+fails on a referenced-but-missing file, so referencing the eight images
+before capturing them would break the suite — correctly.
+
 ### PR ladder
 
 1. **Prose for the four surfaces, no screencaps.** The sections, the

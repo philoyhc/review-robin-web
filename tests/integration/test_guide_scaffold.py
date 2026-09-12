@@ -40,6 +40,7 @@ SECTION_HEADINGS = (
     "What Review Robin Web does",
     "Create and set up a session",
     "Prepare and activate",
+    "Check readiness",
     "Give reviewers access",
     "Watch progress",
     "Download responses",

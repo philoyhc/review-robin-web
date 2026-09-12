@@ -57,6 +57,15 @@ inventories the current session against the rule set.
 
 ---
 
+
+**Documented in the Guide.** `/guide`'s **Check readiness** section
+(`guide.html`, section key `validate`) tells an operator what this page
+is for, that its issues carry "Fix on … ↗" deep links, that warnings are
+acknowledged at activation rather than cleared here, and that the body
+below the Workflow card is read-only. Added at 19K.8; before that the
+Guide named the page only in passing inside neighbouring sections, so a
+reader learned it existed without learning what it shows them.
+
 ## 2. Page body (top to bottom)
 
 ### 2.0 Chrome + Workflow card

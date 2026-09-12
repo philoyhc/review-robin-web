@@ -55,6 +55,15 @@ the load-bearing decision behind the page's existence — see
 | Route | `app/web/routes_operator/_extract_data.py::session_extract_data` |
 | Grouping | Operations |
 
+
+**Documented in the Guide.** `/guide`'s **Download responses** section
+(`guide.html`, section key `close_and_share`) puts Close and Release
+first, since neither this page nor the participants' own pages are
+useful before them, then describes this page as the workbench for
+shaping response data for offline analysis — pick the lens, set the
+chips, download a CSV or a zip. It repeats this spec's own framing that
+the page is deliberately not an in-app analysis tool. Expanded at 19K.8.
+
 ## Chrome and navigation
 
 The Operations row carries the tab at the right-hand end:

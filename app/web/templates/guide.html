@@ -427,6 +427,30 @@
   </div>
   {% endif %}
 
+  {% if "validate" in visible_sections %}
+  <div class="card" id="guide-validate">
+    <h2>Check readiness</h2>
+    <p>
+      The <strong>Validate</strong> page is the find-and-fix readiness surface.
+      It inventories every setup issue the session has &mdash; errors that block
+      activation and warnings that do not &mdash; and each issue carries a
+      <strong>Fix on &hellip;&nbsp;&#8599;</strong> link that drops you onto the
+      exact row that triggered it, rather than leaving you to find it.
+    </p>
+    <p>
+      Work down the errors until the readiness report passes. Warnings do not
+      have to be cleared: when you activate, the Workflow card asks you to
+      acknowledge them, and lists them so that you are acknowledging something
+      specific.
+    </p>
+    <p>
+      Below the Workflow card the page is read-only &mdash; it tells you what is
+      wrong and where, and the fixing happens on the Setup page it sends you to.
+      You can return to it as often as you like; it recomputes each time.
+    </p>
+  </div>
+  {% endif %}
+
   {% if "give_access" in visible_sections %}
   <div class="card" id="guide-give_access">
     <h2>Give reviewers access</h2>
@@ -452,14 +476,27 @@
   <div class="card" id="guide-watch_progress">
     <h2>Watch progress</h2>
     <p>
-      The <strong>Invitations</strong> page monitors the reviewers, showing
-      who has started or completed their reviews. (Note that the reminder
-      function, being dependent upon email, is also currently not implemented
-      yet.)
+      The <strong>Invitations</strong> page is the reviewer&rsquo;s-eye view: who
+      has been invited, who has responded, and who needs nudging. Its info card
+      carries eight lifecycle counters across the top, and the table below lists
+      every reviewer with their current state.
     </p>
     <p>
-      The <strong>Responses</strong> page flips the view to the reviewees, to
-      reflect how many responses each has received.
+      <em>Invitation and reminder columns stay inactive until email sending is
+      switched on.</em> Four of the eight counters cannot move until then, so a
+      page of stuck counters is not a fault.
+    </p>
+    <p>
+      The <strong>Responses</strong> page flips the view to the reviewees, and
+      answers a question the reviewer view cannot: who is
+      <em>under-served</em>. A reviewee with no responses is invisible on the
+      Invitations page, because nothing is wrong with any individual reviewer.
+    </p>
+    <p>
+      Its counters read <strong>Number of reviewees</strong> &middot;
+      <strong>With responses</strong> &middot; <strong>Without responses</strong>,
+      the last of which is the one to watch &mdash; it is the count you want at
+      zero.
     </p>
   </div>
   {% endif %}
@@ -468,16 +505,23 @@
   <div class="card" id="guide-close_and_share">
     <h2>Download responses</h2>
     <p>
-      At the close of the session, download the collected data using the
-      <strong>Extract data</strong> page. You can also use the same page to
-      extract a complete set of CSV files that sets up the session.
-    </p>
-    <p>
-      Before that, use the Workflow card to <strong>Close</strong> the
+      Before downloading, use the Workflow card to <strong>Close</strong> the
       session, which stops new responses, and then <strong>Release
       responses</strong> when you are ready. Reviewees then see their results
       on their own page, in the form you allowed, and observers, if enabled,
       see collated results on their collation page.
+    </p>
+    <p>
+      The <strong>Extract data</strong> page is the workbench for shaping that
+      data for offline analysis. Pick the lens that matches the question you are
+      asking, set the chip-driven options on that card, and download a CSV
+      &mdash; or a zip of CSVs where the lens produces several.
+    </p>
+    <p>
+      It is deliberately not an in-app analysis tool: no charts, no pivots, no
+      dashboards. Its job is to cut the response data the way your analysis
+      needs it and hand it over. The same page also extracts a complete set of
+      CSV files that would set the session up again.
     </p>
   </div>
   {% endif %}

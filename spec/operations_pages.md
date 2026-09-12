@@ -39,6 +39,16 @@ sits **outside the chrome** under the Sys Admin doorway at
 `/operator/sys-admin/sessions/{id}/outbox`. Day-to-day operator work
 shouldn't need it; pilot debugging and send-troubleshooting do.
 
+
+**Documented in the Guide.** `/guide`'s **Watch progress** section
+(`guide.html`, section key `watch_progress`) covers both pages: the
+reviewer's-eye view and its eight lifecycle counters, the note that
+invitation and reminder columns stay inactive until email sending is
+switched on, and the reviewee-centric view with its
+`Number of reviewees · With responses · Without responses` counters —
+framed around the question the reviewer view cannot answer, which
+reviewee is under-served. Expanded at 19K.8 from two sentences.
+
 ## Why "Invitations" and "Responses"
 
 Avoiding "Reviewers" and "Reviewees" as Operations tab labels —
