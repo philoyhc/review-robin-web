@@ -54,9 +54,11 @@ invites tidying, and tidying is how a re-house becomes a rewrite.
 passes — the row-level arity rule is what already ships, *"except
 Observers"* is an existing divergence, and Lock / Unlock, `inert`,
 dirty-tracking, the unsaved-changes confirm and the block-on-switch are
-all shipped mechanisms on the Instruments page. **One narrow thing does
-not**, and it is flagged where it appears: a `beforeunload` guard for
-leaving the page entirely, which no surface in this app has.
+all shipped mechanisms on the Instruments page. **Nothing in it fails that test**, once the
+Instruments page is read with `grep -a`: the unsaved-changes confirm, the
+block on switching while dirty and the `beforeunload` nav-away guard all
+ship there already. This paragraph twice claimed otherwise; see "How the
+error was made".
 
 ### The proposed page structure
 
@@ -461,52 +463,67 @@ Instruments pattern it is in the URL too — which is what makes
 "navigating away discards" true rather than aspirational: there is no
 client-side edit state to lose, because the server renders the mode.
 
-**The warning half also ships — this paragraph was wrong for three
-hours and is corrected in place.** It previously read *"the warning half
-does not exist anywhere in the app"*, on the strength of a `beforeunload`
-grep and a line in `spec/reviewer-surface.md` saying *"There is no
-dirty-tracking and no `beforeunload` guard."* **That sentence is scoped
-to the reviewer surface**, and it was read as if it described the app.
-The author supplied the counter-example by screenshot: the Instruments
-page raising *"You have unsaved changes. Lock anyway? Your changes will
-be lost."*
+**The whole analogy ships. There is no gap.** This paragraph has now
+been wrong twice, in opposite directions, and both versions are described
+here rather than quietly replaced.
+
+*First version:* "the warning half does not exist anywhere in the app."
+*Second version, after the author sent a screenshot of the Instruments
+page's unsaved-changes confirm:* corrected to say the in-page confirm
+ships and **only leaving the page** is unguarded. *That was still wrong.*
+The author sent a second screenshot — the browser's own **"Leave site?
+Changes you made may not be saved."** — which is a `beforeunload` dialog.
 
 What actually ships, read at `04323d44`:
 
 | piece | where |
 |---|---|
-| **Lock / Save / Cancel** triple on the card | `instrument_action_row` |
-| **dirty tracking** — Save starts `disabled`, enables when dirty | Save button state is *the* dirty signal |
-| **confirm on Lock while dirty**, discarding on OK | `newModelTryLock(card)` |
-| **collapse ⇒ lock** runs the same confirm | same function, two callers |
+| **Lock / Save / Cancel** on the card | `instrument_action_row` |
+| **dirty tracking** — Save starts `disabled`, enables when dirty | the Save button's state is the signal |
+| **confirm on Lock while dirty** | `newModelTryLock(card)` |
+| **collapse ⇒ lock** runs the same confirm | one function, two callers |
 | **switching while dirty is blocked** | `newModelUnlockClick` — *"a dirty one blocks (the operator must Save or Cancel it first); a clean one is locked silently"* |
+| **nav-away guard** | `instruments_index.html:3737`, Segment 18R Item 2 PR 2 — `beforeunload`, firing only on `[data-instrument-dirty="true"]` |
+| **deliberate navigation excluded** | `window._newModelIntentionalNav`, set by Save's submit and Cancel's reload |
 
-So the author's *"cancel and save buttons for friendly label edit"* and
-*"if you try locking … without saving, you should get a similar warning"*
-are **a re-house, not new work** — the scoping principle is satisfied,
-and the mechanism is not merely present but has had its edges worked
-(the collapse path, the clean-card silent lock).
+That last row matters: `spec/reviewer-surface.md` lists *"a `beforeunload`
+listener that prompts only when dirty, skipping intentional-discard
+controls"* under **what lands later**. On the operator side it landed in
+18R. **The design that spec defers is already proven on another surface.**
 
-**And the alternative this entry proposed was reinventing it, worse.**
-An earlier draft here suggested `inert`-ing the other index rows while
-one is unlocked, so switching could not happen at all. The Instruments
-page already solves that case and solves it better: it **blocks with a
-reason** — Save or Cancel first — rather than making a control
-mysteriously dead. *The proposal was drafted from a gap that was not
-there.*
+So the author's ask — Save and Cancel on the friendly-label edit, a
+warning on locking without saving, a warning on navigating away — is
+**entirely a re-house**. The scoping principle is satisfied with nothing
+left over, and the earlier suggestion here of `inert`-ing the other index
+rows was inventing a worse substitute for a mechanism that was already
+built and already refined.
 
-**What is genuinely absent is narrower than it looked**: leaving the
-page. Nav to another session page, tab close, address-bar change — those
-lose an unlocked card's edits today with no prompt, on Instruments as
-everywhere else, because no surface carries a `beforeunload` guard. The
-author's *"navigating away … counts as a discard (with warning)"* is
-therefore **one specific gap**, not the whole warning story, and
-`spec/reviewer-surface.md` already carries a design for it.
+#### How the error was made, since checking was done and was not enough
 
-*The lesson is narrower than "check before claiming", which was done —
-the grep was right and the spec quote was accurate. It is that **a
-statement in a surface spec is scoped to that surface**, and carrying it
-outward turns a true sentence into a false one.*
+The grep that produced the first version was:
+
+```
+grep -rn "beforeunload" app/ spec/ docs/ | grep -v Binary
+```
+
+The only match in `app/` is in `instruments_index.html`, which **`grep`
+classifies as binary** — one literal NUL byte at line 2048, inside a
+JavaScript `.join()` separator. For such a file grep prints *"Binary file
+… matches"* instead of the line, and **the `| grep -v Binary` filter,
+added to tidy the output, deleted exactly that.** The command then
+reported nothing, and "nothing" was written up as a finding.
+
+*The failure is not an unchecked assumption. It is a check whose
+output-tidying step removed the only evidence that could have falsified
+it* — which is worse, because it returns a confident negative rather than
+a silence.
+
+**The rule this repo now has to carry:** `instruments_index.html` is its
+largest template and greps against it return nothing unless `-a` is
+passed. **A negative grep result is not evidence of absence here without
+`-a`.** The single NUL could also just be written `'\u0000'`, which is
+identical to the engine and would make the file text again — small enough
+to be worth doing for the greps it would stop swallowing.
 
 **A vocabulary collision to settle before this is built.** The author's
 word is *"Edit"*, and the roster pages do ship an **Edit** button today
@@ -767,14 +784,16 @@ Not answered here; recorded so they are not rediscovered.
    *nothing selected* state question 4 made the default, and the app has
    never used a `type="radio"` anywhere.
 
-**One left open, and it is narrower than this file said for three
-hours:** abandoning an unlocked roster edit. **In-page is settled and
-costs nothing** — Save / Cancel on the label editor, an unsaved-changes
-confirm on Lock, and switching blocked while dirty, all of which the
-Instruments page already does. What remains is only **leaving the page**
-— another session page, tab close, address bar — which no surface in
-this app guards today, and for which `spec/reviewer-surface.md` carries
-a deferred design. A tension was recorded here between the author's
-*"with warning"* and the scoping principle; there is none, because the
-warning is a re-house. See "What the Instrument-card analogy does and
-does not supply".
+**Nothing left open here.** Abandoning an unlocked roster edit was
+recorded as an open tension twice — first against the scoping principle,
+then narrowed to "only leaving the page is unguarded". **Both were
+wrong**: Save / Cancel, dirty tracking, the confirm on Lock, the block on
+switching while dirty, *and* a `beforeunload` nav-away guard all ship on
+the Instruments page, including the intentional-navigation exclusion that
+`spec/reviewer-surface.md` still lists as future work. See "What the
+Instrument-card analogy does and does not supply" — which now also
+records why two greps missed it.
+
+**Also worth applying to the scoping principle above**: this entry's ask
+is a re-house with **no** new mechanism, which is a stronger position
+than the entry claimed for itself at any point today.
