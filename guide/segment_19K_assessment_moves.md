@@ -1390,11 +1390,25 @@ the `<style>` block, compute specificity per selector, and fail where a
 canonical role's declaration loses to an equal-specificity rule that
 comes later.
 
-Scope it to what `spec/ui_elements.md` already names canonical: the
-`.btn` roles (§6) and the layout primitives (§10). Those are the
-selectors the repo has committed to keeping stable, so a tie involving
-one of them is a defect by definition; a tie between two ad-hoc classes
-may be intentional.
+Scope it to **canonical classes that co-occur on one element** — the
+`.btn` roles of `spec/ui_elements.md` §6, which is the shape 19J.9's
+collision had (`btn-icon` and `table-pager-step` on the same pager
+step). Those are selectors the repo has committed to keeping stable, so
+a tie involving one is a defect by definition; a tie between two ad-hoc
+classes may be intentional.
+
+**§10's layout primitives are explicitly out of this rung, and the
+reason is structural rather than a matter of effort.** `.page-grid`'s
+eight rules are *all* combinators — `.page-grid .card`,
+`.page-grid > .card-tl` and so on — and `page-grid` and `card` **never
+appear on the same element** (0 matches across `app/web/templates/`).
+A same-element check cannot ask whether such a rule ties, because there
+is no element whose class list contains both names. `base.html` has
+**35** descendant-combinator selectors of that shape beyond the
+`body.ui-v2 X` pattern. Covering them needs real ancestor matching over
+a parsed DOM tree, which is a bigger resolver and a separate rung —
+named here rather than left for a reader to discover when the check
+silently says nothing about §10.
 
 **Rejected: reading computed style from a browser** — which is what this
 item's first draft specified, until the prerequisite was checked. The
@@ -1466,12 +1480,37 @@ clear, and nothing records why the number is what it is.
 - **A tie is a failure only where a canonical role loses.** Two
   non-canonical classes tying is out of scope and must stay passing, or
   the check becomes noise the first week.
-- **Both themes.** The tokens differ between light and dark
-  (`:root` vs the dark block), so a role resolved in one is not resolved
-  in the other.
+- **One theme is enough for the winner, and that is a measurement not
+  an assumption.** `:root[data-theme="dark"]` (lines 278–401) holds
+  **106 custom-property declarations and zero component rules**, so
+  dark mode changes what a `var()` resolves to *after* the cascade has
+  already picked a winner. The only two theme-scoped component
+  selectors in the file (`:root[data-theme="dark"] body.ui-v2
+  .guide-figure img[…]`) target guide figures, not canonical roles. So
+  which rule wins is theme-invariant today. **The first draft of this
+  item said the opposite**, conflating winner-detection with token-value
+  inspection — which is `test_reserved_shade.py`'s job, not this one's.
+  Re-check the claim if a component rule ever lands inside the dark
+  block.
 - **It runs wherever the suite runs**, including both CI tracks, because
   it needs no browser. That is the property the browser version lacked
   and the reason the method changed.
+- **What this method cannot see, stated up front.** A CSS parse plus a
+  flat class list is *incomplete* in four ways and *unsound* in none of
+  them, provided the check only ever reports a tie it can prove:
+  **inline `style=`** always beats any class selector and is never in
+  the `<style>` block — and there are inline styles on `.page-grid`
+  elements setting the very property its canonical rule sets
+  (`session_new.html:16`); **14 `@media` blocks**, whose rules apply
+  only at some viewports, so comparing them against unconditional rules
+  needs care in both directions; **`:hover` / `:focus`** state selectors,
+  which add specificity but apply conditionally; and **shorthand versus
+  longhand** (`background` against `background-color`), where an exact
+  property-name match would miss a real override. `!important` and
+  `@supports` do not occur in `base.html` at all today (0 each), which
+  is worth re-checking rather than assuming at build time. Each of these
+  is a reason the check may stay silent where a browser would speak;
+  none is a reason it would report a tie that is not there.
 - **A hand-rolled resolver can be wrong**, which is the cost of this
   route. The mitigation is in the Definition of done and is not
   optional: reintroduce 19J.9's actual collision and require the test to
@@ -1479,6 +1518,17 @@ clear, and nothing records why the number is what it is.
   is worse than none, because it reports safety.
 
 ### Judgment calls — decided
+
+- **2026-09-12 — the scope claim was narrowed after a checker found it
+  overreached.** The revision said the check would cover "the `.btn`
+  roles (§6) **and the layout primitives (§10)**". It cannot: `.page-grid`
+  is a named canonical primitive whose every rule is a combinator, and
+  whose two class names never share an element, so a same-element check
+  is structurally blind to it — along with 34 other selectors of that
+  shape. Narrowed to same-element canonical classes, with combinators
+  named as a separate rung. *Changing the method changed what the method
+  can reach, and the scope sentence was carried over unexamined* — the
+  same shape as reusing a figure after re-measuring, one level up.
 
 - **2026-09-12 — the method changed from a browser to Python, on a
   prerequisite check rather than a preference.** The first draft
@@ -1529,10 +1579,12 @@ Taken 2026-09-12 at `72e88096`, and the reason the method changed:
 
 ### Definition of done
 
-- A canonical role whose declared value loses to a same-specificity
-  rule fails a test, in both themes, **with both rules named** — a
-  failure that says only "something overrode this" is a worse report
-  than the browser version it replaced.
+- A canonical `.btn` role whose declared value loses to a
+  same-specificity rule **on an element carrying both classes** fails a
+  test, **with both rules named** — a failure that says only "something
+  overrode this" is a worse report than the browser version it replaced.
+- The check says nothing about combinator-based rules, and the item says
+  so rather than letting silence read as coverage.
 - The test runs in **both CI tracks** with no browser and no new
   dependency — asserted by CI going green, not by it passing here.
 - 19J.9's collision, reintroduced, fails it — asserted, not assumed.
