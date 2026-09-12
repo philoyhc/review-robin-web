@@ -1,27 +1,65 @@
 # Implementation status
 
-**As of:** 2026-09-10. **Segment 19H — additional refinements —
-closed and archived** at seven items, PRs #2219 → #2278; plan now at
-`guide/archive/segment_19H_additional_refinements.md`, alongside 19I,
-which closed the same day. **Segment 19J — the assessment's three
-moves** opened immediately after, for the three recommended next moves in
-`guide/archive/codebase_assessment_10sep.md` §8:
-`guide/archive/segment_19J_assessment_moves.md`. Latest shipped in 19H — **Items 6
-+ 7**:
-the four roster Setup pages now say why they are locked in every state
-that locks them, and every setup-mutation control on them answers one
-predicate. The yellow lock card was keyed to `is_ready` while the
-controls had moved to `is_editable`, so `expired` and `archived` were
-correct and silent; it branches three ways now, `archived` linking
-Unarchive and carrying no control because `/revert` answers 409 from
-there. Item 6's close audit then found the page contradicting itself —
-a live **Save labels** button under a card saying the roster could not
-be modified — and Item 7 moved the friendly-label editor's gate to
-match. Two defects surfaced by measuring rather than by reading: the
-Relationships and Observers lock cards had always posted `return_to`
-slugs their route's allowlist did not contain, so those reverts landed
-on Session Home, and `spec/lifecycle.md` §5's account of that allowlist
-was wrong in the direction that hid it.
+**As of:** 2026-09-12. **Segment 19K — the 11sep assessment's three
+moves — closed and archived** at ten items (nine closed, one moved out),
+PRs #2315 → #2335, suite 3,723 → **3,842**; plan now at
+`guide/archive/segment_19K_assessment_moves.md`. It opened for
+`guide/codebase_assessment_11sep.md` §8's three recommended moves and
+admitted seven more, each from the one before it — the same shape 19J
+took. Item 3 was *to decide* and deferring was permitted; re-measuring
+made the fix cheap instead, taking the Invitations / Responses N+1 from
+**40,433 / 80,432 queries to 434 / 434** at 200×200, quadratic to linear,
+because the cost sat in two functions rather than being diffuse.
+
+**Its largest arc is accessibility.** `docs/known_limitations.md` had
+recorded a WCAG AA failure since **2026-05-18** naming a token that no
+longer existed — stale rather than fictitious, and live the whole time at
+**2.31:1**. Repairing it widened twice, each time because the narrower
+version was lying by omission, ending at a sweep over **73 pairs / 146
+theme-resolved pairings**. `--text-dim` retired into `--text-subtle` on
+the author's counter-proposal once measurement showed one tier cheaper
+than two, and collapsing a hierarchy became general policy. Item 10
+closed the last four shortfalls by inverting three dark mappings: the
+accent family was the lone outlier still carrying white onto a bright
+dark fill, and the palette had already answered that question for amber.
+Darkening the fill was rejected with the measurement — it would have
+traded a text failure for a **2.76** control boundary, under the 3:1 WCAG
+1.4.11 asks. The palette now clears AA normal in both themes, with three
+transient hover dips accepted on machine-checked premises, and the theme
+customizer's Contrast panel renders a row per pair from the same function
+the test imports, so the audit is inspectable and not only enforced.
+
+**Item 9 moved out whole** rather than closing, to
+`guide/post_azure_todo_checklist.md` item 4. The inline stylesheet is
+**157.7 KB**, **64.6–80.5%** of a rendered page, and its first rung needs
+a response header from a dev slot the container's network policy refuses
+(`403 CONNECT tunnel failed`) — *a segment that cannot close until
+someone reads a header is held open by something it does not own.*
+Nothing about the stylesheet is resolved by the move, and both documents
+say so.
+
+**Four findings the segment keeps.** *A clean result and a no-op are
+indistinguishable until you check which one you have* — Item 5's trial
+opened at 0 verdict flips, which is also what a rule that does nothing
+returns; confirming it bit exposed a bug reading every committed
+directory as missing. *A fixture that produces no data makes every
+assertion about that data true* — Item 3 shipped two vacuous tests, the
+second written because a mutation escaped the first. *Reverting a
+mutation with the version-control tool reverts the work too, while the
+work is uncommitted.* And, four separate times, **a correction reaches
+the paragraph it was found in and no further unless someone walks it** —
+most instructively at the close, where `spec/validate_page.md` §2.4 was
+found describing a grouping superseded in Segment **15E**, caught only
+because this segment's own Guide copy was the more accurate of the two
+descriptions. `spec-writer` moved before the push at Item 3 and stayed
+there.
+
+Before it — **Segment 19J — the assessment's three moves — closed and
+archived** at ten items, PRs #2281 → #2311; plan now at
+`guide/archive/segment_19J_assessment_moves.md`. Before that — **Segment
+19H — additional refinements — closed and archived** at seven items, PRs
+#2219 → #2278, alongside **Segment 19I**, which closed the same day:
+`guide/archive/segment_19H_additional_refinements.md`.
 
 Before them — **Segment 19I — roster search and row
 deletion — closed and archived** at thirteen items (twelve closed,
