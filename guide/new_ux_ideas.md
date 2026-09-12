@@ -50,12 +50,13 @@ be cheap and to fall out of the new shape rather than be bolted to it.
 That is a stronger constraint than it sounds, because a consolidation
 invites tidying, and tidying is how a re-house becomes a rewrite.
 
-**It is worth applying to this entry's own contents.** Most of what is
-recorded below passes easily — the row-level arity rule is what already
-ships, *"except Observers"* is an existing divergence, Lock / Unlock and
-`inert` are shipped mechanisms. **One thing does not**, and it is flagged
-where it appears: the `beforeunload` warning on abandoning an unlocked
-edit is a mechanism the app has nowhere today.
+**It is worth applying to this entry's own contents.** Nearly all of it
+passes — the row-level arity rule is what already ships, *"except
+Observers"* is an existing divergence, and Lock / Unlock, `inert`,
+dirty-tracking, the unsaved-changes confirm and the block-on-switch are
+all shipped mechanisms on the Instruments page. **One narrow thing does
+not**, and it is flagged where it appears: a `beforeunload` guard for
+leaving the page entirely, which no surface in this app has.
 
 ### The proposed page structure
 
@@ -460,43 +461,52 @@ Instruments pattern it is in the URL too — which is what makes
 "navigating away discards" true rather than aspirational: there is no
 client-side edit state to lose, because the server renders the mode.
 
-**The warning half does not exist anywhere in the app.** There is **no
-`beforeunload` guard** on any surface — `spec/reviewer-surface.md` says
-so in as many words and lists what that costs today: Prev / Next,
-Discard, browser-close, tab-close, address-bar change and the chrome's
-*My Reviews* link all drop unsaved typing with no prompt. So *"with
-warning"* is **new work, not an inherited pattern**.
+**The warning half also ships — this paragraph was wrong for three
+hours and is corrected in place.** It previously read *"the warning half
+does not exist anywhere in the app"*, on the strength of a `beforeunload`
+grep and a line in `spec/reviewer-surface.md` saying *"There is no
+dirty-tracking and no `beforeunload` guard."* **That sentence is scoped
+to the reviewer surface**, and it was read as if it described the app.
+The author supplied the counter-example by screenshot: the Instruments
+page raising *"You have unsaved changes. Lock anyway? Your changes will
+be lost."*
 
-New, but not unscoped: the same spec carries a **design for it**,
-deferred rather than rejected — per-page dirty tracking off
-`data-rs-saved-value` baselines, and a `beforeunload` listener that
-prompts only when dirty and skips the intentional-discard controls. Two
-surfaces would then want the same mechanism, which is an argument for
-building it once rather than per page, and a reason the Rosters page
-should not invent its own.
+What actually ships, read at `04323d44`:
 
-**But the scoping principle points at a cheaper answer, and it is worth
-putting before the author.** *"Not aiming to add more action capabilities
-over and above current, unless they fit easily and isn't expensive"* —
-and a `beforeunload` guard is the one thing in this entry that is neither
-shipped nor cheap. The alternative uses only mechanism that already
-ships:
+| piece | where |
+|---|---|
+| **Lock / Save / Cancel** triple on the card | `instrument_action_row` |
+| **dirty tracking** — Save starts `disabled`, enables when dirty | Save button state is *the* dirty signal |
+| **confirm on Lock while dirty**, discarding on OK | `newModelTryLock(card)` |
+| **collapse ⇒ lock** runs the same confirm | same function, two callers |
+| **switching while dirty is blocked** | `newModelUnlockClick` — *"a dirty one blocks (the operator must Save or Cancel it first); a clean one is locked silently"* |
 
-- **While a roster is unlocked, `inert` the other index rows.** You
-  cannot switch until you Lock or Cancel, so the in-page loss scenario
-  **does not arise** rather than being warned about. That is the same
-  `inert` the Instruments page already uses, one level up.
-- **Browser-level navigation then loses work exactly as it does
-  everywhere else in this app today** — tab close, address bar, the
-  chrome links. No regression, no new mechanism, and no promise the rest
-  of the app does not keep.
+So the author's *"cancel and save buttons for friendly label edit"* and
+*"if you try locking … without saving, you should get a similar warning"*
+are **a re-house, not new work** — the scoping principle is satisfied,
+and the mechanism is not merely present but has had its edges worked
+(the collapse path, the clean-card silent lock).
 
-The author's instruction was *"treated as cancellations, with warning"*,
-so this is **recorded as a tension, not a substitution**: warning is the
-richer behaviour and is already designed; gating is the one that costs
-nothing and is consistent with the stated scope. **Which is wanted is the
-author's call**, and it is the only place in this entry where the scope
-rule and an earlier instruction pull apart.
+**And the alternative this entry proposed was reinventing it, worse.**
+An earlier draft here suggested `inert`-ing the other index rows while
+one is unlocked, so switching could not happen at all. The Instruments
+page already solves that case and solves it better: it **blocks with a
+reason** — Save or Cancel first — rather than making a control
+mysteriously dead. *The proposal was drafted from a gap that was not
+there.*
+
+**What is genuinely absent is narrower than it looked**: leaving the
+page. Nav to another session page, tab close, address-bar change — those
+lose an unlocked card's edits today with no prompt, on Instruments as
+everywhere else, because no surface carries a `beforeunload` guard. The
+author's *"navigating away … counts as a discard (with warning)"* is
+therefore **one specific gap**, not the whole warning story, and
+`spec/reviewer-surface.md` already carries a design for it.
+
+*The lesson is narrower than "check before claiming", which was done —
+the grep was right and the spec quote was accurate. It is that **a
+statement in a surface spec is scoped to that surface**, and carrying it
+outward turns a true sentence into a false one.*
 
 **A vocabulary collision to settle before this is built.** The author's
 word is *"Edit"*, and the roster pages do ship an **Edit** button today
@@ -757,9 +767,14 @@ Not answered here; recorded so they are not rediscovered.
    *nothing selected* state question 4 made the default, and the app has
    never used a `type="radio"` anywhere.
 
-**One left open, and it is a tension rather than a gap:** whether
-abandoning an unlocked edit **warns** (the author's instruction, richer,
-and the one thing in this entry that is neither shipped nor cheap) or is
-**prevented** by `inert`-ing the other index rows until Lock (costs
-nothing, uses shipped mechanism, and is what the scoping principle
-implies). Stated in full under the Instrument-card analogy.
+**One left open, and it is narrower than this file said for three
+hours:** abandoning an unlocked roster edit. **In-page is settled and
+costs nothing** — Save / Cancel on the label editor, an unsaved-changes
+confirm on Lock, and switching blocked while dirty, all of which the
+Instruments page already does. What remains is only **leaving the page**
+— another session page, tab close, address bar — which no surface in
+this app guards today, and for which `spec/reviewer-surface.md` carries
+a deferred design. A tension was recorded here between the author's
+*"with warning"* and the scoping principle; there is none, because the
+warning is a re-house. See "What the Instrument-card analogy does and
+does not supply".
