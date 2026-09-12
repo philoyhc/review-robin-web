@@ -2765,6 +2765,10 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
+### Segment 19L — UX refinements — 🔵 **live** (**one item, open** — 1; opened 2026-09-12; a log for small, independently-shipping operator-UI refinements, deliberately open-ended; plan: `guide/segment_19L_ux_refinements.md`)
+
+Item 1 is the sessions lobby's selected-row visual cue — today the only row-level signal is the ticked checkbox itself. Graduated from `guide/new_ux_ideas.md` entry 2.
+
 ### Segment 19K — The 11sep assessment's three moves — ✅ **done** (**ten items — nine closed, one moved out**; item 9 moved to `guide/post_azure_todo_checklist.md` item 4 on 2026-09-12; opened 2026-09-11, closed 2026-09-12; PRs #2315 → #2335; plan archived: `guide/archive/segment_19K_assessment_moves.md`)
 
 The three next moves in `guide/codebase_assessment_11sep.md` §8, and
