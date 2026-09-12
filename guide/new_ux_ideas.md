@@ -35,6 +35,31 @@ Consolidate the four roster Setup pages — **Reviewers**, **Reviewees**,
 They share a largely common structure anyway, so four pages present four
 copies of one idea, and an operator learns the same page four times.
 
+### The scope, as set by the author — 2026-09-12
+
+**This is a UX change, not a feature.** The author, governing everything
+below:
+
+> As a general point, it's the ux that is being modified; I am not aiming
+> to add more action capabilities (and restrictions) over and above
+> current, unless they fit easily within the new ux and isn't expensive.
+
+So the test for anything in this entry is **does the operator already
+have this?** Re-housing a capability is in scope; inventing one needs to
+be cheap and to fall out of the new shape rather than be bolted to it.
+That is a stronger constraint than it sounds, because a consolidation
+invites tidying, and tidying is how a re-house becomes a rewrite.
+
+**It is worth applying to this entry's own contents.** Nearly all of it
+passes — the row-level arity rule is what already ships, *"except
+Observers"* is an existing divergence, and Lock / Unlock, `inert`,
+dirty-tracking, the unsaved-changes confirm and the block-on-switch are
+all shipped mechanisms on the Instruments page. **Nothing in it fails that test**, once the
+Instruments page is read with `grep -a`: the unsaved-changes confirm, the
+block on switching while dirty and the `beforeunload` nav-away guard all
+ship there already. This paragraph twice claimed otherwise; see "How the
+error was made".
+
 ### The proposed page structure
 
 As described, and kept as described:
@@ -194,7 +219,7 @@ different, smaller, and safer proposal than one that unifies the
 services behind it — and this idea, as described, is the presentation
 one. Worth keeping those separable if it is ever taken up.
 
-### A constraint the author has set — 2026-09-12
+### A first constraint — mark the roster being worked on, visually
 
 **If this is ever built, any edit or delete mechanism must make it very
 clear — *visually* — which roster is being affected.** Set in response to
@@ -309,6 +334,341 @@ What consolidation genuinely removes is narrower than I first wrote: the
 operator *before* they act; the confirm copy protects them *as* they act,
 and only the first group is lost. That is a real but much smaller claim.
 
+### A second constraint — strict gating on one roster at a time
+
+**Set by the author, 2026-09-12.** The index and everything below it are
+gated together: *"there should be a strict gating between the roster
+index and the table such that you can only work on one roster at a time.
+For instance, if Reviewers is selected, then, only the Reviewers row in
+the index may be edited, only the Reviewers preview table can be shown,
+and only Reviewers rows can be searched for, partitioned, or edited. To
+jump to work on Reviewees, for instance, you need to select Reviewees in
+the index."*
+
+**This makes the page a mode, not a dashboard**, and that is the whole
+of it. The index is a *selector* that happens to summarise, not a
+summary you can act on in parallel. At any instant every control on the
+page — the editable index row, the preview, the search box, the
+partition controls, the row-level action row — belongs to one named
+roster, and the others are not merely unselected but **unavailable**.
+
+**It generalises the rule the refinement already set.** *"Only one
+roster's preview is open at a time"* becomes the special case of a rule
+that now covers editing, search, partition and row actions too. Nothing
+above is contradicted; it is widened.
+
+**It is a stronger answer to the Codex objection than marking alone.**
+That objection is that a generic roster abstraction hides
+audience-specific behaviour — that a reviewee is not a reviewer and a
+shared surface can make them look interchangeable. Visual marking says
+*which* roster you are in. Gating removes the moment when the question
+could arise: there is never a state in which the page is showing, or
+accepting input for, two rosters at once. **Marking answers the question;
+gating means it is never ambiguous enough to need asking.**
+
+#### What it settles, and what it opens
+
+**It weakens the pressure on open question 1**, though it does not close
+it. If only one roster is ever workable, the index no longer has to be a
+working surface, so it does not obviously have to carry *"all rosters and
+their columns"* as the original sketch put it — enough to **choose**
+between them (name, count, status, when last changed) might be the whole
+job, and the column-faithful view is the preview's. *That is an
+observation, not a decision: the sketch is the author's and says
+columns.* Worth settling deliberately, because the ragged-versus-union
+problem mostly evaporates if the index is a chooser.
+
+**It collapses two selections into one, and that needs confirming.** The
+sketch has *select to edit* and *select to preview* as two independent
+affordances. Under strict gating there is one **active roster**, and
+edit and preview read as two things you can then do to it — not two
+separate selections that could disagree about which roster is live. If
+they really are two selections, the gating has to say what happens when
+one names Reviewers and the other Reviewees.
+
+**The active roster has to live in the URL.** Two requirements converge
+on this:
+
+- The Validate deep links — already a requirement above — must land on
+  *this roster, this row*, which under gating means the link must set the
+  active roster, not merely scroll.
+- **Four pages give an operator two browser tabs for free**; one gated
+  page does not, unless the selection is addressable. Comparing Reviewers
+  against Relationships side by side is possible today and would quietly
+  stop being possible. *This is a real cost of the consolidation that the
+  rationale does not mention, and the URL is what pays it back.*
+
+**Unsaved work at the moment of switching is the sharp boundary.** If
+the Reviewers edit row is open and dirty and the operator selects
+Reviewees, the page must discard, block, or prompt. Four separate pages
+cannot lose work this way — a navigation either warns or does not apply
+— so a gated single page **introduces a failure mode the current design
+does not have**. Whichever way it is answered should be answered on
+purpose.
+
+**And what is active on arrival?** Nothing selected, so the first action
+is always a choice; or a default roster, which risks acting on the wrong
+one. The first is safer and costs a click; the second is faster and is
+how the wrong-roster mistake starts.
+
+#### The interaction, refined — 2026-09-12
+
+The author, settling three of the questions above and adding a second,
+inner gate:
+
+> Active roster in URL is fine. Nav away from uncommitted edits should be
+> treated as cancellations, with warning (analogies from Instrument
+> cards). […] you select which roster to work on. Doing that makes the
+> corresponding search card and table show below. However, to access the
+> friendly label edit, you should click on an "Edit" button. When
+> metadata row is being edited, you can't also do other roster actions
+> (e.g., attempt to do a search or select a table row); navigating away
+> to another session page counts as a discard (with warning).
+
+**So there are two nested gates, not one.** The outer gate is the active
+roster; the inner one is edit mode. Selecting a roster is cheap and
+opens the search card and the preview table. Editing roster metadata is
+a **mode you enter deliberately**, by a button, and while you are in it
+the rest of that roster's surface is unavailable too.
+
+**This answers open question 5 better than either option it offered.**
+That question asked whether *select to edit* and *select to preview* are
+one selection or two. The answer is **neither**: there is one selection —
+the active roster — and edit is a mode you can then enter. Selection and
+editing are different kinds of act, which is why treating them as two
+selections felt awkward.
+
+**And it answers open question 3**: a switch that abandons uncommitted
+edits is a cancellation, warned about rather than silently applied.
+
+#### What the Instrument-card analogy does and does not supply
+
+Checked at `04323d44` rather than recalled, because the analogy carries
+most of the design and **not the part that sounds hardest**.
+
+**The gating half already ships, and is a close match.** The Instruments
+page holds per-instrument edit state as **`?editing=<id>` in the URL** —
+so only one instrument is editable at a time, which is the same
+one-at-a-time rule one level down — and blocks everything else with
+**`inert`** on `data-lock-region` containers (22 uses in
+`instruments_index.html`), plus an opacity fade as the visual cue. Its
+own comment: *"`inert` blocks every interaction below (clicks, focus,
+native HTML5 drag); the opacity fade gives the visual cue that the band
+is view-only until Edit is engaged."* That is precisely *"you can't also
+do a search or select a table row"*, already built.
+
+It also means **the two URL decisions are one decision**. The active
+roster is in the URL (settled above), and if edit mode follows the
+Instruments pattern it is in the URL too — which is what makes
+"navigating away discards" true rather than aspirational: there is no
+client-side edit state to lose, because the server renders the mode.
+
+**The whole analogy ships. There is no gap.** This paragraph has now
+been wrong twice, in opposite directions, and both versions are described
+here rather than quietly replaced.
+
+*First version:* "the warning half does not exist anywhere in the app."
+*Second version, after the author sent a screenshot of the Instruments
+page's unsaved-changes confirm:* corrected to say the in-page confirm
+ships and **only leaving the page** is unguarded. *That was still wrong.*
+The author sent a second screenshot — the browser's own **"Leave site?
+Changes you made may not be saved."** — which is a `beforeunload` dialog.
+
+What actually ships, read at `04323d44`:
+
+| piece | where |
+|---|---|
+| **Lock / Save / Cancel** on the card | `instrument_action_row` |
+| **dirty tracking** — Save starts `disabled`, enables when dirty | the Save button's state is the signal |
+| **confirm on Lock while dirty** | `newModelTryLock(card)` |
+| **collapse ⇒ lock** runs the same confirm | one function, two callers |
+| **switching while dirty is blocked** | `newModelUnlockClick` — *"a dirty one blocks (the operator must Save or Cancel it first); a clean one is locked silently"* |
+| **nav-away guard** | `instruments_index.html:3737`, Segment 18R Item 2 PR 2 — `beforeunload`, firing only on `[data-instrument-dirty="true"]` |
+| **deliberate navigation excluded** | `window._newModelIntentionalNav`, set by Save's submit and Cancel's reload |
+
+That last row matters: `spec/reviewer-surface.md` lists *"a `beforeunload`
+listener that prompts only when dirty, skipping intentional-discard
+controls"* under **what lands later**. On the operator side it landed in
+18R. **The design that spec defers is already proven on another surface.**
+
+So the author's ask — Save and Cancel on the friendly-label edit, a
+warning on locking without saving, a warning on navigating away — is
+**entirely a re-house**. The scoping principle is satisfied with nothing
+left over, and the earlier suggestion here of `inert`-ing the other index
+rows was inventing a worse substitute for a mechanism that was already
+built and already refined.
+
+#### How the error was made, since checking was done and was not enough
+
+The grep that produced the first version was:
+
+```
+grep -rn "beforeunload" app/ spec/ docs/ | grep -v Binary
+```
+
+The only match in `app/` is in `instruments_index.html`, which **`grep`
+classifies as binary** — one literal NUL byte at line 2048, inside a
+JavaScript `.join()` separator. For such a file grep prints *"Binary file
+… matches"* instead of the line, and **the `| grep -v Binary` filter,
+added to tidy the output, deleted exactly that.** The command then
+reported nothing, and "nothing" was written up as a finding.
+
+*The failure is not an unchecked assumption. It is a check whose
+output-tidying step removed the only evidence that could have falsified
+it* — which is worse, because it returns a confident negative rather than
+a silence.
+
+**The rule this repo now has to carry:** `instruments_index.html` is its
+largest template and greps against it return nothing unless `-a` is
+passed. **A negative grep result is not evidence of absence here without
+`-a`.** The single NUL could also just be written `'\u0000'`, which is
+identical to the engine and would make the file text again — small enough
+to be worth doing for the greps it would stop swallowing.
+
+**A vocabulary collision to settle before this is built.** The author's
+word is *"Edit"*, and the roster pages do ship an **Edit** button today
+(`session_reviewers.html`, `session_reviewees.html`) — but it is
+**row-level**, sits in the Operator actions card this proposal splits
+apart, and is disabled until rows are selected. A roster-level *Edit* on
+the same page would mean two buttons of that name at two scopes.
+Meanwhile the closest analogue — the Instruments card, which is also
+card-level metadata — **deliberately went the other way**: its Wave 4
+comment records *"Edit / Cancel retired in favour of a Lock / Unlock
+toggle"*, modelled on Quick Setup's footer. Recorded as a question
+rather than decided: the author said Edit, and the app's most recent
+decision at this exact scope said Lock / Unlock.
+
+#### The controls, specified — 2026-09-12
+
+The author, answering open questions 4 and 6 and setting out the control
+set. *"Individual row" here means a row in the preview table, confirmed
+by the author.*
+
+**Q4 — nothing is active on load.** The first act is always a deliberate
+choice of roster.
+
+**Q6 — Lock / Unlock, not Edit.** Which also resolves the collision that
+made it a question: the row-level **Edit** keeps its name, and the
+roster-level control takes the vocabulary the Instruments card already
+uses at this exact scope.
+
+**The index row carries two controls**, and they stage the work:
+
+| control | state | what it does |
+|---|---|---|
+| selection checkbox | one roster at a time | shows that roster's search card and preview table below; activates its Unlock |
+| **Unlock** | inactive until the checkbox is ticked | reveals the roster-level action row |
+
+**The roster-level action row**, revealed by Unlock and hidden again by
+Lock: edit the friendly labels (**except Observers**), delete all data in
+the roster, upload a replacement CSV, download the current one. The
+guarding checkboxes the first constraint describes still apply to the two
+destructive ones.
+
+**In the preview table, arity differs by action**, and the split has a
+reason worth stating so it does not later look arbitrary:
+
+- **Edit column values — one row at a time.** Editing is data entry
+  against *this* row's values; two rows have different ones.
+- **Flip status active / inactive, or delete — several rows together.**
+  These are uniform operations; applying one to twenty is the same act
+  twenty times.
+
+**That rule is not new — it is exactly what ships today**, checked at
+`04323d44` in `session_reviewers.html` rather than recalled:
+
+```js
+setBtn(editBtn, n !== 1);        // Edit needs exactly one row
+setBtn(inactivateBtn, n === 0);  // status flips need at least one
+setBtn(reactivateBtn, n === 0);
+```
+
+So the consolidation **preserves the operator's existing muscle memory
+here rather than asking for relearning**, and the rule already has tests
+and a spec entry. Worth knowing: it is one of the few parts of this idea
+that costs nothing to carry across.
+
+**"Except Observers" is also a shipped fact, not a new exception.**
+`spec/setup_pages.md` lists the friendly-label editor as Reviewers and
+Relationships (a 3-cell row) and Reviewees (a 2-row stacked grid);
+`session_observers.html` has no label editor at all. **This is open
+question 2's first named, concrete instance** — the per-roster divergence
+that question is about is no longer hypothetical, and the consolidated
+design has to carry at least this one on day one. A shared row that
+renders three label editors and one blank is the shape to avoid.
+
+**One small divergence from the Instruments analogy, worth a deliberate
+call.** The author's rule is that the action row *does not show* when
+locked; the Instruments page keeps its gated region in the DOM and
+neutralises it with `inert` plus an opacity fade. Hiding avoids the
+"why is this greyed out" question; `inert` keeps the page height stable,
+which is the reflow concern 19L.2 took seriously one level down. Hiding
+is probably right here — an absent row has nothing to explain — but the
+page will grow on unlock, and the Unlock button should not move under
+the pointer that just clicked it.
+
+#### The index columns, and where the exceptions live — 2026-09-12
+
+**Q1 — the index shows name, count, status and last updated. Nothing
+else.** So the index is a chooser, as the gating constraint implied, and
+this **supersedes the sketch's *"all rosters and their columns"***. The
+column-faithful view is the preview's job. The ragged-versus-union
+problem does not need solving; it needed dissolving, and gating dissolved
+it.
+
+*Three of those four are free; the fourth is not.* Checked at
+`04323d44`: **none of `Reviewer`, `Reviewee`, `Observer` or
+`Relationship` carries a `created_at` or `updated_at`, and there is no
+timestamp mixin.** So *last updated* is not derivable from the rosters —
+it needs either a migration across four tables or a query against
+`audit_events`, which is a log rather than an index. Under the scoping
+principle above that is the one index column that is not a re-house, and
+it should be priced before it is drawn.
+
+*And "status" wants defining at the roster level.* Status is a **member**
+attribute — a reviewer is active or inactive; a roster is not. So the
+column is presumably a summary, at which point it may be the same column
+as **count** (*"12 active of 15"*) rather than a second one.
+
+**Q7 — checkbox, and the question it was conditional on has a firm
+answer.** *"Unless there's a way to unselect a radio"*: **not natively.**
+Clicking a selected radio does not clear it, and a radio group has no
+native none-affordance. Clearing one takes JavaScript, and click-a-
+selected-radio-to-clear is an interaction nobody expects. Since Q4 makes
+*nothing selected* both the initial state and one the operator returns to
+by un-ticking, the checkbox is the control that can express it. It also
+avoids introducing a control type this app has never used — **there is
+not one `type="radio"` in any template today.**
+
+**Q2 — the exceptions live in the action rows, because the action rows
+are already per-roster surfaces.** Observers diverges twice, and each
+divergence lands in the row that owns that scope:
+
+| scope | Observers differs by |
+|---|---|
+| roster-level row (behind Unlock) | **fewer actions** — no friendly labels to edit, so that control is simply absent |
+| row-level action row | **one more action** — the **Cohort match rule**, edited for one or more selected observers |
+
+That is a better answer than the three this entry had been carrying
+(a third mode, a per-roster extras slot, or Observers staying separate):
+**no new mechanism is needed at all.** A per-roster action row renders
+the actions that roster has. Fewer for one, more for another, and the
+shape is the same.
+
+**Moving rule construction into the row-level action row is the part that
+earns it.** The rule is per-observer (`Observer.cohort_rule`), so it
+belongs beside the observers it applies to, which is the same argument
+made for row actions generally and for marking a selected row one level
+down.
+
+*It does bend the arity rule just set — edit one row at a time — and the
+bend is consistent with that rule's reason rather than an exception to
+it.* Column-value editing is one row at a time because two rows hold
+different values. Applying **one** cohort rule to several selected
+observers is a uniform operation, like flipping status: the same act,
+several times. So the rule reads: **per-row values, one row; uniform
+operations, many rows** — and the cohort rule is the second kind.
+
 ### A candidate mechanism — the lobby's row expander
 
 **Proposed by the author, 2026-09-12:** take a leaf from the session
@@ -379,147 +739,61 @@ on.
 
 Not answered here; recorded so they are not rediscovered.
 
-1. **Does the top *index* table show columns per roster, or the union?**
-   Four rosters with different column sets in one table is either a
-   ragged table or a union with many empty cells. **Narrowed 2026-09-12**:
-   the refinement settles it for the *preview* (one roster at a time, so
-   its own columns), which leaves the question only for the index table
-   at the top — where "all rosters and their columns" still has to mean
-   something.
-2. **Where do the per-roster exceptions live?** This is now the load-
-   bearing question rather than one of six, because the author has
-   confirmed Observers will carry unique features — today's cohort match
-   rule and more to come. The shape has to answer it *before* the shared
-   table is designed, not after, since a design that treats divergence as
-   an exception will be wrong in the one place it is most certain to be
-   exercised. Candidates, none chosen: a third expandable mode beside
-   edit and preview; a per-roster extras slot the shared row renders
-   when a roster declares one; or Observers staying its own page and the
-   consolidation covering the three that genuinely are alike. That last
-   option is not a failure of the idea — three-into-one still removes the
-   duplication the rationale is about.
-3. ~~**What happens to deep links?**~~ **Answered 2026-09-12 — and it is
-   now a requirement rather than a question.** The Validate *Fix on … ↗*
-   links and the Setup coverage matrix must still reach *this roster,
-   this row*. What is still open is the **mechanism**: a fragment that
-   opens the right roster's preview and scrolls to the row, a query
-   parameter the server honours, or something else. Whatever it is,
-   `spec/validate_page.md` §2.4 and the coverage matrix change with it.
-4. **Does the row pager survive?** Each roster page currently pages
-   independently, and `spec/ui_elements.md` §10 settles that a page turn
-   reloads. One page hosting four pageable previews needs that answered
-   again.
-5. ~~**Is the nav still four items?**~~ **Answered 2026-09-12: one
-   item.** The author's target nav is eight destinations, flat, with the
-   four rosters behind *Rosters*. The residual question is the one that
-   answer creates: the Setup nav is how an operator currently learns the
-   four rosters exist, and an index table inside a page teaches that only
-   once they arrive. Whether that matters is a pilot question.
-6. **What does this do to Quick Setup?** `_quick_setup.py` orchestrates
-   across these rosters and is already near the size watchlist.
+1. ~~**Does the top *index* table show columns per roster, or the
+   union?**~~ **Answered 2026-09-12: neither — name, count, status and
+   last updated only.** The index is a chooser; the column-faithful view
+   is the preview's. Two riders, both in "The index columns, and where
+   the exceptions live": no roster model carries a timestamp, so *last
+   updated* is the one column that is not a re-house; and *status* is a
+   member attribute, so at roster level it may be the same column as
+   *count*.
+2. ~~**Where do the per-roster exceptions live?**~~ **Answered
+   2026-09-12: in the action rows, which are already per-roster
+   surfaces.** Observers renders one fewer roster-level action (no
+   friendly labels) and one more row-level action (the Cohort match
+   rule, moved beside the observers it applies to). **No new mechanism
+   is needed** — which is a better answer than the three candidates this
+   question had been carrying.
+3. ~~**What happens to unsaved work when the active roster changes?**~~
+   **Answered 2026-09-12: a cancellation, with warning.** The warning is
+   the part that does not exist yet — there is no `beforeunload` guard
+   anywhere in the app — but a design for one is already deferred in
+   `spec/reviewer-surface.md`, so two surfaces would want it and it
+   should be built once. See "What the Instrument-card analogy does and
+   does not supply".
+4. ~~**Is anything active when the page first loads?**~~ **Answered
+   2026-09-12: nothing.** The first act is always a deliberate choice of
+   roster. The click it costs is the point — it is the click that stops
+   the wrong-roster mistake.
+5. ~~**Are *select to edit* and *select to preview* one selection or
+   two?**~~ **Answered 2026-09-12: neither.** There is one selection, the
+   active roster, which opens the search card and the preview; edit is a
+   **mode** entered afterwards by a button, which gates the rest of that
+   roster's surface while it is open. The question offered two options
+   and the answer was a third — selection and editing are different kinds
+   of act, which is why framing both as selections felt awkward.
+6. ~~**Is the roster-level control called Edit, or Lock / Unlock?**~~
+   **Answered 2026-09-12: Lock / Unlock**, matching the Instruments card
+   at the same scope. The row-level **Edit** keeps its name, so the
+   collision that made this a question does not arise.
+7. ~~**Does the index use checkboxes or radios?**~~ **Answered
+   2026-09-12: checkbox.** The condition it was put under — *"unless
+   there's a way to unselect a radio"* — resolves firmly: **not
+   natively**, and clearing one takes JavaScript plus an interaction
+   nobody expects. The checkbox is the control that can express the
+   *nothing selected* state question 4 made the default, and the app has
+   never used a `type="radio"` anywhere.
 
-### What would have to be true before this is worth scheduling
+**Nothing left open here.** Abandoning an unlocked roster edit was
+recorded as an open tension twice — first against the scoping principle,
+then narrowed to "only leaving the page is unguarded". **Both were
+wrong**: Save / Cancel, dirty tracking, the confirm on Lock, the block on
+switching while dirty, *and* a `beforeunload` nav-away guard all ship on
+the Instruments page, including the intentional-navigation exclusion that
+`spec/reviewer-surface.md` still lists as future work. See "What the
+Instrument-card analogy does and does not supply" — which now also
+records why two greps missed it.
 
-- The pilot has run, and there is evidence that operators find the
-  four-page arrangement costly — not merely that it is repetitive in the
-  source.
-- A behaviour change has actually had to be made four times.
-- The deep-link contract has an answer, because Validate's fix links are
-  a shipped affordance and breaking them silently would be worse than
-  the duplication.
-- The selected-roster constraint above has a design that holds **while
-  the panel is open and the source row may be scrolled away**, and the
-  existing roster-naming confirm copy is carried across unchanged. A gate
-  rather than a preference — though a narrower one than first written:
-  the confirm copy already names its roster today and travels with the
-  control, so what needs designing is the *orientation* signal the nav,
-  breadcrumb and heading currently supply, not the *confirmation* signal,
-  which survives on its own.
-
----
-
-## 2. One Monitoring page, replacing three
-
-**Proposed 2026-09-12 by the author**, immediately after entry 1 and as
-part of the same programme — the author's "Item 2", the second move of
-the consolidation. *It was briefly filed as entry 3, behind a lobby
-row-marking entry that has since been removed from this file: session
-lobby work is segment work, not an idea awaiting pilot evidence. With
-that gone the programme numbering and the file numbering agree.*
-
-### The idea, as put
-
-Consolidate **Previews**, **Invitations** and **Responses** into a single
-**Monitoring** page, **with a similar structure** to the Rosters page in
-entry 1: an index at the top, a preview mode, and row-level actions that
-appear beside the rows.
-
-**Assignments stays on its own.** The author's judgment: it is
-sufficiently different. That is worth recording as a *decision*, because
-it is the one page a naive "consolidate the Operations group" would have
-swept in — and the Operations group is exactly where Assignments sits
-today.
-
-### What it rests on
-
-Measured at `453546c4`. The three pages are siblings in the nav's
-**Operations** group, and the two the Guide documents together —
-Invitations and Responses — are already described by **one spec**,
-`spec/operations_pages.md`, which covers both and nothing else. A spec
-that already treats two of the three as one subject is the same signal
-entry 1 draws on, where `spec/setup_pages.md` asserts a shared body shape
-across the four rosters.
-
-Previews is the third, and the loosest fit of the three: it is a
-*rendering* of what participants will see rather than a *monitor* of what
-they have done. Whether "Monitoring" is the right name for a page that
-also previews is an open question below.
-
-### The case against
-
-The same objection entry 1 carries, and it has not been re-measured for
-these three. The 2026-09-12 Codex assessment's warning was about roster
-routes specifically; **nobody has checked whether Previews, Invitations
-and Responses duplicate each other the way Reviewers and Reviewees do.**
-Entry 1's rationale is backed by a measured 5,816 lines and an identical
-card sequence. This entry has no equivalent figure yet, and should not
-borrow entry 1's.
-
-`_operations.py` is already on the size watchlist at **1,038 lines**, and
-the 12sep assessment's note on it is *"two page families; split
-Invitations from Responses if it grows"* — which points the opposite way
-from merging a third page in. Not fatal: a UI consolidation need not
-merge the services behind it, and entry 1 makes the same
-presentation-versus-services split. But it is a live tension and the
-assessment said it first.
-
-### Open questions
-
-1. **Is "Monitoring" the right name**, given Previews renders rather than
-   monitors? The alternative is that Previews does not belong in this
-   consolidation at all.
-2. **What is the index table's row?** On Rosters a row is a roster. Here
-   it is less obvious: a participant, an instrument, a phase, or the
-   three source pages themselves.
-3. **Does the Validate deep-link requirement reach here too?** Validate
-   links at Setup pages today; whether any of its rules point into
-   Operations needs checking before this is planned.
-4. **Does the duplication that justifies entry 1 exist here?** Unmeasured,
-   and the first thing to measure if this is ever picked up.
-
-### What would have to be true before this is worth scheduling
-
-- **Entry 1 has shipped and been used.** This is explicitly the second
-  move; doing it first would be building the pattern twice before
-  learning whether it works once.
-- The duplication question above has an actual number.
-- The Previews-versus-monitoring naming question has an answer, because a
-  page named for something it half does is worse than three pages named
-  correctly.
-
-
----
-
-*Further ideas go below as `## 4.`, `## 5.`, … each with the same shape:
-the idea as put, what it rests on, the case against, open questions.
-Entries are independent unless one says otherwise.*
+**Also worth applying to the scoping principle above**: this entry's ask
+is a re-house with **no** new mechanism, which is a stronger position
+than the entry claimed for itself at any point today.
