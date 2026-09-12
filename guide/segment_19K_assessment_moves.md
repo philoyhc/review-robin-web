@@ -2492,197 +2492,61 @@ Taken 2026-09-12 at `40a0b663`.
 
 ---
 
-## Item 9 — two-thirds of every page is the same CSS, sent again each time
+## Item 9 — two-thirds of every page is the same CSS — **moved out of 19K, 2026-09-12**
 
-### Opportunity
+**This item is no longer a Segment 19K matter.** It moved whole to
+`guide/post_azure_todo_checklist.md` **item 4**, which now carries the
+measurements, the three candidate answers, the semantics, the blast
+radius and the finding — everything needed to take the decision, with
+nothing to read back out of here.
 
-`base.html` carries the app's entire stylesheet as one inline `<style>`
-block, and every one of the **34** templates that extend it re-sends that
-block on every render. Measured 2026-09-12 at `11cad9c1` by rendering
-real pages through `TestClient` and measuring the response body:
+### Status — 2026-09-12
 
-| Page | Total | Inline CSS | CSS share | gzip(whole body) |
-|---|---:|---:|---:|---:|
-| Assignments | 195.9 KB | 157.7 KB | **80.5%** | 49.5 KB |
-| Guide | 213.9 KB | 157.7 KB | 73.7% | 54.2 KB |
-| Lobby | 216.1 KB | 157.7 KB | 73.0% | 53.1 KB |
-| Session home | 244.1 KB | 157.7 KB | 64.6% | 57.4 KB |
+**Why it left.** The item was opened alongside 19K.6–8 as "unblocked
+work while Azure is outstanding". That framing was two-thirds right: it
+is unblocked by *provisioning* and gated on **a request the agent
+container cannot make**. Re-tried 2026-09-12 — the network policy
+refuses the dev slot, `403 CONNECT tunnel failed`, logged by the proxy
+as `connect_rejected`, a policy denial rather than a TLS fault. Its
+rung 1 is the only first rung in 19K.6–9 that cannot start in the
+container; 6, 7 and 8 are all "build here, verify on the slot after
+deploy", while this one needs the number *before* there is anything to
+build.
 
-The **157.7 KB is byte-identical on all four** — it is the same block,
-paid again on every navigation, and it cannot be cached separately
-because it is not a separate thing. (Three of the four are operator
-pages; `/guide` is "operator **and participant** documentation"
-(`app/web/routes_guide.py`), so the cost is not the operator's alone.)
+The item's own `### Open questions` had already asked whether it
+belonged in 19K, and answered by **splitting** it — measurement to the
+checklist, decision staying here. Author's call, 2026-09-12: split it
+the rest of the way, because a segment that cannot close until someone
+reads a header is a segment held open by something it does not own.
 
-**`app/main.py` registers no compression middleware.** Whether the Azure
-front end gzips responses on the way out is **not knowable from here**,
-and that unknown is the whole reason this item is measurement-first: if
-the platform already compresses, the wire cost is ~50 KB rather than
-~200 KB and the case is much weaker.
+**Nothing was lost, and the body was moved rather than summarised.** The
+checklist item is self-sufficient by design: a pointer back into a
+closed segment plan is exactly the dependency this move removes. What
+travelled: the four-page weight table (157.7 KB inline CSS, **64.6–80.5%**
+of a rendered page, byte-identical across all four), the three answers
+with the "do not land 2 and 3 together" constraint, the
+`_RevalidatingStaticFiles` `no-cache` caveat, the stale-stylesheet
+failure class, the blast-radius table, and the `<style>`-in-a-Jinja-comment
+finding — the one 19K.6 hit independently and that
+`tests/unit/_base_css.py` anchors around.
 
-**Not knowable from here, literally.** The agent container's network
-policy blocks the dev slot — a request to
-`app-review-robin-web-dev-…azurewebsites.net` returns
-`403 CONNECT tunnel failed` (tried 2026-09-12). So rung 1 is not agent
-work at all, and this item is **the only one of 19K.6–9 whose first
-rung cannot start in the container**. Items 6, 7 and 8 are all "build
-here, verify on the slot after deploy"; this one needs the number
-*before* there is anything to build.
+**Retired in place rather than deleted.** The heading and this block
+stay so that a reader arriving from `docs/status.md`, from 19K.6's
+cross-reference, or from the segment's own item numbering finds where it
+went instead of a gap. Its `Doc impact` heading below is suffixed —
+the mechanism Segment 19A uses — so `close_check` no longer reads it as
+a live manifest and **19K can close on items 1–8 and 10**.
 
-Context that makes it worth asking: the deployment is an **F1 free App
-Service plan with no Always On** (`docs/known_limitations.md`), so this
-is not a surface where bandwidth and cold-start latency are free.
+**What is not claimed.** The decision is not taken, and this move does
+not take it. The stylesheet is still inline, still 157.7 KB, still
+re-sent per navigation. The item is *relocated*, not resolved, and the
+checklist says so.
 
-### Decision
+### Doc impact — moved to `guide/post_azure_todo_checklist.md` item 4 (retired)
 
-**Not yet made. Rung 1 is a measurement against the deployed slot, and
-the answer decides between three responses** — the same shape 19K.3
-used, which is what turned a deferral into a cheap fix there.
-
-1. **Nothing.** If the Azure front end already gzips, ~50 KB per page
-   over the wire is unremarkable, and the inline block keeps the
-   single-artefact property the architecture chose it for.
-2. **Compression middleware.** One line in `app/main.py`, no
-   architectural change, and it compresses the **whole** response rather
-   than the CSS alone — the HTML around it is 38–86 KB per page.
-3. **Extract the stylesheet.** The only option that makes the CSS
-   *cacheable*, so a repeat view pays a 304 rather than the bytes. It is
-   mechanically cheap — one `<style>` element, 3,869 lines, zero Jinja —
-   and it is the one that changes the architecture, so it needs the
-   strongest evidence.
-
-**Rejected as a framing: treating this as 19K.6's problem.** A
-stylesheet does not fix a specificity tie (19K.6, Decision). These are
-two questions about one file and they get separate answers, or the
-architecture changes on the wrong argument.
-
-**Rejected: doing 2 and 3 together.** Compression would mask most of
-what extraction buys, so landing both at once makes it impossible to say
-afterwards which one was worth it.
-
-### Semantics
-
-- **The measurement is taken against the deployed slot**, not the
-  container, and the distinction that matters is *which* Azure. The dev
-  slot is **live** (`docs/known_limitations.md`: one dev slot, a push to
-  `main` deploys straight to it); what is outstanding is the
-  institutional host, which blocks Segment 20 and not this. So this item
-  is gated on **a request**, not on provisioning.
-- **`_RevalidatingStaticFiles` sets `Cache-Control: no-cache`** (19H
-  Item 4), so an extracted stylesheet would *revalidate* rather than be
-  cached hard — a 304 on repeat views, not a skipped request. That is
-  still far cheaper than 157.7 KB, and the item must not claim a
-  stronger caching win than the existing posture actually gives.
-- **A stale stylesheet after deploy is a real failure class.** Option 3
-  inherits a cache-busting question the inline block does not have, and
-  the existing `no-cache` posture is what answers it.
-- **The architecture's own reason stands either way.** The single-artefact
-  property (`CLAUDE.md`: no stylesheet, no build step) is why this is
-  option 3 and not option 1.
-
-### Judgment calls — decided
-
-- **2026-09-12 — the item's own CSS figures were wrong, and the document
-  already contained the right ones.** The first draft said 3,885 lines /
-  158.4 KB / 39.5 KB. `base.html:9` carries a Jinja comment whose text
-  includes the literal string `` <style> ``, so a non-greedy
-  `<style[^>]*>(.*?)</style>` over the raw template matched **that** as
-  the opening tag and swallowed 15 lines of comment and the no-FOUC
-  `<script>` as if they were CSS. The real element is lines 24–3894:
-  **3,869 lines, 157.7 KB raw, 39.2 KB gzipped**.
-
-  The instructive part is not the regex. **The page-weight table in this
-  same item already said 157.7 KB** — it is measured from a rendered
-  response, where Jinja has stripped the comment before any regex runs,
-  so it was never exposed to the bug. Two measurements of one quantity,
-  taken by two methods, disagreeing by 0.7 KB in one document, and
-  nobody compared them. Measuring twice is worth nothing if the two
-  results are never put beside each other.
-
-- **2026-09-12 — measure before choosing, even though option 2 is one
-  line.** Landing compression without knowing whether the platform
-  already compresses would be a change whose effect nobody could state,
-  and this segment has already produced two findings about numbers that
-  were asserted rather than run.
-
-### Blast radius (measured)
-
-Taken 2026-09-12 at `11cad9c1`.
-
-| What | Count | Command |
-|---|---:|---|
-| Templates extending `base.html` | **34** | `grep -rl 'extends "base.html"' app/web/templates \| wc -l` |
-| `<style>` blocks in `base.html` | **1** | parse |
-| CSS lines / file lines | **3,869 / 4,732** | `<style>` spans lines 24–3894 |
-| Jinja constructs inside the CSS | **0** | parse |
-| Inline CSS, raw / gzipped | **157.7 KB / 39.2 KB** | `len()` + `gzip.compress` on the element's content |
-| CSS share of a rendered page | **64.6–80.5%** | the table above |
-| Compression middleware in `app/main.py` | **0** | `grep -n Middleware app/main.py` |
-| Existing static mount | 1 (`/static`, revalidating) | `app/main.py:42` (class), `:97` (mount) |
-
-### PR ladder
-
-1. **Measure the deployed response — Author, not agent**, and record the
-   answer here. The dev slot exists and every push to `main` deploys to
-   it, so this needs no provisioning; it needs a request the container
-   cannot make. **Filed as item 4 of
-   `guide/post_azure_todo_checklist.md`**, whose admission rule the
-   author widened on 2026-09-11 for exactly this case — a check blocked
-   on *a* deploy rather than *the* institutional one, which "needs a
-   file like this one or it is forgotten". One line, from any machine
-   that can reach the slot:
-
-   ```
-   curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
-     https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/operator/sessions
-   ```
-
-   What to record: the `Content-Encoding` header (present or absent) and
-   `Content-Length`. Browser devtools' Network tab gives the same two,
-   with "transferred" against "resource" size. *Must not* change
-   `app/main.py` or `base.html`.
-2. **Whatever rung 1 selects**, sized once the number exists.
-
-### Definition of done
-
-- The wire size of a real operator page from the dev slot, with its
-  `Content-Encoding`, recorded in this plan.
-- A decision among the three, with its reason, recorded where a reader
-  finds it — `spec/architecture.md` if the architecture holds, or the
-  item that changes it if not.
-- If the answer is "nothing", that is recorded as a measured decision
-  rather than left implicit.
-- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
-  before pushing.
-- `spec-writer` run **before** pushing.
-- `## Doc impact` section present and current
-- `python3 tools/close_check.py 19K.9` exits 0; any warning adjudicated
-- `## Status` records intended vs done
-- `docs/status.md` row added
-
-### Open questions
-
-- **Which of the three.** Author decides at rung 1, from the deployed
-  measurement rather than from the container's.
-- **Whether this item belongs in 19K at all.** It was opened alongside
-  6–8 as "unblocked work while Azure is outstanding", and that framing
-  was only two-thirds right: it is unblocked by *provisioning* and gated
-  on a request the agent cannot make. **Settled 2026-09-12** by
-  splitting it — the measurement is checklist item 4, which is that
-  file's whole job, and the decision stays here, which is this file's.
-  The same split 19J.4 used: its browser verification lives in the
-  checklist and its reasoning never left its plan. So 19K.9 can close
-  without the segment waiting on a header.
-
-### Out of scope
-
-- **Splitting `base.html` into several stylesheets.** Whatever rung 1
-  decides, one file in and one file out; a module boundary inside the
-  CSS is a separate argument with no evidence behind it yet.
-- **A build step.** `CLAUDE.md` rules out a JS/CSS toolchain, and
-  nothing here needs one — extraction is a file move, not a bundle.
-
-### Doc impact
+The commitments below travelled with the item and are **not** Segment
+19K's to honour. Left unedited as the record of what the item had
+promised:
 
 - `spec/architecture.md` — records what a page costs to send and what was
   decided about the inline-CSS choice, so the next reader finds the
@@ -2694,6 +2558,7 @@ Taken 2026-09-12 at `11cad9c1`.
 - `docs/status.md` — row when the item closes (Item 9).
 
 ---
+
 
 ## Item 10 — the last four AA failures are one shade, and the palette already knows the answer
 

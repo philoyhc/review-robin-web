@@ -96,7 +96,9 @@ def _style_element(html: str) -> str:
     a Jinja comment whose *text* contains the literal string
     ``<style>``, and a non-greedy regex over the raw template matches
     that instead, swallowing the no-FOUC script as if it were CSS. That
-    cost a wrong figure in this item's own plan (19K.9).
+    cost a wrong figure in a sibling item's plan, whose write-up of the
+    trap moved with it to ``guide/post_azure_todo_checklist.md`` item 4
+    when 19K.9 left the segment on 2026-09-12.
     """
     lines = html.splitlines()
     start = next(

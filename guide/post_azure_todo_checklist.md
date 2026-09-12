@@ -189,29 +189,62 @@ row plus a dated line in its `### Status`.
 
 ---
 
-## 4. Measure whether the deployed slot compresses a response
+## 4. The inline stylesheet: measure what a page costs on the wire, then decide
 
 **Status:** open. Blocked on a deploy — the **dev slot is enough**; this
 does not wait for the institutional cutover.
 
-**What.** Take one number: does a response from the deployed app come
-back with `Content-Encoding: gzip`, and what is its wire size. Segment
-19K Item 9 cannot choose among its three options without it, and **one
-of the three changes the architecture** — extracting the stylesheet —
-which should not be done on a guess. (The other two are "do nothing"
-and one line of middleware.)
+**Moved here whole from `guide/segment_19K_assessment_moves.md` Item 9
+on 2026-09-12**, so that Segment 19K no longer waits on a header. The
+item was opened alongside 19K.6–8 as "unblocked work while Azure is
+outstanding", and that framing was two-thirds right: it is unblocked by
+*provisioning* and gated on a request the agent container cannot make.
+Its first rung is the only one in that group that cannot start in the
+container. Everything needed to take the decision is below; nothing has
+to be read back out of the segment plan.
 
-**Why it cannot be checked here.** Compression in transit is a property
-of the platform, not of the code — `app/main.py` registers no
-compression middleware, so whichever answer comes back is Azure's, and
-`grep` cannot see it. The agent container also cannot ask: its network
-policy refuses the slot, returning `403 CONNECT tunnel failed`
-(tried 2026-09-12). This is the second entry here whose blocker is *a*
-deploy rather than *the* institutional one, and unlike Item 3 it is not
-a thing to look at — it is a header to read.
+### What is wrong
 
-**Done when** this has been run once, from any machine that can reach
-the slot, and the answer is written into 19K Item 9's `## Status`:
+`base.html` carries the app's entire stylesheet as one inline `<style>`
+block, and every one of the **34** templates that extend it re-sends
+that block on every render. Measured 2026-09-12 at `11cad9c1` by
+rendering real pages through `TestClient` and measuring the response
+body:
+
+| Page | Total | Inline CSS | CSS share | gzip(whole body) |
+|---|---:|---:|---:|---:|
+| Assignments | 195.9 KB | 157.7 KB | **80.5%** | 49.5 KB |
+| Guide | 213.9 KB | 157.7 KB | 73.7% | 54.2 KB |
+| Lobby | 216.1 KB | 157.7 KB | 73.0% | 53.1 KB |
+| Session home | 244.1 KB | 157.7 KB | 64.6% | 57.4 KB |
+
+The **157.7 KB is byte-identical on all four** — the same block, paid
+again on every navigation, and it cannot be cached separately because it
+is not a separate thing. Three of the four are operator pages; `/guide`
+is "operator **and participant** documentation"
+(`app/web/routes_guide.py`), so the cost is not the operator's alone.
+
+The deployment is an **F1 free App Service plan with no Always On**
+(`docs/known_limitations.md`), so this is not a surface where bandwidth
+and cold-start latency are free.
+
+### The measurement
+
+**Why it cannot be taken here.** Compression in transit is a property of
+the platform, not the code — `app/main.py` registers **no** compression
+middleware, so whichever answer comes back is Azure's, and `grep` cannot
+see it. The container cannot ask either: its network policy refuses the
+slot, `403 CONNECT tunnel failed` (re-tried 2026-09-12; the proxy logs
+it as `connect_rejected`, a policy denial rather than a TLS fault).
+
+What the repo *does* settle, and what it does not: the app is served by
+`gunicorn -w 2 -k uvicorn.workers.UvicornWorker` on App Service **Linux**
+(`docs/deployment_dev.md`), and there is no `web.config`, nginx config
+or compression setting anywhere in the repository. So nothing in the
+repo turns compression on — which points at options 2 or 3 below without
+establishing anything, because a platform behaviour is not a repo fact.
+
+One line, from any machine that can reach the slot:
 
 ```
 curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
@@ -220,7 +253,7 @@ curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' \
 
 | Record | Where to find it | What it decides |
 |---|---|---|
-| `Content-Encoding` present or absent | the response headers above, or devtools → Network → Response Headers | Present → the ~200 KB page is ~50 KB on the wire, and 19K.9's answer is probably "do nothing, measured". Absent → the whole 200 KB goes out uncompressed on an F1 plan, and compression middleware is one line |
+| `Content-Encoding` present or absent | the response headers above, or devtools → Network → Response Headers | Present → the ~200 KB page is ~50 KB on the wire, and the answer is probably "do nothing, measured". Absent → the whole 200 KB goes out uncompressed on an F1 plan, and compression middleware is one line |
 | `Content-Length` | the same headers; devtools shows it as "transferred" beside "resource" size | The actual wire cost, against the 195.9–244.1 KB rendered sizes measured in the container |
 
 Easy Auth sits in front, so an unauthenticated `curl` may return a
@@ -229,10 +262,81 @@ still counts if the response is large enough to be worth compressing** —
 if it is a short redirect, take the reading from devtools on a real
 signed-in page instead, which is the more faithful measurement anyway.
 
-**Where this came from.** `guide/segment_19K_assessment_moves.md` Item 9,
-whose rung 1 *is* this measurement and whose three candidate answers
-stay open until it exists. The item records the container-side numbers
-already taken: the same 157.7 KB of inline CSS is **64.6–80.5% of four rendered
-pages**, byte-identical across all of them, re-sent on every navigation
-across 34 templates. Three are operator pages; `/guide` serves
-participants too.
+### The three answers it chooses between
+
+1. **Nothing.** If the Azure front end already gzips, ~50 KB per page
+   over the wire is unremarkable, and the inline block keeps the
+   single-artefact property the architecture chose it for
+   (`CLAUDE.md`: no stylesheet, no build step). **If this is the answer
+   it is recorded as a measured decision, not left implicit.**
+2. **Compression middleware.** One line in `app/main.py`, no
+   architectural change, and it compresses the **whole** response rather
+   than the CSS alone — the HTML around it is 38–86 KB per page.
+3. **Extract the stylesheet.** The only option that makes the CSS
+   *cacheable*, so a repeat view pays a 304 rather than the bytes.
+   Mechanically cheap — one `<style>` element, **3,869 lines, zero
+   Jinja** — and the one that changes the architecture, so it needs the
+   strongest evidence.
+
+**Do not land 2 and 3 together.** Compression would mask most of what
+extraction buys, making it impossible to say afterwards which was worth
+it.
+
+**`_RevalidatingStaticFiles` sets `Cache-Control: no-cache`** (19H Item
+4), so an extracted stylesheet would *revalidate* rather than be cached
+hard — a 304 on repeat views, not a skipped request. Still far cheaper
+than 157.7 KB, but do not claim a stronger caching win than the existing
+posture gives. Option 3 also inherits a **stale-stylesheet-after-deploy**
+failure class the inline block does not have; the `no-cache` posture is
+what answers it.
+
+**Out of scope whatever is chosen:** splitting `base.html` into several
+stylesheets (one file in, one file out — a module boundary inside the
+CSS is a separate argument with no evidence yet), and any build step
+(`CLAUDE.md` rules out a JS/CSS toolchain; extraction is a file move,
+not a bundle).
+
+### Blast radius, measured at `11cad9c1`
+
+| What | Count | Command |
+|---|---:|---|
+| Templates extending `base.html` | **34** | `grep -rl 'extends "base.html"' app/web/templates \| wc -l` |
+| `<style>` blocks in `base.html` | **1** | parse |
+| CSS lines / file lines | **3,869 / 4,732** | `<style>` spans lines 24–3894 |
+| Jinja constructs inside the CSS | **0** | parse |
+| Inline CSS, raw / gzipped | **157.7 KB / 39.2 KB** | `len()` + `gzip.compress` |
+| CSS share of a rendered page | **64.6–80.5%** | the table above |
+| Compression middleware in `app/main.py` | **0** | `grep -n Middleware app/main.py` |
+| Existing static mount | 1 (`/static`, revalidating) | `app/main.py:42`, `:97` |
+
+### One finding worth keeping
+
+**The item's own CSS figures were wrong, and the document already
+contained the right ones.** The first draft said 3,885 lines / 158.4 KB
+/ 39.5 KB. `base.html:9` carries a Jinja comment whose text includes the
+literal string `` <style> ``, so a non-greedy `<style[^>]*>(.*?)</style>`
+over the raw template matched **that** as the opening tag and swallowed
+15 lines of comment and the no-FOUC `<script>` as if they were CSS. The
+real element is lines 24–3894.
+
+The instructive part is not the regex. **The page-weight table above
+already said 157.7 KB** — measured from a rendered response, where Jinja
+has stripped the comment before any regex runs, so it was never exposed
+to the bug. Two measurements of one quantity, by two methods,
+disagreeing by 0.7 KB in one document, and nobody compared them.
+*Measuring twice is worth nothing if the two results are never put
+beside each other.* (19K.6 hit the same `<style>`-in-a-comment trap
+independently; `tests/unit/_base_css.py` anchors on `:root {` because of
+it.)
+
+### Done when
+
+- The wire size of a real page from the dev slot, with its
+  `Content-Encoding`, is recorded **here**.
+- A decision among the three is taken and written where a reader finds
+  it — `spec/architecture.md` if the architecture holds, or the plan of
+  whatever segment changes it if not.
+- If the answer is "nothing", that is recorded as a measured decision
+  rather than left implicit.
+- Whatever is built after that is scoped as its own item in a live
+  segment; this entry is the evidence, not the build.
