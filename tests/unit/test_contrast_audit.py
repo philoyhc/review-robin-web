@@ -115,37 +115,27 @@ ON_FILL = {
 }
 
 #: Pairs under AA normal that are **open** — not accepted, and listed
-#: in `docs/known_limitations.md` as outstanding. Each mapped to the
-#: ratio it measured on 2026-09-12.
+#: in `docs/known_limitations.md` as outstanding.
 #:
-#: **All four are one root cause**: white on `--blue-glow`, the
-#: reserved "you can act on this" shade, in dark. The dark primary
-#: button's own label sits at 3.33 at rest and 2.54 on hover — so the
-#: 2.54 is not a transient dip but the worst point of a control already
-#: below the line. Closing this means moving `--blue-glow` (which
-#: `--selected-bg`, `--focus-ring` and seven more dark tokens resolve
-#: to) or changing the foreground off white; either is a decision about
-#: the reserved shade, and belongs to whoever takes it.
+#: **Empty since 19K.10 (2026-09-12).** The last four were one root
+#: cause — white on `--blue-glow` in dark, the reserved shade — and
+#: closed together by inverting the foreground rather than moving the
+#: fill: dark `--btn-primary-fg`, `--selected-fg` and `--text-on-accent`
+#: took `--ink`, giving 5.33 / 5.33 / 5.33 and **6.98** for the hover
+#: that had been the palette's worst pair at 2.54.
 #:
-#: **None of the four is large text**, so AA large's 3:1 is not their
-#: line: `body.ui-v2 .btn` sets `--fs-small` (0.875rem, weight 500),
-#: and `--selected-fg` renders on chips at `--fs-tiny`, on the theme
-#: toggle at 0.8em and on `.skip-link` at inherited body size. AA large
-#: wants 18.66px, or 14pt bold; the largest of these is 16px at weight
-#: 400.
+#: The dict stays rather than being deleted with its tests. An empty
+#: record is a claim — *nothing is outstanding* — and
+#: `test_every_pair_clears_aa_but_for_the_recorded_shortfalls` is what
+#: keeps it true: a new sub-AA pair fails there rather than being added
+#: here quietly. Deleting the machinery on the day it first reads empty
+#: is how the next failure goes unnoticed.
 #:
-#: A floor in both directions: a regression fails, and so does a fix,
-#: because a fix should delete the entry rather than leave a stale
-#: number behind it.
-#:
-#: Four more closed on 2026-09-12 by collapsing a tier rather than
-#: moving a value — see "Collapsing a tier" in `spec/color_tokens.md`.
-OPEN_SHORTFALLS = {
-    ("dark", "--btn-primary-fg", "--btn-primary-bg-hover"): 2.54,
-    ("dark", "--btn-primary-fg", "--btn-primary-bg"): 3.33,
-    ("dark", "--selected-fg", "--selected-bg"): 3.33,
-    ("dark", "--text-on-accent", "--btn-primary-bg"): 3.33,
-}
+#: If an entry is ever added back it needs its measured ratio and a
+#: line in `docs/known_limitations.md`, and a floor in both directions:
+#: a regression fails, and so does a fix, because a fix should delete
+#: the entry rather than leave a stale number behind it.
+OPEN_SHORTFALLS: dict[tuple[str, str, str], float] = {}
 
 #: Every pair under AA, however recorded. A pair under AA and in
 #: neither set is new, and fails.

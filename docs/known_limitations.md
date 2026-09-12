@@ -76,39 +76,21 @@ bugs — they trace to the Segment 14A plan and
   grip — moved to `--decor-muted` and are outside the text floor
   by rule, WCAG 1.4.3 governing text. Details in
   `spec/color_tokens.md`, "The AA floor on text".
-- **Four colour pairs fall short of AA normal (4.5:1) and are
-  open**, and all four are **one root cause**: white on
-  `--blue-glow` in dark, the reserved "you can act on this" shade.
-  `tests/unit/test_contrast_audit.py` sweeps all 73
-  foreground/background pairs the palette forms and pins these at the
-  ratios below, so none can worsen unnoticed.
+- **Contrast: the palette clears AA normal in both themes** as of
+  2026-09-12 (19K.10). `tests/unit/test_contrast_audit.py` sweeps all
+  73 foreground/background pairs the palette forms, in both themes,
+  and every one meets 4.5:1 except the three accepted below. The last
+  four were a single root cause — white on `--blue-glow` in dark, the
+  reserved "you can act on this" shade — and closed together by
+  inverting the foreground rather than moving the fill: dark
+  `--btn-primary-fg`, `--selected-fg` and `--text-on-accent` took
+  `--ink`, giving **5.33** at rest and **6.98** for the hover that had
+  been the worst pair in the palette at 2.54.
 
-  | Ratio | Theme | Pair |
-  |---|---|---|
-  | **2.54** | dark | `--btn-primary-fg` on `--btn-primary-bg-hover` |
-  | **3.33** | dark | `--btn-primary-fg` on `--btn-primary-bg` |
-  | **3.33** | dark | `--selected-fg` on `--selected-bg` |
-  | **3.33** | dark | `--text-on-accent` on `--btn-primary-bg` |
-
-  The 2.54 is a hover state but not a transient dip: the same control
-  measures **3.33 at rest**, so it is the worst point of a button
-  already below the line. Closing this means moving `--blue-glow`,
-  which `--selected-bg`, `--focus-ring` and seven more dark tokens
-  resolve to, or taking the foreground off white — a decision about
-  the reserved shade rather than four separate fixes.
-
-  **None is large text**, so AA large's 3:1 is not their line:
-  `body.ui-v2 .btn` sets `--fs-small` (0.875rem, weight 500), and
-  `--selected-fg` renders on chips at `--fs-tiny`, on the theme
-  toggle at 0.8em and on `.skip-link` at inherited body size. AA
-  large wants 18.66px, or 14pt bold.
-
-- **Four more were open until 2026-09-12 and were closed by
-  collapsing a tier**, not by moving a value: the light lifecycle,
-  role and status greens took `--green-deep` (3.32 → 6.29) and the
-  expired red took `--red-deep` (3.95 → 6.80), both of which the same
-  tints already used for text elsewhere. See "Collapsing a tier" in
-  `spec/color_tokens.md`.
+  That follows the pattern the palette already used: `--text-on-amber`
+  is `--white` in light and `--ink` in dark, as is `--btn-alert-fg`,
+  because the dark alert fill is bright. The accent family had been the
+  outlier. Details in `spec/color_tokens.md`, "The AA floor on text".
 
 - **Three further pairs are under AA and accepted** (author,
   2026-09-12, reviewing the panel). Each is a button label dipping

@@ -141,7 +141,7 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 |---|---|---|---|---|
 | `--text-body` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 | `--text-subtle` | `--slate` | `--slate-pale` | `#616874` | `#a9b4c6` |
-| `--text-on-accent` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--text-on-accent` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--text-on-amber` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--text-link` | `--blue-strong` | `--blue-glow-soft` | `#2563eb` | `#60a5fa` |
 | `--text-link-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
@@ -222,20 +222,39 @@ The point of the separate token is that the failing value cannot drift
 back onto a label: a `color:` declaration naming `--decor-muted` fails
 the test.
 
-**Seven pairs fall short of AA normal; four are open and three are
-accepted.** The four open ones are a single root cause — white on
-`--blue-glow` in dark, the reserved shade, so moving it moves nine
-other dark tokens — and none is large text, `body.ui-v2 .btn` being
-`--fs-small` (0.875rem, weight 500) and `--selected-fg` rendering
-between 12px and 16px, all short of AA large's 18.66px. The three
-accepted are light button labels dipping **only under the pointer** —
+**Three pairs fall short of AA normal, all accepted; none is open.**
+Since 19K.10 the palette clears AA in both themes. The three accepted
+are light button labels dipping **only under the pointer** —
 3.19/3.68/3.95 on hover against 7.09/5.17/4.83 at rest — and that
 acceptance is conditional on the resting pair, which the suite asserts
-rather than assumes. Every one is listed in
-`docs/known_limitations.md` and pinned in `OPEN_SHORTFALLS` or
-`ACCEPTED_BELOW_AA`, so none can worsen, and a fix has to delete its
-entry rather than leave a stale number behind. Four further pairs
-closed on 2026-09-12 by the rule below.
+rather than assumes. They are listed in `docs/known_limitations.md` and
+pinned in `ACCEPTED_BELOW_AA`; `OPEN_SHORTFALLS` is empty, and the
+sweep is what keeps it so — a new sub-AA pair fails the suite rather
+than being added to a list.
+
+**The accent family's dark foreground follows the amber family's.**
+`--text-on-amber` and `--btn-alert-fg` have always been `--white` in
+light and `--ink` in dark, because the dark alert fill is bright.
+`--btn-primary-fg`, `--selected-fg` and `--text-on-accent` were the
+outlier, still carrying white onto `--blue-glow` — and that outlier was
+the palette's last four AA failures. Inverted at 19K.10: **5.33** at
+rest, **6.98** on hover, where the hover had been **2.54**, the worst
+pair in the palette.
+
+*Darkening the fill was rejected with the measurement.* White on
+`--blue-strong` reaches 5.17 and is the only step that works —
+`--blue-deep` gives 6.70 for the label but drops the fill to **2.76**
+against `--surface-page`, under the **3:1** WCAG 1.4.11 asks of a
+control boundary, trading a text failure for a boundary one. That route
+has one usable value and moves `--blue-glow`, which nine dark tokens
+resolve to; the inversion moves three mappings and no primitive.
+`--btn-primary-border` stays on `--blue-glow`, being a boundary at 3:1,
+by the line that keeps `--decor-muted` outside the text floor.
+
+*`--ink` over `--ink-deep`, decided from a rendered sample* (author's
+open question, 19K.10): at 5.33 against 4.85 the two are
+near-indistinguishable on the control itself, so the one with headroom
+wins on the only axis that separates them.
 
 ### Collapsing a tier
 
@@ -301,7 +320,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
 | `--btn-primary-bg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
-| `--btn-primary-fg` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--btn-primary-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--btn-primary-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--btn-primary-bg-hover` | `--blue-bright` | `--blue-glow-soft` | `#3b82f6` | `#60a5fa` |
 | `--btn-secondary-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
@@ -449,7 +468,7 @@ The same reason the help card has its own `-fg` rather than inheriting
 | Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
 | `--selected-bg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
-| `--selected-fg` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--selected-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--icon-btn-action-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--icon-btn-danger-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--focus-ring-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
