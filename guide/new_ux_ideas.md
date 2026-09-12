@@ -194,7 +194,7 @@ different, smaller, and safer proposal than one that unifies the
 services behind it — and this idea, as described, is the presentation
 one. Worth keeping those separable if it is ever taken up.
 
-### A constraint the author has set — 2026-09-12
+### A first constraint — mark the roster being worked on, visually
 
 **If this is ever built, any edit or delete mechanism must make it very
 clear — *visually* — which roster is being affected.** Set in response to
@@ -309,6 +309,83 @@ What consolidation genuinely removes is narrower than I first wrote: the
 operator *before* they act; the confirm copy protects them *as* they act,
 and only the first group is lost. That is a real but much smaller claim.
 
+### A second constraint — strict gating on one roster at a time
+
+**Set by the author, 2026-09-12.** The index and everything below it are
+gated together: *"there should be a strict gating between the roster
+index and the table such that you can only work on one roster at a time.
+For instance, if Reviewers is selected, then, only the Reviewers row in
+the index may be edited, only the Reviewers preview table can be shown,
+and only Reviewers rows can be searched for, partitioned, or edited. To
+jump to work on Reviewees, for instance, you need to select Reviewees in
+the index."*
+
+**This makes the page a mode, not a dashboard**, and that is the whole
+of it. The index is a *selector* that happens to summarise, not a
+summary you can act on in parallel. At any instant every control on the
+page — the editable index row, the preview, the search box, the
+partition controls, the row-level action row — belongs to one named
+roster, and the others are not merely unselected but **unavailable**.
+
+**It generalises the rule the refinement already set.** *"Only one
+roster's preview is open at a time"* becomes the special case of a rule
+that now covers editing, search, partition and row actions too. Nothing
+above is contradicted; it is widened.
+
+**It is a stronger answer to the Codex objection than marking alone.**
+That objection is that a generic roster abstraction hides
+audience-specific behaviour — that a reviewee is not a reviewer and a
+shared surface can make them look interchangeable. Visual marking says
+*which* roster you are in. Gating removes the moment when the question
+could arise: there is never a state in which the page is showing, or
+accepting input for, two rosters at once. **Marking answers the question;
+gating means it is never ambiguous enough to need asking.**
+
+#### What it settles, and what it opens
+
+**It weakens the pressure on open question 1**, though it does not close
+it. If only one roster is ever workable, the index no longer has to be a
+working surface, so it does not obviously have to carry *"all rosters and
+their columns"* as the original sketch put it — enough to **choose**
+between them (name, count, status, when last changed) might be the whole
+job, and the column-faithful view is the preview's. *That is an
+observation, not a decision: the sketch is the author's and says
+columns.* Worth settling deliberately, because the ragged-versus-union
+problem mostly evaporates if the index is a chooser.
+
+**It collapses two selections into one, and that needs confirming.** The
+sketch has *select to edit* and *select to preview* as two independent
+affordances. Under strict gating there is one **active roster**, and
+edit and preview read as two things you can then do to it — not two
+separate selections that could disagree about which roster is live. If
+they really are two selections, the gating has to say what happens when
+one names Reviewers and the other Reviewees.
+
+**The active roster has to live in the URL.** Two requirements converge
+on this:
+
+- The Validate deep links — already a requirement above — must land on
+  *this roster, this row*, which under gating means the link must set the
+  active roster, not merely scroll.
+- **Four pages give an operator two browser tabs for free**; one gated
+  page does not, unless the selection is addressable. Comparing Reviewers
+  against Relationships side by side is possible today and would quietly
+  stop being possible. *This is a real cost of the consolidation that the
+  rationale does not mention, and the URL is what pays it back.*
+
+**Unsaved work at the moment of switching is the sharp boundary.** If
+the Reviewers edit row is open and dirty and the operator selects
+Reviewees, the page must discard, block, or prompt. Four separate pages
+cannot lose work this way — a navigation either warns or does not apply
+— so a gated single page **introduces a failure mode the current design
+does not have**. Whichever way it is answered should be answered on
+purpose.
+
+**And what is active on arrival?** Nothing selected, so the first action
+is always a choice; or a default roster, which risks acting on the wrong
+one. The first is safer and costs a click; the second is faster and is
+how the wrong-roster mistake starts.
+
 ### A candidate mechanism — the lobby's row expander
 
 **Proposed by the author, 2026-09-12:** take a leaf from the session
@@ -381,11 +458,15 @@ Not answered here; recorded so they are not rediscovered.
 
 1. **Does the top *index* table show columns per roster, or the union?**
    Four rosters with different column sets in one table is either a
-   ragged table or a union with many empty cells. **Narrowed 2026-09-12**:
-   the refinement settles it for the *preview* (one roster at a time, so
-   its own columns), which leaves the question only for the index table
-   at the top — where "all rosters and their columns" still has to mean
-   something.
+   ragged table or a union with many empty cells. **Narrowed twice on
+   2026-09-12.** First the refinement settled it for the *preview* — one
+   roster at a time, so its own columns — leaving only the index. Then
+   the gating constraint weakened it further: if no roster but the active
+   one can be worked on, the index may not need to carry columns at all,
+   only enough to choose between rosters. **Still open**, because the
+   author's sketch says *"all rosters and their columns"* and that is not
+   mine to overrule — but the ragged-versus-union problem mostly
+   evaporates if the index is a chooser.
 2. **Where do the per-roster exceptions live?** This is now the load-
    bearing question rather than one of six, because the author has
    confirmed Observers will carry unique features — today's cohort match
@@ -398,6 +479,19 @@ Not answered here; recorded so they are not rediscovered.
    consolidation covering the three that genuinely are alike. That last
    option is not a failure of the idea — three-into-one still removes the
    duplication the rationale is about.
+3. **What happens to unsaved work when the active roster changes?**
+   Discard, block, or prompt. Raised by the gating constraint, which
+   **introduces a failure mode four separate pages do not have** — a
+   navigation either warns or does not apply, where an in-page switch can
+   silently drop an open edit. Stated in full under that constraint.
+4. **Is anything active when the page first loads?** Nothing, so the
+   first action is always a deliberate choice; or a default roster, which
+   is faster and is how the wrong-roster mistake starts.
+5. **Are *select to edit* and *select to preview* one selection or two?**
+   The sketch has two independent affordances; strict gating implies a
+   single **active roster** with edit and preview as things you do to it.
+   If they stay two, the gating has to say what happens when they
+   disagree.
 3. ~~**What happens to deep links?**~~ **Answered 2026-09-12 — and it is
    now a requirement rather than a question.** The Validate *Fix on … ↗*
    links and the Setup coverage matrix must still reach *this roster,
