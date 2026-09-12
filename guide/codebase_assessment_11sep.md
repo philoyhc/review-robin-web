@@ -21,10 +21,28 @@ this snapshot: on 2026-09-10 a roster page had no pager at all, and on
 - **19J.10 and the close** (#2311–#2312): what the reserved shade's scope
   actually is, then the segment archived.
 
-**Numbers taken at `7f4b3d42`** on `main`: 27 merge commits, 42 non-merge
-commits, 2026-09-10 → 2026-09-11 (2 calendar days). Counting is physical lines
-over git-tracked files, areas fixed by the committed `guide/assessment.json`,
-so every delta below shares a denominator with the 10sep snapshot.
+> **Amended 2026-09-12.** Segment 19K — the three moves this document's §8
+> recommended, plus two more its own findings produced — opened and closed
+> inside a day. Rather than supersede a snapshot that is one day old, §2's
+> tables **and the SHA have been re-taken together**, per the rule that a
+> stale SHA silently decouples the numbers from the tree; the prose sections
+> 19K settled are struck and annotated rather than rewritten. Everything
+> below the amendment markers is as first written on 2026-09-11.
+>
+> The amendment was checked before it landed, and the check earned its keep:
+> it caught `_core.py` called "the fifth file over 1,000" when five were
+> already over it (fifth-*largest*, sixth over the line — two counts wearing
+> one word), a "+46 lines in `_core.py`" that omitted `monitoring.py`'s +21
+> and so left a third of the +69 unfindable, a blockquote spliced through the
+> middle of a sentence, and — asked whether §7 was "still coherent" — a floor
+> whose Templates upper bound had not added up since the 10sep snapshot.
+
+**Numbers first taken at `7f4b3d42`** on `main`: 27 merge commits, 42 non-merge
+commits, 2026-09-10 → 2026-09-11 (2 calendar days). **Re-taken at `ba7b37e7`
+on 2026-09-12** — 9 merges, 13 non-merge commits, PRs #2313–#2321 — with the
+tables in §2, in the same pass. Counting is physical lines over git-tracked
+files, areas fixed by the committed `guide/assessment.json`, so every delta
+below shares a denominator with the 10sep snapshot.
 
 **This document stands alone.** It supersedes and archives alongside
 `guide/archive/codebase_assessment_10sep.md`. Authority for ship state is
@@ -111,6 +129,8 @@ was operator-side and almost entirely about one table control.
 
 Physical lines, git-tracked files, areas fixed by `guide/assessment.json`.
 
+At `7f4b3d42` (2026-09-11, against the 10sep snapshot):
+
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
 | `docs` | 244 (242 prior) | **144,454** | +3,340 (+2.4%) |
@@ -120,13 +140,44 @@ Physical lines, git-tracked files, areas fixed by `guide/assessment.json`.
 | `tooling` | 14 | **11,781** | unchanged |
 | `migrations` | 77 | **6,772** | unchanged |
 
-**Test-to-production ratio: 1.73×**, from 1.70× at 10sep. Rising, and the
+**Re-taken at `ba7b37e7` (2026-09-12, after Segment 19K):**
+
+| Area | Files | LOC | Δ from `7f4b3d42` |
+| --- | --- | --- | --- |
+| `docs` | 247 (244) | **150,392** | +5,938 (+4.1%) |
+| `tests` | 307 (304) | **103,719** | +1,053 (+1.0%) |
+| `production` | 205 | **59,455** | **+69 (+0.1%)** |
+| `templates` | 64 | **25,220** | +79 (+0.3%) |
+| `tooling` | 14 | **12,056** | +275 (+2.3%) |
+| `migrations` | 77 | **6,772** | unchanged |
+
+**+69 production lines for a five-item segment**, and the distribution says
+why: 19K was almost entirely a *tooling and documentation* segment. `tooling`
++275 is `close_check` learning to see `guide/` paths, read every manifest
+level, and commit beyond `spec/` and `docs/`; `docs` +5,938 is the segment
+plan, the status rows and the practice-audit passages recording what the
+checker does and does not verify. The only production change of substance is
+19K.3's response prefetch, and it lands across **three** files that reconcile
+the +69 exactly: **+46 in `app/services/responses/_core.py`** (the new
+`responses_by_assignment` and the reviewer-side rollup), **+21 in
+`app/services/monitoring.py`** (both loop owners calling it, and
+`_assignment_complete`'s signature), and **+2** in the package's `__init__`.
+Together they took the two operator pages from 40,433 and 80,432 queries to
+**434 each**.
+That is the window's whole shape: **a segment can move the codebase's
+behaviour a great deal without moving its size at all**, and the size table
+alone would report this window as nearly idle.
+
+**Test-to-production ratio: 1.73×** at `7f4b3d42`, from 1.70× at 10sep;
+**1.74×** at `ba7b37e7`. Rising, and the
 window is why: 13 new test files against one new production module. My read is
 that this is a refinement window's signature rather than a quality trend —
 pagination, colour and a table control are all things you can only pin by
 writing assertions, so the ratio moves without the architecture changing.
 
-**Suite: 3,723 passed, 16 skipped**, `ruff check .` clean, both CI tracks green
+**Suite: 3,723 passed, 16 skipped** at `7f4b3d42`; **3,774 passed, 16
+skipped** at `ba7b37e7` — **+51 in 19K**, every one of them a guard on the
+checker or the prefetch. `ruff check .` clean, both CI tracks green
 (`test` on SQLite, `postgres` on a `postgres:16` service container with the full
 Alembic round-trip). Up from 3,595 at 10sep — **+128 tests in two days**. All 16
 skips are legacy-card retirements from Wave 5 PR 5.3, unchanged in count and
@@ -144,11 +195,16 @@ reason since the prior snapshot; **0 xfail**.
 | 1,000 | `app/services/csv_imports.py` | unchanged |
 | 984 | `app/web/routes_operator/_quick_setup.py` | unchanged |
 | 978 | `app/services/audit.py` | unchanged |
-| 974 | `app/services/responses/_core.py` | unchanged |
+| 974 → **1,020** | `app/services/responses/_core.py` | **+46** at `ba7b37e7` (19K.3's prefetch) — now fifth-largest, and the **sixth** file over 1,000 |
 | 964 | `app/services/instruments/_response_fields.py` | unchanged |
 
 The shape is a **plateau, not a long tail**: ten files between 964 and 1,264,
-and the top three are flat for a **sixth consecutive window**. The one mover is
+and the top three are flat for a **sixth consecutive window** — and a
+**seventh**, at `ba7b37e7`, where the only mover is `_core.py` crossing 1,000.
+It becomes the **fifth-largest** production file and the **sixth** over that
+line: `app/web/views/_instruments.py` was already there at 1,009, and this
+amendment first said "fifth" for both, which is two different counts wearing
+one word. The one mover is
 `_operations.py` (+102, paging Invitations and Responses), which crosses 1,000
 and joins the plateau rather than standing out of it. §9 carries the watchlist.
 
@@ -164,12 +220,25 @@ of the single-seam cost named in §5.
 
 **Package shape**, unchanged this window except where noted: `app/services` 96
 modules, `app/web/views` 23 (**+1**, `_pager.py`), `app/web/routes_operator` 22,
-`app/web/routes_reviewer` 12, `app/db/models` 21.
+`app/web/routes_reviewer` 12, `app/db/models` 21. Unchanged again at
+`ba7b37e7`: 19K added no module to any package — its one new production
+function lives in an existing one, and its `tooling` growth is inside
+`tools/close_check/`, whose five modules are the same five.
 
 ## 3. Functional-spec compliance
 
 Every row checked against the code at `7f4b3d42`, not against the spec's
 self-description. **Bold rows changed this window.**
+
+**The table stands at `ba7b37e7`, and here is the check rather than the
+assertion.** Between the two SHAs, `git diff --stat` over
+`app/web/templates/`, `app/web/routes_operator/` and `app/web/routes_reviewer/`
+reports **one file changed** — `base.html`, +143/−64, all of it 19K.2's chip
+delegation, which alters how a listener is registered and not what any page
+renders. No route module, no other template, no model. 19K's only other
+production change is 19K.3's query prefetch, which returns the same rows to
+the same pages. So no row below can have moved; a compliance table is about
+routed surfaces, and this segment did not touch one.
 
 | Functional area | Spec | Code status |
 | --- | --- | --- |
@@ -296,14 +365,42 @@ table's rows are worth re-verifying rather than copying forward.
   from another document instead of re-derived, which is precisely the failure
   the skill behind this series exists to prevent, and it survived into a
   recommended next move.
-- **`close_check` cannot see `guide/` commitments, and it bit twice in one
+- ~~**`close_check` cannot see `guide/` commitments, and it bit twice in one
   segment.** The tool tracks `spec/` and `docs/` paths only, so a `Doc impact`
   bullet naming a `guide/` file is unchecked: 19J.7's screencap-retake row and
   19J.8's `deferred_consolidated.md` entry both went unhonoured without failing
   anything, and both were caught by a human reading the manifest at close. A
   related gap: C3's window for a *new* item starts at the segment's date rather
   than the item's, so a fresh item can pass on a sibling's edits. **Plan:**
-  recorded in the archived plan and `todo_master.md`; not scheduled, and see §8.
+  recorded in the archived plan and `todo_master.md`; not scheduled, and see
+  §8.~~
+  **Closed 2026-09-12 (19K.1), and it was worse than this entry knew.**
+  `guide/` commitments are now counted and listed under a `NOTED` status that
+  never fails — abstaining rather than pretending to verify, because a
+  checklist row cannot be confirmed by a diff and a plan file legitimately
+  archives. The related C3 gap is closed too: an uncommitted `## Item <n>`
+  heading now reports the result as **provisional** instead of passing on a
+  sibling's edits.
+
+  What this entry did not know is that the same blindness ran two directories
+  wider, and that the *sweep* had its own version of it. **19K.5** found that
+  `tools/README.md` — the only live document describing the checker — was
+  invisible to the checker, along with `.claude/`, `app/`, `tests/`,
+  `alembic/` and `.github/`; of the 16 such paths, only 3 are commitments and
+  13 are citations, so the fix had to be leading-position-only or it would
+  have invented 13 promises nobody made. **19K.4** found that `--archived`,
+  the sweep that reports the honoured-commitments baseline, read **one
+  manifest per plan** — 37 of the archive's 42 item manifests had never been
+  read, and 19I was judged on 1 of its 13. Reading them all moves the baseline
+  from 147/162 (91%) to **259/274 (95%)**, and every one of the 112 hidden
+  paths was honoured: **the tool had been understating the practice, and
+  understating it more as the plans got better**, because closing item-by-item
+  is the newer convention and was the shape the sweep could not read.
+
+  The through-line worth keeping: *a checker's blind spots are invisible in
+  exactly the way that matters — its output looks the same whether it read
+  everything or a thirteenth of it.* Three of 19K's five items were this one
+  defect seen at three different widths.
 - **`app/services/session_lifecycle.py` is 94 LOC from its watchlist tripwire**
   and has been for two windows. It did not move this window, which is the only
   reason it is not §9's first entry.
@@ -315,6 +412,12 @@ green (3,723 passed / 16 skipped, all skips legacy-card retirements), `ruff`
 clean, **0 TODO/FIXME in `app/`**, **0 xfail** in `tests/`, both CI tracks green
 including the Alembic round-trip on Postgres 16, and `docs/known_limitations.md`
 re-read at this SHA.
+
+**Re-established at `ba7b37e7`, not carried** — a moved SHA invalidates the
+checking behind the claim, which is the same rule that made the tables move
+with it. Re-run at the new SHA: **3,774 passed / 16 skipped** (same 16, same
+reason), `ruff` clean, **0 TODO/FIXME in `app/`**, **0 xfail**, both CI tracks
+green on #2321.
 
 Worth remembering from the window:
 
@@ -337,9 +440,59 @@ Worth remembering from the window:
   mid-window. Not a product bug; recorded because it is the shape of fixture
   assumption that keeps costing time.
 
+**Added in the 2026-09-12 amendment — what Segment 19K's five items left
+behind.** Every one is a variant of the same failure, which is why they are
+kept together:
+
+- **A test that cannot fail certifies nothing, and it looks exactly like a
+  test that passes.** 19K.3 wrote an equivalence test whose fixture produced
+  no response rows, so it compared an empty list against an empty list for
+  every assignment and **passed against the one mutation it existed to
+  catch**. Then the scoping test — added *because* a mutation had escaped —
+  made the identical mistake one level along, seeding a second session with no
+  rows to leak. Writing a test after a mutation escapes does not stop it
+  recurring; only re-running the mutation does.
+- **A clean result and a no-op are indistinguishable until you check which one
+  you have.** 19K.5's trial of a new manifest rule reported *0 verdict flips*
+  across 143 ids — which is also what a rule that does nothing returns.
+  Confirming it had bitten is what made the zero mean anything, and doing so
+  immediately exposed a `is_file`-vs-`exists` bug that would have called every
+  committed directory missing.
+- **The prose can be right and the code wrong.** 19K.5's published count
+  (16 paths, 3 leading, 13 citations) did not reproduce against the shipped
+  regex, which gave 20/3/17. Re-measuring at the pinned SHA settled it: the
+  regex ended `*` where it needed `+`, so a bare `` `tools/` `` named in a
+  sentence matched as a path — harmless until the day one led a bullet, when
+  it would have committed a plan to an entire top-level directory. *A number
+  that refuses to reconcile is worth more attention than the document it sits
+  in.*
+- **Recording that a number is unreliable does not stop you spending it.**
+  19K.1's own `Status` block noted that its hand-parsed count did not
+  reconcile with the tool's — and the same session then used the hand count in
+  two other documents and left it in the code comment that first stated it.
+  The correction has to reach every place a figure is *used*, not the one
+  place it is confessed.
+- **A report that cannot fail needs tests more than a check that can.**
+  `--archived` had none, which is the whole explanation for a
+  one-manifest-per-plan read surviving six days of daily use on this very
+  repository, with its output pasted into `docs/status.md` four times.
+
+**And one process change, adopted mid-segment.** The first three items ran the
+`spec-writer` checker *in parallel with* the push and each merged with
+corrections outstanding — one of which was a real code bug. The last two ran it
+**before** pushing. It cost about eight minutes and 19K.3 merged correct
+instead of collecting a follow-up; on that item the checker also verified a
+correctness question the author had reasoned past rather than checked (a
+unique constraint, not luck, is what makes a dict comprehension's ordering
+irrelevant there). *Maker ≠ checker is worth little if the maker has already
+shipped by the time the checker reports.*
+
 ## 7. Estimated size upon completion
 
-**Current:** production 59,386, templates 25,141.
+**Current:** production 59,386, templates 25,141 (at `7f4b3d42`); **59,455 and
+25,220** at `ba7b37e7`. The floor below is left at the `7f4b3d42` arithmetic —
+19K moved production by +69, which is inside the rounding of every range in the
+table.
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
@@ -348,7 +501,7 @@ Worth remembering from the window:
 | Blob storage (18Q) seam + first consumers | +400–700 | +50–150 | institutional storage account |
 | Operator theming (Stretch) | +150–300 | +100–200 | customizer editor core (shipped) |
 | Technical-support contact (global) | +30–60 | +20–50 | nothing (unblocked) |
-| **Projected floor** | **61,066–62,346** | **25,811–26,441** | |
+| **Projected floor** | **61,066–62,346** | **25,811–26,541** | |
 
 **Reconciliation.** The 10sep snapshot stopped projecting a total and started
 stating a **floor** — the named work and nothing else — after 19J.2 measured
@@ -365,6 +518,26 @@ did not exist when the segment opened. The floor is honest about being a floor;
 it is not a forecast, and this window is the second consecutive demonstration
 that the gap between them is where most of the code comes from.
 
+**The amendment tests it the other way.** Segment 19K was five items —
+three from §8 below, two its own findings produced, the same
+findings-outrun-the-plan shape — and it moved production by **+69**. So a
+window can be dense in items and effectively invisible to the floor. Read
+together, the two windows say the floor tracks *neither* the item count nor
+the work: 19J's ten items were +662 and 19K's five were +69, because 19J
+rebuilt a table control and 19K rebuilt a checker. **What the floor measures
+is how much of the work happens to be production code**, which is not a
+property of the plan and cannot be forecast from one.
+
+**An arithmetic error corrected in the 2026-09-12 amendment, and it was not
+19K's.** The Templates upper bound read **26,441**; the column's own ranges
+sum to +1,400, and 25,141 + 1,400 is **26,541**. The lower bound was right, so
+the slip survived every eye that checked the row's left-hand side. It predates
+this window — carried from the 10sep snapshot — and is corrected here rather
+than silently, because a floor is an argument about arithmetic and a floor
+that does not add up is worth less than no floor. Found by a checker asked
+whether §7 was still coherent after being told it had been left alone; *the
+sections nobody re-derives are the ones that keep an error.*
+
 Excludes anything past v1.
 
 ## 8. Bottom line
@@ -372,9 +545,18 @@ Excludes anything past v1.
 The codebase is in good shape and moved sideways rather than outward this
 window: +1.1% production for a refinement arc that rebuilt one table control
 across seven pages, with the top of the file-size table flat for a sixth
-consecutive window and the test ratio up to 1.73×. Segment 19J closed complete
-at ten items — three it opened for, seven that its own findings produced — and
-the archive is `guide/archive/segment_19J_assessment_moves.md`. The one live
+consecutive window and the test ratio up to 1.73×.
+
+> **Amended 2026-09-12.** Segment 19K took all three moves below plus two
+> more, closing five items in a day for **+69 production LOC** — the whole
+> segment was a checker and its documentation, apart from 19K.3's 69-line
+> prefetch across three service files. The live thread named below is
+> unchanged. The natural next move is a fresh snapshot rather than a further
+> amendment to this one — three of §5's weaknesses are now struck, which is
+> the point at which a document stops describing the tree it was taken from.
+
+Segment 19J closed complete at ten items — three it opened for, seven that its
+own findings produced — and the archive is `guide/archive/segment_19J_assessment_moves.md`. The one live
 thread is that **no segment is in flight**: `todo_master.md` marks none live,
 and the three plans still in `guide/` — `segment_14B_email_infrastructure.md`,
 `segment_18Q_blob.md`, `segment_20_operator_polish_and_documentation.md` — are
@@ -389,6 +571,10 @@ question, not work in progress.
    were caught is that a person read the manifests at close. Every future
    segment's `Doc impact` inherits the gap. The same change should address C3's
    window starting at the segment's date rather than the item's (§5).
+   **Settled 2026-09-12 as Segment 19K Item 1**, both halves. Calling it "the
+   smallest of the three" was wrong: it was the largest, once the same defect
+   was traced two directories wider (19K.5) and into the `--archived` sweep
+   (19K.4). See §5.
 2. **Convert the column-chip script block in `base.html` to delegation.**
    ~~The four element-bound blocks~~ — **one block, 127 lines**, corrected
    2026-09-11 (§5). Named as worth doing regardless by the swap assessment and
@@ -396,7 +582,10 @@ question, not work in progress.
    card survivable. It stays second despite shrinking: it is still the only
    item here that *unblocks* something rather than tidying, and it is now
    cheap enough that the argument for doing it is stronger, not weaker.
-   Opened as Segment 19K Item 2.
+   Opened as Segment 19K Item 2, **and closed the same day**: one delegated
+   listener per event type on `document`, with the late-chip behaviour driven
+   in a browser against both trees rather than argued — `main` **False**, the
+   branch **True**.
 3. **Decide whether the Invitations / Responses N+1 gets an item.** It is
    measured (40,433 / 80,432 queries at 200×200), it is the most deferred
    decision in the codebase, and it currently lives only in one item's Out of
