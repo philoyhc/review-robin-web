@@ -223,35 +223,41 @@ hide that reviewees are not reviewers, and a shared *page* can hide it
 from the operator. This constraint governs the second. The first is still
 open, and is why the presentation/services split above matters.
 
-**Nothing in the app does this today** — checked at `496cc183`, not
-assumed, and confirmed by the author: *the lobby does not, beyond the
-check box.* The expander tints its own injected panel
-(`background: var(--surface-muted)` on the panel's `<td>`) and applies
-**no class whatever to the source row**; the only `classList.add`
-anywhere in that script targets an options element.
+**Nothing in the app did this when this entry was written** — checked at
+`496cc183`, not assumed, and confirmed by the author: *the lobby does
+not, beyond the check box.* The expander tinted its own injected panel
+and applied **no class whatever to the source row**, so the lobby's
+entire row-level selection signal was the checkbox's own checked state —
+a ~13px mark at one end of a full-width row.
 
-So the lobby's entire row-level selection signal is **the checkbox's own
-checked state** — a ~13px mark at the left edge of a full-width row, with
-no fill, border, weight or rule distinguishing the row from its
-neighbours. That is enough for the lobby, where the action panel names a
-count and the operator is choosing among like things. It is the wrong
-strength for a page where the four choices are *unlike* things, one of
-the actions is Clear all, and the row can sit above a tall panel or
-scroll off entirely.
+**That is no longer true, and the change came from this paragraph.**
+Segment 19L Items 1 and 2 marked the selected row, and the lobby now
+carries a *bracket*: `--selected-bg` as a 6px inset rail at **each** end
+of the selected row, carried through the injected panel, whose cell also
+fills with `--selection-panel-bg`. Re-checked at `38110b0f`, not recalled.
 
-A selected-row visual state is therefore **new work, not reuse of an
-existing primitive** — and the honest reading is that the lobby is a
-precedent for the *fan-out*, and an example of the gap for the *marking*.
+*Three paragraphs here argued the old state in the present tense for
+some hours after it stopped being the state, beneath a later paragraph
+that already named the bracket — the correction reached the sentence it
+was written in and no further. Corrected 2026-09-12 on the author's
+question, which is the check that caught it.*
 
-The author's view is that the lobby's own marking wants improving too,
+So a selected-row visual state is **no longer new work**, and the
+argument moves rather than collapses. What has to be decided is
+**whether the lobby's bracket transfers**: it was designed for one wide
+row in a tall table of *like* things, where the panel names a count and
+the operator is choosing among sessions. A Rosters index is four *unlike*
+things, one of the actions is Clear all, and the row can sit above a tall
+panel or scroll off. Those are the conditions the bracket was not
+designed against, and its own open questions — a scattered selection, a
+lone row whose panel has scrolled away — are live for exactly that
+reason.
+
+The author's view was that the lobby's own marking wanted improving too,
 **separately** — and it since has been, as Items 1 and 2 of
 `guide/segment_19L_ux_refinements.md`, which is why it is not an entry in
 this file. It stood on its own, and this entry never acquired the
-dependency. What the lobby now has is a *bracket* rather than a fill: a
-rail at each end of the selected row, carried through the action panel.
-Whether that is the right primitive for a Rosters table is open — it was
-designed for one wide row in a tall table, which is not obviously the
-same problem.
+dependency.
 
 **The reason it is load-bearing rather than a nicety.** Today, "which
 roster am I acting on" is answered by ambient context nobody had to
@@ -310,13 +316,22 @@ lobby. *Select to edit* fans the selected row out — a panel below it
 carrying the edit / delete / upload-to-replace affordances — in a visual
 state where the relevant roster row is clearly marked out.
 
-**What the lobby actually does**, read at `496cc183` rather than recalled:
+**What the lobby actually does** — read at `496cc183` rather than
+recalled, and re-checked at `38110b0f` after 19L.2 changed part of it:
 
 - A `<template id="single-session-expander">` is cloned and injected as a
-  full-width `<tr class="session-expander">` **below the selected row**,
-  `colspan` across the table.
-- The injected `<td>` takes `background: var(--surface-muted)` — a
-  distinct fill is the whole of its visual separation.
+  full-width `<tr class="session-expander session-expander-bracketed
+  session-expander-single">` **below the selected row**, `colspan` across
+  the table. (The middle class is 19L.2's opt-in; the archived page
+  injects the same panel without it.)
+- The injected `<td>` took `background: var(--surface-muted)` — a
+  distinct fill was the whole of its visual separation. **Since 19L.2 the
+  lobby's panel instead carries `--selection-panel-bg` plus a rail at
+  each end**, the same pair the selected row carries, so the panel and
+  the row it acts on read as one bracketed object. The bare
+  `.session-expander` rule still sets `--surface-muted`, and the archived
+  sessions page — which injects the same classes and marks no rows —
+  still renders that way.
 - It carries a `session-expander-title`, and a bulk variant reading
   *"N sessions selected"*.
 
@@ -341,10 +356,15 @@ the part the lobby did not need and this page does.**
 **2. The lobby's expander is a placeholder.** Its own comment: *"the
 action buttons are disabled; only the selection-management buttons are
 wired."* So the precedent is a **shape that has been agreed, not an
-interaction that has been proven in use**. Worth knowing before it is
-cited as a solved problem — and a reason the Rosters version would want
-its own look at whether a `--surface-muted` fill alone reads as "this
-panel belongs to *that* row" once the panel is tall.
+interaction that has been proven in use** — still true at `38110b0f`:
+the template comment stands and the Delete buttons still ship disabled.
+Worth knowing before it is cited as a solved problem.
+
+The question this paragraph used to end on — whether a `--surface-muted`
+fill alone reads as *"this panel belongs to **that** row"* once the panel
+is tall — **the lobby has since answered for itself, in the negative**.
+That is what 19L.2's rails are for. A Rosters version inherits the
+answer rather than having to re-ask it.
 
 **What the mechanism has going for it**, stated plainly: it keeps target
 and action adjacent — the affordances are literally attached to the row
