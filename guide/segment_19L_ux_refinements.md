@@ -85,6 +85,20 @@ on `.tag-chip.is-selected`, which takes the strong shade as a 2px edge
 and the pale one as fill. A selected row wants the same semantic in a
 row-shaped expression.
 
+> **Two errors in the paragraph above, left standing per *never rewrite
+> intent* and corrected in `Status`.** (1) The edge is **1px**, not 2px —
+> the rule has always been `inset 0 0 0 1px`; the figure was wrong in
+> `base.html` and `spec/ui_elements.md` from 19J.7 and this plan
+> inherited it. (2) The pair is **not** "used together on
+> `.tag-chip.is-selected`": the edge sits on the bare `.tag-chip`
+> selector and means *clickable*, carried selected or not, with only the
+> fill gated on `.is-selected`. The reasoning the Decision rests on
+> survives both — the vocabulary does model a strong edge plus a pale
+> interior — but it is a resemblance, not a reuse. *Annotated here on
+> 2026-09-12 because the correction had reached the specs, the test and
+> `base.html` and stopped one document short: the failure this plan's own
+> Status describes, happening to the plan.*
+
 **Rejected: strengthening the copy instead** — a panel title that names
 the selected sessions rather than counting them. It would help, and it is
 not the ask: it fails for the fast operator, does nothing when the panel
