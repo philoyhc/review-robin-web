@@ -161,13 +161,17 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 themes**, and that is deliberate. It carries the whole boundary of every
 bordered surface — inputs and cards fill with `--surface-page`, so the fill
 contributes nothing and the border is the entire delineation. At its previous
-values it measured **1.47:1** light and **1.70:1** dark against that surface,
+values it measured **1.47:1** light and **1.95:1** dark against that surface,
 under the **3:1** WCAG 1.4.11 asks of a UI-component boundary, and light was
 the worse of the two. `--slate-dim` is the one existing primitive that clears
 3:1 in both themes near-symmetrically (**4.29:1** light, **4.31:1** dark), so a
 single primitive serves both columns. Changed in Segment 19C Item 8; the
 options weighed, including per-theme primitives at an exact 3:1, are in
-`guide/archive/segment_19C_refinements.md`.
+`guide/archive/segment_19C_refinements.md`. *(That plan, and this line
+until 19K.7, gave the dark figure as 1.70. It does not reproduce:
+`--slate-deep` `#3a465c` on `--ink-abyss` `#0f141b` is **1.95:1**, which
+is what this document already computed for the same pair under "Card
+accents" below. The light figure, 1.47, reproduces exactly.)*
 
 Two consequences worth knowing. `--decor-muted` also resolves to `--slate-dim`
 in dark, so the border and the decorative dividers share a value there — they
@@ -199,9 +203,15 @@ clear the floor itself — **3.90:1** at worst before, **4.53:1** after
 **The worst case is not a surface**, which is why the check sweeps
 pairs rather than tokens. `--nav-home-bg` (`--gray-mist`, `#e5e7eb`)
 is darker than any `--surface-*` token and carries muted text on the
-Session Home anchor; a sweep of the Text cluster against the Surfaces
-cluster scores 4.56 there and misses it entirely. Gathering pairs from
-the rules themselves is what found it.
+Session Home anchor, so it — not `--surface-tint-5` — is the binding
+constraint on `--text-subtle`: **4.53:1** at the shipped value against
+5.11:1 on the worst surface. A sweep of the Text cluster against the
+Surfaces cluster never reads that pair at all. 19K.7 first moved
+`--slate` to `#667080`, which a surfaces-only sweep scores 4.56 and
+passes while the Session Home anchor sits at **4.04**; the pair sweep
+is what caught it, and the value moved again to `#616874`. `#667080`
+is recorded here because it is the only way to check that 4.04, and
+it ships nowhere.
 
 **Decoration is outside the floor, and has its own token so that it
 stays outside.** WCAG 1.4.3 governs text; a 3px divider and the two

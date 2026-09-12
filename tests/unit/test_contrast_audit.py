@@ -34,10 +34,14 @@ them with margin rather than against the enumerated ones by 0.06.
 
 **Pairs are gathered, not listed.** A hand-kept list of pairs is the
 same mistake one level up — it passes while the palette grows past it.
-Three passes: rules that set a ``color`` and a ``background`` in one
-block; ``--x-fg`` / ``--x-bg`` tokens paired by name; and every text
-token against every surface, since which surface a label lands on is a
-template's choice. 72 pairs, 144 theme-resolved pairings today.
+Three gathering passes: rules that set a ``color`` and a ``background``
+in one block; ``--x-fg`` / ``--x-bg`` tokens paired by name; and every
+text token against every surface, since which surface a label lands on
+is a template's choice. Plus one deliberately hand-kept source,
+``ON_FILL``, for the two foregrounds whose fill no convention predicts
+— four sources, 73 pairs, 146 theme-resolved pairings today. The
+hand-kept one is guarded: the coverage test fails if a ``--text-on-*``
+token exists that it does not name.
 
 **The ratios are computed, not pinned.** A test asserting
 ``--slate == "#616874"`` would pass forever while someone repoints
@@ -173,9 +177,9 @@ _BG = re.compile(r"background(?:-color)?\s*:\s*[^;]*?var\((--[a-z0-9-]+)\)")
 def collect_pairs() -> dict[tuple[str, str], str]:
     """Every foreground/background token pair the palette forms.
 
-    Gathered rather than listed, three ways, because a hand-kept list
-    of pairs decays exactly as the hand-kept entry in
-    ``known_limitations.md`` did:
+    Gathered rather than listed — three passes, plus one hand-kept
+    map — because a list of pairs decays exactly as the hand-kept
+    entry in ``known_limitations.md`` did:
 
     1. **Rules** that set a ``color`` and a ``background`` in the same
        block — the only pass that sees a pairing no naming convention
@@ -187,6 +191,9 @@ def collect_pairs() -> dict[tuple[str, str], str]:
     3. **Text against every surface**, since which surface a label
        lands on is a template's choice and changes without touching
        either token.
+    4. **``ON_FILL``**, the one hand-kept map: two foregrounds whose
+       fill none of the three passes can reach. It is the exception
+       that the coverage test polices rather than the rule.
 
     The value is one selector or a marker, kept for the failure
     message: knowing *where* a pair comes from is most of diagnosing

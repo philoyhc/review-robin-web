@@ -1884,9 +1884,11 @@ shown to be lying by omission.** This is the finding of the item.
    further — and was **still wrong**. `--nav-home-bg` (`#e5e7eb`) is
    darker than any `--surface-*` token and carries muted text on the
    Session Home anchor: **3.90** before this item, **4.04** after the
-   first fix. A cluster-versus-cluster sweep scores 4.56 there and
-   cannot see it. *A check whose scope is a token list will pass while
-   the thing it is named for fails.*
+   first fix. A cluster-versus-cluster sweep never reads that pair at
+   all: its worst case was 4.56, on a *surface*, which passes while the
+   anchor sits at 4.04. (Both belong to the interim `#667080`; the
+   shipped `#616874` is 5.11 and 4.53.) *A check whose scope is a token
+   list will pass while the thing it is named for fails.*
 
 So the check became a sweep over **every pair the palette forms**,
 gathered four ways rather than listed — 73 pairs, 146 theme-resolved
@@ -1914,6 +1916,52 @@ one intended failure plus one contaminant. Re-run clean from a
 snapshot: **11 mutations, 11 caught by the intended test, the negative
 probe silent.** *Reverting a mutation with the version-control tool
 reverts the work as well when the work is not yet committed.*
+
+**The `spec-writer` pass, run before the push, upheld four flags and
+found a fifth this item did not cause.**
+
+- **Two figures in the new spec section reproduced against nothing that
+  ships.** "4.56" and "4.04" are both `#667080`, the *interim* `--slate`
+  — the value the pair sweep rejected. Against the shipped `#616874`
+  the same two measurements are 5.11 and 4.53. The prose read as if it
+  described the shipped palette, so a reader recomputing it would have
+  found neither number. Now named as superseded, and kept rather than
+  dropped because they are the only way to check the claim that a
+  surfaces-only sweep passes while the anchor fails.
+- **The same clause conflated two surfaces.** "scores 4.56 there" put a
+  `--surface-tint-5` figure on `--nav-home-bg`. Corrected in the spec,
+  in `docs/status.md` and above.
+- **The test's own docstring said 72 pairs / 144 pairings** where the
+  code gives **73 / 146** — written before `ON_FILL` was added and not
+  re-measured. Every *other* document this item touched has 73/146, so
+  the one file that computes the number was the one stating it wrongly.
+- **"Three passes" undercounted its own sources.** `ON_FILL` is a
+  fourth, and the one that is hand-kept; describing it as outside the
+  count while it contributes a real pair is the kind of quiet exception
+  this item exists to remove. Now "three gathering passes plus one
+  hand-kept map", with the coverage test named as its guard.
+- **A pre-existing self-contradiction in `spec/color_tokens.md`.** The
+  `--border-default` paragraph gave its previous dark ratio as
+  **1.70:1**; `--slate-deep` `#3a465c` on `--ink-abyss` `#0f141b` is
+  **1.95:1**, and the same document's Card-accents section already
+  computed 1.95 for that identical pair. Inherited from
+  `guide/archive/segment_19C_refinements.md`, live since 19C Item 8.
+  Corrected here with the discrepancy named rather than silently
+  overwritten: it sits in the paragraph this item's new section was
+  inserted beneath, and leaving a known contradiction in a file just
+  certified is worse than the small scope creep of fixing it. The light
+  figure, 1.47, reproduces exactly.
+
+The pass also **independently confirmed** three things this item
+asserted: all 34 templates carry `ui-v2` *and* the surviving rule wins
+on specificity ((0,3,1) against (0,2,0)) rather than on source order,
+so the deleted rule was structurally dead; the 11-row shortfall table
+matches `KNOWN_SHORTFALLS` exactly; and regenerating both theme pages
+from their sources gives files byte-identical to the committed ones.
+That last is worth its own line — this item's finding was that
+*nothing tests* generator-versus-output drift, and the checker did by
+hand what no check does.
+
 
 **Decisions confirmed at build:**
 
