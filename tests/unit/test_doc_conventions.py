@@ -221,7 +221,24 @@ def test_agent_instruction_twins_are_identical() -> None:
 #: a live claim: a snapshot, a sweep, a practice audit, a segment plan.
 #: Excluded wholesale — a reference that was right when it was written is
 #: not a defect now, and a plan legitimately names files not yet built.
-DATED_DOC = re.compile(r"(codebase_assessment_|sweep_|practice-audit-|segment_)")
+#:
+#: Assessment snapshots come in **lineages**, one per agent that writes
+#: them (`codebase_assessment_` for Claude Code, `codex_assessment_` for
+#: Codex), and each lineage retires its own. Both are dated records, so
+#: both are exempt. `codex_assessment_` was missing until 2026-09-12, so
+#: that lineage was being held to live-prose standards: it passed only
+#: because none of its 17 path references had moved yet, while the
+#: `codebase_assessment_` snapshot beside it already carried one dangling
+#: reference (`guide/inplace_pagination_assessment.md`, archived the day
+#: before) and was correctly exempt from failing on it.
+#:
+#: Enumerated rather than generalised to `assessment_`: a broader token
+#: would silently exempt a live document that happened to carry the word,
+#: and a new lineage needs a `guide/README.md` row anyway, so one line
+#: here is the same edit.
+DATED_DOC = re.compile(
+    r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_)"
+)
 
 #: Live prose: top-level `.md` in the three doc folders plus the root.
 #: `archive/` is excluded by not recursing; there are no other nested
