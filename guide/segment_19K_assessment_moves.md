@@ -1797,6 +1797,23 @@ rounding error. The two get separate answers.
 - **2026-09-12 — the entry is corrected rather than struck.** It
   records a real fault under a wrong name; deleting it would lose the
   fault, and striking it would imply the fault went away.
+- **2026-09-12 — the name is `--decor-muted`, for what it does rather
+  than where it sits.** It lands in the Borders & focus cluster beside
+  `--marker-neutral`, which is the same kind of thing; naming it for
+  the cluster (`--border-*`) would have claimed it paints boundaries,
+  which it does not.
+- **2026-09-12 — `--slate` was edited rather than a near-duplicate
+  primitive added.** Repointing was forced for `--text-dim`, whose move
+  is large enough to wreck `--card-help-border`; it was not forced for
+  `--text-subtle`, whose only other consumer is
+  `--btn-secondary-border`, a boundary held to 3:1 that the same edit
+  improves from 4.83 to 5.61. A second gray 0.03 of luminance from the
+  first would cost a reader more than it buys.
+- **2026-09-12 — `--text-link` was folded in; the other eleven were
+  not.** Author, mid-build. The link fix needed no new primitive
+  (`--blue-glow-soft` already existed) and no design decision. The
+  remaining eleven each move a *family* — the reserved accent, or every
+  status tint at once — and belong to whoever takes that decision.
 
 ### Blast radius (measured)
 
@@ -1809,6 +1826,257 @@ Taken 2026-09-12 at `40a0b663`.
 | Uses of `--text-subtle` in `base.html` | **34** | `grep -c` |
 | Templates outside `base.html` using `--text-dim` | 2 | `instruments_index.html`, `session_observers.html` |
 | Existing tests over the colour tokens | **1** | `tests/unit/test_reserved_shade.py` |
+
+### Status — 2026-09-12
+
+**The shape changed: two answers became one token.** The Decision said
+"the two get separate answers" and rejected "a blanket darkening of
+both tokens". Neither is what shipped. Asked for the options if the
+hierarchy were abbreviated instead, the measurement said the collapse
+is both cheaper and cleaner: `--text-dim` retired, its 20 text uses
+taking `--text-subtle`, its decorative uses taking a new
+`--decor-muted` that holds the *same* primitives so nothing decorative
+moves. That is a shape change rather than a value choice, which is why
+it is recorded here and the Decision stands as written.
+
+**Two errors in this item's own blast radius, both found by running
+the commands rather than reading them.**
+
+- The table's `grep 'color: var(--text-dim)'` counts **21** because it
+  also matches `border-color:` at `base.html:784`. The real split is
+  **20 text, 7 non-text** — not 21 and 6.
+- Of the 7 non-text uses, **2 were dead code**. `.btn-cta.disabled`
+  painted `--text-dim` as a *fill*, and is overridden on every page by
+  `body.ui-v2 .btn-cta.disabled`; all **34** templates extending
+  `base.html` carry `ui-v2`, none doesn't. The rule was deleted rather
+  than repointed. Residue: **5** live decorative uses.
+
+**The Opportunity's central claim is half right, and the other half is
+the better finding.** "There is no `--text-muted` token" is true today
+and was false when the entry was written: `guide/archive/semantic_tokens.md`
+records `--slate-soft #9ca3af → --text-muted` in the flat scheme, and
+`docs/status.md`'s 14A PR 5 row names the token and the ratio
+(`~2.5:1`) that still measures 2.54 on white. 19C Item 6 renamed it to
+`--text-dim` and nothing updated the entry. So it was **stale, not
+fictitious** — the entry was not recorded against a token nobody can
+find, it was recorded against a token that was later renamed out from
+under it. Per *never rewrite intent* the Opportunity keeps its words.
+
+**The blast radius omitted `tools/` entirely.**
+`tools/theme_preview.html` and `tools/theme_customizer.html` are
+generated from `base.html` and carry the whole palette; both regenerate.
+Their generators carry hand-written references the lift does not
+reach — the customizer's "Dim / card" contrast row, 4 element-facet
+map entries, and 12 uses in the two tools' own chrome CSS — and
+`tools/theme_variants.gen.py` carried a docstring asserting
+`--slate-dim` is also `--text-dim` in dark. **Nothing tests
+generator-versus-output drift**, so every one of these was silent.
+
+**The scope widened twice, each time because the narrower version was
+shown to be lying by omission.** This is the finding of the item.
+
+1. Checking the fix on the token under repair found **`--text-link`
+   at 4.22** on `--surface-muted` in dark — a second live AA failure,
+   in the same cluster, that four months of an entry naming one token
+   had never mentioned. Fixed here at the author's instruction:
+   `--blue-glow` → `--blue-glow-soft`, an existing primitive, **5.53**.
+2. Widening to *the Text cluster against every surface* found nothing
+   further — and was **still wrong**. `--nav-home-bg` (`#e5e7eb`) is
+   darker than any `--surface-*` token and carries muted text on the
+   Session Home anchor: **3.90** before this item, **4.04** after the
+   first fix. A cluster-versus-cluster sweep never reads that pair at
+   all: its worst case was 4.56, on a *surface*, which passes while the
+   anchor sits at 4.04. (Both belong to the interim `#667080`; the
+   shipped `#616874` is 5.11 and 4.53.) *A check whose scope is a token
+   list will pass while the thing it is named for fails.*
+
+So the check became a sweep over **every pair the palette forms**,
+gathered four ways rather than listed — 73 pairs, 146 theme-resolved
+pairings — and `--slate` went to `#616874` rather than `#667080`, so
+the floor holds against all of them with margin instead of against the
+enumerated ones by 0.06.
+
+**The full audit: 12 failures, of which 1 is now fixed and 11 are
+recorded.** None of the 11 is body text; they are accent fills
+(2.54–3.68, six pairs, all resolving through the reserved
+`--blue-glow`) and saturated text on its own pale tint (3.32–3.95,
+five pairs, two shared values). Each is pinned in `KNOWN_SHORTFALLS`
+at its measured ratio, in **both** directions: a regression fails, and
+so does a fix, because a fix must delete the entry rather than leave a
+stale number behind it — which is precisely how the entry this item
+repaired went wrong.
+
+**A vacuity caught in my own negative probe.** The first mutation run
+reported 9 of 9 caught, and the one *negative* probe — `border-color`
+must not trip the text check — reported a failure. It was not a false
+positive: an earlier mutation had been reverted with `git checkout`,
+which restored the file to `HEAD` and silently undid this item's edits,
+so mutations 3–9 all ran against a dirty tree and every "2 failed" was
+one intended failure plus one contaminant. Re-run clean from a
+snapshot: **11 mutations, 11 caught by the intended test, the negative
+probe silent.** *Reverting a mutation with the version-control tool
+reverts the work as well when the work is not yet committed.*
+
+**The `spec-writer` pass, run before the push, upheld four flags and
+found a fifth this item did not cause.**
+
+- **Two figures in the new spec section reproduced against nothing that
+  ships.** "4.56" and "4.04" are both `#667080`, the *interim* `--slate`
+  — the value the pair sweep rejected. Against the shipped `#616874`
+  the same two measurements are 5.11 and 4.53. The prose read as if it
+  described the shipped palette, so a reader recomputing it would have
+  found neither number. Now named as superseded, and kept rather than
+  dropped because they are the only way to check the claim that a
+  surfaces-only sweep passes while the anchor fails.
+- **The same clause conflated two surfaces.** "scores 4.56 there" put a
+  `--surface-tint-5` figure on `--nav-home-bg`. Corrected in the spec,
+  in `docs/status.md` and above.
+- **The test's own docstring said 72 pairs / 144 pairings** where the
+  code gives **73 / 146** — written before `ON_FILL` was added and not
+  re-measured. Every *other* document this item touched has 73/146, so
+  the one file that computes the number was the one stating it wrongly.
+- **"Three passes" undercounted its own sources.** `ON_FILL` is a
+  fourth, and the one that is hand-kept; describing it as outside the
+  count while it contributes a real pair is the kind of quiet exception
+  this item exists to remove. Now "three gathering passes plus one
+  hand-kept map", with the coverage test named as its guard.
+- **A pre-existing self-contradiction in `spec/color_tokens.md`.** The
+  `--border-default` paragraph gave its previous dark ratio as
+  **1.70:1**; `--slate-deep` `#3a465c` on `--ink-abyss` `#0f141b` is
+  **1.95:1**, and the same document's Card-accents section already
+  computed 1.95 for that identical pair. Inherited from
+  `guide/archive/segment_19C_refinements.md`, live since 19C Item 8.
+  Corrected here with the discrepancy named rather than silently
+  overwritten: it sits in the paragraph this item's new section was
+  inserted beneath, and leaving a known contradiction in a file just
+  certified is worse than the small scope creep of fixing it. The light
+  figure, 1.47, reproduces exactly.
+
+The pass also **independently confirmed** three things this item
+asserted: all 34 templates carry `ui-v2` *and* the surviving rule wins
+on specificity ((0,3,1) against (0,2,0)) rather than on source order,
+so the deleted rule was structurally dead; the 11-row shortfall table
+matches `KNOWN_SHORTFALLS` exactly; and regenerating both theme pages
+from their sources gives files byte-identical to the committed ones.
+That last is worth its own line — this item's finding was that
+*nothing tests* generator-versus-output drift, and the checker did by
+hand what no check does.
+
+
+**The panel became the place the audit is read** (author, after the
+push of the first three commits). The 11 shortfalls were recorded in
+four documents and enforced in one test; the 135 *passing* pairings
+were recorded nowhere — the audit could be enforced but not looked at.
+The customizer's Contrast panel already existed for exactly this and
+was carrying **12** hand-listed pairs, which is the same defect one
+level up: it was missing 62 of the palette's pairs, including the
+`--nav-home-bg` one that was failing AA. So
+the panel now renders a row per pair from `hc.collect_contrast_pairs`
+— the single definition, which the test imports rather than
+re-implements — with sub-AA outlined in red, a live count per group
+and overall, the shipped ratio beside the live one, and the four
+sources named in each row's tooltip.
+
+Two things make that more than a bigger list. **The flagging is
+computed in the browser from the live model**, so grouping is
+structural (by the foreground's cluster) rather than by pass/fail: a
+static "failures first" layout would be wrong the moment you remap.
+And **a test asserts the generated page carries a row for every
+audited pair** — not the generator's source, which would pass while
+the committed page was stale. That is the generator-versus-output
+drift this item found nothing tests; it is now tested for this one
+surface.
+
+**Verified in a browser, not asserted.** The suite has no JS runtime,
+so the panel was driven in Chromium against the committed page: 73
+rows, **0 unresolved**, **7 outlined in light and 4 in dark — 11,
+exactly `KNOWN_SHORTFALLS`** — with the per-group counts summing to
+the same. Then the live promise: repointing `--text-subtle` to
+`--gray`, the value `--text-dim` used to carry, takes the count from
+**7 to 17**, and restoring returns it to 7. Playwright is installed in
+this container but **declared in neither `pyproject.toml` nor
+`requirements.txt`**, so this cannot become a test without a
+dependency decision — the same finding 19K.6 recorded, and the reason
+the two new tests assert the *mechanism* (the class is defined,
+something toggles it, every recorded shortfall has a row) and say so.
+
+The first render was wrong in a way only looking could catch: at three
+columns the labels ellipsised to `subtle → ti…`, so a reader could see
+a red 3.32 and not what it belonged to. Cells widened, and the tooltip
+now carries the token names rather than only the provenance.
+
+
+**The second `spec-writer` pass, on the panel, found the bug the first
+one could not have.** Five flags; the one that matters is a defect in
+the panel's own JavaScript.
+
+- **A stale row reading as current.** When a remap leaves a token
+  unmapped or in a coupling cycle, `resolve` returns null and
+  `updateContrast` **returned** — leaving that row painted with its
+  last-good ratio *and* its last-good red outline, while the counts
+  summed the stale class and agreed with it. So the panel stayed
+  internally consistent and collectively wrong, in exactly the case
+  where recomputing is the point, against prose promising it
+  "recomputes live as tokens are remapped". Reproduced against the
+  pre-fix page before fixing: unmapping `--lifecycle-ready-fg`, which
+  carries one of the 7 outlined rows, left the count at **7**. After:
+  **6**, the row cleared to `—` with a dashed `?` badge. *The promise
+  a tool makes in prose is the first place to look for the case it
+  does not handle.*
+- **A claim of mine that does not survive `git log`**, and the most
+  useful flag of the five. "The twelve had drifted to include
+  `--text-dim`" is false of the twelve actually replaced: **this
+  item's own earlier commit `6f39accd` had already removed that row**,
+  taking the list 13 → 12. Both things are true — the list named a
+  retired token, and the list was missing 62 pairs — but they were
+  true a few commits apart, and compressing them into one sentence
+  invented a state that never existed. Corrected in five places, the
+  canonical one being `collect_contrast_pairs`' docstring that the
+  rest echo. The commit message keeps the original wording; the
+  correction rides the next commit rather than an amend, because the
+  correction is itself part of the record.
+- **One of the twelve is genuinely absent from the 73**, and the
+  checker was right to refuse my "no coverage lost" framing until it
+  was checked: the old list paired `--btn-destructive-fg` with
+  `--surface-page`, where the rule actually sets
+  `--btn-destructive-bg`. Measured both themes — the two resolve
+  identically (`#ffffff` light, `#0f141b` dark) — so the old row was
+  an approximation the derived pair supersedes, and nothing moves.
+- **A latent wrong pair.** `_BG_RE` would match a gradient's first
+  colour *stop* as if it were the fill behind text. Not triggered —
+  `base.html`'s two gradient rules set no `color:` — and wrong the
+  first time one does. Guarded; the count stays 73, which is what
+  "latent" should look like.
+- **`docs/known_limitations.md` still enumerated three sources** where
+  there are four. The identical omission the first pass caught in the
+  test's docstring, never propagated to the document a reader meets
+  first — and sitting four lines under text this item had just
+  edited. *A correction reaches the place it was found and no further
+  unless someone walks it.*
+
+Also upheld and not changed: `setdefault` means a pair reachable by
+more than one source — **31 of the 73** — shows only the first, so
+`tools/README.md` now says that is provenance rather than exclusivity.
+
+
+**Decisions confirmed at build:**
+
+- The decorative uses are outside the floor by rule, not judgment
+  (WCAG 1.4.3 governs text) — and now by construction, since
+  `--decor-muted` is a separate token and a `color:` declaration
+  naming it fails a test.
+- Repointing rather than editing a primitive was forced for
+  `--text-dim` (`--gray` also feeds `--card-help-border`) and for
+  `--text-link` (`--blue-glow` has ten dark consumers, among them the
+  reserved `--selected-bg`), and *not* forced for `--text-subtle`; see
+  Judgment calls.
+- `spec/color_tokens.md`'s "Deliberate couplings" recorded
+  `--text-link` as resolving to the reserved pair in both themes.
+  That contract is now one step off in dark, and the spec says so
+  rather than being quietly left wrong.
+- The parser was extracted to `tests/unit/_base_css.py` rather than
+  copied: `test_reserved_shade.py` had already paid for three traps in
+  it, and 19K.6 added a third reader of the same stylesheet.
 
 ### PR ladder
 
@@ -1856,6 +2124,19 @@ Taken 2026-09-12 at `40a0b663`.
   floor the muted text tokens are held to, and that the decorative uses
   are outside it (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).
+- `tools/theme_variants.gen.py` — the `palette_only_variant` docstring
+  named `--text-dim` as sharing `--slate-dim` in dark; it is
+  `--decor-muted` that does now (Item 7).
+- `tools/theme_customizer.gen.py` / `tools/theme_preview.gen.py` — the
+  hand-written references the `base.html` lift does not reach: the
+  customizer's element-facet map and both tools' own chrome CSS. The
+  customizer's Contrast panel becomes the audit's inspection surface:
+  every pair, sub-AA outlined in red (Item 7).
+- `tools/_harness_common.py` — `collect_contrast_pairs`, the one
+  definition of the pair set, shared by the panel and the test (Item 7).
+- `tools/README.md` — the Contrast-panel paragraph rewritten: what the
+  panel now lists, that the pairs are derived rather than listed, and
+  that a test asserts the generated page matches the audited set (Item 7).
 
 ---
 

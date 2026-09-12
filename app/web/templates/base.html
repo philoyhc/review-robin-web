@@ -60,7 +60,7 @@
         --gray-mist: #e5e7eb;
         --gray-soft: #d1d5db;
         --gray: #9ca3af;
-        --slate: #6b7280;
+        --slate: #616874;
         --ink: #111827;
         --paper: #e6eaf2;
         --slate-pale: #a9b4c6;
@@ -149,7 +149,6 @@
         /* Text & links [P] */
         --text-body: var(--ink);
         --text-subtle: var(--slate);
-        --text-dim: var(--gray);
         --text-on-accent: var(--white);
         --text-on-amber: var(--white);
         --text-link: var(--blue-strong);
@@ -160,6 +159,7 @@
         --focus-ring: var(--blue-strong);
         --focus-ring-halo: var(--blue-pale);
         --marker-neutral: var(--gray-soft);
+        --decor-muted: var(--gray);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-strong);
         --btn-primary-fg: var(--white);
@@ -292,10 +292,9 @@
         /* Text & links [P] */
         --text-body: var(--paper);
         --text-subtle: var(--slate-pale);
-        --text-dim: var(--slate-dim);
         --text-on-accent: var(--white);
         --text-on-amber: var(--ink);
-        --text-link: var(--blue-glow);
+        --text-link: var(--blue-glow-soft);
         --text-link-strong: var(--blue-soft);
         /* Borders & focus [P] */
         --border-subtle: var(--slate-deeper);
@@ -303,6 +302,7 @@
         --focus-ring: var(--blue-glow);
         --focus-ring-halo: var(--blue-abyss);
         --marker-neutral: var(--slate-deep);
+        --decor-muted: var(--slate-dim);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-glow);
         --btn-primary-fg: var(--white);
@@ -491,7 +491,7 @@
       .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
       .breadcrumb span[aria-current="page"] { color: var(--text-body); font-weight: 600; }
-      .breadcrumb-sep { color: var(--text-dim); margin: 0 6px; }
+      .breadcrumb-sep { color: var(--text-subtle); margin: 0 6px; }
       .chrome-user {
         font-size: 0.85em;
         color: var(--text-subtle);
@@ -592,8 +592,8 @@
           to right,
           transparent 0,
           transparent 2px,
-          var(--text-dim) 2px,
-          var(--text-dim) 4px,
+          var(--decor-muted) 2px,
+          var(--decor-muted) 4px,
           transparent 4px,
           transparent 6px
         );
@@ -650,7 +650,7 @@
       .new-model-band2-pill-grip {
         display: inline-block;
         margin-right: 6px;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-size: 0.9em;
         letter-spacing: -1px;
         transition: color 0.1s ease-in-out;
@@ -666,7 +666,7 @@
        * shape stays unchanged for instruments without responses.
        */
       .new-model-band2-pills-divider {
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-weight: bold;
         font-size: 1.1em;
         padding: 0 4px;
@@ -778,11 +778,6 @@
         font-size: 0.95em;
         line-height: 1.25;
         cursor: pointer;
-      }
-      .btn-cta.disabled {
-        background: var(--text-dim);
-        border-color: var(--text-dim);
-        cursor: not-allowed;
       }
       .btn-row {
         display: flex;
@@ -914,7 +909,7 @@
         padding: 12px 16px;
         font-size: 0.78rem;
         font-weight: 700;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         text-transform: uppercase;
         letter-spacing: 0.06em;
         white-space: nowrap;
@@ -1022,13 +1017,13 @@
       }
       .nav-tab.disabled,
       .nav-tab[aria-disabled="true"]:not(.active) {
-        color: var(--text-dim);
+        color: var(--text-subtle);
         cursor: not-allowed;
       }
       .nav-tab.disabled:hover,
       .nav-tab[aria-disabled="true"]:not(.active):hover {
         background: transparent;
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       .nav-tab.active::after {
         content: "";
@@ -2040,7 +2035,7 @@
         background: var(--surface-muted);
       }
       body.ui-v2 .card.placeholder h2 {
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       body.ui-v2 .card.placeholder p {
         color: var(--text-subtle);
@@ -2255,7 +2250,7 @@
       body.ui-v2 .shaper-axis-pipe {
         display: inline-block;
         padding: 0 var(--space-2);
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-weight: 600;
         opacity: 0.5;
       }
@@ -3047,11 +3042,11 @@
       body.ui-v2 .card.next-action .next-action-signal--amber-warning
         .next-action-signal-icon { color: var(--status-warning-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey
-        .next-action-signal-icon { color: var(--text-dim); }
+        .next-action-signal-icon { color: var(--text-subtle); }
       body.ui-v2 .card.next-action .next-action-signal--error
         .next-action-signal-icon { color: var(--status-error-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey {
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       body.ui-v2 .card.next-action .next-action-buttons {
         display: flex;
@@ -3273,7 +3268,7 @@
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-muted {
         background: var(--surface-muted);
-        color: var(--text-dim);
+        color: var(--text-subtle);
         text-decoration: none;
       }
       body.ui-v2 .rs-role-nav a.rs-role-nav-muted:hover {
@@ -3340,7 +3335,7 @@
         border-color: var(--border-default);
         color: var(--text-body);
       }
-      body.ui-v2 .breadcrumb-sep { color: var(--text-dim); }
+      body.ui-v2 .breadcrumb-sep { color: var(--text-subtle); }
       body.ui-v2 .breadcrumb span[aria-current="page"] {
         color: var(--text-body);
       }
@@ -3362,7 +3357,7 @@
       }
       body.ui-v2 .row-label {
         border-right-color: var(--border-subtle);
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       /* Row-label emphasis — applies when the operator is on a
          page in this group OR when hovering any tab in the group's
@@ -3384,7 +3379,7 @@
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
-      body.ui-v2 .nav-tab { color: var(--text-dim); font-weight: 600; }
+      body.ui-v2 .nav-tab { color: var(--text-subtle); font-weight: 600; }
       /* Hover wears the selected tab's colours; the v1 :hover rule is
          shadowed by the v2 base on equal specificity, so re-emit.
          v2's `.nav-tab.active` overrides only the colour and inherits
@@ -3824,7 +3819,7 @@
         border: 1px solid transparent;
         border-radius: 4px;
         cursor: pointer;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font: inherit;
         font-size: 0.85em;
       }
@@ -3853,7 +3848,7 @@
         display: block;
         font-size: 0.75em;
         font-weight: 400;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         margin-top: 1px;
       }
       /* Segment 15A Slice 3 — per-page inline editor for the

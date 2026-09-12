@@ -31,7 +31,7 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--ink-muted` | `#232c3b` |
 | `--slate-deeper` | `#2b3547` |
 | `--slate-deep` | `#3a465c` |
-| `--slate` | `#6b7280` |
+| `--slate` | `#616874` |
 | `--slate-dim` | `#6f7b8e` |
 | `--slate-pale` | `#a9b4c6` |
 | `--gray` | `#9ca3af` |
@@ -140,11 +140,10 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
 | `--text-body` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
-| `--text-subtle` | `--slate` | `--slate-pale` | `#6b7280` | `#a9b4c6` |
-| `--text-dim` | `--gray` | `--slate-dim` | `#9ca3af` | `#6f7b8e` |
+| `--text-subtle` | `--slate` | `--slate-pale` | `#616874` | `#a9b4c6` |
 | `--text-on-accent` | `--white` | `--white` | `#ffffff` | `#ffffff` |
 | `--text-on-amber` | `--white` | `--ink` | `#ffffff` | `#111827` |
-| `--text-link` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--text-link` | `--blue-strong` | `--blue-glow-soft` | `#2563eb` | `#60a5fa` |
 | `--text-link-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 
 ### Borders & focus [P]
@@ -156,25 +155,93 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | `--focus-ring` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--focus-ring-halo` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 | `--marker-neutral` | `--gray-soft` | `--slate-deep` | `#d1d5db` | `#3a465c` |
+| `--decor-muted` | `--gray` | `--slate-dim` | `#9ca3af` | `#6f7b8e` |
 
 **`--border-default` is the only row that maps to the same primitive in both
 themes**, and that is deliberate. It carries the whole boundary of every
 bordered surface — inputs and cards fill with `--surface-page`, so the fill
 contributes nothing and the border is the entire delineation. At its previous
-values it measured **1.47:1** light and **1.70:1** dark against that surface,
+values it measured **1.47:1** light and **1.95:1** dark against that surface,
 under the **3:1** WCAG 1.4.11 asks of a UI-component boundary, and light was
 the worse of the two. `--slate-dim` is the one existing primitive that clears
 3:1 in both themes near-symmetrically (**4.29:1** light, **4.31:1** dark), so a
 single primitive serves both columns. Changed in Segment 19C Item 8; the
 options weighed, including per-theme primitives at an exact 3:1, are in
-`guide/archive/segment_19C_refinements.md`.
+`guide/archive/segment_19C_refinements.md`. *(That plan, and this line
+until 19K.7, gave the dark figure as 1.70. It does not reproduce:
+`--slate-deep` `#3a465c` on `--ink-abyss` `#0f141b` is **1.95:1**, which
+is what this document already computed for the same pair under "Card
+accents" below. The light figure, 1.47, reproduces exactly.)*
 
-Two consequences worth knowing. `--text-dim` also resolves to `--slate-dim` in
-dark, so border and dim text share a value there — they are independently
-mapped, not coupled, and either can move alone. And `--marker-neutral` keeps
+Two consequences worth knowing. `--decor-muted` also resolves to `--slate-dim`
+in dark, so the border and the decorative dividers share a value there — they
+are independently mapped, not coupled, and either can move alone. (It was
+`--text-dim` that shared it until 19K.7 retired that token; see **The AA floor
+on text** below.) And `--marker-neutral` keeps
 `--gray-soft` / `--slate-deep`, which it now has to itself: repointing
 `--border-default` rather than editing those primitives is what left the
 neutral nav-tab markers where they were.
+
+### The AA floor on text
+
+**Every token in the Text cluster clears WCAG AA normal (4.5:1)
+against every `--surface-*` token, in both themes**, and
+`tests/unit/test_contrast_audit.py` computes that from the shipped
+values rather than pinning hexes. The worst case is checked rather
+than the likely one: which surface a label lands on is a template's
+choice, and the worst light surface is `--surface-tint-5` (`#fff1f2`),
+not `--surface-muted`.
+
+Set at 19K.7, which collapsed the two muted tiers into one.
+`--text-dim` (`#9ca3af`, **2.31:1** at worst) is **retired**: its text
+uses took `--text-subtle`, which moved from `#6b7280` to `#616874` to
+clear the floor itself — **3.90:1** at worst before, **4.53:1** after
+— by way of the `--slate` primitive, whose only other consumer is
+`--btn-secondary-border` (a boundary, held to 3:1, and improved from
+4.83 to 5.61 by the same edit).
+
+**The worst case is not a surface**, which is why the check sweeps
+pairs rather than tokens. `--nav-home-bg` (`--gray-mist`, `#e5e7eb`)
+is darker than any `--surface-*` token and carries muted text on the
+Session Home anchor, so it — not `--surface-tint-5` — is the binding
+constraint on `--text-subtle`: **4.53:1** at the shipped value against
+5.11:1 on the worst surface. A sweep of the Text cluster against the
+Surfaces cluster never reads that pair at all. 19K.7 first moved
+`--slate` to `#667080`, which a surfaces-only sweep scores 4.56 and
+passes while the Session Home anchor sits at **4.04**; the pair sweep
+is what caught it, and the value moved again to `#616874`. `#667080`
+is recorded here because it is the only way to check that 4.04, and
+it ships nowhere.
+
+**Decoration is outside the floor, and has its own token so that it
+stays outside.** WCAG 1.4.3 governs text; a 3px divider and the two
+gradient stops in a resize grip are not text and are not held to a
+ratio. Those five uses took `--decor-muted`, which carries exactly the
+primitives `--text-dim` carried, so nothing decorative changed value.
+The point of the separate token is that the failing value cannot drift
+back onto a label: a `color:` declaration naming `--decor-muted` fails
+the test.
+
+**Eleven pairs still fall short and are recorded rather than fixed.**
+None is body text; they are accent fills and pill tints, in two
+families. White on a mid-tone accent (**2.54–3.68**) covers the dark
+primary button and its hover, the light primary and alert hovers, and
+the dark selected state — the dark fill is `--blue-glow`, the reserved
+shade, so moving it moves nine other dark tokens with it. Saturated
+text on its own pale tint (**3.32–3.95**) covers the green `#059669`
+on `#d1fae5` shared by the ready lifecycle pill, the reviewee role
+chip and the success pill, and the red `#dc2626` on `#fee2e2` shared
+by the expired pill and the destructive button's hover. Each is listed
+with its measured ratio in `docs/known_limitations.md` and pinned in
+`KNOWN_SHORTFALLS`, so none can worsen, and a fix has to delete its
+entry rather than leave a stale number behind.
+
+**To look at the audit rather than read it**, open
+`tools/theme_customizer.html`: its Contrast panel lists all 73 pairs,
+outlines in red any that fall under AA in the active theme, and
+recomputes as you remap, so the cost of a palette change is visible
+before it is made. The panel and the test derive their pairs from the
+same function.
 
 **Border colours do not paint fills.** A surface takes a token from the
 Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
@@ -195,7 +262,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--btn-primary-bg-hover` | `--blue-bright` | `--blue-glow-soft` | `#3b82f6` | `#60a5fa` |
 | `--btn-secondary-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
 | `--btn-secondary-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
-| `--btn-secondary-border` | `--slate` | `--slate-pale` | `#6b7280` | `#a9b4c6` |
+| `--btn-secondary-border` | `--slate` | `--slate-pale` | `#616874` | `#a9b4c6` |
 | `--btn-secondary-bg-hover` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
 | `--btn-destructive-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
 | `--btn-destructive-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
@@ -357,6 +424,17 @@ The same reason the help card has its own `-fg` rather than inheriting
 *you can act on this*: click it, or in Instruments Band 2, click and
 drag it. `--text-link` is the same rule rather than an exception, since
 a link is actionable.
+
+**The coupling holds in light and is one step off in dark**, since
+19K.7. Dark `--text-link` measured **4.22:1** on `--surface-muted` at
+`--blue-glow` — under AA normal — and moved to `--blue-glow-soft`
+(`#60a5fa`, **5.53:1**). It is the adjacent step on the same ramp, so
+the *you can act on this* reading survives; what does not survive is
+the literal shared value, and a reader comparing the two columns
+should expect the dark one to differ. Moving `--blue-glow` itself was
+rejected: it is the reserved shade, and nine other dark tokens
+(`--selected-bg`, `--focus-ring`, `--btn-primary-bg`,
+`--chip-active-fg` among them) resolve to it.
 
 **The scope is the ambiguity, not the element type** (author,
 2026-09-11, closing `guide/archive/segment_19J_assessment_moves.md` Item 10).

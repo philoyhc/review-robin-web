@@ -79,22 +79,13 @@ for p, members in groups.items():
     seed_families[p] = {"anchor": anchor, "members": [n for n, _ in members]}
 SEED_ORDER = [p for p in SEED_PREFIX_ORDER if p in seed_families]
 
-# --- contrast pairs (semantic tokens; resolved per active theme) ---
-PAIRS = [
-    ("Body / page", "--text-body", "--surface-page"),
-    ("Body / card", "--text-body", "--surface-card"),
-    ("Subtle / card", "--text-subtle", "--surface-card"),
-    ("Dim / card", "--text-dim", "--surface-card"),
-    ("Link / page", "--text-link", "--surface-page"),
-    ("Primary btn", "--btn-primary-fg", "--btn-primary-bg"),
-    ("Alert btn", "--btn-alert-fg", "--btn-alert-bg"),
-    ("Destructive (outline)", "--btn-destructive-fg", "--surface-page"),
-    ("Pill · info", "--status-info-fg", "--status-info-bg"),
-    ("Pill · success", "--status-success-fg", "--status-success-bg"),
-    ("Pill · warning", "--status-warning-fg", "--status-warning-bg"),
-    ("Pill · error", "--status-error-fg", "--status-error-bg"),
-    ("Selected", "--selected-fg", "--selected-bg"),
-]
+# --- contrast pairs: every pair the palette forms, gathered not listed ---
+# Was a hand-kept list of 12. It had drifted — one row named `--text-dim`,
+# retired at 19K.7 — and it missed 62 pairs, one of them carrying a live AA
+# failure. `hc.collect_contrast_pairs` is the single definition, shared with
+# `tests/unit/test_contrast_audit.py`, which asserts this page carries a row
+# for every pair it returns. Grouping and ordering are below, after `pretty`.
+CX_PAIRS = hc.collect_contrast_pairs(base_css)
 
 # --- pick targets: preview element -> the semantic token each colour facet
 # paints from. `sel` is scoped inside Part A; `facets` are (label, prop, token)
@@ -131,12 +122,12 @@ TARGETS = [
     (".signout", "Sign out button", [("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
     (".breadcrumb a", "Breadcrumb link", [("text", "fg", "--text-link")]),
     ('.breadcrumb [aria-current="page"]', "Breadcrumb (current)", [("text", "fg", "--text-body")]),
-    (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-dim")]),
+    (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-subtle")]),
     # Session navigation
     (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-dim")]),
+    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")]),
     (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
@@ -210,9 +201,9 @@ TARGETS = [
     # inactive tabs are transparent, so their visible fill is the strip behind
     # them — and the Setup / Operations strips are independent tokens.
     (".tab-strip-setup .nav-tab:not(.active)", "Nav tab · Setup",
-     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-setup-bg")]),
+     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-setup-bg")]),
     (".tab-strip-ops .nav-tab:not(.active)", "Nav tab · Operations",
-     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-ops-bg")]),
+     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")]),
     (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
     (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
@@ -237,6 +228,56 @@ DATA = {
 
 def pretty(token):
     return token.lstrip("-").replace("-", " ")
+
+
+_CX_CLUSTER = {
+    token: label
+    for label, tokens in hc.parse_clusters(base_css)
+    for token in tokens
+}
+
+
+def _srgb(channel):
+    c = channel / 255
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def contrast_ratio(a, b):
+    """WCAG 2.1 contrast ratio between two `#rrggbb` strings."""
+    def lum(v):
+        h = v.lstrip("#")
+        r, g, bl = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        return 0.2126 * _srgb(r) + 0.7152 * _srgb(g) + 0.0722 * _srgb(bl)
+    la, lb = lum(a), lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+def cx_groups():
+    """`[(cluster, [(label, fg, bg, provenance, shipped_ratio)])]`.
+
+    Grouped by the *foreground's* cluster, which is structural and so stays
+    correct while you remap; pass and fail are marked live in the browser
+    instead, because a static "failures first" grouping would be wrong the
+    moment you edit a token. Within a group, and between groups, the order
+    is by the ratio as shipped — so the pairs most worth looking at sit at
+    the top on first open, and the order itself does not move under you.
+    """
+    prims = dict(hc.parse_primitives(base_css))
+    light = dict(hc.parse_semantic(base_css)["light"])
+    groups = {}
+    for (fg, bg), provenance in CX_PAIRS.items():
+        a = hc.resolve_semantic(light, prims, fg)
+        b = hc.resolve_semantic(light, prims, bg)
+        ratio = contrast_ratio(a, b) if a and b else None
+        label = f"{pretty(fg).removeprefix('text ')} → {pretty(bg).removeprefix('surface ')}"
+        groups.setdefault(_CX_CLUSTER.get(fg, "Other"), []).append(
+            (99.0 if ratio is None else ratio, label, fg, bg, provenance, ratio)
+        )
+    return [
+        (cluster, [(r[1], r[2], r[3], r[4], r[5]) for r in sorted(rows)])
+        for cluster, rows in sorted(groups.items(), key=lambda kv: min(r[0] for r in kv[1]))
+    ]
+
 
 
 # ---------- markup ----------
@@ -307,17 +348,48 @@ sem_section = f"""    <section class="tc-sec">
 {chr(10).join(sem_blocks)}
     </section>"""
 
-contrast_rows = "\n".join(
-    f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}">'
-    f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
-    f'<span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>'
-    for label, fg, bg in PAIRS
-)
+def _cx_row(label, fg, bg, provenance, ratio):
+    shipped = "—" if ratio is None else f"{ratio:.2f}"
+    source = provenance.split(":", 1)
+    hint = "a rule sets both halves — " + source[1] if len(source) == 2 else {
+        "name": "--x-fg paired with --x-bg by name",
+        "surface": "text token against every surface",
+        "fill": "foreground for a named fill (hand-kept, see ON_FILL)",
+    }[provenance]
+    # The cell ellipsises a long pair, so the tooltip carries the whole
+    # thing — token names, not the prettified label, since the tokens are
+    # what you would grep for. Without this the panel shows a red 3.32 and
+    # not what it belongs to, which is no use for inspection.
+    title = f"{fg} on {bg} \u00b7 shipped {shipped}:1 (light) \u00b7 found by: {hint}"
+    return (
+        f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}" title="{title}">'
+        f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
+        f'<span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span>'
+        f'<span class="tc-cx-shipped" title="ratio as shipped, light theme">{shipped}</span></div>'
+    )
+
+
+cx_blocks = []
+for cluster, rows in cx_groups():
+    body = "\n".join(_cx_row(*row) for row in rows)
+    cx_blocks.append(
+        f'      <details class="tc-cluster" open><summary>{cluster} · {len(rows)}'
+        f' <span class="tc-cx-count" data-cluster="{cluster}"></span></summary>\n'
+        f'      <div class="tc-cx-grid">\n{body}\n      </div>\n      </details>'
+    )
+
 contrast_section = f"""    <section class="tc-sec">
-      <h2 class="tc-h">Contrast — live WCAG ratio per semantic bg/text pair, ACTIVE theme. <strong>Flagged below 3:1</strong>; pairs that also clear AA for normal text (4.5:1) are badged <code>AA</code>. Every pair here is body text, so 4.5:1 is its real AA line — 3:1 is the working floor this tool gates on, not a claim of compliance.</h2>
-      <div class="tc-cx-grid">
-{contrast_rows}
-      </div>
+      <h2 class="tc-h">Contrast — <strong>every</strong> foreground/background pair the palette forms
+      ({len(CX_PAIRS)} pairs), live for the ACTIVE theme. A ratio under
+      <strong>AA normal, 4.5:1</strong>, is <strong>outlined in red</strong>; the badge says which
+      tier it reaches. The trailing grey figure is the ratio <em>as shipped</em> in light, so an
+      edit's effect is visible beside its baseline. Pairs are gathered from `base.html` itself —
+      from rules that set both halves, from <code>--x-fg</code>/<code>--x-bg</code> name siblings,
+      from text × surface, and from one hand-kept map — not from a list anyone maintains; hover a
+      row to see which. <code>tests/unit/test_contrast_audit.py</code> enforces the same set and
+      records the pairs that fall short.</h2>
+      <div class="tc-cx-summary" id="tc-cx-summary">—</div>
+{chr(10).join(cx_blocks)}
     </section>"""
 
 toolbar = """  <div class="ph-toolbar">
@@ -395,23 +467,23 @@ editor_css = r"""
       background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 10px;
       box-shadow: 0 10px 34px rgba(0,0,0,0.20); padding: 10px; }
     .tc-pp-group { margin-bottom: 8px; }
-    .tc-pp-glabel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 4px; }
+    .tc-pp-glabel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); margin: 0 0 4px; }
     .tc-pp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
     .tc-pp-sw { -webkit-appearance: none; appearance: none; width: 100%; aspect-ratio: 1; padding: 0;
       border: 1px solid var(--border-subtle); border-radius: 4px; cursor: pointer; }
     .tc-pp-sw:hover { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
     .tc-pp-sw.is-current { outline: 2px solid var(--text-body); outline-offset: 1px; }
     .tc-facet-h .tc-facet-name { text-transform: capitalize; }
-    .tc-facet-h .tc-facet-prop { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; }
+    .tc-facet-h .tc-facet-prop { color: var(--text-subtle); font-weight: 400; font-size: 0.72rem; }
     .tc-c-row { display: grid; grid-template-columns: 84px 1fr; gap: 4px 10px; font-size: 0.78rem; align-items: baseline; }
-    .tc-c-row dt { color: var(--text-dim); }
+    .tc-c-row dt { color: var(--text-subtle); }
     .tc-c-row dd { margin: 0; }
     .tc-c-row code { font-family: ui-monospace, monospace; font-size: 0.74rem; color: var(--text-body); }
     .tc-c-chain { color: var(--text-subtle); }
-    .tc-c-hex { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-dim); margin-left: 4px; }
+    .tc-c-hex { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-subtle); margin-left: 4px; }
     .tc-c-users { list-style: none; margin: 0; padding: 0; }
     .tc-c-users li { font-size: 0.76rem; color: var(--text-body); padding: 1px 0; }
-    .tc-c-users .tc-c-none { color: var(--text-dim); font-style: italic; }
+    .tc-c-users .tc-c-none { color: var(--text-subtle); font-style: italic; }
     /* Literal red for the same reason as .tc-orphan — diagnostic chrome must
        not be editable out of visibility by the palette it reports on. */
     .tc-c-orphan { font-size: 0.76rem; color: #dc2626; border: 1px solid #dc2626;
@@ -428,7 +500,7 @@ editor_css = r"""
     .tc-seed { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; text-transform: capitalize; }
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
-    .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
+    .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); margin: 0 0 6px; }
     .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--tc-gap); }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
     .tc-chip.tc-picked { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -446,7 +518,7 @@ editor_css = r"""
     .tc-cluster { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 4px 12px; }
     .tc-cluster summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; padding: 4px 0; }
     .tc-remap-head, .tc-remap { display: grid; grid-template-columns: 1.4fr 24px 1fr 1fr; gap: 8px; align-items: center; }
-    .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 4px 0; }
+    .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); padding: 4px 0; }
     .tc-remap { padding: 3px 0; border-top: 1px solid var(--border-subtle); }
     .tc-remap.is-coupled { box-shadow: inset 2px 0 0 0 var(--status-warning-accent); }
     .tc-remap-name { font-size: 0.76rem; }
@@ -455,7 +527,7 @@ editor_css = r"""
     .tc-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border-subtle); }
     body.ui-v2 .tc-remap select.tc-sel { width: 100%; font-size: 0.72rem; padding: 2px 4px; box-sizing: border-box;
       font-family: ui-monospace, monospace; border: 1px solid var(--border-default); border-radius: 5px; background: var(--surface-page); color: var(--text-body); }
-    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 8px; }
     .tc-cx { display: flex; align-items: center; gap: 8px; }
     .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-subtle); min-width: 58px; text-align: right; }
@@ -463,6 +535,20 @@ editor_css = r"""
     .tc-cx-badge.pass { background: var(--status-success-bg); color: var(--status-success-fg); }
     .tc-cx-badge.warn { background: var(--status-warning-bg); color: var(--status-warning-fg); }
     .tc-cx-badge.fail { background: var(--status-error-bg); color: var(--status-error-fg); }
+    .tc-cx-badge.unresolved { background: var(--surface-muted); color: var(--text-subtle);
+      border: 1px dashed var(--border-default); }
+    /* The one thing this panel exists to make obvious: a pair under AA
+       normal. An outline rather than a colour swap, so it reads on the
+       ratio itself and survives both themes. */
+    .tc-cx-ratio.below-aa { outline: 2px solid var(--status-error-fg); outline-offset: 1px;
+      border-radius: 3px; font-weight: 700; }
+    .tc-cx-shipped { font-family: ui-monospace, monospace; font-size: 0.66rem;
+      color: var(--text-subtle); min-width: 34px; text-align: right; opacity: 0.75; }
+    .tc-cx-summary { font-size: 0.78rem; font-weight: 600; padding: 6px 10px; margin: 0 0 8px;
+      border-radius: 6px; background: var(--surface-muted); }
+    .tc-cx-summary.clean { background: var(--status-success-bg); color: var(--status-success-fg); }
+    .tc-cx-summary.short { background: var(--status-error-bg); color: var(--status-error-fg); }
+    .tc-cx-count { font-weight: 400; font-size: 0.72rem; color: var(--text-subtle); }
 """
 
 data_script = "  <script>window.RRW = " + json.dumps(DATA) + ";</script>"
@@ -559,7 +645,20 @@ editor_js = r"""  <script>
     function updateContrast() {
       document.querySelectorAll(".tc-cx").forEach(function (row) {
         var fg = resolve(row.getAttribute("data-fg")), bg = resolve(row.getAttribute("data-bg"));
-        if (!fg || !bg) return;
+        if (!fg || !bg) {
+          // A remap can leave a token unmapped or cyclic, and `resolve`
+          // returns null. Returning here left the row painted with its
+          // last-good ratio AND its last-good red outline — a stale row
+          // reading as current, in the one case where recomputing is the
+          // whole point. Clear it instead, and say why.
+          var ur = row.querySelector(".tc-cx-ratio");
+          ur.textContent = "—"; ur.classList.remove("below-aa");
+          var ub = row.querySelector(".tc-cx-badge");
+          ub.textContent = "?"; ub.className = "tc-cx-badge unresolved";
+          ub.title = "one side of this pair does not resolve to a colour — "
+            + "an unmapped token, or a coupling cycle";
+          return;
+        }
         var r = contrast(fg, bg), pass = r >= 3.0;
         row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
         var b = row.querySelector(".tc-cx-badge");
@@ -567,7 +666,33 @@ editor_js = r"""  <script>
         // AA for a body-text pair that does not reach 4.5:1.
         var tier = r >= 4.5 ? ["AA", "pass"] : pass ? ["3:1", "warn"] : ["✗", "fail"];
         b.textContent = tier[0]; b.className = "tc-cx-badge " + tier[1];
+        // The red outline is the panel's whole point, so it is driven from
+        // the same number the badge is, not from a class baked in at
+        // generation time — remap a token and it moves with you.
+        var ratioEl = row.querySelector(".tc-cx-ratio");
+        ratioEl.classList.toggle("below-aa", r < 4.5);
       });
+      // Hoisted; counts read the classes the loop above just set.
+      updateContrastCounts();
+    }
+
+    // Per-group and overall counts, recomputed with the rows above.
+    function updateContrastCounts() {
+      var groupShort = 0, groupTotal = 0;
+      document.querySelectorAll(".tc-cx-count").forEach(function (el) {
+        var box = el.closest("details"), s = 0, t = 0;
+        box.querySelectorAll(".tc-cx-ratio").forEach(function (r) {
+          t++; if (r.classList.contains("below-aa")) { s++; }
+        });
+        el.textContent = s ? "· " + s + " under AA" : "";
+        groupShort += s; groupTotal += t;
+      });
+      var sum = document.getElementById("tc-cx-summary");
+      if (!sum) { return; }
+      sum.textContent = groupShort
+        ? groupShort + " of " + groupTotal + " pairs under AA normal (4.5:1) in this theme"
+        : "all " + groupTotal + " pairs clear AA normal (4.5:1) in this theme";
+      sum.className = "tc-cx-summary " + (groupShort ? "short" : "clean");
     }
 
     // ---- OKLCH <-> sRGB (Bjorn Ottosson) for seed family shifts ----

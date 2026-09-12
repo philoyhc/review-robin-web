@@ -53,7 +53,7 @@
     [data-new-model-rf-data-type]:disabled,
     [data-new-model-rf-bound]:disabled {
       background: var(--surface-muted);
-      color: var(--text-dim);
+      color: var(--text-subtle);
       cursor: not-allowed;
       opacity: 0.7;
     }
@@ -79,7 +79,7 @@
       border: 1px solid transparent;
       border-radius: 4px;
       cursor: pointer;
-      color: var(--text-dim);
+      color: var(--text-subtle);
       font: inherit;
       font-size: 0.85em;
     }
@@ -92,7 +92,7 @@
       font-variant-numeric: tabular-nums;
     }
     body.ui-v2 .sort-badge.sort-badge-empty {
-      color: var(--text-dim);
+      color: var(--text-subtle);
     }
     /* Band 2 preview table — keep cell + input padding compact so
        the operator-side preview row matches the reviewer surface's
@@ -1045,7 +1045,7 @@
                       onclick="newModelToggleCombinator(this)"
                       title="Toggle combinator">{{ _stored_combinator }}</button>
             </div>
-            <div style="width: 3px; background: var(--text-dim); flex-shrink: 0;"></div>
+            <div style="width: 3px; background: var(--decor-muted); flex-shrink: 0;"></div>
             <div data-new-model-rule-cells
                  style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
               {% for _rule in _cells %}
@@ -1245,7 +1245,7 @@
                         disabled aria-disabled="true"
                         title="Group identity marker">THE SAME</button>
               </div>
-              <div style="width: 3px; background: var(--text-dim); flex-shrink: 0;"></div>
+              <div style="width: 3px; background: var(--decor-muted); flex-shrink: 0;"></div>
               <div data-new-model-unit-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}

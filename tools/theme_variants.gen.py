@@ -198,8 +198,9 @@ def palette_only_variant() -> dict:
 
     The one option that needs zero primitive edits, so `--marker-neutral` and
     every other consumer of the old primitives stay exactly where they are.
-    `--slate-dim` is also `--text-dim` in dark, so border and dim text share a
-    value there; that is the thing to look at when judging this one.
+    `--slate-dim` is also `--decor-muted` in dark, so the border and the
+    decorative dividers share a value there; that is the thing to look at when
+    judging this one. (It carried `--text-dim` until 19K.7 retired that token.)
     """
     model = load_model()
     model["semantic"]["light"]["--border-default"] = "--slate-dim"

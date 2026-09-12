@@ -43,7 +43,7 @@
         --gray-mist: #e5e7eb;
         --gray-soft: #d1d5db;
         --gray: #9ca3af;
-        --slate: #6b7280;
+        --slate: #616874;
         --ink: #111827;
         --paper: #e6eaf2;
         --slate-pale: #a9b4c6;
@@ -132,7 +132,6 @@
         /* Text & links [P] */
         --text-body: var(--ink);
         --text-subtle: var(--slate);
-        --text-dim: var(--gray);
         --text-on-accent: var(--white);
         --text-on-amber: var(--white);
         --text-link: var(--blue-strong);
@@ -143,6 +142,7 @@
         --focus-ring: var(--blue-strong);
         --focus-ring-halo: var(--blue-pale);
         --marker-neutral: var(--gray-soft);
+        --decor-muted: var(--gray);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-strong);
         --btn-primary-fg: var(--white);
@@ -197,7 +197,11 @@
         --lifecycle-draft-bg: var(--amber-pale);
         --lifecycle-draft-fg: var(--amber-deep);
         --lifecycle-validated-bg: var(--blue-pale);
-        --lifecycle-validated-fg: var(--blue-strong);
+        /* Not --blue-strong: that is --selected-bg's value, and
+           the pair is reserved for things you can act on (19J.7).
+           Validated is a lifecycle state, not a control, so it
+           takes the foreground --status-info-fg already uses. */
+        --lifecycle-validated-fg: var(--blue-deeper);
         --lifecycle-ready-bg: var(--green-pale);
         --lifecycle-ready-fg: var(--green-strong);
         --lifecycle-expired-bg: var(--red-pale);
@@ -211,7 +215,6 @@
         --nav-strip-setup-bg: var(--blue-pale);
         --nav-strip-ops-bg: var(--green-wash);
         --nav-home-bg: var(--gray-mist);
-        --nav-home-bg-hover: var(--blue-mist);
         --nav-home-marker: var(--blue-soft);
         /* Config values [A] */
         --config-value-bg: var(--blue-cyan-pale);
@@ -272,10 +275,9 @@
         /* Text & links [P] */
         --text-body: var(--paper);
         --text-subtle: var(--slate-pale);
-        --text-dim: var(--slate-dim);
         --text-on-accent: var(--white);
         --text-on-amber: var(--ink);
-        --text-link: var(--blue-glow);
+        --text-link: var(--blue-glow-soft);
         --text-link-strong: var(--blue-soft);
         /* Borders & focus [P] */
         --border-subtle: var(--slate-deeper);
@@ -283,6 +285,7 @@
         --focus-ring: var(--blue-glow);
         --focus-ring-halo: var(--blue-abyss);
         --marker-neutral: var(--slate-deep);
+        --decor-muted: var(--slate-dim);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-glow);
         --btn-primary-fg: var(--white);
@@ -337,7 +340,8 @@
         --lifecycle-draft-bg: var(--amber-abyss);
         --lifecycle-draft-fg: var(--amber-glow);
         --lifecycle-validated-bg: var(--blue-abyss);
-        --lifecycle-validated-fg: var(--blue-glow);
+        /* Was --blue-glow, which is --selected-bg in this theme. */
+        --lifecycle-validated-fg: var(--blue-soft);
         --lifecycle-ready-bg: var(--green-abyss-mid);
         --lifecycle-ready-fg: var(--green-bright);
         --lifecycle-expired-bg: var(--red-abyss);
@@ -351,7 +355,6 @@
         --nav-strip-setup-bg: var(--blue-abyss-soft);
         --nav-strip-ops-bg: var(--green-abyss-faint);
         --nav-home-bg: var(--ink-muted);
-        --nav-home-bg-hover: var(--blue-abyss-faint);
         --nav-home-marker: var(--blue-bright);
         /* Config values [A] */
         --config-value-bg: var(--blue-cyan-abyss);
@@ -471,7 +474,7 @@
       .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
       .breadcrumb span[aria-current="page"] { color: var(--text-body); font-weight: 600; }
-      .breadcrumb-sep { color: var(--text-dim); margin: 0 6px; }
+      .breadcrumb-sep { color: var(--text-subtle); margin: 0 6px; }
       .chrome-user {
         font-size: 0.85em;
         color: var(--text-subtle);
@@ -572,8 +575,8 @@
           to right,
           transparent 0,
           transparent 2px,
-          var(--text-dim) 2px,
-          var(--text-dim) 4px,
+          var(--decor-muted) 2px,
+          var(--decor-muted) 4px,
           transparent 4px,
           transparent 6px
         );
@@ -630,7 +633,7 @@
       .new-model-band2-pill-grip {
         display: inline-block;
         margin-right: 6px;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-size: 0.9em;
         letter-spacing: -1px;
         transition: color 0.1s ease-in-out;
@@ -646,7 +649,7 @@
        * shape stays unchanged for instruments without responses.
        */
       .new-model-band2-pills-divider {
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-weight: bold;
         font-size: 1.1em;
         padding: 0 4px;
@@ -759,11 +762,6 @@
         line-height: 1.25;
         cursor: pointer;
       }
-      .btn-cta.disabled {
-        background: var(--text-dim);
-        border-color: var(--text-dim);
-        cursor: not-allowed;
-      }
       .btn-row {
         display: flex;
         gap: 16px;
@@ -861,7 +859,7 @@
         position: relative;
       }
       .session-home-anchor:hover {
-        background: var(--nav-home-bg-hover);
+        background: var(--nav-tab-active-bg);
         color: var(--text-body);
       }
       .session-home-anchor.active {
@@ -894,7 +892,7 @@
         padding: 12px 16px;
         font-size: 0.78rem;
         font-weight: 700;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         text-transform: uppercase;
         letter-spacing: 0.06em;
         white-space: nowrap;
@@ -975,9 +973,25 @@
         background: transparent;
         position: relative;
       }
-      .nav-tab:hover {
-        background: rgba(255, 255, 255, 0.7);
-        color: var(--text-body);
+      /* Hover wears the selected tab's colours (author, 2026-09-11:
+         "mouse hover over style = tab selected style"). Before this
+         the strip hovered to a hardcoded `rgba(255, 255, 255, 0.7)` —
+         70% white, which reads as a tinted near-white over the light
+         strips and as a glaring pale block over the dark ones, since
+         the value is a literal and cannot follow the theme.
+
+         The `::after` marker stays on `.active` alone: it is the
+         "you are here" signal, and painting it under the cursor would
+         leave the operator unable to tell which page they are on
+         while they hover. Everything else matches.
+
+         `:not()` rather than a later override, because
+         `body.ui-v2 .nav-tab:hover` (0,3,1) outranks
+         `.nav-tab.disabled:hover` (0,3,0) — a disabled tab has been
+         taking the hover background on every v2 page. */
+      .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
+        background: var(--nav-tab-active-bg);
+        color: var(--nav-tab-active-fg);
       }
       .nav-tab.active {
         background: var(--nav-tab-active-bg);
@@ -986,13 +1000,13 @@
       }
       .nav-tab.disabled,
       .nav-tab[aria-disabled="true"]:not(.active) {
-        color: var(--text-dim);
+        color: var(--text-subtle);
         cursor: not-allowed;
       }
       .nav-tab.disabled:hover,
       .nav-tab[aria-disabled="true"]:not(.active):hover {
         background: transparent;
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       .nav-tab.active::after {
         content: "";
@@ -1144,6 +1158,110 @@
          the trailing paragraph margin needs clearing so the tile's
          padding is the only bottom space. */
       body.ui-v2 .subcard-row > .card > :last-child { margin-bottom: 0; }
+      /* Guide screencaps. The images are captured at the app's own width
+         and are far wider than the prose column, so they scale down and
+         the figure gets the border the screenshot itself does not have —
+         without it a white-backed capture bleeds into the page and the
+         reader cannot tell where the app stops. `max-width: 100%` plus
+         `height: auto` keeps the aspect ratio at every viewport. */
+      /* Guide screencaps are pictures OF this app, rendered INSIDE this
+         app, so a bare bordered image reads as more page rather than as
+         an illustration of one — the capture's own white ground runs
+         straight into the card's.
+
+         A mat fixes what a heavier border cannot. The figure is a padded
+         `surface-muted` panel and the capture sits on it, the way a
+         photograph is mounted: the tint separates the two even where the
+         capture's edge is itself white, and the inset says "this is a
+         picture of something" before the reader has parsed what. The
+         capture's own border stays 1px — its job is now only to define
+         its edge against the mat, and thickening it would fight the mat
+         rather than help it.
+
+         Dark theme used to make it earn its keep twice over: the
+         captures were light-theme images, so on a dark page they were
+         bright blocks whatever the border did, and the dark mat framed
+         them instead of letting them glare off the ground. Segment 19H
+         Item 3 retired that second job — every capture now ships as a
+         light/dark pair (see the swap rules below) — and the mat stays
+         for the first one, which is the reason it exists.
+
+         Not a drop shadow, which is the other common answer: the app's
+         eight `box-shadow` uses are all solid offset markers and focus
+         rings, so a blurred one would be the first soft shadow in the
+         codebase and would read as a different design language.
+
+         `fit-content` makes the mat hug its picture instead of running
+         to the column edge past a 600px capture; `border-box` keeps the
+         padding inside `max-width` so a narrow column cannot overflow. */
+      body.ui-v2 .guide-figure {
+        box-sizing: border-box;
+        width: fit-content;
+        max-width: 100%;
+        margin: var(--space-4) 0;
+        padding: var(--space-4);
+        background: var(--surface-muted);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+      }
+      body.ui-v2 .guide-figure img {
+        display: block;
+        width: 1200px;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+      }
+      /* Segment 19H Item 3 — each figure carries both a light and a dark
+         capture; the theme picks one. Keyed on the same `data-theme`
+         attribute the toggle writes, NOT on `prefers-color-scheme`: this
+         app is two-state and does not follow the OS, so a media query
+         would serve a light capture to a reader sitting in Dark. The
+         no-FOUC script in <head> stamps the attribute before the <img>s
+         are parsed, so the right one is up from the first frame, and the
+         toggle flipping the attribute re-runs these rules with no JS of
+         their own. Light is the copy with no hiding rule, so a page with
+         storage blocked shows the light set — the same default the rest
+         of the theme system takes. */
+      body.ui-v2 .guide-figure img[data-theme-variant="dark"] {
+        display: none;
+      }
+      :root[data-theme="dark"] body.ui-v2 .guide-figure img[data-theme-variant="light"] {
+        display: none;
+      }
+      :root[data-theme="dark"] body.ui-v2 .guide-figure img[data-theme-variant="dark"] {
+        display: block;
+      }
+      /* The captures arrive in two families — six at ~830px and six at
+         ~1680px, 1x and 2x shots of the same app. Left to fill the prose
+         column they read at two different apparent scales, so each
+         family gets a fixed display width: 1200px above, 600px here.
+         Both are author's numbers, set from looking at the rendered page
+         rather than derived from the pixel dimensions.
+
+         `width` (not `max-width`) is what pins an image below its
+         natural size; the `max-width: 100%` above still takes over on a
+         narrower column, so neither number causes a horizontal scroll.
+
+         This rule must stay *after* the base one: the two selectors have
+         equal specificity, so order is what makes the modifier win. */
+      body.ui-v2 .guide-figure-narrow img {
+        width: 600px;
+      }
+      /* One blank line above each in-card heading. The Guide's cards run
+         long enough that its `<h3>`s are section breaks rather than
+         labels on the paragraph below, and ui-v2's `h3` rule sets
+         `margin-top: 0` for the label case. Scoped by the `guide-`
+         id prefix the cards already carry, so no markup changes and no
+         other page's headings move. */
+      body.ui-v2 .card[id^="guide-"] h3 {
+        margin-top: var(--space-6);
+      }
+      body.ui-v2 .guide-figure figcaption {
+        margin-top: var(--space-2);
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1161,6 +1279,11 @@
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
+      /* A lone card in a `.bottom-grid`, held to the right-hand
+         column at half width instead of stretching across both.
+         Without it a single child lands in column 1 and reads as a
+         card that failed to fill the row. */
+      .bottom-grid > .grid-right { grid-column: 2; }
       .bottom-left {
         display: flex;
         flex-direction: column;
@@ -1193,7 +1316,12 @@
          Part 1 follow-up). Lives inside `.card.card-half`; its form has
          a two-up `.filter-row` for the status dropdown + search input
          and a right-aligned `.filter-actions` row at the bottom for
-         Apply (with optional Clear + "Showing N of M" counter). */
+         Apply (with optional Clear).
+
+         The row carried a "Showing N of M" counter until Segment 19I
+         Item 10 moved it to the top-left of the table it describes,
+         where the four roster pages already put theirs. Actions stay
+         here; the count sits with its rows. */
       .filter-card form { margin: 0; }
       .filter-card .filter-row {
         display: flex;
@@ -1264,6 +1392,256 @@
         gap: 12px;
         margin-top: 12px;
         flex-wrap: wrap;
+      }
+      /* The "Showing N of M" hint at the top-left of a preview-table
+         card (Segment 19I Item 4). Moved here from the
+         operator-actions strip so it sits with the rows it counts. */
+      .table-showing-hint {
+        margin: 0 0 12px 0;
+      }
+      /* Row pager for the seven roster-bearing tables (19J.5).
+         Rendered twice — where the count line sits, and again below
+         the table, because a 200-row table is several screens tall
+         and a pager only at the top makes the operator scroll back to
+         use it. Ranges rather than page numbers: `201–400` says where
+         you are in the roster, `page 2` makes you multiply. */
+      /* A range link carries a ``#<noun>-table-card`` fragment so a page
+         turn arrives at the **table's card**: its top edge, then the
+         column chips, then the page links, then the new rows (19J.8).
+
+         Two earlier targets were wrong, both measured in Chromium
+         against a 556-row roster at 1280x900. The **table** put its
+         header flush at the viewport top and the page links 31px above
+         the fold — and since only 670px of a 10,775px page sits above
+         the table, that is also indistinguishable from landing at the
+         top of the page. The **top strip** fixed the links but cropped
+         the chip row and the card's own boundary, so the page read as
+         starting mid-card.
+
+         The margin keeps the card's top border off the viewport's edge,
+         which is what makes it read as a boundary rather than a crop. */
+      .table-pager-anchored {
+        scroll-margin-top: var(--space-4);
+      }
+      /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
+         `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
+         rung 2. It could only reach two pages per click whatever the
+         roster size, so crossing a long roster cost a linear number of
+         page loads; the cluster below reaches any page in one.
+
+         Two of its rules died with it rather than moving:
+         `.table-pager-link.is-current` marked the one cell in the strip
+         that did *not* navigate, and the menu's summary now says where
+         you are while also being the way to leave — one element for
+         one job. And `.table-pager-jump` styled `«` / `»` as decorative
+         `aria-hidden` spans beside the First / Last links: affordances
+         that looked clickable and were not. They are buttons now. */
+      /* The page pager — 19J.9.
+
+         `«‹ [range ▾] ›»`: five cells that reach any page in one move. It exists because the strip's reach is a constant
+         two pages per click whatever the roster size, so crossing a
+         long roster costs a number of clicks linear in its length —
+         5 to row 2,400 of 5,861, 50 to the middle of 40,000.
+
+         Nothing here reaches `--selected-bg`, deliberately: a page
+         the operator is already on is not a control (19J.7), and the
+         steps are navigation rather than selection. The menu is
+         marked by weight and a muted fill, like the strip's current
+         cell before it.
+
+         No drop shadow on the panel, following the rest of the
+         sheet — every `box-shadow` in here is a solid offset marker
+         or a focus ring. An opaque `--surface-card` and a border do
+         the separating. */
+      body.ui-v2 .table-pager-cluster {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--fs-small);
+      }
+      /* Below the table it is the only thing on its line, so it takes
+         the full width and pushes itself right. */
+      body.ui-v2 .table-pager-cluster-bottom {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: var(--space-3);
+      }
+      /* `text-decoration: none` here, even though 19J.7 rung 4 took
+         exactly that property *off* `.table-pager-link` — the two are
+         different surfaces. A range in a strip was inline prose and had
+         to read as the link it was; these are the `.btn-icon` role, the
+         same borderless glyph button as the move-up / move-down arrows,
+         and an underlined `»` reads as a typo. The hover darkening is
+         what says it is live. */
+      /* `.btn-icon.table-pager-step`, not `.table-pager-step`, and the
+         extra class is load-bearing rather than decorative:
+         `body.ui-v2 .btn-icon` further down this sheet is (0,2,1) — the
+         same specificity — so at the shorter selector it wins on order
+         and this rule's `font-size` and `color` never apply. They were
+         dead from 19J.9 rung 1 and nobody could see it, because both
+         declarations happened to match what `.btn-icon` already set.
+         Raising the size is what made it visible. */
+      body.ui-v2 .btn-icon.table-pager-step {
+        padding: 0 var(--space-1);
+        /* Larger than the range label beside it (author, 2026-09-11):
+           a guillemet at body size is a small target for the app's
+           most-used page turn, and these four carry the stepping the
+           menu does not. `line-height: 1` keeps the taller glyph from
+           growing the row the column chips share. */
+        font-size: 1.5em;
+        line-height: 1;
+        color: var(--text-subtle);
+        text-decoration: none;
+      }
+      body.ui-v2 a.btn-icon.table-pager-step:hover {
+        color: var(--text-body);
+      }
+      /* Inactive at the ends — in place, never absent, or the other
+         three cells shift sideways as the operator pages. */
+      body.ui-v2 .btn-icon.table-pager-step.is-inactive {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      body.ui-v2 .table-pager-menu {
+        position: relative;
+      }
+      body.ui-v2 .table-pager-menu > summary {
+        list-style: none;
+        cursor: pointer;
+        /* 2px rather than a hairline (author, 2026-09-11): this is the
+           cluster's only box, and at 1px it read as a text field
+           beside four bare glyphs rather than as the control it is.
+           The padding drops by the 1px the border gains, so the box
+           keeps its height and the row the column chips share does
+           not move. */
+        padding: 0 calc(var(--space-2) - 1px);
+        border: 2px solid var(--border-default);
+        border-radius: var(--radius-button);
+        background: var(--surface-card);
+        color: var(--text-body);
+        /* Labels vary in width — `1–200` against `5,801–5,861` — and a
+           control that resizes as you page through it reads as broken.
+           Tabular figures plus a floor keep it still. */
+        font-variant-numeric: tabular-nums;
+        min-width: 9em;
+        text-align: center;
+      }
+      body.ui-v2 .table-pager-menu > summary::-webkit-details-marker {
+        display: none;
+      }
+      body.ui-v2 .table-pager-menu > summary::after {
+        content: " \25BE";
+        color: var(--text-subtle);
+      }
+      body.ui-v2 .table-pager-menu-panel {
+        position: absolute;
+        right: 0;
+        z-index: 20;
+        margin-top: 2px;
+        /* `border-box` so `min-width: 100%` means the summary's width
+           and not the summary's width plus two borders — at a hairline
+           the 2px overhang was invisible, and at 2px it is not. This
+           sheet has no global box-sizing reset; five other rules set it
+           the same way. */
+        box-sizing: border-box;
+        min-width: 100%;
+        max-height: 16em;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-1) 0;
+        background: var(--surface-card);
+        /* Matches the summary's 2px. They are one control in two
+           states, and a hairline panel hanging off a 2px box reads as
+           two things that failed to line up. */
+        border: 2px solid var(--border-default);
+        border-radius: var(--radius-button);
+      }
+      /* Below the table, the panel opens upward: downward would put it
+         past the card's bottom edge and, on the last card of a page,
+         off the viewport. Measured in Chromium at 1280x900. */
+      body.ui-v2 .table-pager-cluster-bottom .table-pager-menu-panel {
+        top: auto;
+        bottom: 100%;
+        margin: 0 0 2px 0;
+      }
+      /* Menu rows, not prose links: a list where every row is
+         underlined is harder to scan, not easier, and the panel's own
+         shape already says these are choices. Hover fills the row, the
+         way a menu does. */
+      body.ui-v2 .table-pager-menu-item {
+        padding: 1px var(--space-3);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-body);
+        text-decoration: none;
+      }
+      body.ui-v2 a.table-pager-menu-item:hover {
+        background: var(--surface-muted);
+      }
+      body.ui-v2 .table-pager-menu-item.is-current {
+        font-weight: 600;
+        background: var(--surface-muted);
+      }
+      /* The row the cluster owns, at the top of the table card. The
+         column chips join it when there are chips: a roster with no
+         tags in any slot renders no chip row at all, so the cluster
+         cannot be a passenger on one.
+
+         The chip row's width is operator data — tag labels come from
+         the session's CSV — so no width is safe to assume. The cluster
+         right-aligns and wraps to its own line rather than compressing,
+         and that line is the one the strip occupies today.
+
+         No margin of its own: both children carry the 12px, so an
+         empty row (no chips, no cluster) costs nothing. */
+      body.ui-v2 .table-card-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0 var(--space-4);
+      }
+      body.ui-v2 .table-card-toolbar > .table-pager-cluster {
+        margin: 0 0 12px auto;
+      }
+      /* Second action row: the selected-count pill and the
+         delete-confirmation checkbox, together and flush right
+         (Segment 19I Item 2). Its own class rather than a change to
+         `.filter-actions`, which seven templates share — the three
+         non-roster users of that class must not feel this. The count
+         and the gate sit together because the gate is about the
+         count: "3 selected  Yes, delete these" is a sentence. */
+      .operator-actions-card .filter-confirm {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .operator-actions-card .filter-confirm .delete-confirm-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9em;
+      }
+      /* The global `label { margin-top: 12px }` (above) leaves this
+         label's *margin box* lopsided — 12px over, 4px under — and a
+         flex row centres the margin box, so the visible label sat 4px
+         below the two items beside it. Measured in Chromium, not
+         guessed: the first fix tried was the checkbox's UA margin,
+         which was already zero. On a row whose whole point is that
+         three things read as one line, 4px is the difference between
+         a sentence and three neighbours. */
+      .operator-actions-card .filter-confirm .delete-confirm-label {
+        margin: 0;
+      }
+      /* Greyed while nothing is selected — the gate has no object
+         yet, and a tickable box with nothing to confirm invites
+         confirming before selecting. */
+      .operator-actions-card .filter-confirm
+        input[type="checkbox"]:disabled + span {
+        color: var(--text-subtle);
       }
       /* The selected-count pill + action-button row sits flush
          right (Segment 15F PR 3 follow-up). */
@@ -1640,7 +2018,7 @@
         background: var(--surface-muted);
       }
       body.ui-v2 .card.placeholder h2 {
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       body.ui-v2 .card.placeholder p {
         color: var(--text-subtle);
@@ -1855,7 +2233,7 @@
       body.ui-v2 .shaper-axis-pipe {
         display: inline-block;
         padding: 0 var(--space-2);
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font-weight: 600;
         opacity: 0.5;
       }
@@ -2227,8 +2605,35 @@
         cursor: pointer;
       }
       /* Tag-filter chips — clickable; the selected ones flip to a
-         filled accent so the active filter set reads at a glance. */
-      body.ui-v2 .tag-chip { cursor: pointer; }
+         filled accent so the active filter set reads at a glance.
+
+         Every chip carries the reserved accent shade as a 2px edge
+         (19J.7 rung 3). Until then the pill vocabulary said "clickable"
+         with nothing but ``cursor: pointer`` — invisible until the
+         pointer is already on the chip, absent on touch, and absent
+         from every screencap in the Guide.
+
+         The **background is deliberately left alone**. A Band 1 link
+         chip in the "not set" state is ``pill-empty tag-chip is-unset``,
+         and that amber is a status, not decoration; blanking it to a
+         transparent outline would trade one signal for another. Amber
+         says not set, the edge says you can fix it, and both are true.
+         So the edge is additive over whatever fill the modifier gives.
+
+         2px comes from an inset shadow rather than ``border-width`` so
+         the box never changes size, and ``.pill``'s 1px transparent
+         border (below) keeps a bordered chip exactly as tall as the
+         status label beside it in the same table cell.
+
+         ``[data-new-model-band2-pill]`` needs no selector of its own:
+         every Band 2 pill already renders ``pill tag-chip``. */
+      body.ui-v2 .tag-chip,
+      body.ui-v2 .pill.pill-tag-clear,
+      body.ui-v2 .pill.tag-mode-chip {
+        cursor: pointer;
+        border-color: var(--selected-bg);
+        box-shadow: inset 0 0 0 1px var(--selected-bg);
+      }
       body.ui-v2 .tag-chip.is-selected {
         background: var(--selected-bg);
         color: var(--selected-fg);
@@ -2238,22 +2643,48 @@
         color: var(--text-body);
         cursor: pointer;
       }
-      /* Setup-page column-visibility chips (Segment 18E Part 1) —
-         each chip toggles whether its column shows in the preview
-         table. Rendered as pills reusing the Sessions-lobby
-         tag-filter chip styling (.pill .tag-chip): filled
-         (is-selected) means the column is visible; a struck-through
-         is-disabled chip marks a column with no data. */
+      /* Column-visibility chips (Segment 18E Part 1) — each chip
+         toggles whether its column shows in the preview table.
+         Rendered as pills reusing the Sessions-lobby tag-filter chip
+         styling (.pill .tag-chip): filled (is-selected) means the
+         column is visible, plain means hidden.
+
+         ``.tag-chip.is-disabled`` no longer appears on any chip row:
+         19I Item 12 rung 3 retired the struck-through "no data in
+         this column" state, because a slot with no data now renders
+         neither chip nor column. The rule stays because
+         ``instruments_index.html`` renders the same class for its
+         Band 1 link chips, which are a different mechanism. */
       body.ui-v2 .col-chip-row {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: var(--space-2);
       }
+      /* One chip row can carry several labelled groups (Assignments
+         has three: reviewer / reviewee / relationship tags). Each
+         group is its own inline-flex box so a narrow viewport wraps
+         BETWEEN groups rather than stranding a label at the end of a
+         line with its chips on the next. The wider left gap on every
+         group after the first is what separates them on one line. */
+      body.ui-v2 .chip-group {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .chip-group + .chip-group {
+        margin-left: var(--space-4);
+      }
+      /* The one ``.tag-chip`` that is not a control: it sets
+         ``cursor: default`` itself, so it must not wear the shade that
+         claims otherwise. Cancels both halves of the edge (19J.7). */
       body.ui-v2 .tag-chip.is-disabled {
         cursor: default;
         opacity: 0.55;
         text-decoration: line-through;
+        border-color: transparent;
+        box-shadow: none;
       }
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
@@ -2435,6 +2866,56 @@
       .skip-link:focus {
         top: 8px;
       }
+      /* ── Navigation busy indicator (Segment 19J.4) ──────────────
+         An indeterminate bar that arms ~200 ms after a same-origin
+         link click or form submit and clears when the next page
+         paints. Indeterminate on purpose: a page is one blocking
+         TemplateResponse, so there is no progress to report and a
+         bar that invented one would be a lie the operator can catch
+         by watching it.
+
+         Why it exists: on a large roster the Invitations and
+         Responses pages take seconds to render (19J.4's measured
+         table), and until now the app said nothing while the old
+         page sat there looking live. */
+      .rrw-busy {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        z-index: 2000;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .rrw-busy-fill {
+        height: 100%;
+        width: 40%;
+        background: var(--btn-primary-bg);
+        animation: rrw-busy-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes rrw-busy-slide {
+        0%   { margin-left: -40%; }
+        100% { margin-left: 100%; }
+      }
+      /* Reduced motion: a static full-width bar still says "working",
+         without the travelling highlight. */
+      @media (prefers-reduced-motion: reduce) {
+        .rrw-busy-fill {
+          width: 100%;
+          margin-left: 0;
+          animation: none;
+          opacity: 0.8;
+        }
+      }
+      body.rrw-navigating { cursor: progress; }
+      /* The control the operator actually clicked. Never `disabled` —
+         see the script's note: a disabled control is not serialized,
+         so its name/value would vanish from the payload. */
+      .rrw-navigating [aria-busy="true"] {
+        cursor: progress;
+        opacity: 0.72;
+      }
       /* Screen-reader-only text: removed from the visual layout but
          still in the accessibility tree (e.g. a label for an
          icon-only or visually-empty cell). */
@@ -2544,11 +3025,11 @@
       body.ui-v2 .card.next-action .next-action-signal--amber-warning
         .next-action-signal-icon { color: var(--status-warning-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey
-        .next-action-signal-icon { color: var(--text-dim); }
+        .next-action-signal-icon { color: var(--text-subtle); }
       body.ui-v2 .card.next-action .next-action-signal--error
         .next-action-signal-icon { color: var(--status-error-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey {
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       body.ui-v2 .card.next-action .next-action-buttons {
         display: flex;
@@ -2692,6 +3173,11 @@
         font-weight: 500;
         text-transform: uppercase;
         margin-right: var(--space-1);
+        /* Every pill reserves the space a chip's edge takes, so adding
+           one to the controls alone does not grow them by 2px and
+           reflow every table where a status label sits beside a
+           toggle (19J.7 rung 3). */
+        border: 1px solid transparent;
       }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
@@ -2765,7 +3251,7 @@
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-muted {
         background: var(--surface-muted);
-        color: var(--text-dim);
+        color: var(--text-subtle);
         text-decoration: none;
       }
       body.ui-v2 .rs-role-nav a.rs-role-nav-muted:hover {
@@ -2832,7 +3318,7 @@
         border-color: var(--border-default);
         color: var(--text-body);
       }
-      body.ui-v2 .breadcrumb-sep { color: var(--text-dim); }
+      body.ui-v2 .breadcrumb-sep { color: var(--text-subtle); }
       body.ui-v2 .breadcrumb span[aria-current="page"] {
         color: var(--text-body);
       }
@@ -2845,7 +3331,7 @@
         color: var(--text-subtle);
       }
       body.ui-v2 .session-home-anchor:hover {
-        background: var(--nav-home-bg-hover);
+        background: var(--surface-page);
         color: var(--text-body);
       }
       body.ui-v2 .session-home-anchor.active {
@@ -2854,7 +3340,7 @@
       }
       body.ui-v2 .row-label {
         border-right-color: var(--border-subtle);
-        color: var(--text-dim);
+        color: var(--text-subtle);
       }
       /* Row-label emphasis — applies when the operator is on a
          page in this group OR when hovering any tab in the group's
@@ -2876,12 +3362,14 @@
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
-      body.ui-v2 .nav-tab { color: var(--text-dim); font-weight: 600; }
-      /* Hover emphasises the tab text; the v1 :hover rule is
-         shadowed by the v2 base on equal specificity, so re-emit. */
-      body.ui-v2 .nav-tab:hover {
+      body.ui-v2 .nav-tab { color: var(--text-subtle); font-weight: 600; }
+      /* Hover wears the selected tab's colours; the v1 :hover rule is
+         shadowed by the v2 base on equal specificity, so re-emit.
+         v2's `.nav-tab.active` overrides only the colour and inherits
+         v1's background, so hover matches on both. */
+      body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
         color: var(--text-body);
-        background: rgba(255, 255, 255, 0.7);
+        background: var(--nav-tab-active-bg);
       }
       body.ui-v2 .nav-tab.active { color: var(--text-body); }
       /* Active-tab underline — match the row's tint family. Setup
@@ -3314,7 +3802,7 @@
         border: 1px solid transparent;
         border-radius: 4px;
         cursor: pointer;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         font: inherit;
         font-size: 0.85em;
       }
@@ -3343,7 +3831,7 @@
         display: block;
         font-size: 0.75em;
         font-weight: 400;
-        color: var(--text-dim);
+        color: var(--text-subtle);
         margin-top: 1px;
       }
       /* Segment 15A Slice 3 — per-page inline editor for the
@@ -3389,24 +3877,24 @@
       color: var(--text-subtle); border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
     .pv-hue { margin: 14px 0; }
     .pv-hue-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--text-dim); margin: 0 0 6px; }
+      color: var(--text-subtle); margin: 0 0 6px; }
     .pv-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
     .pv-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle);
       border-radius: 8px; padding: 5px 7px; }
     .pv-sw { width: 30px; height: 26px; border-radius: 4px; flex: none; border: 1px solid var(--border-subtle); }
     .pv-lbl { display: flex; flex-direction: column; min-width: 0; }
     .pv-lbl code { font-size: 0.68rem; color: var(--text-body); word-break: break-all; }
-    .pv-lbl span { font-family: ui-monospace, monospace; font-size: 0.64rem; color: var(--text-dim); }
+    .pv-lbl span { font-family: ui-monospace, monospace; font-size: 0.64rem; color: var(--text-subtle); }
     .pv-cluster { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 4px 12px; }
     .pv-cluster summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; padding: 4px 0; }
     table.pv-sem { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    table.pv-sem th { text-align: left; color: var(--text-dim); font-weight: 600;
+    table.pv-sem th { text-align: left; color: var(--text-subtle); font-weight: 600;
       border-bottom: 1px solid var(--border-subtle); padding: 4px 6px; }
     table.pv-sem td { padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
     .pv-name { display: flex; flex-direction: column; }
-    .pv-name code { font-size: 0.66rem; color: var(--text-dim); }
+    .pv-name code { font-size: 0.66rem; color: var(--text-subtle); }
     .pv-sem code { font-family: ui-monospace, monospace; font-size: 0.72rem; }
-    .pv-hex { font-family: ui-monospace, monospace; font-size: 0.68rem; color: var(--text-dim); }
+    .pv-hex { font-family: ui-monospace, monospace; font-size: 0.68rem; color: var(--text-subtle); }
     .pv-dot { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: middle;
       margin-right: 4px; border: 1px solid var(--border-subtle); }
 
@@ -3479,7 +3967,7 @@
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Read-only preview of base.html's real two-tier palette
-      (80 primitives · 107 semantic).
+      (80 primitives · 106 semantic).
       Design tool only — not wired into the app. To edit, use theme_customizer.</span>
   </div>
 
@@ -3665,7 +4153,7 @@
         <div class="pv-chip"><div class="pv-sw" style="background: #e5e7eb;"></div><div class="pv-lbl"><code>--gray-mist</code><span>#e5e7eb</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #d1d5db;"></div><div class="pv-lbl"><code>--gray-soft</code><span>#d1d5db</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #9ca3af;"></div><div class="pv-lbl"><code>--gray</code><span>#9ca3af</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #6b7280;"></div><div class="pv-lbl"><code>--slate</code><span>#6b7280</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #616874;"></div><div class="pv-lbl"><code>--slate</code><span>#616874</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #111827;"></div><div class="pv-lbl"><code>--ink</code><span>#111827</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #e6eaf2;"></div><div class="pv-lbl"><code>--paper</code><span>#e6eaf2</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #1a212e;"></div><div class="pv-lbl"><code>--ink-deep</code><span>#1a212e</span></div></div>
@@ -3772,18 +4260,17 @@
         <tr><td class="pv-name">surface tint 5<code>--surface-tint-5</code></td><td><span class="pv-dot" style="background: var(--surface-tint-5);"></span><code>--tint-rose</code> <span class="pv-hex">#fff1f2</span></td><td><code>--tint-rose-dark</code> <span class="pv-hex">#241318</span></td></tr>
         <tr><td class="pv-name">surface tint 6<code>--surface-tint-6</code></td><td><span class="pv-dot" style="background: var(--surface-tint-6);"></span><code>--tint-cream</code> <span class="pv-hex">#fffbeb</span></td><td><code>--tint-cream-dark</code> <span class="pv-hex">#221d0e</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Text & links [P] · 7</summary>
+      <details class="pv-cluster" open><summary>Text & links [P] · 6</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">text body<code>--text-body</code></td><td><span class="pv-dot" style="background: var(--text-body);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
-        <tr><td class="pv-name">text subtle<code>--text-subtle</code></td><td><span class="pv-dot" style="background: var(--text-subtle);"></span><code>--slate</code> <span class="pv-hex">#6b7280</span></td><td><code>--slate-pale</code> <span class="pv-hex">#a9b4c6</span></td></tr>
-        <tr><td class="pv-name">text dim<code>--text-dim</code></td><td><span class="pv-dot" style="background: var(--text-dim);"></span><code>--gray</code> <span class="pv-hex">#9ca3af</span></td><td><code>--slate-dim</code> <span class="pv-hex">#6f7b8e</span></td></tr>
+        <tr><td class="pv-name">text subtle<code>--text-subtle</code></td><td><span class="pv-dot" style="background: var(--text-subtle);"></span><code>--slate</code> <span class="pv-hex">#616874</span></td><td><code>--slate-pale</code> <span class="pv-hex">#a9b4c6</span></td></tr>
         <tr><td class="pv-name">text on accent<code>--text-on-accent</code></td><td><span class="pv-dot" style="background: var(--text-on-accent);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--white</code> <span class="pv-hex">#ffffff</span></td></tr>
         <tr><td class="pv-name">text on amber<code>--text-on-amber</code></td><td><span class="pv-dot" style="background: var(--text-on-amber);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink</code> <span class="pv-hex">#111827</span></td></tr>
-        <tr><td class="pv-name">text link<code>--text-link</code></td><td><span class="pv-dot" style="background: var(--text-link);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
+        <tr><td class="pv-name">text link<code>--text-link</code></td><td><span class="pv-dot" style="background: var(--text-link);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow-soft</code> <span class="pv-hex">#60a5fa</span></td></tr>
         <tr><td class="pv-name">text link strong<code>--text-link-strong</code></td><td><span class="pv-dot" style="background: var(--text-link-strong);"></span><code>--blue-deep</code> <span class="pv-hex">#1d4ed8</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Borders & focus [P] · 5</summary>
+      <details class="pv-cluster" open><summary>Borders & focus [P] · 6</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">border subtle<code>--border-subtle</code></td><td><span class="pv-dot" style="background: var(--border-subtle);"></span><code>--gray-mist</code> <span class="pv-hex">#e5e7eb</span></td><td><code>--slate-deeper</code> <span class="pv-hex">#2b3547</span></td></tr>
@@ -3791,6 +4278,7 @@
         <tr><td class="pv-name">focus ring<code>--focus-ring</code></td><td><span class="pv-dot" style="background: var(--focus-ring);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
         <tr><td class="pv-name">focus ring halo<code>--focus-ring-halo</code></td><td><span class="pv-dot" style="background: var(--focus-ring-halo);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
         <tr><td class="pv-name">marker neutral<code>--marker-neutral</code></td><td><span class="pv-dot" style="background: var(--marker-neutral);"></span><code>--gray-soft</code> <span class="pv-hex">#d1d5db</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>
+        <tr><td class="pv-name">decor muted<code>--decor-muted</code></td><td><span class="pv-dot" style="background: var(--decor-muted);"></span><code>--gray</code> <span class="pv-hex">#9ca3af</span></td><td><code>--slate-dim</code> <span class="pv-hex">#6f7b8e</span></td></tr>
       </tbody></table></details>
       <details class="pv-cluster" open><summary>Buttons [P] · 20</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
@@ -3801,7 +4289,7 @@
         <tr><td class="pv-name">btn primary bg hover<code>--btn-primary-bg-hover</code></td><td><span class="pv-dot" style="background: var(--btn-primary-bg-hover);"></span><code>--blue-bright</code> <span class="pv-hex">#3b82f6</span></td><td><code>--blue-glow-soft</code> <span class="pv-hex">#60a5fa</span></td></tr>
         <tr><td class="pv-name">btn secondary bg<code>--btn-secondary-bg</code></td><td><span class="pv-dot" style="background: var(--btn-secondary-bg);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink-abyss</code> <span class="pv-hex">#0f141b</span></td></tr>
         <tr><td class="pv-name">btn secondary fg<code>--btn-secondary-fg</code></td><td><span class="pv-dot" style="background: var(--btn-secondary-fg);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
-        <tr><td class="pv-name">btn secondary border<code>--btn-secondary-border</code></td><td><span class="pv-dot" style="background: var(--btn-secondary-border);"></span><code>--slate</code> <span class="pv-hex">#6b7280</span></td><td><code>--slate-pale</code> <span class="pv-hex">#a9b4c6</span></td></tr>
+        <tr><td class="pv-name">btn secondary border<code>--btn-secondary-border</code></td><td><span class="pv-dot" style="background: var(--btn-secondary-border);"></span><code>--slate</code> <span class="pv-hex">#616874</span></td><td><code>--slate-pale</code> <span class="pv-hex">#a9b4c6</span></td></tr>
         <tr><td class="pv-name">btn secondary bg hover<code>--btn-secondary-bg-hover</code></td><td><span class="pv-dot" style="background: var(--btn-secondary-bg-hover);"></span><code>--gray-wash</code> <span class="pv-hex">#f5f5f7</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
         <tr><td class="pv-name">btn destructive bg<code>--btn-destructive-bg</code></td><td><span class="pv-dot" style="background: var(--btn-destructive-bg);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink-abyss</code> <span class="pv-hex">#0f141b</span></td></tr>
         <tr><td class="pv-name">btn destructive fg<code>--btn-destructive-fg</code></td><td><span class="pv-dot" style="background: var(--btn-destructive-fg);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
@@ -3857,14 +4345,14 @@
         <tr><td class="pv-name">lifecycle draft bg<code>--lifecycle-draft-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-draft-bg);"></span><code>--amber-pale</code> <span class="pv-hex">#fef3c7</span></td><td><code>--amber-abyss</code> <span class="pv-hex">#3a2c0a</span></td></tr>
         <tr><td class="pv-name">lifecycle draft fg<code>--lifecycle-draft-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-draft-fg);"></span><code>--amber-deep</code> <span class="pv-hex">#92400e</span></td><td><code>--amber-glow</code> <span class="pv-hex">#fcd34d</span></td></tr>
         <tr><td class="pv-name">lifecycle validated bg<code>--lifecycle-validated-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-validated-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
-        <tr><td class="pv-name">lifecycle validated fg<code>--lifecycle-validated-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-validated-fg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
+        <tr><td class="pv-name">lifecycle validated fg<code>--lifecycle-validated-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-validated-fg);"></span><code>--blue-deeper</code> <span class="pv-hex">#1e40af</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
         <tr><td class="pv-name">lifecycle ready bg<code>--lifecycle-ready-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-ready-bg);"></span><code>--green-pale</code> <span class="pv-hex">#d1fae5</span></td><td><code>--green-abyss-mid</code> <span class="pv-hex">#0f3d2e</span></td></tr>
         <tr><td class="pv-name">lifecycle ready fg<code>--lifecycle-ready-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-ready-fg);"></span><code>--green-strong</code> <span class="pv-hex">#059669</span></td><td><code>--green-bright</code> <span class="pv-hex">#34d399</span></td></tr>
         <tr><td class="pv-name">lifecycle expired bg<code>--lifecycle-expired-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-expired-bg);"></span><code>--red-pale</code> <span class="pv-hex">#fee2e2</span></td><td><code>--red-abyss</code> <span class="pv-hex">#3d1a1a</span></td></tr>
         <tr><td class="pv-name">lifecycle expired fg<code>--lifecycle-expired-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-expired-fg);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
         <tr><td class="pv-name">lifecycle archived bg<code>--lifecycle-archived-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-archived-bg);"></span><code>--gray-wash</code> <span class="pv-hex">#f5f5f7</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Navigation [A] · 9</summary>
+      <details class="pv-cluster" open><summary>Navigation [A] · 8</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">nav marker setup<code>--nav-marker-setup</code></td><td><span class="pv-dot" style="background: var(--nav-marker-setup);"></span><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td><td><code>--blue-bright</code> <span class="pv-hex">#3b82f6</span></td></tr>
@@ -3874,7 +4362,6 @@
         <tr><td class="pv-name">nav strip setup bg<code>--nav-strip-setup-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-setup-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
         <tr><td class="pv-name">nav strip ops bg<code>--nav-strip-ops-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-ops-bg);"></span><code>--green-wash</code> <span class="pv-hex">#ddf4e3</span></td><td><code>--green-abyss-faint</code> <span class="pv-hex">#0c2419</span></td></tr>
         <tr><td class="pv-name">nav home bg<code>--nav-home-bg</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg);"></span><code>--gray-mist</code> <span class="pv-hex">#e5e7eb</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
-        <tr><td class="pv-name">nav home bg hover<code>--nav-home-bg-hover</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg-hover);"></span><code>--blue-mist</code> <span class="pv-hex">#fafcff</span></td><td><code>--blue-abyss-faint</code> <span class="pv-hex">#0e1c2c</span></td></tr>
         <tr><td class="pv-name">nav home marker<code>--nav-home-marker</code></td><td><span class="pv-dot" style="background: var(--nav-home-marker);"></span><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td><td><code>--blue-bright</code> <span class="pv-hex">#3b82f6</span></td></tr>
       </tbody></table></details>
       <details class="pv-cluster" open><summary>Config values [A] · 3</summary>
