@@ -956,3 +956,171 @@ JavaScript runtime and cannot see a rendered colour.
   marks no rows. Both clauses corrected (Item 3). *Not named at planning
   time; added when `spec-writer` found them — see `Status`.*
 - `docs/status.md` — row when the item closes (Item 3).
+
+---
+
+## Item 4 — one NUL byte makes the largest template invisible to grep
+
+### Opportunity
+
+`app/web/templates/operator/instruments_index.html` line 2048 carries a
+**literal NUL byte**, written directly into a JavaScript string — the
+separator in a composite key:
+
+```js
+var keyOf = function (r) {
+  return fields.map(function (f) { return r[f] || ''; }).join('<NUL>');
+};
+```
+
+It is a deliberate choice of separator, joining on a character that
+cannot occur in roster data, and the *value* is right. What is wrong is
+that it is written as the raw byte.
+
+**One NUL reclassifies the whole file.** `grep` treats any file
+containing a NUL as binary and, instead of printing matching lines, emits
+`Binary file … matches`. This is the repository's **largest template**,
+so every plain `grep` against it returns something that looks like
+nothing.
+
+**Not hypothetical: it cost three wrong findings in one day
+(2026-09-12).** Twice the suppressed output was caught on re-check. The
+third was not caught at all — a search for `beforeunload` ran as
+
+```
+grep -rn "beforeunload" app/ spec/ docs/ | grep -v Binary
+```
+
+and the `| grep -v Binary`, added to tidy the output, **deleted the one
+line that would have falsified the conclusion**. A design discussion in
+`guide/new_ux_ideas.md` was then built on "no such mechanism exists",
+corrected once to a narrower wrong claim, and corrected again only
+because the author sent a screenshot of the feature working. *A check
+whose tidying step removes the disconfirming evidence is worse than no
+check: it returns a confident negative rather than a silence.*
+
+### Decision
+
+**Write the separator as the six-character escape `\u0000`.** Identical
+to every JavaScript engine, identical composite key, and the file becomes
+text again — so every future `grep`, editor search and review tool sees
+its 3,700-odd lines.
+
+**Rejected — change the separator.** Another character would also make
+the file text, but it changes what the key *is*, and a separator that
+cannot appear in roster data is the right design. This item fixes an
+encoding, not a decision.
+
+**Rejected — document the hazard instead**, for example a line in
+`CLAUDE.md` telling agents to pass `-a`. That is a note asking every
+future reader to remember something, in place of a fix that removes the
+thing to remember. `constitution.md`'s *retire rather than mechanise
+badly* points the same way.
+
+**A guard, because the byte is invisible.** Nothing in review catches a
+NUL — it renders as nothing in a diff, in an editor, and in a browser.
+The guard asserts that **no template under `app/web/templates/` contains
+one**, which generalises past this file.
+
+### Semantics
+
+- **Rendered output is unchanged.** The escape and a raw NUL are the same
+  string to the engine, so the composite key, the grouping and the cohort
+  preview behave identically.
+- **The guard reads bytes, not text**, since a NUL is exactly what a
+  text-mode read may mangle or a linter skip.
+- **Scope is `app/web/templates/`.** Compiled `.pyc` files and the
+  Guide's PNGs are legitimately binary; a template is not.
+
+### Judgment calls — decided
+
+- **Guard the directory, not the file.** A one-file assertion would pass
+  for ever after this fix and catch nothing; the failure mode is *a
+  template acquiring a NUL*, which is not specific to this one.
+  2026-09-12.
+- **No `CLAUDE.md` note.** Once the byte is gone the hazard is gone, and
+  a standing instruction to pass `-a` would outlive its reason. The
+  guard's docstring carries the history instead. 2026-09-12.
+
+### Blast radius (measured)
+
+At `769be773`, 2026-09-12:
+
+- A byte scan across `app/` finds NULs in **one source file** —
+  `operator/instruments_index.html`, 1 byte, line 2048. Every other hit
+  is a `.pyc` or a Guide screenshot.
+- That template is the largest in the repo at roughly 3,700 lines.
+- Templates affected: **1**. New guard files: **1**. Specs: **0** — this
+  changes no behaviour and no contract.
+
+### PR ladder
+
+One rung. A byte and a guard.
+
+### Definition of done
+
+- `instruments_index.html` contains no NUL byte; the separator reads as
+  the `\u0000` escape.
+- `grep -rn "beforeunload" app/` — the command that failed — prints the
+  line without needing `-a`.
+- A guard fails if any template under `app/web/templates/` contains a
+  NUL.
+- `.venv/bin/pytest` green; `ruff check .` clean.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19L.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The value is unchanged, the encoding is equivalent, and the guard
+generalises past the one file.
+
+### Out of scope
+
+- **The cohort-preview grouping itself.** Untouched; only how one
+  character is spelled.
+- **A repo-wide "no control characters" rule.** Tabs and their kin are
+  ordinary; NUL is the one that reclassifies a file.
+
+### Status — 2026-09-12 (item closed)
+
+**Landed as planned: one byte and a guard.** The separator now reads
+`\u0000`; the template contains no NUL; the suite went 3,866 to **3,868**
+for the two new assertions.
+
+**The definition-of-done line that mattered was the reproduction.** The
+exact command that failed this morning —
+
+```
+grep -rn "beforeunload" app/
+```
+
+— now prints `instruments_index.html:3737` without `-a`. *The fix was
+verified against the failure that motivated it, not against a
+description of it.*
+
+**Two guards, not one, and the second is the unusual one.** The general
+assertion (no template carries a NUL) is what generalises. The specific
+one pins this line, so a future author who "simplifies" the escape back
+to a raw byte gets a message naming the line and the reason, rather than
+a directory-wide failure they have to trace. A guard that only says
+*somewhere* is weaker than one that also says *here, because*.
+
+**Mutation: 1 run, 2 caught.** Restoring the raw byte fails both.
+
+**What this item does not claim.** The value was already right — a
+separator that cannot occur in roster data is good design. Only its
+spelling changed, and nothing rendered differs.
+
+**A note on how the fix was written.** Two attempts to append text
+containing the literal byte were rejected by the harness for containing
+control characters, which is the same hazard one layer out: the byte is
+invisible until something refuses to carry it. Both times it had arrived
+by copy-paste from earlier tool output. Written via a file with the
+escape constructed in code instead.
+
+### Doc impact
+
+- `docs/status.md` — row when the item closes (Item 4).
