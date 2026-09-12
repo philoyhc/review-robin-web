@@ -222,19 +222,63 @@ The point of the separate token is that the failing value cannot drift
 back onto a label: a `color:` declaration naming `--decor-muted` fails
 the test.
 
-**Eleven pairs still fall short and are recorded rather than fixed.**
-None is body text; they are accent fills and pill tints, in two
-families. White on a mid-tone accent (**2.54–3.68**) covers the dark
-primary button and its hover, the light primary and alert hovers, and
-the dark selected state — the dark fill is `--blue-glow`, the reserved
-shade, so moving it moves nine other dark tokens with it. Saturated
-text on its own pale tint (**3.32–3.95**) covers the green `#059669`
-on `#d1fae5` shared by the ready lifecycle pill, the reviewee role
-chip and the success pill, and the red `#dc2626` on `#fee2e2` shared
-by the expired pill and the destructive button's hover. Each is listed
-with its measured ratio in `docs/known_limitations.md` and pinned in
-`KNOWN_SHORTFALLS`, so none can worsen, and a fix has to delete its
-entry rather than leave a stale number behind.
+**Seven pairs fall short of AA normal; four are open and three are
+accepted.** The four open ones are a single root cause — white on
+`--blue-glow` in dark, the reserved shade, so moving it moves nine
+other dark tokens — and none is large text, `body.ui-v2 .btn` being
+`--fs-small` (0.875rem, weight 500) and `--selected-fg` rendering
+between 12px and 16px, all short of AA large's 18.66px. The three
+accepted are light button labels dipping **only under the pointer** —
+3.19/3.68/3.95 on hover against 7.09/5.17/4.83 at rest — and that
+acceptance is conditional on the resting pair, which the suite asserts
+rather than assumes. Every one is listed in
+`docs/known_limitations.md` and pinned in `OPEN_SHORTFALLS` or
+`ACCEPTED_BELOW_AA`, so none can worsen, and a fix has to delete its
+entry rather than leave a stale number behind. Four further pairs
+closed on 2026-09-12 by the rule below.
+
+### Collapsing a tier
+
+**Where a hue carries two text tiers on one surface and the lighter
+one fails AA, collapse it into the darker rather than inventing a
+value.** Author's policy, 2026-09-12, generalised from 19K.7's own
+central move: `--text-dim` was retired into `--text-subtle` rather
+than nudged, because two muted tiers whose difference nobody could
+state were not worth keeping once one of them had to move.
+
+The tell is that the darker tier **already exists and already
+passes**, which means the palette had answered the question once and
+then not applied the answer. Four pairs closed this way on 2026-09-12,
+after the audit made them visible side by side:
+
+| Token | Was | Now | Ratio |
+|---|---|---|---|
+| `--lifecycle-ready-fg` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
+| `--role-reviewee-fg` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
+| `--status-success-accent` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
+| `--lifecycle-expired-fg` | `--red-strong` | `--red-deep` | 3.95 → **6.80** |
+
+`--status-success-fg` was **already** `--green-deep` and
+`--status-error-fg` already `--red-deep`, on the same tints — so one
+surface was carrying two text colours of the same hue, one passing and
+one failing, for no reason a reader could state.
+
+Two limits, both following the rules above rather than taste:
+
+- **Only text collapses.** `--status-success-border` keeps
+  `--green-strong`: it is a boundary, held to 1.4.11's 3:1, which it
+  clears at 3.32. The same line that keeps `--decor-muted` outside the
+  text floor.
+- **Light only, here.** The dark mappings of all four differ
+  (`--green-bright`, `--red-bright`) and already clear AA, so
+  collapsing them would change appearance to fix nothing.
+
+**This does not close the remaining four**, and the distinction is the
+point: those are white on `--blue-glow` in dark, a single value with
+no second tier to collapse into. A hierarchy collapse is available
+when the palette has already produced the answer; when it has not, the
+value has to move, and that is a different decision with its own blast
+radius.
 
 **To look at the audit rather than read it**, open
 `tools/theme_customizer.html`: its Contrast panel lists all 73 pairs,

@@ -2059,6 +2059,118 @@ more than one source — **31 of the 73** — shows only the first, so
 `tools/README.md` now says that is provenance rather than exclusivity.
 
 
+**Eleven became eight open and three accepted** (author, 2026-09-12,
+after looking at the panel — which is the panel doing its job: it was
+built to be looked at, and the first look changed a decision).
+
+The author's reading was that anything above 3:1 is fine, and that the
+2.54 is fine too because it is a hover style. Two corrections, and
+then the call stood:
+
+- **The 2.54 is not a transient dip.** It is the dark primary button
+  on hover, and the same control measures **3.33 at rest** — the worst
+  point of a button already below the line, not a momentary one.
+- **3:1 is not these pairs' line.** The ui-v2 pills render at
+  `--fs-tiny` (0.75rem, weight 500); AA large wants 18.66px or 14pt
+  bold. Accepting 3.32 for a 12px label is a substantive decision, not
+  a technicality.
+
+So the split went by *transience*, not by threshold: three light
+button labels that dip only under the pointer, against resting states
+of 7.09, 5.17 and 4.83, are accepted; the eight that fail at rest stay
+open. **The thresholds did not move.** Moving the measurement would
+have made the panel stop telling the truth, and a check that flags
+nothing is the one that rots — which is the whole subject of this
+item. What moved is the *record*: two sets instead of one, and the
+panel marking an accepted pair with a dashed edge rather than red
+instead of falling silent about it.
+
+**The acceptance is stored as its premise, not its conclusion.** Each
+entry in `ACCEPTED_BELOW_AA` names the *resting* pair it rests on, and
+`test_accepted_pairs_still_earn_their_acceptance` fails if that pair
+stops clearing AA — so darkening a button's resting fill voids the
+hover exemption automatically. Pinning the hover ratio to a magic
+number instead would have recorded the conclusion and thrown away the
+premise, which is exactly how the entry this item repaired outlived
+its own reason by four months. Mutation-proved: dropping
+`--btn-alert-bg` to `--amber-strong` takes the resting pair to 3.19
+and the exemption dies with it.
+
+**Two mutations in this round were no-ops before they were
+mutations.** M1 and M2 reported "12 passed" — which reads as a hole in
+the guards until you notice the `sed` patterns named
+`--amber-strong`/`--amber-soft` where the file says `--amber-deep`. So
+nothing was changed and the suite was right. Re-run against the real
+token names: both caught. *The same lesson as 19K.5's zero and this
+item's own contaminated probe — a clean result and a no-op are
+indistinguishable until you check which one you have.*
+
+Verified in Chromium: light **4 open (red) + 3 accepted (dashed)**,
+dark **4 open + 0 accepted**, summaries reading "4 of 73 pairs open
+under AA normal (4.5:1), plus 3 accepted (transient; legible at
+rest)". 5 mutations on the new guards, 5 caught.
+
+
+**Collapsing a tier became policy, and closed four of the eight**
+(author, 2026-09-12): *it is fine to solve an AA failure by collapsing
+a hierarchy, as `--text-dim` into `--text-subtle`.* Stated as general
+policy, it turned out to be immediately concrete — the audit had put
+the evidence side by side without anyone reading it that way.
+
+Both failing light families carried **two text tiers on one tint, and
+the darker one already passed**: `--status-success-fg` was already
+`--green-deep` and `--status-error-fg` already `--red-deep`, while
+`--lifecycle-ready-fg`, `--role-reviewee-fg`,
+`--status-success-accent` and `--lifecycle-expired-fg` sat on
+`--green-strong` / `--red-strong` and failed. One surface, two text
+colours of the same hue, one passing and one failing, for no reason a
+reader could state. Repointed: **3.32 → 6.29** and **3.95 → 6.80**.
+`--status-success-border` stays on `--green-strong` — a boundary at
+1.4.11's 3:1, which it clears — by the same line that keeps
+`--decor-muted` outside the text floor. Dark was left alone: its
+mappings differ and already pass, so collapsing there would change
+appearance to fix nothing.
+
+**Light mode now has no open shortfall at all**; all four remaining
+are dark, and all four are one root cause — white on `--blue-glow`.
+That is the useful shape: what is left is a single question about the
+reserved shade, not a mixed bag. And it is *not* collapsible, which is
+the limit the policy needs stated beside it: a collapse is available
+when the palette has already produced the answer elsewhere; where it
+has not, the value has to move.
+
+**The third `spec-writer` pass**, on the accepted/open split, confirmed
+every ratio and found three things:
+
+- **A stale module docstring** the split had missed. It still said
+  "Eleven pairs still fail and are named, **not excused**" — while
+  three of them had just been excused. The block comment twenty lines
+  below it had been rewritten and the file's own opening had not.
+  *A correction reaches the paragraph it was found in and no further
+  unless someone walks it* — the second time this item has recorded
+  that, and it caught me the second time too.
+- **My size evidence was wrong for half the set.** "The ui-v2 pills
+  render at `--fs-tiny` (0.75rem, weight 500)" is true of the four
+  tint pairs and false of the button ones: `body.ui-v2 .btn` sets
+  `--fs-small` (0.875rem), and `--selected-fg` also renders on the
+  theme toggle at 0.8em and on `.skip-link` at inherited body size.
+  The conclusion held — 14px at weight 500 and 16px at weight 400 both
+  fail AA large's 18.66px bar — but the number quoted as evidence did
+  not apply to the pairs it was quoted for. *Citing one measurement
+  for a set you have not checked is how a true conclusion acquires a
+  false reason.* The collapse then removed all four pill pairs, so the
+  corrected prose covers only the buttons.
+- **Nothing asserted the accepted marking.** The panel test checked
+  the red outline only, so the whole `data-accepted-<theme>` mechanism
+  rested on one manual look in a browser — and an accepted pair losing
+  its attribute would render red, the exact failure the split exists
+  to prevent. Now tested, per theme, including that an acceptance in
+  light does not leak into dark.
+
+4 mutations on the collapse and the new marking, 4 caught. Verified in
+Chromium: light **0 open + 3 accepted**, dark **4 open + 0**.
+
+
 **Decisions confirmed at build:**
 
 - The decorative uses are outside the floor by rule, not judgment

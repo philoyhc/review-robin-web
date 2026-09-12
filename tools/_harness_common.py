@@ -124,6 +124,40 @@ ON_FILL = {
 }
 
 
+#: Pairs that fall under AA normal and are **accepted**, with the reason
+#: and the resting pair the acceptance rests on. Author's call,
+#: 2026-09-12, reviewing the panel: a control whose label is legible at
+#: rest and dips only while the pointer is on it is not worth chasing.
+#:
+#: The acceptance is conditional, and the condition is machine-checked
+#: rather than written down and trusted: each entry names the *resting*
+#: background, and `test_accepted_pairs_still_earn_their_acceptance`
+#: fails if that resting pair stops clearing AA. Darken a button's
+#: resting fill and the hover exemption dies with it, which is the point
+#: — "it's only a hover" is true exactly while the rest of the control
+#: is fine.
+#:
+#: Everything NOT here and under 4.5 is open, stays red in the panel,
+#: and is listed in `docs/known_limitations.md`. Deliberately excluded:
+#: the dark `--btn-primary-bg-hover` pair (2.54), because the control it
+#: belongs to measures **3.33 at rest** — that is not a transient dip,
+#: it is the worst point of a control already below the line.
+ACCEPTED_BELOW_AA = {
+    ("light", "--btn-alert-fg", "--btn-alert-bg-hover"): {
+        "resting_bg": "--btn-alert-bg",
+        "reason": "hover dip; the alert button's label is 7.09:1 at rest",
+    },
+    ("light", "--btn-primary-fg", "--btn-primary-bg-hover"): {
+        "resting_bg": "--btn-primary-bg",
+        "reason": "hover dip; the primary button's label is 5.17:1 at rest",
+    },
+    ("light", "--btn-destructive-fg", "--btn-destructive-bg-hover"): {
+        "resting_bg": "--btn-destructive-bg",
+        "reason": "hover dip; the destructive button's label is 4.83:1 at rest",
+    },
+}
+
+
 def resolve_semantic(sem_map, prims, token, depth=0):
     """Follow a ``var()`` chain from a semantic token to a literal hex."""
     if token in prims:

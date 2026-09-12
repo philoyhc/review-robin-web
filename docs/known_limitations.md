@@ -76,46 +76,58 @@ bugs — they trace to the Segment 14A plan and
   grip — moved to `--decor-muted` and are outside the text floor
   by rule, WCAG 1.4.3 governing text. Details in
   `spec/color_tokens.md`, "The AA floor on text".
-- **Eleven colour pairs still fall short of AA normal (4.5:1).**
-  Found by the audit that checked the fix above, all pre-existing,
-  none of them body text. `tests/unit/test_contrast_audit.py`
-  sweeps all 73 foreground/background pairs the palette forms and
-  pins these eleven at the ratios below, so none can worsen
-  unnoticed; each is a design decision for its family rather than
-  a fix, and closing any of them should delete its line here.
-
-  *White on a mid-tone accent fill* — the fill is `--blue-glow` in
-  dark, the reserved "you can act on this" shade, so moving it
-  moves `--selected-bg`, `--focus-ring` and seven more dark tokens
-  with it:
+- **Four colour pairs fall short of AA normal (4.5:1) and are
+  open**, and all four are **one root cause**: white on
+  `--blue-glow` in dark, the reserved "you can act on this" shade.
+  `tests/unit/test_contrast_audit.py` sweeps all 73
+  foreground/background pairs the palette forms and pins these at the
+  ratios below, so none can worsen unnoticed.
 
   | Ratio | Theme | Pair |
   |---|---|---|
   | **2.54** | dark | `--btn-primary-fg` on `--btn-primary-bg-hover` |
-  | **3.19** | light | `--btn-alert-fg` on `--btn-alert-bg-hover` |
   | **3.33** | dark | `--btn-primary-fg` on `--btn-primary-bg` |
   | **3.33** | dark | `--selected-fg` on `--selected-bg` |
   | **3.33** | dark | `--text-on-accent` on `--btn-primary-bg` |
-  | **3.68** | light | `--btn-primary-fg` on `--btn-primary-bg-hover` |
 
-  *Saturated text on its own pale tint* — two shared values, five
-  pairs; deepening the text or paling the tint is one decision
-  across every status family at once:
+  The 2.54 is a hover state but not a transient dip: the same control
+  measures **3.33 at rest**, so it is the worst point of a button
+  already below the line. Closing this means moving `--blue-glow`,
+  which `--selected-bg`, `--focus-ring` and seven more dark tokens
+  resolve to, or taking the foreground off white — a decision about
+  the reserved shade rather than four separate fixes.
 
-  | Ratio | Theme | Pair |
+  **None is large text**, so AA large's 3:1 is not their line:
+  `body.ui-v2 .btn` sets `--fs-small` (0.875rem, weight 500), and
+  `--selected-fg` renders on chips at `--fs-tiny`, on the theme
+  toggle at 0.8em and on `.skip-link` at inherited body size. AA
+  large wants 18.66px, or 14pt bold.
+
+- **Four more were open until 2026-09-12 and were closed by
+  collapsing a tier**, not by moving a value: the light lifecycle,
+  role and status greens took `--green-deep` (3.32 → 6.29) and the
+  expired red took `--red-deep` (3.95 → 6.80), both of which the same
+  tints already used for text elsewhere. See "Collapsing a tier" in
+  `spec/color_tokens.md`.
+
+- **Three further pairs are under AA and accepted** (author,
+  2026-09-12, reviewing the panel). Each is a button label dipping
+  **only while the pointer is on it**, where the control is
+  comfortably legible at rest — not worth chasing:
+
+  | Hover | At rest | Control |
   |---|---|---|
-  | **3.32** | light | `--lifecycle-ready-fg` on `--lifecycle-ready-bg` |
-  | **3.32** | light | `--role-reviewee-fg` on `--role-reviewee-bg` |
-  | **3.32** | light | `--status-success-accent` on `--status-success-bg` |
-  | **3.95** | light | `--btn-destructive-fg` on `--btn-destructive-bg-hover` |
-  | **3.95** | light | `--lifecycle-expired-fg` on `--lifecycle-expired-bg` |
+  | 3.19 | **7.09** | alert button, light |
+  | 3.68 | **5.17** | primary button, light |
+  | 3.95 | **4.83** | destructive button, light |
 
-  All eleven clear AA *large* (3:1) except the first, and all are
-  button labels, pill text or selected states rather than prose.
-  To inspect them rather than read them, open
-  `tools/theme_customizer.html` — its Contrast panel lists all 73
-  pairs with the sub-AA ones outlined in red, per theme, and
-  recomputes live as tokens are remapped.
+  The acceptance is conditional and the condition is checked, not
+  trusted: each entry names the resting pair it rests on, and the
+  suite fails if that pair stops clearing AA. Darken a button's
+  resting fill and the hover exemption dies with it. They stay
+  visible in the customizer's Contrast panel, marked with a dashed
+  edge rather than red — a panel that stops showing what it has
+  excused is how an excuse outlives its reason.
 - **What the sweep cannot see.** A pair is found only where one
   rule sets both halves, the token names match (`--x-fg` /
   `--x-bg`), the background is a `--surface-*`, or the foreground
