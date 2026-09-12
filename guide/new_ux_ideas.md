@@ -119,15 +119,57 @@ one. Worth keeping those separable if it is ever taken up.
 
 ### A constraint the author has set — 2026-09-12
 
-**If this is ever built, the UX must display which roster is selected and
-being worked on, unmistakably, at every moment.** Set in response to the
-objection above.
+**If this is ever built, any edit or delete mechanism must make it very
+clear — *visually* — which roster is being affected.** Set in response to
+the objection above, and sharpened by the author on 2026-09-12: **the
+point is not copy that names the selected roster. It is a visual state
+that marks the selected row out.**
+
+That distinction is the whole of this section, so it is worth stating
+once, flatly. **Copy is read if it is read.** Visual state is not read at
+all — it is seen, before the operator has decided to attend to anything,
+and it is still doing its work for someone moving fast enough not to
+finish the sentence. The operator this constraint protects is precisely
+the one going too fast to read, so a safeguard that only works on the
+careful reader answers a different problem.
+
+Copy and visual state are therefore **complementary and not substitutes**,
+and they act at different moments: the confirm sentence catches you *at*
+the irreversible click, the visual marking tells you *the whole time*
+which roster you are inside. An earlier draft of this section conflated
+them and argued the case almost entirely on copy. That was a mistake and
+is corrected below.
 
 It is worth being precise about which half of that objection this
 answers. Codex's warning has two halves: a shared *implementation* can
 hide that reviewees are not reviewers, and a shared *page* can hide it
 from the operator. This constraint governs the second. The first is still
 open, and is why the presentation/services split above matters.
+
+**Nothing in the app does this today** — checked at `496cc183`, not
+assumed, and confirmed by the author: *the lobby does not, beyond the
+check box.* The expander tints its own injected panel
+(`background: var(--surface-muted)` on the panel's `<td>`) and applies
+**no class whatever to the source row**; the only `classList.add`
+anywhere in that script targets an options element.
+
+So the lobby's entire row-level selection signal is **the checkbox's own
+checked state** — a ~13px mark at the left edge of a full-width row, with
+no fill, border, weight or rule distinguishing the row from its
+neighbours. That is enough for the lobby, where the action panel names a
+count and the operator is choosing among like things. It is the wrong
+strength for a page where the four choices are *unlike* things, one of
+the actions is Clear all, and the row can sit above a tall panel or
+scroll off entirely.
+
+A selected-row visual state is therefore **new work, not reuse of an
+existing primitive** — and the honest reading is that the lobby is a
+precedent for the *fan-out*, and an example of the gap for the *marking*.
+
+The author's view is that the lobby's own marking wants improving too,
+**separately** — recorded as entry 2 below rather than folded in here,
+because it stands on its own and this entry should not acquire a
+dependency it does not need.
 
 **The reason it is load-bearing rather than a nicety.** Today, "which
 roster am I acting on" is answered by ambient context nobody had to
@@ -142,23 +184,92 @@ structure puts two of them inside the expandable row: **Clear all**, and
 **Upload CSV** where it replaces. Those are the actions where getting the
 roster wrong is unrecoverable or expensive.
 
-The guarding checkboxes the proposal already names gate *intent* — "yes,
-I mean to delete these rows". They do not gate *target*. A checkbox
-reading *"I understand this removes every row"* reads identically
-whichever roster happens to be expanded, so on a consolidated page the
-guard stops being a guard against the error that page newly makes
-possible. **So the implication is that a guard must name its roster**,
-not merely its action: the confirm text, the button label, and the Danger
-Zone heading all have to carry the roster's name. That is a stronger
-requirement than the four pages have today, precisely because today the
-page supplies it.
+~~The guarding checkboxes gate *intent* and not *target*, so a guard must
+be made to name its roster — a stronger requirement than the four pages
+have today.~~ **Wrong, and corrected 2026-09-12 by reading the
+templates rather than imagining them.** The guards already name their
+roster, on every one of the four pages:
 
-Not a design here, deliberately. Candidate mechanisms — a persistent
-header stating the selected roster, the expanded row visually owning the
-page, the roster name interpolated into every destructive control — are
-for whoever takes this up. The constraint is that **the answer must be
-visible without scrolling and present in the confirm step**, and a design
-that satisfies it only while the row is on screen does not satisfy it.
+| | today's confirm | today's button |
+|---|---|---|
+| Reviewers | *Yes, delete the existing **N reviewers*** | **Delete all reviewers** |
+| Reviewees | *… **N reviewees*** | **Delete all reviewees** |
+| Relationships | *… **N relationships*** | **Delete all relationships** |
+| Observers | *… **N observers*** | **Delete all observers** |
+
+The count sits in a pill inside the sentence, and the template comment
+says so in as many words — *"The sentence names what goes"* (Segment 19I
+Item 3, modelled on the Instruments page). The Upload card's replace
+carries its own *"replaces the whole roster"* wording.
+
+So the requirement is **not stronger than today — it is exactly today's,
+and the job is to carry it across rather than invent it.** The error was
+reasoning from an invented checkbox (*"I understand this removes every
+row"*) instead of opening the file, which is the failure this repository
+keeps recording against itself.
+
+**And the author's objection to the framing holds.** The four pages are
+already similar enough to mislead a careless operator, so consolidation
+is not a step change in that risk — the ambient signal I called "free"
+is weaker than I claimed, because what actually distinguishes the pages
+at the dangerous moment is the *roster-naming copy*, and that copy is
+per-control rather than per-page. It travels with the control. Which is
+why it survives consolidation intact.
+
+What consolidation genuinely removes is narrower than I first wrote: the
+**nav highlight, breadcrumb, URL and page heading**. Those orient an
+operator *before* they act; the confirm copy protects them *as* they act,
+and only the first group is lost. That is a real but much smaller claim.
+
+### A candidate mechanism — the lobby's row expander
+
+**Proposed by the author, 2026-09-12:** take a leaf from the session
+lobby. *Select to edit* fans the selected row out — a panel below it
+carrying the edit / delete / upload-to-replace affordances — in a visual
+state where the relevant roster row is clearly marked out.
+
+**What the lobby actually does**, read at `496cc183` rather than recalled:
+
+- A `<template id="single-session-expander">` is cloned and injected as a
+  full-width `<tr class="session-expander">` **below the selected row**,
+  `colspan` across the table.
+- The injected `<td>` takes `background: var(--surface-muted)` — a
+  distinct fill is the whole of its visual separation.
+- It carries a `session-expander-title`, and a bulk variant reading
+  *"N sessions selected"*.
+
+Two things about it matter here, and both cut against copying it
+literally.
+
+**1. The lobby never names the row it is acting on.** Its single-select
+title reads *"**1** session selected"*, and the template comment gives
+the reason: *"the session name already shows in the Name box below, so
+the single-select header just reads '1 session selected'."* Identity
+arrives as a side effect of an **editable field** that happens to hold
+it.
+
+A roster has no such field. *Reviewers* is not a name you edit in the
+panel; it is the row's fixed identity. Copy the lobby exactly and you get
+a panel headed *"1 roster selected"* with nothing anywhere saying
+**which** — the one page where that is least affordable, since the panel
+holds Clear all and replacing Upload. **So the author's addition — mark
+the roster row out clearly — is not a garnish on the lobby pattern; it is
+the part the lobby did not need and this page does.**
+
+**2. The lobby's expander is a placeholder.** Its own comment: *"the
+action buttons are disabled; only the selection-management buttons are
+wired."* So the precedent is a **shape that has been agreed, not an
+interaction that has been proven in use**. Worth knowing before it is
+cited as a solved problem — and a reason the Rosters version would want
+its own look at whether a `--surface-muted` fill alone reads as "this
+panel belongs to *that* row" once the panel is tall.
+
+**What the mechanism has going for it**, stated plainly: it keeps target
+and action adjacent — the affordances are literally attached to the row
+they act on, which is a stronger spatial claim than a heading elsewhere
+on the page — and it reuses a pattern the operator will already have met
+in the lobby, which is the same argument the consolidation itself rests
+on.
 
 ### Open questions
 
@@ -203,14 +314,68 @@ Not answered here; recorded so they are not rediscovered.
 - The deep-link contract has an answer, because Validate's fix links are
   a shipped affordance and breaking them silently would be worse than
   the duplication.
-- The selected-roster constraint above has a design that holds **at the
-  confirm step of a destructive action**, not merely while the expanded
-  row is on screen. This one is a gate rather than a preference: four
-  pages get target-clarity free, and a consolidation that does not buy it
-  back has made the app easier to get wrong in exchange for making the
-  source shorter.
+- The selected-roster constraint above has a design that holds **while
+  the panel is open and the source row may be scrolled away**, and the
+  existing roster-naming confirm copy is carried across unchanged. A gate
+  rather than a preference — though a narrower one than first written:
+  the confirm copy already names its roster today and travels with the
+  control, so what needs designing is the *orientation* signal the nav,
+  breadcrumb and heading currently supply, not the *confirmation* signal,
+  which survives on its own.
 
 ---
 
-*Further ideas go below as `## 2.`, `## 3.`, … each with the same shape:
-the idea as put, what it rests on, the case against, open questions.*
+## 2. The lobby's selected row is marked only by its checkbox
+
+**Raised by the author, 2026-09-12**, while discussing entry 1, and
+**explicitly separable from it**: this stands whether or not the Rosters
+consolidation ever happens, and entry 1 should not wait on it.
+
+### The observation
+
+On the sessions lobby, selecting a row injects an action panel beneath it
+— and the only thing distinguishing the *selected row itself* from its
+neighbours is that its checkbox is ticked. Verified at `496cc183`: the
+panel's `<td>` takes `background: var(--surface-muted)`, and no class is
+applied to the source `<tr>` at any point.
+
+### Why it is worth improving
+
+A ticked checkbox is a small mark at one edge of a full-width row. It is
+adequate while the panel sits directly beneath it and the operator has
+just clicked. It degrades in exactly the conditions the lobby invites:
+
+- **bulk selection**, where several rows are selected and the panel
+  states only a count, so *which* rows are in that count is carried
+  entirely by scattered checkbox states;
+- **a tall panel**, which pushes the source row toward or past the top of
+  the viewport;
+- **returning to the page**, where selection may be restored without the
+  click that created it.
+
+The panel's actions include **Purge and archive** and **Delete** — the
+Delete button ships disabled today, and the expander is a placeholder,
+but the intended action set is destructive, and target-clarity matters
+most where the action is irreversible.
+
+### What this is not
+
+Not a proposal for a mechanism, and not an argument that the lobby is
+currently unsafe — its destructive buttons are not wired. It records that
+**the row-marking is the weakest link in a pattern the app is likely to
+reuse**, which is the reason to fix it before it is copied rather than
+after.
+
+### Relationship to entry 1
+
+If both are ever done, this one is the **cheaper and lower-risk** of the
+two and could land first: it improves a shipped page in place, needs no
+route or service change, and would give entry 1 the primitive it
+otherwise has to invent. That is an argument for sequence, not for
+bundling — entry 1 remains gated on pilot evidence, and this one is not.
+
+---
+
+*Further ideas go below as `## 3.`, `## 4.`, … each with the same shape:
+the idea as put, what it rests on, the case against, open questions.
+Entries are independent unless one says otherwise.*
