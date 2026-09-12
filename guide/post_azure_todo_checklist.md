@@ -194,7 +194,7 @@ row plus a dated line in its `### Status`.
 **Status:** open. Blocked on a deploy — the **dev slot is enough**; this
 does not wait for the institutional cutover.
 
-**Moved here whole from `guide/segment_19K_assessment_moves.md` Item 9
+**Moved here whole from `guide/archive/segment_19K_assessment_moves.md` Item 9
 on 2026-09-12**, so that Segment 19K no longer waits on a header. The
 item was opened alongside 19K.6–8 as "unblocked work while Azure is
 outstanding", and that framing was two-thirds right: it is unblocked by
