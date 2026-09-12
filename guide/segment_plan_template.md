@@ -82,8 +82,9 @@ Each rung: what it lands, and what it must not touch. Strike dropped rungs; do n
 
 <!-- One bullet per file. Backticked path, dash, what changes, (Item n) tag if
 applicable. A spec/ or docs/ path counts anywhere in the bullet; a root-level
-document (constitution.md, CLAUDE.md) or a bare shorthand filename counts only
-before the dash. Waive with <!-- doc-impact-waived: reason --> on the same line
+document (constitution.md, CLAUDE.md), a bare shorthand filename, or a path
+under app/, tests/, tools/, alembic/, .github/ or .claude/ counts only before
+the dash. A guide/ path is counted and listed but never verified (NOTED). Waive with <!-- doc-impact-waived: reason --> on the same line
 rather than deleting. If a bullet CITES a path rather than committing to it —
 naming the target of a pointer it is editing — mark it
 <!-- cites: spec/x.md --> (comma-separated for several) rather than dropping the

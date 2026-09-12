@@ -92,6 +92,39 @@ GUIDE_PATH = re.compile(r"`(guide/[A-Za-z0-9._/-]+\.md)[^`]*`")
 # of them real commitments no previous run could see.
 COMMITTED_BARE = re.compile(r"`([A-Za-z0-9._-]+\.md)[^`]*`")
 
+# A commitment to a path outside `spec/` and `docs/` — `tools/README.md`,
+# `.claude/skills/segment-plan/SKILL.md`, a workflow, a package. Matched in
+# the **leading position only**, exactly as bare root-level names are
+# (19G.4), and for the same reason, measured rather than assumed.
+#
+# Of the 16 such paths across every live and archived plan (2026-09-11),
+# only **3 sit in the leading position**. The other 13 are *citations*: the
+# bullet commits to a `spec/` file and names a code path as the content of
+# the edit — "name the `app/services/assignments/` package, not the retired
+# module path", "one sentence, new routing modules must be registered in
+# `app/web/spec_registry.py`". Matching anywhere would convert all 13 into
+# commitments the author never made, and one of them
+# (`tests/integration/test_extracts_round_trip.py`) no longer exists, so C2
+# would fail an archived plan that did nothing wrong.
+#
+# The root list is explicit rather than "any path that resolves on disk",
+# which is how bare names work: resolution-on-disk would make a *deleted*
+# path silently stop being a commitment, which is precisely what C2 exists
+# to catch.
+# At least one character after the root's slash. A bare `` `tools/` `` is a
+# folder named in prose — "the `tools/` and `.claude/` paths the regex never
+# matched" — not a path, and `*` matched four of those across the archive.
+# Harmless while they all sat after the dash, and a commitment to an entire
+# top-level directory the first time one led a bullet. A trailing-slash
+# *path* still matches: `.github/workflows/` has `workflows/` after the root.
+#
+# Found because the published count (16 paths, 3 leading, 13 citations) did
+# not reproduce against the shipped regex, which gave 20/3/17. The prose was
+# right and the code was wrong — the four extra were these.
+COMMITTED_ROOT = re.compile(
+    r"`((?:app|tests|tools|alembic|\.github|\.claude)/[A-Za-z0-9._/-]+)[^`]*`"
+)
+
 # The em-dash (or en-dash) that ends a manifest bullet's path list.
 BULLET_HEAD = re.compile(r"\s[\u2014\u2013]\s")
 
@@ -245,10 +278,18 @@ def find_manifests(text: str) -> dict[str, object]:
 def _all_paths(bullet: dict) -> list[str]:
     """Every path the bullet names, before `cites:` removes any."""
     head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
+    # `COMMITTED_ROOT` over the **whole** text, not the head, even though
+    # only the head makes a commitment. This function answers "does the
+    # bullet name this path at all", which is C7's question, and the 13
+    # after-dash citations are precisely the ones an author would mark
+    # `cites:`. Head-only here would fail C7 on every correct use of the
+    # escape for a root path — the escape unusable exactly where it is
+    # needed.
     return [
         resolve_committed(raw)
         for raw in COMMITTED_PATH.findall(bullet["text"])
         + COMMITTED_BARE.findall(head)
+        + COMMITTED_ROOT.findall(bullet["text"])
     ] + GUIDE_PATH.findall(bullet["text"])
 
 
@@ -276,7 +317,9 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
         bullet["cites"] = cited
         seen: list[str] = []
         head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
-        for raw in COMMITTED_PATH.findall(bullet["text"]) + COMMITTED_BARE.findall(head):
+        for raw in (COMMITTED_PATH.findall(bullet["text"])
+                    + COMMITTED_BARE.findall(head)
+                    + COMMITTED_ROOT.findall(head)):
             path = resolve_committed(raw)
             if path not in seen and path not in cited:
                 seen.append(path)
@@ -566,7 +609,11 @@ def check_manifest(
     for entry in committed:
         if "archive/" in entry["path"]:
             c2.append(f"{entry['path']} is archived (line {entry['line']})")
-        elif not (_shared.REPO / entry["path"]).is_file():
+        # `exists`, not `is_file`: a manifest legitimately commits to a
+        # directory — `.github/workflows/` in 18Q, `app/services/assignments/`
+        # in 19C — and `is_file` called every one of them missing. Invisible
+        # until 19K.5 made such paths commitments in the first place.
+        elif not (_shared.REPO / entry["path"]).exists():
             c2.append(f"{entry['path']} does not exist (line {entry['line']})")
     checks.append({
         "id": "C2", "what": "committed paths exist and are live",
@@ -583,7 +630,7 @@ def check_manifest(
         })
     else:
         for entry in committed:
-            if entry["waived"] or not (_shared.REPO / entry["path"]).is_file():
+            if entry["waived"] or not (_shared.REPO / entry["path"]).exists():
                 continue
             checked += 1
             entry_start = entry["start"] or start
