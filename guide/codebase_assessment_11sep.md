@@ -28,6 +28,14 @@ this snapshot: on 2026-09-10 a roster page had no pager at all, and on
 > stale SHA silently decouples the numbers from the tree; the prose sections
 > 19K settled are struck and annotated rather than rewritten. Everything
 > below the amendment markers is as first written on 2026-09-11.
+>
+> The amendment was checked before it landed, and the check earned its keep:
+> it caught `_core.py` called "the fifth file over 1,000" when five were
+> already over it (fifth-*largest*, sixth over the line — two counts wearing
+> one word), a "+46 lines in `_core.py`" that omitted `monitoring.py`'s +21
+> and so left a third of the +69 unfindable, a blockquote spliced through the
+> middle of a sentence, and — asked whether §7 was "still coherent" — a floor
+> whose Templates upper bound had not added up since the 10sep snapshot.
 
 **Numbers first taken at `7f4b3d42`** on `main`: 27 merge commits, 42 non-merge
 commits, 2026-09-10 → 2026-09-11 (2 calendar days). **Re-taken at `ba7b37e7`
@@ -149,8 +157,13 @@ why: 19K was almost entirely a *tooling and documentation* segment. `tooling`
 level, and commit beyond `spec/` and `docs/`; `docs` +5,938 is the segment
 plan, the status rows and the practice-audit passages recording what the
 checker does and does not verify. The only production change of substance is
-19K.3's response prefetch — **+46 lines in `app/services/responses/_core.py`**,
-which took the two operator pages from 40,433 and 80,432 queries to 434 each.
+19K.3's response prefetch, and it lands across **three** files that reconcile
+the +69 exactly: **+46 in `app/services/responses/_core.py`** (the new
+`responses_by_assignment` and the reviewer-side rollup), **+21 in
+`app/services/monitoring.py`** (both loop owners calling it, and
+`_assignment_complete`'s signature), and **+2** in the package's `__init__`.
+Together they took the two operator pages from 40,433 and 80,432 queries to
+**434 each**.
 That is the window's whole shape: **a segment can move the codebase's
 behaviour a great deal without moving its size at all**, and the size table
 alone would report this window as nearly idle.
@@ -182,13 +195,16 @@ reason since the prior snapshot; **0 xfail**.
 | 1,000 | `app/services/csv_imports.py` | unchanged |
 | 984 | `app/web/routes_operator/_quick_setup.py` | unchanged |
 | 978 | `app/services/audit.py` | unchanged |
-| 974 → **1,020** | `app/services/responses/_core.py` | **+46** at `ba7b37e7` (19K.3's prefetch) — now fifth, and the fifth file over 1,000 |
+| 974 → **1,020** | `app/services/responses/_core.py` | **+46** at `ba7b37e7` (19K.3's prefetch) — now fifth-largest, and the **sixth** file over 1,000 |
 | 964 | `app/services/instruments/_response_fields.py` | unchanged |
 
 The shape is a **plateau, not a long tail**: ten files between 964 and 1,264,
 and the top three are flat for a **sixth consecutive window** — and a
-**seventh**, at `ba7b37e7`, where the only mover is `_core.py` crossing 1,000
-to become the fifth file over that line. The one mover is
+**seventh**, at `ba7b37e7`, where the only mover is `_core.py` crossing 1,000.
+It becomes the **fifth-largest** production file and the **sixth** over that
+line: `app/web/views/_instruments.py` was already there at 1,009, and this
+amendment first said "fifth" for both, which is two different counts wearing
+one word. The one mover is
 `_operations.py` (+102, paging Invitations and Responses), which crosses 1,000
 and joins the plateau rather than standing out of it. §9 carries the watchlist.
 
@@ -485,7 +501,7 @@ table.
 | Blob storage (18Q) seam + first consumers | +400–700 | +50–150 | institutional storage account |
 | Operator theming (Stretch) | +150–300 | +100–200 | customizer editor core (shipped) |
 | Technical-support contact (global) | +30–60 | +20–50 | nothing (unblocked) |
-| **Projected floor** | **61,066–62,346** | **25,811–26,441** | |
+| **Projected floor** | **61,066–62,346** | **25,811–26,541** | |
 
 **Reconciliation.** The 10sep snapshot stopped projecting a total and started
 stating a **floor** — the named work and nothing else — after 19J.2 measured
@@ -512,6 +528,16 @@ rebuilt a table control and 19K rebuilt a checker. **What the floor measures
 is how much of the work happens to be production code**, which is not a
 property of the plan and cannot be forecast from one.
 
+**An arithmetic error corrected in the 2026-09-12 amendment, and it was not
+19K's.** The Templates upper bound read **26,441**; the column's own ranges
+sum to +1,400, and 25,141 + 1,400 is **26,541**. The lower bound was right, so
+the slip survived every eye that checked the row's left-hand side. It predates
+this window — carried from the 10sep snapshot — and is corrected here rather
+than silently, because a floor is an argument about arithmetic and a floor
+that does not add up is worth less than no floor. Found by a checker asked
+whether §7 was still coherent after being told it had been left alone; *the
+sections nobody re-derives are the ones that keep an error.*
+
 Excludes anything past v1.
 
 ## 8. Bottom line
@@ -523,15 +549,14 @@ consecutive window and the test ratio up to 1.73×.
 
 > **Amended 2026-09-12.** Segment 19K took all three moves below plus two
 > more, closing five items in a day for **+69 production LOC** — the whole
-> segment was a checker and its documentation, apart from 19K.3's 46-line
-> prefetch. The live thread named below is unchanged: **no segment is in
-> flight**, and the three plans still in `guide/` are all blocked on
-> provisioning or an undecided product question. The natural next move is a
-> fresh snapshot rather than a further amendment to this one — three of §5's
-> weaknesses are now struck, which is the point at which a document stops
-> describing the tree it was taken from. Segment 19J closed complete
-at ten items — three it opened for, seven that its own findings produced — and
-the archive is `guide/archive/segment_19J_assessment_moves.md`. The one live
+> segment was a checker and its documentation, apart from 19K.3's 69-line
+> prefetch across three service files. The live thread named below is
+> unchanged. The natural next move is a fresh snapshot rather than a further
+> amendment to this one — three of §5's weaknesses are now struck, which is
+> the point at which a document stops describing the tree it was taken from.
+
+Segment 19J closed complete at ten items — three it opened for, seven that its
+own findings produced — and the archive is `guide/archive/segment_19J_assessment_moves.md`. The one live
 thread is that **no segment is in flight**: `todo_master.md` marks none live,
 and the three plans still in `guide/` — `segment_14B_email_infrastructure.md`,
 `segment_18Q_blob.md`, `segment_20_operator_polish_and_documentation.md` — are
