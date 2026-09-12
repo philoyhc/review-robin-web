@@ -1346,3 +1346,448 @@ measurements that rejected them.
 - `guide/segment_plan_template.md` — the same two-clause description,
   in the comment a new plan is copied from (Item 5).
 - `docs/status.md` — row when the item closes (Item 5).
+
+---
+
+## Item 6 — a specificity collision in `base.html` is invisible until a value changes
+
+### Opportunity
+
+`app/web/templates/base.html` is 4,732 lines and owns the inline CSS for
+the entire app — deliberately, per `CLAUDE.md` and `spec/architecture.md`:
+no stylesheet, no build step. That choice has held, and this item does
+not propose reversing it.
+
+What it costs is recorded in the 11sep assessment's §5 as **the single
+largest structural risk**, and the evidence is a defect rather than a
+worry. During 19J.9 the rule `body.ui-v2 .table-pager-step` was **dead
+for two rungs**: it and `body.ui-v2 .btn-icon` are both specificity
+(0,2,1), so source order decided, and `.btn-icon` sits later. Nobody
+could see it, because the loser's declarations happened to match what the
+winner already set. It surfaced only when someone asked for a bigger
+glyph and the glyph did not change.
+
+Measured 2026-09-12 at `40a0b663`:
+
+| What | Count | Command |
+|---|---:|---|
+| Lines in `base.html` | 4,732 | `wc -l` |
+| Rule selectors | 618 | `grep -c '^\s*[.#a-z][^{]*{'` |
+| …carrying `body.ui-v2` | 410 | `grep -c 'body\.ui-v2'` |
+| Existing tests over its tokens | 2 | `test_reserved_shade.py`, `test_participant_tokens.py` |
+
+**Two-thirds of the rules live in one `body.ui-v2` layer**, which is
+exactly the condition that makes ties common: a `body.ui-v2 .a` and a
+`body.ui-v2 .b` tie at (0,2,1), and any element carrying both classes
+resolves by source order alone.
+
+### Decision
+
+**Make ties visible rather than remove them.** A test that resolves the
+canonical roles against the real cascade — rendering a page and reading
+*computed* style, not matching source text — and fails when a role's
+declared property is not the one that wins.
+
+Scope it to what `spec/ui_elements.md` already names canonical: the
+`.btn` roles (§6) and the layout primitives (§10). Those are the
+selectors the repo has committed to keeping stable, so a tie involving
+one of them is a defect by definition; a tie between two ad-hoc classes
+may be intentional.
+
+**Rejected: extracting a stylesheet.** The architecture forbids it in
+terms, and the 19J.9 bug is not an argument against inline CSS — the same
+tie resolves the same way in a stylesheet. Moving 4,732 lines to change
+nothing about the cascade would be a large diff bought with no defect
+removed.
+
+**Rejected: a source-order lint.** "`body.ui-v2 .btn-icon` must precede
+`body.ui-v2 .table-pager-step`" encodes today's answer, not the rule,
+and a reader who changes the order correctly would have to change the
+test to match — a check that has to be edited whenever the thing it
+checks changes is not a check.
+
+**Rejected: raising specificity on the canonical roles.** It works
+(19J.9 fixed its own case with `body.ui-v2 .btn-icon.table-pager-step`)
+and it scales badly: each rescue raises the bar the next rule has to
+clear, and nothing records why the number is what it is.
+
+### Semantics
+
+- **The test reads computed style**, so it measures the cascade rather
+  than the text of a rule. A source-matching test cannot see this class
+  of defect at all, which is why `test_reserved_shade.py` — which does
+  match source — did not catch 19J.9's.
+- **A tie is a failure only where a canonical role loses.** Two
+  non-canonical classes tying is out of scope and must stay passing, or
+  the check becomes noise the first week.
+- **Both themes.** The tokens differ between light and dark
+  (`:root` vs the dark block), so a role resolved in one is not resolved
+  in the other.
+- **It runs in the agent container**, with the browser already used for
+  19J's measurements and 19K.2's late-chip check.
+
+### Judgment calls — decided
+
+- **2026-09-12 — `base.html` does not go on §9's watchlist.** It is a
+  template, not a production module, and the split its size would
+  otherwise imply is precisely the one the architecture forbids. The
+  risk is real and the remedy is not a split, which is why this item
+  exists instead.
+
+### Blast radius (measured)
+
+Taken 2026-09-12 at `40a0b663`. See the table above; additionally:
+
+| What | Count | Command |
+|---|---:|---|
+| Canonical `.btn` roles in `spec/ui_elements.md` §6 | to be enumerated at rung 1 | read the spec |
+| Templates extending `base.html` | to be counted at rung 1 | `grep -rl 'extends "base.html"' app/web/templates` |
+| Pages a render-based test must visit | ≤ the number of canonical roles | one page per role, not one per page |
+
+### PR ladder
+
+1. **Resolve the canonical roles against the real cascade**, in both
+   themes, and fail on a tie a canonical role loses. Mutation: restore
+   19J.9's collision and watch it fail. *Must not* change any rule in
+   `base.html` — if the check finds a live collision, that is a finding
+   for `## Status` and a second rung, not a silent fix inside the rung
+   that added the check.
+
+### Definition of done
+
+- A canonical role whose declared value loses to a same-specificity
+  rule fails a test, in both themes.
+- 19J.9's collision, reintroduced, fails it — asserted, not assumed.
+- Two non-canonical classes tying does **not** fail it.
+- Any live collision the check finds is recorded in `## Status`, fixed
+  or waived with a reason, and not folded into rung 1.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `spec-writer` run **before** pushing (the order adopted at 19K.3).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.6` exits 0; any warning adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether a live collision exists today.** Unknown until the check
+  runs, and the answer changes the item's size. Rung 1 finds out; the
+  ladder above says what happens either way.
+
+### Out of scope
+
+- **Splitting `base.html`.** See Decision.
+- **The `.btn` vocabulary itself**, settled at 19B and 19J.7.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §6 records that the canonical roles are
+  resolved against the cascade by a test, and what a tie means (Item 6).
+- `docs/practice-audit-2026-09-04.md` — the inventory of automated
+  checks gains the row (Item 6).
+- `docs/status.md` — row when the item closes (Item 6).
+
+---
+
+## Item 7 — the muted-text contrast failure, and the entry that records it
+
+### Opportunity
+
+`docs/known_limitations.md` §Accessibility says:
+
+> The `--text-muted` colour token fails WCAG AA contrast and is still
+> used on operator chrome / breadcrumbs; flagged for a later pass.
+
+**There is no `--text-muted` token.** `grep -c 'var(--text-muted)'`
+across `app/web/templates/` returns **0**. The entry names something
+that does not exist, which is the more interesting half of this item:
+the one live user-facing fault in `known_limitations.md` has been
+recorded for months against a token nobody can find.
+
+Computed 2026-09-12 at `40a0b663` — WCAG 2.1 relative luminance over the
+real token values in `base.html`:
+
+| Token | Value | On | Ratio | AA normal | AA large |
+|---|---|---|---:|---|---|
+| `--text-subtle` | `#6b7280` | `--white` | **4.83** | pass | pass |
+| `--text-subtle` | `#6b7280` | `--surface-muted` `#f5f5f7` | **4.44** | **fail** | pass |
+| `--text-dim` | `#9ca3af` | `--white` | **2.54** | **fail** | **fail** |
+| `--text-dim` | `#9ca3af` | `--surface-muted` | **2.33** | **fail** | **fail** |
+
+Dark mode is better and not clean: `--text-subtle` (`#a9b4c6`) is
+6.71–8.83 everywhere, and `--text-dim` (`#6f7b8e`) is **3.28–4.31** —
+fails AA normal, passes AA large.
+
+So the real finding is **two** failures of different severity, neither
+described by the entry:
+
+- **`--text-dim` in light mode is the serious one** — 2.33–2.54 is not
+  marginal, it is roughly half the required ratio.
+- **`--text-subtle` fails by 0.06** on the muted surface only, and
+  passes on white. A different kind of problem, and possibly a
+  different answer.
+
+Usage, measured: **21 `color:` uses** of `--text-dim` across
+`app/web/templates/`, plus **6 decorative uses** (a 3px divider, a
+striped pattern, a border) where WCAG imposes no text requirement at
+all. `--text-subtle` is used 34 times in `base.html`.
+
+### Decision
+
+**Fix the token values, not the call sites, and separate the two
+failures.** A value change reaches every one of the 21 call sites at
+once; editing call sites would leave the token failing and make the next
+use of it fail again.
+
+**The decorative uses are excluded, by rule and not by judgment.** WCAG
+1.4.3 applies to text; a 3px divider and a striped background are not
+text. Those 6 stay as they are, and the item says so where it changes
+the rest, or the next reader will "fix" them and lighten a divider for
+no reason.
+
+**Rejected: waiting for the deployment.** Nothing here needs Azure. It
+is in `known_limitations.md` under a heading that is otherwise entirely
+infrastructure constraints, which is probably why it has sat: it
+inherited the blocked-ness of its neighbours without sharing it.
+
+**Rejected: a blanket darkening of both tokens.** `--text-subtle` passes
+on white and misses by 0.06 on one surface; treating it identically to a
+token at 2.33 would change the app's whole muted register to fix a
+rounding error. The two get separate answers.
+
+### Semantics
+
+- **The threshold is AA normal (4.5:1)** for text under 18.66px or not
+  bold, AA large (3:1) above it. Several `--text-dim` uses are on
+  `--fs-tiny` (0.75rem), so the stricter bar applies.
+- **Both themes are in scope**; the dark values are separate tokens and
+  `--text-dim` fails AA normal there too.
+- **A token change is a visual change everywhere it is used**, so this
+  is one of the changes `CLAUDE.md` says must be verified on the Azure
+  dev slot rather than claimed from the suite.
+- **`known_limitations.md`'s entry is rewritten to name what is true**
+  — which tokens, which ratios, which surfaces, and that the decorative
+  uses are deliberately untouched.
+
+### Judgment calls — decided
+
+- **2026-09-12 — the entry is corrected rather than struck.** It
+  records a real fault under a wrong name; deleting it would lose the
+  fault, and striking it would imply the fault went away.
+
+### Blast radius (measured)
+
+Taken 2026-09-12 at `40a0b663`.
+
+| What | Count | Command |
+|---|---:|---|
+| `color:` uses of `--text-dim` | **21** | `grep -rn 'color: var(--text-dim)' app/web/templates/` |
+| Decorative uses of `--text-dim` (out of scope) | **6** | `grep -rn 'background: var(--text-dim)\|var(--text-dim) [0-9]'` |
+| Uses of `--text-subtle` in `base.html` | **34** | `grep -c` |
+| Templates outside `base.html` using `--text-dim` | 2 | `instruments_index.html`, `session_observers.html` |
+| Existing token tests | 2 | `test_reserved_shade.py`, `test_participant_tokens.py` |
+
+### PR ladder
+
+1. **New values for the two tokens, in both themes, with the contrast
+   arithmetic in the test.** A test that computes the ratio from the
+   token values rather than asserting a hex, so the next value change
+   is checked rather than trusted. `known_limitations.md` rewritten in
+   the same PR — the entry is the reason the item exists.
+
+### Definition of done
+
+- Every `color:` use of `--text-dim` and `--text-subtle` meets AA for
+  the size it is rendered at, in both themes, computed by a test from
+  the token values.
+- The 6 decorative uses are unchanged, and the reason is written down.
+- `docs/known_limitations.md` names the real tokens, the real ratios,
+  and what was done.
+- Flagged in the PR as **UI-visible and verified on the dev slot after
+  deploy, not in the container** (`CLAUDE.md`, "Where work runs").
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `spec-writer` run **before** pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.7` exits 0; any warning adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **The replacement values.** Author decides at rung 1, from rendered
+  samples in both themes — a contrast ratio is a floor, not a design.
+
+### Out of scope
+
+- **A full WCAG audit.** `known_limitations.md` records that only a
+  basic pre-pilot pass was done (Segment 14A PR 5); this item fixes the
+  one thing that pass found and does not become the audit.
+- **The decorative uses.** See Decision.
+
+### Doc impact
+
+- `docs/known_limitations.md` — the Accessibility entry rewritten
+  against the real tokens and ratios (Item 7).
+- `spec/ui_elements.md` — the token table records the AA floor the two
+  muted tokens are held to (Item 7).
+- `docs/status.md` — row when the item closes (Item 7).
+
+---
+
+## Item 8 — the Guide documents how to build a session, not how to run one
+
+### Opportunity
+
+`app/web/templates/guide.html` is the operator's in-app documentation,
+canonical since 19E rung 2. It is **front-loaded to the point of
+imbalance**, measured 2026-09-12 at `40a0b663`:
+
+| Section | Lines | Screencaps |
+|---|---:|---:|
+| Create and set up | ~290 | 9 |
+| Prepare and activate | ~85 | 4 |
+| **Watch progress** (Invitations + Responses) | **12** | **0** |
+| **Download responses** (Extract data) | **17** | **0** |
+| For reviewers | 13 | 0 |
+| For observers | 11 | 0 |
+| For reviewees | 9 | 0 |
+
+All **16** screencapped surfaces are setup surfaces. The word
+"Invitations" appears **once** in the whole Guide; "Extract data" once.
+**Validate is never described as a page.**
+
+So the Guide teaches how to *build* a session in detail and how to *run*
+one in four paragraphs — and running it is the half an operator does
+under time pressure with real people waiting. The participant sections
+have the same shape: a reviewee arriving at `/me/.../results` gets nine
+lines.
+
+**Why now rather than later.** 19J and 19K rebuilt these exact pages —
+the range strip became a pager cluster, the column chips were
+delegated, and 19K.3 took Invitations and Responses from 40,433 and
+80,432 queries to 434 each. Screencaps taken now are of the current UI.
+Screencaps taken before 19J would already be stale, and **19J.7
+committed to a screencap-retake row and never wrote it** — that debt is
+still open and this item is where it gets paid.
+
+### Decision
+
+**Bring the operational half up to the standard the setup half already
+sets** — prose plus a screencap per surface — rather than writing a new
+document. The Guide is the canonical operator documentation; a second
+one would compete with it.
+
+Covered: **Validate**, **Invitations**, **Responses**, **Extract data**.
+Each gets what the setup surfaces get: what the page is for, what the
+operator does on it, and one screencap in both themes.
+
+**Rejected: a separate "operations" guide page.** 19E made
+`guide.html` canonical precisely to stop operator documentation
+scattering, and `known_limitations.md` plus `docs/` already hold the
+non-operator half. A second page would have to be found.
+
+**Rejected: doing the participant sections in the same item.** They have
+the same shape of gap and a different audience, a different set of
+routes, and a different reviewer. Named in Out of scope with where they
+are recorded, not silently dropped.
+
+**Rejected: waiting for the deployment.** Nothing here needs the host.
+Segment 20 owns the *currency pass* over the Guide against deployed
+reality, and its own Out of scope says work that does not need the host
+"belongs in 19E / 19C, not here" — so this is new work, and 20's pass
+will re-read whatever this item writes.
+
+### Semantics
+
+- **Screencaps are committed assets** under `app/web/static/guide/`,
+  light and dark, and `tests/integration/test_guide_screencaps.py` (285
+  lines) fails on a referenced-but-missing file **and** on a
+  committed-but-unreferenced one. The Guide cannot drift from its
+  images in either direction, which is why this is safe to grow.
+- **A screencap needs a session with data in it.** 19K.3's benchmark
+  harness seeds a full-matrix session through the real import and
+  generate routes and drives responses through `/me/.../save` and
+  `/submit` — an Invitations page with nothing on it would document
+  nothing.
+- **The Guide is honest about what is not wired.** The existing
+  "Watch progress" text says the reminder function is not implemented;
+  anything this item writes about email-dependent behaviour carries the
+  same caveat rather than describing a feature the operator cannot use.
+- **Section visibility is already conditional** (`visible_sections`), so
+  new content inherits that mechanism rather than adding one.
+
+### Judgment calls — decided
+
+- **2026-09-12 — Validate gets a section of its own** rather than a
+  paragraph inside "Prepare and activate". It is a page an operator
+  returns to, and the Guide currently never tells them it exists.
+
+### Blast radius (measured)
+
+Taken 2026-09-12 at `40a0b663`.
+
+| What | Count | Command |
+|---|---:|---|
+| Lines in `guide.html` | 590 | `wc -l` |
+| Screencap files committed | 32 (16 surfaces × 2 themes) | `ls app/web/static/guide/` |
+| …of an Operations surface | **0** | the same listing |
+| Lines in the screencap test | 285 | `wc -l tests/integration/test_guide_screencaps.py` |
+| Specs to write from | 4 surfaces, 24–35 files mentioning each | `grep -rli` per surface |
+| New screencaps this item adds | 8 (4 surfaces × 2 themes) | the Decision |
+
+### PR ladder
+
+1. **Prose for the four surfaces, no screencaps.** The sections, the
+   copy, the Validate section's placement in the nav order. Landing
+   the words first means the shape is agreed before eight binary assets
+   are committed to it — the scaffold-first rule in `CLAUDE.md`, applied
+   to documentation.
+2. **The eight screencaps**, seeded through 19K.3's harness so each page
+   shows real rows, and the `{% if %}` wiring that references them.
+
+### Definition of done
+
+- Validate, Invitations, Responses and Extract data each have a Guide
+  section saying what the page is for and what the operator does there.
+- Each has a screencap in both themes, referenced from the Guide, and
+  `test_guide_screencaps.py` passes in both directions.
+- Nothing in the new copy describes behaviour that is not wired, or it
+  carries the same caveat the reminder sentence already does.
+- 19J.7's outstanding screencap-retake commitment is either satisfied
+  by this item's captures or explicitly re-scoped in `## Status`.
+- `.venv/bin/pytest` and `ruff check .` both pass in the agent container
+  before pushing.
+- `spec-writer` run **before** pushing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19K.8` exits 0; any warning adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+- **Whether the participant sections follow in this segment or the
+  next.** They have the same gap and a different audience; the Author
+  decides once rung 1 shows how much the operational copy cost.
+
+### Out of scope
+
+- **The participant sections** (`for_reviewers`, `for_observers`,
+  `for_reviewees`), recorded in the Open question above rather than
+  dropped.
+- **Segment 20's currency pass**, which re-reads the Guide against the
+  deployed reality and is correctly blocked on the host.
+- **Screencap retakes of the 16 setup surfaces.** They are current as of
+  19J; only 19J.7's specific retake commitment is in scope, and only to
+  be settled either way.
+
+### Doc impact
+
+- `app/web/templates/guide.html` — the four new sections (Item 8).
+- `spec/operations_pages.md` — records that the Guide documents these
+  four surfaces, so the spec and the operator-facing copy point at each
+  other (Item 8).
+- `guide/archive/segment_19J_assessment_moves.md` — 19J.7's screencap
+  commitment settled, since this item is where it lands (Item 8).
+- `docs/status.md` — row when the item closes (Item 8).
