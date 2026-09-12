@@ -2558,6 +2558,11 @@ untouched 379, and the 15/17-against-16/18 parser difference — checked
 independently against `f767e150` rather than taken from this Status
 block.
 
+**Rung 2 is not started.** No `<figure>` was added: `test_guide_screencaps.py`
+fails on a referenced-but-missing file, so referencing the eight images
+before capturing them would break the suite — correctly. *(Left as
+written; rung 2's own block below records what it became.)*
+
 ### Status — 2026-09-12 (rung 2, item closed)
 
 **The eight screencaps landed, and the item is closed.** Four surfaces
@@ -2613,6 +2618,35 @@ needs Playwright, declared in neither `pyproject.toml` nor
 candidate: a `tools/guide_shots.gen.py` sibling to the theme generators,
 gated on that dependency decision.
 
+**Scope beyond the ladder: one paragraph of `spec/validate_page.md`,
+found by the pre-push `spec-writer` run.** §2.4 said the Issues card
+"groups issues by `source` … one group heading per source". It has not
+done that since Segment 15E PR 2: `_validate.py` groups by `(gate,
+source)` and `partials/validation_results.html` renders an `<h2>` *Setup
+gate* / *Operations gate* heading above the `<h3>` source headings, so a
+source whose rules span both gates appears twice and the source headings
+are **not** unique — which is why the `id="issue-source-{source}"` anchor
+renders on first appearance only. §2.4 documented neither the gate
+headings, nor the duplication, nor the conditional anchor. Corrected
+here, with the 15E provenance named, because the drift is in a file this
+item's manifest already commits to and this rung's own screencap alt text
+("issues grouped by gate") was the more accurate of the two descriptions.
+The rest of §2.4 was re-checked against the template and is unchanged.
+
+*This is the fourth time this session that a correct statement and a
+stale one about the same thing have lived a few lines apart* — the Guide
+copy knew about gates while its own cross-referenced spec did not, just
+as rung 1 found `extract_data.md`'s new note sitting eight lines under the
+contradiction it should have removed. The pattern is not carelessness at
+the point of writing; it is that a correction reaches the paragraph it was
+found in and no further unless someone walks it.
+
+**One paragraph was misfiled in this very block and is now moved.** The
+*"Rung 2 is not started"* note was rung 1's; writing rung 2's Status above
+it left a paragraph declaring the rung unstarted inside the block
+recording that it closed. Moved back under rung 1 with a pointer forward.
+The same failure as the one above, committed while writing about it.
+
 **The Responses screencap is uniform, and that is the page rather than
 the seed.** Every reviewee reads `AT RISK · 3/9`, because in a
 full-matrix session every reviewer reviews every reviewee, so coverage
@@ -2620,10 +2654,6 @@ cannot vary unless the reviewers do. `Without responses` is **0**, which
 the copy calls the count you want at zero — the image illustrates the
 good state rather than the failure it warns about. Named here rather
 than left for a reader to wonder at.
-
-**Rung 2 is not started.** No `<figure>` was added: `test_guide_screencaps.py`
-fails on a referenced-but-missing file, so referencing the eight images
-before capturing them would break the suite — correctly.
 
 ### PR ladder
 
