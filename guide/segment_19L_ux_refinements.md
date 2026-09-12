@@ -279,6 +279,35 @@ edge thinned below the chip's 2px; the fill repointed to
 `--chip-selected-bg`. The guard states at its own definition what it
 cannot do — it holds the mechanism, never that a row *becomes* marked.
 
+**The `spec-writer` pass found one overstatement of mine and one false
+number I had helped entrench.** Both are corrected above rather than
+noted.
+
+*Overstated:* the edge-and-fill pairing was described as "the pair
+`.tag-chip.is-selected` already uses". It is not. A chip's edge sits on
+the **bare `.tag-chip` selector** — every chip carries it, selected or
+not, because that edge means *clickable*, which is 19J.7's entire point
+— and only the fill is gated on `.is-selected`. The row gates **both**
+halves on selection, since a row is not clickable by being a row. The
+rendered look is the same; the mechanism is not, and "already uses"
+claimed a reuse that does not exist.
+
+*False, and older than this item:* **a chip's edge is 1px, not 2px.**
+The rule has always been `inset 0 0 0 1px`, while `base.html`'s comment
+and `spec/ui_elements.md` have both said 2px since 19J.7. This item's
+first version of `test_the_row_style_carries_both_an_edge_and_a_fill`
+then justified its own `>= 2` floor as *"the 2px a selected chip
+carries"* — **restating the wrong figure in a third place, inside a test,
+where it reads as verified.** The floor survives on its own reason (a
+hairline on a full-width row reads as one of the table's rules, not as a
+state); the premise did not. Both pre-existing statements corrected with
+the discrepancy named, in a spec this manifest already commits to.
+
+*The pattern is the one this repository keeps recording*, and this is its
+sharpest instance yet: a number was wrong in two places, and the act of
+writing a **new guard** put it in a third. A test that cites a figure it
+does not check is not a check of that figure.
+
 **Open questions 2 and 3 are left open, deliberately.** Whether
 select-all marking fifty rows reads as signal or as a new background
 wants a fifty-row render, which this item did not need. Whether the

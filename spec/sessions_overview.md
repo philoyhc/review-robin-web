@@ -268,9 +268,16 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 - **Selected rows are marked** (19L.1). Every selected row carries
   `session-row-selected`, styled in `base.html` as an edge **and** a
   fill — `--selected-bg` as a 3px inset shadow on the first cell,
-  `--row-selected-bg` as the row's interior. That is the pair
-  `.tag-chip.is-selected` already uses, in row shape; either half alone
-  was a candidate that was considered and not chosen. The edge is an
+  `--row-selected-bg` as the row's interior. Either half alone was a
+  candidate that was considered and not chosen.
+
+  The look echoes a selected chip, but **the mechanism deliberately
+  differs and the echo should not be read as reuse**: a chip's edge sits
+  on the bare `.tag-chip` selector, so *every* chip carries it whether
+  selected or not — that edge means "clickable", which is 19J.7's whole
+  point — and only the fill is gated on `.is-selected`. A row is not
+  clickable-by-being-a-row, so both halves gate on selection here and an
+  unselected row carries neither. The edge is an
   inset shadow rather than a border so selecting a row does not change
   its height and reflow the table under the pointer.
 

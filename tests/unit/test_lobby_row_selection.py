@@ -86,11 +86,16 @@ def test_the_marking_clears_before_it_applies() -> None:
 
 
 def test_the_row_style_carries_both_an_edge_and_a_fill() -> None:
-    """Candidate D: what ``.tag-chip.is-selected`` already does.
+    """Candidate D: the reserved shade as an edge, its pale companion
+    as the interior.
 
-    The reserved shade as an edge, its pale companion as the interior.
     Either half alone is a different candidate that was considered and
     not chosen, so a rule that lost one is a silent change of design.
+
+    The look echoes a selected chip; the mechanism is not the chip's. A
+    chip's edge sits on the bare ``.tag-chip`` selector and means
+    *clickable*, carried selected or not, with only the fill gated on
+    ``.is-selected``. Both halves gate on selection here.
     """
     css = _base()
     fill = re.search(
@@ -105,8 +110,17 @@ def test_the_row_style_carries_both_an_edge_and_a_fill() -> None:
     assert edge, "the selected row has no edge rule"
     assert fill.group(1) == "--row-selected-bg", fill.group(1)
     assert edge.group(2) == "--selected-bg", edge.group(2)
+    # A judgment, stated as one rather than derived: there is no
+    # constant to read it off. The chip's edge is 1px, which is legible
+    # on a small rounded shape and disappears on a full-width row, where
+    # a hairline reads as one of the table's own rules rather than as a
+    # state. An earlier version of this line justified the floor as "the
+    # 2px a selected chip carries" — a figure that is wrong (the rule is
+    # `inset 0 0 0 1px`) and that this test was quietly restating from
+    # two other places rather than checking.
     assert int(edge.group(1)) >= 2, (
-        "the edge is thinner than the 2px a selected chip carries"
+        "a 1px edge on a full-width row reads as a table rule, not as a "
+        "selected state"
     )
 
 

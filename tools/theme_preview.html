@@ -2613,8 +2613,10 @@
       /* Tag-filter chips — clickable; the selected ones flip to a
          filled accent so the active filter set reads at a glance.
 
-         Every chip carries the reserved accent shade as a 2px edge
-         (19J.7 rung 3). Until then the pill vocabulary said "clickable"
+         Every chip carries the reserved accent shade as a 1px edge
+         (19J.7 rung 3; the figure read "2px" here and in
+         ``spec/ui_elements.md`` from 19J.7 until 19L.1, against a rule
+         that has always been ``inset 0 0 0 1px``). Until then the pill vocabulary said "clickable"
          with nothing but ``cursor: pointer`` — invisible until the
          pointer is already on the chip, absent on touch, and absent
          from every screencap in the Guide.
