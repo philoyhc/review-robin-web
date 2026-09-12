@@ -322,16 +322,18 @@ recalled, and re-checked at `38110b0f` after 19L.2 changed part of it:
 - A `<template id="single-session-expander">` is cloned and injected as a
   full-width `<tr class="session-expander session-expander-bracketed
   session-expander-single">` **below the selected row**, `colspan` across
-  the table. (The middle class is 19L.2's opt-in; the archived page
-  injects the same panel without it.)
+  the table. (The middle class is 19L.2's opt-in. **19L.3 gave the
+  archived page the same class and the same row marking**, so both pages
+  now bracket a selection identically.)
 - The injected `<td>` took `background: var(--surface-muted)` — a
   distinct fill was the whole of its visual separation. **Since 19L.2 the
   lobby's panel instead carries `--selection-panel-bg` plus a rail at
   each end**, the same pair the selected row carries, so the panel and
   the row it acts on read as one bracketed object. The bare
-  `.session-expander` rule still sets `--surface-muted`, and the archived
-  sessions page — which injects the same classes and marks no rows —
-  still renders that way.
+  `.session-expander` rule still sets `--surface-muted`, which is now the
+  fallback for any page that does **not** opt in — **as of 19L.3 that is
+  no page**: the archived sessions page took the class and the marking
+  too.
 - It carries a `session-expander-title`, and a bulk variant reading
   *"N sessions selected"*.
 

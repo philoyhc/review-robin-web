@@ -896,6 +896,33 @@ Two callers in one surface family is not generality, and
 `spec/ui_elements.md` now says so explicitly rather than leaving
 "exactly one caller" to rot.
 
+**The `spec-writer` pass found four things; one of them is the third
+instance of this session's recurring failure, and the sharpest.**
+
+Three were small and are fixed: `spec/sessions_overview.md`'s bullet
+still attributed the mechanism to *"19L.1, restyled by 19L.2"* while its
+body described 19L.3 at length; its sentence explaining *why* the bracket
+is opt-in had gone elliptical once both pages carried the class, where
+`spec/ui_elements.md`'s parallel sentence still said it plainly; and that
+entry still opened *"a selected row on the sessions lobby"*, correcting
+itself only three sentences later.
+
+The fourth was **undeclared doc impact**. `guide/new_ux_ideas.md` carried
+two clauses this item falsified — *"the archived page injects the same
+panel without it"* and *"the archived sessions page — which injects the
+same classes and marks no rows — still renders that way"* — and the
+manifest did not name the file, so nothing would have caught it.
+
+*Both clauses were written four commits earlier, by me, in a commit
+titled "bring entry 1's account of the lobby up to date" — whose entire
+purpose was fixing exactly this kind of staleness in exactly this file.*
+They were true when written and false two items later. **The lesson is
+not "check that file"; it is that a statement of present fact about
+another surface acquires a maintenance obligation the moment it is
+written, and the manifest is the only place that obligation can be
+recorded.** The bullet is added above, after the fact, which is the
+weaker version of having declared it.
+
 **UI-visible: verify on the dev slot after deploy** — the suite has no
 JavaScript runtime and cannot see a rendered colour.
 
@@ -911,4 +938,8 @@ JavaScript runtime and cannot see a rendered colour.
 - `spec/ui_elements.md` — the `.session-row-selected` entry's "lobby-local"
   wording gains its second caller, without promoting it to a primitive
   (Item 3).
+- `guide/new_ux_ideas.md` — entry 1's account of the lobby expander said
+  the archived page injects the panel *without* the opt-in class and
+  marks no rows. Both clauses corrected (Item 3). *Not named at planning
+  time; added when `spec-writer` found them — see `Status`.*
 - `docs/status.md` — row when the item closes (Item 3).
