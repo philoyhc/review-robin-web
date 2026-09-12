@@ -2171,6 +2171,54 @@ every ratio and found three things:
 Chromium: light **0 open + 3 accepted**, dark **4 open + 0**.
 
 
+**The review bot found two things the three `spec-writer` passes had
+not, and both were mine.**
+
+- **I reintroduced the staleness bug while fixing it.** The unresolved
+  branch clears `below-aa`; I then added `accepted-below-aa` and did
+  not revisit the branch, so breaking an accepted pair left the blank
+  row still wearing its dashed marker and still counted as accepted.
+  Reproduced in Chromium before fixing — accepted stayed at **3** with
+  two rows unresolved; after, **2**. *Third time in this item that a
+  correction failed to travel past the line it was made on*, and the
+  first two were recorded before this one happened.
+- **The collapse reached `base.html` and the customizer and stopped
+  there.** `tools/theme_preview.html` was stale by a day, and four
+  Tier-2 rows in `spec/color_tokens.md` still read
+  `--green-strong` / `#059669` after `--green-deep` / `#166534`
+  shipped. A reader designing from the catalogue would have designed
+  against values that had not shipped, off a table that looks
+  authoritative.
+
+**Both root causes are now checked, which is the part worth keeping.**
+Fixing four rows and regenerating a page would have left the next
+repoint exactly as exposed:
+
+- `test_every_semantic_token_is_catalogued_with_its_shipped_mapping`
+  does for Tier 2 what the existing test did for Tier 1 — which is why
+  `--slate` was caught the day before and these four were not. 95 rows,
+  both themes, primitive *and* hex.
+- `tests/unit/test_generated_tools_are_current.py` regenerates each
+  `*.gen.py` into a temp tree and compares bytes. It regenerates into a
+  copy rather than in place, because a test that quietly fixes the
+  drift it reports never fails twice. A companion test fails if a new
+  `*.gen.py` appears and is not covered — the failure mode being a
+  generated artefact nobody re-runs, which a generator missing from the
+  list reproduces exactly.
+
+That last one closes a gap this item had **named and left open twice**:
+"nothing tests generator-versus-output drift" appears in its own PR
+body, and the drift happened anyway, in the very next commit.
+
+**My own guard failed on a correct page first.** The mechanism test for
+the unresolved branch scanned every `classList.toggle` on the page —
+catching `is-coupled` and `tc-orphan` — and the first
+`classList.remove`, which is the colour picker's. Scoped to
+`updateContrast`'s body it passes and still catches the revert. 4
+mutations on the four new guards, 4 caught, plus the browser
+before/after.
+
+
 **Decisions confirmed at build:**
 
 - The decorative uses are outside the floor by rule, not judgment

@@ -330,7 +330,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--status-info-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--status-success-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
 | `--status-success-fg` | `--green-deep` | `--green-glow` | `#166534` | `#6ee7b7` |
-| `--status-success-accent` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--status-success-accent` | `--green-deep` | `--green-bright` | `#166534` | `#34d399` |
 | `--status-success-border` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
 | `--status-warning-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--status-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
@@ -354,7 +354,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--role-reviewer-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 | `--role-reviewer-fg` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 | `--role-reviewee-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
-| `--role-reviewee-fg` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--role-reviewee-fg` | `--green-deep` | `--green-bright` | `#166534` | `#34d399` |
 | `--role-observer-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--role-observer-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 
@@ -367,9 +367,9 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--lifecycle-validated-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 | `--lifecycle-validated-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--lifecycle-ready-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
-| `--lifecycle-ready-fg` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--lifecycle-ready-fg` | `--green-deep` | `--green-bright` | `#166534` | `#34d399` |
 | `--lifecycle-expired-bg` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
-| `--lifecycle-expired-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--lifecycle-expired-fg` | `--red-deep` | `--red-bright` | `#991b1b` | `#f87171` |
 | `--lifecycle-archived-bg` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
 
 ### Navigation [A]
