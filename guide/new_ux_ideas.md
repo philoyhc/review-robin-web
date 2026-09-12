@@ -386,6 +386,86 @@ is always a choice; or a default roster, which risks acting on the wrong
 one. The first is safer and costs a click; the second is faster and is
 how the wrong-roster mistake starts.
 
+#### The interaction, refined — 2026-09-12
+
+The author, settling three of the questions above and adding a second,
+inner gate:
+
+> Active roster in URL is fine. Nav away from uncommitted edits should be
+> treated as cancellations, with warning (analogies from Instrument
+> cards). […] you select which roster to work on. Doing that makes the
+> corresponding search card and table show below. However, to access the
+> friendly label edit, you should click on an "Edit" button. When
+> metadata row is being edited, you can't also do other roster actions
+> (e.g., attempt to do a search or select a table row); navigating away
+> to another session page counts as a discard (with warning).
+
+**So there are two nested gates, not one.** The outer gate is the active
+roster; the inner one is edit mode. Selecting a roster is cheap and
+opens the search card and the preview table. Editing roster metadata is
+a **mode you enter deliberately**, by a button, and while you are in it
+the rest of that roster's surface is unavailable too.
+
+**This answers open question 5 better than either option it offered.**
+That question asked whether *select to edit* and *select to preview* are
+one selection or two. The answer is **neither**: there is one selection —
+the active roster — and edit is a mode you can then enter. Selection and
+editing are different kinds of act, which is why treating them as two
+selections felt awkward.
+
+**And it answers open question 3**: a switch that abandons uncommitted
+edits is a cancellation, warned about rather than silently applied.
+
+#### What the Instrument-card analogy does and does not supply
+
+Checked at `04323d44` rather than recalled, because the analogy carries
+most of the design and **not the part that sounds hardest**.
+
+**The gating half already ships, and is a close match.** The Instruments
+page holds per-instrument edit state as **`?editing=<id>` in the URL** —
+so only one instrument is editable at a time, which is the same
+one-at-a-time rule one level down — and blocks everything else with
+**`inert`** on `data-lock-region` containers (22 uses in
+`instruments_index.html`), plus an opacity fade as the visual cue. Its
+own comment: *"`inert` blocks every interaction below (clicks, focus,
+native HTML5 drag); the opacity fade gives the visual cue that the band
+is view-only until Edit is engaged."* That is precisely *"you can't also
+do a search or select a table row"*, already built.
+
+It also means **the two URL decisions are one decision**. The active
+roster is in the URL (settled above), and if edit mode follows the
+Instruments pattern it is in the URL too — which is what makes
+"navigating away discards" true rather than aspirational: there is no
+client-side edit state to lose, because the server renders the mode.
+
+**The warning half does not exist anywhere in the app.** There is **no
+`beforeunload` guard** on any surface — `spec/reviewer-surface.md` says
+so in as many words and lists what that costs today: Prev / Next,
+Discard, browser-close, tab-close, address-bar change and the chrome's
+*My Reviews* link all drop unsaved typing with no prompt. So *"with
+warning"* is **new work, not an inherited pattern**.
+
+New, but not unscoped: the same spec carries a **design for it**,
+deferred rather than rejected — per-page dirty tracking off
+`data-rs-saved-value` baselines, and a `beforeunload` listener that
+prompts only when dirty and skips the intentional-discard controls. Two
+surfaces would then want the same mechanism, which is an argument for
+building it once rather than per page, and a reason the Rosters page
+should not invent its own.
+
+**A vocabulary collision to settle before this is built.** The author's
+word is *"Edit"*, and the roster pages do ship an **Edit** button today
+(`session_reviewers.html`, `session_reviewees.html`) — but it is
+**row-level**, sits in the Operator actions card this proposal splits
+apart, and is disabled until rows are selected. A roster-level *Edit* on
+the same page would mean two buttons of that name at two scopes.
+Meanwhile the closest analogue — the Instruments card, which is also
+card-level metadata — **deliberately went the other way**: its Wave 4
+comment records *"Edit / Cancel retired in favour of a Lock / Unlock
+toggle"*, modelled on Quick Setup's footer. Recorded as a question
+rather than decided: the author said Edit, and the app's most recent
+decision at this exact scope said Lock / Unlock.
+
 ### A candidate mechanism — the lobby's row expander
 
 **Proposed by the author, 2026-09-12:** take a leaf from the session
@@ -479,19 +559,32 @@ Not answered here; recorded so they are not rediscovered.
    consolidation covering the three that genuinely are alike. That last
    option is not a failure of the idea — three-into-one still removes the
    duplication the rationale is about.
-3. **What happens to unsaved work when the active roster changes?**
-   Discard, block, or prompt. Raised by the gating constraint, which
-   **introduces a failure mode four separate pages do not have** — a
-   navigation either warns or does not apply, where an in-page switch can
-   silently drop an open edit. Stated in full under that constraint.
+3. ~~**What happens to unsaved work when the active roster changes?**~~
+   **Answered 2026-09-12: a cancellation, with warning.** The warning is
+   the part that does not exist yet — there is no `beforeunload` guard
+   anywhere in the app — but a design for one is already deferred in
+   `spec/reviewer-surface.md`, so two surfaces would want it and it
+   should be built once. See "What the Instrument-card analogy does and
+   does not supply".
 4. **Is anything active when the page first loads?** Nothing, so the
    first action is always a deliberate choice; or a default roster, which
-   is faster and is how the wrong-roster mistake starts.
-5. **Are *select to edit* and *select to preview* one selection or two?**
-   The sketch has two independent affordances; strict gating implies a
-   single **active roster** with edit and preview as things you do to it.
-   If they stay two, the gating has to say what happens when they
-   disagree.
+   is faster and is how the wrong-roster mistake starts. *Still open —
+   the refinement settles what selection does, not what is selected
+   before anyone has chosen.*
+5. ~~**Are *select to edit* and *select to preview* one selection or
+   two?**~~ **Answered 2026-09-12: neither.** There is one selection, the
+   active roster, which opens the search card and the preview; edit is a
+   **mode** entered afterwards by a button, which gates the rest of that
+   roster's surface while it is open. The question offered two options
+   and the answer was a third — selection and editing are different kinds
+   of act, which is why framing both as selections felt awkward.
+6. **Is the roster-level control called Edit, or Lock / Unlock?** The
+   author said *Edit*; the roster pages already ship an **Edit** button
+   at **row** level, which this proposal keeps but moves; and the closest
+   analogue at this exact scope — the Instruments card — retired
+   *Edit / Cancel* in favour of *Lock / Unlock* in its Wave 4. Two
+   buttons named Edit at two scopes on one page is the thing to avoid,
+   whichever way it goes.
 3. ~~**What happens to deep links?**~~ **Answered 2026-09-12 — and it is
    now a requirement rather than a question.** The Validate *Fix on … ↗*
    links and the Setup coverage matrix must still reach *this roster,
