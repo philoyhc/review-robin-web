@@ -292,8 +292,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   both rails — the cell is first and last child at once — and fills it
   with `--selection-panel-bg`, the renamed token whose primitives used
   to be the row's. The panel renders no pills, so the shade is safe
-  there; see `spec/ui_elements.md` §6 for the pill-free-zone condition
-  that creates. The archived-sessions page injects a panel with the
+  there; see `.session-row-selected` in `spec/ui_elements.md` for the
+  pill-free-zone condition that creates. (Named rather than numbered: it
+  is in §10 Layout primitives today, and this citation said §6 — which
+  is Buttons — until `spec-writer` caught it.) The archived-sessions page injects a panel with the
   same `session-expander` class names from its own script and marks no
   rows, so it deliberately does **not** carry the opt-in class.
 

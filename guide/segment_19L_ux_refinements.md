@@ -606,6 +606,22 @@ no JavaScript runtime, so nothing proves a row *becomes* bracketed when
 ticked; and nothing here sees a rendered colour. Every contrast ratio in
 this item is from the plan's measurements, not from a check.
 
+**The `spec-writer` pass found one defect, and it is mine twice over.**
+`spec/sessions_overview.md` pointed at *"`spec/ui_elements.md` §6"* for
+the pill-free-zone condition. §6 is Buttons; the `.session-row-selected`
+entry is in §10, Layout primitives. Worse, **I repeated the same wrong
+number in the brief I gave `spec-writer`** — describing the edit as "the
+`.session-row-selected` table row in §6" — so the agent was handed my
+error as a premise and caught it anyway, and said so. The citation now
+**names the primitive instead of the section**, because a section number
+is precisely the kind of reference that drifts as sections are added.
+
+*Two items running, two stale cross-references, both of them numbers
+standing in for names.* 19L.1's was a pixel width restated in three
+places; this one is a section index. The repo's own habit of quoting
+identifiers rather than positions is the defence, and it was not applied
+here.
+
 **Open questions 1-3 stay open**, all three being dev-slot questions —
 scattered selections on a fifty-row lobby, whether the archived page
 should follow, and whether two rails ~900px apart hold a lone selected
