@@ -4760,7 +4760,13 @@
           // reading as current, in the one case where recomputing is the
           // whole point. Clear it instead, and say why.
           var ur = row.querySelector(".tc-cx-ratio");
-          ur.textContent = "—"; ur.classList.remove("below-aa");
+          // Both state classes, not just the red one. Clearing only
+          // `below-aa` left an unresolved row still wearing its dashed
+          // acceptance marker and still counted as accepted — the same
+          // staleness this branch exists to prevent, reintroduced by
+          // adding a second class and not revisiting the branch.
+          ur.textContent = "—";
+          ur.classList.remove("below-aa", "accepted-below-aa");
           var ub = row.querySelector(".tc-cx-badge");
           ub.textContent = "?"; ub.className = "tc-cx-badge unresolved";
           ub.title = "one side of this pair does not resolve to a colour — "

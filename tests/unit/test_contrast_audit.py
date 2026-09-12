@@ -535,3 +535,47 @@ def test_the_panel_marks_every_accepted_pair_in_its_own_theme() -> None:
             f"{in_page} rows claim acceptance in {theme}, "
             f"but {len(accepted_here)} pairs are accepted there"
         )
+
+
+def test_the_unresolved_branch_clears_every_contrast_state() -> None:
+    """An unresolved row keeps none of its previous marking.
+
+    Found by a review bot on the first version of this: the branch that
+    handles a token resolving to nothing cleared ``below-aa`` and not
+    ``accepted-below-aa``, so breaking an accepted pair left the blank
+    row still wearing its dashed marker and still counted as accepted.
+    That is precisely the staleness the branch was added to prevent,
+    reintroduced by adding a second class and not revisiting the branch
+    — the third time in this item that a correction failed to travel
+    past the line it was made on.
+
+    Reproduced in Chromium before fixing (accepted count stayed at 3
+    with two rows unresolved; after, it drops to 2) and asserted here as
+    a *mechanism*, since the suite has no JS runtime: the removal must
+    name every class the paint step can add, so adding a fourth state
+    without extending it fails.
+    """
+    page = (
+        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
+    ).read_text(encoding="utf-8")
+
+    # Scoped to the contrast paint function: the page toggles unrelated
+    # classes elsewhere (`is-coupled`, `tc-orphan`) and clears
+    # `tc-picked` in the colour picker, and an unscoped scan compares
+    # those against each other and fails on a correct page. It did, the
+    # first time this test ran.
+    body = page[page.index("function updateContrast()") : page.index("function updateContrastCounts")]
+
+    painted = set(re.findall(r'classList\.toggle\("([a-z-]+)"', body))
+    assert painted, "no contrast-state classes are toggled at all"
+    assert {"below-aa", "accepted-below-aa"} <= painted, sorted(painted)
+
+    cleared = re.search(r"classList\.remove\(([^)]*)\)", body)
+    assert cleared, "the unresolved branch clears nothing"
+    cleared_names = set(re.findall(r'"([a-z-]+)"', cleared.group(1)))
+
+    assert painted <= cleared_names, (
+        "the unresolved branch leaves state behind: "
+        f"{sorted(painted - cleared_names)} can be added by the paint step "
+        "but is never removed, so a row that stops resolving keeps it."
+    )

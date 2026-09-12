@@ -573,3 +573,56 @@ def test_every_documented_cell_matches_the_constant() -> None:
         "source — both writers read it. Correct the table, unless the "
         "constant itself is what changed."
     )
+
+
+def test_every_semantic_token_is_catalogued_with_its_shipped_mapping() -> None:
+    """The Tier-2 half of the catalogue, which nothing checked until 19K.7.
+
+    ``test_every_primitive_is_catalogued_with_its_shipped_value`` covers
+    Tier 1 and caught `--slate` moving. Tier 2 had no equivalent, so four
+    rows survived a repoint with their old primitives and hex intact —
+    `--lifecycle-ready-fg` still reading `--green-strong` / `#059669`
+    after it shipped as `--green-deep` / `#166534`. A reader designing
+    from the catalogue would have designed against values that had not
+    shipped for a day, and the table would have looked authoritative
+    while doing it.
+
+    Rows are matched whole, for the reason the Tier-1 test records: an
+    unanchored pattern reads the middle of a five-column row as if it
+    were a two-column one.
+    """
+    light, dark = _root_blocks()
+    prims = dict(re.findall(r"(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})", light))
+    sem_light = dict(re.findall(r"(--[a-z0-9-]+):\s*var\((--[a-z0-9-]+)\)", light))
+    sem_dark = {**sem_light, **dict(re.findall(r"(--[a-z0-9-]+):\s*var\((--[a-z0-9-]+)\)", dark))}
+
+    spec = (REPO / "spec/color_tokens.md").read_text()
+    rows = re.findall(
+        r"^\|\s*`(--[a-z0-9-]+)`\s*\|\s*`(--[a-z0-9-]+)`\s*\|\s*`(--[a-z0-9-]+)`\s*"
+        r"\|\s*`(#[0-9a-fA-F]{3,8})`\s*\|\s*`(#[0-9a-fA-F]{3,8})`\s*\|$",
+        spec,
+        re.M,
+    )
+    # A floor, because a pattern that matches nothing makes every claim
+    # below vacuously true. The catalogue carried 95 five-column rows
+    # when this was written.
+    assert len(rows) >= 90, f"only {len(rows)} Tier-2 rows parsed from the catalogue"
+
+    wrong = []
+    for token, lp, dp, lhex, dhex in rows:
+        for theme, prim, hexv, mapping in (
+            ("light", lp, lhex, sem_light),
+            ("dark", dp, dhex, sem_dark),
+        ):
+            shipped_prim = mapping.get(token)
+            if shipped_prim is None:
+                continue  # retirements are covered by the path/term checks
+            if shipped_prim != prim:
+                wrong.append(f"{token} ({theme}): base.html {shipped_prim} vs spec {prim}")
+            elif prims.get(shipped_prim, "").lower() != hexv.lower():
+                wrong.append(
+                    f"{token} ({theme}): {shipped_prim} is "
+                    f"{prims.get(shipped_prim)} vs spec {hexv}"
+                )
+
+    assert not wrong, "catalogued Tier-2 mapping differs from the shipped one:\n  " + "\n  ".join(wrong)
