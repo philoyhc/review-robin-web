@@ -2509,6 +2509,55 @@ immediately — `test_every_committed_section_exists_in_the_template` and
 scaffold is pinned in both directions, which is why growing the Guide is
 safe.
 
+**The `spec-writer` pass found two false claims in the new copy — the
+exact failure this item warned itself about, committed anyway.**
+
+- **"each issue carries a Fix on … ↗ link that drops you onto the exact
+  row that triggered it."** False for **6 of the 16 active rules**: no
+  name, no code, empty reviewers, empty reviewees, no included pairs,
+  no help contact — all set no `fix_anchor` and land the operator on
+  the right *page*. Worse, `spec/validate_page.md` §6 already
+  distinguishes whole-page rules from row rules, and I had read that
+  file: I took the row case and stated it as universal.
+- **"the Workflow card asks you to acknowledge them, and lists them."**
+  Wrong element. `acknowledge_warnings` renders in exactly one
+  template, `session_validate.html` — the Validate page body. The
+  Workflow card only fires the redirect that sends you there.
+
+Both are the same mistake in the same register: prose written from a
+fast read and formatted as fact. This item's Judgment calls say its
+first draft was wrong in seven places for that reason and instruct the
+build to *trust none of the prose it did not re-run* — and the build
+then wrote two more. **Reading a spec is not re-running it**; the check
+that caught these was counting `fix_anchor` assignments and grepping
+for the template that renders the control, which takes a minute and
+which I did only after being asked.
+
+**Two pre-existing spec drifts, both in files this item's manifest
+already commits to, corrected with the discrepancy named:**
+
+- `spec/validate_page.md` §3 listed `instruments.stale_generated` as a
+  live warning rule. Its check has been a no-op since Wave 5 PR 5.1 —
+  and the row directly above it, `instruments.no_rule_pinned`, is
+  correctly annotated as retired, so the file disagreed with itself one
+  line apart. Found while counting which rules carry an anchor.
+- `spec/extract_data.md`'s opening said "Setup data lives on Home;
+  response data lives here" — a split Segment 18R Item 4 ended by
+  moving the Extract setup card onto this page. This item's own new
+  note, which correctly says the Guide describes that card as living
+  here, sat eight lines beneath the contradiction.
+
+**One redundancy recorded, not acted on.** The `tips` section still
+carries "Validate early" and "The Validate page explains most setup
+problems in plain language", which the new card now covers. Not wrong,
+and trimming copy the author wrote is a different decision from adding
+copy they asked for.
+
+**Every number reproduced**, including the 32 → 75, the 0 → 23, the
+untouched 379, and the 15/17-against-16/18 parser difference — checked
+independently against `f767e150` rather than taken from this Status
+block.
+
 **Rung 2 is not started.** No `<figure>` was added: `test_guide_screencaps.py`
 fails on a referenced-but-missing file, so referencing the eight images
 before capturing them would break the suite — correctly.

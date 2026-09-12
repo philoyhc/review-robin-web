@@ -12,12 +12,16 @@ data along the dimension the operator asks for so the actual
 analysis can happen in Excel / pandas / a notebook with the
 shape the operator already wants.
 
-The page complements the Session Home **Extract setup** card
-(which exports the round-trippable Reviewers / Reviewees /
-Relationships / Settings CSVs for porting / cloning a session).
-Setup data lives on Home; response data lives here. The split is
-the load-bearing decision behind the page's existence — see
-`guide/archive/extract_data.md` for the rationale.
+The page also carries the **Extract setup** card (which exports the
+round-trippable Reviewers / Reviewees / Relationships / Settings CSVs
+for porting / cloning a session). *This paragraph read "Setup data
+lives on Home; response data lives here" until 19K.8 — that split was
+the load-bearing decision behind the page's existence (see
+`guide/archive/extract_data.md`), and Segment 18R Item 4 ended it by
+moving the card off Session Home onto this page (`spec/session_home.md`
+§2). Corrected rather than deleted: the original split is why the page
+exists, and a reader meeting only the current state would not know
+that.*
 
 > **Implementation status — fully wired end-to-end (2026-05-30).**
 > Page chrome + skeleton landed in the Extract-data tab carve.
