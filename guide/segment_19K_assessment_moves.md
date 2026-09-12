@@ -630,6 +630,147 @@ Taken 2026-09-11 at `94aaa3b2`.
 | …that are not | 2 | `invitations.py`, `scheduled_events/_reminders.py` |
 | Places the measurement is currently recorded | 5 | `grep -rn '40,433\|80,432' guide/ docs/` |
 
+### Status — 2026-09-12
+
+Both rungs landed together. Rung 1's re-measurement settled the
+question the Author was to decide from, and the answer — **fix it now**
+— made rung 2 the same piece of work.
+
+**Rung 1: the measurement, re-taken on `main` with paging in place.**
+Method mirrors 19J.4's — full-matrix sessions through the real import +
+generate routes, each page rendered while SQL statements are counted,
+SQLite in-process.
+
+| roster | assignments | Assignments | Invitations | Responses |
+|---|---:|---|---|---|
+| 25×25 | 625 | 43 q | 708 q | 1,332 q |
+| 50×50 | 2,500 | 43 q | 2,633 q | 5,132 q |
+| 100×100 | 10,000 | 43 q | 10,233 q | 20,232 q |
+| 200×200 | 40,000 | 43 q | **40,433 q** | **80,432 q** |
+
+**Every query count is identical to 19J.4's**, at every roster size. So
+paging did not change the work behind the pages — the plan asserted that
+"by design", and it is now measured rather than claimed. Wall times came
+in lower (6.9 s / 12.6 s against 9.3 s / 16.1 s), which is container
+speed; the query count is the portable number.
+
+**Three things the re-measurement added that the plan did not have:**
+
+1. **Responses' second pass is exactly half of it.** `summary_counts`
+   accounts for **40,404 of the 80,432** queries, measured by replacing
+   it with a stub, and its only consumer is one integer,
+   `incomplete_count`.
+2. **That integer is not cheap to get another way.** `pill_state`
+   bottoms out in per-assignment completeness, so "replace the pass with
+   a scalar `COUNT`" — the obvious cheap win — is not available. Checked
+   before it was recommended.
+3. **It is two lines, not a diffuse problem.** Attributing every query
+   to its call site: `responses/_core.py:805` produced 2,500 of the
+   Invitations page's 2,633 at 50×50, and Responses added
+   `monitoring.py:213` for another 2,500. **Those two lines are ~99% of
+   both pages.** The same query shape occurs at 9 sites in the
+   codebase; the other 7 never fire on these pages.
+
+Point 3 is what made the decision cheap. The plan's worry — that fixing
+this touches a service with four callers, two of them not pages — does
+not apply to a prefetch *inside* those two functions: no signature a
+caller passes changes, because the new parameter defaults to `None` and
+the non-looping callers never pass it.
+
+**Rung 2: one query per session, in place of one per assignment.**
+
+| roster | Invitations | Responses |
+|---|---:|---:|
+| 25×25 | 708 → **84** | 1,332 → **84** |
+| 50×50 | 2,633 → **134** | 5,132 → **134** |
+| 100×100 | 10,233 → **234** | 20,232 → **234** |
+| 200×200 | **40,433 → 434** | **80,432 → 434** |
+
+93× and 185× at 200×200; 6.9 s → 2.3 s and 12.6 s → 2.5 s. **Not flat**
+like Assignments' 43 — 84 / 134 / 234 / 434 is roughly two queries per
+reviewer plus a constant, the per-reviewer assignment and field lookups
+that remain. Linear in the roster where it was quadratic in it, which is
+the change worth having; the residual is recorded here rather than
+chased.
+
+**Decisions confirmed at build:**
+
+- **The prefetch is internal and opt-in.** `responses_by_assignment` is
+  a new parameter defaulting to `None` on `reviewer_session_state`,
+  `_state_from_assignments` and `_assignment_complete`; only the two
+  loop owners pass it. Every other caller behaves exactly as before,
+  including the two non-page ones the plan flagged.
+- **Joined on `Assignment.session_id`, not `id.in_(...)`.** The id list
+  is the assignment count, which is the thing that grows, and SQLite's
+  default variable limit is 999.
+
+**Measured, not assumed:**
+
+| Claim | Measurement |
+|---|---|
+| Paging changed nothing | Query counts identical to 19J.4 at all four roster sizes. |
+| The second pass is half | 80,432 → 40,028 with `summary_counts` stubbed: **40,404 queries, 50%**. |
+| Two lines are the cause | Per-call-site attribution at 50×50: 2,500 from `_core.py:805`, 2,500 from `monitoring.py:213`. |
+| Nothing broke | Full suite **3,774 passed**, 16 skipped. |
+| Guards are not vacuous | **6 mutations, 6 caught.** |
+
+**Two vacuous tests written and caught before pushing — the same
+mistake twice in one item.**
+
+The first equivalence test seeded no responses, so it compared an empty
+list against an empty list for every assignment and **passed against a
+mutation returning `{}`** — the one mutation it existed to catch. Fixed
+by activating the session and having half the reviewers submit.
+
+Then the scoping test, added *because* a mutation escaped, made the
+identical mistake one level along: it seeded a second session with no
+responses, so dropping the `session_id` filter leaked nothing and the
+test passed on the mutation it was written for. Fixed by giving the
+other session rows.
+
+*A fixture that produces no data makes every assertion about that data
+true.* Writing the test after the mutation escaped did not stop it
+happening again; only running the mutation a second time did.
+
+**`spec-writer` pass (checker, 2026-09-12) — run *before* the push, for
+the first time.** The three previous items ran it in parallel with the
+push and each collected corrections after the merge; the Author changed
+the order for this item. It found three things, all fixed here rather
+than as a follow-up:
+
+1. **The new function's docstring contradicted the rest of the change.**
+   It said the per-assignment lookup "scaled linearly" — the whole point
+   is that it scaled with the *square* of the roster and the prefetch is
+   what makes it linear — and it attached the 50×50 figure to a sentence
+   about 200×200. Rewritten with both roster sizes named.
+2. **`guide/todo_master.md` still listed Item 3 as open roadmap work**,
+   and `guide/codebase_assessment_11sep.md` still called the N+1
+   "measured and unfixed" in §6 and recommended deciding it in §8 — a
+   snapshot overtaken one day after it was written. Struck and annotated
+   rather than rewritten, per the assessment convention, and both gained
+   manifest bullets. They are visible to `close_check` at all because of
+   19K.1, and nameable in a manifest because of 19K.5.
+3. An alphabetical-ordering slip in `responses/__init__.py`.
+
+It also **verified something this item had not**: the last-write-wins
+concern in `_assignment_complete`'s `by_field` dict is moot, because
+`Response` carries `UniqueConstraint("assignment_id",
+"response_field_id")` — two rows cannot share a field id on one
+assignment, so row order cannot matter in either path. That is a
+correctness question the item had reasoned about and not checked.
+
+**Running the checker before the push cost about eight minutes and
+changed what landed.** Three items in a row had merged with corrections
+outstanding; this one merged correct.
+
+**One mutation was reclassified rather than fixed.** Dropping the
+`session_id` filter is **not** a correctness bug: assignment ids are
+globally unique, so a superset keyed by assignment id answers every
+`.get` correctly. It is a performance bug — on a server hosting many
+sessions the prefetch would read every response row in the database to
+render one page — and it is guarded as that, with the reasoning in the
+test.
+
 ### PR ladder
 
 1. **Re-measure, then decide.** Benchmark both pages at the current
@@ -671,6 +812,11 @@ Taken 2026-09-11 at `94aaa3b2`.
 - `spec/operations_pages.md` — records what the two pages cost to render
   and what was decided about it, so the next reader finds it on the
   page's own spec rather than in a closed plan (Item 3).
+- `guide/todo_master.md` — the Item 3 roadmap entry struck and marked
+  done, since it still described the decision as open (Item 3).
+- `guide/codebase_assessment_11sep.md` — §6's "measured and unfixed"
+  weakness and §8's third recommended move, both settled the day after
+  they were written; struck and annotated rather than rewritten (Item 3).
 - `docs/status.md` — row when the item closes (Item 3).
 
 ---

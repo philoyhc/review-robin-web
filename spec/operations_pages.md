@@ -409,6 +409,40 @@ session.`
 
 ---
 
+## What these pages cost to render
+
+Both pages read every response row in the session: Invitations rolls up
+per reviewer (`monitoring.per_reviewer_progress`), Responses rolls up
+per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
+`monitoring.summary_counts` for one number, `incomplete_count`, which
+runs the reviewer-side pass a second time.
+
+Until 2026-09-12 each pass read those rows one assignment at a time.
+Measured through the real routes at four roster sizes (SQLite,
+in-process), rendering each page once:
+
+| roster | assignments | Assignments | Invitations | Responses |
+|---|---:|---:|---:|---:|
+| 25 × 25 | 625 | 43 q | 708 → **84** | 1,332 → **84** |
+| 50 × 50 | 2,500 | 43 q | 2,633 → **134** | 5,132 → **134** |
+| 100 × 100 | 10,000 | 43 q | 10,233 → **234** | 20,232 → **234** |
+| 200 × 200 | 40,000 | 43 q | 40,433 → **434** | 80,432 → **434** |
+
+`responses_service.responses_by_assignment` now loads the session's
+response rows in one query and the two rollups read from it. The counts
+after the arrow are **linear in the roster** rather than quadratic in
+it: roughly two queries per reviewer plus a constant, from the
+per-reviewer assignment and field lookups that remain. Assignments is
+flat at 43 at every size — its `LIMIT 200` and its indexes hold.
+
+Paging the two pages (Segment 19J) did not change any of these counts,
+by design and confirmed by measurement: the slice is applied after every
+row is built.
+
+These are SQLite figures at roughly 0.2 ms per query. Production
+Postgres pays a network round trip per query, so **the query count is
+the portable number and the wall times are a floor, not a ceiling.**
+
 ## Implementation pointers
 
 - View-shape adapters in `app/web/views/_invitations.py` and

@@ -743,6 +743,7 @@ def _state_from_assignments(
     fields_by_instrument: dict[int, list[InstrumentResponseField]],
     *,
     group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
+    responses_by_assignment: dict[int, list[Response]] | None = None,
 ) -> ReviewerSessionState:
     """Inner per-assignment-set rollup shared by
     :func:`reviewer_session_state` (whole-session aggregate) and
@@ -801,11 +802,14 @@ def _state_from_assignments(
         fields = fields_by_instrument.get(assignment.instrument_id, [])
         required_ids = {f.id for f in fields if f.required}
         required_total += len(required_ids)
-        rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
-        )
+        if responses_by_assignment is not None:
+            rows = responses_by_assignment.get(assignment.id, [])
+        else:
+            rows = list(
+                db.execute(
+                    select(Response).where(Response.assignment_id == assignment.id)
+                ).scalars()
+            )
         if rows:
             any_response = True
         present_required = {
@@ -844,12 +848,50 @@ def _state_from_assignments(
     )
 
 
+def responses_by_assignment(
+    db: Session, *, session_id: int
+) -> dict[int, list[Response]]:
+    """Every response row in a session, keyed by assignment id.
+
+    One query where the per-assignment lookup it replaces issues one
+    *per assignment*, which is why the pages it serves scaled with the
+    **square** of the roster: a reviewer rollup walks every reviewer,
+    and each reviewer's assignments are proportional to the roster too.
+
+    Measured 2026-09-12 through the real routes. At 50x50 (2,500
+    assignments) that lookup was 2,500 of the Invitations page's 2,633
+    queries; at 200x200 (40,000 assignments), rendering Invitations and
+    Responses once cost **40,433 and 80,432 queries**. With this
+    prefetch both are **434** — linear in the roster rather than
+    quadratic in it, the residual being roughly two queries per
+    reviewer.
+
+    Joined on ``Assignment.session_id`` rather than an ``in_`` over the
+    ids: the id list is the assignment count, which is the thing that
+    grows, and SQLite's default variable limit is 999.
+
+    An assignment with no responses is simply absent from the dict, so
+    callers use ``.get(id, [])`` and read the same empty list the
+    per-assignment query returned.
+    """
+    rows = db.execute(
+        select(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == session_id)
+    ).scalars()
+    out: dict[int, list[Response]] = {}
+    for row in rows:
+        out.setdefault(row.assignment_id, []).append(row)
+    return out
+
+
 def reviewer_session_state(
     db: Session,
     *,
     reviewer: Reviewer,
     session_id: int,
     group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
+    responses_by_assignment: dict[int, list[Response]] | None = None,
 ) -> ReviewerSessionState:
     """Whole-session aggregate state. See
     :class:`ReviewerSessionState` for the field shape.
@@ -858,7 +900,10 @@ def reviewer_session_state(
     :func:`_state_from_assignments`; a caller looping over many
     reviewers (``per_reviewer_progress``) passes a session-wide
     map so the relationships scan happens once, not once per
-    reviewer."""
+    reviewer. ``responses_by_assignment`` is the same idea for the
+    response rows themselves — see :func:`responses_by_assignment`.
+    Both default to ``None``, so every caller that does not loop is
+    unchanged and still pays one query per assignment."""
     assignments = _reviewer_assignments(db, reviewer, session_id)
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
@@ -868,6 +913,7 @@ def reviewer_session_state(
         assignments,
         fields_by_instrument,
         group_key_by_assignment=group_key_by_assignment,
+        responses_by_assignment=responses_by_assignment,
     )
 
 

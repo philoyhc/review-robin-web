@@ -265,13 +265,20 @@ table's rows are worth re-verifying rather than copying forward.
   what the winner already set. **Plan:** none. Filed here; the file is not on §9
   because it is not a production module and the split the architecture forbids
   is exactly a stylesheet.
-- **Invitations and Responses are N+1, measured and unfixed.** 40,433 and 80,432
-  queries at 200×200. Pagination cut the HTML those pages emit but not the work
-  behind it — every row is still built before any slice happens. **Cost:**
-  seconds of wall time on a large roster, which is what 19J.4's indicator exists
-  to narrate rather than remove. **Plan:** named in 19J.4's Out of scope and
-  nowhere else. This is the most deferred decision in the codebase and the one I
-  would expect to be forced by a real pilot roster.
+- ~~**Invitations and Responses are N+1, measured and unfixed.** 40,433 and
+  80,432 queries at 200×200. Pagination cut the HTML those pages emit but not
+  the work behind it — every row is still built before any slice happens.
+  **Cost:** seconds of wall time on a large roster, which is what 19J.4's
+  indicator exists to narrate rather than remove. **Plan:** named in 19J.4's Out
+  of scope and nowhere else. This is the most deferred decision in the codebase
+  and the one I would expect to be forced by a real pilot roster.~~
+  **Closed 2026-09-12 (19K.3), a day after this was written.** The figures held
+  exactly on re-measurement — paging had indeed changed nothing — and the cause
+  turned out to be two lines carrying ~99% of both pages, so a prefetch inside
+  the two rollups fixed it without touching any caller's signature: **40,433 →
+  434 and 80,432 → 434**. The expectation recorded above, that a real pilot
+  roster would force it, was wrong in a useful way: what forced it was measuring
+  the thing precisely enough to see it was small.
 - ~~**Four of five table-relevant script blocks in `base.html` bind to elements
   at load.**~~ **Corrected 2026-09-11, after this document first said it: it is
   one block, not four.** Re-measured by reading each of the eight inline blocks
@@ -396,6 +403,11 @@ question, not work in progress.
    scope. It is third not because it matters least but because a real pilot
    roster will price it better than an estimate can — the move is to *decide*,
    which may legitimately be "not yet, and here is the trigger".
+   **Settled 2026-09-12 as Segment 19K Item 3 — decided *and* fixed.** The
+   decision the move called for was taken from a re-measurement rather than an
+   estimate, and the re-measurement is what changed the answer: the cost sat in
+   two call sites, so "fix it now" was the cheap option rather than the
+   expensive one.
 
 **Settling the prior snapshot's proposals.** The 10sep §8 recommended three
 moves and all three shipped the day they were recommended, as Segments 19J.1
