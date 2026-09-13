@@ -248,6 +248,18 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **The archived-sessions page has one panel, not two.** Its
+  `archived-bulk-expander` `<template>` opens on **any** selection of one
+  or more rows — the lobby's count-keyed switch between a single and a
+  bulk template has no counterpart there, so a lone archived row gets the
+  bulk panel. Its actions are Unselect all, Unarchive
+  (`bulk-unarchive`), a **disabled** Download placeholder with no route
+  behind it, and a Delete gated behind "Yes, delete"
+  (`bulk-delete-archived`). Its heading is the bulk phrasing at every
+  count, so one selected row reads *"1 sessions selected"*. Whether that
+  wants singular copy or the lobby's second template is undecided and
+  recorded in `guide/new_ux_ideas.md` entry 2; the contract here is what
+  ships.
 - **Selected rows are marked.** Every selected row carries
   `session-row-selected`, styled in `base.html` as a **rail at each end
   and no fill** — `--selected-bg` as a 6px inset shadow on
@@ -282,10 +294,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   archived rows take the same `session-row-selected` marking from their
   own `refreshExpander()`, and the archived bulk panel carries the same
   opt-in class — so a selection brackets identically on each. *The two
-  scripts stay separate on purpose (the archived page has a single bulk
-  panel; the lobby has a single and a bulk one with editable fields and
-  purge options), so the marking function is duplicated rather than
-  shared.*
+  scripts stay separate on purpose — the archived page has **one** panel,
+  the bulk one, for any selection; the lobby has two, a single-row
+  template with editable fields and purge options and a bulk one — so the
+  marking function is duplicated rather than shared.*
 
   The archived-sessions page has no section of its own in this spec, so
   its selection behaviour is recorded here rather than pointed at.

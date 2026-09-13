@@ -989,9 +989,15 @@ The lobby supports:
   no responses).
 
 The **archived-sessions child page** (`/operator/sessions/archived`)
-mirrors the main lobby for sessions in `archived` state, with an
-expander offering Unarchive, Download (extract), and Delete bulk
-actions.
+lists sessions in `archived` state with the lobby's table, sort, search
+and tag-filter affordances. Its expander does **not** mirror the
+lobby's: there is one template, the bulk one, and it opens on any
+selection of one or more rows rather than switching on the count. It
+offers Unselect all, Unarchive, Delete (gated behind "Yes, delete"),
+and a **Download button that is disabled** — a placeholder with no route
+behind it. See `spec/sessions_overview.md` "Row affordances" for the
+selection and bracket behaviour, which is recorded there because this
+page has no section of its own.
 
 ### 9.2 Create session
 

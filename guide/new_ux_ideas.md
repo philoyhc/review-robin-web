@@ -806,10 +806,13 @@ than the entry claimed for itself at any point today.
 open question at the 19L close, 2026-09-13.** Undecided there, and an
 archived plan is not where an undecided refinement should wait.
 
-`sessions_archived.html` has only a **bulk** selection panel. The lobby
-grew a single-row expander; the archived page did not, so selecting one
-archived session opens a panel headed *"1 sessions selected"* — correct
-arithmetic, wrong register, and a plural the operator can see is wrong.
+`sessions_archived.html` has only a **bulk** selection panel — one
+`<template>`, opening on any selection of one or more rows. **A lone
+archived row does get an expander**; it gets the bulk one. The lobby
+switches on the count between a single-row template and a bulk one; the
+archived page has no such switch, so selecting one archived session
+opens a panel headed *"1 sessions selected"* — correct arithmetic, wrong
+register, and a plural the operator can see is wrong.
 
 19L.3 deliberately did not touch it. That item's job was the *bracket* —
 marking the selected row itself — and it took the archived page as far as
