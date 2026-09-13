@@ -23,9 +23,9 @@ Inclusion rule (paraphrased from the segment doc):
     machine-derived state (``status``, ``assignment_mode``,
     validation reports, lifecycle stamps), reviewer-determined
     state (responses), system-emitted state (audit events),
-    operator-level state (SMTP credentials, operator-library
-    RTDs / RuleSets), and seeded RTDs / RuleSets that
-    auto-materialise on session create.
+    operator-level state (SMTP credentials, the operator RuleSet
+    library), and seeded RuleSets that auto-materialise on session
+    create.
 
 The CSV is "fallback for what the operator would type", not a
 machine-only round-trip — the order is fixed so re-exporting

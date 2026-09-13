@@ -405,7 +405,6 @@ one file.
 session.name,Spring Review,String
 session.deadline,2026-06-01T08:00:00+08:00,DateTime
 email_overrides.invitation.subject,Please review your assigned reviewees,String
-rtd.Long_text.data_type,Long_text,String
 instruments[1].name,Default,String
 instruments[1].display_fields[1].source_type,reviewee,String
 session_rule_sets[Personal: Custom rule].description,…,String
@@ -414,7 +413,7 @@ data_shapes[1].name,By reviewer,String
 
 The dotted / bracketed `field` paths route each row to a parser
 that knows its target. See `serialize_session_config` for the
-sections (session-level → email templates → RTDs → instruments
+sections (session-level → email templates → instruments
 → session RuleSets → data shapes → session tags) and their
 canonical ordering. **Friendly labels are not a Settings
 section** — the roster CSV headers are their sole carrier (§1a); see
@@ -426,8 +425,8 @@ the round-trip notes below.
    into `ApplyResult.errors`. One bad row doesn't mask the next.
    No DB writes.
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
-   the affected section (e.g. all RTDs for a session, all
-   instruments, all `session_rule_sets` rows minus seeded copies).
+   the affected section (e.g. all instruments for a session, all
+   `session_rule_sets` rows minus seeded copies).
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
@@ -442,7 +441,7 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
   one still imports.** Friendly labels round-trip through the roster
   CSV headers (§1a) as the sole carrier, so the export emits no
   `field_labels.*` row. One that arrives on input must fall through to
-  the unknown-key **silent ignore** on apply (like an `rtds[` row) —
+  the unknown-key **silent ignore** on apply (as a retired `rtds[` row does) —
   no error, the label dropped, and re-exporting the roster recovers it
   in the header. Dropping the tolerance would make every older
   bundle fail to import for a row that carries nothing.
@@ -482,8 +481,8 @@ five is how a round-trip regression goes unnoticed.
 Concrete guarantees the importers + serialisers maintain:
 
 1. **Deterministic row order.** Active rows first, then by the
-   first sort key documented per extract. Seeded RTDs and seeded
-   RuleSets always emit in install order.
+   first sort key documented per extract. Seeded RuleSets always
+   emit in install order.
 2. **Deterministic field order.** Section ordering pinned in
    `serialize_session_config`'s docstring + a golden-fixture
    unit test.
@@ -500,8 +499,8 @@ Concrete guarantees the importers + serialisers maintain:
    **case-insensitively**, so a file written with capitalised tokens
    (`String`, `DateTime`) must validate identically to the
    documented lowercase ones — otherwise a hand-edited or older
-   bundle fails on a cell whose meaning is unambiguous. RTD
-   `data_type` accepts both
+   bundle fails on a cell whose meaning is unambiguous. A response
+   field's `data_type` accepts both
    lowercase tokens (`long_text`) and capitalised model values
    (`Long_text`) on import; serialise emits the capitalised
    form.
@@ -539,7 +538,7 @@ shares. Public surface:
 
 | Helper | Role |
 |---|---|
-| `decode_csv(content: bytes) -> str` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. |
+| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the two operator-facing failures — file too large, not valid UTF-8 — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
 | `_read_dict_rows(text: str)` | `csv.DictReader` wrapper with empty-line tolerance. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |

@@ -365,8 +365,8 @@ def save_draft(
 ) -> SaveResult:
     """Upsert response rows; empty values delete. Never touches submitted_at.
 
-    Values that fail RTD-level validation (Integer / Decimal range and
-    step) are skipped — only valid upserts are persisted. The caller
+    Values that fail the field's own validation (Integer / Decimal
+    range and step) are skipped — only valid upserts are persisted. The caller
     surfaces the error list so the offending fields can be re-rendered
     with the typed value still in the box."""
     assignments = _reviewer_assignments(db, reviewer, review_session.id)

@@ -105,7 +105,7 @@ def purge_rosters(
     """Hard-delete the session's reviewers, reviewees and relationships.
 
     Assignments / responses / invitations carry foreign keys onto the
-    rosters, so they cascade out too; instruments, RTDs, display /
+    rosters, so they cascade out too; instruments, display /
     response fields and settings retain. Reverts the session to a
     setup skeleton with no people.
     """

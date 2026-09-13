@@ -22,7 +22,7 @@ Three layers, all in `app/web/deps.py`:
   session that exists and they do not own; existence is checked first).
   Before Segment 19F this was a 403 with a role-naming `detail`. Applied per-route on session-scoped operator
   routes, either directly or via slice helpers
-  (`_require_instrument_in_session`, `_require_rtd_in_session`, …)
+  (`_require_instrument_in_session`, and its siblings)
   that also re-scope any child id to the session.
 - **`require_sys_admin`** — workspace sys-admin gate; strictly
   tighter than `require_operator`. `require_sys_admin_or_session_operator`

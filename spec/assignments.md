@@ -592,7 +592,7 @@ rule name here names either Band 1 or nothing.
 ### Self-review toggle wiring
 
 The checkbox is bound to a per-instrument form
-`POST /sessions/{sid}/assignments/instrument/{iid}/self-reviews-active`
+`POST /sessions/{sid}/assignments/{iid}/self-reviews/active`
 with `active=true|false`. The service helper
 `assignments.set_instrument_self_reviews_active`:
 
