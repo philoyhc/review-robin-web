@@ -202,8 +202,8 @@ def upsert(
 
     Empty / whitespace-only ``label`` is rejected — call
     ``clear`` to remove a row. Raises
-    ``FieldLabelSourceError`` for slots outside the 12-slot
-    allowlist.
+    ``FieldLabelSourceError`` for slots outside
+    ``_VALID_SOURCE_FIELDS``.
 
     Invalidates ``validated`` via
     ``lifecycle.invalidate_if_validated`` and emits a
@@ -333,9 +333,9 @@ def clear(
     Idempotent: clearing a slot that has no override is a no-op
     (no audit event, no lifecycle invalidation).
 
-    Raises ``FieldLabelSourceError`` for slots outside the
-    12-slot allowlist — the resolver is permissive on read but
-    the mutators are strict.
+    Raises ``FieldLabelSourceError`` for slots outside
+    ``_VALID_SOURCE_FIELDS`` — the resolver is permissive on read
+    but the mutators are strict.
     """
     _require_known_source(source_type, source_field)
 

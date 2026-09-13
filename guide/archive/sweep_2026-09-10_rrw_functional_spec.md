@@ -4,9 +4,11 @@
 > Item 1. The three *code* findings at the foot of this file — the ones
 > it recorded as "none was fixed in this pass" — are closed too, two of
 > them on the retirement pass: `deps.py`'s "Phase 1 stub" docstring had
-> already gone; `field_labels.py`'s "12 in-scope slots" was wrong twice
-> over (the dict it heads holds 13, the validator admits 9) and now
-> names the constants instead of a count; and `sessions.py`'s
+> already gone; `field_labels.py` was wrong twice over (the dict the
+> comment heads holds 13, the validator admits 9) and in **five**
+> places, not the three carrying the exact phrase the sweep quoted —
+> `upsert` and `clear` said "12-slot allowlist" and were missed on the
+> first pass; all five now name the constants instead of a count; and `sessions.py`'s
 > "The Edit Session UI" named a page retired in 18R Item 4. Nothing
 > here is carried forward.
 
