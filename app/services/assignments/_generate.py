@@ -607,6 +607,89 @@ class ReconcileImpact:
     responses_deleted: int
 
 
+@dataclass(frozen=True)
+class InstrumentReconcileState:
+    """What a regenerate would do to one instrument — see
+    :func:`staleness_by_instrument`."""
+
+    stale: bool
+    eligible: int
+
+
+def staleness_by_instrument(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    override_exclude_self_reviews: bool | None = None,
+) -> dict[int, InstrumentReconcileState]:
+    """Per instrument: would regenerating change which pairs exist?
+
+    ``True`` when the instrument **has materialised rows** and a
+    :func:`replace_assignments` run would insert or delete at least one
+    pair — the rows have fallen out of step with what the engine would
+    produce now, because the pinned rule changed or the rosters or
+    relationships moved after Generate.
+
+    **The basis is the engine's own diff, not a count.** Two earlier
+    shapes were wrong in ways that matter:
+
+    - *Comparing counts* (``eligible_count != generated_count``) misses a
+      rule change that trades one pair for another — the totals match and
+      the set is different.
+    - *Gating on ``rule_id is not None``* misses every unpinned
+      instrument. Since Wave 5 PR 5.3 a NULL ``rule_set_id`` is the Full
+      Matrix default at the diff site, so unpinned instruments generate
+      like any other and can go stale like any other.
+
+    Deriving the verdict from :func:`_diff_one_instrument` — the same
+    function :func:`replace_assignments` applies — means it cannot drift
+    from what Generate actually does, because it *is* what Generate does.
+
+    ``eligible`` rides along from the same diff: the pair fan-out the
+    engine would produce for that instrument now. It is the figure the
+    Assignments page's ``eligible_count`` has always promised and, since
+    the per-rule helper retired, never carried.
+
+    Inputs are loaded once for the whole session, so this costs one
+    reconcile walk rather than one per instrument.
+    """
+    inputs = _load_reconcile_inputs(db, review_session, None)
+    state: dict[int, InstrumentReconcileState] = {}
+    for instrument in inputs.targets:
+        diff = _diff_one_instrument(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            session_rule_set=inputs.rule_set_for(instrument),
+            reviewers=inputs.reviewers,
+            reviewees=inputs.reviewees,
+            pair_context_lookup=inputs.pair_context_lookup,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+        )
+        # Never-generated is not stale. An instrument with no
+        # materialised rows would otherwise report stale on every fresh
+        # session, since a run would insert its whole fan-out — and an
+        # always-stale badge trains the operator to ignore it, which is
+        # the failure mode that retired the previous signal. The
+        # not-yet-generated case has its own carriers: the Workflow
+        # card's Generate step and the ``assignments.*`` empty rules.
+        # Staleness means *materialised rows that have fallen out of
+        # step*, which needs rows to have been materialised.
+        #
+        # The boundary this accepts: deleting a roster entry cascades
+        # its assignment rows away, so emptying an instrument's roster
+        # entirely leaves no rows and reads as never-generated rather
+        # than stale. The same sibling rules carry that case, and the
+        # alternative — treating "no rows" as stale — is the false
+        # positive above.
+        state[instrument.id] = InstrumentReconcileState(
+            stale=bool(diff.existing_rows)
+            and bool(diff.to_insert or diff.to_delete),
+            eligible=diff.pairs_count,
+        )
+    return state
+
+
 def reconcile_impact(
     db: Session,
     review_session: ReviewSession,

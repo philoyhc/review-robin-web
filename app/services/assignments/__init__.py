@@ -62,6 +62,8 @@ from ._generate import (
     coverage_stats,
     generate_full_matrix,
     reconcile_impact,
+    InstrumentReconcileState,
+    staleness_by_instrument,
     replace_assignments,
 )
 from ._self_review import (
@@ -102,6 +104,8 @@ __all__ = [
     "list_reviewees",
     "list_reviewers",
     "reconcile_impact",
+    "InstrumentReconcileState",
+    "staleness_by_instrument",
     "recompute_self_review_classification",
     "replace_assignments",
     "reviewee_fields_with_data",

@@ -50,9 +50,10 @@ class InstrumentStatusBlock:
     - ``rule_name`` — the pinned RuleSet's name; ``None`` when
       ``Instrument.rule_set_id`` is NULL ("— No rule pinned —").
     - ``eligible_count`` — pairs the engine would produce if run
-      now against the current rosters / relationships. ``0`` when
-      no rule is pinned. Recomputes on every page load — reflects
-      roster edits immediately, before Generate.
+      now against the current rosters / relationships, read from the
+      reconcile diff. Recomputes on every page load, so roster edits
+      show before Generate. Unpinned instruments carry a real figure
+      too: a NULL ``rule_set_id`` is Full Matrix at the diff site.
     - ``generated_count`` — actual ``Assignment`` rows on this
       instrument right now.
     - ``self_review_total`` — count of self-review rows on this
@@ -70,13 +71,12 @@ class InstrumentStatusBlock:
       ``include=True``. Drives the **Included** column pill on the
       Assignments page status table; lags ``generated_count`` when
       individual rows (e.g. self-reviews) have been deactivated.
-    - ``is_stale`` — **always ``False``.** The staleness comparison
-      needed a per-rule eligible count, and the helper that supplied
-      it went with the rule-set library, so nothing can populate it.
-      Kept as a field rather than removed because the status block is
-      constructed positionally in several places; see the comment at
-      its assignment below for why forcing ``False`` is safer than
-      computing it from what remains.
+    - ``is_stale`` — the instrument has materialised rows and a
+      regenerate would insert or delete at least one pair. Read from
+      the engine's reconcile diff, so it cannot disagree with what
+      Generate would do. Never-generated instruments read ``False``:
+      a run would insert their whole fan-out, and an always-on badge
+      is one the operator learns to ignore.
     - ``edit_url`` — deep link to the matching Instrument card.
     """
 
@@ -108,10 +108,13 @@ class AssignmentsPageContext:
       non-NULL ``rule_set_id``. Drives the disabled state on the
       page-level Generate button (zero pinned ⇒ disabled with
       "Pin rules on the Instruments page first" nudge).
-    - ``any_stale`` — **always ``False``**, since every
-      ``is_stale`` is. No "Pairs may be stale" badge renders, and the
-      ``"generate"`` next-action state below is unreachable while this
-      holds.
+    - ``any_stale`` — whether any instrument is stale. **No live
+      consumer:** no template reads it, and the only caller is
+      :func:`compute_next_action_generate_state` below, which is
+      itself wired to no route. Kept because the aggregate is free
+      once the per-instrument walk has run, and because the resolver
+      is a decision to make rather than dead weight to delete
+      silently — see the findings register.
     - ``instruments_url`` — deep link to the Instruments page,
       surfaced on the Generate disabled-state nudge.
     """
@@ -132,14 +135,13 @@ def build_assignments_page_context(
     from app.services import assignments as assignments_service
     from app.services import responses as responses_service
 
-    # Wave 5 PR 5.1 — ``session_library.evaluate_session_rule_eligibility``
-    # retired with the operator-library tier. The Assignments page
-    # status blocks no longer surface a per-rule eligible count;
-    # ``eligible_count`` reads 0 for pinned instruments (and the
-    # downstream ``compute_staleness`` predicate falls back to "not
-    # stale" once eligible is unknown). PR 5.3 retires the page's
-    # legacy-pinning context entirely.
-    eligibility_by_rule: dict[int, int] = {}
+    # Staleness is read from the engine's own diff — one reconcile walk
+    # for the session, keyed by instrument id. The retired per-rule
+    # eligible count it replaces could not answer the question: equal
+    # counts hide a rule change that swaps one pair for another.
+    reconcile_state = assignments_service.staleness_by_instrument(
+        db, review_session
+    )
 
     instruments = list(
         db.execute(
@@ -212,21 +214,14 @@ def build_assignments_page_context(
             pinned_count += 1
             rule_row = rule_set_rows.get(rule_id)
             rule_name = rule_row.name if rule_row is not None else None
-            eligible_count = eligibility_by_rule.get(rule_id, 0)
         else:
             rule_name = None
-            eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
         included_count = included_by_instrument.get(instrument.id, 0)
-        # The staleness comparison retired with the session_library
-        # helper that supplied per-rule eligibility. Without an
-        # eligible count ``compute_staleness`` would false-positive
-        # every pinned instrument, which is worse than reporting
-        # nothing: an always-stale badge trains the operator to ignore
-        # it. So this is False deliberately, not pending — reviving
-        # staleness means restoring a per-rule eligible count first.
-        # spec/assignments.md states the absence as the contract.
-        is_stale = False
+        state = reconcile_state.get(instrument.id)
+        is_stale = state.stale if state is not None else False
+        eligible_count = state.eligible if state is not None else 0
+        any_stale = any_stale or is_stale
         sr_active, sr_deactivated = self_review_breakdown.get(
             instrument.id, (0, 0)
         )
@@ -298,16 +293,13 @@ class NextActionGenerateState:
       Segment 15E renders a supporting link to the Instruments
       page in place of a primary button — generation isn't
       meaningful until at least one instrument has a rule.
-    - ``"generate"`` — **unreachable today.** It is gated on
-      ``any_stale``, which is forced ``False`` (see above), so this
-      branch never returns. It was meant to catch never-generated
-      instruments, and instruments whose rule or roster changed after
-      a Generate. Reviving it needs a per-rule eligible count, not a
-      change here. Renders as a Primary "Generate assignments" button
-      that POSTs the same
-      ``/assignments/generate`` route used by the Assignments
-      page's page-level button.
-    """
+    - ``"generate"`` — at least one instrument's rows are stale: the
+      pinned rule changed, or the rosters or relationships moved after
+      Generate. Reachable again since Segment 19N restored the
+      staleness signal; it was dead while ``any_stale`` was forced
+      ``False``. Never-generated instruments are *not* caught here —
+      that case has its own carriers, and treating it as staleness
+      lights up every fresh session."""
 
     state: Literal["hidden", "pin_rules", "generate"]
     pinned_instrument_count: int
