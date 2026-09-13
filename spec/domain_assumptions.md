@@ -1,16 +1,12 @@
 # Assumptions
 
 A short record of load-bearing **domain** assumptions for Review
-Robin Web. The original UI-vocabulary content (button styles,
-banners, typography, layout primitives) was officially superseded
-2026-05-03 by `spec/visual_style_general.md` +
-`spec/visual_style_rrw.md` + `spec/ui_elements.md`; the
-superseded sections moved to `guide/archive/assumptions_ui_legacy.md`
-on 2026-05-11 once the sweep at `guide/archive/spec_sweep_11may.md` C1
-landed.
-
-Today this file is the small Domain reference + a cross-reference
-index pointing into the canonical visual-style docs.
+Robin Web. **UI vocabulary is not here** — button styles, banners,
+typography and layout primitives live in
+`spec/visual_style_general.md`, `spec/visual_style_rrw.md` and
+`spec/ui_elements.md`, which are authoritative for them. This file
+is the small Domain reference plus the cross-reference index
+below.
 
 ## Domain
 

@@ -154,57 +154,46 @@ classes.
 
 ### 3. Page headings
 
-> **H1 (page title)** — `1.5rem semibold text-primary`, with a
-> `.page-subtitle` line allowed below.
-> *Current:* `h1` global rule in `base.html` (margin only, no size
-> override). `.page-subtitle` defined as `0.95em #555`.
-> *Canonical:* `visual_style_general.md` "Type scale" — explicit `1.5rem`
-> semibold, `page-subtitle` becomes `text-secondary` small.
-> *Migration delta:* size + weight on H1; color token on subtitle.
-> *PR:* A (tokens & primitives).
+> **H1 (page title)** — `--fs-h1` (1.5rem) at weight 600, line-height
+> 1.3, with `--space-4` below. An optional `.page-subtitle` line sits
+> under it at `--fs-small` in `--text-subtle`, pulled up 8px so it reads
+> as part of the title block rather than as the first paragraph.
 
-> **H2 (card / section title)** — `1.125rem semibold text-primary`,
-> sits at top of card with 16px space below.
-> *Current:* `.card h2` rule sets `font-size: 1.15rem`; bare `h2`
-> outside cards inherits browser default.
-> *Canonical:* uniform 1.125rem semibold across cards and sections.
-> *Migration delta:* normalize to one rule.
-> *PR:* A (tokens & primitives).
+> **H2 (card / section title)** — `--fs-h2` (1.125rem) at weight 600,
+> **one rule for cards and sections alike**, so a heading does not change
+> size by moving into or out of a card. `--space-3` below, zeroed on the
+> top when it is a card's first child. `h3` takes `--fs-body` at the same
+> weight; on `/guide` it also takes a `--space-6` top margin (see §10).
 
 ### 4. Cards
 
-> **`.card` (default)** — white surface, `border-default` 2px border,
-> `border-radius: 8px`, 16px padding.
-> *v1:* `border: 2px solid #bbb; border-radius: 12px; padding: 20px`.
-> *v2 (pilot-validated):* `border: 2px solid var(--border-default);
-> border-radius: var(--radius-card); padding: var(--space-4)`. The
-> 1px border in the original spec was visually swallowed by table
-> grid lines and form borders — bumped to 2px during the pilot.
-> *Migration delta:* sweep page-by-page; the v2 rule already lives
-> under `body.ui-v2` so any opted-in template picks it up.
-> *PR:* C (cards & banners) — landed in pilot.
+> **`.card` (default)** — `border: 2px solid var(--border-default)`,
+> `border-radius: var(--radius-card)` (8px), `padding: var(--space-4)`,
+> filled with `--surface-page`.
+> **2px, not 1px**: at 1px the card edge is visually swallowed by the
+> table grid lines and form borders sitting next to it.
+> **No `margin-bottom`.** A card's vertical spacing comes from its
+> wrapper's flex or grid `gap`, because a margin on the card compounded
+> with `.bottom-grid`'s own margin and the `align-items: start` offset and
+> doubled the gap on the Setup pages.
 
-> **`.card.lock` (warning-framed, lifecycle-locked)** — same shape
-> as `.card`, with `accent-amber-bg` background and
-> `accent-amber-dark` border (the warning brown). Recovery action
-> inside uses outline-amber button (see §6).
-> *v1:* not a class — inline-styled `.card` with bespoke amber
-> border + bg per page.
-> *v2 (pilot-validated):* `.card.lock` rule under `body.ui-v2`.
-> *Migration delta:* sweep templates to replace inline amber cards
-> with `.card.lock`.
-> *PR:* C (cards & banners) — class landed; per-template sweep
-> still pending for the rest of the operator surface.
+> **`.card.lock` (warning-framed, lifecycle-locked)** — `.card`'s shape
+> with `--card-warning-bg` fill and `--card-warning-border` border (the
+> warning brown). The recovery action inside uses the outline-amber
+> `.btn.alert` role (§6), per `visual_style_general.md` P7. Never build an
+> amber card from inline styles: the framing is shared with
+> `.card.danger-zone` and has to move in one place.
 
 > **`.card.danger-zone` (warning-framed, destructive grouping)** —
-> same shape as `.card`, white background, `accent-amber-dark`
-> border (same warning brown as `.card.lock` — both warning
-> surfaces share one visual language), H2 in `accent-amber-dark`.
-> Destructive button inside stays outline-`accent-red` (the action
-> that actually deletes data) — the brown frames the surface, the
-> red marks the action.
+> `.card`'s shape over the **same amber surface as `.card.lock`**:
+> `--card-warning-bg` fill and `--card-warning-border` border, plus an H2
+> in `--card-warning-fg`. Both warning surfaces share one visual language,
+> fill included, so the operator's eye recognises the category whether the
+> card says "you can't change this right now" or "here's where you delete
+> data". The Destructive button inside keeps its own outline red — the
+> amber frames the surface, the red marks the action that deletes data.
 >
-> **Delete-confirm standard (audit U3).** Every destructive
+> **Delete-confirm standard.** Every destructive
 > submit is **disabled-until-checked**: the button ships
 > `disabled aria-disabled="true"`, a paired confirmation checkbox
 > enables it, and the checkbox is also `required` (belt-and-suspenders
@@ -217,96 +206,74 @@ classes.
 > affirmative **"Yes, delete …"** voice everywhere (full sentence in a
 > danger-zone card; compact "Yes, delete" in the expander toolbar) —
 > never a permissive "Allow delete".
-> *v1:* not a class — inline-styled `.card` with bespoke red
-> border (and inconsistent backgrounds) per page.
-> *v2 (pilot-validated):* `.card.danger-zone` rule under
-> `body.ui-v2`.
-> *Migration delta:* sweep `session_detail.html`,
-> `session_reviewees.html`, `session_assignments.html`,
-> `instruments_index.html` to use the class; drop inline
-> `style="color: #b91c1c"` H2 overrides.
-> *PR:* C (cards & banners) — class landed; per-template sweep
-> still pending.
 
-> **`.card.placeholder` (canonical placeholder treatment)** — same
-> shape as `.card`, with `bg-muted` background, `text-muted` H2,
-> `text-secondary` body, `not-allowed` cursor on the whole card.
-> Used for cards whose underlying feature is not yet implemented;
-> every instance reads as visually identical so siblings on the
-> same page render with the same typography and contrast
-> regardless of which is in its "active" lifecycle state.
-> *v1:* not a class — placeholder cards mixed with active cards
-> rendered identically (default `.card`), distinguished only by
-> a "(under construction)" body line.
-> *v2 (Segment 11B):* `.card.placeholder` rule under
-> `body.ui-v2`; a Jinja macro `placeholder_card(id, title,
-> description, button_label, button_tooltip)` in
-> `app/web/templates/operator/partials/_placeholder_card.html`
-> packages the canonical heading + body + disabled action
-> button. Used on Session Home (Quick Setup, Extract Data) and
-> the Assignments page (Rule Based Assignment). New placeholder
-> cards on any page should reuse the macro without further
-> design work.
-> *Migration delta:* none — canonical from the start.
-> *PR:* Segment 11B (PRs C / D / 386 / 387 / 388).
+> **`.card.placeholder` (canonical placeholder treatment)** — `.card`'s
+> shape with a `--surface-muted` fill, `--text-subtle` H2 and body, and
+> `not-allowed` cursor on the card and everything in it. For cards whose
+> underlying feature is not yet implemented.
+> **Every instance reads identically.** Per-card state distinctions belong
+> in body copy, never in an opacity flip: two placeholders on one page
+> that differ visually invite the reader to look for a difference in
+> meaning that is not there.
+> A Jinja macro `placeholder_card(id, title, description, button_label,
+> button_tooltip)` in
+> `app/web/templates/operator/partials/_placeholder_card.html` packages the
+> canonical heading + body + disabled action button. It has **no callers
+> at present**; the one live placeholder is the Previews hub's empty-state
+> card, written out in `session_previews.html`. Reach for the macro rather
+> than a second hand-written copy.
 
-> **`.card.next-action` (Session Home's Next Action card)** —
-> same shape as `.card`, with `accent-blue` border (matching the
-> Primary button inside) and `display: flex; flex-direction: column`.
-> No fixed `min-height` — the card grows to fit its content. Three
-> vertically-stacked children:
-> `.next-action-body` (flex-grows), optional `.next-action-confirm`
-> (sits just above the buttons), and `.next-action-buttons`
-> (Primary + Secondary buttons in one row at the bottom). The
-> H2 is the literal constant string "Next Action"; per-state
-> action verbs live in the primary button label, not the H2.
-> The blue border signals this is the page's single most
-> important card. POST forms (Activate / Revert to draft /
-> Pause) declare an id in the body and the button declares
-> `form="next-action-{name}-form"` so the form definition stays
-> near its checkbox while the submit button lives in the bottom
+> **`.card.next-action` (Session Home's Workflow card)** —
+> `.card`'s shape with a `--card-active-border` border and
+> `display: flex; flex-direction: column`. The border signals this is the
+> page's single most important card and ties it to the Primary button it
+> carries. **No fixed `min-height`** — the card grows to fit its content,
+> so a short early state is not padded out to match a tall one.
+> **The H2 is the constant string "Workflow"**; the per-state action verb
+> belongs in the primary button's label, never in the heading.
+> Rules exist under `body.ui-v2 .card.next-action` for
+> `.next-action-body` (flex-grows), `.next-action-confirm`,
+> `.next-action-buttons`, `.next-action-signals` / `.next-action-signal`
+> (the tone-coded inline captions) and `hr.next-action-divider`. Which of
+> them each lifecycle state renders is `spec/session_home.md`'s contract,
+> not this catalogue's.
+> **A POST form declares its id in the body and its submit button
+> declares `form="next-action-{name}-form"`**, so the form definition
+> stays next to the checkbox it gates while the submit sits in the bottom
 > row.
-> *v1:* not a class — Home rendered four equal-weight CTAs in a
-> "Run Session" card.
-> *v2 (Segment 11B):* `.card.next-action` rule under
-> `body.ui-v2`; spec at `spec/session_home.md`.
-> *Migration delta:* none — net-new in 11B.
-> *PR:* Segment 11B (PRs B / 390 / 391 / 392 / 393).
 
-> **Reviewer help cards (`.rs-help-card` family)** — tinted blocks
-> listing per-instrument response-field help text. Always a
-> `.rs-help-grid` row of half-width `.rs-help-card` items, whatever
-> the count: the lone-help case used to expand to full width via
-> `.rs-help-card-solo`, retired 2026-05-05 (`62a85fee`) when the
-> per-instrument intro became a half-width card grid and the single
-> card started landing in column 2 beside the heading card.
-> Regression-tested — `test_reviewer_response_flow.py` asserts the
-> modifier does not render.
-> *Current:* `.rs-help-grid`, `.rs-help-card` in `base.html`, on
-> their own `--card-help-bg` / `-border` / `-fg`
-> family (`#e5e7eb` / `#9ca3af` / `#111827` light,
-> `#232c3b` / `#3a465c` / `#e6eaf2` dark) — the shape
-> `.danger-zone` already uses. **Shared since 19E rung 6a with
-> `.page-guidance`**, the Setup pages' guidance disclosure, which is
-> why the theme customizer's facet is named `Help card` rather than
-> `Instrument help card`.
-> *Canonical:* a **slab with a defined edge** — `--card-help-border` is
-> darker than the fill: **2.54:1** against the page in light, **1.95:1**
-> in dark. Enough to sit alone in a column and read as bounded; still
-> short of the 3:1 a UI-component boundary needs, so it is decoration
-> rather than a control edge. *(Deepened 2026-09-06 from ~1.5:1 in both
-> themes; the earlier value was chosen while the slab still sat inside
-> another card.)*
-> *(Through 19C Item 8 the border resolved to the fill's own
-> primitive so the 2px `.card` edge vanished entirely; right while
-> the slab sat inside another card, wrong once `.page-guidance` made
-> it a card of its own. See `spec/color_tokens.md`.)* The
-> tokenization pass had pointed the fill at `--border-default`; that
-> matched only while the border token was very light, and 19C Item 8
-> moved it to a 3:1 boundary colour. Own tokens rather than borrowed
-> ones is what stops the next border change reaching this card.
-> *Migration delta:* none beyond token swap.
-> *PR:* A (tokens) for color tokens; otherwise no change.
+> **Reviewer help cards (`.rs-help-card` family)** — tinted slabs
+> listing per-instrument response-field help text, in `base.html`.
+> **Always a `.rs-help-grid` row of half-width `.rs-help-card` items,
+> whatever the count.** There is no full-width variant and adding one
+> strands the lone card: the per-instrument intro is a half-width card
+> grid, so a sole card that expanded would land in column 2 beside the
+> heading card. `test_reviewer_response_flow.py` asserts that no
+> `rs-help-card-solo` renders.
+>
+> **Its own token family, not borrowed ones** — `--card-help-bg` /
+> `-border` / `-fg` (`#e5e7eb` / `#9ca3af` / `#111827` light,
+> `#232c3b` / `#3a465c` / `#e6eaf2` dark). The fill must never point at a
+> border token: pointed at `--border-default` it reads acceptably only
+> while that token is very light, and `--border-default` carries every
+> bordered surface's boundary and so has to be free to darken. Own tokens
+> are what stop the next border change reaching this card, and are the
+> same reason the family has its own `-fg` rather than inheriting
+> `--text-body`.
+>
+> **A slab with a defined edge**: `--card-help-border` is darker than the
+> fill — **2.54:1** against the page in light, **1.95:1** in dark. Enough
+> for a card standing alone in a column to read as bounded; still short of
+> the 3:1 WCAG 1.4.11 asks of a UI-component boundary, so it is decoration
+> rather than a control edge, and does not have to reach 3:1. The two
+> themes deliberately do not match by the numbers — each ramp has one
+> shared step available at that end.
+>
+> **One token set, two callers**: `.rs-help-card` and `.page-guidance`
+> (the Setup pages' guidance disclosure). That is why the theme
+> customizer's facet is named `Help card` rather than `Instrument help
+> card` — a facet named after one caller would misdescribe what editing it
+> changes. See `spec/color_tokens.md` "Card accents".
 
 ### 5. Banners
 
@@ -352,8 +319,7 @@ reject a payload with a redirect-back-with-banner pattern: the
 route 303s to the GET page with a query-string flag, and the
 GET template renders an inline banner card describing what
 went wrong. Three conventions govern every banner the surface
-renders. (Moved here from `spec/domain_assumptions.md`
-2026-05-11.)
+renders.
 
 **Cancel button.** Every such banner — both red error banners
 ("Could not save…", "Could not delete…") and amber confirmation
@@ -393,66 +359,59 @@ doesn't fire on the dismissed page because no
 
 ### 6. Buttons
 
-The original #21 brief. Pilot-validated. Six v1 affordance × treatment
-styles map onto a refined Primary / Secondary / Destructive / Outline-amber
-vocabulary as follows.
+Five canonical roles — **Primary**, **Secondary**, **Destructive**
+(outline red), **Alert** (filled amber) and **Outline-amber** (lock-card
+recovery). Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
+padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
+border, single-line label. **Roles differ by token, not by shape**, so a
+role change is a colour change and nothing else. If a button does not fit
+one of the five, ask before inventing a sixth.
 
-| v1 (`.btn` modifier) | v2 canonical | Notes |
+| Class | Role | Notes |
 |---|---|---|
-| `.btn` (no modifier) | **Primary** | Solid `accent-blue`, white text. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
-| `.btn.secondary` | **Secondary** | White bg; `text-primary` label with a `text-secondary` outline (a medium-grey border, a shade lighter than the label). The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
-| `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
-| `.btn.alert-solid` | **Primary** | The orange solid collapses to Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
-| `.btn.destructive` | **Destructive (outline red)** | White bg, `accent-red` border + text. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. Since Segment 19I the role also appears **outside** a danger zone: the roster Setup pages' Operator actions card carries a `Delete` for the checkbox-selected rows, between `Add` and `Search`. The card is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox on the row below it (`spec/setup_pages.md`, "Operator actions card"). |
-| `.btn.danger-solid` | **Alert (filled amber)** | Filled `accent-amber-dark`, white text; lightens to `accent-amber` on hover. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution; distinct from `.btn.destructive` (red delete) and `.btn.alert` (outline-amber lock recovery). Consistency-audit U5 / U6 (2026-08-19). |
+| `.btn` (no modifier) | **Primary** | `--btn-primary-bg` fill, `--btn-primary-fg` label, `--btn-primary-border` border. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
+| `.btn.secondary` | **Secondary** | `--btn-secondary-bg` (white) with a `--btn-secondary-fg` label and a `--btn-secondary-border` outline — a medium grey, a shade lighter than the label. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
+| `.btn.alert` | **Outline-amber (recovery in lock card)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
+| `.btn.alert-solid` | **Primary** | Resolves to the Primary tokens; there is no separate orange solid. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
+| `.btn.destructive` | **Destructive (outline red)** | `--btn-destructive-bg` (white) with `--btn-destructive-border` + `--btn-destructive-fg`. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. The role also appears **outside** a danger zone: the roster Setup pages' Operator actions card carries a `Delete` for the checkbox-selected rows, between `Add` and `Search`. The card is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox on the row below it (`spec/setup_pages.md`, "Operator actions card"). |
+| `.btn.danger-solid` | **Alert (filled amber)** | Filled `--btn-alert-bg` with a `--btn-alert-fg` label; lightens to `--btn-alert-bg-hover`. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution, and the role exists to stay distinct from `.btn.destructive` (red, deletes data) and `.btn.alert` (outline amber, recovery inside a lock card): three amber-or-red treatments that mean three different things, so none may borrow another's fill. |
 | `.btn.danger` | **Destructive** (entry point) or **Secondary** | Where `.danger` is the entry into a confirmation, prefer Secondary; the destructive treatment lands on the confirm step. |
-| `.btn-cta` | **Primary (large / centered variant)** | Layout variant only; fill normalizes to Primary. **No current users in app markup** — its one caller was the sessions-lobby empty-state CTA, retired 2026-09-07 when the lobby settled on a single create affordance (`spec/sessions_overview.md`). The rule stays in `base.html` as a named variant, but reach for it only where a page genuinely has one affordance and nothing else competing; don't reintroduce it beside an existing Primary to the same route. |
+| `.btn-cta` | **Primary (large / centered variant)** | Layout variant only — flex centering and multi-line labels; the fill is Primary's. **No callers in app markup**, the rule staying in `base.html` as a named variant. Reach for it only where a page genuinely has one affordance and nothing else competing with it; never beside an existing Primary pointing at the same route, which is two buttons for one action (`spec/sessions_overview.md`). |
 | `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, `pointer-events: none`. Same disabled rule as the regular Primary. |
-| `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row). Keep; add canonical disabled treatment. **As an anchor** (19J.9's pager steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed`, and it takes **no** accent fill. A `.btn-icon` used as an anchor also needs `text-decoration: none` stated on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. Specificity matters here: `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so a specialising rule must carry `.btn-icon` in its selector (`body.ui-v2 .btn-icon.table-pager-step`) or lose on order — silently, if its declarations happen to match what `.btn-icon` already sets. Checked since 2026-09-12 by `tests/integration/test_cascade_ties.py`, which resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is 19J.9 and is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
-| `.btn-reset` | **Inline text-button** (revert-this-field) | Single-line link-styled button used to revert a single text field inside an editor without cancelling and exiting the whole editor. Reference example: per-field `Reset {{ field }} to default` on the Email Template page (`session_setupinvite.html`). Reads as a small inline link (`color: accent-blue`, underline-on-hover); posts a form. The pattern can apply to any editor with per-field overrides — adopt this class instead of inline-styled buttons. |
-| `.back-link` | **Return-to-where-you-came-from** | Top-of-body inline link rendered as `<a class="back-link" href="{{ return_to_url }}">← Back to {{ return_to_label }}</a>`. The canonical "navigate back" affordance for chrome-detour pages and session-level child pages. Used by Operator Settings (`/operator/settings`), About (`/about`), and any page that should return the operator to wherever they came from regardless of the page's working state. The Rule Builder child page used this pattern before its retirement in Wave 5 PR 5.1. Pages that need a "Cancel uncommitted edits" affordance render an inline Cancel button alongside the working-state Save (the back-link still navigates regardless). The `?return_to=<path>` query-param round-trip surfaces as `return_to_url` / `return_to_label` view-shape variables. |
+| `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row), `--text-subtle` by default with `.danger` / `.action` modifiers taking `--icon-btn-danger-fg` / `--icon-btn-action-fg`. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
+| `.btn-reset` | **Inline text-button** (revert-this-field) | Single-line link-styled button used to revert a single text field inside an editor without cancelling and exiting the whole editor. Reference example: per-field `Reset {{ field }} to default` on the Email Template page (`session_setupinvite.html`). Reads as a small inline link (`--text-link`, underline on hover); posts a form. The pattern can apply to any editor with per-field overrides — adopt this class instead of inline-styled buttons. |
+| `.back-link` | **Return-to-where-you-came-from** | Top-of-body inline link rendered as `<a class="back-link" href="{{ return_to_url }}">← Back to {{ return_to_label }}</a>`. The canonical "navigate back" affordance for chrome-detour pages and session-level child pages. Used by Operator Settings (`/operator/settings`), About (`/about`), and any page that should return the operator to wherever they came from regardless of the page's working state. Pages that need a "Cancel uncommitted edits" affordance render an inline Cancel button alongside the working-state Save (the back-link still navigates regardless). The `?return_to=<path>` query-param round-trip surfaces as `return_to_url` / `return_to_label` view-shape variables. |
 | `.nav-tab` (chrome class, reused for page-internal) | **Nav button** (page-internal view switcher) | Page-internal tab-like navigation between sibling views inside a single operator page — *not* the chrome. Reference examples: Email Template's `Invitation` / `Reminder` / `Responses received` row (`session_setupinvite.html`); Previews-page email-tab strip (`partials/_email_preview_region.html`). Reuses the chrome's `.nav-tab` styling so the visual vocabulary stays consistent: active view renders `<span class="nav-tab active" aria-current="page">` (non-anchor, current location), sibling views render `<a class="nav-tab">` anchors, "coming soon" reserved tabs render `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `<div class="tab-strip tab-strip-page">` — the `.tab-strip-page` modifier gives the row the chrome's grey tint, a thin border, and rounded corners so the active-tab white background reads against the row tint just like the chrome's Setup row. |
 
-**Hover** (per `visual_style_general.md` P6 — pilot-validated):
-- *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten). `.btn.danger-solid` (filled amber) lightens from `accent-amber-dark` to `accent-amber`.
-- *Outline buttons* (Secondary, `.btn.destructive`, Outline-amber): subtle background tint in the role's family (`bg-muted`, `accent-red-bg`, `accent-amber-bg-mid`).
-- Disabled buttons skip via `pointer-events: none`.
+**Hover** (per `visual_style_general.md` P6): filled controls lighten,
+outline controls gain a subtle tint in their own family. One direction
+everywhere, so "you can click this" reads the same way on every control.
 
-> **Disabled anchor-as-button** — anchors used as buttons that
-> render disabled (the Extract Data zip-all CTA on Session Home;
-> the Operator actions card's "Add" anchor — `Add new row` until
-> Segment 19I — when a row is being edited or a roster is empty).
-> *Current:* inconsistent — `.btn.alert-solid.disabled` with
-> `aria-disabled="true"` and ad-hoc inline
-> `style="opacity: 0.5; pointer-events: none;"` in some places;
-> `.btn.secondary.disabled` in others.
-> *Canonical:* one `.btn.disabled` rule that handles both
-> `<button disabled>` and `<a class="btn disabled" aria-disabled>`,
-> matching visual_style_general.md's "Disabled — same shape as the role
-> variant; reduced opacity (0.5) and `cursor: not-allowed`".
-> *Migration delta:* unify; remove inline overrides.
-> *PR:* B (buttons).
+- *Filled* — Primary and `.alert-solid` move to `--btn-primary-bg-hover`;
+  `.btn.danger-solid` to `--btn-alert-bg-hover`.
+- *Outline* — Secondary to `--btn-secondary-bg-hover`, `.btn.destructive`
+  to `--btn-destructive-bg-hover`, `.btn.alert` to
+  `--btn-amber-bg-hover`. Border and label stay put.
+- Disabled buttons never hover: `pointer-events: none`.
 
-> **Inline-style buttons** — ad-hoc buttons that bypass the `.btn`
-> family entirely.
-> *Current:* migrated. The row-level rf-delete / rf-add buttons in
-> `instruments_index.html` now use `.btn-icon.danger` /
-> `.btn-icon.action` (rules in `base.html`); the `session_detail.html`
-> Delete Data / Delete session buttons are `.btn.destructive` in a
-> `.card.danger-zone` **on Session Home**; `review_surface.html`'s
-> "Clear all" is `.btn.destructive`. No inline-styled buttons remain in
-> these templates.
-> *Corrected 2026-09-08:* this read that the Delete buttons "relocated
-> to `session_edit.html`'s Danger Zone (2026-05-22)", which was half a
-> round trip. They did move there on 2026-05-22 (commit `b490825`), and
-> **came back** when 18R Item 4 retired that page on 2026-08-18;
-> `session_edit.html` no longer exists. The class was right throughout —
-> only the address was stale.
-> *Canonical:* Destructive for the danger-zone forms, `.btn-icon`
-> variants (`.danger` / `.action`) for the row-level rf-delete /
-> rf-add.
-> *Migration delta:* complete.
-> *PR:* B (buttons).
+> **Disabled anchor-as-button** — an anchor doing button duty that has to
+> render inert, such as the Operator actions card's "Add" while a row is
+> being edited. **One rule covers all four forms** —
+> `body.ui-v2 .btn:disabled`, `button.btn:disabled`, `a.btn.disabled` and
+> `.btn[aria-disabled="true"]` — at `opacity: 0.5`, `cursor: not-allowed`,
+> `pointer-events: none`. Markup carries the class **and**
+> `aria-disabled="true"` (an anchor cannot take the `disabled` attribute),
+> and never an inline `style` override: a role's disabled look has to move
+> in one place.
+
+> **No inline-styled buttons.** Nothing in the templates bypasses the
+> `.btn` family: `instruments_index.html`'s row-level delete / add use
+> `.btn-icon.danger` / `.btn-icon.action`, `session_detail.html`'s Delete
+> data and Delete session are `.btn.destructive` inside the
+> `#danger-zone` card, and `review_surface.html`'s "Clear all" is
+> `.btn.destructive`. A new button takes a role from the table above; an
+> inline `style` on a button is a defect, because a role that exists in one
+> template's markup cannot be restyled from `base.html`.
 
 ### 7. Tables
 

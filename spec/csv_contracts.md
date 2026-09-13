@@ -5,8 +5,8 @@ operator extracts or uploads.** Multiple extract paths and five
 import paths share a small library of primitives and a strict
 round-trip guarantee on the five main roster-shaped pairs
 (Reviewers, Reviewees, Relationships, Observers, Settings).
-Observers has both a wired importer and an extract (W13, PR #1755);
-its tile is conditionally shown on the Extract Setup card when
+Observers has both a wired importer and an extract; its tile is
+conditionally shown on the Extract Setup card when
 `observers_enabled`.
 
 When the code drifts from this spec, fix the code. Each extract
@@ -52,7 +52,7 @@ header name (case-sensitive), not by position. An extra column
 the operator added in Excel is ignored; a missing required
 column is a parse error.
 
-### 1a. Friendly-label header suffix (Segment 19C Item 1)
+### 1a. Friendly-label header suffix
 
 The operator-definable friendly labels for the nine renamable tag
 slots — `ReviewerTag1..3`, `RevieweeTag1..3`, `PairContextTag1..3`
@@ -107,8 +107,8 @@ is byte-stable.
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
-| 6 | `PhotoLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `PhotoLink` column (W11, PR #1756). |
-| 7 | `Status` | `reviewer.status` | Segment 18P PR C. `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
+| 6 | `PhotoLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `PhotoLink` column. |
+| 7 | `Status` | `reviewer.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
 `name`, then by `email`. Deterministic.
@@ -123,14 +123,14 @@ is byte-stable.
 | 4 | `RevieweeTag2` | `reviewee.tag_2` | Optional. |
 | 5 | `RevieweeTag3` | `reviewee.tag_3` | Optional. |
 | 6 | `PhotoLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
-| 7 | `Status` | `reviewee.status` | Segment 18P PR C. `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
+| 7 | `Status` | `reviewee.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first, then by `name`, then by
 `email_or_identifier`.
 
 ### 2.3 Relationships — `extracts/relationships_extract.py`
 
-Shipped 12A-3 PR 1. The pair-context round-trip.
+The pair-context round-trip.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
@@ -146,11 +146,9 @@ reviewee identifier.
 
 ### 2.4 Responses — `extracts/responses_extract.py`
 
-Shipped 12A-1 PR 4 + #781 polish; preamble + positional
-instrument naming added in Segment 18D. Analysis-facing per-session
-CSV — the consumer is an external analyst, not the app. No import
-counterpart (responses are reviewer-generated, not
-operator-uploaded).
+Analysis-facing per-session CSV — the consumer is an external
+analyst, not the app. No import counterpart (responses are
+reviewer-generated, not operator-uploaded).
 
 The file has two parts:
 
@@ -171,7 +169,7 @@ The file has two parts:
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
 | Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Computed via `is_self_review(reviewer, reviewee)` (case-insensitive email match; `FALSE` for non-email reviewee identifiers). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
-| Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped` (Segment 13C / 18D). Appended last so the original 20-column indices stay stable for existing analyst pipelines. |
+| Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped`. **Appended last, not grouped with the other instrument columns**, so the preceding 20 column indices stay stable for analyst pipelines that read by position. |
 
 An analyst joins a preamble help text to its data column via the
 shared `FieldKey`.
@@ -187,9 +185,9 @@ instrument.order, field.order)`.
 
 ### 2.5 Audit events — `extracts/audit_events_extract.py`
 
-Shipped 12B PR 1. No operator-facing tile (relocates to Sys Admin
-under Segment 16A); the route `GET /export/audit_log.csv` is
-live.
+No operator-facing tile on the session pages; the route
+`GET /export/audit_log.csv` is live and is reached from the Sys Admin
+page's per-session Diagnostics row.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
@@ -206,7 +204,7 @@ live.
 
 ### 2.6 Entity stats — `extracts/entity_stats_extract.py`
 
-Shipped 18H Part 3. Two **bundle-only** CSVs — a Reviewer stats
+Two **bundle-only** CSVs — a Reviewer stats
 file and a Reviewee stats file — added to the Zip-all bundle.
 They are deliberately **not** offered as individual downloads and
 have **no importer**: the round-trippable Reviewers / Reviewees
@@ -234,7 +232,7 @@ three field / char pairs.
 
 ### 2.7 Per-instrument responses — `extracts/responses_extract.py` (`serialize_responses_for_instrument`)
 
-Shipped 18H Part 2. **Bundle-only** sibling files to the unified
+**Bundle-only** sibling files to the unified
 Responses CSV — one ``{code}_instrument_{n}.csv`` per instrument,
 named positionally to match the ``instrument_{n}`` vocabulary
 used in §2.4's preamble and ``InstrumentName`` column. No
@@ -252,7 +250,7 @@ rows cluster together.
 
 ### 2.8 Reviewer session summary — `extracts/responses_extract.py` (`serialize_reviewer_session_summary`)
 
-Shipped 17B Phase 2 PR B. The **per-reviewer** participation
+The **per-reviewer** participation
 record downloaded from
 `GET /me/sessions/{id}/summary.csv` as
 ``{code}_my_responses.csv``. Gated on whole-session submission
@@ -273,8 +271,8 @@ family.
 
 ### 2.9 Participant tokens — `extracts/participant_tokens_extract.py`
 
-Shipped 2026-06-03 as the operator-side deanonymization key.
-Downloaded from the Extract data tab's `Token keys` card
+The operator-side deanonymization key. Downloaded from the Extract
+data tab's `Token keys` card
 (`GET /sessions/{id}/export/participant_tokens.csv`) and
 included in the responses-bundle Zip-all archive when
 `session.observers_enabled` is on (driven by the intro
@@ -294,8 +292,7 @@ Reviewer + Reviewee on the session; reviewers block first
 to its counterpart in any Anonymized download for the same
 session. Audit event:
 `session.participant_tokens_extracted` (`counts.rows` =
-reviewer + reviewee row count, header excluded). Closes
-`guide/archive/observers_clean_up.md` item 15.
+reviewer + reviewee row count, header excluded).
 
 ---
 
@@ -359,18 +356,20 @@ reconciles them.
 | Status value | `Status` must be `active` / `inactive` (lowercase) or empty (defaults to `active`). |
 
 **Save:** `save_relationships(db, session, rows)` wipe-and-replace,
-then call `seed_display_fields_from_assignments` (legacy-named
-helper that reads from `relationships.tag_N` post-15D PR 6b).
+then call `seed_display_fields_from_assignments` — **named for
+assignments, but it reads `relationships.tag_N`**; the name is kept
+because renaming it buys a reader nothing and costs every caller.
 
 ### 3.2b Observers — `csv_imports.py`
 
-Shipped PR #1706. `parse_observer_csv(content: bytes) -> ParseResult`
+`parse_observer_csv(content: bytes) -> ParseResult`
 and `save_observers(db, session, rows, *, user, correlation_id)`.
 
 **Required columns:** `ObserverEmail`.
 **Optional columns:** `ObserverName`, `ObserverTag1`, `Status`,
-`CohortRule` (Segment 18P PR B — a compact-JSON `cohort_rule` payload;
-PR C — the `Status` the extract already emitted is now read back).
+`CohortRule` (a compact-JSON `cohort_rule` payload). The importer reads
+back both columns the extract emits, so observer status and cohort rule
+both round-trip.
 
 **Per-row validation:**
 
@@ -379,7 +378,7 @@ PR C — the `Status` the extract already emitted is now read back).
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
-| `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error (18P PR C). |
+| `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's
@@ -387,7 +386,7 @@ observer roster. Emits `observers.imported` audit event on success.
 Bulk delete: `delete_all_observers(db, session, *, user,
 correlation_id)` — emits `observers.deleted_all`.
 
-**Extract counterpart:** `app/services/extracts/observers_extract.py` (W13, PR #1755). The extract uses the same column shape as the importer. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Extract Setup card renders the Observers tile conditionally when `observers_enabled=True`; the Zip-all bundle includes `{code}_observers.csv` on the same gate.
+**Extract counterpart:** `app/services/extracts/observers_extract.py`. The extract uses the same column shape as the importer. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Extract Setup card renders the Observers tile conditionally when `observers_enabled=True`; the Zip-all bundle includes `{code}_observers.csv` on the same gate.
 
 ### 3.3 Settings — `session_config_io/` (two-phase apply)
 
@@ -415,8 +414,9 @@ The dotted / bracketed `field` paths route each row to a parser
 that knows its target. See `serialize_session_config` for the
 sections (session-level → email templates → RTDs → instruments
 → session RuleSets → data shapes → session tags) and their
-canonical ordering. **Friendly labels are no longer a Settings
-section** — see the round-trip notes below.
+canonical ordering. **Friendly labels are not a Settings
+section** — the roster CSV headers are their sole carrier (§1a); see
+the round-trip notes below.
 
 **Two-phase apply contract:**
 
@@ -436,26 +436,27 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 **Round-trip notes:**
 
-- **`field_labels.*` retired from the Settings CSV (Segment 19C
-  Item 1).** Friendly labels now round-trip through the roster CSV
-  headers (§1a) as the sole carrier. Settings no longer serializes
-  them; a legacy `field_labels.*` row in an old bundle falls through
-  to the unknown-key **silent-ignore** on apply (like the retired
-  `rtds[` keys) — no error, label dropped, re-export to recover it in
-  the roster header.
+- **`field_labels.*` is not a Settings key, and a bundle carrying
+  one still imports.** Friendly labels round-trip through the roster
+  CSV headers (§1a) as the sole carrier, so the export emits no
+  `field_labels.*` row. A bundle written when it did falls through to
+  the unknown-key **silent ignore** on apply (like an `rtds[` row) —
+  no error, the label is dropped, and re-exporting the roster recovers
+  it in the header. Dropping the tolerance would make every older
+  bundle fail to import for a row that carries nothing.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **1-based CSV row position is authoritative**. To reorder
   instruments, reorder their row blocks in the file.
-- **`instruments[n].display_fields[m].label` is a dead column.** It is no
-  longer serialized (retired 15A); a legacy `label` row is tolerated and
-  silently dropped on import, and the model column is always restored
-  empty.
+- **`instruments[n].display_fields[m].label` is a dead column.** The
+  export does not emit it, a `label` row from an older bundle is
+  tolerated and silently dropped on import, and the model column is
+  always restored empty. The column stays in the schema as dead data;
+  the import tolerance is what keeps an older bundle importable.
 
 ### 3.4 What's not an importer
 
-- **Assignments.** Materialised derivative post-15D — no operator-
-  facing CSV importer. The `manual` CSV path in `assignments.py`
-  survives as a dev-diagnostic helper for test fixtures only.
+- **Assignments.** A materialized derivative — no operator-facing
+  CSV importer, and no importer of any kind.
 - **Responses.** Reviewer-generated; no operator-facing importer.
 - **Audit events.** System-emitted; no importer.
 
@@ -485,10 +486,14 @@ Concrete guarantees the importers + serialisers maintain:
    dialect-stable, and round-trip-safe (any ISO 8601 offset parses
    back). The audit-events extract is the exception: it stays in
    UTC (`spec/timezone_display.md`).
-5. **Vocabulary normalisation.** RTD `data_type` accepts both
+5. **Vocabulary normalisation.** The `data_type` column is
+   lower-cased before it is validated, so a file written with the
+   capitalised tokens (`String`, `DateTime`) validates identically
+   to the documented lowercase ones — a hand-edited or older bundle
+   imports either way. RTD `data_type` accepts both
    lowercase tokens (`long_text`) and capitalised model values
    (`Long_text`) on import; serialise emits the capitalised
-   form. (12A-3 PR 3 fix.)
+   form.
 6. **Empty-string handling.** A `null` cell in storage is an
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.
@@ -527,12 +532,10 @@ Two generic template sets an operator downloads **before any
 session exists**. Both carry the same four roster files and differ
 only in their rows.
 
-> Status: shipped (Segment 19E rungs 4–5). Routes:
-> `GET /templates/starter.zip`, `GET /templates/demo.zip` →
-> `app/web/routes_templates.py`. Generator:
-> `app/services/setup_templates.py`. Filenames:
-> `review-robin-setup-templates.zip`,
-> `review-robin-demo-session.zip`.
+Routes: `GET /templates/starter.zip`, `GET /templates/demo.zip` →
+`app/web/routes_templates.py`. Generator:
+`app/services/setup_templates.py`. Download filenames:
+`review-robin-setup-templates.zip`, `review-robin-demo-session.zip`.
 
 | Set | Rows | Job | Offered from |
 |---|---|---|---|
@@ -629,9 +632,8 @@ all the same — every surface in the app is behind sign-in.
 session exists: the Guide's "Create and set up a session" card
 (`spec/operator_ui_concept.md`) and the lobby first-run card
 (`spec/sessions_overview.md`). Not offered from the Workflow card or
-Extract Data — both were considered and rejected, since neither can
-reach an operator who wants the templates while creating the session
-(`guide/archive/segment_19E_operator_onboarding.md` → Judgment calls).
+Extract Data: neither reaches an operator who wants the templates
+while creating the session.
 
 ---
 
@@ -644,11 +646,11 @@ reach an operator who wants the templates while creating the session
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the four setup CSVs above (`GET /export/bundle.zip`, filename `{code}_setup.zip`; renamed 2026-05-29 from the original "session bundle" per `guide/archive/extract_data.md`) | same |
-| Extract data tab — Zip all button | Out | `build_responses_bundle` — a zip of the unified Responses CSV plus the two bundle-only entity-stats CSVs and one `instrument_{n}.csv` per instrument (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`; split out from the original session bundle 2026-05-29) | `guide/archive/extract_data.md` |
+| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the four setup CSVs above (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
+| Extract data tab — Zip all button | Out | `build_responses_bundle` — a zip of the unified Responses CSV plus the two bundle-only entity-stats CSVs and one `instrument_{n}.csv` per instrument (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `guide/archive/extract_data.md` |
 | Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{N}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt). | `guide/archive/extract_data.md` |
-| `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
-| Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /me/sessions/{id}/summary.csv`, Segment 17B Phase 2 PR B) | `spec/reviewer-surface.md` "Per-session summary" |
+| `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link |
+| Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /me/sessions/{id}/summary.csv`) | `spec/reviewer-surface.md` "Per-session summary" |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |

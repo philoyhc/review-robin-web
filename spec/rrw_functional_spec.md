@@ -2,19 +2,19 @@
 
 > **Technology-neutral functional contract.** This document
 > describes **what** Review Robin Web (RRW) is meant to do, in
-> user- and concept-level terms — not **how** it is built. It
-> supersedes the pre-implementation draft archived at
-> `guide/archive/functional_spec.md` (retired 2026-05-11), which
-> read as a forward-looking "destination" rather than a working
-> contract.
+> user- and concept-level terms — not **how** it is built.
 >
 > Implementation details (URLs, code modules, data types, frameworks)
 > live in the per-page / per-subsystem specs alongside this file,
 > and in `docs/status.md` for ship-state. Cross-references are
 > noted in [§19 Reading guide](#19-reading-guide).
 >
-> **Currency.** Aligned with the system as of 2026-08-18. The
-> functional contract is stable; ship-state may move ahead.
+> **Currency.** The functional contract is stable; ship-state may
+> move ahead of it. Whether this document has been read end to end
+> against the code is recorded in its sweep record
+> (`guide/sweep_2026-09-10_rrw_functional_spec.md`), not by a date
+> kept here: a date in this header moves only when someone
+> remembers it, and this one did not move through nine edits.
 
 ---
 
@@ -171,8 +171,7 @@ elevation of the operator role, not a separate login.
 
 ### 4.1 System administrator (three-tier model)
 
-Since Segment 18S Item 1 workspace governance is a **strict
-three-tier hierarchy** with **nested capabilities**
+Workspace governance is a **strict three-tier hierarchy** with **nested capabilities**
 (super-admin ⊇ admin ⊇ operator) and a **config-anchored top
 tier**:
 
@@ -204,7 +203,7 @@ An **admin** (`is_sys_admin`) can, on top of operator capability:
   audit-events CSV** for any session.
 
 Reading a non-owned session's diagnostics does **not** grant
-edit rights. Since Segment 18S Item 3, editing a non-owned
+edit rights. Editing a non-owned
 session requires **ownership**: the Diagnostics **"Manage"**
 action self-adds the admin as an owner (audited
 `session.owner_added`) and opens the session, after which they
@@ -240,7 +239,7 @@ Operators do **not** see other operators' sessions in their lobby
 unless they have been added as a co-owner. Admins reach
 non-owned sessions through the Sessions Diagnostics surface: they can
 *read* diagnostics (Outbox, Audit log), but **editing requires
-ownership** (Segment 18S Item 3) — the Diagnostics **"Manage"** action
+ownership** — the Diagnostics **"Manage"** action
 self-adds them as an owner (audited) and opens the session, after which
 they act through the normal operator path.
 
@@ -276,9 +275,8 @@ session configuration, and have no operator affordances.
 
 ### 4.4 Reviewee
 
-A session-scoped participant — the person being evaluated. Unlike
-the pre-participant-model era, an email-identified reviewee is now
-a **live authenticated audience** (shipped 2026-05-30 → 06-03).
+A session-scoped participant — the person being evaluated. An
+email-identified reviewee is a **live authenticated audience**.
 A reviewee can:
 
 - **Sign in** and reach their `/me` dashboard.
@@ -290,14 +288,14 @@ A reviewee can:
 - **Acknowledge** they have seen their results (a one-shot,
   idempotent gesture stamping `results_acknowledged_at`).
 
-Access is gated by `require_reviewee_with_current_grant`
-(Segment 19F PR 4): the roster check — an active reviewee row
-whose `email_or_identifier` parses as a real email matching the
-signed-in user, case-insensitively — **plus a currently-resolving
-visibility grant**, meaning at least one instrument granting this
-reviewee a mode under a window that is open right now. Without a
-grant the route answers 404. (Before 19F the roster check alone
-opened the surface; see [§10.9](#109-reviewee-results-surface).)
+Access is gated by `require_reviewee_with_current_grant`: the
+roster check — an active reviewee row whose `email_or_identifier`
+parses as a real email matching the signed-in user,
+case-insensitively — **plus a currently-resolving visibility
+grant**, meaning at least one instrument granting this reviewee a
+mode under a window that is open right now. The roster check alone
+is not enough; without a grant the route answers 404 (see
+[§10.9](#109-reviewee-results-surface)).
 **Confidential reviewees** (non-email identifiers, used for
 analysis-only sessions) cannot reach the results surface by
 construction — there is no inbox to authenticate against.
@@ -373,9 +371,7 @@ authenticated audience — they sign in, reach `/me`, and read the
 results collected about them where a visibility policy grants it
 (see [§4.4](#44-reviewee)); a reviewee identified by anything
 other than an email is a subject of evaluation only, with no way
-in. (This paragraph read "reviewees do not sign in to RRW … not
-participants" until 2026-09-10, three months after the
-participant model shipped.)
+in.
 
 **User-supplied fields:** name, email or other identifier (used as
 the unique within-session key — institutions that don't use email
@@ -462,11 +458,9 @@ the label); the input control that renders in each cell (text
 input, textarea, number input, or select) — driven directly by
 the field's own `data_type`.
 
-The per-session Response Type Definition catalogue **retired
-2026-05-26** (the `response_type_definitions` table + `_rtds.py`
-are gone). Each response field now carries its own inline
-`data_type` + bounds rather than referencing a shared RTD row. A
-small set of pre-filled **List presets** (Boolean / Agreement /
+There is **no shared type catalogue**: each response field carries
+its own inline `data_type` + bounds rather than referencing a
+shared type row. A small set of pre-filled **List presets** (Boolean / Agreement /
 Grades, in `instruments/_field_presets.py`) is baked into the
 Band 3 type picker for convenience; the preset's identity is not
 stored — only the resulting `data_type` + `list_options`.
@@ -494,9 +488,7 @@ default) a tri-state sort-priority slot.
 The reviewee's name and email are always present (cannot be
 turned off — they are the two locked rows); the other **seven**
 are opt-in. The canonical list is `_DEFAULT_DISPLAY_LABELS` in
-`app/services/instruments/_display_fields.py`. (This read "seven
-sources … the other five" until 2026-09-10; the enumeration below
-it always listed nine.)
+`app/services/instruments/_display_fields.py`.
 
 ### 5.9 Assignment
 
@@ -555,11 +547,10 @@ Rule predicates match against reviewer tags, reviewee tags, and
 pair-context tags, using per-predicate operators (`IS` / `IS NOT`
 and the cross-side `IS THE SAME AS` / `IS DIFFERENT FROM`).
 
-Every RuleSet is **per-session** — the cross-session operator
-**RuleSet library tier retired in Wave 5** (the
-`operator_rule_sets` + `rule_set_revisions` tables and the
-standalone Rule Builder page are gone). There is no
-`personal` / `library` / `seeded` scope distinction anymore.
+Every RuleSet is **per-session**. There is no cross-session
+operator RuleSet library, no standalone Rule Builder page, and no
+`personal` / `library` / `seeded` scope distinction — a rule
+belongs to one instrument in one session and nowhere else.
 
 Each instrument owns its rule via **`Instrument.rule_set_id`**,
 authored inline in the instrument card's **Instrument assignment
@@ -659,8 +650,8 @@ treats the session in lobby and extract surfaces.
 | `draft` | Draft | Setup is open. Operator may edit any aspect. Reviewer surface is read-only (pre-open). |
 | `validated` | Validated | Setup has been validated and passed all blocking checks. Setup is still open. Any setup mutation auto-invalidates back to `draft`. |
 | `ready` | Activated | Reviewer surface is open and accepting responses. Setup is locked. Operator may pause back to `draft`. |
-| `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. **Live** (no longer reserved). |
-| `archived` | Archived | Session is filed out of the active lobby; no data deleted. Since the 18R archive harmonization it can be reached from **any non-archived** state. Unarchive returns it to `draft`. |
+| `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. |
+| `archived` | Archived | Session is filed out of the active lobby; no data deleted. Reachable from **any non-archived** state. Unarchive returns it to `draft`. |
 
 ### 6.1 Transitions
 
@@ -714,8 +705,8 @@ pages render one partial,
 Not *every* setup page: the **Email Template** page renders no
 lock card and carries no editable gate at all (deliberate —
 `spec/email_template_editor.md` §5), and Assignments /
-Invitations / Responses retired theirs when the Workflow card
-became the lifecycle chrome.
+Invitations / Responses carry none either — the Workflow card is
+the lifecycle chrome on those.
 
 While locked, upload affordances and destructive-action cards are
 hidden, the row-selection surface is absent rather than inert, and
@@ -723,10 +714,6 @@ form controls inside builders — including the friendly-label
 editor — are disabled. Every one of those answers the same
 `is_editable` predicate as the card, so the explanation and the
 controls cannot disagree.
-
-(This paragraph said "in `ready`, every setup page" until
-2026-09-10. The card was keyed to `ready` alone until Segment 19H
-Item 6 and the friendly-label editor until Item 7.)
 
 The Session details config card on Session Home is also
 lifecycle-gated — its edit swap (`?editing=1`) is only reachable
@@ -772,9 +759,9 @@ Two entry paths exist:
   in user's email must case-insensitively match an active
   reviewer row on that session. Mismatch answers a **bare 404** —
   no banner, no hint that the session exists — so a signed-in
-  stranger cannot enumerate session ids (Segment 19F PR 1). (This
-  bullet promised an account-mismatch banner until 2026-09-10;
-  that banner belongs to the invitation path below.)
+  stranger cannot enumerate session ids. The friendly
+  account-mismatch page belongs to the invitation path below, not
+  here.
 
 - **Unique invitation link** (`/me/invite/{token}`). The
   token is per-reviewer, per-session, one-shot redemption to a
@@ -828,7 +815,7 @@ real ownership.
 A session carries metadata that the operator edits on the Create
 New Session form and, thereafter, in-place on the **Session
 details** config card on Session Home (`?editing=1` display ↔ edit
-swap; the standalone Edit page retired in 18R Item 4), plus
+swap; there is no standalone Edit page), plus
 per-session preferences accessible from setup pages or operator
 settings.
 
@@ -861,8 +848,8 @@ settings.
 ### 8.3 Schedule fields
 
 The session optionally carries scheduled-event anchors and
-offsets (Segment 18G schema; the activation / invite / reminder
-consumers are wired, archive / retention are deferred):
+offsets (the activation / invite / reminder consumers are wired;
+archive / retention are deferred):
 
 - **Scheduled activation timestamp** (`scheduled_activate_at`) —
   moment at which a `validated` session auto-promotes to `ready`.
@@ -916,9 +903,8 @@ and operator-facing surface:
 - Reviewee tag 1 / 2 / 3
 - Pair-context tag 1 / 2 / 3
 
-(The reviewee identity / photo slots were renamable in the
-original 15A scope but were **retired 2026-05-31** — identity, not
-labels; their built-in defaults still render.)
+(The reviewee identity / photo slots are **not** renamable — they
+are identity, not labels; their built-in defaults always render.)
 
 Friendly labels rename the *display text* shown for these slots;
 the underlying machine field name does not change. Changing a
@@ -927,8 +913,8 @@ every CSV import preview and download, and the schedule-timeline
 caption. The nine renamable **tag** labels are set in one of two
 places: the inline editor on the Reviewers / Reviewees /
 Relationships pages, or the **roster CSV header** as a
-`ReviewerTag1.<label>` suffix (Segment 19C Item 1) — the sole
-CSV round-trip carrier for those labels.
+`ReviewerTag1.<label>` suffix — the sole CSV round-trip carrier
+for those labels.
 
 ### 8.6 Self-review behaviour
 
@@ -950,10 +936,10 @@ Distinct from per-session settings, each operator owns:
 - **Default display timezone** — falls in when a new session is
   created.
 
-(The personal library of reusable RTDs and RuleSets that once
-lived here retired in Wave 5 / Segment 18J alongside the RTD table
-and the operator RuleSet library tier.) The operator's settings
-page also supports clear/reset of the SMTP section.
+There is no personal library of reusable response types or
+RuleSets here — both are per-session, authored on the instrument
+card. The operator's settings page also supports clear/reset of
+the SMTP section.
 
 ### 8.8 User-interface feature toggles
 
@@ -1023,10 +1009,10 @@ Clone action lands on Session Home the same way.
 ### 9.3 Session Home
 
 The Session Home page (`/operator/sessions/{id}`) is the
-operator's primary working surface for a session. Since 18R
-Item 4 it consolidated session-config **display and edit** onto
-Home (the standalone Edit page retired; `/edit` now
-301-redirects to `…?editing=1#session-config`). Top → bottom:
+operator's primary working surface for a session. Session config
+is both **displayed and edited** here — there is no separate Edit
+page, and `/edit` 301-redirects to
+`…?editing=1#session-config`. Top → bottom:
 
 - **Workflow card** (full width) — the lifecycle-driven card
   explaining the current state and offering the single
@@ -1051,19 +1037,17 @@ Home (the standalone Edit page retired; `/edit` now
   **Delete Data** (wipes every reviewer response, preserves setup;
   confirm-gated; any state) and **Delete Session** (removes the
   session entirely; confirm-gated; visible-but-disabled in `ready`,
-  route-enforced server-side). Returned to Home in 18R Item 4 when
-  the Edit page retired.
+  route-enforced server-side).
 
-The **Extract Data / Extract Setup card** — the round-trip
-setup CSV download tiles — moved off Session Home to the
-Operations-strip **Extract data** tab in 18R Item 4 (see
+The round-trip **setup CSV download tiles** are not on Session
+Home: they live on the Operations-strip **Extract data** tab (see
 [§9.12](#912-extract-data)).
 
 ### 9.4 Session details config card
 
 The Session details card on Session Home (`#session-config`) is
-the successor to the retired standalone Edit Session Details page.
-`GET /operator/sessions/{id}/edit` now 301-redirects to
+the only surface for session config.
+`GET /operator/sessions/{id}/edit` 301-redirects to
 `…?editing=1#session-config`.
 
 - **Display ↔ edit swap.** The card carries
@@ -1097,20 +1081,19 @@ and **Observers** (gated on `observers_enabled`).
 Each page offers:
 
 - **Friendly-label editor card** — inline editors for the
-  display labels of this entity's **tag slots only**. The reviewee
-  identity / photo overrides retired 2026-05-31 (see
-  [§8.5](#85-friendly-labels)); `field_labels.upsert` refuses
-  them, and the built-in defaults still render. The editor answers
-  the same `is_editable` gate as the rest of the page (Segment 19H
-  Item 7).
+  display labels of this entity's **tag slots only**:
+  `field_labels.upsert` refuses an identity or photo slot, whose
+  built-in default always renders (see
+  [§8.5](#85-friendly-labels)). The editor answers the same
+  `is_editable` gate as the rest of the page.
 - **Operator-actions card** — a search + status-filter strip
   and a selection-driven row of bulk and per-row actions
   (Edit, Inactivate, Activate, Add, Delete, Search, Clear),
   with a status row beneath it carrying the selected-count pill
   (`N of M selected`, where M is the rendered window) and the
   delete confirmation. The preview-count line sits above the
-  preview table, not in this row (Segment 19I Item 4), and is
-  shared by all seven preview pages (Item 10).
+  preview table, not in this row, and is shared by all seven
+  preview pages.
   In Edit / Add mode an inline Save + Cancel pair replaces the
   row of selection-driven buttons.
 - **Preview table** — every row in the roster (paginated by
@@ -1162,9 +1145,10 @@ most one instrument unlocked at a time). Its stripes:
   Link cycles a `Not set → All → Filter/Group` pill. A **"Not set"
   safety gate** requires the operator to deliberately touch every
   Link before the instrument reads as configured, so the implicit
-  Full Matrix default can't ship silently. (The band renamed from
-  "Band 1" to "Instrument assignment rule" in 18R Item 1; the
-  standalone Rule Builder page retired in Wave 5.)
+  Full Matrix default can't ship silently. (The card's heading is
+  **Instrument assignment rule**; "Band 1" is the shorthand this
+  spec and the code use for it. There is no separate Rule Builder
+  page — the rule is authored here or nowhere.)
 - **Band 2 — Display fields + preview** — a chip row of populated
   display-field sources (Reviewee Name / Email always shown; the
   rest opt-in) plus a live preview of one sample reviewee row, with
@@ -1187,11 +1171,11 @@ most one instrument unlocked at a time). Its stripes:
   (confirm-gated; blocked when only one instrument) / **+Instrument**
   / **+Page break** / Lock-Unlock. One bulk Save commits identity,
   Band 1, Band 3, visibility policies, and column widths together
-  through the consolidated `/save` endpoint (18R Item 2).
+  through the consolidated `/save` endpoint.
 
-There is **no Response Type Definitions card** — the per-session
-RTD catalogue retired 2026-05-26; each Band 3 row carries its own
-inline `data_type` + bounds instead.
+There is **no Response Type Definitions card** and no shared type
+catalogue: each Band 3 row carries its own inline `data_type` +
+bounds.
 
 ### 9.7 Configure assignments
 
@@ -1203,8 +1187,8 @@ on the Operations row of the chrome. It carries:
   `stale` pill when the current rule + roster would produce a
   different set), group count, self-review count + per-instrument
   self-review toggle (locked while `ready`), included count, and a
-  per-instrument "Show in preview table" filter checkbox. (The
-  Rule column retired 2026-05-26 — the rule lives on Band 1.)
+  per-instrument "Show in preview table" filter checkbox. (There
+  is no Rule column — the rule lives on Band 1.)
 - **Operator-actions card** — a status filter, a search box with
   typeahead suggestions, a Search-by dropdown (All / Reviewers /
   Reviewees), and the selection-driven bulk Inactivate / Activate
@@ -1213,9 +1197,7 @@ on the Operations row of the chrome. It carries:
   Self review column — there is no session-wide toggle on this
   page; the session's self-reviews-active flag seeds the `include`
   value at generation time and this surface overrides it after
-  (see [§8.6](#86-self-review-behaviour)). (The status filter and
-  typeahead landed in Segment 19I Item 9; a "Self-reviews card"
-  was listed here until 2026-09-10 and never existed.)
+  (see [§8.6](#86-self-review-behaviour)).
 - **Assignments preview table** — every materialised pair,
   with reviewer identity + tag columns, reviewee identity +
   tag columns, pair-context tag columns, Include checkbox,
@@ -1224,8 +1206,8 @@ on the Operations row of the chrome. It carries:
 
 Assignments are not edited row by row. The operator changes
 which pairs exist by changing the rule (in the **Instrument
-assignment rule** card / Band 1 on the Instruments page; the
-standalone Rule Builder sub-page retired in Wave 5) or the
+assignment rule** card / Band 1 on the Instruments page — the
+only place a rule is authored) or the
 rosters and **regenerating** via the Workflow card's Prepare
 action. Generation runs a per-instrument rule pass over the
 session's reviewer × reviewee matrix; an instrument with
@@ -1299,9 +1281,9 @@ a reviewer-centric Operations-row tab.
 The chrome's session top-nav bar carries a **four-state
 Invitations pill** — `Not created`, `Not sent`, `Partially
 sent`, `All sent` — reflecting the session-wide invitation
-status at a glance (commit 49f1875, 2026-05-22). Splitting
-this from a single "Invitations" pill replaced the old binary
-present-or-absent indicator.
+status at a glance. The four states are what the pill is for: a
+single present-or-absent indicator cannot distinguish "created but
+unsent" from "partially sent".
 
 ### 9.10 Monitor responses
 
@@ -1337,7 +1319,7 @@ activating.
 Extraction now splits across two surfaces:
 
 **Extract Setup card** (the round-trip / porting CSVs) — moved off
-Session Home to the **Extract data** Operations tab in 18R Item 4.
+Session Home to the **Extract data** Operations tab.
 It offers per-entity download tiles — Reviewers, Reviewees,
 Relationships (gated on `relationships_enabled`), Settings, and a
 conditional Observers tile (`observers_enabled`) — plus a Zip-all
@@ -1387,9 +1369,8 @@ The operator's Settings page (`/operator/settings`) carries:
   typeahead with a worked-example live preview).
 - **Clear all settings** — wipes the SMTP fields on the account.
 
-(The personal Library RTDs and Library RuleSets cards that once
-sat here retired in Wave 5 / Segment 18J together with the RTD
-table and the operator RuleSet library tier.)
+(There are no Library response-type or Library RuleSet cards on
+this page: both are per-session, authored on the instrument card.)
 
 ### 9.14 Sys admin surface
 
@@ -1402,7 +1383,7 @@ the chrome's user menu. It carries:
   session with summary state. Its **"Manage"** row action self-adds
   the sys-admin as an owner (audited) and opens the session — the
   explicit elevation door, since editing a non-owned session requires
-  ownership (Segment 18S Item 3).
+  ownership.
 - **Per-session Owner Management** — add / remove operator
   co-owners on sessions the sys-admin owns. A non-owner sys-admin may
   only self-add (the adopt bootstrap) or clone; removing owners and
@@ -1428,7 +1409,7 @@ A reviewer reaches their work through one of two entry points
 After sign-in, the reviewer lands on:
 
 - The **`/me` dashboard** — a cross-role participant lobby
-  (shipped 2026-05-30) listing **every session the signed-in
+  listing **every session the signed-in
   identity touches in any participant role** (reviewer / reviewee
   / observer). One table row per session carries the session name
   with per-role pills beneath it, Start / End / Timezone columns,
@@ -1461,7 +1442,7 @@ or are hidden after close.
 
 If the signed-in identity does not match any reviewer row on
 the session, a direct link answers a **bare 404** — the
-enumeration-safe refusal from Segment 19F PR 1. The friendly
+enumeration-safe bare refusal. The friendly
 account-mismatch page belongs to the *invitation* path
 ([§7.2](#72-reviewer-identity)), which answers 403 and names the
 invited address.
@@ -1587,7 +1568,7 @@ this reviewer's rows).
 An email-identified reviewee reaches
 `/me/sessions/{id}/results` (gated by
 `require_reviewee_with_current_grant` — the roster check plus a
-currently-resolving visibility grant, Segment 19F PR 4; without one the
+currently-resolving visibility grant; without one the
 route answers 404). The body is per-instrument
 sections — one section per instrument that carries a `reviewee`
 visibility policy — rendering the responses collected *about this
@@ -1764,8 +1745,7 @@ infrastructure, and cost trade-offs lives in
 
 ### 11.6 What is wired today, what is not
 
-As of 2026-08-18, the following invitation-and-email surface
-is **wired**:
+The following invitation-and-email surface is **wired**:
 
 - Per-session invitation, reminder, and responses-received
   templates with merge-tag substitution, reset-to-default
@@ -1803,13 +1783,12 @@ outbox row, and flips its status straight to `sent` as a
 server. The `SmtpEmailTransport` exists and is unit-tested but has
 no caller on the live send path; lighting it up is the scope of
 **Segment 14B Part A** (`guide/segment_14B_email_infrastructure.md`).
-That plan was `segment_14-1_email_infra.md` before segment
-numbering moved from a `-1` / `-2` suffix to letters, and its
-header records the rename — which is why `email_outbox.py`, its
-test and the `c4f6a8b0d2e5` migration still say "Segment 14-1" in
-their comments. Same work, older name. The functional contract (templates, tokens,
-outbox, scheduling, transport class) is complete; only the last
-mile (invoking the transport from the send path) is pending.
+`email_outbox.py`, its test and the `c4f6a8b0d2e5` migration name
+that same work "Segment 14-1" in their comments — the plan's
+earlier number, reconciled in its header, not a different piece of
+work. The functional contract (templates, tokens, outbox,
+scheduling, transport class) is complete; only the last mile
+(invoking the transport from the send path) is pending.
 
 This gap is the scope of an upcoming segment of work. **The
 functional spec describes RRW's intended invitation and
@@ -1824,7 +1803,7 @@ deployment-level concern, not a functional one.
 Extraction splits across two surfaces (see
 [§9.12](#912-extract-data)): the **Extract data** Operations tab
 hosts the response-shaping lenses + Data shaper, and the **Extract
-Setup** card (relocated to that same tab) hosts the round-trip
+Setup** card on that same tab hosts the round-trip
 setup CSVs — Reviewers, Reviewees, Relationships (gated),
 Observers (gated), Settings — plus a `{code}_setup.zip` bundle.
 The response CSVs (unified Responses, per-instrument files, and
@@ -1859,11 +1838,11 @@ exception, called out on the file's surface).
   format spanning session-level fields, email templates,
   instruments, session RuleSets, data shapes, and session tags.
   Round-trips perfectly back through the Settings import path.
-  (The former RTDs section retired 2026-05-26 with the RTD
-  table, and the friendly-labels section retired 2026-08-20 with
-  Segment 19C Item 1 — tag friendly labels now ride the roster
-  CSV headers; legacy `rtds[...]` / `field_labels.*` rows are
-  silently ignored on import.)
+  It carries **no** response-type section and **no**
+  friendly-labels section — tag friendly labels ride the roster
+  CSV headers instead — and `rtds[...]` / `field_labels.*` rows in
+  an older bundle are silently ignored on import rather than
+  rejected.
 
 ### 12.3 Responses extract
 
@@ -1878,11 +1857,10 @@ the file lists each instrument's field dictionary.
 `RevieweeEmail` deliberately mirrors the roster CSV header even
 though the underlying column is `Reviewee.email_or_identifier`.
 The canonical tuple is `HEADER` in
-`app/services/extracts/responses_extract.py`. (This list named the
-column `RevieweeEmail_or_Identifier` and placed `SelfReview` after
-`Version` until 2026-09-10 — a name and a position, which are the
-two things that break a consumer built against
-[§12.7](#127-round-trip-stability)'s stability promise.)
+`app/services/extracts/responses_extract.py` — the column name and
+its position are both part of the contract
+[§12.7](#127-round-trip-stability) promises, and both break a
+downstream consumer if they move.
 
 Group-scoped instruments collapse one row per group rather
 than per member. The file streams to the operator without
@@ -2106,8 +2084,8 @@ end-of-cycle transition; Pause is a mid-cycle setup edit.
 
 ### 16.2 Archive
 
-Operator-driven, reversible. Since the 18R archive harmonization
-a session moves into `archived` from **any non-archived** state
+Operator-driven, reversible. A session moves into `archived` from
+**any non-archived** state
 (draft / validated / ready / expired) via the Workflow card's
 Archive button; the Sessions-lobby bulk-archive still pre-filters
 to `draft`. Archived sessions:
@@ -2192,8 +2170,8 @@ and gate 5 additionally by a visibility grant:
 5. **Reviewee in session, with a current grant** — the reviewee
    results surface. The roster match alone is not enough: at
    least one instrument must grant this reviewee a mode under a
-   window open right now, or the route answers 404 (Segment 19F
-   PR 4, [§4.4](#44-reviewee)). A reviewee whose identifier is not
+   window open right now, or the route answers 404
+   ([§4.4](#44-reviewee)). A reviewee whose identifier is not
    an email can never reach it.
 6. **Observer in session** — the observer collation surface.
 
@@ -2234,10 +2212,8 @@ A full security-posture catalogue lives in
   value for every boundary tag.
 - **D6 source** — One of the **nine** possible display-field
   sources (reviewee name, reviewee email, photo link, three
-  reviewee tags, three pair-context tags — the bracket has always
-  enumerated nine; the count said seven until 2026-09-10). Two
-  are locked on, seven opt-in; see
-  [§5.8](#58-display-field).
+  reviewee tags, three pair-context tags). Two are locked on,
+  seven opt-in; see [§5.8](#58-display-field).
 - **Display field** — A read-only context column on an
   instrument; one of nine D6 sources.
 - **Display label** — The user-facing string for a lifecycle
@@ -2265,11 +2241,6 @@ A full security-posture catalogue lives in
   collects reviewer input. Carries its own `data_type` +
   validation bounds inline (no shared type row); quick-fill
   list presets live in `instruments/_field_presets.py`.
-- **Response Type Definition (RTD)** — *Retired 2026-05-26.*
-  Formerly a reusable, per-session type row shared by
-  response fields; the `response_type_definitions` table and
-  its editor were removed. Response fields now carry their
-  type inline (see **Response field**).
 - **Reviewee** — A person being reviewed.
 - **Reviewer** — A person giving feedback.
 - **RuleSet** — A bundle of rules selecting which
@@ -2293,10 +2264,9 @@ disagrees with this document, **the subsystem spec wins** and this
 one is corrected to match — this file describes the product, they
 describe the surfaces.
 
-(Until 2026-09-10 this table listed only the specs this document
-happened to cite, which left eleven live specs unnamed — including
-`spec/ui_elements.md`, and seven that govern a section this
-document already has.)
+The table names **every** live spec, not only the ones this
+document happens to cite: it is a map of the corpus for a new
+reader, so a spec missing from it is a spec nobody is sent to.
 
 | Subject | Spec |
 |---|---|

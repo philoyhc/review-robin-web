@@ -86,7 +86,9 @@ Each card contains:
   - Form artifact: rendered as a static, non-interactive snapshot of the form the reviewer would see. Form fields display but do not submit; the snapshot reflects exactly what the live form would render for this reviewer with their assigned reviewees.
 - A small footer or sidebar noting the artifact's source: "Rendered from Email Template (Setup) and Reviewers (Setup)." This helps the operator know where to go to fix something they don't like.
 
-**3. Send-test affordance (per email card).**
+**3. Send-test affordance (per email card) — deferred, not built.**
+The contract below is what it has to satisfy when it lands; nothing on the
+page does any of it today.
 
 Each email-artifact card has a "Send test to..." affordance: an input for an email address (defaulting to the operator's own, if known) and a Send button. Clicking sends the previewed email — rendered for the selected reviewer, with their data — to the test address.
 
@@ -118,7 +120,7 @@ Errors are scoped per-card. A missing email template doesn't block the form prev
 
 ### Lifecycle behavior
 
-The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, `closed`):
+The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, `closed`). The send-test clauses below belong to the deferred affordance (§3) and describe nothing on the page today:
 
 - **`draft` / `validated`:** Full functionality. All previews render (or surface missing-data messages). Send-test is enabled.
 - **`ready`:** Full functionality. Previews still render against current setup data; this is when the operator most wants the hub. Send-test is enabled.
@@ -146,12 +148,11 @@ This is forward-looking and not a deliverable for this segment. Recorded here so
 
 ### Doc impact
 
-UI concept doc (`spec/operator_ui_concept.md`) — reconciled in the same Segment 11F Part 1 doc-sweep PR:
+What the UI concept doc (`spec/operator_ui_concept.md`) has to agree with:
 
-- The Operations Pages section in the page taxonomy carries `session_previews.html` (`/sessions/{id}/previews`) under tab label "Previews", plus the satellite `preview-surface/{page_n}` route reachable from the picker's "Open full preview" button.
-- The Preview Pages grouping in the page taxonomy is **retired**. Its sole member (the form-only reviewer preview) is absorbed into the Operations hub: from 2026-05-07 → 2026-05-28 as an iframe surface card on the hub itself; from 2026-05-28 onward as the picker-row "Open full preview" link to the dedicated `/preview-surface/{N}` route.
-- The retired `/preview` (singular) is documented as a permanent (308) redirect — target updated 2026-05-28 from `/previews#reviewer-surface` to `/operator/sessions/{id}/preview-surface/1`.
-- Session Home's Next Action card "See previews" link targets `/previews` (the `#reviewer-surface` anchor was retired alongside the iframe card).
+- The Operations Pages section of the page taxonomy carries `session_previews.html` (`/sessions/{id}/previews`) under tab label "Previews", plus the satellite `preview-surface/{page_n}` route reachable from the picker's "Open full preview" button.
+- **There is no Preview Pages grouping in the page taxonomy.** Its one member, the form-only reviewer preview, belongs to the Operations hub — as the picker-row "Open full preview" link to `/preview-surface/{N}`. A grouping with one member that lives somewhere else is a heading, not a grouping.
+- `/preview` (singular) is a permanent (308) redirect to `/operator/sessions/{id}/preview-surface/1`.
 
 ### Implementation pointers
 
