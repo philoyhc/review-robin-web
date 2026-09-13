@@ -38,9 +38,9 @@ triples actually get materialised from the Band 1 rule — see
 - [Status + bulk-actions card](#status--bulk-actions-card)
 - [Per-instrument card](#per-instrument-card)
   - [Identity](#identity)
-  - [Band 1 — Assignment rule + Unit of review](#band-1--assignment-rule--unit-of-review)
-  - [Band 2 — Display fields + preview row](#band-2--display-fields--preview-row)
-  - [Band 3 — Response fields](#band-3--response-fields)
+  - [Instrument assignment rule + Unit of review](#instrument-assignment-rule--unit-of-review)
+  - [Preview review instrument](#preview-review-instrument)
+  - [Visibility + Response fields](#visibility--response-fields)
   - [Action row](#action-row)
 - [Add / Replicate / Delete](#add--replicate--delete)
 - [Editing flow](#editing-flow)
@@ -180,6 +180,17 @@ boolean carries the operator-controlled page-break layout:
   `validated`.
 
 ## Per-instrument card
+
+**Band 1 / 2 / 3 are shorthand, kept because the code uses them.** The
+sections below are named for the headers the card actually shows; the
+band numbers survive in prose and in identifiers (`band2_state`,
+`band1_touched_links`), which are names and do not change. The mapping:
+
+| Shorthand | What the card heads it |
+|---|---|
+| Band 1 | Instrument assignment rule (+ Unit of review) |
+| Band 2 | Preview review instrument |
+| Band 3 | Visibility, Response fields |
 
 Order of stripes (each separated by a horizontal rule):
 
@@ -412,7 +423,7 @@ maps the service's `ValueError`s to 409; the
 includes the current instrument's id as `after` so the
 new instrument lands immediately below.
 
-### Instrument assignment rule (Band 1) + Unit of review
+### Instrument assignment rule + Unit of review
 
 The **Instrument assignment rule** card (titled "Instrument assignment rule"
 for the operator — the "Instrument" prefix disambiguates it from the
@@ -572,7 +583,7 @@ Hydration (re-rendering the saved state on edit) reads
 wraps both into the `new_model_band1_state` and
 `new_model_link3_state` dicts the template iterates.
 
-### Band 2 — Display fields + preview row
+### Preview review instrument
 
 Band 2 declares **what reviewee context** the reviewer sees
 alongside each row of their answer surface, and renders a
@@ -587,7 +598,7 @@ live preview of one sample row inline.
 > suppress self-reviews (Link rule, or the Self-review toggle on
 > the Assignments page).
 
-#### Intro card (left of Band 2's preview row)
+#### Intro card (left of the preview row)
 
 Top-of-band intro card carrying:
 
@@ -670,10 +681,14 @@ names below. Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, the trailing `... + N more` collapses the overflow.
 
-### Band 3 — Response fields
+### Visibility + Response fields
 
-Band 3 is a stack of inline editor rows — one per Response
-Field, plus a trailing empty starter row so the operator can
+The **Visibility** half is the 3 × 2 audience × window chip grid;
+`spec/visibility_policy.md` is its contract and this section does not
+restate it.
+
+The **Response fields** half is a stack of inline editor rows — one per
+Response Field, plus a trailing empty starter row so the operator can
 keep typing without first clicking `+`. Each row defines one
 typed input control the reviewer fills in on the surface form.
 
@@ -974,7 +989,7 @@ of rules against instruments. Active ones that surface here
   (`spec/validate_page.md` §3.2).
 
 Note: the "Not set" pill safety gate (see
-[Band 1](#band-1--assignment-rule--unit-of-review)) is enforced
+[the assignment rule](#instrument-assignment-rule--unit-of-review)) is enforced
 **off-validate** — it drives the workflow card's `is_setup_empty`
 state directly via `is_configured` / `has_unconfigured` rather
 than emitting a `ValidationRule`. The signal surface is the

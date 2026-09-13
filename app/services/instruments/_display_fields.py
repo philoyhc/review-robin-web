@@ -796,6 +796,7 @@ def set_sort_display_fields(
     Validation (raises ``SortSpecError``):
 
     - ``too_many``: length > 3.
+    - ``bad_id``: ``display_field_id`` is not an integer.
     - ``unknown_dir``: ``dir`` not in ``{"asc", "desc"}``.
     - ``duplicate_id``: same ``display_field_id`` appears twice.
     - ``cross_instrument``: ``display_field_id`` is not one of

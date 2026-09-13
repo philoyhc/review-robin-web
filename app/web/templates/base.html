@@ -868,8 +868,8 @@
         display: grid;
         grid-template-columns: minmax(180px, 220px) auto 1fr;
         grid-template-rows: auto auto;
-        /* Themeable: --accent-blue-marker is #93c5fd in light and darkens
-           under [data-theme="dark"], so the nav marker follows the theme. */
+        /* Themeable: --nav-marker-setup darkens under
+           [data-theme="dark"], so the nav marker follows the theme. */
         --tab-marker-color: var(--nav-marker-setup);
       }
       /* Home anchor: spans both rows on the left, blue tint,
@@ -2323,12 +2323,12 @@
       /* The Self-review handling + empty-row drop chips' states
          are all ``is-selected`` (the chips always reflect the
          current selection — there's no unselected state), so
-         the standard accent-blue ``is-selected`` fill stays
+         the standard ``--selected-bg`` ``is-selected`` fill stays
          vibrant even at the locked opacity. When chips lock,
          repaint with the SAME unselected-pill palette the
          Reviewer / Reviewee / instrument chips inherit from
-         ``.pill-count`` (``--accent-blue-bg`` light blue
-         + ``--text-primary`` dark text), so all the locked
+         ``.pill-count`` (``--status-info-bg`` fill + ``--text-body``
+         text), so all the locked
          scope-row chips read with one consistent muted look. */
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
@@ -2340,7 +2340,7 @@
         color: var(--text-body);
       }
       /* Selected sub-card — the one currently in edit mode.
-         Border switches to the accent-blue used for primary
+         Border switches to the ``--btn-primary-bg`` used for primary
          buttons + selected chips so the operator can see
          which sub-card the scope/content rows above feed.
          Wired via ``data-shape-selected="true"`` on the
@@ -2354,7 +2354,7 @@
         background: var(--card-active-bg);
       }
       /* Unlocked (= currently-being-edited) instrument card
-         on the Instruments page picks up the same accent-blue
+         on the Instruments page picks up the same ``--selected-bg``
          cue as the selected Data shape sub-card. The
          attribute ``data-instrument-editing="true"`` is
          emitted on the outer ``.card`` div whenever
@@ -2449,7 +2449,7 @@
       }
       /* Buttons — Primary / Secondary / Destructive vocabulary
          per spec/visual_style_general.md. Same shape, role expressed by
-         tonal variation only. Primary is solid accent-blue and is
+         tonal variation only. Primary is solid ``--btn-primary-bg`` and is
          reserved for the page's single main affirmative action
          (P1 — "color where it carries meaning"); routine submits
          like Upload should use Secondary. */
@@ -2475,7 +2475,7 @@
         color: var(--btn-secondary-fg);
         border-color: var(--btn-secondary-border);
       }
-      /* Danger Outline (.destructive) — outline red, for irreversible
+      /* Destructive (.destructive) — outline red, for irreversible
          row / collection deletes (Delete session, delete-all,
          delete-selected). */
       body.ui-v2 .btn.destructive {
@@ -3070,7 +3070,7 @@
          between lifecycle states; body flex-grows to push the
          optional .next-action-confirm block and the .next-action-
          buttons row to the bottom of the card. The border picks
-         up the same accent-blue as the Primary action button
+         up the same ``--btn-primary-bg`` as the Primary action button
          inside it, signalling that this is the page's
          single most important card. */
       body.ui-v2 .card.next-action {
@@ -3568,7 +3568,7 @@
       }
       body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
       /* Light/dark Display-mode toggle pill (chrome, W6). Two segments; the
-         active side fills accent-blue. Compact; themes via tokens. */
+         active side fills --selected-bg. Compact; themes via tokens. */
       /* Toggle sits inline after the app identity in the top-left chrome. */
       .chrome-identity-row {
         display: flex;

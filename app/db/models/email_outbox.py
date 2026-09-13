@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 # Canonical value sets for the ``status`` and ``kind`` string columns.
 # Documented here so any future widening is a deliberate edit. Until
-# Segment 14-1 Part A wires the dispatch helper, the enqueue paths only
+# Segment 14B Part A wires the dispatch helper, the enqueue paths only
 # ever write ``"queued"`` (status) and ``"invitation"`` / ``"reminder"``
 # (kind); the wider sets below are scaffolding for that work.
 EMAIL_OUTBOX_STATUSES: tuple[str, ...] = ("queued", "sending", "sent", "failed")
@@ -27,10 +27,10 @@ class EmailOutbox(Base):
     """Audit-log row for an outbound email (invitation, reminder, or
     responses-received notification).
 
-    Pre-Segment-14-1 the row is a dev-mode preview surface: there is no
+    Pre-Segment-14B the row is a dev-mode preview surface: there is no
     real transport, so ``status`` flips ``queued → sent`` synchronously
     when the row is written and the operator views the rendered body
-    here. Segment 14-1 Part A lights up the actual send paths against
+    here. Segment 14B Part A lights up the actual send paths against
     the audit-log columns added by Segment 11C PR F (``error_message``,
     ``from_address``, ``backend``, ``backend_message_id``,
     ``delivered_at``, ``payload_hash``, ``correlation_id``); the value
@@ -66,7 +66,7 @@ class EmailOutbox(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Audit-log scaffolding (Segment 11C PR F). All nullable; populated
-    # by the Segment 14-1 dispatch helper, not by today's enqueue paths.
+    # by the Segment 14B dispatch helper, not by today's enqueue paths.
     # Truncated transport error captured on failure.
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # The address actually sent from (operator-set or deployment default).

@@ -33,9 +33,10 @@ log = get_logger(__name__)
 class SessionStatus(str, Enum):
     """Canonical session lifecycle values.
 
-    9.5A adds ``validated`` between ``draft`` and ``ready``. ``expired`` and
-    ``archived`` are reserved for later segments — recognised here so the
-    string column is constrained at the application layer.
+    9.5A adds ``validated`` between ``draft`` and ``ready``. All five
+    values are live: :func:`expire_session` and :func:`archive_session`
+    write ``expired`` and ``archived`` respectively. The enum constrains
+    the string column at the application layer.
 
     **Enum vs. display label.** Operators see ``ready`` rendered as
     ``"Activated"`` everywhere in the UI — the enum reads as "ready

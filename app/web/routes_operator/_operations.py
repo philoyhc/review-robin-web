@@ -262,7 +262,8 @@ def previews_index(
     Renders the picker, the email previews region, and an "Open full
     preview" link to the operator-side full reviewer-surface preview
     (``_preview_surface.py``). The iframe-embedded surface card on
-    this page was retired in Segment 18Q follow-on: the picker-row
+    this page was retired in the Segment 11F preview-surface follow-on
+    (2026-05-28): the picker-row
     button now opens the full preview in a new tab. URL state:
 
     - ``?reviewer_email=…`` selects the picker's current reviewer; an
@@ -357,11 +358,11 @@ def session_preview(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Permanent redirect from the standalone reviewer-surface preview
-    (Segment 10B-3) to the operator-side full preview surface
-    (Segment 18Q). Through Segment 11F PR C this redirected to the
-    Previews hub's iframe surface card; the card was retired in the
-    Segment 18Q follow-on, so the redirect now targets the standalone
-    preview route directly.
+    (Segment 10B-3) to the operator-side full preview surface.
+    Through Segment 11F PR C this redirected to the Previews hub's
+    iframe surface card; the card was retired by the 2026-05-28
+    preview-surface follow-on to Segment 11F, so the redirect now
+    targets the standalone preview route directly.
 
     Status 308 keeps the GET method and preserves the bookmark / link
     semantics for stragglers.
