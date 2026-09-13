@@ -300,7 +300,7 @@ def test_no_identity_gate_folds_inline() -> None:
         for n, line in enumerate(lines, 1):
             if not INLINE_FOLD.search(code[n - 1]):
                 continue
-            if "normalize_email" in line:
+            if "normalize_email" in code[n - 1]:
                 continue
             # A fold that is demonstrably not an identity match may
             # stay, but it has to say so in the comment block directly
@@ -390,11 +390,16 @@ def test_identity_columns_are_compared_through_the_fold() -> None:
             if not IDENT_ATTR.search(bare) or not COMPARE.search(bare):
                 continue
             scanned += 1
-            if "normalize_email" in line:
+            # Both exemptions read ``code``, never ``lines``: a comment
+            # or docstring that merely *mentions* ``normalize_email``
+            # must not excuse a comparison that does not call it. Only
+            # the marker lookup below reads raw lines, because a marker
+            # is a comment.
+            if "normalize_email" in code[n - 1]:
                 continue
             enclosing = [f for f in funcs if f.lineno <= n <= (f.end_lineno or n)]
             if any(
-                "normalize_email" in "\n".join(lines[f.lineno - 1 : f.end_lineno])
+                "normalize_email" in "\n".join(code[f.lineno - 1 : f.end_lineno])
                 for f in enclosing
             ):
                 continue

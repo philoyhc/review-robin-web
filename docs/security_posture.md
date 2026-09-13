@@ -118,7 +118,10 @@ four, because `auth/identity.py` never strips the parsed claim and the
 row it creates keeps the untrimmed address: before this, a padded
 claim would have missed its own row and created a second one. It was
 omitted from the first version of this paragraph, which named the
-other three.
+other three. It is also the one site here the fail-open paragraph
+above does not name, which is not an inconsistency: it always folded
+with `.lower()`, never `.casefold()`, so it was exposed to the
+whitespace gap but never to the merge.
 
 **This was a live fail-open, not a hypothetical**, and the first
 write-up of this item got that wrong — it said the pre-fix state
