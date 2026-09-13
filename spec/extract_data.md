@@ -1050,15 +1050,17 @@ valid post-close use case. No yellow lock card wrap.
 - `app/services/extracts/zip_bundle.py` —
   `build_by_instrument_bundle` zip wrapper consumed by
   `export_by_instrument_bundle_zip`.
-- `_discrete_steps_values` in
-  `app/web/routes_operator/_extract_data.py` — small
-  helper computing the Data shaper's `Discrete steps`
-  step vocabulary for qualifying numeric fields
-  (≤12 distinct values).
-- `tests/unit/test_extract_data_route_helpers.py` —
-  unit tests for the discrete-steps helper covering the
-  Integer / Decimal / threshold-boundary / non-numeric
-  cases.
+- `discrete_step_values` in
+  `app/services/extracts/data_shape_extract.py` — the
+  Data shaper's `Discrete steps` step vocabulary for
+  qualifying numeric fields, capped at
+  `DISCRETE_STEPS_THRESHOLD` distinct values. One
+  implementation, used by both the Data shaper route and
+  the file-gen side that writes the extract.
+- `tests/unit/test_discrete_step_values.py` — unit tests
+  covering the Integer / Decimal / threshold-boundary /
+  non-numeric cases, with the boundary cases derived from
+  the constant rather than restating it.
 - `guide/archive/extract_data.md` — the shipped plan: landing
   rationale, open-question resolutions, and the wiring decisions
   behind the chip vocabulary.
