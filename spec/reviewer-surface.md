@@ -7,14 +7,13 @@ is the page they spend ~all their time on; the dashboard
 (`/me`) and invitation-landing (`/me/invite/{token}`)
 exist to land them on it.
 
-This spec rewrites the response surface around **multi-instrument
-awareness**: the URL carries an explicit instrument segment, the page
-renders one instrument at a time, and an action row at the top + bottom
-of the surface carries every control — the review-level controls
-(Save / Discard / Submit) and the per-page navigation (Page N) — in
-one strip per side, the two groups separated by a vertical divider.
-Single-instrument sessions are a degenerate case of
-the same model.
+The response surface is **multi-instrument aware**: the URL carries an
+explicit page segment, the page renders one operator-defined page of
+instruments at a time, and an action row at the top *and* bottom of the
+surface carries every control — the review-level controls (Save /
+Discard / Submit) and the per-page navigation — in one strip per side,
+the two groups separated by a vertical divider. Single-instrument
+sessions are a degenerate case of the same model, not a second shape.
 
 Cross-references:
 
@@ -31,9 +30,8 @@ Cross-references:
   recovery-action color family).
 - `spec/preview_hub.md` — operator-side preview entry-point spec; the
   preview page reuses this surface's template.
-- `app/web/templates/reviewer/review_surface.html` — current
-  implementation (single-form-multi-instrument-stack); this spec is
-  the target.
+- `app/web/templates/reviewer/review_surface.html` — the template this
+  spec governs. The operator-side preview route renders the same file.
 
 ---
 
@@ -227,7 +225,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Discard** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the status column's complete-icon appears on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -585,8 +583,8 @@ unchanged should one ever be adopted.
 
 ### Group-scoped instruments
 
-A **group-scoped instrument** (`Instrument.group_kind` non-null —
-Segment 13C) renders differently. Its canonical design lives in
+A **group-scoped instrument** (`Instrument.group_kind` non-null)
+renders differently. Its canonical design lives in
 [`spec/instruments.md`](instruments.md) § Band 1 (the operator-
 authoring side) and [`spec/assignments.md`](assignments.md) §
 group-scoped fan-out (the storage + collapse-on-read side); the
@@ -1257,16 +1255,18 @@ today but the surface is designed so they can be added later without
 re-architecting; see "Designed-for-extensibility" below.
 
 - **`beforeunload` warning** when the form is dirty.
-- **Standalone submission-confirmation page** ("thank you" surface).
-  Today the post-submit signal is the per-page `submitted` pill in
-  the overview card and the per-row submitted-timestamp in
-  the status column.
+- **Submission-confirmation surface for a *partial* submit.** The
+  full-submit case is not deferred — it lands on
+  `/me/sessions/{id}/summary`. A partial submit returns to the surface,
+  where the per-page `submitted` pill in the overview card and the
+  status column's per-row complete icon are the whole signal.
 - **Large-table ergonomics** (cell autosave, return-to-place,
-  visible progress, filter-to-incomplete) —
-  Segment 17B, as targeted progressive enhancement. A wholesale
-  JS data-grid swap (AG Grid or equivalent) is *not* planned —
-  judged overkill; recorded as an aspirational possibility in
-  `guide/deferred_consolidated.md`. See "Large-table ergonomics"
+  filter-to-incomplete) — owned by Segment 17B, as targeted
+  progressive enhancement. A wholesale JS data-grid swap (AG Grid or
+  equivalent) is *not* planned; it is overkill for this surface and is
+  recorded as an aspirational possibility in
+  `guide/deferred_consolidated.md`. Visible progress is the one item of
+  the set that is already in place. See "Large-table ergonomics"
   below.
 
 ---
@@ -1312,20 +1312,24 @@ makes today + the small follow-on the deferred work needs.
   `beforeunload` handler. No template restructuring needed; the
   markup hooks are already in place.
 
-### Standalone submission-confirmation page
+### Submission-confirmation surface
 
-- **Today.** `POST /me/sessions/{id}/submit` 303s to
-  `…/{page_n}` (no flash). The reviewer reads the post-submit
-  signal off the per-page `submitted` pill in the overview card
-  and the per-row submitted-timestamp in the status column.
-- **Design call.** The submit route's redirect target is computed via
-  a small helper (`submit_redirect_url(review_session, position)`)
-  rather than inlined. Today the helper returns
-  `f"/me/sessions/{id}/{page_n}"`. Tomorrow it can return
-  `f"/me/sessions/{id}/submitted"` (session-level thank-you)
-  without touching any other code path.
-- **What lands later.** A new template (`reviewer/submitted.html` or
-  similar) plus the helper change. The surface itself doesn't move.
+- **Today.** The submit route computes its redirect through
+  `submit_redirect_url(review_session, *, fully_submitted)` in
+  `routes_reviewer/_surface/_routes.py`. A submit that closed out the
+  whole session 303s to `/me/sessions/{id}/summary` — the read-only
+  capstone page specified above, which *is* the session-level
+  confirmation surface. A partial submit 303s to the bare session URL,
+  which 303s on to `/1`. No flash banner either way: the per-page
+  `submitted` pill and the status column's per-row complete icon are
+  the signal.
+- **Design call, and why the helper stays a helper.** The redirect
+  target is computed in one place rather than inlined at the call site.
+  That is what lets a new post-submit destination land without touching
+  the submit handler, its validation, or its audit write.
+- **Still deferred.** A confirmation surface for a *partial* submit —
+  "page 2 of 4 saved and submitted". One branch in
+  `submit_redirect_url` and one template; no restructuring.
 
 ### Large-table ergonomics
 
@@ -1389,24 +1393,17 @@ compatible either way:
 
 ---
 
-## Migration notes
+## The bare-session URL is load-bearing
 
-The URL change from `/me/sessions/{id}` to
-`/me/sessions/{id}/{page_n}` is a breaking change for:
+`GET /me/sessions/{id}` carries no page segment and **must** 303 to
+`/me/sessions/{id}/1`. Three classes of caller depend on it and none of
+them can be updated:
 
-- **Existing invitation emails** — already-sent invitation emails
-  embed the old token URL (`/me/invite/{token}`), which redirects
-  via `/me/sessions/{id}` after Easy Auth resolves. The
-  bare-session URL must 303 to `/me/sessions/{id}/1` to keep old
-  invitation links working.
-- **Reviewer dashboard rows** — link generation in
-  `reviewer/dashboard.html` points at page `1`. Per-session
-  sub-rows were dropped in PR #1751 (see "Per-page sub-rows"
-  above).
-- **Bookmarks / returning reviewers** — same 303 covers them.
+- **Invitation emails already sent** embed the token URL
+  (`/me/invite/{token}`), which lands on `/me/sessions/{id}` once Easy
+  Auth resolves.
+- **Bookmarks and returning reviewers** hold the same bare URL.
+- **Reviewer dashboard rows** are the one caller that *can* be
+  updated, and `reviewer/dashboard.html` links straight at page `1`.
 
-The 303 fallback covers all known callers; no data migration is
-needed. The fanout fix shipped in PR #418 ensures that
-multi-instrument sessions actually have multiple `instrument_groups`
-visible to each reviewer, which is the precondition for the page
-selector to render at all.
+No data migration is involved — the fallback is the whole mechanism.

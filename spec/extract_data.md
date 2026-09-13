@@ -12,26 +12,19 @@ data along the dimension the operator asks for so the actual
 analysis can happen in Excel / pandas / a notebook with the
 shape the operator already wants.
 
-The page also carries the **Extract setup** card (which exports the
+The page also carries the **Extract setup** card, which exports the
 round-trippable Reviewers / Reviewees / Relationships / Settings CSVs
-for porting / cloning a session). *This paragraph read "Setup data
-lives on Home; response data lives here" until 19K.8 — that split was
-the load-bearing decision behind the page's existence (see
-`guide/archive/extract_data.md`), and Segment 18R Item 4 ended it by
-moving the card off Session Home onto this page (`spec/session_home.md`
-§2). Corrected rather than deleted: the original split is why the page
-exists, and a reader meeting only the current state would not know
-that.*
+for porting or cloning a session (`spec/csv_contracts.md`). **Both
+kinds of extract are downloaded from here** — Session Home carries no
+extract card (`spec/session_home.md` §2).
 
-> **Implementation status — fully wired end-to-end (2026-05-30).**
-> Page chrome + skeleton landed in the Extract-data tab carve.
-> Every card on the page is wired: the intro `Extract all data`
-> card, the `By instrument` card, the two metadata cards
-> (Reviewer / Reviewee response metadata), and the full-width
-> `Data shaper` card all drive real download routes. Chip state
-> persists per session via `localStorage` for the canned-lens
-> cards and **per-shape via the `data_shapes` table** for the
-> Data shaper; every download emits an audit event.
+> **Every card on the page is wired end-to-end.** The intro
+> `Extract all data` card, the `By instrument` card, the two
+> metadata cards (Reviewer / Reviewee response metadata), and the
+> full-width `Data shaper` card all drive real download routes.
+> Chip state persists per session via `localStorage` for the
+> canned-lens cards and **per-shape via the `data_shapes` table**
+> for the Data shaper; every download emits an audit event.
 >
 > The Data shaper carries two stacked chip rows (scope ⇒ axis
 > + empty-row drop + Self-review handling + instrument + response
@@ -43,11 +36,8 @@ that.*
 > Cancel / Delete / +Shape / Download action row), and the
 > outer `Zip all` button.
 >
-> The Self-review handling chip slice (PRs #1642 → #1647 +
-> #1659) and the chip-controlled-drop slice (PRs #1654 → #1659)
-> closed out the wiring, including the cross-card consistency
-> sweep that converted all four empty-row-drop chips to two-
-> state cycling pills with explicit labels per state.
+> All four empty-row-drop chips are two-state cycling pills with
+> an explicit label per state, one shape across the cards.
 
 ## Page identity
 
@@ -160,9 +150,7 @@ Three families of chip live on the page:
   on each CSV. All toggles default to the "include" state.
 - **Self-review handling chip** (metadata cards + Data
   shaper scope row) — single-pill three-state cycle
-  (`Include self` → `Exclude self` → `Both` → …) shipped
-  in the 2026-05-30 chip slice (PRs #1642 → #1647 — see
-  `guide/archive/extract_data.md`). Drives the column-name
+  (`Include self` → `Exclude self` → `Both` → …). Drives the column-name
   suffix (`_self` / `_noself` / `_both`) on every
   aggregate column, the filename suffix on the download
   (`{code}_reviewer_metadata{_suffix}.csv` and friends),
@@ -241,7 +229,7 @@ cross-cutting toggles:
 |---|---|---|
 | `instrument-{id}` | `#{N}: {short_label}` | Membership filter — only selected instruments ship as zip members. |
 | `include-metadata` | `Include metadata` | When **off**, drops the meta-header block + blank separator row from every CSV. |
-| `all-assignment-rows` | `All assignment rows` / `Assignment rows with data` | Two-state cycling pill — when **off**, drops assignment rows whose response-field cells are all empty. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle (PR #1657, chip-controlled-drop consistency sweep). |
+| `all-assignment-rows` | `All assignment rows` / `Assignment rows with data` | Two-state cycling pill — when **off**, drops assignment rows whose response-field cells are all empty. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle. |
 
 All default-selected.
 
@@ -326,7 +314,7 @@ scope toggle:
 | Chip slot | Labels (on / off) | Role |
 |---|---|---|
 | `instrument-{id}` | `#{N}: {short_label}` | Selects which instruments contribute per-(instrument, field) column blocks; also scopes the cross-instrument totals when at least one is selected. |
-| `all-reviewers` / `all-reviewees` | `All reviewers` / `Reviewers with responses` (or `All reviewees` / `Reviewees with responses`) | Two-state cycling pill — when **off**, drops body rows for entities with zero non-empty responses in scope. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle (PR #1657, chip-controlled-drop consistency sweep). |
+| `all-reviewers` / `all-reviewees` | `All reviewers` / `Reviewers with responses` (or `All reviewees` / `Reviewees with responses`) | Two-state cycling pill — when **off**, drops body rows for entities with zero non-empty responses in scope. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle. |
 
 All default-selected.
 
@@ -453,7 +441,7 @@ with the same payload shape:
 ```
 
 The `context.self_review_handling` slot records the operator's
-Self-review handling chip state on this download (PR #1642).
+Self-review handling chip state on this download.
 Unknown query-param values fall through to `include_self`
 server-side, so the audit value always reflects what the file
 actually contained.
@@ -476,15 +464,12 @@ above it cover the common cases without configuration.
 | Button id | `extract-data-shaper-zip` |
 | Button target | `#` (placeholder — `aria-disabled`) |
 
-**Implementation status.** Fully shipped as of 2026-05-30
-(placeholder chip UI: PRs #1589 → #1603; persistence +
-file-gen wiring: PRs #1626 → #1659). The chip-driven UX,
-shape persistence (`data_shapes` table), and per-shape
-`Download` button (backed by
+**Implementation status.** The chip-driven UX, shape persistence
+(`data_shapes` table), and per-shape `Download` button (backed by
 `…/shapes/{id}/download.csv`) are all live. The outer
 `Zip all` button on this card still renders
-`aria-disabled="true"` (bundle integration is the
-remaining follow-up — see "Out of scope" below).
+`aria-disabled="true"` — bundle integration is the remaining
+follow-up (see "Out of scope" below).
 
 ### Two stacked chip rows
 
@@ -509,8 +494,7 @@ Self-review handling chip, separated by vertical pipes (`|`):
    the content row below.)
 2. **Empty-row drop chip** — inline after the axis chips,
    **before** the Self-review handling chip. Two-state
-   cycling pill (`All rows` ↔ `Rows with data`) shipped
-   2026-05-30 (PR #1654, chip-controlled-drop slice).
+   cycling pill (`All rows` ↔ `Rows with data`).
    Persists per-shape on the
    `data_shapes.include_empty_rows` boolean column (see
    `spec/settings_inventory.md` §9.5). When `Rows with data`
@@ -535,8 +519,8 @@ Self-review handling chip, separated by vertical pipes (`|`):
 
 3. **Self-review handling chip** — inline after the empty-
    row drop chip, before the first `|`. Three-state cycle
-   (`Include self` → `Exclude self` → `Both` → …) shipped
-   2026-05-30 (PR #1644). Persists per-shape on the
+   (`Include self` → `Exclude self` → `Both` → …).
+   Persists per-shape on the
    `data_shapes.self_review_handling` column (see
    `spec/settings_inventory.md` §9.5). Drives the
    column-name suffix (`_self` / `_noself` / `_both`) on
@@ -553,9 +537,8 @@ Self-review handling chip, separated by vertical pipes (`|`):
    instrument at a time. Selecting an instrument also
    reveals its **response-field scope chips** in the next
    group; deselecting it hides them. With no instrument
-   selected the (eventual) aggregate columns span every
-   session instrument, matching the legacy "By reviewer" /
-   "By reviewee" framings.
+   selected the aggregate columns span every session
+   instrument.
 5. **Response-field scope chip** — one per response field
    on the selected instrument, **mutually exclusive**, chip
    text = the field's friendly label
@@ -812,31 +795,27 @@ member-assignment counts on its own).
   / `Discrete steps`) live **statically** inside each
   per-axis pool template and are hidden / shown via the
   `data-shaper-relevant-for` filter rather than cloned
-  in / out (the dynamic per-option List chips that
-  shipped briefly in #1600 retired in #1608).
+  in / out.
 - **Lifecycle behaviour.** The card renders identically
   in every session lifecycle state. Once the file-gen
   pipeline wires the `Zip all` button, the same
   no-yellow-lock-card behaviour the rest of the page
   already has will apply.
 
-### Wiring decisions (resolved 2026-05-29, fully shipped 2026-05-30)
+### Wiring contract
 
-The placeholder UI shipped through #1589 → #1610 surfaced the
-operator-facing chip vocabulary; the wiring slice (#1626 →
-#1659) turned chip selections into persisted shapes + CSV
-downloads + a chip-controlled drop of empty rows. The
-decisions below pin the contract the slice honoured.
+The contract the chip UI, the persisted shapes and the CSV
+downloads hold each other to.
 
 #### Persistence model
 
-A new `data_shapes` table keyed on `(session_id,
+The `data_shapes` table is keyed on `(session_id,
 name)` with `UNIQUE (session_id, name)` so the operator
 can't save two shapes with the same name on the same
 session. Per-session (not per-operator) — every operator
 on the session sees the same shape library.
 
-Columns (final, as of 2026-05-30):
+Columns:
 
 | Column | Purpose |
 |---|---|
@@ -847,8 +826,8 @@ Columns (final, as of 2026-05-30):
 | `instrument_id` | nullable FK to `instruments` — null when no instrument scope chip is on |
 | `response_field_id` | nullable FK to `instrument_response_fields` — null when no field chip is on |
 | `column_chip_slots` | JSON list of column-chip slot strings (e.g. `["reviewer:name", "reviewer:email", "reviewer:assigned", "reviewer:count", "reviewer:list-items"]`) — preserves chip-selection order so the preview-row order matches the CSV header order |
-| `self_review_handling` | Self-review handling chip state — `include_self` (default) / `exclude_self` / `both`. Added 2026-05-30 by PR #1643. |
-| `include_empty_rows` | Empty-row drop chip state — `True` (default, "All rows") / `False` ("Rows with data"). Added 2026-05-30 by PR #1654. |
+| `self_review_handling` | Self-review handling chip state — `include_self` (default) / `exclude_self` / `both`. |
+| `include_empty_rows` | Empty-row drop chip state — `True` (default, "All rows") / `False` ("Rows with data"). |
 | `created_by_user_id` | FK to `users` |
 | `created_at` | timestamp |
 | `updated_at` | timestamp (bumps on PATCH) |
@@ -883,13 +862,13 @@ session-unique.
 
 #### Audit events
 
-Three new event types register against `EVENT_SCHEMAS`:
+Three event types are registered in `EVENT_SCHEMAS`:
 
 | Event type | Envelope | Notes |
 |---|---|---|
 | `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, self_review_handling, include_empty_rows, name); `refs.shape_id` carries the row's id. |
 | `session.data_shape_deleted` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on DELETE. `snapshot` captures the deleted row's columns so the audit trail can reconstruct what existed pre-delete. |
-| `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs", "context"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted; `context.self_review_handling` records the chip state the download was generated under (PR #1643). |
+| `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs", "context"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted; `context.self_review_handling` records the chip state the download was generated under. |
 
 #### Validation rules
 
@@ -1080,7 +1059,6 @@ valid post-close use case. No yellow lock card wrap.
   unit tests for the discrete-steps helper covering the
   Integer / Decimal / threshold-boundary / non-numeric
   cases.
-- `guide/archive/extract_data.md` — shipped plan: landing
-  rationale, open-question resolutions, and the wiring
-  decisions for the chip-controlled-drop + self-review-
-  handling slices (archived 2026-05-30).
+- `guide/archive/extract_data.md` — the shipped plan: landing
+  rationale, open-question resolutions, and the wiring decisions
+  behind the chip vocabulary.

@@ -25,12 +25,12 @@ For the instrument side — what an instrument is, how Band 1
 authors a rule, where `group_kind` lives — see
 `spec/instruments.md`.
 
-> **Status.** Implemented through Wave 5 (the post-collapse
-> world). The library tier (operator-side RuleSet library +
-> Rule Builder page) retired in Wave 5 PR 5.1 (PR #1446); every
-> rule now lives on its instrument's Band 1. The synthetic
-> Full Matrix shipped in Wave 4 PR 1. Historical doc set:
-> `spec/archive/rule_based_assignment.md` and the fan-out half
+> **One rule per instrument, authored in one place.** Every rule
+> lives on its instrument's Band 1: there is no operator-side
+> RuleSet library and no standalone Rule Builder page, and an
+> instrument with no rule at all evaluates against the synthetic
+> Full Matrix. Superseded designs are kept as records at
+> `spec/archive/rule_based_assignment.md` and in the fan-out half
 > of `spec/archive/group_scoped_instruments.md`.
 
 ## Contents
@@ -120,10 +120,8 @@ For one instrument:
          exclude_self_reviews)
 ```
 
-Wave 5 PR 5.2 + 5.3 collapsed the legacy / new-model split, so
-every instrument's rule passes through this same pipeline. Band 1
-of the instrument card is the only operator-facing entry into
-the pipeline.
+Every instrument's rule passes through this one pipeline, and
+Band 1 of the instrument card is its only operator-facing entry.
 
 ### Rule kinds
 
@@ -136,14 +134,14 @@ not surfaced in the UI.
 |---|---|---|
 | `MATCH` | One predicate (`field operator operand`). | Yes — one per cell in Link 1 / 2's rule list. |
 | `COMPOSITE` | Wraps a list of child rules with `AND` / `OR`. | Yes — one per Link in Band 1 (Link 1's Composite, Link 2's Composite). |
-| `FILTER` | Domain-restriction rule (legacy slot). | No — Band 1 uses `MATCH` directly inside `COMPOSITE`. |
+| `FILTER` | Domain-restriction rule. | No — Band 1 uses `MATCH` directly inside `COMPOSITE`. |
 | `QUOTA` | Cap pairs per actor. | No. |
 
 ### Predicate vocabulary
 
 A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensitive}`.
 
-**Field namespaces** (Wave 5):
+**Field namespaces:**
 
 | Namespace | Source | Available tag slots |
 |---|---|---|
@@ -178,8 +176,7 @@ The wrapping `Combinator` enum on a `RuleSet` or `COMPOSITE`:
 
 - `ALL_OF` — every child must match (logical AND).
 - `ANY_OF` — at least one child must match (logical OR).
-- *(legacy)* `NONE_OF` — engine honours it but Band 1 doesn't
-  emit it.
+- `NONE_OF` — the engine honours it; Band 1 never emits it.
 
 Band 1's outer `SessionRuleSet.combinator` is always `ALL_OF` —
 Link 1's Composite ∩ Link 2's Composite. Inside each Composite,
@@ -231,15 +228,7 @@ substitutes the synthetic Full Matrix at evaluate time.
 
 ## Where the rule lives
 
-> **Wave 5 collapse.** The pre-Wave-5 world had two authoring
-> surfaces: a per-instrument pinned rule on the Instruments
-> page and a standalone **Rule Builder page** at
-> `/operator/sessions/{id}/rules` that managed the session's
-> `SessionRuleSet` rows directly. Wave 5 PR 5.1 retired the
-> Rule Builder page. PR 5.2 retired the cross-session
-> `operator_rule_sets` library + `rule_set_revisions` tables.
-
-Post-Wave-5, the only place to author a rule is **Band 1 of an
+The only place to author a rule is **Band 1 of an
 instrument card** — titled **"Instrument assignment rule"** for the operator
 (the "Instrument" prefix disambiguates it from this Operations-row
 Assignments page), with Links labelled *Who does the review* / *Who is being
@@ -257,13 +246,13 @@ names. The rule is per-instrument and per-session:
 - Renaming, "Save As", or sharing rules across instruments is
   not supported. Replicate-the-instrument is the substitute.
 
-There is no scope `personal` / `library` / `seeded` distinction
-anymore — every row is per-session.
+There is no scope `personal` / `library` / `seeded`
+distinction — every row is per-session.
 
 ## Synthetic Full Matrix
 
 When `Instrument.rule_set_id is NULL`, the engine substitutes a
-synthetic schema (Wave 4 PR 1):
+synthetic schema:
 
 ```python
 RuleSetSchema(
@@ -287,8 +276,8 @@ Effects:
   rule-set id can't serve as seed when no row exists).
 
 Materialised `SessionRuleSet` rows from Band 1 align with this
-default: `_create_band1_rule_set` sets `exclude_self_reviews=False`
-(PR #1452, 2026-05-26). The two paths are intentionally
+default — `_create_band1_rule_set` sets
+`exclude_self_reviews=False` — so the two paths are deliberately
 indistinguishable from the generator's point of view.
 
 ## Self-review policy
@@ -337,9 +326,11 @@ Two attributes still drive whether self-review rows appear as
 
 1. **`SessionRuleSet.exclude_self_reviews`** (rule-set level).
    Vestigial column — the engine layer hardcodes False regardless
-   of its value. Migration `d2e4f6a8c1b3` backfilled every row to
-   `False` so the column matches behaviour, and
-   `_create_band1_rule_set` writes `False` on every save.
+   of its value. Every row carries `False` (the column was
+   backfilled by Alembic `d2e4f6a8c1b3` and
+   `_create_band1_rule_set` writes `False` on every save), so the
+   column agrees with the behaviour rather than contradicting
+   it.
 2. **`ReviewSession.self_reviews_active`** (session level,
    defaults True). When a self-review pair is materialised, its
    `Assignment.include` is `True if self_reviews_active else False`.
@@ -393,8 +384,8 @@ backend) consumes the column directly. The
 with a continuous-gate invariant
 (`assignments.verify_self_review_classification`); strict
 in test envs, log-and-auto-correct in production. The
-overall consolidation plan + the five-PR ladder that
-landed it lives in `guide/archive/self_review_consolidate.md`.
+rationale for consolidating on the column is recorded in
+`guide/archive/self_review_consolidate.md`.
 
 Pair-level `is_self_review(reviewer, reviewee)` survives as
 a helper for the rule-engine desugar paths that operate on
@@ -496,12 +487,12 @@ Steps:
 2. **Run the rule list.** Each rule in `rule_set_schema.rules`
    contributes a per-pair predicate; the top-level `combinator`
    wraps them.
-3. ~~**Apply self-review exclusion.**~~ **Retired in Wave 5 /
-   PR #1475 — project-wide policy is now `excludeSelfReviews=False`
-   everywhere; the engine never drops `(R, R)` pairs at the
-   desugar stage.** See the "Self-review policy" section above
-   for rationale and the two supported suppression paths (Link
-   rule + per-instrument Self-review toggle).
+3. **No self-review exclusion.** Project-wide policy is
+   `excludeSelfReviews=False` everywhere, so the engine never
+   drops `(R, R)` pairs at the desugar stage. See the
+   "Self-review policy" section above for why, and for the two
+   supported suppression paths (Link rule + per-instrument
+   Self-review toggle).
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**
    - Individual: one row per surviving pair.
@@ -535,8 +526,8 @@ The Operations-row page at
    flush right (`.grid-right` in a `bottom-grid`).
 4. **Assignments preview card** — the row-level table of
    materialised pairs, with a per-row Include checkbox. It carries
-   **no `<h2>`**: it was the only preview-table card in the app with
-   one, and `Assignments preview` retired in Segment 19I Item 12.
+   **no `<h2>`**, because no preview-table card in the app does; the
+   page's single `<h2>` belongs to the status table above.
 
    Above the rows sit the **`Show columns:` chips**, all three
    groups on one line — `Show reviewers:` / `Show reviewees:` /
@@ -550,17 +541,16 @@ The Operations-row page at
    Relationships Setup page counts every row.
 
    The table sits in `.table-scroll`. With all nine tag slots
-   populated it renders 14 columns — measured at 1508px inside a
-   1360px card — so its overflow belongs inside the card rather than
-   scrolling the whole page (Segment 19I Item 12; the same wrapper
-   Item 11 gave Invitations and Responses).
+   populated it renders 14 columns — 1508px inside a 1360px card —
+   so its overflow belongs inside the card rather than scrolling the
+   whole page, the same wrapper Invitations and Responses use.
 
 The page reuses the Workflow card chrome shared with Session
 Home + other Operations-row pages.
 
 ### Per-instrument status table
 
-Under the card's `<h2>`, a `.muted` line (Segment 19E):
+Under the card's `<h2>`, a `.muted` line:
 
 > Pairs are materialised from each instrument's rule and appear at
 > Prepare.
@@ -579,7 +569,7 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers"). Corrected 2026-09-09 — this read "Short label or full name", and `name` has not participated in the label chain for some time. |
+| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers") — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count, plus a `stale` pill when the current rule + roster pass would produce a different set. "Not generated yet" when zero. |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
@@ -588,9 +578,9 @@ Columns (left → right):
 | Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
 
-The Rule column retired 2026-05-26 (PR #1451) — the rule lives
-on Band 1 and isn't load-bearing as a column once the implicit
-Full Matrix default landed.
+**There is no Rule column**, and re-adding one buys nothing: the
+rule lives on Band 1, and with the implicit Full Matrix default a
+rule name here names either Band 1 or nothing.
 
 ### Self-review toggle wiring
 
@@ -611,16 +601,16 @@ with `active=true|false`. The service helper
 
 Whenever the session is **not editable** — `ready`, `expired` or
 `archived` — the checkbox disables, matching the
-`_require_editable` its route already enforced (Segment 19I Item
-8; it was `is_ready` alone until then, so the box was live on
-`expired` and `archived` where the route answered 409). Its title
+`_require_editable` its route enforces. Gating the template on
+`is_ready` alone instead leaves the box live on `expired` and
+`archived`, where the route answers 409. Its title
 names the way out that state actually has: *"Revert to draft to
 change self-review inclusion."* on `ready` and `expired`, which
 `revert_session_to_draft` accepts, and *"Unarchive this session
 …"* on `archived`, which it refuses. `spec/lifecycle.md` §2.5
 and §5 carry the state machine.
 
-### The page's lifecycle surface (Segment 19I Item 8)
+### The page's lifecycle surface
 
 The Assignments page splits the way the roster Setup pages do
 (`spec/setup_pages.md`, and `spec/lifecycle.md` §5):
@@ -633,23 +623,24 @@ The Assignments page splits the way the roster Setup pages do
   enforce.
 - **The read-only half renders in every state** — the `Search by:`
   select, the search box, `Clear` and the `Search` button. The count
-  itself left this card in Segment 19I Item 10 — see "The
-  preview-count line" below. Reading a finished session's
-  assignments is legitimate, and mid-session is exactly when an
-  operator checks who is assigned to whom.
+  itself is not in this card — see "The preview-count line" below.
+  Reading a finished session's assignments is legitimate, and
+  mid-session is exactly when an operator checks who is assigned to
+  whom.
 
-Before Item 8 the template gated the whole operator-actions card
-on `not is_ready`, which disagreed with those routes on **three of
-five** states in both directions: `expired` and `archived` offered
-live controls the routes refuse, and `ready` lost the search
+**The split is per-half, not per-card, and that is the point.**
+Gating the whole operator-actions card on one predicate disagrees
+with the five mutating routes on **three of five** states in both
+directions: on `not is_ready`, `expired` and `archived` offer live
+controls the routes refuse, and `ready` loses the search
 altogether.
 
-**No lock card here.** The four roster pages still have none on
+**No lock card here.** The four roster pages have none on
 `expired` / `archived` (`spec/lifecycle.md` §5) while Instruments
-gained one in Item 6; a third variant would widen that
-inconsistency rather than close it.
+carries one; a third variant would widen that inconsistency
+rather than close it.
 
-### Search matching (Segment 19I Item 7)
+### Search matching
 
 `?q=` filters the pairs; `?search_by=` scopes it. The matching rule
 is the one `spec/setup_pages.md` "Search matching and suggestions"
@@ -671,10 +662,6 @@ Scoping is **per side, not per person**: on a self-review row the
 reviewer and reviewee are the same person, so that person's tag
 matches under `reviewer` *and* under `reviewee`.
 
-The tag columns were invisible to this search until Item 7 — a tag
-an operator could filter by on the roster pages returned nothing
-here.
-
 **The rule is expressed twice, deliberately.** The roster pages run
 it in Python over a loaded list
 (`app/web/views/_filters.py::_matches_row`); this page runs it in
@@ -686,7 +673,7 @@ of cases against both paths so they cannot drift apart silently.
 Its known limit: Python `str.casefold` and SQL `lower` agree on
 ASCII but not on every codepoint.
 
-**The typeahead** (Segment 19I Item 9) offers both sides'
+**The typeahead** offers both sides'
 `"Name (handle)"` labels in **one** list, sorted case-insensitively
 and capped at `REVIEWERS_DATALIST_CAP`. One list rather than one per
 side because `Search by:` can change without a reload; the picked
@@ -694,8 +681,8 @@ handle resolves against whichever side the scope allows anyway.
 
 **Tag values are not offered**, unlike the roster pages' list. A tag
 identifies too many pairs to partition by here, where on a roster of
-people it partitions usefully (author's measurement against a large
-mock roster, 2026-09-09). Tag *matching*, above, is unaffected.
+people it partitions usefully (measured against a large mock
+roster). Tag *matching*, above, is unaffected.
 
 **A picked label matches the handle by equality**, and this is
 load-bearing rather than a refinement: the term submitted is the
@@ -715,20 +702,19 @@ like `Group (B)` reading as a pick), a **reviewee** tail need not
 the scope excludes matches nothing, rather than falling back to a
 substring search that would ignore the scope.
 
-**Not partitioned by instrument.** Raised and set aside 2026-09-09:
-a session carries a handful of distinct instruments against a roster
-of hundreds, so an instrument partition divides the list barely at
-all. The per-instrument `Show` checkboxes in the status table remain
+**Not partitioned by instrument.** A session carries a handful of
+distinct instruments against a roster of hundreds, so an instrument
+partition divides the list barely at all. The per-instrument `Show` checkboxes in the status table remain
 the instrument-side filter — client-side, over the rendered window.
 
-### Status filter (Segment 19I Item 9)
+### Status filter
 
 `?status=` filters the pairs by **`Assignment.include`** — the
 boolean the operator-actions card's own **Inactivate** / **Activate**
 buttons flip, and which the Include column already shows as a
-`no` pill. It was visible and unfilterable until Item 9, so an
-operator could inactivate in bulk and have no way to list the
-result back.
+`no` pill. Without the filter an operator can inactivate in bulk
+and then have no way to list the result back, which is what it is
+for.
 
 | value | matches |
 |---|---|

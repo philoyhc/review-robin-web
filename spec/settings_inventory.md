@@ -484,44 +484,25 @@ CRUD + validation lives in `app/services/data_shapes.py`.
 
 ## 10. CSV export / import coverage
 
-Two segment plans co-author the porting / template-capture
-workflow:
+> **Inclusion rule:** *if the operator were setting up an
+> equivalent new session from scratch, would they have to retype
+> this?* Yes → in the export. No (machine-derived from operator
+> typing, system-emitted record, per-instance state, or per-operator
+> credential) → excluded.
 
-- **`guide/archive/segment_12A-1_export.md`** — five CSVs off the Extract
-  Data card on Session Home (settings, reviewers, reviewees,
-  manual assignments, responses). Fully shipped 2026-05-09 across
-  PRs #713, #716, #717, #718, #721.
-- **`guide/archive/segment_12A-3_export_import_updates.md`** — Settings
-  CSV importer (absorbed from 12A-2) + Relationships per-entity
-  export + import (parallel to rosters) + manual-assignments CSV
-  adjustments around 15D's "always derived" model. Planned, 4
-  PRs. (The earlier `guide/archive/segment_12A-2_import.md` is kept as a
-  historical-reference document for the Settings importer
-  contract — the implementation lands as 12A-3 PR 1.)
-
-> **Inclusion rule** (paraphrased from 12A-1): *if the operator
-> were setting up an equivalent new session from scratch, would
-> they have to retype this?* Yes → in the export. No
-> (machine-derived from operator typing, system-emitted record,
-> per-instance state, or per-operator credential) → excluded.
-
-The five CSVs split the work three ways:
+The CSVs split the work three ways:
 
 1. **Settings CSV** (`{code}_settings.csv`) — 3-column
    `field,value,data_type` shape capturing every per-session
-   configuration field the operator typed. Round-trip target for
-   12A-2.
+   configuration field the operator typed.
 2. **Per-entity CSVs** (`{code}_reviewers.csv`,
-   `{code}_reviewees.csv`, `{code}_relationships.csv`) —
-   round-trip with the existing per-entity importers. The
-   relationships CSV ships in 12A-3 PR 1 alongside its
-   importer (already shipped in 15D). The legacy
-   `{code}_assignments.csv` retired in 12A-3 PR 2 —
-   assignments are derived (rule-based engine + roster +
-   relationships), not an input to a new session, so the
-   download has no place in a porting bundle. The RuleSet
-   selection itself travels in the Settings CSV via the
-   per-instrument `rule_set_name` field.
+   `{code}_reviewees.csv`, `{code}_relationships.csv`,
+   `{code}_observers.csv`) — round-trip with the per-entity
+   importers. **There is no `{code}_assignments.csv`:** assignments
+   are derived (rule-based engine + roster + relationships), not an
+   input to a new session, so the download has no place in a
+   porting bundle. The RuleSet selection itself travels in the
+   Settings CSV via the per-instrument `rule_set_name` field.
 3. **Responses CSV** (`{code}_responses.csv`) — wide
    row-per-observation shape for downstream analysis.
    **Independent of the porting workflow** — no import
@@ -532,44 +513,30 @@ The five CSVs split the work three ways:
 | § | Section | In CSV? | Where / why |
 |---|---------|---------|-------------|
 | §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
-| §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, `relationships_enabled`, `observers_enabled`, plus the eight 18G + S12 scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). `relationships_enabled` / `observers_enabled` (the participant-model Phase 1 feature toggles) joined the round-trip in **Segment 18P PR A1** (force-applied on import — config, not operator-typed identity). On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, both feature toggles, and the eight 18G / S12 columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). Added to the export by Segment 18D PR E2; 18G columns added by Segment 18N PR 5; S12 swapped `release_until_offset` (string) → `responses_release_until` (datetime); feature toggles by 18P PR A1. |
+| §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, `relationships_enabled`, `observers_enabled`, plus the eight scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). `relationships_enabled` / `observers_enabled` (the participant-model feature toggles) are force-applied on import — config, not operator-typed identity. On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, both feature toggles, and the eight scheduled-event columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). |
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
-| §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. **Per-instrument visibility policy:** the `instruments[n].view_policies[<audience>].*` rows (the 3 × 2 chip grid — Reviewers / Reviewees / Observers × Session-ongoing / Responses-released, each Raw / Anonymized / Summarized), added to the round-trip by **Segment 18P PR A2** (see `spec/visibility_policy.md`). The columns take only the values legal for their `(audience, window)` **cell**, not merely any word from the vocabulary: since **19C Item 9** the import validates each cell against `_PER_CELL_VALID_MODES` and rejects the apply with a named error on an illegal one — a `reviewee` `while_ongoing` grant being the case that matters, since it is the one with a disclosure behind it (`spec/visibility_policy.md` §3.1). **Band 1 link rule:** `band1_touched_links` (the operator's hand-touched link set), added by **Segment 18P PR D**. `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the source of truth for a pinned instrument; the legacy fallback to the latest `assignments.generated` audit row's `refs.rule_set_id` retired alongside seeded RuleSets in Wave 5 PR 5.2. Inline response-field type + bounds + visible added by Segment 18N PR 5 (the serializer hadn't been updated after 18J Wave 2 PR iii-b4 retired the RTD table and moved type / bounds inline — every response field was silently losing its semantic bounds on round-trip for ~2 weeks); `column_widths` / `starts_new_page` / `band2_state` added by the same PR. |
-| §4.5 | Per-session RTDs (retired) | — | Section retired with the `response_type_definitions` table in PR #1454. Numeric / string / List bounds are now inline columns on `instrument_response_fields` (covered under §4; round-tripped via Segment 18N PR 5). |
-| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All | Reviewers / Reviewees / Relationships / Observers each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` / `observers.imported` audit-event paths). The `{code}_observers.csv` download is exposed on the Extract Setup card (conditionally, when `observers_enabled`) via `GET /operator/sessions/{id}/export/observers.csv` (W13, PR #1755); the Zip-all bundle includes it when the toggle is on. |
-| §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
+| §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. **Per-instrument visibility policy:** the `instruments[n].view_policies[<audience>].*` rows (the 3 × 2 chip grid — Reviewers / Reviewees / Observers × Session-ongoing / Responses-released, each Raw / Anonymized / Summarized; see `spec/visibility_policy.md`). The columns take only the values legal for their `(audience, window)` **cell**, not merely any word from the vocabulary: the import validates each cell against `_PER_CELL_VALID_MODES` and rejects the apply with a named error on an illegal one — a `reviewee` `while_ongoing` grant being the case that matters, since it is the one with a disclosure behind it (`spec/visibility_policy.md` §3.1). **Band 1 link rule:** `band1_touched_links` (the operator's hand-touched link set). `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the sole source of truth for a pinned instrument — there is no fallback to an audit row. |
+| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All | Reviewers / Reviewees / Relationships / Observers each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` / `observers.imported` audit-event paths). The `{code}_observers.csv` download is exposed on the Extract Setup card (conditionally, when `observers_enabled`) via `GET /operator/sessions/{id}/export/observers.csv`; the Zip-all bundle includes it when the toggle is on. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
-| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ Roster headers | Round-trip via the **roster CSV headers** as the sole carrier (Segment 19C Item 1): the tag friendly label rides on its column as a `ReviewerTag1.<label>` suffix. **Not** in the Settings CSV (a stale `field_labels.*` row in an old bundle is silently ignored on apply). Allowlist: the nine tag slots, via `field_label_csv._LABELABLE_COLUMNS`. |
-| §9 | `session_rule_sets` | Partial | All rows → Settings CSV (the seeded-vs-authored distinction retired alongside the 5-seeded-RuleSets default-seed in Wave 5 PR 5.2). The `library_name` provenance column also retired in the same wave; the importer recognises-and-skips legacy CSVs that still carry it. |
-| §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 7 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), `self_review_handling` (Self-review handling chip state), and `include_empty_rows` (Empty-row drop chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). The `self_review_handling` row was added by PR #1643 (Phase 2); the `include_empty_rows` row by PR #1654 (chip-controlled-drop slice). Pre-PR-B CSVs without the `self_review_handling` row import to `include_self`; pre-PR-6 CSVs without `include_empty_rows` import to `True`. |
+| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ Roster headers | Round-trip via the **roster CSV headers** as the sole carrier: the tag friendly label rides on its column as a `ReviewerTag1.<label>` suffix. **Not** in the Settings CSV (a stale `field_labels.*` row in an old bundle is silently ignored on apply). Allowlist: the nine tag slots, via `field_label_csv._LABELABLE_COLUMNS`. |
+| §9 | `session_rule_sets` | Partial | All rows → Settings CSV. The export emits no `library_name` cell, and the importer does **not** tolerate one: `session_rule_sets[n].library_name` fails parse with `unknown session_rule_sets[] attribute` and the whole apply is rejected, so a bundle written while that column existed must have the cell removed before import. |
+| §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 7 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), `self_review_handling` (Self-review handling chip state), and `include_empty_rows` (Empty-row drop chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). **A bundle missing either chip row still imports:** absent `self_review_handling` applies `include_self`, absent `include_empty_rows` applies `True` — the chip defaults. An unrecognized `self_review_handling` string falls back to `include_self` rather than failing the apply. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
-| n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` (Segment 12B PR 1) — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route ships live but **without an Extract Data tile** — operator-facing surface relocates to the Sys Admin page when Segment 16A ships, per industry best practice for audit-data downloads. |
+| n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route is live but carries **no Extract Data tile**: the operator-facing surface is the Sys Admin page's per-session Diagnostics row, which is where audit-data downloads belong. |
 | n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
 
-### Deferred follow-ons
+### Bundles
 
-- ~~**Zip bundle**~~ — shipped. Two bundles are now live: the setup
-  bundle (`{code}_setup.zip`, all setup CSVs including Observers
-  when enabled) via the Extract Setup card's Zip-all tile, and the
-  responses bundle (`{code}_responses.zip`) via the Extract data
-  Operations tab. The import side always reads a single Settings
-  CSV per upload.
-- ~~**Operator-library RTD / RuleSet portability**~~ —
-  retired 2026-05-25 alongside the operator-library tier (Wave
-  5 PR 5.2). Workspace-scoped portability was meant to anchor
-  on Operator Settings + Rule Builder; both surfaces are gone.
-  Per-session rule rows now travel as part of the Settings CSV
-  via §9 above; numeric / string / List bounds travel with
-  their `instrument_response_fields` rows via §4.
+Two zip bundles are live: the **setup bundle** (`{code}_setup.zip`,
+all setup CSVs including Observers when enabled) via the Extract
+Setup card's Zip-all tile, and the **responses bundle**
+(`{code}_responses.zip`) via the Extract data Operations tab. The
+import side always reads **a single Settings CSV per upload** — no
+bundle importer.
 
-**Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
-CSV shapes + inclusion rule),
-`guide/archive/segment_12A-3_export_import_updates.md` (Settings
-importer + Relationships export + import + post-15D
-assignments-CSV adjustments). The earlier
-`guide/archive/segment_12A-2_import.md` is kept as historical reference
-for the Settings importer contract.
+**Canonical spec:** `spec/csv_contracts.md` (column shapes, parsing
+rules, and the round-trip stability contract).
 
 ---
 
@@ -578,10 +545,7 @@ for the Settings importer contract.
 - `app/config.py` — env-config source of truth.
 - `app/db/models/` — SQLAlchemy declarations for every persisted
   setting named here. The §2.5 / §9 backing tables live in
-  `session_field_label.py` and `session_rule_set.py`; their
-  docstrings link back to the segment plans that wired them. (The
-  `operator_response_type_definition.py` model retired with the
-  RTD table — see §4.5.)
+  `session_field_label.py` and `session_rule_set.py`.
 - `app/services/operator_settings.py` — Operator Settings save /
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
@@ -589,15 +553,8 @@ for the Settings importer contract.
 - `app/main.py` — Quick Setup unlock-cookie navigation
   middleware (mirrors the `qsu_` prefix in
   `app/web/routes_operator/_shared.py`).
-- `guide/archive/segment_13D_db_prep.md` — rationale for every §9
-  inert table / column.
-- `guide/archive/segment_12A-1_export.md` / `guide/archive/segment_12A-3_export_import_updates.md`
-  — CSV export / import contract referenced by §10.
-  (`guide/archive/segment_12A-2_import.md` is the superseded importer
-  plan, kept as historical reference.)
-- `guide/archive/segment_15F_enhanced_setup_pages.md` —
-  inline-editable Setup rows + Add + Inactivate / Reactivate UI
-  for Reviewers / Reviewees / Relationships (covers the two
-  deferred-settings surfaces that were previously catalogued as
-  items #25 + #36 in the retired
-  `guide/archive/unfinished_business.md`).
+- `spec/csv_contracts.md` — the CSV export / import contract
+  referenced by §10.
+- `spec/setup_pages.md` — the inline-editable Setup rows + Add +
+  Inactivate / Reactivate UI for Reviewers / Reviewees /
+  Relationships / Observers.
