@@ -44,7 +44,7 @@ Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract da
 
 Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after, and Extract data last because it is what the operator reaches for once responses are in.
 
-Session Home's Next Action card carries a "See previews" secondary button while the session is `validated` and ready-to-activate; the button targets `/previews`, with no fragment — an anchor into a card is only as durable as the card.
+Session Home's Next Action card carries **no** "See previews" button; the string appears nowhere in `app/`. Were one added it should target `/previews` with no fragment — an anchor into a card is only as durable as the card.
 
 ### Page layout
 
@@ -82,7 +82,7 @@ Each card contains:
 
 **3. Send-test affordance (per email card).**
 
-Each email-artifact card has a "Send test to..." affordance: an input for an email address (defaulting to the operator's own, if known) and a Send button. Clicking sends the previewed email — rendered for the selected reviewer, with their data — to the test address.
+**Not built.** No send-test affordance ships on any email-artifact card; nothing in `app/` sends a preview to a test address. The design below is kept as the contract for when it lands, because its constraints are the reason the feature is worth building carefully — not as a description of today.
 
 Important constraints:
 - The test email's `To:` address is the operator-supplied test address, **never** the reviewer's actual address. The card surfaces this clearly: "This will send to *[test@example.com](mailto:test@example.com)*, not to *[reviewer@example.com](mailto:reviewer@example.com)*."
@@ -145,7 +145,7 @@ What the UI concept doc (`spec/operator_ui_concept.md`) has to agree with:
 - The Operations Pages section of the page taxonomy carries `session_previews.html` (`/sessions/{id}/previews`) under tab label "Previews", plus the satellite `preview-surface/{page_n}` route reachable from the picker's "Open full preview" button.
 - **The Preview Pages grouping has one member, and this file is its contract** (`spec/operator_ui_concept.md` §"4. Preview Pages" carries the grouping; the name stays plural because further preview surfaces are anticipated). The operator-facing tab sits in the Operations row, and the form-only reviewer preview is reached from the picker's "Open full preview" link — so the grouping and the tab row are not the same axis, which is the thing to keep straight rather than to collapse.
 - `/preview` (singular) is a permanent (308) redirect to `/operator/sessions/{id}/preview-surface/1`.
-- Session Home's Next Action card "See previews" link targets `/previews`.
+- Session Home's Next Action card carries no "See previews" link today; if one is added it targets `/previews`.
 
 ### Implementation pointers
 

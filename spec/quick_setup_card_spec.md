@@ -71,7 +71,7 @@ Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` in
 
 **Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 
-**Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments and relationships (they reference reviewer / reviewee IDs); replacing relationships or settings has no cascade beyond its own dataset. The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer / reviewee / relationships replacement, and the operator returns to the Operations Assignments page to regenerate.
+**Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments and relationships (they reference reviewer / reviewee IDs); replacing relationships or settings has no cascade beyond its own dataset. The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer / reviewee / relationships replacement. Regeneration fires from Session Home's Workflow card stepper, which is where every other lifecycle action starts; the Assignments page carries the same action for an operator already on it.
 
 The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, relationships or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners are not used.
 

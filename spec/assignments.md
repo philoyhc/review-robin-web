@@ -921,8 +921,10 @@ blocker:** it is a warning, so it does not gate activation.
 Used by the **Prepare session** button to show the
 `prepare_confirm` banner before any destructive write happens.
 Returns the `new` / `deleted` / `kept` / `responses_deleted` counts
-a real run would cause, per instrument, so that one code path
-serves both this banner and a per-instrument preview on this page.
+a real run would cause, **aggregated across the session** — the banner
+asks one question and needs one answer. A per-instrument preview reads
+`staleness_by_instrument` instead, which is that shape; the two share
+the engine's diff, so they cannot disagree.
 The Workflow card renders `responses_deleted` and `deleted_pairs`
 from it and gates the re-POST on
 `acknowledge_response_loss=true`.

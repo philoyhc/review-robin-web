@@ -53,6 +53,16 @@ Each state has its **own** token pair (`--lifecycle-<state>-bg` / `-fg`, catalog
 
 Lifecycle state always appears first in the status strip, leftmost, before per-entity counts.
 
+**Status-strip surface — an override of `visual_style_general.md`.** That
+spec's Patterns entry gives the generic strip a `bg-muted` fill with
+`border-subtle` top *and* bottom borders, sitting between the chrome and
+the page body. Review Robin's `.status-row` sits **inside** the session
+nav card and takes `--surface-card` with a **top border only**: the card
+already supplies the surrounding frame, so a second fill and a second
+bottom border would read as a box inside a box. Placement and fill move
+together — the general spec's values apply to a strip that stands alone,
+which this one does not.
+
 ---
 
 ## Page composition — card kinds and layout

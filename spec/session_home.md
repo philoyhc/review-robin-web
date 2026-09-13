@@ -118,30 +118,25 @@ context that helps the operator decide whether to take it.
   section layout reads taller. Each state's vertical extent matches
   its content rather than padding to a uniform frame.
 
-**Body layout.** Three vertically-stacked blocks inside the card,
-in the standard treatment used by every state except Activated:
+**Body layout.** Two vertically-stacked blocks inside the card, the
+same in **every** state — there is no Activated-state exception:
 
 1. `.next-action-body` — explanation paragraph(s), state-conditional.
    Grows to fill available space (`flex: 1 1 auto`).
-2. `.next-action-confirm` — optional, used in pre-Activated states
-   that need a confirm checkbox. Sits immediately above the button
-   row so the operator's eye flows top-down: read → confirm →
-   click.
-3. `.next-action-buttons` — the button row, pinned to the bottom.
+2. `.next-action-buttons` — the button row, pinned to the bottom.
    Primary action first, supporting actions following as
-   Secondary buttons.
+   Secondary buttons. `spec/workflow_card.md` "Single-row button
+   layout" carries the gating contract for which buttons appear.
 
-The **Activated state is an exception** — its body splits into two
-inline sections separated by `<hr class="next-action-divider">`,
-each with its own buttons and (for the Pause section) its own
-`.next-action-confirm`. The bottom-pinned `.next-action-buttons`
-row is *not* rendered while Activated; the buttons live next to
-the body sections they belong to. See the per-state breakdown
-below.
+`.next-action-confirm` and `<hr class="next-action-divider">` are
+**not rendered by any state**. Both once described an Activated-state
+split — two inline sections with their own buttons, no bottom-pinned
+row — that the card has never shipped; the single row above replaced
+it, and a confirm checkbox rides inside the form rather than in a
+block of its own.
 
 The empty-draft short-circuit state renders only a single
-paragraph in `.next-action-body` and skips both
-`.next-action-confirm` and `.next-action-buttons` entirely.
+paragraph in `.next-action-body` and skips the button row.
 
 **Buttons.** Primary action uses Primary styling (solid
 `--btn-primary-bg`); supporting actions use Secondary styling (white
@@ -183,9 +178,10 @@ Notes specific to Session Home:
   layout never promotes either to Primary. Pause carries **no
   confirmation checkbox**; the lifecycle service's `confirm` gate is
   satisfied by a hidden field in the form.
-- **No "See previews" in `ready`.** Operators monitor live
-  responses while Activated; previewing is the validation-time
-  affordance.
+- **No "See previews" button in any state.** The card has never
+  rendered one. The intent behind the rule stands — previewing is a
+  validation-time affordance, not something to offer while Activated —
+  so a button added later belongs in `validated`, not `ready`.
 - **Status pills + per-issue list live in the right column**, not
   the body. States 3 and 5 surface the readiness pill row
   (`pill-error` / `pill-empty` / `pill-count`) and per-issue list
@@ -435,11 +431,10 @@ State-conditional copy only — the card frame is constant:
 **Session Home carries no placeholder card** — all four of its cards
 are wired. The pattern is documented here because it is the app's one
 shape for an inert card, and any future placeholder on any page must
-reuse it rather than invent a second.
+match it rather than invent a second. It is a **class, not a macro**:
+a `placeholder_card` macro existed and was retired unused, so the one
+live placeholder — on the Previews page — writes the markup directly.
 
-- **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
-  exporting `placeholder_card(id, title, description,
-  button_label, button_tooltip)`.
 - **Class:** `body.ui-v2 .card.placeholder` — `--surface-muted`
   background, with `--text-subtle` on both the heading and the body,
   `not-allowed` cursor.

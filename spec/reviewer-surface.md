@@ -1242,9 +1242,9 @@ It carries audit-event copy and is otherwise invisible.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given, and the Instruments Setup
-page enforces the cap at create / edit time. As belt-and-braces
-against a value that slipped past it, Page buttons carry
-`max-width: 16em; text-overflow: ellipsis`.
+page enforces the cap at create / edit time. Page buttons carry no
+truncation rule of their own — a label that slipped past the cap
+renders at its full width.
 
 ---
 
@@ -1356,12 +1356,16 @@ compatible either way:
   above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
 - **Keyboard navigation.** Tab walks cells across a row, which the
-  browser gives for free. **Enter moves focus down a column and
-  Shift+Enter up it**, and the handler that does so carries two
-  obligations: Enter anywhere in the table must not submit the page
-  `<form>`, and Enter inside a `<textarea>` must stay a newline.
-- **What lands later.** Return-to-place (preserve scroll position
-  across save / reload) is the remaining ergonomics item. Cell
+  browser gives for free, and that is all that ships: the surface
+  binds no `keydown` handler. Column-wise Enter / Shift+Enter movement
+  is listed below as unbuilt; the two obligations it would carry are
+  recorded there so they are not rediscovered.
+- **What lands later.** Column-wise keyboard movement — Enter down a
+  column, Shift+Enter up — which any handler must implement without
+  letting Enter submit the page `<form>` and without stealing Enter
+  from inside a `<textarea>`. Return-to-place (preserve scroll
+  position across save / reload) is the other remaining ergonomics
+  item. Cell
   autosave and filter-to-incomplete are deferred to
   `guide/deferred_consolidated.md` — pure progressive enhancement,
   built only if pilot feedback asks for them. **None of these is

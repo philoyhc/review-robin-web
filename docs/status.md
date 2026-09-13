@@ -738,7 +738,7 @@ suite against a `postgres:16` service container).
   placeholder cards plus the Rule Based Assignment card on
   `/assignments` share the canonical `.card.placeholder` class +
   `placeholder_card` Jinja macro
-  (`app/web/templates/operator/partials/_placeholder_card.html`),
+  (`app/web/templates/operator/partials/_placeholder_card.html`), <!-- path-ref-ok -->
   so all three render with identical typography and contrast.
   See `spec/session_home.md`.
 - **Lifecycle display label mapping (Segment 11B)**: a single
