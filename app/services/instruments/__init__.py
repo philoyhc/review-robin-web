@@ -104,6 +104,7 @@ from ._response_fields import (
 from ._instrument_crud import (
     DEFAULT_INSTRUMENT_NAME,
     GROUP_KIND_SENTINEL,
+    LastInstrumentError,
     create_instrument,
     decode_group_kind,
     delete_instrument,
@@ -153,6 +154,7 @@ __all__ = [
     "FieldKeyError",
     "InstrumentResponseField",
     "InvalidResponseFieldShapeError",
+    "LastInstrumentError",
     "LockedDisplayFieldError",
     "ResponseFieldDropAcknowledgementRequired",
     "ResponseFieldShapeChangeError",

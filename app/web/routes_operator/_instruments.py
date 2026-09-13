@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -1065,39 +1065,24 @@ def instruments_delete(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instrument not found",
         )
-    total = db.execute(
-        select(func.count())
-        .select_from(Instrument)
-        .where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    if total <= 1:
+    # Captured BEFORE the delete — the row is gone after.
+    landing_id = views.instrument_delete_landing_id(
+        db,
+        session_id=review_session.id,
+        instrument_id=instrument_id,
+    )
+    try:
+        instruments_service.delete_instrument(
+            db, instrument=instrument, actor=user
+        )
+    except instruments_service.LastInstrumentError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete the last instrument",
+            detail=str(exc),
         )
-    # Pick the next-or-previous sibling so the operator lands near
-    # the instrument they just deleted instead of being yanked to
-    # the top of the page. Captured BEFORE the delete since the row
-    # is gone after.
-    sibling_ids = (
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.id)
-        )
-        .scalars()
-        .all()
-    )
-    idx = sibling_ids.index(instrument_id)
-    if idx + 1 < len(sibling_ids):
-        landing_id = sibling_ids[idx + 1]
-    else:
-        landing_id = sibling_ids[idx - 1]
-    instruments_service.delete_instrument(
-        db, instrument=instrument, actor=user
-    )
     return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{landing_id}"
+        review_session.id,
+        fragment=f"instrument-{landing_id}" if landing_id else None,
     )
 
 

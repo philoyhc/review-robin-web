@@ -1765,13 +1765,9 @@
              toggle, picking up the help cards + constraints. #}
           <div data-new-model-band2-preview
                style="margin-top: 16px;">
-            <div class="rs-progress-row"
-                 style="display: flex; flex-wrap: wrap;
-                        justify-content: flex-end; align-items: baseline;
-                        gap: 12px; margin: 0 0 8px 0;">
+            <div class="rs-progress-row">
               <p class="rs-instrument-progress"
                  data-new-model-intro-progress
-                 style="margin: 0;"
                  {% if _all_count == 0 %}hidden{% endif %}>
                 <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
                       data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
@@ -2787,7 +2783,6 @@
             var hiddenAttr = allCount === 0 ? ' hidden' : '';
             return '<p class="rs-instrument-progress"'
               + ' data-new-model-intro-progress'
-              + ' style="margin: 0;"'
               + hiddenAttr + '>'
               + '<span class="pill ' + reqClass + '"'
               +   ' data-new-model-intro-required-pill>'
@@ -2808,10 +2803,7 @@
           function buildProgressAndConstraintsRow(card) {
             var pillsHtml = buildProgressPills(card);
             var constraintsHtml = buildConstraints(card);
-            return '<div class="rs-progress-row"'
-              + ' style="display: flex; flex-wrap: wrap;'
-              + ' justify-content: flex-end; align-items: baseline;'
-              + ' gap: 12px; margin: 0 0 8px 0;">'
+            return '<div class="rs-progress-row">'
               + pillsHtml
               + constraintsHtml
               + '</div>';

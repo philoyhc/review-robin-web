@@ -405,6 +405,17 @@ def replicate_instrument(
     return instrument
 
 
+class LastInstrumentError(Exception):
+    """Raised when deleting would leave a session with no instruments.
+
+    A session always has at least one instrument — ``ensure_default_
+    instrument`` creates one, and every surface downstream (Validate,
+    Generate, the reviewer surface) assumes it. The floor lives here
+    rather than in the route because it is a rule about the domain,
+    not about the request: any caller reaching this function gets it.
+    """
+
+
 def delete_instrument(
     db: Session,
     *,
@@ -415,8 +426,20 @@ def delete_instrument(
     fields, assignments, responses) via cascade, then re-pack the
     surviving instruments' ``order`` values to ``0..N-1``. Returns the
     deleted instrument's id.
+
+    Raises :class:`LastInstrumentError` when this is the session's only
+    instrument — checked before anything mutates.
     """
     review_session = instrument.session
+    total = db.execute(
+        select(func.count())
+        .select_from(Instrument)
+        .where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    if total <= 1:
+        raise LastInstrumentError(
+            "Cannot delete the last instrument"
+        )
     lifecycle.invalidate_if_validated(
         db, review_session=review_session, user=actor, reason="instrument_deleted"
     )

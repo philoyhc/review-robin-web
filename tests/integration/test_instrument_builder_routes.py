@@ -5416,7 +5416,14 @@ def test_band2_intro_progress_pills_render_inside_preview_row(
     assert progress_idx != -1
     between = flat[preview_idx:progress_idx]
     assert "rs-progress-row" in between
-    assert "justify-content: flex-end" in between
+    # Right-alignment used to be asserted here as an inline style. It
+    # now lives on the class in ``base.html``, which is what lets the
+    # four render paths (this template, the reviewer surface, and the
+    # two JS builders) share one layout instead of four copies of it.
+    assert "justify-content: flex-end" not in between, (
+        "the row's layout belongs on .rs-progress-row in base.html, "
+        "not inline on this markup"
+    )
 
 
 def test_band2_intro_inline_edit_icons_retired(
@@ -5490,7 +5497,12 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     flat = " ".join(body.split())
     # The flex row appears after the intro card's closing tags and
     # before the table wrapper, and it wraps the pills.
-    card_idx = flat.find("rs-instrument-card")
+    # Search the body, not the document: ``base.html``'s inline
+    # stylesheet names both classes, so an unanchored ``find`` lands
+    # in the CSS instead of the markup.
+    body_start = flat.find("</style>")
+    assert body_start != -1
+    card_idx = flat.find("rs-instrument-card", body_start)
     row_idx = flat.find("rs-progress-row", card_idx)
     progress_idx = flat.find("rs-instrument-progress", row_idx)
     table_idx = flat.find("table-scroll", progress_idx)
@@ -5499,9 +5511,11 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     # and the flex row.
     between = flat[card_idx:row_idx]
     assert "</div> </div>" in between or "</div></div>" in between
-    # The flex row is right-aligned.
+    # The flex row is right-aligned — by the class, not inline.
     row_tag = flat[row_idx : flat.find(">", row_idx)]
-    assert "justify-content: flex-end" in row_tag
+    assert "style=" not in row_tag, (
+        "the row's layout belongs on .rs-progress-row in base.html"
+    )
 
 
 # --------------------------------------------------------------------------- #

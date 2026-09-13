@@ -129,7 +129,11 @@ every change are:
 1. **Route handlers** (`app/web/routes_*.py`, plus the
    `app/web/routes_operator/` and `app/web/routes_reviewer/` packages)
    parse the request, resolve identity via dependencies, and call
-   services. No SQL, no business rules. New operator routes belong in
+   services. **No business rules** — a scoped entity lookup that
+   resolves a path parameter is fine and common; a floor, a quota, a
+   cascade, or a multi-row computation that a service or a view would
+   otherwise own is not (`spec/architecture.md` "Three-layer split").
+   New operator routes belong in
    their feature-area sub-module; slices import only from `_shared.py`
    and from outside the package — **no slice-to-slice imports**.
 2. **Service modules** (`app/services/`) hold all business logic. Routes

@@ -55,7 +55,25 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict
 three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
 
 1. **Route handlers** parse the request, resolve identity via
-   dependencies, and call into services — no SQL, no business rules.
+   dependencies, and call into services — **no business rules**.
+
+   *What "no SQL" means here.* The prohibition is on rules, not on
+   statements. A **scoped entity lookup** — load the row named by a
+   path parameter, scoped to the session, 404 if absent — is a route
+   resolving its own arguments, and is allowed. Where more than one
+   route needs the same lookup, factor it into a
+   `_require_*_in_session` helper in `_shared.py`; that is the
+   preferred shape.
+
+   What may **not** live in a handler is a rule with a domain
+   consequence — a floor, a quota, a cascade, a precondition beyond
+   the gates in `deps.py` — or a computation over several rows that
+   a service or a view would otherwise own. Worked example:
+   `instruments_delete` held both. Its "cannot delete the last
+   instrument" floor is now `instruments.LastInstrumentError`, so
+   every caller gets it rather than the one route that happened to
+   check; its next-sibling landing choice is now
+   `views.instrument_delete_landing_id`, per the fourth seam below.
    Operator routes live in the `app/web/routes_operator/` package
    (split by feature area — `_lobby.py`, `_session_home.py`,
    `_settings.py`, the `_setup_*` slices, `_assignments.py`,
