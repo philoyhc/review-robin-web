@@ -86,6 +86,14 @@ Decisions confirmed at build:
 
 *Third time in one segment that the error was the same shape and the checker found it. The shape is now specific enough to name: **prose written from the surrounding prose rather than from the file it describes**, which is exactly what the spec-writer brief warns about, and my rewrites are no more exempt than the code's.*
 
+**2026-09-13, slice 3a — responses load or drop; nothing is fabricated to fit.** Half of `SC-37` / `SC-40`; the delivery half stays open. The find-or-create backfill is gone: a row naming a pair generation did not produce is dropped with a reason, and `serialize_dropped_responses` renders the set under the upload's own header plus `DropReason`. **What the build turned up is that the drop was already happening** — seven `continue` sites each appended to `ResponseLoadResult.warnings`, and *nothing ever read that list*. The orchestrator ignored it; no route, audit event or page saw it. So the dropped CSV replaces the warnings list rather than joining it, and `counts.assignments_backfilled` becomes `counts.responses_dropped` — the audit event was reporting the fabrication count where the interesting number was always the loss.
+
+The retired-behaviour test (`test_per_reviewee_backfills_missing_assignment`) is reversed, as slice 1's two were. 5 mutations, 5 caught; the first pass left padding and truncation alive, and the test that now kills both had to reach `serialize_dropped_responses` through its public dataclass, because `parse_responses_csv` rejects short rows and so cannot produce the case.
+
+*Undeclared spec impact:* `spec/README.md`'s rehydrate row summarised the pipeline as *"assignment regenerate + backfill"*. Bullet added.
+
+**Blocked, not deferred:** the CSV is produced and discarded. Delivery is the open question below, and it is the last thing standing between rehydrate and its gate opening. `app/services/rehydrate_stash.py` — operator-scoped, 1h TTL, Postgres-backed, built for exactly the Validate → Commit hand-off this CSV has to cross — already exists, which makes the stash option cheaper than it looked when the question was written.
+
 ### PR ladder
 
 Slices, in dependency order. Sizes to be confirmed when each is cut.
@@ -129,6 +137,7 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 - `spec/rehydrate.md` — the header retracts *"the whole pipeline is live"* for the gate; §9 states the dropped-response gap and the contract the feature must meet before the flag opens; §6.3 item 3 follows when slice 3 lands (Item 1).
 - `spec/sessions_overview.md` and `spec/operator_button_audit.md` — both asserted the lobby's Rehydrate button is always rendered, which slice 0's gate falsified; each now names the flag (Item 1).
 - `spec/settings_inventory.md` — drop `manual` from the session-level `assignment_mode` values (Item 1).
+- `spec/README.md` — the rehydrate row's pipeline summary names the backfill the slice-3 drop replaces (Item 1).
 - `guide/findings_2026-09-13_spec_discrepancies.md` — mark `SC-02`, `SC-03`, `SC-09`, `SC-37`, `SC-38`, `SC-39` as they land (Item 1).
 - `guide/todo_master.md` — the live-segment entry and its ordering (Item 1).
 - `docs/status.md` — row when the item lands.

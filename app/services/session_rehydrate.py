@@ -602,8 +602,9 @@ def rehydrate_session(
             correlation_id=correlation_id or "",
         )
 
-        # 5. Responses — load, backfilling any assignment the rules didn't
-        #    regenerate (e.g. default Full-Matrix instruments).
+        # 5. Responses — load every row a generated assignment can carry.
+        #    Rows naming a pair the rules did not produce are dropped,
+        #    not backfilled: assignments are always generated.
         parsed_responses = parse_responses_csv(resolved["responses"])
         load_result = load_responses(
             db, review_session=review_session, rows=parsed_responses
@@ -613,7 +614,7 @@ def rehydrate_session(
             "reviewers": len(reviewers_parse.rows),
             "reviewees": len(reviewees_parse.rows),
             "responses": load_result.responses,
-            "assignments_backfilled": load_result.assignments_created,
+            "responses_dropped": load_result.dropped_count,
         }
         audit.write_event(
             db,
