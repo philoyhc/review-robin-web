@@ -20,10 +20,20 @@ import io
 import os
 import zipfile
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.services import rehydrate_stash
@@ -84,7 +94,25 @@ def _collect_files(uploads: list[UploadFile]) -> dict[str, bytes]:
     return files
 
 
-@router.get("/sessions/rehydrate", response_class=HTMLResponse)
+def _require_rehydrate_enabled() -> None:
+    """404 unless ``rehydrate_enabled`` is on (Segment 19N).
+
+    Gated rather than deleted: the pipeline is wired and covered by
+    tests, and the gap is in the unsettled cases, not the machinery —
+    a response the regenerated rules cannot place is dropped with a
+    warning nobody surfaces. A 404 rather than a disabled page because
+    an operator who has never seen this feature should not be told it
+    exists and is withheld.
+    """
+    if not settings.rehydrate_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@router.get(
+    "/sessions/rehydrate",
+    response_class=HTMLResponse,
+    dependencies=[Depends(_require_rehydrate_enabled)],
+)
 def rehydrate_page(
     request: Request,
     user: User = Depends(get_or_create_user),
@@ -93,7 +121,11 @@ def rehydrate_page(
     return _render(request, user)
 
 
-@router.post("/sessions/rehydrate/validate", response_class=HTMLResponse)
+@router.post(
+    "/sessions/rehydrate/validate",
+    response_class=HTMLResponse,
+    dependencies=[Depends(_require_rehydrate_enabled)],
+)
 def rehydrate_validate(
     request: Request,
     files: list[UploadFile] = File(default=[]),
@@ -114,7 +146,11 @@ def rehydrate_validate(
     return _render(request, user, report=report, token=token)
 
 
-@router.post("/sessions/rehydrate/commit", response_class=HTMLResponse)
+@router.post(
+    "/sessions/rehydrate/commit",
+    response_class=HTMLResponse,
+    dependencies=[Depends(_require_rehydrate_enabled)],
+)
 def rehydrate_commit(
     request: Request,
     token: str = Form(default=""),

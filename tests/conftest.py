@@ -11,6 +11,12 @@ import os
 # PR 8 and ``spec/architecture.md`` "Audit-event detail schema".
 os.environ.setdefault("AUDIT_STRICT_MODE", "true")
 
+# Rehydrate ships gated off (Segment 19N) — see ``app/config.py``. The
+# machinery is wired and worth keeping covered, so the suite runs with
+# it on; ``tests/unit/test_rehydrate_gate.py`` pins the shipped default
+# to off so turning it on here cannot hide that.
+os.environ.setdefault("REHYDRATE_ENABLED", "true")
+
 from collections.abc import Iterator  # noqa: E402
 from pathlib import Path  # noqa: E402
 

@@ -68,8 +68,13 @@
           <span class="btn secondary disabled" aria-disabled="true">Cancel</span>
         {% endif %}
         <a class="btn" href="/operator/sessions/new">Add new session</a>
+        {# Rehydrate is gated off by default (Segment 19N) — the route
+           404s unless ``rehydrate_enabled``, so the button must not
+           render into a dead link. #}
+        {% if rehydrate_enabled %}
         <a class="btn secondary"
            href="/operator/sessions/rehydrate">Rehydrate</a>
+        {% endif %}
         <a class="btn secondary"
            href="/operator/sessions/archived">Go to Archive</a>
       </div>

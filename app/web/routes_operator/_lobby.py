@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
@@ -107,6 +108,7 @@ def list_sessions(
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
             "lobby_tags": session_tags.vocabulary(db, session_ids),
             "breadcrumbs": breadcrumbs.operator_root(),
+            "rehydrate_enabled": settings.rehydrate_enabled,
         },
     )
 
