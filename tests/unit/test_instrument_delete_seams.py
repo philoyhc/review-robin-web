@@ -1,11 +1,12 @@
 """The two pieces that left ``instruments_delete``'s route body.
 
 `NF-22` asked whether route handlers holding SQL breaks the layering
-rule. Almost every site turned out to be a scoped entity lookup —
-a route resolving its own path parameter, which is not a business
-rule. This route was the exception: it carried a domain rule (a
-session keeps at least one instrument) and a navigation choice
-(where to land afterwards) inline.
+rule. Most sites turned out to be scoped entity lookups — a route
+resolving its own path parameter, which is not a business rule —
+though not all of them: see `NF-25` for the ones that are neither
+lookups nor fixed here. This route was the clearest case, carrying
+both a domain rule (a session keeps at least one instrument) and a
+navigation choice (where to land afterwards) inline.
 
 The rule moved to ``instruments.delete_instrument``, so **any**
 caller gets it rather than only the one that happened to check. The
