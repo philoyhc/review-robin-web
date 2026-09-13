@@ -876,7 +876,7 @@ Prepare step — then for each instrument:
      `Assignment.include` is **recomputed, not preserved**.
      `_generate.py:345-347` sets the expected value to
      `self_reviews_active` for a self-review pair and `True`
-     for every other pair, and `:457-461` writes it back
+     for every other pair, and `:462-466` writes it back
      whenever it differs from the stored one — so an
      operator's manual Inactivate on a non-self pair is reset
      to `True` on the next Generate. That reset is the

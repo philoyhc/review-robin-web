@@ -250,8 +250,8 @@ Admin per-session audit-log page, never a tile here.
 **No lifecycle gate.** The card renders identically in every
 session state. Extraction is read-only and useful at every
 state — `draft` (sanity-check the configured artefacts),
-`validated`, `ready` (mid-flight responses snapshot), `closed`
-(final dataset).
+`validated`, `ready` (mid-flight responses snapshot), `expired`
+(final dataset) and `archived`.
 
 **Filenames** follow `{code}_{kind}.csv` (e.g.
 `CS101_reviewers.csv`) via `app/services/extracts/__init__.py::filename`.

@@ -260,8 +260,8 @@ matter.
 
 Also to settle in this item: `_shared.py:351` documents
 `super_button` as *"`\"prepare\"` or `\"activate\"`"*, and
-`spec/workflow_card.md` says the same in three places (`:100-102`,
-`:140-141`, `:663-665`). The spec, the helper's docstring and the
+`spec/workflow_card.md` says the same in four places (`:100-102`,
+`:140-141`, `:442-443`, `:663-665`). The spec, the helper's docstring and the
 template are all two values behind the routes — one vocabulary
 recorded in four places and updated in none.
 
@@ -277,12 +277,13 @@ recorded in four places and updated in none.
 ### Blast radius (measured)
 
 ```
-grep -rn "super_button" app/ --include=*.py   # 24 (11 call sites, 13 plumbing)
-grep -rn "super_failure" app/web/templates/   # 6, all next_action_card.html
+grep -rn "super_button" app/ --include=*.py   # 32 (11 call sites, 21 plumbing)
+grep -rn "super_failure" app/web/templates/   # 7, all next_action_card.html
 grep -rn "parse_super_failure" app/ tests/    # to re-measure at build
 ```
 
-One template block, one view helper's docstring, one spec.
+One template block, one view helper's docstring, one spec (four
+passages of it).
 
 ### PR ladder
 
@@ -316,7 +317,7 @@ One template block, one view helper's docstring, one spec.
 
 ### Doc impact
 
-- `spec/workflow_card.md` — enumerate all five `super_button` values in the `super_failure` slot description, the `parse_super_failure` helper note and the Workflow-failure signal section; add the unknown-value fallback (Item 3).
+- `spec/workflow_card.md` — enumerate all five `super_button` values in **all four** places the two-value vocabulary appears: the `super_failure` slot description (`:100-102`), the `parse_super_failure` helper note (`:140-141`), the Failure-handling redirect URL (`:442-443`) and the Workflow-failure signal section (`:663-665`); add the unknown-value fallback (Item 3).
 - `guide/findings_2026-09-13_spec_discrepancies.md` — `NF-01` closes when this lands (Item 3).
 - `docs/status.md` — row when the item lands.
 

@@ -187,7 +187,8 @@ def validate_session(
     # Activate-warns detour: ?activate=1 requests the inline
     # confirmation banner (Segment 11G PR D). It only renders on
     # ``validated`` sessions that have warnings or new errors. On
-    # ineligible states (draft / ready / closed) or when there's
+    # ineligible states (draft / ready / expired / archived) or
+    # when there's
     # nothing to acknowledge, drop the param and 303 to the clean
     # URL — operator can activate (or not) from the Workflow card.
     activate_banner: dict[str, object] | None = None
