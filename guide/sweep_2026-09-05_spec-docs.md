@@ -24,6 +24,15 @@ now. The mechanical dead-reference pass below rediscovered one of them
 (C3) from scratch, which is what carrying findings forward is meant to
 save.
 
+**The `Now` column is present tense and is kept current**, like the
+findings ledger at the foot of this file — those two are the live
+surfaces here, and the ledger wins if they ever disagree. Everything
+else, *Headline numbers* included, is frozen at 2026-09-05. Said
+explicitly because this section is where the next sweep starts reading:
+between 2026-09-08 and 2026-09-13 the ledger was kept current while this
+column was not, so for five days §0 reported four findings as open that
+the ledger already recorded closed.
+
 | Finding | From | Age | Now | Note |
 |---|---|---|---|---|
 | Tier 1 #4 — Email Template editor has no spec | 2026-05-11 | 117 d | **done** | `spec/email_template_editor.md`, #2101 |
@@ -34,11 +43,11 @@ save.
 | Tier 3 #9 — Edit Session page | 2026-05-11 | 117 d | **moot** | The page was retired in 18R; there is nothing left to spec |
 | Tier 3 #10–#12 — new-session form, drill-in pages, outbox | 2026-05-11 | 117 d | **declined** | Deferred on the same reasoning as when filed; `session_outbox.html` remains explicitly out of the operator taxonomy |
 | C1 — `preview_hub.md` dates the `/preview` 308 repoint anachronistically | 2026-08-18 | 18 d | **re-diagnosed** | See finding 2.1 — the note had it backwards |
-| C2 — `lifecycle.md` §1 state diagram omits `expired` | 2026-08-18 | 18 d | **still open** | See 2.2 |
-| C3 — `assignments.md` names `app/services/assignments.py` (now a package) | 2026-08-18 | 18 d | **still open** | See 2.3; independently rediscovered by the dead-reference pass |
+| C2 — `lifecycle.md` §1 state diagram omits `expired` | 2026-08-18 | 18 d | **done** | Became 2.2; closed 19C Item 7 PR 2 — all five states |
+| C3 — `assignments.md` names `app/services/assignments.py` (now a package) | 2026-08-18 | 18 d | **done** | Became 2.3; closed 19C Item 7 PR 1 — five specs renamed, `docs/status.md` left as dated history. Independently rediscovered by the dead-reference pass |
 | C4 — `visual_style_general.md` green-marker is one shade off | 2026-08-18 | 18 d | **superseded** | Worse than filed: the token is not a different shade, it no longer exists. See 2.4 |
-| C5 — `operator_ui_concept.md` user card omits the admin suffix | 2026-08-18 | 18 d | **still open** | See 2.5 |
-| C6 — `domain_assumptions.md` "1–6 Instruments" implies a cap | 2026-08-18 | 18 d | **still open** | See 2.6 |
+| C5 — `operator_ui_concept.md` user card omits the admin suffix | 2026-08-18 | 18 d | **done** | Became 2.5; closed 19C Item 7 PR 2 — the `(super admin)` / `(sys admin)` suffix |
+| C6 — `domain_assumptions.md` "1–6 Instruments" implies a cap | 2026-08-18 | 18 d | **done** | Became 2.6; closed 19C Item 7 PR 2 — restated as typical usage, not a bound |
 
 `spec_sweep_18Aug.md` §A and §B and `docs_sweep_19Aug.md`'s four buckets
 were all executed at the time; nothing carried from them beyond §C above.
@@ -198,9 +207,16 @@ mechanical hit as a lead, not a finding.
 | In scope | 64 (38 `spec/`, 17 `docs/`, 9 root) |
 | Read | 13 |
 | Findings | 8 (write 0 / update 8 / consolidate 0 / retire 0 / move 0) |
-| Carried in / closed / still open | 13 / 6 / 7 |
+| Carried in / closed / still open | **at sweep** 13 / 6 / 7 · **today** 13 / 10 / 3 |
 | False positives rejected | 1 (`role_navigator.md`) |
 | Untouched since the previous sweep | 13 of 64; stalest 117 d |
+
+*The three still open today are the standing **declines**, not work: a
+standalone Relationships page (condition: pilot feedback, and there has
+been no pilot), a standalone Operator Settings page (condition: the page
+grows), and the Tier 3 trio. Each reopens on a stated trigger and on
+nothing else. The four that moved from open to done between the sweep and
+today are C2, C3, C5 and C6, all closed by 19C Item 7.*
 
 **Two observations for the cadence itself.** First, the four
 "non-actionable" notes from August that were still true are the argument
