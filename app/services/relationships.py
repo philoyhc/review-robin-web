@@ -173,6 +173,7 @@ def parse_relationship_csv(
             continue
         seen_pairs[(reviewer.id, reviewee.id)] = index
 
+        # not-identity: a roster Status enum from a CSV cell, not an email.
         status_raw = (_cell(raw, "Status") or "active").strip().lower()
         if status_raw == "":
             status_raw = "active"

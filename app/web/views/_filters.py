@@ -175,6 +175,9 @@ def filter_invitations_rows(
     if needle:
         tail = _extract_filter_label_tail(needle)
         if tail is not None and "@" in tail:
+            # not-identity: a picker selection narrowing rows the operator is
+            # already authorized to see. Folding here changes what is
+            # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
             out = [r for r in out if r.reviewer.email.casefold() == picked]
         else:
@@ -225,6 +228,9 @@ def filter_responses_rows(
     if needle:
         tail = _extract_filter_label_tail(needle)
         if tail is not None:
+            # not-identity: a picker selection narrowing rows the operator is
+            # already authorized to see. Folding here changes what is
+            # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
             out = [
                 r
@@ -303,6 +309,9 @@ def filter_reviewers_rows(
     if needle:
         tail = _picked_label_handle(needle, _reviewer_labels(rows))
         if tail is not None and "@" in tail:
+            # not-identity: a picker selection narrowing rows the operator is
+            # already authorized to see. Folding here changes what is
+            # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
             out = [r for r in out if r.email.casefold() == picked]
         else:
@@ -440,6 +449,9 @@ def filter_reviewees_rows(
     if needle:
         tail = _picked_label_handle(needle, _reviewee_labels(rows))
         if tail is not None:
+            # not-identity: a picker selection narrowing rows the operator is
+            # already authorized to see. Folding here changes what is
+            # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
             out = [
                 r
@@ -507,6 +519,9 @@ def filter_observers_rows(
     if needle:
         tail = _picked_label_handle(needle, _observer_labels(rows))
         if tail is not None and "@" in tail:
+            # not-identity: a picker selection narrowing rows the operator is
+            # already authorized to see. Folding here changes what is
+            # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
             out = [o for o in out if o.email.casefold() == picked]
         else:

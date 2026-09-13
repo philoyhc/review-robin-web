@@ -163,6 +163,13 @@ def _rule_matches_row(
         right = _observer_attr_value(observer, observer_attr)
         if right is None:
             return False
+        # not-identity: ``right`` can be the observer's own email, but
+        # ``left`` never can — ``ALLOWED_LEFT_FIELDS`` admits only
+        # ``tag1``/``tag2``/``tag3``, and the tag-attr maps above don't
+        # carry ``"email"``. So this compares an observer's email
+        # against someone's *tag*, never against another person's
+        # email; there is no ß-style merge to engineer against. Checked
+        # 2026-09-13 while auditing the fold.
         left_cmp = (left or "").lower()
         right_cmp = right.lower()
         if op == "IS THE SAME AS":

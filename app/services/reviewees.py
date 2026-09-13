@@ -235,6 +235,9 @@ def update_reviewee(
     if tag_3 is not _UNSET:
         proposed["tag_3"] = _normalised_optional(tag_3)  # type: ignore[arg-type]
 
+    # not-identity: a dirty check — did the operator edit this
+    # field? A case-only edit is a real edit, so this compares raw
+    # values deliberately. The uniqueness gate below folds.
     if (
         "email_or_identifier" in proposed
         and proposed["email_or_identifier"] != reviewee.email_or_identifier

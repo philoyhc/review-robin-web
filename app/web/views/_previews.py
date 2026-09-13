@@ -165,6 +165,8 @@ def build_preview_picker_context(
 
     current: PreviewPickerOption | None = None
     current_index: int | None = None
+    # not-identity: locating the operator's own picker selection in
+    # a list already scoped to this session. Not an access decision.
     if parsed_email:
         for idx, opt in enumerate(options):
             if opt.email.casefold() == parsed_email:

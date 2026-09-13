@@ -184,6 +184,7 @@ def _parse_status(
     active). A present, non-empty value outside the allowed set is a
     blocking per-row error.
     """
+    # not-identity: a roster Status enum from a CSV cell, not an email.
     value = _cell(row, "Status").lower()
     if not value:
         return "active"

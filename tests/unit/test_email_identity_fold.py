@@ -25,6 +25,45 @@ from app.services.email_identity import looks_like_email, normalize_email
 
 
 # --------------------------------------------------------------------- #
+# Reading a source file as code, not as prose
+# --------------------------------------------------------------------- #
+
+
+def _code_lines(path) -> list[str]:
+    """Return the file's lines with every string literal and comment
+    blanked out, so a scan matches what the module *does* rather than
+    what it says about itself.
+
+    Added by the third pass. Widening the fold regex to catch the
+    bound-method spelling (``key=str.casefold``) immediately made it
+    match two docstrings that *describe* the convention — including
+    ``deps.py``'s, which says the fold is ``str.lower``. A scanner that
+    trips on its own documentation teaches people to stop writing it.
+
+    ``tokenize`` rather than a regex, because the literals that matter
+    here are triple-quoted and span lines.
+    """
+    import io
+    import tokenize
+
+    src = path.read_text()
+    rows = [list(line) for line in src.splitlines()]
+    for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+        if tok.type not in (tokenize.STRING, tokenize.COMMENT):
+            continue
+        (r1, c1), (r2, c2) = tok.start, tok.end
+        for r in range(r1, r2 + 1):
+            if r - 1 >= len(rows):
+                break
+            row = rows[r - 1]
+            lo = c1 if r == r1 else 0
+            hi = c2 if r == r2 else len(row)
+            for c in range(lo, min(hi, len(row))):
+                row[c] = " "
+    return ["".join(row) for row in rows]
+
+
+# --------------------------------------------------------------------- #
 # The fold itself
 # --------------------------------------------------------------------- #
 
@@ -226,23 +265,40 @@ def test_no_identity_gate_folds_inline() -> None:
         # deciding who someone is, not filtering what a viewer sees.
         "app/services/users.py",
         "app/web/routes_operator/_session_home.py",
+        # Added by the third pass. None of these were violating —
+        # they were simply never listed, which is the point: the list
+        # only protects what someone remembered to add to it. The
+        # column-scoped test below is what closes that gap; this list
+        # remains as the stricter rule for modules that decide access.
+        "app/services/reviewers.py",
+        "app/services/observers.py",
+        "app/services/reviewees.py",
+        "app/services/relationships.py",
+        "app/services/csv_imports.py",
+        "app/services/rules/engine.py",
+        "app/services/assignments/_self_review.py",
     ]
 
-    # Both folds, both spellings. The first version matched only
+    # Both folds, three spellings. The first version matched only
     # ``.casefold()`` and so could not see ``deps.py``'s sign-in
     # resolution folding with a bare ``.lower()`` — the single most
     # consequential identity comparison in the app, inside a module
-    # already on this list. ``func.lower(col)`` is the SQL side and is
-    # not matched: these patterns require empty parens.
-    INLINE_FOLD = re.compile(r"\.(casefold|lower)\(\)|\bstr\.(casefold|lower)\(")
+    # already on this list. The second matched ``str.casefold(`` but
+    # required the paren, so the bound-method form ``key=str.casefold``
+    # — already in use in ``views/_filters.py`` — would have slipped
+    # past. ``func.lower(col)`` is still not matched: the method forms
+    # require empty parens, and the ``str.`` form requires the
+    # ``str.`` prefix.
+    INLINE_FOLD = re.compile(r"\.(casefold|lower)\(\)|\bstr\.(casefold|lower)\b")
 
     offenders: list[str] = []
     for rel in gates:
         path = root / rel
         assert path.exists(), f"gate module moved: {rel}"
         lines = path.read_text().splitlines()
+        code = _code_lines(path)
         for n, line in enumerate(lines, 1):
-            if not INLINE_FOLD.search(line):
+            if not INLINE_FOLD.search(code[n - 1]):
                 continue
             if "normalize_email" in line:
                 continue
@@ -265,4 +321,96 @@ def test_no_identity_gate_folds_inline() -> None:
     assert not offenders, (
         "identity gates must fold through email_identity.normalize_email, "
         "not inline:\n  " + "\n  ".join(offenders)
+    )
+
+
+# --------------------------------------------------------------------- #
+# The gap the module list could not close
+# --------------------------------------------------------------------- #
+#
+# Three verification passes, three sets of misses, one root cause: the
+# test above protects a list someone has to remember to extend. Pass
+# one missed four gates; pass two missed three more, one of them in a
+# module already on the list; pass three found none — but only because
+# it read every file by hand, which is not a gate.
+#
+# This one starts from the columns instead. The identity-bearing
+# attributes are a closed set of two names, so a comparison or a fold
+# against one can be found without knowing which module it lives in.
+# Measured cost of the inversion: 10 sites needing a marker, against
+# the 67 that marking every ``.lower()`` in ``app/`` would have
+# required — which would have made the marker mean "I touched a fold"
+# rather than "I touched an identity comparison".
+
+
+def test_identity_columns_are_compared_through_the_fold() -> None:
+    """Every comparison against an email column folds, or says why not.
+
+    Scans all of ``app/`` — no allowlist — for a line that both names
+    an identity-bearing attribute (``.email`` / ``.email_or_identifier``)
+    and compares or folds it. Such a line passes if ``normalize_email``
+    appears on it or anywhere in its enclosing function (the common
+    shape is a ``normalized = normalize_email(...)`` local compared
+    against ``func.lower(column)`` a few lines down), or if a
+    ``# not-identity:`` comment appears above it inside that same
+    function.
+
+    Function scope rather than the line-above scope used by the test
+    above, because these are function-level decisions: a picker filter
+    or a dirty check is wholly one or the other, and one marker per
+    function says that more honestly than five identical ones.
+
+    Matching runs against ``_code_lines`` — string literals and
+    comments blanked — so a dict key or a sort key naming a column
+    (``views/_sort.py``) is not a hit, and neither is prose about the
+    convention.
+    """
+    import ast
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parents[2]
+    IDENT_ATTR = re.compile(r"\.(email|email_or_identifier)\b")
+    COMPARE = re.compile(r"==|!=|\.lower\(\)|\.casefold\(\)")
+
+    offenders: list[str] = []
+    scanned = 0
+    for path in sorted(root.glob("app/**/*.py")):
+        src = path.read_text()
+        lines = src.splitlines()
+        code = _code_lines(path)
+        tree = ast.parse(src, filename=str(path))
+        funcs = [
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
+        for n, line in enumerate(lines, 1):
+            bare = code[n - 1]
+            if not IDENT_ATTR.search(bare) or not COMPARE.search(bare):
+                continue
+            scanned += 1
+            if "normalize_email" in line:
+                continue
+            enclosing = [f for f in funcs if f.lineno <= n <= (f.end_lineno or n)]
+            if any(
+                "normalize_email" in "\n".join(lines[f.lineno - 1 : f.end_lineno])
+                for f in enclosing
+            ):
+                continue
+            start = min((f.lineno for f in enclosing), default=1)
+            above = "\n".join(lines[start - 1 : n - 1])
+            if "not-identity:" in above:
+                continue
+            rel = path.relative_to(root)
+            offenders.append(f"{rel}:{n}: {line.strip()}")
+
+    assert scanned >= 20, (
+        "the scan found almost nothing — the attribute pattern has "
+        f"probably gone stale (matched {scanned} lines)"
+    )
+    assert not offenders, (
+        "a comparison against an identity column neither folds through "
+        "normalize_email nor carries a '# not-identity:' marker:\n  "
+        + "\n  ".join(offenders)
     )

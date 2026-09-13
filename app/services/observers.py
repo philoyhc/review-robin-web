@@ -204,6 +204,9 @@ def update_observer(
     if tag_1 is not _UNSET:
         proposed["tag_1"] = _normalised_optional(tag_1)  # type: ignore[arg-type]
 
+    # not-identity: a dirty check — did the operator edit this field?
+    # A case-only edit is a real edit, so this compares raw values
+    # deliberately. The uniqueness gate below folds.
     if "email" in proposed and proposed["email"] != observer.email:
         if _email_taken(
             db,

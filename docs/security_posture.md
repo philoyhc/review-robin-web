@@ -83,11 +83,14 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 
 ## §5.5a Identity matching — the fold
 
-Every identity comparison in the app decides on an email match — the
-gates audited in §5.6, and four more that audit does not list:
-`get_or_create_user` (which `User` row an authenticated principal
-becomes), `auth.roles.is_super_admin`, the reviewer dashboard's roster
-match, and invite acceptance. The convention, settled 19N Item 2
+Every identity comparison in the app decides on an email match. Most
+sit behind a gate audited in §5.6; three do not appear in that table
+at all — `get_or_create_user` (which `User` row an authenticated
+principal becomes), `auth.roles.is_super_admin`, and the reviewer
+dashboard's roster match. (An earlier version of this sentence counted
+invite acceptance as a fourth. It is listed: §5.6's `/me/invite/{token}`
+row.) Roster uniqueness and CSV de-duplication fold too, so read this
+as the convention rather than as an enumeration. Settled 19N Item 2
 (2026-09-13):
 
 **`email_identity.normalize_email` — strip, then `str.lower`.** Not
@@ -103,13 +106,19 @@ and at invite acceptance. Merging two people at any of them lets one
 reach the other's surface: a fail-**open**. Lowering keeps them
 distinct.
 
-**The fold also strips**, which three of those sites did not do
-before — `is_super_admin`, the dashboard match and invite acceptance
-compared unstripped. Surrounding whitespace on an identity now
-matches where it previously did not. A widening, stated rather than
-absorbed: these identities arrive from Easy Auth headers and a roster
-whose emails are stripped on write, so the case is not expected, but
-the semantics changed and the change was not the point of the item.
+**The fold also strips**, which four of the sites it reached did not
+do before — `is_super_admin`, the dashboard match, invite acceptance
+and `get_or_create_user` all compared unstripped. Surrounding
+whitespace on an identity now matches where it previously did not. A
+widening, stated rather than absorbed: these identities arrive from
+Easy Auth headers and a roster whose emails are stripped on write, so
+the case is not expected, but the semantics changed and the change was
+not the point of the item. `get_or_create_user` is the sharpest of the
+four, because `auth/identity.py` never strips the parsed claim and the
+row it creates keeps the untrimmed address: before this, a padded
+claim would have missed its own row and created a second one. It was
+omitted from the first version of this paragraph, which named the
+other three.
 
 **This was a live fail-open, not a hypothetical**, and the first
 write-up of this item got that wrong — it said the pre-fix state
@@ -152,8 +161,23 @@ correct for non-ASCII; it can only be kept out of the way.
   systems and contrary to user expectation if honoured. A deliberate
   concession.
 
-Coverage: `tests/unit/test_email_identity_fold.py`, including the
-eszett distinctness and the SQLite/Postgres divergence.
+**How it is held.** Two structural tests in
+`tests/unit/test_email_identity_fold.py`. The first forbids a second,
+inline fold inside a listed set of identity-deciding modules. The
+second scans **all** of `app/` for a comparison or fold against
+`.email` / `.email_or_identifier` and requires it to reach
+`normalize_email` — on the line or anywhere in its enclosing function
+— or to carry a `# not-identity:` comment above it inside that
+function. The second exists because the first is a list someone has to
+remember to extend, and two verification passes each found a gate it
+had not been extended to; the column set is closed where the module
+set is not. Ten sites carry the marker for that scan — five operator
+picker filters, one audit-log actor filter, three roster dirty checks
+and one picker preview — and three more carry it for the first test,
+all folds of a CSV `Status` value or a tag rather than an address.
+
+Coverage also includes the eszett distinctness and the
+SQLite/Postgres divergence.
 
 ## §5.6 Permission audit
 

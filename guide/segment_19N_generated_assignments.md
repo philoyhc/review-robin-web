@@ -354,17 +354,47 @@ anticipate:
   absent from the list entirely.
   The root cause each time was the same: the blast radius counted
   callers of `normalize_email` rather than sites that fold without it.
-  All seven are routed now; the test matches both folds in both
-  spellings and covers eight modules.
+  All seven are routed now.
+- **A third pass found no eighth gate — and that is the finding.** It
+  swept every identity comparison in `app/` and came back clean, which
+  two passes of reading could not have promised. What it did find was
+  that the test's protection was still a list: correct today, one new
+  module from being wrong again, and it named three misses in the
+  module list's own spelling of the regex — `key=str.casefold`, already
+  in use in `views/_filters.py`, has no trailing paren and would have
+  slipped past. So the test was inverted onto the **columns**, which
+  are a closed set of two names where the modules are not. Measured
+  cost of the inversion before building it: 10 sites needing a
+  `# not-identity:` marker, against the 67 that marking every
+  `.lower()` in `app/` would have required — the difference between a
+  marker that means "this is not an identity comparison" and one that
+  means "I touched a fold". Four mutations, each caught by the right
+  test; the decisive one is an unfolded `a.email == b.email` dropped
+  into a module on no list at all.
+- **Two corrections to `docs/security_posture.md` §5.5a**, both mine.
+  It named four gates "the audit does not list" and one of them,
+  invite acceptance, is listed — §5.6's `/me/invite/{token}` row. And
+  the strip-widening paragraph named three newly-stripping sites when
+  there were four: `get_or_create_user` also gained stripping, in the
+  same commit that declared the other three, and it is the sharpest of
+  them because `auth/identity.py` never strips the claim and the row
+  it creates keeps the untrimmed address.
+- **`observer_cohort.py` looked like an eighth gate and is not.** Its
+  `IS THE SAME AS` rule can put an observer's email on one side, but
+  `ALLOWED_LEFT_FIELDS` admits only `tag1`/`tag2`/`tag3` on the other,
+  so no two people's emails ever meet. The schema is what makes it
+  safe, not the fold — recorded in a comment there so the next audit
+  does not re-trace it.
 - **The pre-fix state was not merely fail-closed.** The first draft said
   so and stopped at the self-match direction; a `ß` holder's casefolded
   key matched an unrelated `ss` row at every gate. Withdrawn and
   recorded, in the plan and in `docs/security_posture.md`.
 
-Nothing broke: the suite went 3,903 → 3,914, all additions. Seven
-mutations across the fold and the four gates, each caught — reverting
-to casefold fails exactly the eszett test, and reverting any gate fails
-the structural one.
+Nothing broke: the suite went 3,903 → 3,915, all additions. Every
+mutation run across the three passes was caught by exactly one test —
+reverting to casefold fails the eszett test, reverting any gate fails
+the module-list test, and an unfolded `a.email == b.email` in a module
+on no list fails the column test.
 
 ---
 

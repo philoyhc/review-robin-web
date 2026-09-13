@@ -897,6 +897,9 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
         # Case-insensitive exact match — operators pick from a
         # typeahead populated with this session's distinct actor
         # emails, so substring search isn't useful here.
+        # not-identity: narrowing an audit log the caller is already
+        # authorized to read. Unlike the identity fold this one does not
+        # strip, because the value comes from the typeahead verbatim.
         from sqlalchemy import func as _func
 
         stmt = stmt.where(
