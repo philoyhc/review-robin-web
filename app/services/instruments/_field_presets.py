@@ -41,9 +41,3 @@ LIST_PRESETS: Final[tuple[tuple[str, str, str], ...]] = (
 """Operator-visible Band 3 quick-fill presets. Each entry's
 ``list_options`` is a comma-joined string matching the
 ``InstrumentResponseField._inline_list_csv`` storage shape."""
-
-
-def preset_list_options_by_key() -> dict[str, str]:
-    """Return ``{preset_key: list_options}`` for the template + JS
-    to use directly (e.g. as a JSON-serialised data attribute)."""
-    return {key: options for key, _label, options in LIST_PRESETS}

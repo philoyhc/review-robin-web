@@ -6,8 +6,7 @@ UTC — so this doc is only about display. The mechanics live in
 `app/services/date_formatting.py`: `format_datetime` / `format_date`
 / `parse_local_datetime` / `format_datetime_local`, the
 `SHOW_ZONE_TOKEN` switch, and the zone-identity helpers
-`gmt_offset_label` / `gmt_offset_zone_label` (plus the unused
-CLDR-name helper `timezone_label` — see Rendering format below).
+`gmt_offset_label` / `gmt_offset_zone_label`.
 
 ## Layers
 
@@ -106,8 +105,13 @@ filter are labelled `(UTC)`.
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **No surface shows the CLDR long display name** (e.g.
   `Australian Eastern Standard Time`) — the offset-plus-IANA forms
-  above are the only zone renderings. `date_formatting.timezone_label`
-  is retained for reuse.
+  above are the only zone renderings. The `timezone_label` helper
+  that produced them was **deleted in 19N.2**. It had been kept here
+  "for reuse", which held right up until someone counted what the
+  reuse cost: it was the sole importer of `babel`, a pinned runtime
+  dependency shipped in the deploy artefact. A helper no surface
+  calls does not earn a dependency. Reviving the CLDR form means
+  re-adding both, deliberately.
 
 ## See also
 
