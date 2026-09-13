@@ -31,10 +31,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession, User
+from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import audit, responses as responses_service
 from app.web import views as audit_views
@@ -652,31 +652,9 @@ def export_audit_log_csv(
     # ``session.audit_log_extracted`` event we're about to write
     # is NOT included in this count — the next download will
     # capture it (the recursion is bounded and intentional).
-    count_stmt = (
-        select(func.count())
-        .select_from(AuditEvent)
-        .where(AuditEvent.session_id == review_session.id)
+    body_count = audit.count_events_for_session(
+        db, review_session, filters=filters
     )
-    # _apply_filters needs the LEFT-JOIN on users.email when
-    # actor filtering is active. For the count we want the same
-    # WHERE clauses without the join overhead when actor filter
-    # is empty — split the cases to stay cheap.
-    if filters.actor_email:
-        from app.db.models import User as _User
-
-        count_stmt = (
-            select(func.count())
-            .select_from(AuditEvent)
-            .outerjoin(_User, _User.id == AuditEvent.actor_user_id)
-            .where(AuditEvent.session_id == review_session.id)
-        )
-        count_stmt = audit._apply_filters(count_stmt, filters, _User)
-    else:
-        # No actor filter → no join needed. Just augment WHERE.
-        from app.db.models import User as _User
-
-        count_stmt = audit._apply_filters(count_stmt, filters, _User)
-    body_count = db.execute(count_stmt).scalar_one()
 
     audit_event_payload = audit.counts(rows=body_count)
     audit.write_event(

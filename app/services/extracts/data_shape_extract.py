@@ -56,14 +56,21 @@ from app.services import responses as responses_service
 
 
 __all__ = [
+    "DISCRETE_STEPS_THRESHOLD",
     "build_shape_rows",
     "compose_shape_preview_headers",
     "compose_shape_preview_aggregates",
+    "discrete_step_values",
 ]
 
 
 _NUMERIC = ("Integer", "Decimal")
 _TAG_SLOTS = ("tag-1", "tag-2", "tag-3")
+
+# A numeric response field with a finite, small number of valid
+# values gets the Data shaper's "Discrete steps" chip — one chip
+# per value, which scales poorly past a dozen.
+DISCRETE_STEPS_THRESHOLD = 12
 
 
 # --------------------------------------------------------------------------- #
@@ -195,12 +202,24 @@ def _tag_header_label(
     )
 
 
-def _discrete_step_values(
+def discrete_step_values(
     field: InstrumentResponseField,
 ) -> list[str]:
-    """Mirror of ``_extract_data._discrete_steps_values`` for
-    the file-gen side — same arithmetic, returns the discrete
-    step strings. Empty when the field doesn't qualify."""
+    """The discrete step values for a numeric response field, as
+    pre-formatted strings — empty when the field is non-numeric,
+    lacks the min/max/step triple, or spans more than
+    :data:`DISCRETE_STEPS_THRESHOLD` steps.
+
+    **One implementation, deliberately.** This arithmetic decides
+    whether the Data shaper offers a per-field "Discrete steps"
+    chip, and the same answer has to hold on the file-gen side
+    that writes the extract. It lived in both places until
+    `NF-25` — the route module's copy gating on its own
+    ``_DISCRETE_STEPS_THRESHOLD`` and this one on a literal
+    ``12``, equal at the time and free to drift the moment either
+    was edited. ``constitution.md`` (constant-derived gates only)
+    is the rule that forbids exactly that shape.
+    """
     data_type = field._inline_data_type
     if data_type not in _NUMERIC:
         return []
@@ -215,7 +234,7 @@ def _discrete_step_values(
     if span < 0:
         return []
     count = int(round(span / step)) + 1
-    if count <= 0 or count > 12:
+    if count <= 0 or count > DISCRETE_STEPS_THRESHOLD:
         return []
     is_int = data_type == "Integer"
     values: list[str] = []
@@ -310,7 +329,7 @@ def _aggregate_cells(
                 cells.append(str(acc.fanout_counts.get(opt, 0)))
         elif slot == f"{axis}:discrete-steps":
             steps = (
-                _discrete_step_values(anchor_field)
+                discrete_step_values(anchor_field)
                 if anchor_field
                 else []
             )
@@ -383,7 +402,7 @@ def compose_shape_preview_headers(
             headers.extend(options)
         elif slot == f"{axis}:discrete-steps":
             steps = (
-                _discrete_step_values(anchor_field)
+                discrete_step_values(anchor_field)
                 if anchor_field
                 else []
             )
@@ -419,7 +438,7 @@ def compose_shape_preview_aggregates(
             flags.extend([True] * len(options))
         elif slot == f"{axis}:discrete-steps":
             steps = (
-                _discrete_step_values(anchor_field)
+                discrete_step_values(anchor_field)
                 if anchor_field
                 else []
             )
@@ -519,7 +538,7 @@ def _compose_aggregate_header(
             header.extend(f"{opt}{suffix}" for opt in options)
         elif slot == f"{axis}:discrete-steps":
             steps = (
-                _discrete_step_values(anchor_field)
+                discrete_step_values(anchor_field)
                 if anchor_field
                 else []
             )

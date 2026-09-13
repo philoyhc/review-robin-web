@@ -918,6 +918,42 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
     return stmt
 
 
+def count_events_for_session(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    filters: AuditFilters | None = None,
+) -> int:
+    """How many ``audit_events`` rows this session has under
+    ``filters`` — the same set :func:`list_events_for_session`
+    would page through, and the same set the CSV exporter writes.
+
+    Lives here because :func:`_apply_filters` is private to this
+    module and composing a statement against it is this module's
+    business. The audit-log CSV route built this count inline and
+    reached across for the private helper until `NF-25`.
+
+    The LEFT JOIN on ``users`` exists only so an actor-email
+    filter has a column to match; it is skipped when no actor
+    filter is active, because a count does not otherwise need it.
+    """
+    from sqlalchemy import func as _func
+
+    from app.db.models import User as _User
+
+    stmt = (
+        select(_func.count())
+        .select_from(AuditEvent)
+        .where(AuditEvent.session_id == review_session.id)
+    )
+    if filters is not None and filters.actor_email:
+        stmt = stmt.outerjoin(
+            _User, _User.id == AuditEvent.actor_user_id
+        )
+    stmt = _apply_filters(stmt, filters, _User)
+    return db.execute(stmt).scalar_one()
+
+
 def list_events_for_session(
     db: Session,
     review_session: ReviewSession,
