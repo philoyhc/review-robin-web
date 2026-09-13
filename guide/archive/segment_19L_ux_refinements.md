@@ -27,6 +27,25 @@ sessions page should follow the same conventions — which reversed 19L.2's
 open question 2, closed hours earlier as undecided. The other candidate,
 merging the bulk expander's title and Tags rows, stays declined.
 
+**Segment closed 2026-09-13** on the author's instruction, at **four
+items, all closed**, PRs **#2341 → #2349**. An open-ended log closes when
+someone says so rather than when it empties, so what matters here is what
+did *not* close with it. **One open question was live:** 19L.3's — whether
+the archived page wants the single-row expander, which today heads a lone
+selection *"1 sessions selected"*. It is a refinement described and not
+yet worth doing, so it goes where the segment's own preamble sends such
+work: `guide/new_ux_ideas.md`. The declined bulk-expander merge stays
+declined and is not carried.
+
+**What the four items have in common** is that each was a signal that was
+*almost* there. The lobby marked a selection on the panel but never on the
+row (1); the fix's fill then erased the pills the row carried, so the fill
+went and a bracket replaced it (2); the archived page had the same rows
+and none of the marking (3); and a template carried a real NUL byte, so
+the value was right and `grep` called the repo's largest template binary
+and printed nothing (4). Three of the four were found by looking at the
+thing rather than at the code that makes it.
+
 **What belongs here.** A refinement to a surface that already ships:
 a visual state, a copy fix, an affordance that is present but weak. Work
 that adds a page, a card, or a navigation affordance is a segment of its
@@ -846,7 +865,10 @@ marks rows under a panel that does not close the bracket, or the reverse.
 1. **Does the archived page want the single-row expander too?** It has
    only a bulk panel today, so a lone selected row gets a panel headed
    *"1 sessions selected"* — a pre-existing wrinkle this item does not
-   touch. Decided by the author if it grates.
+   touch. Decided by the author if it grates. **Carried at the segment
+   close (2026-09-13) to `guide/new_ux_ideas.md`** rather than answered:
+   still undecided, and an archived plan is not where an undecided
+   refinement should wait.
 
 ### Out of scope
 

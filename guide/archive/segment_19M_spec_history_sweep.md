@@ -267,20 +267,28 @@ For the segment: every item closed, then the plan moves to
 
 ## Open questions
 
-1. **Does the sweep record belong in one file or six?** Started as one
-   (`guide/sweep_2026-09-13_spec_history.md`) with a section per batch,
-   on the reasoning that the three-bucket rule is one subject and a
-   reader comparing batches should not open six files. Revisit if the
-   file passes ~1,000 lines. *Decides: whoever lands Item 3.*
-2. **Is this a corpus sweep for cadence purposes?** It reads all 39 live
-   `spec/` files but **no** `docs/` file and no root document, so it is
-   not the whole-folder sweep the 8-week / 500-merge clock measures.
-   Marked `partial` until that is settled. *Decides: the author, or
-   whoever next runs `close_check --stale`.*
-3. **Does the stale-identifier class want its own item?** Item 1
-   measures it in the token family; the other five batches only report.
-   If the reports total more than ~40 lines outside the token family it
-   is an item, not a footnote. *Decides: the count, after Item 6.*
+All three answered at the close, 2026-09-13, each by its own stated test.
+
+1. ~~**Does the sweep record belong in one file or six?**~~ **One.** The
+   threshold was ~1,000 lines; the record closed at **804**
+   (`wc -l guide/sweep_2026-09-13_spec_history.md`), so the condition
+   for splitting never arrived.
+2. ~~**Is this a corpus sweep for cadence purposes?**~~ **No — it stays
+   `partial`**, which is what it was marked from the start and what
+   nothing in the build changed. It read all 39 live `spec/` files and
+   no `docs/` file and no root document, exactly as the question
+   predicted, so it does not reset the 8-week / 500-merge clock. The
+   ruling the question reserved to the author was never needed: the
+   scope decided it.
+3. ~~**Does the stale-identifier class want its own item?**~~ **No, a
+   footnote.** The test was ~40 lines of report outside the token
+   family; the measurement is **14 report lines** across the three
+   sections that carry one — Item 3's *found and since fixed here* (8),
+   Item 4's *none* (1), Item 5's *3 lines, left for Item 1* (5). Items
+   2 and 6 have no such section at all. *(First written as 15, counting
+   a `---` rule under Item 4's one-line section as report. A horizontal
+   rule is not a report line; corrected on the close's verification
+   pass.)*
 
 ## Out of scope
 
@@ -692,7 +700,7 @@ checked batch rather than on a delivered one.
 ### Opportunity
 
 The sweep registered **75 discrepancies** in
-`guide/findings_2026-09-13_spec_discrepancies.md` and actioned none, on the
+`guide/archive/findings_2026-09-13_spec_discrepancies.md` and actioned none, on the
 rule that *a sweep recommends*. The author's instruction now splits them:
 **doc-only fixes land here, in 19M.** Everything needing a code change or a
 contract decision stays in the register.
@@ -773,8 +781,8 @@ Recorded because they are the same shape as the sweep's own
 At `83282ddb`, 2026-09-13 — 75 findings, of which doc-only:
 
 ```
-grep -c '^| ID-' guide/findings_2026-09-13_spec_discrepancies.md   # 8  (Item 7)
-grep -c '^| SI-' guide/findings_2026-09-13_spec_discrepancies.md   # part of 10 (Item 8)
+grep -c '^| ID-' guide/archive/findings_2026-09-13_spec_discrepancies.md   # 8  (Item 7)
+grep -c '^| SI-' guide/archive/findings_2026-09-13_spec_discrepancies.md   # part of 10 (Item 8)
 ```
 
 *These two commands return 0 against the register as it stands.* It was
@@ -1187,3 +1195,35 @@ to tell those apart from drift, and the lesson held on the last item.*
 - `rrw_sdd_in_practice.md` — §6.1's charter quote, §6.2's currency trade-off, §6.4's unqualified clause, and the Appendix maker/checker row (Item 10).
 - `guide/findings_2026-09-13_spec_discrepancies.md` — DT-01..DT-03 marked actioned; DT-04 recorded as dissolved (Item 10).
 - `docs/status.md` — row when the item closes (Item 10).
+
+---
+
+## Segment close — 2026-09-13
+
+**Ten items, all closed**, PRs **#2350 → #2357**. All three segment-level
+open questions answered above, each by the measurement it had named
+rather than by a ruling. The item-level `Doc impact` manifests are
+current; `python3 tools/close_check.py 19M` exits 0.
+
+**What the segment was really for, stated once.** It ran on
+`rrw_sdd_in_practice.md` §4 — the spec is the contract — and the rule's
+sharp edge is that a sweeper who finds spec and code disagreeing **may
+not quietly rewrite the spec to match**. That is why the sweep's output
+is two artefacts and not one: `guide/sweep_2026-09-13_spec_history.md`
+records what was *changed*, and the findings register recorded what was
+*found and left standing*. Seventy-five discrepancies were registered and
+none actioned by the sweep itself.
+
+**The correction the segment could not have planned for.** Every batch
+was briefed to write *"plain present-tense description of what ships"* —
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep
+pointer to §4 caught it; §0a of the record carries it in full. A sweep
+briefed to make specs read like status pages would have done real damage
+at scale, and the brief was wrong from Item 1.
+
+**The register outlived the segment**, which is the other thing worth
+recording. It opened here at 86 rows, closed at 86, was re-audited from
+scratch the same day, gained 25 more under `NF-`, and closed again at
+25/25 — across PRs **#2365 → #2377**, most of them after every 19M item
+had shipped. A findings file is not a segment artefact; it is a register
+that a segment happens to open. It archives alongside this plan.

@@ -883,7 +883,7 @@ Prepare step — then for each instrument:
      deliberate state of the round trip today, not an
      oversight: assignment-row status carries through no
      export and no clone, and restoring it is future work
-     (`guide/segment_19N_generated_assignments.md` Item 1,
+     (`guide/archive/segment_19N_generated_assignments.md` Item 1,
      Semantics 6; `spec/roundtrip_coverage.md` records the
      gap).
 
