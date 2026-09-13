@@ -547,7 +547,8 @@ def _load_reconcile_inputs(
     ``instrument_id=None`` targets **every** instrument in the session;
     a NULL ``rule_set_id`` is the Full Matrix default at the diff site,
     not a reason to skip. ``instrument_id=<id>`` targets that one and
-    raises ``ValueError`` if it is missing or has no rule pinned.
+    raises ``ValueError`` if no such instrument belongs to the session.
+    A NULL pin is not an error here either.
     """
     from app.services._queries import session_scoped
 
@@ -744,30 +745,27 @@ def replace_assignments(
     """Materialise per-instrument ``Assignment`` rows from each
     instrument's pinned ``rule_set_id``.
 
-    ``instrument_id=None`` (default): iterate every instrument in the
-    session whose ``rule_set_id`` is non-NULL, run the rule engine
-    per-instrument against that instrument's pinned
-    ``session_rule_sets`` row, and write per-instrument pair fan-outs.
-    Instruments with NULL ``rule_set_id`` are **not** skipped: since
-    Wave 5 PR 5.3 every instrument flows through one path and a NULL pin
-    resolves to the Full Matrix default at the diff site. This said
-    "skipped silently" until Segment 19N, describing the pre-5.3
-    behaviour — and it was load-bearing, because the retired staleness
-    predicate gated on ``rule_id is not None`` and so never looked at an
-    unpinned instrument.
+    ``instrument_id=None`` (default): iterate **every** instrument in
+    the session, run the rule engine per-instrument against that
+    instrument's pinned ``session_rule_sets`` row, and write
+    per-instrument pair fan-outs. An instrument with a NULL
+    ``rule_set_id`` is not skipped — since Wave 5 PR 5.3 a NULL pin
+    resolves to the Full Matrix default at the diff site, so every
+    instrument flows through one path.
 
-    ``instrument_id=<id>``: scope to that single instrument only. The
-    instrument's ``rule_set_id`` must be non-NULL; raises ``ValueError``
-    otherwise.
+    ``instrument_id=<id>``: scope to that single instrument only.
+    Raises ``ValueError`` if no such instrument belongs to the session;
+    a NULL ``rule_set_id`` is not an error, for the same 5.3 reason.
 
     Returns aggregate ``(replaced, new)`` ``Assignment`` row counts
     across every instrument processed. Emits one
     ``assignments.generated`` audit event per processed instrument
     with ``refs.instrument_id`` set.
 
-    When zero instruments are processed (no pinned rules in scope),
-    returns ``(0, 0)`` and does not invalidate the validated
-    lifecycle state.
+    A session with no instruments at all returns ``(0, 0)`` without
+    invalidating the validated lifecycle state. With ``instrument_id``
+    left at ``None`` that cannot happen: the default instrument is
+    created first.
     """
     get_or_create_default_instrument(db, review_session)
     inputs = _load_reconcile_inputs(db, review_session, instrument_id)
