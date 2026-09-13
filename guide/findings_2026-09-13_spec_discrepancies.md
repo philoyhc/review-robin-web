@@ -263,3 +263,103 @@ rots. **And a claim that a thing was fixed rots the moment it is written,
 because it is believed on sight and nothing re-derives it.*** Which is why every
 struck-through row above says what the fix *was*, in terms a reader can go and
 check in the file.
+
+---
+
+# Second pass — a fresh audit, 2026-09-13
+
+**22 open. 0 resolved.** Opened the same day the first register closed, at the
+author's instruction: *"send agents out to do a fresh audit to look for gaps
+between spec and code, spec and spec."* Seven agents covered all 39 live
+`spec/` files plus a code-side sweep for dead matter and false self-description.
+**Every row below was re-verified by hand against the file and line it names
+before being written here** — three agent claims were dropped or corrected at
+that step, including one citation to a prohibition that exists in a different
+spec than the one named.
+
+**The headline is not a spec gap.** `NF-01` is a live user-facing bug. And
+**seven of these rows are leftovers of the first register's own fixes** — see
+"What this pass says about the last one" below, which is the most useful thing
+in this table.
+
+| what the open rows need | ids | count |
+|---|---|---|
+| **code** — a live defect | `NF-01` | 1 |
+| **spec** — a claim the code disproves | `NF-02`…`NF-09` | 8 |
+| **spec** — self-contradiction or spec-vs-spec | `NF-10`…`NF-14` | 5 |
+| **code** — dead matter with no caller | `NF-15`…`NF-19` | 5 |
+| **code** — a comment that misdescribes its own code | `NF-20`, `NF-21` | 2 |
+| **a ruling** — structural, not a defect | `NF-22` | 1 |
+
+| id | where | contract / one side | reality | disposition |
+|---|---|---|---|---|
+| `NF-01` | `next_action_card.html:432` | the failure banner names the action that failed | `{% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}` — but `_workflow.py:391` **and** `:410` pass `super_button="close"`, so a failed **Close session** is headlined *"Activate session failed…"* | **Live defect, user-facing.** The only one in this table. A three-branch label or a lookup keyed on `super_failure.button` fixes it; the failure paths already carry the right value |
+| `NF-02` | `assignments.md:874-876` | *"**To-keep.** Pairs surviving both passes. Their `Assignment.include` is preserved"* | `_generate.py:345-347` sets `pair_include = self_reviews_active if is_self else True`, and `:457-461` overwrites `row.include` whenever it differs — so a manually-Inactivated **non-self** pair is flipped back to `True` on the next regenerate | **Leftover of `SC-42`.** That row stated the gap in `roundtrip_coverage.md` and left two other specs asserting the opposite |
+| `NF-03` | `reconciling_regeneration.md:73-74` | *"Non-self-review pairs are always `include=True`, so only self-review `to_keep` pairs can ever change"* | premise right, conclusion wrong — a non-self row set to `False` **does** change, back to `True`. Same code as `NF-02` | **Leftover of `SC-42`**, second site |
+| `NF-04` | `_generate.py:455-456` (comment) | *"only refresh `include` in place when a `self_reviews_active` toggle changed it"* | the loop below it refreshes on any difference, self-review or not | **Code comment**, same false claim as `NF-02`/`NF-03`, inside the code that disproves it |
+| `NF-05` | `visual_style_rrw.md:447, 449, 690` | the reviewer action row carries *"Discard"* | shipped label is `Cancel` (`review_surface.html:130,160`) | **Leftover of `SC-12`**, which renamed 21 references in `reviewer-surface.md` and never looked here |
+| `NF-06` | `visual_style_rrw.md:696-699` | Page buttons ship *"a defensive CSS truncation rule (`max-width: 16em; text-overflow: ellipsis`)"* | `base.html` contains **zero** `text-overflow` declarations | **Leftover of `SC-13`**, which removed this exact sentence from `reviewer-surface.md` only |
+| `NF-07` | `quick_setup_card_spec.md:52` | *"The per-slot routes (`POST …/quick-setup/{kind}`)"* | four slots match, but **Settings** is `POST /sessions/{id}/import-config`; `quick-setup/settings` has 0 hits | **Leftover of `SI-08`** — this sentence was written *in this session* and overgeneralised the route shape |
+| `NF-08` | `domain_assumptions.md:26-28` | *"Archived (data collected has been downloaded and **deleted**)"*, and a status list of Draft / Ready / Expired / Archived | `archive_session` (`session_lifecycle.py:686-691`) *"is reversible … and **deletes no data**"*, and `validated` is a fifth live state the line omits | **The worst factual drift found.** A spec telling a reader that archiving destroys their data, when it destroys nothing and is reversible |
+| `NF-09` | `architecture.md:175-177` | the band2 / pagination AJAX endpoints *"still hand-roll `request.json()`… R4 aligns them"* | R4 shipped: both call `require_json_object` (`_shared.py:377-400`), whose docstring says R4 ran **and deliberately kept** the non-Pydantic contract | **Spec describes pending work that landed, and landed differently** |
+| `NF-10` | `session_home.md:492-497` | *"The standard body / confirm / buttons stack handles every state except Activated, which uses an inline two-section layout"* | `:120-136` of the **same file**, rewritten this session, says there is no Activated exception and neither class renders in any state | **Leftover of this session's own rewrite** — one file, two passages, opposite claims |
+| `NF-11` | `preview_hub.md:115, 119, 121` | the hub renders in states `draft`, `validated`, `ready`, **`closed`** | `session_home.md:43-46` (and `operator_ui_concept.md:39`): *"There is no `closed` state in the canonical enum… Nothing — CSS class, query param or column value — may name a `closed` state."* The enum value is `expired`, displayed as "Closed" | **Spec-vs-spec.** Cited here against the file that actually carries the prohibition — the audit first named `lifecycle.md`, which does not |
+| `NF-12` | `roundtrip_coverage.md:129` | Relationships is *"the **only** roster path whose `status` round-trips"* | `:124` and `:127` of the same table mark reviewer / reviewee / observer `status` as round-tripping | **Self-contradiction** — the ✅/❌ marks are right, the connecting prose is not |
+| `NF-13` | `rehydrate.md:212` | the `*_observers.csv` manifest lists `ObserverEmail, ObserverName, ObserverTag1, Status` | the header is five columns including `CohortRule` (`observers_extract.py:26-35`) — and `:499-504` of the same document depends on it | **Self-contradiction**; §4 understates the file §9 relies on |
+| `NF-14` | `workflow_card.md:549, 554, 763` | Close session *"Calls `lifecycle.close_session`"* and *"Emits `session.closed`"* | neither exists: 0 occurrences in `app/`. The real names are `expire_session` and `session.expired` | **Two identifiers that name nothing** |
+| `NF-15` | `app/services/rules/preview.py` + `partials/_rule_set_preview.html` | a live rule-preview surface the docstrings describe as refetched by *"the editor's JS hook"* after each edit | **219 lines with no caller**: nothing imports the module, no template includes the partial, and `…/rule-based/preview` does not exist | **Dead surface.** Its own sibling (`_assignments.py:17-18`) already records that the `rule-based-editor` routes exist nowhere |
+| `NF-16` | `_instrument_crud.py:644-698` + `audit.py:466` | `pin_rule_set`, a 55-line mutating service, and its registered `instrument.rule_pinned` event | no route, no template, no test reaches it; it is the sole emitter, so the allowlist key is unreachable | **Dead write path plus an unreachable registry entry** |
+| `NF-17` | `_instrument_crud.py:624-642` | `has_unpinned` *"Drives the Next Action card's 'Empty Setup' state"* | no caller. `_workflow_card.py:100-102` records that the card *"switched from rule-set-centric `has_unpinned` to `has_unconfigured`"* | **Dead, and its docstring asserts the opposite of the file that stopped calling it** |
+| `NF-18` | `date_formatting.py:106-125` | `timezone_label`, a CLDR zone-name formatter | no app caller — and it is the **only** importer of `babel`, a shipped dependency (`pyproject.toml:22`, `requirements.txt:12`). The app's zone display goes through `gmt_offset_zone_label` | **Dead function carrying a dependency** |
+| `NF-19` | five symbols | `RuleSetRevisionSchema`, `SessionRead`, `canonical_default`, `preset_list_options_by_key`, `participant_token` | each occurs once in `app/` — its own definition. Two of them (`canonical_default`, `preset_list_options_by_key`) additionally describe a call site that does not exist | **Dead cluster**; the last is a test-only convenience wrapper and is the weakest of the five |
+| `NF-20` | `validation.py:811-827` | the `instruments.no_rule_pinned` registry entry carries `severity=warning` and operator-facing `why` copy — *"An unpinned legacy instrument is silently skipped during generation, leaving its reviewer page empty"* | the handler (`:444-458`) is `return` / `yield` — **a registered no-op**. Unlike `instruments.stale_generated`, this retirement is deliberate and its docstring says so; what is stale is the `why` three hundred lines away, and `_RULE_KEY_GATE` routing a key nothing produces | **The second registered no-op this codebase has had.** The first was an accident 19N.1 revived; this one is intentional, so the fix is to retire the copy, not the rule |
+| `NF-21` | `deps.py:398-400` and `:495-496` | *"Phase 1 stub — defined but not referenced by any route yet"*, on `require_reviewee_in_session` and `require_observer_in_session` | both are **live access gates**: the observer one at `_collation.py:51,68,103`, the reviewee one composed into `require_reviewee_with_current_grant` (`deps.py:438`), which gates `/results` | **In the auth layer.** Nothing behaves wrongly, but a reader auditing access control is told these gates are inert |
+| `NF-22` | `architecture.md:57-58` / `CLAUDE.md` | route handlers hold *"no SQL, no business rules"* | **54** `db.execute(select…)` / `scalar_one` sites across 13 of ~20 `routes_operator` files. `_instruments.py:1044-1101` runs three queries plus the last-instrument floor rule and the next-sibling choice in the route body | **Needs a ruling, not a fix.** Either the rule is aspirational and should say so, or this is a real backlog; at 54 sites it is a segment, not a row |
+
+## Also checked, and clean
+
+Recorded so the next pass does not re-sweep them. The participant slice came back
+clean on behaviour, which is the reassuring result for the surfaces that gate
+disclosure: the access-gate composition and its 404-not-403 rule, `_PER_CELL_VALID_MODES`
+against `visibility_policy.md` §3.1 cell-for-cell, `build_role_chips` / `_ROLE_PRIORITY`
+including the reviewee-omitted-vs-observer-greyed asymmetry, and
+`is_response_release_window_open`. Also verified: the 21-column `responses.csv` header and
+its strict parser, `session.rehydrated`'s four `counts` keys, the `data_shapes[N].*`
+serialization, `session_clone`'s roster-status copy and zero-observer copy, all ten
+Workflow-card visibility formulas, `ui_elements.md` §6's button-role table, `color_tokens.md`'s
+80 / 107 / 16 token counts (recounted from `base.html`), the `ACCEPTED_BELOW_AA` ratios,
+and the `.rs-help-card` hex values.
+
+**On permissions, the coverage is partial and that is stated deliberately.** Gates were
+followed **transitively through `Depends()`** for `owners/add`, `clone`,
+`export/audit_log.csv`, the sys-admin adopt route, `quick-setup/lock`, the instrument
+page-break routes and the Extract-data sub-API — all matching `permissions.md`. A bulk
+scanner was built, produced ~120 false "ungated" hits from a regex that could not parse
+multi-line decorators, and was **discarded rather than reported**. That is the trap
+`permissions.md` §3 names: a check that flags a correctly-gated route is worse than no
+check, because the next reader believes it.
+
+## What this pass says about the last one
+
+Seven of the twenty-two rows above — `NF-02`, `NF-03`, `NF-04`, `NF-05`, `NF-06`,
+`NF-07`, `NF-10`, plus the three `response_type.*` entries folded into `NF-16`'s
+neighbourhood — are **leftovers of fixes made earlier the same day**.
+
+The cause is one thing, and it is worth more than any single row here:
+
+> **A row-scoped fix is not a claim-scoped fix.**
+
+Each register row named one location. Each fix corrected that location. The *same
+claim* lived in other files, and nothing looked for it — `SC-12` and `SC-13` swept
+`reviewer-surface.md` while the identical sentences sat in `visual_style_rrw.md`;
+`SC-42` stated the round-trip gap in `roundtrip_coverage.md` while two other specs
+asserted the opposite; the Next Action rewrite fixed one passage of `session_home.md`
+and left its own file contradicting itself four hundred lines down; the RTD
+retirement swept prose and missed three registered audit-event types; and one row
+(`NF-07`) is a sentence written *during* that session that overgeneralised a route
+shape nobody re-checked.
+
+**The remedy is procedural, not a row to close:** when a finding is fixed, grep the
+*claim* across `spec/`, `docs/`, `app/` and `tests/` — not the file the row cited.
+The first register's own `CC-09` learned this once (four logged occurrences turned
+out to be nine) and the lesson did not generalise to the rows around it.
