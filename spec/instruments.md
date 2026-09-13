@@ -151,9 +151,9 @@ boolean carries the operator-controlled page-break layout:
   The DB `server_default` is `false` and the Mapped
   column declares `default=False`, so a new instrument
   continues the current page and ORM creates match the
-  DB. Instruments that predate the column were
-  backfilled `true`, which is why an older session still
-  renders one instrument per page (the rationale is
+  DB. The column's rollout migration backfills `true`
+  on instruments that predate it, so a session authored
+  before it keeps one instrument per page (rationale in
   `guide/archive/segment_18M_instrument_layout.md`).
 
   Mutated only by the three service helpers in
@@ -695,12 +695,11 @@ The whole card's bulk Save form (form id `dfsave-{iid}`)
 POSTs to the consolidated
 `POST /sessions/{sid}/instruments/{iid}/save` endpoint — one
 request carries identity, Band 1, the Band 2/Band 3 state
-snapshots, and column widths together. The per-concern routes
-`/fields/save`, `/band2-state`, `/column-widths`,
-`/display-fields/order` and `/identity` all still exist
-server-side for fixture / programmatic callers; the page drives
-none of them except `/fields/save`, which is the no-JS
-fallback. It persists every row in its current
+snapshots, and column widths together. The page drives no other
+save endpoint except `/fields/save`, its no-JS fallback; the
+per-concern routes `/band2-state`, `/column-widths`,
+`/display-fields/order` and `/identity` remain available to
+fixture and programmatic callers only. It persists every row in its current
 order; row order on save mirrors the **Band 2 pill order**, so
 drag-reordering the response pills in Band 2 is the
 operator-facing reorder affordance (there is no per-row drag
@@ -937,14 +936,13 @@ of rules against instruments. Active ones that surface here
 - **`instruments.no_display_fields`** (info) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
-- **`instruments.stale_generated`** — **registered but inert**;
-  the check yields nothing, so no staleness warning reaches this
-  page (`spec/validate_page.md` §3.2).
+- **`instruments.stale_generated`** — raises no findings; it is
+  inert by design and `spec/validate_page.md` §3.2 carries why.
 - **`instruments.zero_included`** (error) — every assignment row
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.
-- **`instruments.no_rule_pinned`** — **registered but inert**;
-  the synthetic Full Matrix covers a NULL `rule_set_id`, so an
+- **`instruments.no_rule_pinned`** — raises no findings: the
+  synthetic Full Matrix covers a NULL `rule_set_id`, so an
   unpinned instrument is never "not set up"
   (`spec/validate_page.md` §3.2).
 

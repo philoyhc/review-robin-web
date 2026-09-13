@@ -186,8 +186,8 @@ instrument.order, field.order)`.
 ### 2.5 Audit events — `extracts/audit_events_extract.py`
 
 No operator-facing tile on the session pages; the route
-`GET /export/audit_log.csv` is live and is reached from the Sys Admin
-page's per-session Diagnostics row.
+`GET /export/audit_log.csv` is reached from the Sys Admin page's
+per-session Diagnostics row.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
@@ -455,8 +455,9 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 ### 3.4 What's not an importer
 
-- **Assignments.** A materialized derivative — no operator-facing
-  CSV importer, and no importer of any kind.
+- **Assignments.** A materialized derivative of the rule engine,
+  the roster and the relationships — no operator-facing CSV
+  importer.
 - **Responses.** Reviewer-generated; no operator-facing importer.
 - **Audit events.** System-emitted; no importer.
 
@@ -486,11 +487,12 @@ Concrete guarantees the importers + serialisers maintain:
    dialect-stable, and round-trip-safe (any ISO 8601 offset parses
    back). The audit-events extract is the exception: it stays in
    UTC (`spec/timezone_display.md`).
-5. **Vocabulary normalisation.** The `data_type` column is
-   lower-cased before it is validated, so a file written with the
-   capitalised tokens (`String`, `DateTime`) validates identically
-   to the documented lowercase ones — a hand-edited or older bundle
-   imports either way. RTD `data_type` accepts both
+5. **Vocabulary normalisation.** The `data_type` column is matched
+   **case-insensitively**, so a file written with capitalised tokens
+   (`String`, `DateTime`) must validate identically to the
+   documented lowercase ones — otherwise a hand-edited or older
+   bundle fails on a cell whose meaning is unambiguous. RTD
+   `data_type` accepts both
    lowercase tokens (`long_text`) and capitalised model values
    (`Long_text`) on import; serialise emits the capitalised
    form.

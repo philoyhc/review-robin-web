@@ -112,7 +112,7 @@ terms, one event per instrument (`refs.instrument_id`):
 - `responses_deleted` — `Response` rows removed with `to_delete`
 - `pairs` / `instruments` / `excluded_*`.
 
-`replace_assignments` still returns a `(replaced, new)` 2-tuple, where
+`replace_assignments` returns a `(replaced, new)` 2-tuple, where
 `replaced` counts the pairs the reconcile **deleted**.
 
 Register any new keys in the `EVENT_SCHEMAS` allowlist
@@ -137,12 +137,13 @@ The **Prepare session** button (`POST
    the common path off the engine.
 2. Otherwise dry-runs the reconcile — engine plus diff per instrument,
    **without writing** — through
-   `assignments.reconcile_impact(db, review_session)`, which returns a
-   `ReconcileImpact` carrying the aggregate `new` / `deleted` / `kept`
-   / `responses_deleted` a real run would cause. It shares
-   `_diff_one_instrument` / `_load_reconcile_inputs` with
-   `replace_assignments`, so the confirmation and the run cannot
-   disagree about the diff.
+   `assignments.reconcile_impact(db, review_session)`, which returns
+   the `new` / `deleted` / `kept` / `responses_deleted` counts a real
+   run would cause, **per instrument**, so that the confirmation
+   builder and any per-instrument Assignments-page preview sit on one
+   code path. It shares `_diff_one_instrument` /
+   `_load_reconcile_inputs` with `replace_assignments`, so the
+   confirmation and the run cannot disagree about the diff.
 3. Runs straight through when `responses_deleted == 0`.
 4. 303s to the host page when `responses_deleted > 0`, where the
    Workflow card renders the `prepare_confirm` banner with both counts

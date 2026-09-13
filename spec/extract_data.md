@@ -18,13 +18,13 @@ for porting or cloning a session (`spec/csv_contracts.md`). **Both
 kinds of extract are downloaded from here** — Session Home carries no
 extract card (`spec/session_home.md` §2).
 
-> **Every card on the page is wired end-to-end.** The intro
+> **Every card on the page drives a download route.** The intro
 > `Extract all data` card, the `By instrument` card, the two
 > metadata cards (Reviewer / Reviewee response metadata), and the
-> full-width `Data shaper` card all drive real download routes.
-> Chip state persists per session via `localStorage` for the
-> canned-lens cards and **per-shape via the `data_shapes` table**
-> for the Data shaper; every download emits an audit event.
+> full-width `Data shaper` card. Chip state persists per session via
+> `localStorage` for the canned-lens cards and **per-shape via the
+> `data_shapes` table** for the Data shaper; every download emits an
+> audit event.
 >
 > The Data shaper carries two stacked chip rows (scope ⇒ axis
 > + empty-row drop + Self-review handling + instrument + response
@@ -288,10 +288,10 @@ auditing and coaching on the reviewer side, feedback-packet
 shaping on the reviewee side.
 
 The two cards are functionally symmetric — only the entity
-name and the toggle slot change. The shipped column shape
-moved the old per-statistic chips (`Count` / `Mean` /
-`Median` / `Min` / `Max` / `Length`) **into the column
-shape** of the CSV itself, where they apply by data type.
+name and the toggle slot change. **There are no per-statistic
+chips.** Count / Mean / Median / Min / Max / Length live in the
+**column shape** of the CSV itself, where they apply by data
+type.
 
 | Field | Reviewer card | Reviewee card |
 |---|---|---|
@@ -464,12 +464,12 @@ above it cover the common cases without configuration.
 | Button id | `extract-data-shaper-zip` |
 | Button target | `#` (placeholder — `aria-disabled`) |
 
-**Implementation status.** The chip-driven UX, shape persistence
-(`data_shapes` table), and per-shape `Download` button (backed by
-`…/shapes/{id}/download.csv`) are all live. The outer
-`Zip all` button on this card still renders
-`aria-disabled="true"` — bundle integration is the remaining
-follow-up (see "Out of scope" below).
+The chip-driven UX, shape persistence (`data_shapes` table), and
+per-shape `Download` button (backed by
+`…/shapes/{id}/download.csv`) are the card's live surface. The
+outer `Zip all` button renders `aria-disabled="true"` — bundle
+integration is the remaining follow-up (see "Out of scope"
+below).
 
 ### Two stacked chip rows
 

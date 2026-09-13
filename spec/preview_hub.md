@@ -2,24 +2,16 @@
 
 A read-only Operations Page that renders, for an operator-selected reviewer, every reviewer-facing artifact the session generates: invitation email, response form, reminder email, responses-received email, and any future reviewer-facing artifacts. The operator uses this surface to eyeball the reviewer experience before activating the session and sending real communications.
 
-> **What is live, and the one region that is not.** The page chrome, the
-> reviewer picker, and the tabbed email region — Invitation, Reminder and
-> Responses-received, all three wired to the real render adapters — are in
-> production. The **per-artifact send-test affordance (§3 below) is not
-> built**; it needs the same dispatch helper as the live send paths, so it
-> belongs with the email send-activation work rather than here. Read §3 and
-> the send-test clauses under "Lifecycle behavior" as the contract it must
-> meet, not as a description of the page today.
->
-> **The reviewer-surface render is a separate route, not a card on this
+> **The reviewer-surface render is a separate route, never a card on this
 > page.** The picker card's action row carries an **"Open full preview"**
-> button, targeting ``/operator/sessions/{id}/preview-surface/{page_n}`` in
-> a new tab. That route renders the same ``reviewer/review_surface.html``
+> button targeting ``/operator/sessions/{id}/preview-surface/{page_n}`` in a
+> new tab. That route renders the same ``reviewer/review_surface.html``
 > template the live reviewer surface uses, through the same
 > ``_surface_context`` plumbing, so every rendering decision the reviewer
 > surface makes the preview makes too — production parity by construction
-> rather than by two code paths agreeing. An iframe-embedded copy on the hub
-> could not make that claim, and the hub does not carry one.
+> rather than by two code paths agreeing to it. An embedded copy of the
+> surface on the hub cannot hold that guarantee, which is why the hub must
+> not carry one.
 
 ### Rationale and placement
 
@@ -44,13 +36,15 @@ The hub URL is plural (`/previews`) to match the chrome tab and the broader "pre
 
 ### Chrome and navigation
 
-The Operations row of the session chrome carries a `Previews` tab. Shipped order:
+The Operations row of the session chrome carries a `Previews` tab, alongside Assignments, Validate, Invitations and Responses, in this order:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
+Operations  [Assignments][Validate][Previews][Invitations][Responses]
 ```
 
 Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after.
+
+Session Home's Next Action card carries a "See previews" secondary button while the session is `validated` and ready-to-activate; the button targets `/previews`, with no fragment — an anchor into a card is only as durable as the card.
 
 ### Page layout
 
@@ -86,9 +80,7 @@ Each card contains:
   - Form artifact: rendered as a static, non-interactive snapshot of the form the reviewer would see. Form fields display but do not submit; the snapshot reflects exactly what the live form would render for this reviewer with their assigned reviewees.
 - A small footer or sidebar noting the artifact's source: "Rendered from Email Template (Setup) and Reviewers (Setup)." This helps the operator know where to go to fix something they don't like.
 
-**3. Send-test affordance (per email card) — deferred, not built.**
-The contract below is what it has to satisfy when it lands; nothing on the
-page does any of it today.
+**3. Send-test affordance (per email card).**
 
 Each email-artifact card has a "Send test to..." affordance: an input for an email address (defaulting to the operator's own, if known) and a Send button. Clicking sends the previewed email — rendered for the selected reviewer, with their data — to the test address.
 
@@ -120,7 +112,7 @@ Errors are scoped per-card. A missing email template doesn't block the form prev
 
 ### Lifecycle behavior
 
-The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, `closed`). The send-test clauses below belong to the deferred affordance (§3) and describe nothing on the page today:
+The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, `closed`):
 
 - **`draft` / `validated`:** Full functionality. All previews render (or surface missing-data messages). Send-test is enabled.
 - **`ready`:** Full functionality. Previews still render against current setup data; this is when the operator most wants the hub. Send-test is enabled.
@@ -128,7 +120,7 @@ The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, 
 
 The hub never renders fully locked behind a yellow lock card — even on closed sessions, inspecting what the reviewer experience looked like is useful. Only the send-test affordance gates on lifecycle.
 
-### Out of scope for this segment
+### Out of scope
 
 - **Editing artifacts.** The hub is strictly read-only; edits happen on the Setup pages.
 - **A/B comparing previews** across multiple reviewers side-by-side.
@@ -144,7 +136,7 @@ Some envisioned future scenarios — non-confidential peer review, 360-degree fe
 
 Two hubs (one per audience) is preferred over a single hub with an audience toggle: the audiences will diverge in artifact composition enough that a unified hub becomes contorted. The current hub should not bake in reviewer-only assumptions that prevent the parallel hub from being built later — for example, the artifact registry that drives the preview list should be neutral about audience, with reviewer-facing and reviewee-facing being two different registry filters.
 
-This is forward-looking and not a deliverable for this segment. Recorded here so the implementation doesn't accidentally close off the path.
+This is forward-looking and not a current deliverable. Recorded here so the implementation doesn't accidentally close off the path.
 
 ### Doc impact
 
@@ -153,6 +145,7 @@ What the UI concept doc (`spec/operator_ui_concept.md`) has to agree with:
 - The Operations Pages section of the page taxonomy carries `session_previews.html` (`/sessions/{id}/previews`) under tab label "Previews", plus the satellite `preview-surface/{page_n}` route reachable from the picker's "Open full preview" button.
 - **There is no Preview Pages grouping in the page taxonomy.** Its one member, the form-only reviewer preview, belongs to the Operations hub — as the picker-row "Open full preview" link to `/preview-surface/{N}`. A grouping with one member that lives somewhere else is a heading, not a grouping.
 - `/preview` (singular) is a permanent (308) redirect to `/operator/sessions/{id}/preview-surface/1`.
+- Session Home's Next Action card "See previews" link targets `/previews`.
 
 ### Implementation pointers
 

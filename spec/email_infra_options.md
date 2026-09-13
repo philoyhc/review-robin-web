@@ -3,8 +3,8 @@
 How Review Robin sends email (invitations, reminders, future
 notifications) from its Azure App Service deployment.
 
-Segment 11E ships the pluggable-sender scaffolding the rest of this
-document describes — `EmailTransport` Protocol +
+The pluggable-sender scaffolding the rest of this document
+describes is in place — `EmailTransport` Protocol +
 `SmtpEmailTransport` concrete implementation + typed-stub
 `GraphEmailTransport` placeholder + per-operator
 `/operator/settings` page for SMTP credentials. This document is
@@ -35,9 +35,8 @@ paths.**
 
 In scope:
 
-- **Option A** — SMTP relay (the existing path shipped in
-  Segment 11E PR 5, generalised for production SMTP relay use as
-  well as the dev local server).
+- **Option A** — SMTP relay (the existing path, generalised for
+  production SMTP relay use as well as the dev local server).
 - **Option B** — Microsoft Graph API with application permission
   (`Mail.Send`), scoped to a shared mailbox via Application Access
   Policy.
@@ -67,8 +66,7 @@ The core of the design is a single internal interface —
 notification paths depend on. All call sites use this interface;
 none knows which backend is in use.
 
-Already shipped in `app/services/email_send.py` (Segment 11E
-PR 5):
+Declared in `app/services/email_send.py`:
 
 ```python
 @dataclass(frozen=True)
@@ -119,10 +117,9 @@ itself. See "Bulk sending and queueing" below.
 Each backend is a separate implementation of `EmailTransport`:
 
 - `SmtpEmailTransport` — connects to a configured SMTP relay.
-  Shipped in 11E PR 5.
-- `GraphEmailTransport` — uses Microsoft Graph API. Typed stub
-  shipped in 11E PR 5; the application-permission flavour is
-  Option B below.
+  Implemented.
+- `GraphEmailTransport` — uses Microsoft Graph API. A typed stub;
+  the application-permission flavour is Option B below.
 - `AcsEmailTransport` — uses Azure Communication Services. Not
   yet implemented.
 - `ThirdPartyApiEmailTransport` — uses a third-party service's
@@ -138,9 +135,9 @@ only `"smtp"` is reachable; the `"graph"` / `"acs"` /
 ### Configuration
 
 Today's configuration is **per-operator**, not per-deployment —
-Segment 11E PR 4 adopted the "send-as-me" identity model with
-credentials stored on the `users` table (encrypted at rest via
-Fernet, key from the `SMTP_ENCRYPTION_KEY` env var). The operator
+a "send-as-me" identity model, with credentials on the `users`
+table (encrypted at rest via Fernet, key from the
+`SMTP_ENCRYPTION_KEY` env var). The operator
 configures their own host / port / username / password / display
 name on `/operator/settings`.
 
@@ -157,7 +154,7 @@ operator settings and tomorrow's per-deployment defaults:
   + `/operator/settings` page. Used when send-as-me semantics
   apply.
 - **Per-session overrides.** Reply-to, CC / BCC live on the
-  email-template editor (Segment 11E PR 2), keyed by template.
+  email-template editor, keyed by template.
 
 The `transport_for` factory and the future send dispatcher
 reconcile these layers when picking the backend + identity for a
@@ -169,9 +166,7 @@ Every send attempt is recorded in a database table. This is the
 central data structure that makes the email subsystem auditable,
 debuggable, and idempotent.
 
-Today's `email_outbox` table is the audit log. Its current shape
-(post-Segment 9.2 + Segment 11C Part 1's `cc_emails` /
-`bcc_emails` slice):
+Today's `email_outbox` table is the audit log. Its shape:
 
 | Field | Type | Notes |
 |---|---|---|
@@ -179,12 +174,12 @@ Today's `email_outbox` table is the audit log. Its current shape
 | `session_id` | FK | Which session this send belongs to. |
 | `reviewer_id` | FK | Which reviewer (nullable for system emails). |
 | `invitation_id` | FK | Which invitation row this send is for (nullable). |
-| `kind` | enum | `invitation`, `reminder`; `responses_received` member added by Segment 11C Part 2. |
+| `kind` | enum | Canonical set `EMAIL_OUTBOX_KINDS` — `invitation`, `reminder`, `responses_received`. |
 | `to_email` | text | The recipient. |
-| `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time (Segment 11C Part 1). |
+| `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | `queued`, `sent` today; widened to `{queued, sending, sent, failed}` at the service layer by Segment 11C Part 2. |
+| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. The enqueue paths write only `queued` until the dispatch helper lands. |
 | `created_at` | timestamp | When the row was written. |
 
 **Segment 11C Part 2 (truncated)** lands the audit-log columns
@@ -285,10 +280,10 @@ the shared infrastructure above to support that backend.
 
 ### Option A — SMTP relay
 
-**Status.** Concrete implementation shipped in Segment 11E PR 5
-(`SmtpEmailTransport` in `app/services/email_send.py`). Operator-
-facing UI on `/operator/settings`; per-operator credentials
-encrypted at rest via Fernet.
+**Status.** Implemented — `SmtpEmailTransport` in
+`app/services/email_send.py`, with operator-facing UI on
+`/operator/settings` and per-operator credentials encrypted at
+rest via Fernet.
 
 **What it is.** The app connects to a configured SMTP server
 with credentials and submits the email. The SMTP server can be:
@@ -355,8 +350,8 @@ Manage Invitations send path against the audit-log columns
 
 ### Option B — Microsoft Graph (application permission)
 
-**Status.** Typed stub shipped in 11E PR 5
-(`GraphEmailTransport` in `app/services/email_send.py`). The
+**Status.** A typed stub — `GraphEmailTransport` in
+`app/services/email_send.py`. The
 class exists so `transport_for` can dispatch on
 `settings.transport == "graph"` once the body of the
 implementation lands.
@@ -571,7 +566,7 @@ to all. ✅ = shipped, ◻ = pending.
 2. ✅ **A factory or DI registration** that selects the active
    implementation from configuration (`transport_for(settings)`).
 3. ◻ **The audit log table extensions** described above —
-   `cc_emails` / `bcc_emails` shipped in Segment 11C Part 1;
+   `cc_emails` / `bcc_emails` are in place;
    `error_message` + the future-target columns (`from_address` /
    `backend` / `backend_message_id` / `delivered_at` /
    `payload_hash` / `correlation_id`) and the widened status /
@@ -609,15 +604,16 @@ What the app does *not* need before any backend ships:
 
 ## Migration path
 
-Segment 11E PR 5 already ships the `EmailTransport` Protocol +
-`SmtpEmailTransport` concrete implementation. Adding any other
-backend is a parallel implementation; switching deployments to
-use it is a configuration change.
+The `EmailTransport` Protocol + `SmtpEmailTransport` concrete
+implementation are in place. Adding any other backend is a
+parallel implementation; switching deployments to use it is a
+configuration change.
 
 A reasonable sequence:
 
-1. ✅ **Sender abstraction + SMTP backend** — Segment 11E PR 5.
-2. ✅ **Operator credential storage** — Segment 11E PR 4.
+1. ✅ **Sender abstraction + SMTP backend.**
+2. ✅ **Operator credential storage** — per-operator SMTP
+   credentials on `users`, encrypted at rest.
 3. ◻ **Outbox audit-log column scaffolding** — Segment 11C
    Part 2. Inert; populated at send time by Step 4. Lands the
    columns (`error_message` + future-target additions) and the

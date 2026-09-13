@@ -526,8 +526,8 @@ The Operations-row page at
    flush right (`.grid-right` in a `bottom-grid`).
 4. **Assignments preview card** — the row-level table of
    materialised pairs, with a per-row Include checkbox. It carries
-   **no `<h2>`**, because no preview-table card in the app does; the
-   page's single `<h2>` belongs to the status table above.
+   **no `<h2>`** — a preview-table card does not take one, and this
+   page's `<h2>` belongs to the status table above.
 
    Above the rows sit the **`Show columns:` chips**, all three
    groups on one line — `Show reviewers:` / `Show reviewees:` /
@@ -630,9 +630,9 @@ The Assignments page splits the way the roster Setup pages do
 
 **The split is per-half, not per-card, and that is the point.**
 Gating the whole operator-actions card on one predicate disagrees
-with the five mutating routes on **three of five** states in both
-directions: on `not is_ready`, `expired` and `archived` offer live
-controls the routes refuse, and `ready` loses the search
+with the mutating routes on **three of the five lifecycle states**,
+in both directions: on `not is_ready`, `expired` and `archived`
+offer live controls the routes refuse, and `ready` loses the search
 altogether.
 
 **No lock card here.** The four roster pages have none on
@@ -681,8 +681,7 @@ handle resolves against whichever side the scope allows anyway.
 
 **Tag values are not offered**, unlike the roster pages' list. A tag
 identifies too many pairs to partition by here, where on a roster of
-people it partitions usefully (measured against a large mock
-roster). Tag *matching*, above, is unaffected.
+people it partitions usefully. Tag *matching*, above, is unaffected.
 
 **A picked label matches the handle by equality**, and this is
 load-bearing rather than a refinement: the term submitted is the
@@ -742,49 +741,45 @@ otherwise persist there. The route parameter is named `filter_status`
 with a `status` alias: `status` alone shadows the module-level
 `status` import (`status.HTTP_200_OK`).
 
-### The preview-count line (Segment 19I Item 10)
+### The preview-count line
 
-Until Item 10 this page reported its counts in **three** places: a
-`Showing {matching} of {total}.` span flush right in the
-operator-actions row, a `Showing first N of M unique pairs.` line
-top-left of the preview card in `.form-help`, and a
-`…and X more not shown.` line below the table. All three collapse
-into the one sentence the seven preview pages share, rendered by
+**One count, in one place.** The page's counts are the single
+sentence the seven preview pages share, rendered by
 `operator/partials/_preview_count_line.html` in
-`.table-showing-hint` — the roster pages' class. `.form-help` sets
-`--fs-small`, which is why this page's line used to render a size
-smaller than the identical sentence on the rosters.
+`.table-showing-hint` — the roster pages' class, and not
+`.form-help`, which sets `--fs-small` and would render this page's
+line a size smaller than the identical sentence on a roster.
 
-The noun is **`assignments`**; `unique pairs` is retired. The
-branches and the rule behind them are in `spec/setup_pages.md`,
-"Preview tables (shared toggle pattern)" — this page is capped by
+The noun is **`assignments`**, never `unique pairs`. The branches and
+the rule behind them are in `spec/setup_pages.md`, "Preview tables
+(shared toggle pattern)" — this page is capped by
 `PAIR_PREVIEW_LIMIT` (200, unlifted by a filter).
 
-**19J.5 reshaped the sentence.** Where a pager renders the line says
-nothing, because the ranges already state the position; the filtered
-branches read `Showing 2 assignments.` and, when the cap truncates a
-filtered view, `Showing 500 of 900 assignments, 400 more not shown.`
-A count of one takes the singular. ~~*This page is not paged yet* —
-rung 4 wires it, once the sort question below is settled.~~ **Rung 4
-paged it** (2026-09-11): `?offset=` cuts a 200-row page out of the
-whole matching set, clamped rather than rejected, with the pager above
-and below the table and suppressed while a filter is active. (The
-control was 19J.5's range strip until 19J.9 replaced it with the
-`.table-pager-cluster` on all seven pages at once — `spec/ui_elements.md`
-§10.) It was
-the last page to page, so the pre-19J.5 withheld notice retired with
-it — no table renders it anywhere now.
+**Where a pager renders, the line says nothing about position**,
+because the ranges already state it. The filtered branches read
+`Showing 2 assignments.` and, when the cap truncates a filtered view,
+`Showing 500 of 900 assignments, 400 more not shown.` A count of one
+takes the singular.
 
-### Sorting the pair list (19J.5 rung 4)
+**The page is paged**: `?offset=` cuts a 200-row page out of the whole
+matching set, **clamped rather than rejected**
+(`views.clamp_offset`), with the `.table-pager-cluster`
+(`spec/ui_elements.md` §10) above *and* below the table, and
+suppressed entirely while a filter is active — the operator's own
+partition wins, and the count line speaks for that view instead. Both
+affordances read the same filter flag, so they cannot disagree about
+which mode the page is in.
+
+### Sorting the pair list
 
 **The operator's sort is applied by the query, not to its result.**
-Until rung 4 the page fetched 200 rows and sorted *those* in Python
-(`views.apply_cookie_sort`). That was invisible while 200 was all an
-operator could see; paging makes it a lie, because page 2 would be
-sorted within page 2. Every sort key now translates to `ORDER BY` in
-`assignments.list_pairs`, including `pair_tag_*`, which reaches the
-pair's tags through an outer join to `relationships` gated on
-`status = 'active'` — the same condition the rule engine applies.
+Sorting a fetched window in Python (`views.apply_cookie_sort`, which
+the roster pages use) would sort page 2 *within* page 2 — invisible
+on an unpaged table, a lie on a paged one. So every sort key
+translates to `ORDER BY` in `assignments.list_pairs`, including
+`pair_tag_*`, which reaches the pair's tags through an outer join to
+`relationships` gated on `status = 'active'` — the same condition the
+rule engine applies.
 
 **The translation preserves `apply_cookie_sort`'s semantics exactly**,
 because the alternative is every sorted table reshuffling on the day
@@ -797,12 +792,12 @@ it lands:
 | Text compares by code point | explicit `COLLATE "C"` on Postgres; SQLite's default BINARY already does |
 | Ties fall through, then to a stable order | the sort keys, then `(reviewer_id, reviewee_id, instrument_id)` |
 
-The third rule is the one with teeth. Measured on Postgres 16
-(2026-09-11): under a locale-aware collation seven names order
+The third rule is the one with teeth. On Postgres 16, under a
+locale-aware collation seven names order
 `_edge | alpha | ana lim | Ana Lim | Bravo | charlie | Delta`, and
 under `C` they order `Ana Lim | Bravo | Delta | _edge | alpha |
-ana lim | charlie` — the second being what this app has always
-rendered. Azure Postgres commonly carries a locale-aware collation,
+ana lim | charlie` — the second being what this app renders. Azure
+Postgres commonly carries a locale-aware collation,
 so the guard is load-bearing in production and invisible on SQLite.
 
 The fourth rule is what makes paging safe: without a **total** order
@@ -812,10 +807,9 @@ two adjacent pages can show the same row or neither.
 rule, not a quirk of this page (`spec/setup_pages.md`, "Preview
 tables"). The line sits inside the preview card's `pair_sample`
 gate, so there is no table for it to caption, and `No assignments
-match the search.` owns that state alone. Before Item 10 a
-`Showing 0 of 1.` also rendered in the filter row, which is what
-changed here. (Were the helper called in that state now it would
-return `Showing 0 assignments.`; the gate means it is not.)
+match the search.` owns that state alone. (Were the helper called in
+that state it would return `Showing 0 assignments.`; the gate means
+it is not.)
 
 ### Preview table
 
@@ -834,10 +828,8 @@ left → right:
 | Instrument | yes | yes (per-instrument Show checkbox in the status table above) |
 
 A row with `include=False` renders its Include cell as a
-warning-coloured `no` pill (`.pill-empty`); the row itself is not
-dimmed or otherwise restyled. **Corrected 2026-09-09 (19I.9)** —
-this line previously claimed the whole row dimmed, which no
-template or stylesheet has ever implemented. The (select) column
+warning-coloured `no` pill (`.pill-empty`); the row itself is **not**
+dimmed or otherwise restyled. The (select) column
 enables bulk-set Include via a checkbox column header + a
 per-row checkbox; the operator-actions card carries the
 **`Inactivate`** / **`Activate`** buttons the selection drives.
@@ -846,38 +838,32 @@ per-row checkbox; the operator-actions card carries the
 
 Two routes, `POST /assignments/bulk-inactivate` and
 `POST /assignments/bulk-activate`, both over the service helper
-`assignments.bulk_set_assignment_include`. **Corrected 2026-09-09**
-(Segment 19I Item 8): this section named a single
-`POST /assignments/include` taking `include=true|false`, and
-buttons labelled `Include selected` / `Exclude selected`. Neither
-the route nor those labels exists anywhere in the app — only the
-helper name was right. `spec/operator_button_audit.md` has carried
-the correct labels throughout. Lifecycle-aware
-(the same `_require_editable` guard as the self-review toggle —
-`draft` or `validated`).
+`assignments.bulk_set_assignment_include`. The buttons are
+**`Inactivate`** / **`Activate`**; `spec/operator_button_audit.md`
+is the catalogue for that copy. Lifecycle-aware (the same
+`_require_editable` guard as the self-review toggle — `draft` or
+`validated`).
 
 ## Reconcile + regenerate
 
-> **Background.** The pre-Wave-5 "Generate assignments" path
-> wholesale-replaced an instrument's rows on every re-run,
-> deleting saved responses. Segment 13D PRs #1065 → #1069 (also
-> documented in `spec/reconciling_regeneration.md`,
-> kept) replaced this with a **diff-and-reconcile** path that
-> preserves responses on pairs that survive the re-run.
+Generate never wholesale-replaces an instrument's rows: it
+**diffs and reconciles**, so responses on pairs that survive the
+re-run survive with them. `spec/reconciling_regeneration.md`
+carries the algorithm and the reasons it may not be simplified
+back.
 
-The current behaviour: when Generate runs (manually or as part
-of the Workflow-card Activate super-button), for each
-instrument:
+When Generate runs — on its own, or inside the Workflow card's
+Prepare step — then for each instrument:
 
 1. Run the engine over the current rule + roster.
 2. Compute the diff against existing `Assignment` rows:
    - **To-insert.** New pairs the engine produced.
    - **To-delete.** Existing pairs no longer surviving the
      rule. **Their responses are deleted too** — this is the
-     destructive part. The Workflow-card Activate super-button
-     surfaces a `prepare_confirm` modal listing the deleted
-     pairs first, so the operator acknowledges the loss
-     before it happens.
+     destructive part. The Workflow card's **Prepare session**
+     button detours through a `prepare_confirm` banner naming
+     both counts first, so the operator acknowledges the loss
+     before it happens (`spec/workflow_card.md`).
    - **To-keep.** Pairs surviving both passes. Their
      `Assignment.include` is preserved; their responses
      survive untouched.
@@ -902,11 +888,14 @@ informational.
 
 ### `reconcile_impact` dry-run
 
-Used by the Activate super-button to show the
-`prepare_confirm` modal before any destructive write happens.
-Returns a tuple `(responses_deleted, deleted_pairs)`. The
-Workflow card surfaces this and gates the final Activate POST
-on operator acknowledgement.
+Used by the **Prepare session** button to show the
+`prepare_confirm` banner before any destructive write happens.
+Returns the `new` / `deleted` / `kept` / `responses_deleted` counts
+a real run would cause, per instrument, so that one code path
+serves both this banner and a per-instrument preview on this page.
+The Workflow card renders `responses_deleted` and `deleted_pairs`
+from it and gates the re-POST on
+`acknowledge_response_loss=true`.
 
 ## Validation surfaces
 
@@ -984,9 +973,8 @@ After **Activate**, the reviewer logs in and sees:
 - **Audit-log surface for self-review toggles.** The events
   are written; surfacing a per-instrument "self-review toggle
   history" timeline is not yet on the page.
-- **Resurrecting the library tier.** The Wave 5 retirement of
-  `operator_rule_sets` was scoped to a single-author use case.
-  If shared rule evolution across sessions becomes a real ask,
-  the per-instrument Band 1 design leaves a clean reintroduction
-  path (a per-workspace library + a `library_origin_id`
-  back-reference on `session_rule_sets`).
+- **A cross-session rule library.** Dropped as out of scope for a
+  single-author use case. If shared rule evolution across sessions
+  becomes a real ask, the per-instrument Band 1 design leaves a
+  clean reintroduction path (a per-workspace library + a
+  `library_origin_id` back-reference on `session_rule_sets`).

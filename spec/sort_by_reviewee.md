@@ -119,9 +119,9 @@ operator default.
 say so.** Starlette does not percent-decode cookie values, so without
 it `json.loads` fails on the browser's own encoding and SSR falls back
 to insertion order — silently, because the client-side JS re-sorts
-after paint and the badge still shows the column sorted. A test that
-sets a raw-JSON cookie passes either way, so a cookie-decoding test
-has to write the value the way the browser writes it.
+after paint and the badge still shows the column sorted. A
+cookie-decoding test must therefore write the value the way the
+browser writes it; one that sets raw JSON exercises nothing.
 
 **Persistence is safe because the sort is visible.** Every sortable
 header carries a `rrw-sort-badge`: `↕` while the column is not in the
@@ -304,9 +304,6 @@ Key landmarks in the codebase:
     Assignments (the `ORDER BY` path).
   - `tests/integration/test_operations_sort.py` — Operations
     Invitations + Responses.
-  - **No browser-level coverage.** The reviewer-side JS reorder and
-    the reset link are exercised only through the SSR path and the
-    cookie, so a change to the client comparator can pass the suite.
 
 ---
 

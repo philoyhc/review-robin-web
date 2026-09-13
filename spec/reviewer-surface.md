@@ -225,7 +225,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Discard** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the status column's complete-icon appears on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -373,20 +373,17 @@ by how many instruments the reviewer is assigned on:
 
 | Case | Title (H2) | Subtitle (`.muted`, body-weight) |
 |---|---|---|
-| Multi-instrument, `short_label` set | `#{N}: {short_label}` | `description` if set, else nothing |
-| Multi-instrument, `short_label` empty | `#{N}` (bare) | `description` if set, else nothing |
-| Single-instrument, `short_label` set | `{short_label}` (no `#1:` prefix) | `description` if set, else nothing |
-| Single-instrument, `short_label` empty but `description` set | `{description}` | none — the description is the title in this one case |
+| Multi-instrument, `short_label` set | `Page #{N}: {short_label}` | `description` if set, else nothing |
+| Multi-instrument, `short_label` empty | `Page #{N}` (bare) | `description` if set, else nothing |
+| Single-instrument, `short_label` set | `{short_label}` (no `Page #1:` prefix) | `description` if set, else nothing |
 | Single-instrument, both empty | none — no heading row renders | n/a |
+| Single-instrument, only `description` set | none — no heading row renders | n/a (description shown elsewhere) |
 
-Whitespace-only values count as unset on both fields, so a stray space
-never renders an empty title or subtitle slot.
-
-The `#{N}` prefix is the safety-net default for multi-instrument
+The `Page #{N}` prefix is the safety-net default for multi-instrument
 sessions: even with `short_label` unset, the reviewer still gets
-"which page am I on" context. Single-instrument sessions don't need it;
-the H1 (session name) at the top of the surface already establishes
-"this is the review."
+"which page am I on" context. Single-instrument sessions don't need
+the `Page #1` prefix; the H1 (session name) at the top of the surface
+already establishes "this is the review."
 
 The view-shape returned by `_surface_context` exposes a structured
 heading dict per instrument group:
@@ -428,14 +425,13 @@ together on every Band 3 / R toggle).
 - **Help block** above the table (below the heading row), listing each
   response field that has both `help_text` set and
   `help_text_visible=true`. One shape, whatever the count: a
-  `.rs-help-grid` row of half-width `.rs-help-card` items. **There is
-  no full-width solo variant**: with the per-instrument intro itself a
-  half-width card grid, a lone help card lands in column 2 beside the
-  heading card, and widening it would break that pairing. No
-  `.rs-help-card-solo` class exists, and
-  `tests/integration/test_reviewer_response_flow.py` asserts the
-  modifier never renders — so re-adding it fails the suite rather than
-  quietly changing the layout.
+  `.rs-help-grid` row of half-width `.rs-help-card` items. **The family
+  has no full-width solo variant, and must not grow one.** The
+  per-instrument intro is itself a half-width card grid, so a lone help
+  card belongs in column 2 beside the heading card; widening it to
+  full width breaks that pairing. `.rs-help-card-solo` is therefore not
+  part of the contract, and its absence is asserted by
+  `tests/integration/test_reviewer_response_flow.py`.
 
 Single-instrument sessions with both `short_label` and `description`
 empty render no H2 at all, pinned by
@@ -514,12 +510,11 @@ paused), every input renders `disabled`.
 
 **Textarea height derivation.** Long-text textareas size their
 initial `rows` attribute so a typical response — assumed to cluster
-around **50%** of the configured `max_length`, since operators rarely
-author a cap they expect to be filled — fits at the column's current
-width:
+around **75%** of the configured `max_length` — fits at the column's
+current width:
 
 ```
-typical_chars = max_length * 0.5
+typical_chars = max_length * 0.75
 chars_per_row = max(20, column_width_px / 8)
 rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 ```
@@ -529,7 +524,7 @@ rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 grippers); when unset, the default is 224px (matching the
 `td.rs-textlong { min-width: 14em }` CSS at the default 16px body
 font). The 8 px/char ratio is calibrated against the proportional
-sans-serif body font stack; the 0.5 factor is named at
+sans-serif body font stack; the 0.75 factor is named at
 `views/_instruments.py::_TYPICAL_RESPONSE_FRACTION`. Reviewers
 retain native textarea corner-drag at runtime — this only sets
 the initial height. The Band 2 preview cell in
@@ -911,7 +906,7 @@ The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
 as inert `<span>` pills.
 
-The cross-role union is inline in `_dashboard.py`, and has exactly one consumer.
+The cross-role union is built inline in `_dashboard.py` rather than behind a shared service helper.
 
 ### Session-status pill vocabulary
 
@@ -1209,19 +1204,15 @@ from the top bar.
 
 ## Button labels
 
-The labels the surface ships, as rendered:
-
 | Where | Label |
 |---|---|
-| Action row, review-level cluster | `Save` |
-| Action row, review-level cluster | `Cancel` — **this is the control this spec calls Discard**; the rendered label is `Cancel` and the hook is `data-rs-discard` |
-| Action row, review-level cluster | `Submit` |
-| Action row, page-navigation cluster | `< Previous page` / `Page {N} of {M}` / `Next page >` |
-| Danger Zone | `Clear all` (copy explains "every response across every page") |
+| Action row, page-level slot | `Save` |
+| Action row, page-level slot | `Discard` (hook: `data-rs-discard`) |
+| Action row, page-level slot | `Page #{N}: {Instrument.short_label}` when the operator has set a short label; bare `Page #{N}` otherwise |
+| Action row, review-level slot, after the divider | `Submit` |
+| Danger Zone | `Clear all` — copy explains "every response across every page" |
 
-There is **no per-page button** carrying an instrument's short label —
-page navigation is Previous / counter / Next, and nothing else. The
-other reviewer-side labels are `Sign out` and `My Reviews`.
+The only other reviewer-side labels are `Sign out` and `My Reviews`.
 
 ### Friendly short label vs. long description
 
@@ -1229,11 +1220,10 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands as the per-instrument H2
-  title (`#{N}: {short_label}` on a multi-instrument session, bare
-  `{short_label}` on a single-instrument one). Capped at 32 characters
-  at the schema layer so a heading row doesn't wrap on typical
-  viewports.
+  operator's reviewer-facing framing. Lands on Page button labels
+  (`Page #{N}: {short_label}`) and as the per-instrument H2 title.
+  Capped at 32 characters at the schema layer so button rows don't
+  wrap on typical viewports.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2
   title above each table.
@@ -1244,7 +1234,9 @@ It carries audit-event copy and is otherwise invisible.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given, and the Instruments Setup
-page enforces the cap at create / edit time.
+page enforces the cap at create / edit time. As belt-and-braces
+against a value that slipped past it, Page buttons carry
+`max-width: 16em; text-overflow: ellipsis`.
 
 ---
 
@@ -1255,18 +1247,18 @@ today but the surface is designed so they can be added later without
 re-architecting; see "Designed-for-extensibility" below.
 
 - **`beforeunload` warning** when the form is dirty.
-- **Submission-confirmation surface for a *partial* submit.** The
-  full-submit case is not deferred — it lands on
-  `/me/sessions/{id}/summary`. A partial submit returns to the surface,
-  where the per-page `submitted` pill in the overview card and the
-  status column's per-row complete icon are the whole signal.
+- **Standalone submission-confirmation page for a *partial* submit.**
+  A submit that closes out the whole session already has one — the
+  per-session summary page. A submit that leaves pages outstanding
+  returns to the surface, where the per-page `submitted` pill in the
+  overview card and the status column's per-row complete icon are the
+  whole signal.
 - **Large-table ergonomics** (cell autosave, return-to-place,
   filter-to-incomplete) — owned by Segment 17B, as targeted
   progressive enhancement. A wholesale JS data-grid swap (AG Grid or
   equivalent) is *not* planned; it is overkill for this surface and is
   recorded as an aspirational possibility in
-  `guide/deferred_consolidated.md`. Visible progress is the one item of
-  the set that is already in place. See "Large-table ergonomics"
+  `guide/deferred_consolidated.md`. See "Large-table ergonomics"
   below.
 
 ---
@@ -1293,43 +1285,33 @@ makes today + the small follow-on the deferred work needs.
   (Save-disable-until-dirty + in-place Discard) and a `beforeunload`
   listener that prompts only when the form is dirty, skipping the
   intentional-discard controls.
-- **The same guard already ships on the operator side, so the design is
-  settled and only the wiring is outstanding.**
-  `app/web/templates/operator/instruments_index.html` wires it for the
-  instrument cards, and it is three parts: one `beforeunload` listener
-  registered once; a warning raised only when
-  `document.querySelector('[data-instrument-card][data-instrument-dirty="true"]')`
-  matches; and an early return when `window._newModelIntentionalNav` is
-  set — the flag Save and Cancel raise so their own deliberate
-  navigation cannot self-trigger the prompt. **That third part is the
-  one worth copying**: without an intentional-nav flag every Save and
-  every Discard fires the browser's own leave-confirmation on the way
-  out. The reviewer-surface version is the same shape against the
-  `data-rs-*` hooks — a per-page dirty marker, an intentional-nav flag
-  raised by Save and Discard, one listener.
+- **Shape of the guard.** A per-page dirty marker, an intentional-nav
+  flag raised by Save and Discard so the app's own controls never
+  trigger the prompt, and one `beforeunload` listener registered once.
+  Both the dirty gate and the intentional-nav escape are load-bearing
+  (see "How the surface works" above).
 - **What lands later.** A new inline `<script>` block wiring the
   `data-rs-*` hooks — dirty tracking, in-place Discard, and the
   `beforeunload` handler. No template restructuring needed; the
   markup hooks are already in place.
 
-### Submission-confirmation surface
+### Standalone submission-confirmation page
 
-- **Today.** The submit route computes its redirect through
-  `submit_redirect_url(review_session, *, fully_submitted)` in
-  `routes_reviewer/_surface/_routes.py`. A submit that closed out the
-  whole session 303s to `/me/sessions/{id}/summary` — the read-only
-  capstone page specified above, which *is* the session-level
-  confirmation surface. A partial submit 303s to the bare session URL,
-  which 303s on to `/1`. No flash banner either way: the per-page
-  `submitted` pill and the status column's per-row complete icon are
-  the signal.
-- **Design call, and why the helper stays a helper.** The redirect
-  target is computed in one place rather than inlined at the call site.
-  That is what lets a new post-submit destination land without touching
-  the submit handler, its validation, or its audit write.
-- **Still deferred.** A confirmation surface for a *partial* submit —
-  "page 2 of 4 saved and submitted". One branch in
-  `submit_redirect_url` and one template; no restructuring.
+- **Where the redirect goes.** A submit that closes out the whole
+  session lands on `/me/sessions/{id}/summary`, the read-only capstone
+  page specified above. A submit that leaves pages outstanding returns
+  to the surface, with no flash banner: the per-page `submitted` pill
+  in the overview card and the status column's per-row complete icon
+  are the signal.
+- **Design call — one helper owns the target.** The submit route's
+  redirect target is computed by `submit_redirect_url(...)` rather than
+  inlined at the call site, so a new post-submit destination lands
+  without touching the submit handler, its validation or its audit
+  write.
+- **Deferred: a confirmation page for a partial submit** — a
+  "page 2 of 4 submitted" surface rather than a silent return. One
+  branch in the helper plus one template; the surface itself does not
+  move.
 
 ### Large-table ergonomics
 
@@ -1360,25 +1342,25 @@ compatible either way:
   alongside the row data, so the ergonomics work needs no route or
   view-adapter change — and the same payload would also feed a
   JS-driven grid unchanged, should one ever be adopted.
-- **Already in place.** *Visible progress* — the session-wide status
-  pill plus the per-instrument `Required items completed` /
-  `All items completed` pills (see "Session-wide status pill" and
-  "Above the table" above). Cell-to-cell **Tab** works natively, with
-  no script. The action row is ordered Save / Discard / Submit /
-  divider / page navigation.
-- **Not in place — Enter / Shift+Enter column navigation.** The
-  reviewer surface wires **no `keydown` handler at all**, and there is
-  no `.rs-paginated` wrapper to hang one on. Whatever adds it carries
-  two obligations: Enter inside a `<textarea>` stays a newline, and
-  Enter anywhere in the table must not submit the page `<form>`.
+- **Visible progress.** The session-wide status pill plus the
+  per-instrument `Required items completed` / `All items completed`
+  pills carry it (see "Session-wide status pill" and "Above the table"
+  above). The action row is ordered Save / Discard / Submit / divider /
+  page navigation.
+- **Keyboard navigation.** Tab walks cells across a row, which the
+  browser gives for free. **Enter moves focus down a column and
+  Shift+Enter up it**, and the handler that does so carries two
+  obligations: Enter anywhere in the table must not submit the page
+  `<form>`, and Enter inside a `<textarea>` must stay a newline.
 - **What lands later.** Return-to-place (preserve scroll position
   across save / reload) is the remaining ergonomics item. Cell
   autosave and filter-to-incomplete are deferred to
   `guide/deferred_consolidated.md` — pure progressive enhancement,
   built only if pilot feedback asks for them. **None of these is
   gated on any other**: each is an independent inline script against
-  the markup hooks already rendered, and treating them as one
-  all-or-nothing bundle is what a grid-library framing does to them.
+  the markup hooks the surface already renders, and treating them as
+  one all-or-nothing bundle is what a grid-library framing does to
+  them.
 - **Ruled out — sticky column headers.** `visual_style_rrw.md` pins
   them as first-class; they do not work on this surface and are not
   attempted. `position: sticky` on the `<th>` row does nothing useful

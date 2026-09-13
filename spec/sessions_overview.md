@@ -278,9 +278,9 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   **The bracket is opt-in by class, never by `.session-expander`
   alone.** The archived-sessions page injects a panel carrying the same
   `session-expander` class names from its own script, so an unscoped
-  rule would style both pages at once. Both pages do opt in — archived
-  rows take the same `session-row-selected` marking from their own
-  `refreshExpander()`, and the archived bulk panel carries the same
+  rule would style both pages at once. Both pages must opt in —
+  archived rows take the same `session-row-selected` marking from their
+  own `refreshExpander()`, and the archived bulk panel carries the same
   opt-in class — so a selection brackets identically on each. *The two
   scripts stay separate on purpose (the archived page has a single bulk
   panel; the lobby has a single and a bulk one with editable fields and

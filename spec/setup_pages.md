@@ -116,7 +116,8 @@ Every Setup Page renders, top-to-bottom:
    *transient* page-level feedback — persistent explanation is not
    that.
 
-   **All six pages carry the card**, each with real copy.
+   **Every one of the six pages carries the card**, with real copy —
+   none is exempt.
 
    **The copy contract.** The shipped words live in the six templates
    and nowhere else — reproducing them here would make every wording

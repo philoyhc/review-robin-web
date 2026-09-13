@@ -1,10 +1,9 @@
 # Rehydrate an extracted session — functional spec
 
-> **Status: shipped (Segment 18P Group 2).** The full pipeline is live —
-> the `/operator/sessions/rehydrate` page (Validate + Rehydrate), the
-> pre-flight analyzer, the operator-scoped stash, the responses importer,
-> and the `session_rehydrate.rehydrate_session` orchestrator. This file
-> now describes how the feature works today. Companion to
+> **The whole pipeline is live** — the `/operator/sessions/rehydrate`
+> page (Validate + Rehydrate), the pre-flight analyzer, the
+> operator-scoped stash, the responses importer, and the
+> `session_rehydrate.rehydrate_session` orchestrator. Companion to
 > `spec/sessions_overview.md` (the lobby), `spec/setup_pages.md`, and
 > `spec/assignments.md`.
 
@@ -43,12 +42,12 @@ Grounded in what the extract actually captures and what importers exist:
 | Session facet | Extract source | Import path today | Rehydrate approach |
 |---|---|---|---|
 | Session metadata, instruments (+ display/response fields), rule sets, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is |
-| Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header (Segment 19C Item 1) |
+| Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header |
 | Relationships (reviewer↔reviewee pairs + status + pair tags + pair-context friendly labels) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is; pair-context friendly labels ride the header |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets, then backfill any pair present in `responses.csv` |
-| **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | **Net-new importer** ([§6.4](#64-load-responses)) |
-| Instrument visibility policies (`instrument_view_policies`) | `settings.csv` (18P PR A2) | ✅ | Apply as-is |
-| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` (18P PR A1) | ✅ | Apply as-is |
+| **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | Its own importer, `responses_import.py` ([§6.4](#64-load-responses)) |
+| Instrument visibility policies (`instrument_view_policies`) | `settings.csv` | ✅ | Apply as-is |
+| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` | ✅ | Apply as-is |
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
 
 Rows one to three, plus the two rows closed by the
@@ -65,14 +64,12 @@ round-trip through `settings.csv` — serialized by
 rows plus `session.relationships_enabled` / `session.observers_enabled`) and
 restored by `_apply` within its instrument wipe-and-rebuild pass.
 
-This was a real gap in the **normal** settings round-trip, independent of
-rehydrate: neither `session_config_io` nor `session_clone` used to carry
-them, so a plain `export settings.csv → import settings.csv` dropped them.
-It was closed **first** — the two feature toggles in 18P PR A1,
-`instrument_view_policies` in PR A2 — precisely so rehydrate inherits them
-for free: no rehydrate-specific view-policy code, and every session's
-export/import (clone-by-config, backup/restore) also stopped losing them.
-That is why it was a prerequisite rather than a rehydrate sub-task.
+Rehydrate therefore carries **no view-policy code of its own**: it
+inherits both from the ordinary settings round-trip, which every other
+consumer (config-only clone, backup / restore) shares. If the settings
+carrier ever stopped emitting them, rehydrate would silently rebuild
+sessions at default visibility — which is why this is a prerequisite of
+the feature rather than a part of it.
 
 ## 3. Entry point and page
 
@@ -85,9 +82,8 @@ button row — today `Cancel` · `Add new` · `Go to Archive`
 button **between `Add new` and `Go to Archive`**, linking to
 `GET /operator/sessions/rehydrate`. Same `.btn` styling as its siblings.
 
-Giving it its own page removes the whole "ignore the other inputs" problem
-the earlier Add-New-card design carried — there is no create form on this
-page to bleed into.
+Its own page means there is no create form here for the upload to bleed
+into, and nothing on the page the operator has to be told to ignore.
 
 ### 3.2 The rehydrate page (`GET /operator/sessions/rehydrate`)
 
@@ -177,9 +173,9 @@ instance recycle **and** scale-out — which matters because the app is sized
 to autoscale to 2–3 App Service instances under load (`docs/architecture.md`,
 `docs/azure_provision.md`), so a Validate on one instance and Commit on
 another still find the stash — using infrastructure already provisioned (the
-database), with no Storage Account. (A local temp-file or a re-upload-on-commit
-design would have avoided the migration but not survived scale-out; the
-`bytea` stash was chosen for that reason.)
+database), with no Storage Account. A local temp file or a
+re-upload-on-commit would not survive that: **scale-out is the constraint
+that picks the storage**, not payload size.
 
 **Button styles.** Validate = Secondary; Rehydrate = Primary (per
 `spec/ui_elements.md` §6). Rehydrate is additive — it creates a new
@@ -196,7 +192,7 @@ the handler resolves files by name.
 | File | Header (must match) | Provides |
 |---|---|---|
 | `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
-| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,PhotoLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix — Segment 19C Item 1) |
+| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,PhotoLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
 | `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,PhotoLink` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
 
@@ -296,17 +292,20 @@ fields), session rule sets, email overrides, and data
 shapes, and restores per-instrument runtime flags including
 `accepting_responses` and `responses_visible_when_closed`. Tag friendly
 labels are rebuilt separately from the roster CSV headers when those files
-import (Segment 19C Item 1), not from `settings.csv`.
+import, not from `settings.csv`.
 
-With the [prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles) in
-place, `relationships_enabled` / `observers_enabled` **and** the instrument
-visibility policies are carried in `settings.csv` and restored by `apply` —
-no rehydrate-specific handling. (Defensive fallback for a legacy extract
-taken before the prerequisite: infer the toggles from file presence and
-leave view policies at defaults.)
+`relationships_enabled` / `observers_enabled` **and** the instrument
+visibility policies are carried in `settings.csv` and restored by `apply`
+— no rehydrate-specific handling
+([prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles)).
+**An older extract whose `settings.csv` carries neither still rehydrates:**
+the shell session is created with the toggles inferred from *file
+presence* (`relationships` / `observers` in the resolved set) before
+`apply` runs, so a bundle with those rows overrides the inference and one
+without keeps it; view policies fall back to defaults.
 
-**A bundle carrying an illegal visibility cell fails here.** Since 19C
-Item 9 `apply_session_config` validates each
+**A bundle carrying an illegal visibility cell fails here.**
+`apply_session_config` validates each
 `instruments[n].view_policies[<audience>].*` cell against the same table
 the Band 3 editor uses (`spec/visibility_policy.md` §3.1) and returns an
 `ApplyError` naming the field. Rehydrate treats that like any other
@@ -337,8 +336,8 @@ forbidden cells serialize as empty and parse back to "off".
 
 ### 6.4 Load responses
 
-**New machinery** (no importer existed — responses were export-only).
-Implemented in **18P PR F** (`app/services/extracts/responses_import.py`):
+Responses are the one facet with no other import path;
+`app/services/extracts/responses_import.py` carries it —
 `parse_responses_csv` + `load_responses`. For each data row, resolve
 identity to the newly-created PKs and insert a `Response`:
 
@@ -430,9 +429,9 @@ Stated plainly so the card copy and the PR description stay honest:
   `relationships_enabled`, `observers_enabled`) round-trip through
   `settings.csv` via the
   [prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles),
-  a hard dependency of rehydrate — so these are not gaps. (Only a legacy
-  pre-prerequisite extract would fall back to default view policies +
-  presence-inferred toggles.)
+  a hard dependency of rehydrate — so these are not gaps. An extract
+  whose `settings.csv` predates that carrier falls back to default view
+  policies and presence-inferred toggles ([§6.2](#62-apply-settings)).
 - **Manual per-pair assignment overrides don't round-trip** (confirmed —
   `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
   Assignments page's bulk Activate / Inactivate (the `Assignment.include`
@@ -441,11 +440,12 @@ Stated plainly so the card copy and the PR description stay honest:
   that *has* responses ([§6.3](#63-import-populations-and-regenerate-assignments)),
   so no response is lost, but an *empty-but-included* manual assignment
   won't reappear.
-- **Observer cohort rules aren't restored** (confirmed). The observers CSV
-  carries only Email/Name/Tag1/Status, so `Observer.cohort_rule` is lost —
-  rehydrated observers come back without their cohort scoping. *Fix path:*
-  carry `cohort_rule` in the observers CSV or serialize observers through
-  `session_config_io` (`spec/roundtrip_coverage.md` recommendation 2).
+- **Observer cohort rules round-trip, so rehydrate must keep them** —
+  not a gap. The observers CSV carries a `CohortRule` column (compact
+  JSON) alongside `ObserverEmail` / `ObserverName` / `ObserverTag1` /
+  `Status`, re-validated through `CohortRuleSet` on import, so a
+  rehydrated observer keeps its cohort scoping (`spec/csv_contracts.md`
+  §3.2b).
 - **Not restored** (confirmed): invitations, email-outbox send history,
   `Reviewee.results_acknowledged_at`, and participant anonymization tokens
   (regenerated fresh for the new session, so they won't match the original

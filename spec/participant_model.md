@@ -89,7 +89,7 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 
 **Mount-order note.** The routes (`_results.py`, `_collation.py`) are registered **before** `_surface` in `routes_reviewer/__init__.py` because the surface's `/me/sessions/{id}/{page_n}` would otherwise swallow `/results` and `/collation` as the `page_n` value. Treat this as load-bearing — adding any further literal-segment `/me/sessions/{id}/<thing>` routes needs the same precedence.
 
-### Reachability windows (today)
+### Reachability windows
 
 - Reviewer surface: reachable when `session_status_for_reviewer(reviewer, session) != "not opened"`. The surface 403s / redirects until the session has at least once been activated.
 - Reviewee results: gated by `require_reviewee_with_current_grant` — an active reviewee whose `email_or_identifier` matches the user's email reaches the page **while a grant currently resolves**, and every other caller gets a bare 404. The gate composes the roster check with `visibility_policies.reviewee_has_current_grant`, so the surface and the `/me` row agree by construction rather than by two readings of one rule. Both the GET and the `POST .../acknowledge` companion share it. Inside the page, the per-instrument resolver still decides what renders: a grant on one instrument opens the page, and instruments granting nothing contribute nothing, so an open page with a sparse body is normal.

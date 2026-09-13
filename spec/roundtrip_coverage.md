@@ -10,10 +10,10 @@ do **not** come back.
 
 Companion to `spec/settings_inventory.md` (the full index of every
 persisted setting). Where that doc's §10 coverage table and this doc
-disagree, **this doc is authoritative** — it was built from a
-field-by-field sweep of the serialize/apply/import/clone code and lists
-several config surfaces the inventory's matrix omits (view policies,
-observer cohort rules, `band1_touched_links`, reviewer `profile_link`).
+disagree, **this doc governs** — it is the field-by-field matrix, and it
+covers several config surfaces the inventory's matrix does not name (view
+policies, observer cohort rules, `band1_touched_links`, reviewer
+`profile_link`).
 
 ## Scope
 

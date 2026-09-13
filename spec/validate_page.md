@@ -36,7 +36,7 @@ Cross-references:
 | Page name | Validate |
 | URL | `GET /operator/sessions/{id}/validate` |
 | Template | `app/web/templates/operator/session_validate.html` |
-| Operations row position | #2 — after Assignments, before Previews (`session_top_nav.html`). |
+| Operations row position | #2 — after Assignments, before Previews. |
 | Audience | Operator (`require_session_operator`). |
 
 The page is reachable in every lifecycle state. It's read-only
@@ -217,7 +217,7 @@ first duplicate row's `#reviewer-row-{id}`).
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
-| `instruments.no_rule_pinned` | instruments | warning | **Registered but inert** — the check yields nothing, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap this once caught. The key stays registered so audit history remains addressable. |
+| `instruments.no_rule_pinned` | instruments | warning | **Inert by design** — raises no findings, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap. The key stays registered so audit history remains addressable. |
 | `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
 | `assignments.reviewer_missing` | assignments | warning | A reviewer has no assignment rows at all (pinned rule excluded them, or they joined the roster after the last Generate). |
@@ -225,7 +225,7 @@ first duplicate row's `#reviewer-row-{id}`).
 | `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
-| `instruments.stale_generated` | instruments | warning | **Registered but inert** — the check yields nothing. It compared a pinned instrument's eligible-pair count against its generated row count through a per-rule eligibility helper that no longer exists, and the Workflow card plus the Generate button already cover the "pinned a rule but never generated" case. The key stays registered so audit history remains addressable. A reader hunting for a staleness signal should expect none from this rule. |
+| `instruments.stale_generated` | instruments | warning | **Inert by design** — raises no findings. The Workflow card and the Generate button carry the "pinned a rule but never generated" signal instead, so this rule adds nothing an operator can act on. The key stays registered so audit history remains addressable. |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
 | `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 

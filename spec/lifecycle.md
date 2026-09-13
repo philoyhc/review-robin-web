@@ -446,8 +446,8 @@ card and its routes carry no `_require_editable`, so email copy
 stays editable in every lifecycle state — see
 `spec/email_template_editor.md` §5.
 
-**Visual treatment:** `accent-amber-dark` border, `accent-amber-bg`
-interior, outline-amber button. Documented in
+**Visual treatment:** `--card-warning-border` border,
+`--card-warning-bg` interior, outline-amber button. Documented in
 `spec/visual_style_rrw.md` "Warning surfaces — shared brown
 framing".
 

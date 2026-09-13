@@ -90,20 +90,19 @@ defines what each window *means*, which the pairs do not restate; read
 
 | Window | What it means |
 |---|---|
-| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. The **status column**, not the deadline: the resolver reads it through `lifecycle.is_ready`, and `expire_session` is called from one place only — the Workflow card's Close button (`POST /sessions/{id}/workflow/close`) — never automatically at the deadline. So a session past its deadline that nobody has closed is still `ready` and still inside this window. |
+| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. The window is the **status column**, not the deadline, and the deadline passing does not close it: a session leaves `ready` only when the operator closes it from the Workflow card, so a session past its deadline that nobody has closed is still inside this window. |
 | `after_release` | **`sessions.status = "expired"`** AND `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Session Edit Details / Create New Session; the Release-now / Stop-release buttons write the same columns. The closed-session half of the condition is load-bearing — §3.2 carries why. |
 | `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Not a stored value: it is both pairs set. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
 | `always` | **Reserved**, and not authorable — no pair encodes it. Viewing irrespective of window is the operator's baseline, and the operator is not a row in this table. |
 
 ### 3.1 Per-cell valid modes
 
-The table below is `_PER_CELL_VALID_MODES` in
-`app/services/visibility_policies.py` — the constant both writers read.
-
 Each `(audience, window)` cell accepts only these modes. `None` means
 "off in this window" and is stored as NULL in both members of the pair.
 
-**The table below is derived, not transcribed.**
+**The table is derived, not transcribed** — it is
+`_PER_CELL_VALID_MODES` in `app/services/visibility_policies.py`, the
+constant both writers read.
 `tests/unit/test_doc_conventions.py` parses it — audiences from the row
 labels, windows from the column headers, modes from the backticked
 tokens in each cell — and fails if it disagrees with

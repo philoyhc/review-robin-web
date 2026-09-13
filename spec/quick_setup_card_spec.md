@@ -25,7 +25,7 @@ For `ready` and `closed` sessions, the card renders the same body-greying as the
 
 ### Slots
 
-The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **There is no Assignments slot, and adding one would be wrong:** assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
+The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **The card must not gain an Assignments slot.** Assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
 
 **Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships + Settings (+ Observers when visible) stack in the right column. There is no horizontal divider between the slot groups.
 

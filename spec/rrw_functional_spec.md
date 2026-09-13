@@ -1019,7 +1019,7 @@ page, and `/edit` 301-redirects to
 - **Workflow card** (full width) — the lifecycle-driven card
   explaining the current state and offering the single
   most-important next action(s). The card frame is constant (H2
-  "Workflow", accent-blue border, height grows to fit); the
+  "Workflow", blue-framed, height grows to fit); the
   contents differ across the lifecycle states (see
   [§9.8](#98-validation-and-activation)).
 - **Session details card** (full width, below Workflow) — a
