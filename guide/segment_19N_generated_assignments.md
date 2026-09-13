@@ -174,12 +174,20 @@ Ruled by the author 2026-09-13, on the recommendation below.
 leaned toward, and the dangerous one. Casefold is the Unicode-correct
 fold for caseless *search*; identity is not search. It maps `ß` to
 `ss`, so `straße@example.com` and `strasse@example.com` — two
-different mailboxes — become one key. `_dashboard.py:100` and
-`participants.roles_held_anywhere` use that key to decide whose
-sessions and roles a signed-in user sees, so merging two people there
-fails **open**. The mixed state this item opened on fails **closed**:
-the legitimate `ß` participant is refused. Wrong, but the safe wrong,
-and the reason there was no pressure to choose quickly.
+different mailboxes — become one key, and that key decides access at
+the three `web/deps.py` gates, at `auth.roles.is_super_admin`, at the
+reviewer dashboard's roster match and at invite acceptance.
+
+**The first draft of this Decision was wrong about the direction, in
+the safe-sounding direction.** It said the pre-fix state failed
+*closed* — a `ß` holder cannot match their own lower-cased row — and
+concluded there was no pressure to choose quickly. That is one of two
+pairings. The other was never checked: a `ß` holder's casefolded key
+matches an unrelated **`ss`-spelled** row exactly, at every gate
+above, because casefold was applied consistently on both sides there.
+So a real fail-open existed. Low likelihood in an ASCII tenancy and no
+evidence it occurred, but the reassurance was unearned and is
+withdrawn.
 
 **Rejected: fold inside SQL.** It cannot be made trustworthy here,
 and measuring it turned out to be worse than the argument that
@@ -243,16 +251,42 @@ direction*, not fixing a live incident.
 
 ### Blast radius (measured)
 
+Re-run post-fix, 2026-09-13. Each line says what its command counts,
+because two of these were published once without being re-run:
+
 ```
-grep -rn "normalize_email" app/ --include=*.py    # 14 call sites
-grep -rn "func\.lower" app/ --include=*.py        # 13 SQL-side sites
-grep -rc "normalize_email" tests/ --include=*.py  # 0 — no direct coverage
+grep -rn "normalize_email(" app/ --include=*.py | grep -v "def "
+  -> 55 invocations, 18 files
+
+grep -rn "func\.lower" app/ --include=*.py
+  -> 15 lines, of which 2 are prose inside email_identity.py's own
+     docstring; 13 are code
+
+grep -rn "\.casefold()" app/ --include=*.py
+  -> 22 remaining, none in a gate module except the one marked
+     `not-identity:` in assignments/_coverage.py
+
+grep -rc "normalize_email" tests/ --include=*.py
+  -> 0 before this item; the fold had no direct coverage at all
 ```
 
-One function body. Nine of the thirteen SQL-side sites compared a
-`func.lower` column against a casefolded Python value; four already
-lowered both sides. No test asserted casefold semantics, which is why
-the suite is unchanged apart from the eight new ones.
+**The first measurement said "14 call sites" and was wrong** — it
+reconciles to nothing the command produces. So did the first
+correction of it, which published a `func.lower` count and a
+`.casefold()` count taken before the fix rather than after.
+
+**And it measured the wrong thing**, which cost more than the bad
+number. Counting what *calls* `normalize_email` says nothing about
+what bypasses it. Four identity comparisons folded inline —
+`auth/roles.py` (super-admin), `routes_reviewer/_dashboard.py`,
+`routes_reviewer/_invite.py`, and two `assignments/_coverage.py`
+handle filters — so changing one function body did not reach them.
+The `.casefold()` grep is the one that would have shown it, and it was
+not run until the verification pass asked why the gates still merged.
+All four are now routed through the fold, and
+`test_no_identity_gate_folds_inline` makes that structural: a bare
+`.casefold()` in a gate module fails unless the line above it says
+`not-identity:` and why.
 
 ### PR ladder
 
@@ -303,9 +337,21 @@ anticipate:
   folds through `normalize_email`, when the SQL-side sites never did.
   That claim is what `SC-45` was really about.
 
-Nothing broke: the suite went 3,903 → 3,911, all additions. Three
-mutations, each caught — reverting to casefold fails exactly the
-eszett test.
+- **Changing one function did not close the gates it was written for.**
+  Four identity comparisons folded inline and never called it — one of
+  them `auth.roles.is_super_admin`. Found by the verification pass, not
+  by the build, because the blast radius counted callers rather than
+  bypassers. All four routed through the fold; a structural test now
+  fails on any new inline fold in a gate module.
+- **The pre-fix state was not merely fail-closed.** The first draft said
+  so and stopped at the self-match direction; a `ß` holder's casefolded
+  key matched an unrelated `ss` row at every gate. Withdrawn and
+  recorded, in the plan and in `docs/security_posture.md`.
+
+Nothing broke: the suite went 3,903 → 3,914, all additions. Seven
+mutations across the fold and the four gates, each caught — reverting
+to casefold fails exactly the eszett test, and reverting any gate fails
+the structural one.
 
 ---
 

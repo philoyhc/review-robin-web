@@ -34,6 +34,7 @@ from app.db.models import (
 )
 from app.services import audit, session_lifecycle as lifecycle
 from app.services._queries import session_scoped, slot_has_data
+from app.services.email_identity import normalize_email
 
 
 PAIR_PREVIEW_LIMIT = 200
@@ -290,6 +291,9 @@ def _tag_matches(term: str, *columns):
     ASCII, so a non-ASCII tag is the one place the two rules could
     still disagree.
     """
+    # not-identity: a tag / name substring search, not an email match.
+    # Folding a tag is a display question; the known ß limit above is
+    # the whole of its consequence.
     folded = term.strip().casefold()
     if not folded:
         return []
@@ -358,7 +362,7 @@ def _apply_pair_search(
                 (
                     "reviewer",
                     func.lower(func.trim(Reviewer.email))
-                    == picked_reviewer_handle.strip().casefold(),
+                    == normalize_email(picked_reviewer_handle),
                 )
             )
         if picked_reviewee_handle:
@@ -366,7 +370,7 @@ def _apply_pair_search(
                 (
                     "reviewee",
                     func.lower(func.trim(Reviewee.email_or_identifier))
-                    == picked_reviewee_handle.strip().casefold(),
+                    == normalize_email(picked_reviewee_handle),
                 )
             )
         allowed = [

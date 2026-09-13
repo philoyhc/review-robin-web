@@ -16,6 +16,7 @@ cycles.
 from __future__ import annotations
 
 from app.config import Settings, settings as default_settings
+from app.services.email_identity import normalize_email
 
 
 def effective_super_admin_emails(settings: Settings | None = None) -> list[str]:
@@ -46,8 +47,8 @@ def is_super_admin(email: str | None, settings: Settings | None = None) -> bool:
     """
     if not email:
         return False
-    target = email.casefold()
+    target = normalize_email(email)
     return any(
-        item.casefold() == target
+        normalize_email(item) == target
         for item in effective_super_admin_emails(settings)
     )

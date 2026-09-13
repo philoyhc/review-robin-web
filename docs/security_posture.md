@@ -83,19 +83,30 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 
 ## §5.5a Identity matching — the fold
 
-Every gate in §5.5 decides on an email match. The convention, settled
-19N Item 2 (2026-09-13):
+Every gate in the audit below decides on an email match. The
+convention, settled 19N Item 2 (2026-09-13):
 
 **`email_identity.normalize_email` — strip, then `str.lower`.** Not
 `str.casefold`, and the reason is a security one rather than a
 stylistic one. Casefold is the Unicode-correct fold for caseless
 *search*; identity is not search. It maps `ß` to `ss`, so
 `straße@example.com` and `strasse@example.com` — two different
-mailboxes — become one comparison key. The reviewer dashboard and
-`participants.roles_held_anywhere` use that key to decide whose
-sessions and roles a signed-in user sees, so merging two people there
-would let one reach the other's surface: a fail-**open**. Lowering
-keeps them distinct.
+mailboxes — become one comparison key. That key decides access at
+`require_reviewer_in_session` / `require_reviewee_in_session` /
+`require_observer_in_session` (`web/deps.py`), at
+`auth.roles.is_super_admin`, at the reviewer dashboard's roster match
+and at invite acceptance. Merging two people at any of them lets one
+reach the other's surface: a fail-**open**. Lowering keeps them
+distinct.
+
+**This was a live fail-open, not a hypothetical**, and the first
+write-up of this item got that wrong — it said the pre-fix state
+"failed closed" because a `ß` holder could not match their *own*
+lower-cased row, and stopped there. The other direction was never
+checked: a `ß` holder's casefolded key matched an unrelated
+*`ss`-spelled* row exactly, at every gate above. Low likelihood in an
+ASCII tenancy, no evidence it ever occurred, and closed now — but it
+was a fail-open path and is recorded as one.
 
 **The fold is applied in Python and never composed in SQL.** A dozen
 sites compare `func.lower(column)` against a `normalize_email` value;

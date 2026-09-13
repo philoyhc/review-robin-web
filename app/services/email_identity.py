@@ -10,12 +10,21 @@ gates used to each re-derive:
   three-way split between ``str.casefold``, SQL ``lower``, and
   ``str.lower`` — audit S2).
 
-Every Python-side identity match folds through
-:func:`normalize_email`. **Comparisons composed in SQL do not** — a
-dozen sites compare ``func.lower(column)`` against a Python-folded
-value, and until 19N Item 2 the two sides used different folds.
-Aligning :func:`normalize_email` on ``str.lower`` makes them agree on
-every ASCII identity, which is every identity this deployment has.
+Every identity gate folds through :func:`normalize_email` — and that
+sentence was false for three years' worth of call sites until 19N
+Item 2 checked it. ``auth/roles.py``, the reviewer dashboard, invite
+acceptance and two coverage filters case-folded **inline**, so they
+were untouched by any change to this function.
+``tests/unit/test_email_identity_fold.py::test_no_identity_gate_folds_inline``
+now enforces it rather than asserting it: a bare ``.casefold()`` in a
+gate module fails unless the comment above it says ``not-identity:``
+and why.
+
+**Comparisons composed in SQL still do not fold through here** — 13
+code sites compare ``func.lower(column)`` against a Python-folded
+value, and until Item 2 the two sides used different rules. Aligning
+this function on ``str.lower`` makes them agree on every ASCII
+identity, which is every identity this deployment has.
 
 The fold cannot be made trustworthy *inside* SQL here, and that is
 why it is not attempted: **SQLite's ``lower()`` is ASCII-only while

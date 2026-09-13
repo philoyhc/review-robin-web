@@ -46,10 +46,11 @@ def test_eszett_addresses_stay_distinct() -> None:
     """The reason this is `lower` and not `casefold`.
 
     `straße@` and `strasse@` are two different mailboxes. Casefold
-    maps both to `strasse@`; on `_dashboard.py`'s roster match or
-    `participants.roles_held_anywhere`, merging them would let one
-    person reach the other's surface. That is the one failure
-    direction worth engineering against, because it fails open.
+    maps both to `strasse@`; at the `web/deps.py` gates,
+    `auth.roles.is_super_admin`, the dashboard roster match and invite
+    acceptance, merging them lets one person reach the other's
+    surface. That is the failure direction worth engineering against,
+    because it fails open.
     """
     sharp = normalize_email("straße@example.com")
     double = normalize_email("strasse@example.com")
@@ -155,3 +156,100 @@ def test_looks_like_email_strips_before_judging() -> None:
     assert looks_like_email("  a@b.com  ")
     assert not looks_like_email("not-an-email")
     assert not looks_like_email(None)
+
+
+# --------------------------------------------------------------------- #
+# The gates that bypassed the fold
+# --------------------------------------------------------------------- #
+#
+# Changing `normalize_email` fixed only the sites that call it. Four
+# identity comparisons case-folded *inline* and were untouched by it:
+# `auth/roles.py` (super-admin), `routes_reviewer/_dashboard.py` (the
+# roster listing), `routes_reviewer/_invite.py` (invite acceptance),
+# and two `assignments/_coverage.py` handle filters.
+#
+# The module docstring on `email_identity` asserted that every
+# identity-match site folds through `normalize_email`. It did not, and
+# believing it is how the first pass at this item stopped one function
+# short of the gates it was written to protect.
+
+
+def test_super_admin_membership_does_not_merge_eszett() -> None:
+    """The worst instance, had it ever been reachable.
+
+    `is_super_admin` case-folded both sides against the configured
+    allowlist. An address whose fold collides with an allowlisted one
+    — `straße@` against an allowlisted `strasse@` — would have been
+    admitted as super-admin.
+    """
+    from app.auth.roles import is_super_admin
+    from app.config import Settings
+
+    settings = Settings(
+        super_admin_emails=["strasse@example.edu"],
+        allow_fake_auth=False,
+    )
+
+    assert is_super_admin("strasse@example.edu", settings)
+    assert is_super_admin("  STRASSE@Example.EDU  ", settings), (
+        "the fold still has to do its ASCII job"
+    )
+    assert not is_super_admin("straße@example.edu", settings), (
+        "casefold would admit this; it is a different mailbox"
+    )
+
+
+def test_no_identity_gate_folds_inline() -> None:
+    """One fold, enforced structurally rather than remembered.
+
+    Every module here decides who someone is. A bare `.casefold()` or
+    `.lower()` in one of them is a second fold that `normalize_email`
+    cannot reach — which is exactly the gap this item's first pass
+    left. Operator-side *filtering* modules (`views/_filters.py`,
+    `views/_previews.py`) are deliberately not listed: they narrow
+    data the operator is already authorized to see, so a fold there
+    changes what is displayed, not who may see it.
+    """
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parents[2]
+    gates = [
+        "app/auth/roles.py",
+        "app/web/deps.py",
+        "app/web/routes_reviewer/_dashboard.py",
+        "app/web/routes_reviewer/_invite.py",
+        "app/services/participants.py",
+        "app/services/assignments/_coverage.py",
+    ]
+
+    offenders: list[str] = []
+    for rel in gates:
+        path = root / rel
+        assert path.exists(), f"gate module moved: {rel}"
+        lines = path.read_text().splitlines()
+        for n, line in enumerate(lines, 1):
+            if not re.search(r"\.casefold\(\)", line):
+                continue
+            if "normalize_email" in line:
+                continue
+            # A fold that is demonstrably not an identity match may
+            # stay, but it has to say so in the comment block directly
+            # above it. The marker is the point: it forces the next
+            # person adding one to state which kind it is instead of
+            # leaving the reader to guess.
+            j = n - 2
+            marked = False
+            while j >= 0 and lines[j].strip().startswith("#"):
+                if "not-identity:" in lines[j]:
+                    marked = True
+                    break
+                j -= 1
+            if marked:
+                continue
+            offenders.append(f"{rel}:{n}: {line.strip()}")
+
+    assert not offenders, (
+        "identity gates must fold through email_identity.normalize_email, "
+        "not inline:\n  " + "\n  ".join(offenders)
+    )
