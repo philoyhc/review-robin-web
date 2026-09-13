@@ -3226,7 +3226,12 @@
       }
       body.ui-v2 .pill.pill-success {
         background: var(--status-success-bg);
-        color: var(--status-success-accent);
+        /* ``-fg`` is the text-on-pill token; ``-accent`` is for
+           standalone glyphs on the page background (signal icons,
+           status symbols). This pill reached for the icon token —
+           invisible in light, where both resolve to --green-deep, and
+           a contrast drop in dark (6.3:1 against 8.0:1). */
+        color: var(--status-success-fg);
       }
       body.ui-v2 .pill.pill-super {
         background: var(--status-super-bg);

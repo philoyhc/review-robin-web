@@ -480,8 +480,9 @@ In rendered order:
    - everything else → no width modifier.
 4. **Status indicator** (trailing, narrow): only renders when
    `group.show_status_col` is true (i.e. when at least one row has
-   `submitted_at` set or `show_acknowledge` is true after a
-   missing-required Submit attempt). Cell content is icon-only:
+   `submitted_at` set, or `show_incomplete_marks` is true after a
+   missing-required Submit attempt). There is no `show_acknowledge`
+   flag — the same absence §"no checkbox" states below. Cell content is icon-only:
    - `<span class="status-icon-complete" title="Complete">✓</span>`
      when the row's required fields are all filled.
    - `<span class="status-icon-incomplete" title="N required field
@@ -656,9 +657,9 @@ field before the submit lands.
    `Page N: Reviewee X — field Y` so the reviewer knows where to
    navigate.
 3. The reviewer fills the gaps (using the per-page navigation
-   to reach each one) and re-clicks Submit. There is no checkbox,
-   no `show_acknowledge` template flag, and no
-   `acknowledged_missing` audit detail.
+   to reach each one) and re-clicks Submit. There is no checkbox and
+   no `acknowledged_missing` audit detail. The flag that turns the
+   status column on after a failed Submit is `show_incomplete_marks`.
 
 The card carries a Cancel link back to the originating instrument
 page so the reviewer can also dismiss the warning without scrolling
@@ -968,11 +969,13 @@ per-page state.
 ## Per-session summary (`/me/sessions/{id}/summary`)
 
 A read-only capstone page that renders once the reviewer has
-submitted every assigned row on a session. The surface's
-`submit_redirect_url` graduates to
-this URL when a submit closes out the last instrument; partial
-submits keep the existing "redirect back to surface"
-behaviour. The page also stays reachable later from the
+submitted every assigned row on a session.
+`submit_redirect_url(review_session, *, fully_submitted=False)`
+returns this URL when `fully_submitted` — every assigned row now has
+`submitted_at` — and the bare session URL otherwise, which 303s on to
+`/1`. It takes no page position: since 18L the URL slot is the
+operator-defined page number, so submit does not try to return the
+reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
 

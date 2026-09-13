@@ -83,11 +83,11 @@ questions are re-asked here on every surface that includes the strip.
 
 ### Identity match
 
-The same case-insensitive email match drives roster membership detection (`func.lower(column) == casefold(user.email)`):
+The same case-insensitive email match drives roster membership detection. `build_role_chips` folds **both sides in Python** through `email_identity.normalize_email` (`.strip().casefold()`) and compares the results — not a SQL-side `lower()`. `casefold` is the Unicode-correct fold and is not equivalent to `lower()` on every input, so the folding function is part of the contract, not an implementation detail:
 
-- Reviewer: `Reviewer.status == "active"` and `func.lower(Reviewer.email) == user_email`.
-- Reviewee: `Reviewee.status == "active"`, `participants.is_email_identified(reviewee)`, and case-insensitive `email_or_identifier` match. Confidential / non-email reviewees are filtered out.
-- Observer: `Observer.status == "active"` and `func.lower(Observer.email) == user_email`.
+- Reviewer: `Reviewer.status == "active"` and `normalize_email(Reviewer.email) == normalize_email(user.email)`.
+- Reviewee: `Reviewee.status == "active"`, `participants.is_email_identified(reviewee)`, and the same fold over `email_or_identifier`. Confidential / non-email reviewees are filtered out.
+- Observer: `Observer.status == "active"` and the same fold over `Observer.email`.
 
 The reviewer match also fetches the reviewer's `session_pill_for_reviewer` state to decide the summary-vs-page-1 target.
 

@@ -3209,7 +3209,12 @@
       }
       body.ui-v2 .pill.pill-success {
         background: var(--status-success-bg);
-        color: var(--status-success-accent);
+        /* ``-fg`` is the text-on-pill token; ``-accent`` is for
+           standalone glyphs on the page background (signal icons,
+           status symbols). This pill reached for the icon token —
+           invisible in light, where both resolve to --green-deep, and
+           a contrast drop in dark (6.3:1 against 8.0:1). */
+        color: var(--status-success-fg);
       }
       body.ui-v2 .pill.pill-super {
         background: var(--status-super-bg);
@@ -4407,7 +4412,7 @@
     </section>
     <section class="tc-sec">
       <h2 class="tc-h">Contrast — <strong>every</strong> foreground/background pair the palette forms
-      (73 pairs), live for the ACTIVE theme. A ratio under
+      (72 pairs), live for the ACTIVE theme. A ratio under
       <strong>AA normal, 4.5:1</strong>, is <strong>outlined in red</strong>; the badge says which
       tier it reaches. The trailing grey figure is the ratio <em>as shipped</em> in light, so an
       edit's effect is visible beside its baseline. Pairs are gathered from `base.html` itself —
@@ -4490,9 +4495,8 @@
         <div class="tc-cx" data-fg="--role-observer-fg" data-bg="--role-observer-bg" title="--role-observer-fg on --role-observer-bg · shipped 6.37:1 (light) · found by: a rule sets both halves — body.ui-v2 .pill-role-observer"><span class="tc-cx-sample" style="background: var(--role-observer-bg); color: var(--role-observer-fg)">Aa — role observer fg → role observer bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">6.37</span></div>
       </div>
       </details>
-      <details class="tc-cluster" open><summary>Status / feedback [P] · 7 <span class="tc-cx-count" data-cluster="Status / feedback [P]"></span></summary>
+      <details class="tc-cluster" open><summary>Status / feedback [P] · 6 <span class="tc-cx-count" data-cluster="Status / feedback [P]"></span></summary>
       <div class="tc-cx-grid">
-        <div class="tc-cx" data-fg="--status-success-accent" data-bg="--status-success-bg" title="--status-success-accent on --status-success-bg · shipped 6.29:1 (light) · found by: a rule sets both halves — body.ui-v2 .pill.pill-success"><span class="tc-cx-sample" style="background: var(--status-success-bg); color: var(--status-success-accent)">Aa — status success accent → status success bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">6.29</span></div>
         <div class="tc-cx" data-fg="--status-success-fg" data-bg="--status-success-bg" title="--status-success-fg on --status-success-bg · shipped 6.29:1 (light) · found by: a rule sets both halves — .pill-success"><span class="tc-cx-sample" style="background: var(--status-success-bg); color: var(--status-success-fg)">Aa — status success fg → status success bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">6.29</span></div>
         <div class="tc-cx" data-fg="--status-warning-fg" data-bg="--status-warning-bg" title="--status-warning-fg on --status-warning-bg · shipped 6.37:1 (light) · found by: a rule sets both halves — .pill-warning"><span class="tc-cx-sample" style="background: var(--status-warning-bg); color: var(--status-warning-fg)">Aa — status warning fg → status warning bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">6.37</span></div>
         <div class="tc-cx" data-fg="--status-error-fg" data-bg="--status-error-bg" title="--status-error-fg on --status-error-bg · shipped 6.80:1 (light) · found by: a rule sets both halves — .pill-error"><span class="tc-cx-sample" style="background: var(--status-error-bg); color: var(--status-error-fg)">Aa — status error fg → status error bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">6.80</span></div>

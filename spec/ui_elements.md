@@ -49,9 +49,12 @@ classes.
 > right carries the signed-in line, the `.chrome-link` detours (Settings /
 > Admin / Guide / About) and Sign out. Bottom border `--border-subtle`,
 > identity text and the signed-in line `--text-subtle`.
-> **Sign out is a Secondary control**, rendered at chrome scale. §6 owns
-> what Secondary means and this entry does not restate it: a second
-> definition is a second thing to keep in step. Chrome scale, not page
+> **Sign out is a bespoke chrome control, not a `.btn` role.** It ships
+> its own rule — `--border-default` (not `--btn-secondary-border`),
+> `--text-body`, `--surface-muted` on hover — so it reads as
+> Secondary-ish at chrome scale without joining the button vocabulary.
+> §6's roles govern page-scale buttons; this one is deliberately outside
+> them. Chrome scale, not page
 > scale — the
 > chrome's one control must not read as loudly as the page's default
 > button.
