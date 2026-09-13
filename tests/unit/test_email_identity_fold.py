@@ -98,21 +98,52 @@ def test_python_and_sql_folds_agree_on_ascii_identities() -> None:
         assert normalize_email(raw) == _sqlite_lower(raw.strip())
 
 
-def test_sql_lower_is_dialect_dependent_outside_ascii() -> None:
-    """Why the fold is not attempted inside SQL.
+def test_sqlite_lower_is_ascii_only() -> None:
+    """Hazard one: the fold means different things in test and prod.
 
-    SQLite's `lower()` is ASCII-only; Postgres's is Unicode-aware. The
-    suite runs on SQLite and production on Postgres, with `ci-postgres`
-    running these same tests against the other dialect — so a
-    `func.lower` comparison on a non-ASCII identity means different
-    things in the two places. A test written to pin that behaviour
-    would assert two different things in the two CI jobs.
+    SQLite's `lower()` leaves non-ASCII alone; Postgres's does not.
+    The suite runs on SQLite and production on Postgres, with
+    `ci-postgres` running these same tests against the other dialect —
+    so a `func.lower` comparison on a non-ASCII identity means
+    different things in the two places, and a test pinning *its result*
+    would assert two different things in the two jobs.
 
-    This test pins the *divergence*, not a fold result, so it is true
-    on both dialects: it asserts only what SQLite does.
+    This pins the divergence rather than a fold result, via an explicit
+    in-memory SQLite connection, so it is true whichever database the
+    suite is pointed at.
     """
     assert _sqlite_lower("ÄÖÜ@x.com") == "ÄÖÜ@x.com"
     assert "ÄÖÜ@x.com".lower() == "äöü@x.com"
+
+
+def test_python_and_postgres_lower_disagree_on_dotted_capital_i() -> None:
+    """Hazard two, and the one the argument did not predict.
+
+    Python and Postgres disagree on `İ` — so the two sides of a
+    `func.lower(column) == normalize_email(value)` comparison can
+    disagree **in production**, where no test can catch it.
+
+    Measured 2026-09-13 against Postgres 16 (`C.UTF-8`) stood up in the
+    sandbox:
+
+        select lower('İstanbul')  ->  'istanbul'   (8 chars, plain i)
+        'İstanbul'.lower()        ->  'i̇stanbul'  (9 chars, i + U+0307)
+
+    Only the Python half is assertable here — there is no Postgres in
+    the unit suite, and hard-coding the database's answer would be
+    asserting a measurement rather than a behaviour. What this test
+    pins is the property that makes the disagreement possible: Python's
+    fold *adds a combining mark*, which no ASCII-only or
+    dot-dropping implementation will reproduce.
+    """
+    folded = normalize_email("İstanbul@x.com")
+
+    assert folded == "i̇stanbul@x.com"
+    assert len(folded.split("@")[0]) == 9, "i + U+0307, not a plain i"
+    assert "\u0307" in folded
+    assert folded != "istanbul@x.com", (
+        "Postgres lower() yields this 8-char form; Python does not"
+    )
 
 
 # --------------------------------------------------------------------- #

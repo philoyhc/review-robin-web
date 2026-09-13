@@ -99,12 +99,23 @@ keeps them distinct.
 
 **The fold is applied in Python and never composed in SQL.** A dozen
 sites compare `func.lower(column)` against a `normalize_email` value;
-that is sound because the two agree on every ASCII identity. It is not
-extended to non-ASCII because it cannot be made trustworthy there:
-**SQLite's `lower()` is ASCII-only, Postgres's is Unicode-aware**, and
-the suite runs on SQLite while production runs on Postgres. A
-`func.lower` comparison on a non-ASCII identity means one thing in the
-tests and another in production.
+that is sound because the three implementations agree on every ASCII
+identity. It is not extended to non-ASCII because **no two of them
+agree there**. Measured 2026-09-13 against Postgres 16 (`C.UTF-8`),
+SQLite, and CPython:
+
+| input | Python `.lower()` | Postgres `lower()` | SQLite `lower()` |
+|---|---|---|---|
+| `ÄÖÜ` | `äöü` | `äöü` | `ÄÖÜ` — unchanged |
+| `İstanbul` | `i̇stanbul` — 9 chars, `i` + U+0307 | `istanbul` — 8 chars | `İstanbul` — unchanged |
+
+Two separate hazards, not one. **SQLite's `lower()` is ASCII-only**,
+so a `func.lower` comparison means something different in the test
+suite than in production. And **Python and Postgres disagree on `İ`**
+— Python keeps a combining dot the database drops — so the Python and
+SQL sides of one comparison can disagree *in production*, with no test
+able to show it. A fold split across that boundary cannot be made
+correct for non-ASCII; it can only be kept out of the way.
 
 **Known and accepted limits.**
 

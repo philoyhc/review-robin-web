@@ -181,12 +181,24 @@ fails **open**. The mixed state this item opened on fails **closed**:
 the legitimate `ß` participant is refused. Wrong, but the safe wrong,
 and the reason there was no pressure to choose quickly.
 
-**Rejected: fold inside SQL.** It cannot be made trustworthy here.
-`lower()` in SQLite is ASCII-only; in Postgres it is Unicode-aware.
-The suite runs on SQLite, production on Postgres, and `ci-postgres`
-runs the same tests against the other dialect — so `func.lower` on a
-non-ASCII identity means one thing in the tests and another in
-production, and a test pinning it would assert two different things.
+**Rejected: fold inside SQL.** It cannot be made trustworthy here,
+and measuring it turned out to be worse than the argument that
+predicted it. Against Postgres 16 stood up in the sandbox, SQLite, and
+CPython:
+
+| input | Python `.lower()` | Postgres `lower()` | SQLite `lower()` |
+|---|---|---|---|
+| `ÄÖÜ` | `äöü` | `äöü` | `ÄÖÜ` — unchanged |
+| `İstanbul` | `i̇stanbul` (9 chars, `i` + U+0307) | `istanbul` (8) | `İstanbul` — unchanged |
+
+**Two hazards, not one.** SQLite's `lower()` is ASCII-only, so a
+`func.lower` comparison means one thing in the suite and another in
+production — a test pinning it would assert two different things in
+the two CI jobs. *And* Python and Postgres disagree on `İ`, so the two
+sides of one comparison can disagree **in production**, where no test
+can show it. The second was not predicted; it was found by measuring
+rather than asserting, after the first draft of this Decision shipped
+the Postgres half as a claim.
 
 **Deferred: the stored normalized column.** Fold in Python at write,
 compare with `==`, index it. That is the design that puts non-ASCII
