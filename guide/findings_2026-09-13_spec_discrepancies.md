@@ -343,3 +343,58 @@ coverage floor. That is the open question this class leaves.
   line-38 quotation are affected by the functional spec's currency line
   being replaced with a sweep-record pointer.
 - **Fixes.** *A sweep recommends.*
+
+---
+
+## DT — documentation that now describes its own tooling imprecisely
+
+A fifth kind, added when the author instructed that **`spec-writer`'s
+instruction be updated**. Its charter had a contradiction that cost two
+long per-invocation overrides during 19M: step 3 said *"update the spec to
+match current behaviour … Reflect what the code actually does now"*, while
+step 5 said *"flag drift … rather than silently rewriting"*. **Those are
+opposite instructions for the same situation**, and under §4 the first one
+is wrong outside a segment close.
+
+`.claude/agents/spec-writer.md` now draws the distinction §6.1 actually
+makes, as two modes:
+
+- **Mode A — a segment close.** The segment deliberately shipped code, so
+  the shipped behaviour *is* the intended new contract and aligning the
+  spec is the deliberate act §4 calls for. *"Spec on the way out."*
+- **Mode B — anything else** (a verification pass, a sweep, a drift someone
+  noticed). **The spec wins**; a divergence merely discovered has no
+  decision behind it, so it is reported, not re-aligned. Where the spec is
+  stricter, it stays stricter. *"If you cannot tell which mode you are in,
+  you are in Mode B."*
+
+It also now forbids the two things this sweep had to strip out by hand —
+tree measurements and a spec hedging itself against the code — and carries
+the constraint-keeps-its-reason rule, the grep-`tests/`-before-deleting
+rule, and the keep-if-uncertain rule.
+
+### The knock-on — reported, not edited
+
+`rrw_sdd_in_practice.md` describes the charter in **four** places. One is
+now *more* accurate than before; three are imprecise:
+
+| id | where | what it says | status |
+|---|---|---|---|
+| DT-01 | `rrw_sdd_in_practice.md:85` | quotes the charter as *"to match the code … so the specs never drift from reality"* | **the quoted words no longer exist in the file.** The *phase rule* the sentence supports is unaffected — it is now stated explicitly as Mode A — but the quotation needs requoting or paraphrasing |
+| DT-02 | `:115` | *"`spec-writer` updates `spec/` to match the code after a change … and must 'flag drift … rather than silently rewriting'"* | the second quote survives; the first half is now **conditional on a close**. This line is where the old contradiction is most visible, because it states both halves side by side without noticing they conflict |
+| DT-03 | `:201` | the maker/checker table: *"spec-writer (writes spec to match code)"* | imprecise for the same reason |
+| — | `:95` | *"that stays `spec-writer`'s job **at the close**, and the author's"* | **already correct, and now corroborated** — this is the only one of the four that carried the phase qualifier |
+
+**Not edited.** It is the author's own analysis, carrying measured figures,
+and §6.1's argument does not change — only its characterization of a tool.
+*That DT-04 exists at all is the same lesson the sweep keeps producing: a
+document describing a thing goes stale when the thing changes, and nothing
+renews it.* Note that `:95` is right precisely because it named the phase;
+the three that are wrong all omitted it.
+
+### DT-04 · The same imprecision, in three other live documents
+
+`docs/practice-audit-2026-09-04.md`, `docs/status.md` and
+`guide/todo_master.md` each describe `spec-writer`'s job. They were not
+read against the new definition — out of 19M's scope — and should be
+checked when DT-01..DT-03 are actioned.
