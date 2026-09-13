@@ -178,7 +178,7 @@
            [bottom action row, flush-right]
            [danger zone]
 
-         The action row carries Save / Discard / Submit | divider |
+         The action row carries Save / Cancel / Submit | divider |
          Prev / Page N of M / Next. Within a page, instruments
          stack vertically without an inter-instrument separator. #}
       {% if any_accepting or preview_mode %}
@@ -406,7 +406,8 @@
                        contract; pre-Slice-4a rendering branched on
                        legacy literal type names. #}
                     {# PR δ — `data-rs-saved-value` carries the
-                       last-saved value; the inline JS Discard handler
+                       last-saved value; the inline JS
+                       ``data-rs-discard`` handler (the Cancel button)
                        reads it back into the input on click and
                        clears the active group's dirty flag. #}
                     {% if data_type == "String" %}

@@ -546,12 +546,13 @@ sub-module (`app/web/routes_operator/_workflow.py`):
 - **Close session** posts to
   `/operator/sessions/{id}/workflow/close` via
   `next-action-close-form`. Live in State 9 only
-  (`close_visible = is_ready`). Calls `lifecycle.close_session`
-  → `ready → expired` + closes every instrument
+  (`close_visible = is_ready`). Calls `lifecycle.expire_session`
+  — the service keeps the enum's name, the button keeps the
+  operator's — for `ready → expired` + closes every instrument
   (`accepting_responses = False`); the per-instrument
   `responses_visible_when_closed` toggle then governs whether
   reviewers can still see what they submitted post-close. Emits
-  `session.closed`.
+  `session.expired`.
 - **Release responses** posts to
   `/operator/sessions/{id}/workflow/release-responses` via
   `next-action-release-responses-form`. Live in State 10 only,
@@ -760,7 +761,7 @@ routes:
 | --- | --- | --- | --- | --- |
 | `POST /operator/sessions/{id}/workflow/prepare` | `assignments.replace_assignments` → `lifecycle.mark_validated` (on clean Validate) | `draft` or `validated` (`is_editable`) | `validated` (or `draft` on Validate errors; detour to host page with `prepare_confirm=responses` in the saved-response case) | `session.workflow_run_started` with `context.button="prepare_session"` + per-step events; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/workflow/activate` | `lifecycle.activate_session` (re-validates first) | `validated` | `ready` (or detour to Validate page in the warnings case) | `session.workflow_run_started` with `context.button="activate_session"`; `session.workflow_run_failed` on failure |
-| `POST /operator/sessions/{id}/workflow/close` | `lifecycle.close_session` | `ready` | `expired` (every instrument flips `accepting_responses = False`) | `session.closed` |
+| `POST /operator/sessions/{id}/workflow/close` | `lifecycle.expire_session` | `ready` | `expired` (every instrument flips `accepting_responses = False`) | `session.expired` |
 | `POST /operator/sessions/{id}/workflow/release-responses` | `lifecycle.release_responses_now` | not `archived` | unchanged (stamps `responses_release_at = now()`, clears `responses_release_until`) | `session.responses_released` |
 | `POST /operator/sessions/{id}/workflow/stop-release` | `lifecycle.stop_responses_release` | not `archived` | unchanged (stamps `responses_release_until = now()`) | `session.responses_release_stopped` |
 | `POST /operator/sessions/{id}/workflow/archive` | `lifecycle.archive_session` | any non-archived state | `archived`; 303 → `/operator/sessions/archived` | `session.archived` |

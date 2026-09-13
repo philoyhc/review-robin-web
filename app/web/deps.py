@@ -395,9 +395,11 @@ def require_reviewee_in_session(
     Reviewee rows whose ``status`` is anything other than ``active``
     do not grant access.
 
-    Phase 1 stub — defined but not referenced by any route yet. The
-    reviewee results surface (Phase 3 W16) wires this in as its
-    auth gate.
+    Live. W16 wired it in as the reviewee results gate, composed
+    into :func:`require_reviewee_with_current_grant`, which gates
+    ``GET /me/sessions/{id}/results`` (``routes_reviewer/_results.py``).
+    Not used as a route dependency on its own — the composed gate
+    adds the visibility check.
     """
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == session_id)
@@ -492,8 +494,9 @@ def require_observer_in_session(
     access. Unlike reviewees, observers always carry an email
     (``observers.email`` is NOT NULL) so no parse check is needed.
 
-    Phase 1 stub — defined but not referenced by any route yet. The
-    observer collation surface (Phase 3 W17) wires this in.
+    Live. W17 wired it in as the observer collation gate; it is the
+    route dependency on ``GET /me/sessions/{id}/collation`` and its
+    sub-routes (``routes_reviewer/_collation.py``).
     """
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == session_id)

@@ -112,13 +112,13 @@ Errors are scoped per-card. A missing email template doesn't block the form prev
 
 ### Lifecycle behavior
 
-The hub renders in all session lifecycle states (`draft`, `validated`, `ready`, `closed`):
+The hub renders in all five session lifecycle states (`draft`, `validated`, `ready`, `expired`, `archived`) — its route carries no lifecycle gate at all. `expired` is the post-response-window state; operators read it as **Closed**, and per `spec/session_home.md` nothing may name a `closed` state.
 
 - **`draft` / `validated`:** Full functionality. All previews render (or surface missing-data messages). Send-test is enabled.
 - **`ready`:** Full functionality. Previews still render against current setup data; this is when the operator most wants the hub. Send-test is enabled.
-- **`closed`:** Previews still render (read-only inspection of what was sent). Send-test renders disabled with the standard yellow lock card explanation, since the session is no longer active.
+- **`expired` / `archived`:** Previews still render (read-only inspection of what was sent). Send-test renders disabled with the standard yellow lock card explanation, since the session is no longer active.
 
-The hub never renders fully locked behind a yellow lock card — even on closed sessions, inspecting what the reviewer experience looked like is useful. Only the send-test affordance gates on lifecycle.
+The hub never renders fully locked behind a yellow lock card — even on a Closed session, inspecting what the reviewer experience looked like is useful. Only the send-test affordance gates on lifecycle.
 
 ### Out of scope
 

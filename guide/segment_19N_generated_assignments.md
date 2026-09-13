@@ -194,3 +194,136 @@ Surfaced while investigating `SC-19`, which asked only which fold *one*
 call site uses; the answer was "Python casefold", and the question that
 mattered turned out to be why the other ten do something else. No code
 has moved.
+
+---
+
+## Item 3 — the failure banner names the wrong button
+
+### Opportunity
+
+The workflow card's failure signal headlines whichever action
+failed. It derives that headline from one line
+(`next_action_card.html:432`):
+
+```jinja
+{% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
+```
+
+Two values in, five values out. `_workflow.py` and
+`_session_home.py` between them pass **five** distinct
+`super_button` values:
+
+| value | passed at | headline today |
+|---|---|---|
+| `prepare` | `_workflow.py:106, 185, 226` | "Prepare session failed…" ✓ |
+| `activate` | `_workflow.py:263, 275, 353`; `_session_home.py:541` | "Activate session failed…" ✓ |
+| `close` | `_workflow.py:391, 410` | **"Activate session failed…"** ✗ |
+| `release_responses` | `_workflow.py:441` | **"Activate session failed…"** ✗ |
+| `stop_release` | `_workflow.py:478` | **"Activate session failed…"** ✗ |
+
+So an operator whose **Close session** fails its precondition is
+told *"Activate session failed at the pre-flight check"* — naming
+an action they did not take, on a session that is already
+activated. The error detail below it is correct, which makes the
+headline worse rather than harmless: the two disagree and the
+bold one is wrong.
+
+There is a second, quieter half. `_step_label_map` in the same
+block covers `generate` / `validate` / `activate` /
+`precondition`. `_workflow.py:411` passes `super_step="close"`,
+which the map does not carry, so that banner silently drops its
+step phrase. The template's `{% if super_failure.step in
+_step_label_map %}` guard means an unmapped step degrades
+quietly instead of rendering a raw enum — correct behaviour for
+an unknown value, and the reason this went unnoticed.
+
+Nothing is mis-routed and no state is wrong: the failure paths
+already carry the right `super_button`, and `_redirect_url`
+already forwards it. Only the label lookup is short.
+
+### Decision
+
+**A lookup keyed on `super_button`, beside `_step_label_map`,
+carrying all five values** — and `_step_label_map` gains `close`,
+`release` and `stop`. An unknown key falls back to a generic
+"Action failed" rather than to any named button, so the next
+value added to the vocabulary reads vague instead of wrong.
+
+Rejected: **extend the ternary to a five-branch chain.** It puts
+the vocabulary in an expression nobody greps, which is how it
+came to be two values behind in the first place.
+
+Rejected: **derive the label from the lifecycle state.** The
+state at redirect time is the state the action failed to leave,
+so it names the wrong action for exactly the failures that
+matter.
+
+Also to settle in this item: `_shared.py:351` documents
+`super_button` as *"`\"prepare\"` or `\"activate\"`"*, and
+`spec/workflow_card.md` says the same in four places (`:100-102`,
+`:140-141`, `:442-443`, `:663-665`). The spec, the helper's docstring and the
+template are all two values behind the routes — one vocabulary
+recorded in four places and updated in none.
+
+### Semantics
+
+- **Unknown or absent `super_button`** — headline reads "Action
+  failed"; the step phrase and error detail render as they do
+  today. No branch may fall through to a named button.
+- **Unknown `super_step`** — unchanged: the phrase is omitted,
+  the headline and error still render.
+- **`super_failure` absent** — unchanged: no signal line.
+
+### Blast radius (measured)
+
+```
+grep -rn "super_button" app/ --include=*.py   # 32 (11 call sites, 21 plumbing)
+grep -rn "super_failure" app/web/templates/   # 7, all next_action_card.html
+grep -rn "parse_super_failure" app/ tests/    # to re-measure at build
+```
+
+One template block, one view helper's docstring, one spec (four
+passages of it).
+
+### PR ladder
+
+1. The lookup + `_step_label_map` additions, a test per
+   `super_button` value asserting its headline, and the
+   `_shared.py` / `spec/workflow_card.md` vocabulary fix. One
+   slice — the map and the copy that documents it should not
+   land apart.
+
+### Definition of done
+
+- Each of the five `super_button` values renders its own
+  headline, asserted by a test that drives the real route.
+- An unrecognised value renders "Action failed" and names no
+  button.
+- `super_step="close"` renders a step phrase.
+- `spec/workflow_card.md` and `_shared.py:351` enumerate the
+  same five values the routes pass.
+
+### Open questions
+
+- **Copy for `release_responses` / `stop_release`.** The buttons
+  read "Release responses" and "Stop release"; the headlines
+  presumably match. **Decides:** the author, at build, unless
+  the button labels settle it.
+
+### Out of scope
+
+- The `super_*` query-param mechanism itself. It works; only its
+  vocabulary is short.
+
+### Doc impact
+
+- `spec/workflow_card.md` — enumerate all five `super_button` values in **all four** places the two-value vocabulary appears: the `super_failure` slot description (`:100-102`), the `parse_super_failure` helper note (`:140-141`), the Failure-handling redirect URL (`:442-443`) and the Workflow-failure signal section (`:663-665`); add the unknown-value fallback (Item 3).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — `NF-01` closes when this lands (Item 3).
+- `docs/status.md` — row when the item lands.
+
+### Status
+
+**Opened 2026-09-13**, logged for attention at the author's
+instruction. Found by the second-pass audit as `NF-01` — the only
+live user-facing defect in that register of 22. No code has
+moved.

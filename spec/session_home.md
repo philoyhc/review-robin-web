@@ -114,9 +114,10 @@ context that helps the operator decide whether to take it.
   page's single most important card and ties visually to the
   primary action it carries.
 - Card height grows to fit content. There's no fixed `min-height` —
-  early states (empty draft) read short; the Activated state's two-
-  section layout reads taller. Each state's vertical extent matches
-  its content rather than padding to a uniform frame.
+  early states (empty draft) read short; states carrying several
+  explanation paragraphs and a full button row read taller. Each
+  state's vertical extent matches its content rather than padding to
+  a uniform frame.
 
 **Body layout.** Two vertically-stacked blocks inside the card, the
 same in **every** state — there is no Activated-state exception:
@@ -249,8 +250,8 @@ Admin per-session audit-log page, never a tile here.
 **No lifecycle gate.** The card renders identically in every
 session state. Extraction is read-only and useful at every
 state — `draft` (sanity-check the configured artefacts),
-`validated`, `ready` (mid-flight responses snapshot), `closed`
-(final dataset).
+`validated`, `ready` (mid-flight responses snapshot), `expired`
+(final dataset) and `archived`.
 
 **Filenames** follow `{code}_{kind}.csv` (e.g.
 `CS101_reviewers.csv`) via `app/services/extracts/__init__.py::filename`.
@@ -491,10 +492,11 @@ action card doing the explanatory job.
 
 - The Workflow card's content is state-conditional. The card
   frame's constants are the H2 ("Workflow") and the
-  `--card-active-border` border; height grows to fit content. The standard
-  body / confirm / buttons stack handles every state except
-  Activated, which uses an inline two-section layout. Implement as
-  a single block in the template that switches body / confirm /
+  `--card-active-border` border; height grows to fit content. The
+  body / buttons stack above handles **every** state, Activated
+  included — there is no two-section exception, and
+  `.next-action-confirm` / `.next-action-divider` render nowhere.
+  Implement as a single block in the template that switches body and
   buttons by lifecycle state.
 - The empty-draft short-circuit (rosters not yet populated) is a
   special case computed in the route handler from
