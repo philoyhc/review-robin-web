@@ -128,9 +128,8 @@ check will ever look at (`close_check.py` reads only paths a plan
 python3 tools/close_check.py --stale --since <previous sweep date>
 ```
 
-Read the marked files first. Staleness is a prompt, never a finding: a
-spec untouched for 117 days may be perfectly correct, and
-`spec/blob_storage.md` is a deliberate stub.
+Read the marked files first. Staleness is a prompt, never a finding — an
+untouched spec may be perfectly correct, and some are deliberate stubs.
 
 **2. Dropped commitments.** A plan that named a spec and never edited it
 points straight at a page worth reading.
@@ -153,12 +152,9 @@ PY
 ```
 
 Most hits are legitimately cross-cutting (`architecture.md`,
-`ui_elements.md`, the visual-style pair, `rrw_functional_spec.md`) and
-some are deliberate — three specs were unmapped on 2026-09-05 for
-describing a model rather than a route. Read the list for the one that
-surprises you. Sizing a `CROSS_CUTTING` allowlist from several sweeps'
-worth of this list is what would decide Item 3's deferred orphan-spec
-test.
+`ui_elements.md`, the visual-style pair, `rrw_functional_spec.md`), and
+some are deliberate — a spec describing a model rather than a route maps
+to nothing. Read the list for the one that surprises you.
 
 **4. Dead cross-references** — backticked paths that no longer exist.
 
@@ -188,6 +184,20 @@ git diff --stat "$(git rev-list -1 --before=<previous sweep date> origin/main)".
 
 A bare date is not a git revision, hence the `rev-list` — `git diff
 2026-08-18..HEAD` fails.
+
+## Length
+
+A sweep record says what was **changed** and what was **found**, per file, and
+stops. Records have run past 800 lines; the reader of one is deciding whether to
+trust a file, not reliving the pass.
+
+- **One line per file** in sections 0–7, not a paragraph. If a file needs more,
+  it is a finding, and findings belong in their own register.
+- **A rule you re-expressed is worth a clause, not its derivation.** Say what
+  the constraint now is; the reasoning that got you there was the work, not the
+  record.
+- **Do not reproduce what you deleted.** The diff has it.
+- **What you could not verify** is a list, not an essay.
 
 ## What a sweep is not
 
