@@ -538,3 +538,267 @@ the rule uses `--card-active-border` / `--card-active-bg`),
 
 `reviewer-surface.md:145` says *(See "Form scope" below)*; the section is
 called "Form HTML mechanics".
+
+---
+
+## Batch record — Item 6, data IO and infrastructure
+
+Nine files. **`settings_inventory.md` 669 → 560; `email_template_editor.md`
+358 → 318.** `blob_storage.md`: **read, no finding** — 0 dated lines, 0
+provenance, 0 retirement language; its future-tense options ladder and the
+deferral itself are the document's subject.
+
+**The batch's own correction:** two edits reverted once §0a arrived, both
+because they had rewritten a contract to match the code (SC-01 and SC-09 in
+the findings register).
+
+### Compatibility constraints — the category that made this batch risky
+
+`settings_inventory.md` leads the corpus on retirement language largely
+because here **a dated note is usually a live tolerance, not provenance**.
+Each was kept and stated as an obligation:
+
+- **`field_labels.*` on input** must fall through to the unknown-key
+  silent ignore — *"dropping the tolerance would make every older bundle
+  fail to import for a row that carries nothing."*
+- **`instruments[n].display_fields[m].label`** — a dead column, still
+  tolerated and dropped on import; *"the import tolerance is what keeps an
+  older bundle importable."*
+- **`data_type` matched case-insensitively** — added as an explicit
+  obligation with its reason; this is what makes `String`- and
+  `DateTime`-cased bundles import.
+- **Data-shape chip rows** — a bundle missing either still imports
+  (`self_review_handling` → `include_self`, `include_empty_rows` → `True`),
+  and an unrecognized value falls back rather than failing the apply.
+- **`session_field_labels` identity slots** — `resolve` permissive on read,
+  `upsert` / `clear` strict on write; and the column is `VARCHAR(64)` with
+  no enum gate, *so that allowlist is the only validation layer.*
+- **The six column-visibility `localStorage` keys must not be renamed** — a
+  rename silently resets every operator's saved columns, which is why
+  Assignments says `col-visibility` where the rest say `tag-visibility`.
+- **Presence-inference fallback in rehydrate** — an older extract whose
+  `settings.csv` carries neither toggle still rehydrates, because the shell
+  session infers them from *file presence* before `apply` runs.
+
+### Absent subjects deleted — 3, each with the reason absence is real
+
+`settings_inventory.md` §4.5 (per-session RTDs: no model file, no table,
+and `_inline_min_length` / `_inline_max_length` at 0 occurrences) and §6
+(per-user RuleSets: five identifiers, all 0 live). The live *import
+tolerance* for `rtds[` rows lives in `csv_contracts.md` §3.3 and **was
+kept there**, so no input obligation was lost. And `csv_contracts.md`'s
+claim that a `manual` CSV path survives in `assignments.py` as a
+dev-diagnostic helper — 0 occurrences, and *"absence here is absence from
+the contract because this described a code helper, not an input the
+importer must accept."*
+
+### `roundtrip_coverage.md` treated as a coverage contract
+
+Every *"as of 18P PR A1/A2/B/C/D1/D2/E"* attribution came off 11 matrix
+cells, and a **changelog of completed work** went — six struck-through gap
+entries and four struck-through recommendations. **The ✅/❌ marks and their
+reasons are untouched.** A contradiction inside the file was resolved: its
+gap list said clone omits `relationships_enabled` / `observers_enabled`
+while its own matrix row said clone copies them, and `session_clone.py:120-121`
+copies both — the gap line went, the matrix stands.
+
+### Deferred is not past
+
+`email_infra_options.md` kept every Segment 14B Part A–H pointer, the whole
+Options A–D comparison, and the *"Not in scope"* rejections — **those are
+scope boundaries, not lost proposals.** Two outbox rows now name the code
+constants holding the value sets (`EMAIL_OUTBOX_STATUSES` /
+`EMAIL_OUTBOX_KINDS`) instead of the segment that added members.
+
+---
+
+## Batch record — Item 2, operator chrome and page surfaces
+
+Eight files. **5,467 → 4,782 lines (−685).** Dated lines **39 → 0**;
+provenance phrases **~60 → 0** (the one remaining grep hit is "used to
+revert", a false positive).
+
+**The batch re-did its earlier files after §0a**, and one of its own
+corrections is worth naming: it had written a header into
+`operator_button_audit.md` saying *"this is an inventory, not a contract —
+treat a contradicting row as the row being wrong."* **That inverts the
+authority §4 establishes**, and it was removed. The header now says each
+row names the role a control **must** carry, with `ui_elements.md` §6
+owning the definitions.
+
+### The largest single deletion in the sweep
+
+`operator_button_audit.md` (790 → 689) lost its whole dated header, a
+**"Was → Now" mapping table**, and a `45a63a6e` / *"false by lunchtime"*
+meta-paragraph — plus ~30 per-row segment tags. Its *"Drift /
+inconsistencies surfaced by the audit"* section, a list of findings marked
+resolved and superseded, was **retitled "Cross-page button conventions"
+and rewritten as six numbered rules** — which is the audit-to-contract
+conversion in miniature: *an audit's findings are provenance; an audit's
+rules are the contract.*
+
+Its maintenance note changed in the same direction: *"treat it as a
+snapshot, not a real-time index"* → **"a PR that adds, removes or restyles
+a button updates its row here in the same PR. A row and its control change
+together, or the row is prescribing something nobody built."**
+
+### Constraints re-expressed forward
+
+- **Section and row numbers are stable identifiers, not an ordering.**
+  Other documents cite them (`email_template_editor.md` cites §10), so a
+  new section takes the next free number and a later pass may flatten a
+  sequence only together with its citations.
+- **`Go to Archive` is unconditional and must stay so** — gate it on the
+  populated branch and an operator who archives every session *"loses
+  their only in-app route … their sessions are still there and
+  unreachable."*
+- **A page that renders the Workflow card carries no yellow `.card.lock`** —
+  which exempts Home and the Operations row and **does not** exempt the
+  Setup row, which renders no Workflow card.
+- **`is_ready` is the wrong predicate, and the failure mode is silent** — it
+  is true only in `ready`, so a control keyed to it stays live on
+  `expired` and `archived` while its route answers 409 or 303: *a page
+  offering a Save the server will refuse, with no yellow card to explain
+  why.*
+- **All four revert slugs must be in the route's allowlist**, or the revert
+  silently lands on Session Home.
+- **There is no paragraph ceiling, because a count is the wrong
+  instrument.** *"Five paragraphs that each answer one question a reader
+  has is shorter to read than two that bundle four subjects."*
+- **The roster-wide question must be answered by a query, not by scanning
+  rendered rows** — a surface that scans its own rows is wrong whenever the
+  cap or a filter bites, and *a tag populated only past the cap reads as
+  "no data".*
+- **Every rollup reads the session's response rows in one query**, with the
+  budget table re-cut as a **budget** (43 / 84 / 134 / 234 / 434) rather
+  than a before/after: *"Assignments stays flat at 43 at every size — its
+  `LIMIT 200` and its indexes are what hold it there, so a change that
+  drops either belongs in this table"*, and *"paging must not change any of
+  these counts."*
+- **Omitting a context key fails silently, not loudly** — Jinja's
+  `Undefined` is falsy in `{% if %}`, so *"check the second builder
+  whenever a key is added."*
+
+### Absent subjects deleted — 8 entries, each grep-verified
+
+The `session_edit.html` sub-page entry (no template; only a redirect
+function and two string references) — **and its `<!-- path-ref-ok -->`
+marker removed with it**, so `test_no_inline_path_marker_outlives_the_reference_it_covers`
+stays green. The `### …/edit — retired` section was **kept** (slimmed),
+because the 308 route is live and *"a page-by-page document that drops the
+entry invites the page being re-created."*
+
+Also: row 12a (`btn-cta`, 0 template users), rows 48 and 51 (Instruments
+bulk visibility toggles, 0 controls), §9c and rows 58–62 (the RTD card),
+rows 79–83 and 88–89 (Invitations / Responses bulk bars — replaced by the
+**prohibition**, plus a corrected per-row set, since the audit had
+"Remind" and omitted Regenerate), and §16 with rows 95–99 (Rule Builder
+page: no template, no route).
+
+**One deletion also retired the file's last `Primary Outline` occurrence
+and its `<!-- retired-term-ok -->` escape** — checked against
+`RETIRED_TERMS` in `test_doc_conventions.py` first.
+
+### Fifteen spec-vs-spec contradictions resolved
+
+Listed in the findings register under "Resolved by the sweep". The pattern
+worth noting: **most were a file contradicting itself**, and the rest were
+settled by the precedence rule rather than by preference — e.g.
+`operator_ui_concept.md` §5 said "five tabs" above its own six-row table
+and its own six-tab chrome diagram.
+
+---
+
+## Batch record — Item 1, the visual / token family
+
+Four files. **`ui_elements.md` 957 → 800**, and the headline number for the
+whole segment: **plan apparatus 86 → 0.**
+
+| file | lines | dated | apparatus | retired-token lines |
+|---|---|---|---|---|
+| `ui_elements.md` | 957 → 800 | 33 → 0 | 86 → 0 | 38 → 1\* |
+| `visual_style_rrw.md` | 850 → 838 | 9 → 0 | — | 20 → 0 |
+| `visual_style_general.md` | 225 → 225 | 0 | — | 61 → 61 (deliberate) |
+| `color_tokens.md` | 584 → 561 | 5 → 0 | — | 2 → 1\* |
+
+\*the remaining one is the **do-not-reintroduce constraint**, which has to
+name the retired token to forbid it.
+
+### The `visual_style_general.md` decision — 61 lines left untouched
+
+**Read, and deliberately not swept.** That file's own preamble already
+states the constraint forward: *"These are the design system's role names,
+not Review Robin's shipped token identifiers. This document is portable …
+They are deliberately not the identifiers in the app's CSS"*, with
+`color_tokens.md` named authoritative and an explicit note that it retires
+the flat vocabulary. *Renaming them would break the document's stated
+portability and contradict its own guard paragraph.* Its **only**
+history-shaped passage was "two-tier **since Segment 19C Item 6**".
+
+### Ship-state stripped after §0a — the largest single category
+
+Counts pulled out of contracts: *"no callers in app markup"*, *"no template
+uses it"*, *"33 as literal attributes … a plain `grep -c` returns 36"*,
+*"the app's eight `box-shadow` uses"*, *"flips all sixteen"*, *"151 uses
+across the templates"*, *"its Contrast panel lists all 73 pairs"*, *"nine
+other dark tokens resolve to it"*, *"six 1× shots and ten 2×"*. **And an
+authority inversion in the header** — a sentence making `base.html` *"the
+source of truth for values"* — removed.
+
+### Constraints re-expressed forward
+
+- **A hover value must be a token, never a literal** — *"a literal
+  near-white cannot follow the theme: it reads as a tint over the light
+  strips and a pale block over the dark ones."*
+- **A specialising rule must name `.btn-icon` in its own selector**, or it
+  loses on specificity wherever it sits (both test-read values kept).
+- **The help card's fill must never point at a border token** —
+  `--border-default` carries every bordered surface's boundary *"and so
+  has to be free to darken."*
+- **Do not bring back the range strip** — a window bounds the control's
+  width and leaves its reach at two pages per click.
+- **The row introduces no tile class of its own, and must not acquire
+  one.**
+- **2px card border, not 1px** — at 1px the card edge is visually
+  swallowed by the table grid lines and form borders beside it.
+- **There is no flat colour-named token, and one must not be
+  reintroduced** — *"a name that says blue cannot be remapped for dark, or
+  moved for contrast, without lying about what it is, which is the whole
+  reason the two tiers exist."*
+- **A label on a bright dark accent fill inverts rather than staying
+  white** — white on `--blue-glow` reaches only 2.54 on the hover pair.
+- **A collapse is not the only alternative to moving a value** — inverting
+  the *foreground* is a third move, and *"a rule that names only the
+  options it can see makes the unseen one look impossible."*
+- **A token with no consumer is not kept** — when a rule's last consumer
+  goes, its token goes in the same change; *"an orphan token reads as a
+  slot someone forgot to fill."*
+- **A new sub-AA pair fails the suite rather than joining a list** — the
+  accepted set is closed, and reopening it is a decision, not a fix.
+
+### Kept as uncertain — and one of them is a guard-shaped exception
+
+The **retired-pager-strip paragraph** is by default an absent subject (0
+rules, 0 markup — only `base.html` comments). **Kept**, because
+`test_pager_link_style.py::test_the_retired_strip_left_no_rules_behind`
+asserts those five selectors stay absent, so the paragraph's presence is
+what stops reintroduction. Recast as a prohibition rather than a
+retirement record.
+
+Also kept: the **in-place-swap rejection** (five paragraphs — the only
+statement of *not at all* rather than *not yet*), and §10's
+`.session-row-selected` row **whole**, because
+`test_lobby_row_selection.py` reads the rail width off that single line
+and splitting it risks the guard.
+
+### Verification the batch did on its own numbers
+
+It **recomputed 2.54 / 1.95 / 2.05 / 1.48 / 4.29 / 4.31 and the
+0.810–0.914 luminance band independently — all matched** — and says
+plainly that the remaining ratios were carried over unchanged rather than
+re-derived. *That distinction is what a "could not verify" list is for.*
+
+### One cross-reference repointed
+
+`color_tokens.md`'s *"See 'Card accents' above"* was pointing **forward**
+(line 304 → §Card accents at 410). Corrected to "below".
