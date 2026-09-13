@@ -28,9 +28,116 @@ and put it back". *Those reverts are the most load-bearing thing in this
 document: without the correction, nine contracts would have been silently
 demoted to descriptions of the code.*
 
+## OPEN — what still needs a decision, and what needs doing
+
+**26 of 74 resolved. 48 open.** This section is the one to read; everything
+below it is the evidence.
+
+| what it needs | ids | count |
+|---|---|---|
+| **a ruling from the author** — which side is right | `SC-05`…`SC-36` | 32 |
+| **a contract decision** | `SS-01`, `SS-02` | 2 |
+| **code, no decision** — a comment or a dead mapping | `CC-01`…`CC-11` | 11 |
+| **code, no decision** — a guard | `SI-07` | 1 |
+| **prose, no decision** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
+
+### The 32 `SC` rows need one ruling each, and they group
+
+`SC-01`…`SC-04` took one line — *"update spec/comments; code is correct"* —
+and the rest divide the same way. **My read is offered so they can be ruled
+in batches rather than thirty-two times**, and it is a read, not a finding:
+
+**(a) The code looks intended and the spec is stale** — the `SC-01`…`SC-04`
+shape. `SC-05` (a test pins the code's heading format *while citing the
+spec section it contradicts*), `SC-06` (a route path — and *a URL is
+contract*, so whichever wins, one must move), `SC-08` (`decode_csv`'s
+signature), `SC-09` (`assignment_mode` admits only `rule_based`), `SC-10`
+(`/edit` is a 308, not a page), `SC-11` (Band 3 names a type vocabulary the
+code replaced), `SC-12`/`SC-16` (button labels, a pill colour), `SC-18`/`SC-19`
+(a preview route, an identity-match mechanism), `SC-22` (a sixth Operations
+tab), `SC-25` (eight vs twelve Guide sections), `SC-29` (an RTD section the
+exporter never emits), `SC-30`…`SC-33` (visual-layer tokens — `SC-33`,
+`.pill-success` resolving to `-accent` where every other pill uses `-fg`, is
+**probably a code bug**).
+
+**(b) The spec states a requirement the code has not met** — here the spec
+is working, and the question is whether to build or to retire. `SC-13`
+(`max-width`/ellipsis on page buttons), `SC-14` (Enter / Shift+Enter column
+navigation — *no `keydown` handler exists on that surface at all*), `SC-20`
+(a per-artifact "Send test to…" affordance), `SC-21`/`SC-34` (a Next Action
+button and a `.next-action-confirm` that render nowhere), `SC-23` (an
+Activated-state layout exception), `SC-35` (a `placeholder_card` macro with
+no callers).
+
+**(c) A real judgement, where neither side is obviously right.** `SC-07`
+(seeded RuleSets are re-emitted, which the spec says would trip
+`uq_session_rule_set_session_name` on re-import — *a round-trip stability
+claim, so this one may be a live bug*), `SC-15`/`SC-17` (a flag and a helper
+signature where the spec also contradicts itself), `SC-24` (a gate the
+template applies and the spec does not), `SC-26`/`SC-27` (the `include` seed
+and `reconcile_impact`'s shape — in `SC-26` **the code is right and the spec
+is incomplete**, in `SC-27` the reverse), `SC-28` (where the operator is
+sent to regenerate), `SC-31` (a status-strip fill no spec accounts for),
+`SC-36` (orphan CSS — cleanup, not a contract).
+
+*`SC-07` is the one I would look at first, because a round-trip that trips a
+unique constraint on re-import is a defect rather than a documentation
+question.*
+
+### The 2 `SS` rows
+
+- **`SS-01` — five validation severities.** `validate_page.md` agrees with
+  the code; the per-page specs do not. **Two are specified as errors where
+  the code warns, and as errors they would block activation**, so the
+  direction matters. My read: `spec/README.md`'s precedence rule gives the
+  subsystem spec authority, so the per-page lists are what to correct — but
+  that is an error → warning downgrade in two live specs, which is a
+  deliberate contract change. **All five untouched.**
+- **`SS-02` — observer cohort rules.** Already **resolved by editing**
+  `rehydrate.md`, because its pointer named text the sweep removed. It is
+  the one spec-vs-spec conflict the sweep settled rather than reported, and
+  it wants confirmation rather than work.
+
+### The 11 `CC` rows and `SI-07` need code, not a decision
+
+`CC-01` (a `SessionStatus` docstring calling two written states "reserved"),
+`CC-02` (a dead 409 mapping — **verified as a deliberate retirement**, so
+this is dead-matter removal), `CC-03`/`CC-05`/`CC-11` (docstrings naming a
+dropped table, dropped sections, and a shipped PR as pending), `CC-04` (a
+named constant that does not exist), `CC-06` (a window documented as a date
+range where the behaviour is a status check), `CC-07` (**two code comments
+disagreeing with each other** about which segment did the work), `CC-08` (a
+segment name), `CC-09` (retired token names inside `base.html`'s own
+comments — including the pre-19B button vocabulary the doc guard bans in
+prose but cannot see in CSS), `CC-10` (a docstring listing 3 of the 5 error
+codes it raises).
+
+**`SI-07`** is the query budget: 43 / 84 / 134 / 234 / 434, presented as
+*"measured through the real routes"*, **pinned by nothing** — the related
+test only asserts relative growth under 2.5×. Rewording it would be
+theatre. *A guard is the right answer and a guard is code.*
+
+### The 2 prose rows
+
+`SI-08` — restore the fact that the Quick Setup per-slot endpoints have **no
+live caller** (0 template hits), which went out with an unverifiable
+*"retained for fixture compatibility"*. `SI-10` — give the `rtds[` import
+tolerance its own bullet, since the enforcement is unconditional and
+stronger than its documentation.
+
+### One structural question, not a finding
+
+**`role_landing_and_visibility.md` may be a `docs/` document living in
+`spec/`.** Its own opening answers *"given my role … what do I see"*, which
+is `docs/`'s question. Moving it is a contract decision, and
+`tests/unit/test_spec_coverage.py` maps routing modules to governing specs,
+so it is not a file rename.
+
+---
+
 ## The tally
 
-**75 findings**, counted by distinct id rather than asserted:
+**74 findings**, counted by distinct id rather than asserted:
 
 | kind | count | what it is |
 |---|---|---|
@@ -38,11 +145,11 @@ demoted to descriptions of the code.*
 | **CC** | 11 | two code comments disagree, or one names something absent |
 | **SI** | 10 | one spec contradicts itself |
 | **ID** | 8 | a spec names an identifier that does not exist |
-| **SS** | 6 | two live specs disagree |
+| **SS** | 5 | two live specs disagree |
 | **DT** | 4 | documentation that describes its own tooling imprecisely |
 
-*Recount before quoting this number.* It was published as 64 and grew to
-75 as the verification passes reported, and nothing renews a count —
+*Recount before quoting this number.* It was published as 64, grew to
+75 as the verification passes reported, and is **74**, and nothing renews a count —
 which is the defect this whole segment exists to remove, so a register
 carrying one had better be honest about it. The command:
 
@@ -236,7 +343,7 @@ named text the sweep removed. **This is the one spec-vs-spec conflict the
 sweep resolved by editing rather than reporting; flagged for
 adjudication.**
 
-### SS-03 · Others, left standing
+### Others, left standing
 
 | id | conflict | left |
 |---|---|---|
