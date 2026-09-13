@@ -453,16 +453,16 @@ Detailed layout contract — control order within the row, the navigation cluste
 Three persistent guarantees the chrome makes regardless of layout details:
 
 - **Tab order** matches whatever order the operator configured in the Instruments Setup page. Reviewers can't reorder; the order is the session's.
-- **Free movement between pages.** The reviewer can switch pages at any time, in any order. The dirty buffer carries across page switches so they don't lose typed-but-not-saved values.
+- **Free movement between pages.** The reviewer can switch pages at any time, in any order. **Unsaved typing does not survive the move** — a page change is a server round-trip, there is no dirty-tracking and no `beforeunload` guard, so `Save` before navigating is the reviewer's responsibility (`spec/reviewer-surface.md`, Prev / Next row and "Dirty-state"). Restoring typed-but-unsaved values across a page change is a real improvement and is not built.
 - **No page is "locked" by another page's completion.** The reviewer can fill instruments in any order.
 
-**When there is only one instrument**, the page buttons don't render. A single-instrument session shows just the page header, action rows, and the form — the per-page status pill in the right-half status panel ("Page 1: …") is the only signal that pages exist as a concept.
+**When the session runs to a single page**, the navigation cluster doesn't render — the action row carries only Save / Cancel / Submit. The per-page status pill in the right-half status panel is then the only signal that pages exist as a concept. (The pill's label is `#{N} {short_label}`, or bare `#{N}` — note it uses a space where the per-instrument H2 uses `#{N}: {short_label}`.)
 
 ##### Per-reviewee navigation within an instrument
 
-A separate concern: within a single instrument, the reviewer evaluates multiple reviewees. **This is rendered as a table — every reviewee on one page, one row per reviewee.** No per-reviewee paging, no sidebar drill-down. See "Response form layout and instrument pacing" below for the canonical principle and rationale; pacing across cohorts is handled by splitting into multiple instruments (i.e. multiple page buttons), not by paging within an instrument.
+A separate concern: within a single instrument, the reviewer evaluates multiple reviewees. **This is rendered as a table — every reviewee on one page, one row per reviewee.** No per-reviewee paging, no sidebar drill-down. See "Response form layout and instrument pacing" below for the canonical principle and rationale; pacing across cohorts is handled by splitting the work across pages, not by paging within an instrument.
 
-The chrome stops at the page button row; what happens *inside* the form (table layout, sticky headers, keyboard navigation, auto-save) is the response-form component's concern — see "Large-table ergonomics" below.
+The chrome stops at the action row; what happens *inside* the form (table layout, sticky headers, keyboard navigation, auto-save) is the response-form component's concern — see "Large-table ergonomics" below.
 
 #### Submission confirmation
 
@@ -574,8 +574,9 @@ A single canonical response form layout means:
   sessions and review types.
 - The Setup-side and reviewer-side share one model; what the
   operator builds is what the reviewer sees.
-- The chrome (page button row, persistent affordances) is stable
-  and well-defined; no mode-dependent variants.
+- The chrome (action row, page navigation, persistent
+  affordances) is stable and well-defined; no mode-dependent
+  variants.
 - Future variations (different review types, embedded scenarios,
   audience extensions) sit alongside this pattern as separate
   features rather than as toggles within it.
@@ -593,7 +594,7 @@ calibrating across rows.
 **Multiple contexts, same reviewer pool** — reviewers evaluate one
 group of people on technical criteria and a slightly different
 group on collaborative criteria. Two instruments, two pages, two
-tables. The page buttons carry the context switch; each table is
+tables. Page navigation carries the context switch; each table is
 appropriately sized to its scope.
 
 **Large global cohort, small per-reviewer scopes** — 1,000 people
@@ -672,10 +673,10 @@ navigation"; restating in this principle's context:
   The system handle `Instrument.name` is **not** reviewer-facing
   — it carries audit-event copy and is otherwise invisible.
 - **The per-instrument heading carries the operator's framing.**
-  `short_label` reaches the reviewer through the H2 above each
-  table and nowhere else — the navigation cluster shows only
-  `Page {N} of {M}`, which grounds position without naming
-  content. The H2 reads `#{N}: {short_label}` on a multi-instrument
+  `short_label` reaches the reviewer in two places, neither of
+  them a control: the H2 above each table, and the per-page status
+  pill's label. The navigation cluster shows only `Page {N} of
+  {M}`, which grounds position without naming content. The H2 reads `#{N}: {short_label}` on a multi-instrument
   session and bare `{short_label}` on a single-instrument one
   (no `#1:` prefix needed when there is only one). Note the
   composed form is `#{N}:`, not `Page #{N}:`. "#1: Round 1" /
@@ -694,17 +695,17 @@ navigation"; restating in this principle's context:
   The full composition table lives on that dataclass.
 - **`short_label` length constraint.** **`Instrument.short_label`
   is capped at 32 characters** — `String(32)` on the column, with
-  the check in `instruments/_instrument_crud.py`. The reviewer
-  surface renders it in the per-instrument H2, not on a control, so
-  the cap is about keeping a heading to one line rather than about
-  fitting a button. This is a Setup-side responsibility; the
-  reviewer surface trusts the value it's given
-  (`spec/instruments.md`). The cap is the whole of the defence —
-  `base.html` carries no `text-overflow` declaration, here or
-  anywhere.
+  the check in `update_short_label`
+  (`instruments/_instrument_crud.py`). The cap is a Setup-side
+  responsibility and the reviewer surface trusts the value it's
+  given (`spec/instruments.md`). **No rationale for 32 is recorded
+  anywhere**, and nothing downstream depends on it: the cap is the
+  whole of the defence — `base.html` carries no `text-overflow`
+  declaration and no single-line constraint on the H2, here or
+  anywhere — so a longer label would wrap rather than break.
 - **Per-page status pills** (per "Multi-instrument navigation")
   live in the right-half status panel above the action rows, not
-  on the page buttons themselves. The panel always renders (one
+  in the navigation cluster. The panel always renders (one
   pill per instrument) so the reviewer sees the shape of their
   remaining work at a glance, regardless of which page is visible.
   Within an instrument, completeness is a property of the table
@@ -822,7 +823,8 @@ there, and still open design notes:
 - `spec/audience_and_identity_model.md` — the audience and surface
   philosophy the principle here serves.
 - "Multi-instrument navigation" (above in this document) — the
-  chrome around the response form, including the page button row.
+  chrome around the response form, including the action row and
+  its page-navigation cluster.
 - `spec/reviewer-surface.md` — the multi-instrument-aware response
   surface spec; the URL pattern, page anatomy, form scope, and
   per-page status pills implementing this principle on the live

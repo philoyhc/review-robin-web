@@ -1231,12 +1231,14 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands as the per-instrument
-  **H2 title**, composed per the table in "Above the table — heading
-  + help block": `#{N}: {short_label}` on a multi-instrument session,
-  bare `{short_label}` on a single-instrument one. It reaches no
-  control. Capped at 32 characters at the schema layer so the
-  heading stays on one line.
+  operator's reviewer-facing framing. Lands in two places, neither
+  of them a control: the per-instrument **H2 title**, composed per
+  the table in "Above the table — heading + help block"
+  (`#{N}: {short_label}` on a multi-instrument session, bare
+  `{short_label}` on a single-instrument one), and the **per-page
+  status pill** label (`#{N} {short_label}` — a space, not a colon;
+  see "Per-page status"). Capped at 32 characters at the schema
+  layer; no rationale for that number is recorded.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2
   title above each table.
