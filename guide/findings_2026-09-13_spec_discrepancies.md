@@ -11,12 +11,12 @@ quietly rewrite the spec to match**. So every divergence became a finding
 instead of an edit. This is that register: one table, every finding, resolved
 rows struck through with what the fix was.
 
-**27 of 82 resolved. 55 open.**
+**27 of 83 resolved. 56 open.**
 
 | what the open rows need | ids | count |
 |---|---|---|
 | **a ruling** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
-| **a contract now ruled** — assignments are always generated, planned in `guide/segment_19N_generated_assignments.md` | `SC-37`…`SC-42` | 6 |
+| **a contract now ruled** — assignments are always generated, planned in `guide/segment_19N_generated_assignments.md` | `SC-37`…`SC-43` | 7 |
 | **a contract decision** | `SS-01`, `SS-02`, `SS-07` | 3 |
 | **code** — a comment or a dead mapping | `CC-01`…`CC-12` | 12 |
 | **code** — a guard | `SI-07` | 1 |
@@ -101,6 +101,7 @@ code, the other spec, or the other comment.
 | `SC-40` | `rehydrate.md` §9 | *"no response is lost"* on a restore | **false for group-scoped rows.** `responses_import.py:295-313` warns and skips when a group identity does not resolve or its regenerated group has no member assignments — and `ResponseLoadResult.warnings` is **surfaced nowhere**: not in the `session.rehydrated` audit counts, not to the commit route, not to the operator. The restore commits and the responses are gone | **Code, and the most serious row here.** Silent data loss on a restore path, present today and independent of `SC-37`. Found by the Codex review on #2358, verified here. **Closed by the same mechanism as `SC-37`** — 19N behaviour (4) drops these rows into the operator's dropped-responses CSV rather than warning into a void |
 | `SC-41` | the contract: `manual` is not reachable | `assignment_mode` only ever `rule_based` | `session_clone.py:107` copies `assignment_mode=source.assignment_mode`, so a session carrying a pre-16A `manual` propagates it into every clone. A clone also carries no assignments, so the mode describes a generation that did not happen | **Code.** `SC-09` cannot close on a spec edit alone — the ladder needs a normalization step (reset legacy modes to `None`). Found by the Codex review on #2358, verified here |
 | `SC-42` | the author's contract — *"individual rows can be turned inactive, and that's the extent of operator manual work **and export import round trip**"* | inactivation survives the round trip | `Assignment.include` is carried by no export and reset to `True` whenever assignments regenerate; `rehydrate.md` §9 admits it. There is no assignments extract at all | **Deferred by the author, 2026-09-13** — *"include should round trip but leave that as future improvement. For now, round trip will not include assignment row status."* Registered so the gap is a recorded decision rather than an oversight; 19N behaviour (4) is what makes deferring it safe, since an inactivated pair's responses are no longer invented a home |
+| `SC-43` | `session_home.md` / the Next Action card's intent | a pre-Validate Generate nudge exists for the operator | `compute_next_action_generate_state` (`views/_assignments.py:308`) is **called by nothing in `app/`** — exported from `views/__init__.py` and exercised only by tests. `15B` Slice 4 wired it; `1a5b8608`, *"strip Home route validated plumbing and unused imports"*, unwired it, and nothing noticed. `page_ctx.any_stale` exists solely to feed it | **Decide: wire or retire.** Surfaced by 19N slice 1 — restoring staleness made the resolver's `"generate"` branch reachable *in tests*, which is what exposed that it is reachable nowhere else. The staleness signal itself ships on two live surfaces (the per-instrument pill and the Validate warning), so this is an extra affordance rather than a gap in the signal |
 | `SS-01` | the five validation severities | `instruments.no_fields` error; `no_display_fields` warning; `zero_included` warning; `assignments.no_included_pairs` warning; `reviewer_missing` warning — `validate_page.md` **agrees with the code** | `instruments.md` and `assignments.md` say warning / info / error / error / error | **Contract decision.** `spec/README.md`'s precedence rule gives the subsystem spec authority, so the per-page lists are what to correct — but **two are specified as errors where the code warns, and as errors they would block activation**. All five untouched |
 | `SS-02` | `rehydrate.md` §9 | cohort rules are not restored; the observers CSV carries only Email/Name/Tag1/Status | `csv_contracts.md` §3.2b and `roundtrip_coverage.md` say `CohortRule` round-trips, and the code agrees: `observers_extract.HEADER` includes it, `csv_imports.py:532-572` re-validates through `CohortRuleSet` | **Wants confirmation.** The rehydrate bullet **was edited** — its pointer named text the sweep removed. The one spec-vs-spec conflict the sweep settled rather than reported |
 | ~~`SS-04`~~ | `operator_button_audit.md` §1 | 11 nav tabs, omitting **Observers** and **Extract data** | both required by `operator_ui_concept.md` | **Fixed** — added as chrome rows **12 and 13**, appended rather than slotted, because that file states its own rule that numbers are stable identifiers other documents cite |
@@ -150,7 +151,7 @@ longer exists.
 
 ## The tally
 
-**82 findings**, counted by distinct id rather than asserted: `SC` 42, `CC` 12,
+**83 findings**, counted by distinct id rather than asserted: `SC` 43, `CC` 12,
 `SI` 10, `ID` 8, `SS` 6, `DT` 4.
 
 *Recount before quoting this number.* It was published as 64, grew to 75 as the

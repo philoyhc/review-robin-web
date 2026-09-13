@@ -876,10 +876,14 @@ Generate without changing anything is a no-op.
 
 An instrument is **stale** when it has materialised rows and a
 regeneration would insert or delete at least one pair — the pinned rule
-changed, or the rosters or relationships moved after Generate. The page
-carries a `stale` pill per instrument and a "Pairs may be stale" badge
-when any is; `instruments.stale_generated` raises a matching warning on
-Validate, and the Next Action card offers Generate.
+changed, or the rosters or relationships moved after Generate.
+
+**Two surfaces carry it:** a `stale` pill beside the instrument's
+Generated count on this page, and an `instruments.stale_generated`
+warning on Validate naming each affected instrument. There is no
+page-level badge, and no Next Action affordance — the pre-Validate
+Generate resolver that once consumed the session-wide aggregate is not
+wired to any route.
 
 **The verdict is the engine's own diff**, not a comparison of counts.
 Two properties follow, and both are the contract rather than an

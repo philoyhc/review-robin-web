@@ -71,13 +71,12 @@ class InstrumentStatusBlock:
       ``include=True``. Drives the **Included** column pill on the
       Assignments page status table; lags ``generated_count`` when
       individual rows (e.g. self-reviews) have been deactivated.
-    - ``is_stale`` — **always ``False``.** The staleness comparison
-      needed a per-rule eligible count, and the helper that supplied
-      it went with the rule-set library, so nothing can populate it.
-      Kept as a field rather than removed because the status block is
-      constructed positionally in several places; see the comment at
-      its assignment below for why forcing ``False`` is safer than
-      computing it from what remains.
+    - ``is_stale`` — the instrument has materialised rows and a
+      regenerate would insert or delete at least one pair. Read from
+      the engine's reconcile diff, so it cannot disagree with what
+      Generate would do. Never-generated instruments read ``False``:
+      a run would insert their whole fan-out, and an always-on badge
+      is one the operator learns to ignore.
     - ``edit_url`` — deep link to the matching Instrument card.
     """
 
@@ -109,10 +108,13 @@ class AssignmentsPageContext:
       non-NULL ``rule_set_id``. Drives the disabled state on the
       page-level Generate button (zero pinned ⇒ disabled with
       "Pin rules on the Instruments page first" nudge).
-    - ``any_stale`` — whether any instrument's materialised rows have
-      fallen out of step with what the engine would produce now.
-      Drives the "Pairs may be stale" badge and the ``"generate"``
-      next-action state below.
+    - ``any_stale`` — whether any instrument is stale. **No live
+      consumer:** no template reads it, and the only caller is
+      :func:`compute_next_action_generate_state` below, which is
+      itself wired to no route. Kept because the aggregate is free
+      once the per-instrument walk has run, and because the resolver
+      is a decision to make rather than dead weight to delete
+      silently — see the findings register.
     - ``instruments_url`` — deep link to the Instruments page,
       surfaced on the Generate disabled-state nudge.
     """
