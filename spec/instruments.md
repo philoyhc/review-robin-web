@@ -858,9 +858,14 @@ Bottom row of the card, right-aligned, in this order:
 - **No assignment rows.** A new instrument starts with none, in a
   generated session as much as an empty one, and gets its pairs from the
   next Generate — assignments are only ever written by the rule engine
-  (`spec/assignments.md`). Until then the Assignments page reports the
-  instrument as not generated and flags the session **stale**, which is
-  the prompt to regenerate.
+  (`spec/assignments.md`). Until then the Assignments page reports it as
+  **not generated**, and `assignments.instrument_empty` raises it on
+  Validate. It does **not** read as *stale*: staleness means
+  materialised rows that have fallen out of step, and a never-generated
+  instrument has none — see `spec/assignments.md` "Staleness". Adding an
+  instrument does not make its siblings stale either; their pairs depend
+  on their own rule and the rosters, neither of which a new instrument
+  changes.
 
 ### `Replicate` semantics
 
