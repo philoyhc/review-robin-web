@@ -777,6 +777,12 @@ grep -c '^| ID-' guide/findings_2026-09-13_spec_discrepancies.md   # 8  (Item 7)
 grep -c '^| SI-' guide/findings_2026-09-13_spec_discrepancies.md   # part of 10 (Item 8)
 ```
 
+*These two commands return 0 against the register as it stands.* It was
+restructured into one grouped table after Item 10 closed, and an actioned row
+is now struck through (`| ~~`ID-01`~~ |`). The counts above are as of
+`83282ddb` and the id-counting command in the register's own tally section is
+the one that still works.
+
 **Item 7's eight ID rows touch six spec files.** Six are the retired
 color vocabulary (`accent-*`, `text-primary`, `bg-page`, `surface-2`,
 `text-muted` — all **0** definitions in `base.html`); two are other wrong
