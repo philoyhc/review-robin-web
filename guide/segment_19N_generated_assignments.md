@@ -82,6 +82,10 @@ Decisions confirmed at build:
 - **The first gate test passed for the wrong reason** — an unauthenticated request returns 401 before the gate runs, so a naive "not 200" would have proved nothing. The guard now uses an authenticated client.
 - **A mutation run was invalidated by `git checkout`**, which reverted the uncommitted work along with the mutation; two mutations then "passed" against a codebase with no gate. Re-run from an in-memory copy: 5/5 caught, each by the single test that should catch it. This is verbatim the lesson 19K recorded.
 
+**2026-09-13, slice 6 — the two stale `_generate.py` docstrings, and five false claims of my own.** Closes `CC-04`. Both paragraphs still said unpinned instruments are "skipped silently", describing pre-5.3 behaviour; both also claimed scoped generation "raises `ValueError` if the instrument has no rule pinned", which no code does — the only `ValueError` is *not found in session*. **Three of the five corrections were in prose this slice had just written**, caught by the spec-writer pass, not by me: a rewritten opening that contradicted its own next sentence, a zero-targets note describing a gate that no longer exists, and a `docs/status.md` value list reading as three current values when `AssignmentMode` has one member. The provenance paragraph I had added — *"this said X until Segment 19N"* — went too; a docstring recording what it used to say is history, and the reason survives without it.
+
+*Third time in one segment that the error was the same shape and the checker found it. The shape is now specific enough to name: **prose written from the surrounding prose rather than from the file it describes**, which is exactly what the spec-writer brief warns about, and my rewrites are no more exempt than the code's.*
+
 ### PR ladder
 
 Slices, in dependency order. Sizes to be confirmed when each is cut.
