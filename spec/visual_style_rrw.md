@@ -327,7 +327,7 @@ No breadcrumb is needed; the page hierarchy is too shallow. The H1 and the user 
 This page is the operator's "lobby" and is the natural landing page when signing in or returning from a session. It deserves slightly more care than other non-session pages, but uses the same chrome.
 
 - **H1:** "Sessions" or "My Sessions".
-- **Body:** A v2 table inside a single `.card`. Columns:
+- **Body:** A table inside a single `.card`. Columns:
   - **Session Name** — linked to that session's Home. The name is the row's primary affordance; there's no separate Access button.
   - **Session Code** — rendered in `<code>`.
   - **Deadline** — `.pill.pill-info` carrying the ISO date when set; plain muted "No deadline" when unset.

@@ -3,12 +3,9 @@
 Answers one question from the reader's side: **given my role — or my
 lack of one — can I sign in, where do I land, and what do I see?**
 
-Every table below is **recorded from a running app**, not derived from
-reading the routes: a fresh database seeded with one session in each of
-the five lifecycle states, a full roster on each, and one signed-in
-persona per row driving the real Easy Auth header path. A row that
-surprises its reader should be re-observed the same way rather than
-reasoned about from the routes.
+Every table below is stated per role and per lifecycle state, at the
+granularity a reader can act on: a session in each of the five lifecycle
+states, a full roster on each, and one signed-in persona per row.
 
 **What this file is not.** The authorization *contract* — which gate
 guards which route, and with what status code — is
@@ -82,13 +79,13 @@ still lands on the lobby.
 | Operator + reviewer | `operator`, `reviewer` | both sets — roles union |
 
 **A viewer who resolves no audience gets no sections — not every
-section.** The tempting fallback is the other way round: the Guide
-carries no session data, so an empty page seems to serve nobody. It
-does not survive the comparison it implies — a union of all four
-audiences shows a stranger *more* of the Guide than any role-holder
-sees, while a reviewer sees one section. `visible_audiences` returns
-the empty set and `routes_guide` turns it into the bounce below, so the
-resolver stays pure.
+section.** The opposite fallback is tempting, since the Guide carries no
+session data and an empty page seems to serve nobody, but it does not
+survive the comparison it implies: a union of all four audiences shows a
+stranger *more* of the Guide than any role-holder sees, while a reviewer
+sees one section. `visible_audiences` returns the empty set and
+`routes_guide` turns it into the bounce below, so the resolver stays
+pure.
 
 `/about` rather than a 404 because the chrome offers the Guide link to
 everyone, and refusing a link the app itself rendered is a worse answer
@@ -267,13 +264,15 @@ archived session is not expired, so both window predicates return
 archived session whose release anchor is in the past resolves a live
 grant again — `"raw"`, on a policy authored for the observer audience.
 
-So the view carries an `is_archived` short-circuit
-(`ObserverCollationContext(sections=[], cohort_empty=False)`) as
-**defense in depth**, and
-`tests/unit/test_observer_archive_short_circuit.py` pins it by
-monkeypatching exactly that relaxation — the only condition under which
-the line is observable at all. **It is not dead code**: every other test
-of the rule passes with the short-circuit deleted.
+So the view states the rule locally: an `is_archived` short-circuit
+returning `ObserverCollationContext(sections=[], cohort_empty=False)`,
+as **defense in depth**. `cohort_empty` must be `False` there —
+`True` renders "No cohort is configured for you yet", blaming the
+operator for something that is configured.
+`tests/unit/test_observer_archive_short_circuit.py` pins the
+short-circuit by simulating that relaxation, which is the only
+condition under which it is observable at all. **It is not redundant
+with the window predicates, and must not be removed as though it were.**
 
 **Sign-in is open to the whole tenant** (§1). If the intended posture is
 that only allowlisted operators and rostered participants may sign in,

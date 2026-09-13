@@ -3,8 +3,15 @@
 The app's colour system is **two-tier**, defined in `app/web/templates/base.html`'s
 `:root` blocks. **Tier 1 primitives** hold the raw palette; **Tier 2 semantic**
 tokens name every role and are the *only* thing components and templates consume.
-The former flat colour-named tokens (`--accent-blue`, `--bg-page`, …) are fully
-retired. This document is the catalogue; the design + rationale live in
+
+**There is no flat colour-named token.** `--accent-blue`, `--bg-page` and their
+kind are not part of the model and must not be reintroduced: a name that says
+*blue* cannot be remapped for dark, or moved for contrast, without lying about
+what it is — which is the whole reason the two tiers exist. Where a document
+uses those names it is naming a design *role*, not a token
+(`spec/visual_style_general.md`).
+
+This document is the catalogue; the design rationale is in
 `guide/archive/semantic_tokens.md`.
 
 Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
@@ -160,27 +167,21 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 **`--border-default` is the only row that maps to the same primitive in both
 themes**, and that is deliberate. It carries the whole boundary of every
 bordered surface — inputs and cards fill with `--surface-page`, so the fill
-contributes nothing and the border is the entire delineation. At its previous
-values it measured **1.47:1** light and **1.95:1** dark against that surface,
-under the **3:1** WCAG 1.4.11 asks of a UI-component boundary, and light was
-the worse of the two. `--slate-dim` is the one existing primitive that clears
-3:1 in both themes near-symmetrically (**4.29:1** light, **4.31:1** dark), so a
-single primitive serves both columns. Changed in Segment 19C Item 8; the
-options weighed, including per-theme primitives at an exact 3:1, are in
-`guide/archive/segment_19C_refinements.md`. *(That plan, and this line
-until 19K.7, gave the dark figure as 1.70. It does not reproduce:
-`--slate-deep` `#3a465c` on `--ink-abyss` `#0f141b` is **1.95:1**, which
-is what this document already computed for the same pair under "Card
-accents" below. The light figure, 1.47, reproduces exactly.)*
+contributes nothing and the border is the entire delineation. **It is held to
+the 3:1 WCAG 1.4.11 asks of a UI-component boundary**, and a light grey cannot
+meet that: a pair at `--gray-soft` / `--slate-deeper` measures **1.47:1** light
+and **1.95:1** dark against that surface, with light the worse of the two.
+`--slate-dim` is the one primitive that clears 3:1 in both themes
+near-symmetrically (**4.29:1** light, **4.31:1** dark), so a single primitive
+serves both columns. The options weighed, including per-theme primitives at an
+exact 3:1, are in `guide/archive/segment_19C_refinements.md`.
 
 Two consequences worth knowing. `--decor-muted` also resolves to `--slate-dim`
 in dark, so the border and the decorative dividers share a value there — they
-are independently mapped, not coupled, and either can move alone. (It was
-`--text-dim` that shared it until 19K.7 retired that token; see **The AA floor
-on text** below.) And `--marker-neutral` keeps
-`--gray-soft` / `--slate-deep`, which it now has to itself: repointing
-`--border-default` rather than editing those primitives is what left the
-neutral nav-tab markers where they were.
+are **independently mapped, not coupled**, and either can move alone. And
+`--marker-neutral` has `--gray-soft` / `--slate-deep` to itself: repointing
+`--border-default` rather than editing those primitives is what keeps the
+neutral nav-tab markers where they are, and is the move to repeat next time.
 
 ### The AA floor on text
 
@@ -192,13 +193,13 @@ than the likely one: which surface a label lands on is a template's
 choice, and the worst light surface is `--surface-tint-5` (`#fff1f2`),
 not `--surface-muted`.
 
-Set at 19K.7, which collapsed the two muted tiers into one.
-`--text-dim` (`#9ca3af`, **2.31:1** at worst) is **retired**: its text
-uses took `--text-subtle`, which moved from `#6b7280` to `#616874` to
-clear the floor itself — **3.90:1** at worst before, **4.53:1** after
-— by way of the `--slate` primitive, whose only other consumer is
-`--btn-secondary-border` (a boundary, held to 3:1, and improved from
-4.83 to 5.61 by the same edit).
+**There is one muted text tier, not two.** A second one
+(`--text-dim`, `#9ca3af`) sits at **2.31:1** at worst, under the floor,
+and two muted tiers whose difference nobody could state are not worth
+keeping once one of them has to move. Muted text takes `--text-subtle`
+by way of the `--slate` primitive (`#616874`, **4.53:1** at worst);
+`--slate`'s only other consumer is `--btn-secondary-border`, a boundary
+held to 3:1 and clearing it at 5.61.
 
 **The worst case is not a surface**, which is why the check sweeps
 pairs rather than tokens. `--nav-home-bg` (`--gray-mist`, `#e5e7eb`)
@@ -206,42 +207,38 @@ is darker than any `--surface-*` token and carries muted text on the
 Session Home anchor, so it — not `--surface-tint-5` — is the binding
 constraint on `--text-subtle`: **4.53:1** at the shipped value against
 5.11:1 on the worst surface. A sweep of the Text cluster against the
-Surfaces cluster never reads that pair at all. 19K.7 first moved
-`--slate` to `#667080`, which a surfaces-only sweep scores 4.56 and
-passes while the Session Home anchor sits at **4.04**; the pair sweep
-is what caught it, and the value moved again to `#616874`. `#667080`
-is recorded here because it is the only way to check that 4.04, and
-it ships nowhere.
+Surfaces cluster never reads that pair at all. The worked case:
+`--slate` at `#667080` scores 4.56 on the worst surface and passes,
+while the Session Home anchor sits at **4.04** — only a pair sweep
+catches that. `#667080` is named here because it is the only way to
+check the 4.04; it maps to nothing.
 
 **Decoration is outside the floor, and has its own token so that it
 stays outside.** WCAG 1.4.3 governs text; a 3px divider and the two
 gradient stops in a resize grip are not text and are not held to a
-ratio. Those five uses took `--decor-muted`, which carries exactly the
-primitives `--text-dim` carried, so nothing decorative changed value.
-The point of the separate token is that the failing value cannot drift
-back onto a label: a `color:` declaration naming `--decor-muted` fails
-the test.
+ratio. They take `--decor-muted`, which is free to carry the faint value
+the text floor rules out. **The point of the separate token is that the
+faint value cannot drift back onto a label**: a `color:` declaration
+naming `--decor-muted` fails the test.
 
 **Three pairs fall short of AA normal, all accepted; none is open.**
-Since 19K.10 the palette clears AA in both themes. The three accepted
-are light button labels dipping **only under the pointer** —
+The three are light button labels dipping **only under the pointer** —
 3.19/3.68/3.95 on hover against 7.09/5.17/4.83 at rest — and that
-acceptance is conditional on the resting pair, which the suite asserts
-rather than assumes. They are listed in `docs/known_limitations.md` and
-pinned in `ACCEPTED_BELOW_AA`; `OPEN_SHORTFALLS` is empty, and the
-sweep is what keeps it so — a new sub-AA pair fails the suite rather
-than being added to a list.
+acceptance is **conditional on the resting pair**, which the suite
+asserts rather than assumes. They are listed in
+`docs/known_limitations.md` and pinned in `ACCEPTED_BELOW_AA`. **A new
+sub-AA pair fails the suite rather than joining a list**: the accepted
+set is closed, and reopening it is a decision, not a fix.
 
-**The accent family's dark foreground follows the amber family's.**
-`--text-on-amber` and `--btn-alert-fg` have always been `--white` in
-light and `--ink` in dark, because the dark alert fill is bright.
-`--btn-primary-fg`, `--selected-fg` and `--text-on-accent` were the
-outlier, still carrying white onto `--blue-glow` — and that outlier was
-the palette's last four AA failures. Inverted at 19K.10: **5.33** at
-rest, **6.98** on hover, where the hover had been **2.54**, the worst
-pair in the palette.
+**A label on a bright dark accent fill inverts rather than staying
+white.** `--text-on-amber` and `--btn-alert-fg` take `--white` in light
+and `--ink` in dark, because the dark alert fill is bright;
+`--btn-primary-fg`, `--selected-fg` and `--text-on-accent` follow the
+same rule for the same reason. White on `--blue-glow` reaches only
+**2.54** on the hover pair, which would be the worst in the palette;
+`--ink` gives **5.33** at rest and **6.98** on hover.
 
-*Darkening the fill was rejected with the measurement.* White on
+*Do not darken the fill instead.* White on
 `--blue-strong` reaches 5.17 and is the only step that works —
 `--blue-deep` gives 6.70 for the label but drops the fill to **2.76**
 against `--surface-page`, under the **3:1** WCAG 1.4.11 asks of a
@@ -251,8 +248,7 @@ resolve to; the inversion moves three mappings and no primitive.
 `--btn-primary-border` stays on `--blue-glow`, being a boundary at 3:1,
 by the line that keeps `--decor-muted` outside the text floor.
 
-*`--ink` over `--ink-deep`, decided from a rendered sample* (author's
-open question, 19K.10): at 5.33 against 4.85 the two are
+*`--ink` rather than `--ink-deep`*: at 5.33 against 4.85 the two are
 near-indistinguishable on the control itself, so the one with headroom
 wins on the only axis that separates them.
 
@@ -260,27 +256,24 @@ wins on the only axis that separates them.
 
 **Where a hue carries two text tiers on one surface and the lighter
 one fails AA, collapse it into the darker rather than inventing a
-value.** Author's policy, 2026-09-12, generalised from 19K.7's own
-central move: `--text-dim` was retired into `--text-subtle` rather
-than nudged, because two muted tiers whose difference nobody could
-state were not worth keeping once one of them had to move.
+value.** The tell is that the darker tier **already exists and already
+passes**, which means the palette has answered the question once and
+not applied the answer. Four text tokens are held there for that
+reason:
 
-The tell is that the darker tier **already exists and already
-passes**, which means the palette had answered the question once and
-then not applied the answer. Four pairs closed this way on 2026-09-12,
-after the audit made them visible side by side:
+| Token | Primitive (light) | Ratio |
+|---|---|---|
+| `--lifecycle-ready-fg` | `--green-deep` | **6.29** |
+| `--role-reviewee-fg` | `--green-deep` | **6.29** |
+| `--status-success-accent` | `--green-deep` | **6.29** |
+| `--lifecycle-expired-fg` | `--red-deep` | **6.80** |
 
-| Token | Was | Now | Ratio |
-|---|---|---|---|
-| `--lifecycle-ready-fg` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
-| `--role-reviewee-fg` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
-| `--status-success-accent` | `--green-strong` | `--green-deep` | 3.32 → **6.29** |
-| `--lifecycle-expired-fg` | `--red-strong` | `--red-deep` | 3.95 → **6.80** |
-
-`--status-success-fg` was **already** `--green-deep` and
-`--status-error-fg` already `--red-deep`, on the same tints — so one
-surface was carrying two text colours of the same hue, one passing and
-one failing, for no reason a reader could state.
+The lighter tier of each hue — `--green-strong` at 3.32,
+`--red-strong` at 3.95 — is **not a text colour**. Putting one back
+would leave a single tint carrying two text colours of the same hue,
+one passing and one failing, for no reason a reader could state:
+`--status-success-fg` and `--status-error-fg` sit on the same tints at
+`--green-deep` and `--red-deep`.
 
 Two limits, both following the rules above rather than taste:
 
@@ -292,35 +285,28 @@ Two limits, both following the rules above rather than taste:
   (`--green-bright`, `--red-bright`) and already clear AA, so
   collapsing them would change appearance to fix nothing.
 
-**This did not close the remaining four**, and the distinction is the
-point: those were white on `--blue-glow` in dark, a single value with
-no second tier to collapse into. A hierarchy collapse is available only
-where the palette has already produced a passing tier to collapse
-*into*.
-
-*This paragraph originally continued "when it has not, the value has to
-move". 19K.10 closed those four without moving it* — by inverting the
-**foreground** onto `--ink`, following the amber family (above). So the
-limit stated here was right that a collapse was unavailable and wrong
-about what the alternative had to be: there was a third move, and
-naming only two made the harder one look inevitable. Corrected rather
-than deleted, because the mistake is the useful part — *a rule that
-names the options it can see will make the unseen one look impossible.*
+**A collapse is available only where the palette has already produced a
+passing tier to collapse into**, which is not every case: white on
+`--blue-glow` in dark is a single value with no second tier. **And a
+collapse is not the only alternative to moving a value** — inverting the
+*foreground* is a third move, and it is what closes that case (above). A
+rule that names only the options it can see makes the unseen one look
+impossible.
 
 **To look at the audit rather than read it**, open
-`tools/theme_customizer.html`: its Contrast panel lists all 73 pairs,
+`tools/theme_customizer.html`: its Contrast panel lists every pair,
 outlines in red any that fall under AA in the active theme, and
 recomputes as you remap, so the cost of a palette change is visible
 before it is made. The panel and the test derive their pairs from the
 same function.
 
 **Border colours do not paint fills.** A surface takes a token from the
-Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
-read acceptably only while that token was very light; at 3:1-plus the body text
-on it would have fallen to 3.96:1 light / 3.41:1 dark, both under AA. It now
-fills with `--card-help-bg` — its own token, not a borrowed one, so the next
-change to a border token cannot reach it (`--gray-mist` light /
-`--ink-muted` dark, carrying body text at 14.3:1 and 11.7:1). See "Card accents" above and
+Surfaces cluster. `.rs-help-card` fills with `--card-help-bg` — its own
+token, not a borrowed one, so the next change to a border token cannot reach
+it (`--gray-mist` light / `--ink-muted` dark, carrying body text at 14.3:1 and
+11.7:1). Filled with `--border-default` instead it would read acceptably only
+while that token stayed very light, and at 3:1-plus the body text on it falls
+to 3.96:1 light / 3.41:1 dark, both under AA. See "Card accents" below and
 `spec/ui_elements.md` §"Reviewer help cards".
 
 ### Buttons [P]
@@ -434,12 +420,12 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--card-help-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 
 
-**Two callers, one token set.** `--card-help-*` paints both
+**One token set, more than one caller.** `--card-help-*` paints both
 `.rs-help-card` (the Instruments page's help slabs) and
 `.page-guidance` (the `What this page is for` disclosure on every Setup
-page, Segment 19E rung 6). The theme customizer's facet is therefore
-named **`Help card`**, not `Instrument help card` — a facet named after
-one caller would misdescribe what editing it changes.
+page). The theme customizer's facet is therefore named **`Help card`**,
+not `Instrument help card` — a facet named after one caller would
+misdescribe what editing it changes.
 
 **`--card-help-border` is darker than `--card-help-bg`** — `--gray` over
 `--gray-mist` in light, `--slate-deep` over `--ink-muted` in dark. It
@@ -449,27 +435,24 @@ fill). Short of the 3:1 WCAG 1.4.11 asks of a UI-component boundary, so
 it is not load-bearing as a control edge — but firm enough that a card
 standing alone in a column reads as bounded.
 
-*Deepened 2026-09-06* from `--gray-soft` / `--slate-deeper` (1.47:1 and
-1.50:1 against the page), authored in the customizer. The two themes no
-longer read alike by the numbers — light is the firmer edge — which is
-the consequence of both themes having only one shared step available at
-each end of that ramp.
+A fainter pair does not do the job: `--gray-soft` / `--slate-deeper`
+measures 1.47:1 and 1.50:1 against the page, which reads as no edge at
+all. **The two themes deliberately do not match by the numbers** — light
+is the firmer edge — because each end of that ramp offers only one shared
+step.
 
-*This reverses 19C Item 8*, which pointed the border at the fill's own
-primitive so the edge vanished entirely. That was right while the help
-card was a tinted slab sitting **inside** another card — an edge there
-would have been `.card`'s 2px `--border-default` cutting across a nested
-block. It stopped being right at 19E rung 6b, when `.page-guidance` made
-the help card a card **of its own** in a column, where an edgeless card
-reads as unanchored against the page. The token did not change meaning;
-the thing it paints did.
+**The border must not point at the fill's own primitive.** That erases
+the edge, which is tolerable only for a tinted slab nested *inside*
+another card, where an edge would be `.card`'s 2px `--border-default`
+cutting across a nested block. A help card standing **alone in a column**
+reads as unanchored without one, and `.page-guidance` is exactly that
+case.
 
-They remain **two independent mappings, not a coupling**:
-`--card-help-border` points at a primitive, never at
+`--card-help-border` and `--card-help-bg` are **two independent mappings,
+not a coupling**: the border points at a primitive, never at
 `var(--card-help-bg)`, so either can be repointed alone without dragging
-the other — which is exactly what let this change happen as one edit.
-The same reason the help card has its own `-fg` rather than inheriting
-`--text-body`.
+the other. The same reason the help card has its own `-fg` rather than
+inheriting `--text-body`.
 
 ### Selection, toggles & markers [P]/[A]
 
@@ -497,42 +480,36 @@ The same reason the help card has its own `-fg` rather than inheriting
 drag it. `--text-link` is the same rule rather than an exception, since
 a link is actionable.
 
-**The coupling holds in light and is one step off in dark**, since
-19K.7. Dark `--text-link` measured **4.22:1** on `--surface-muted` at
-`--blue-glow` — under AA normal — and moved to `--blue-glow-soft`
-(`#60a5fa`, **5.53:1**). It is the adjacent step on the same ramp, so
-the *you can act on this* reading survives; what does not survive is
-the literal shared value, and a reader comparing the two columns
-should expect the dark one to differ. Moving `--blue-glow` itself was
-rejected: it is the reserved shade, and nine other dark tokens
-(`--selected-bg`, `--focus-ring`, `--btn-primary-bg`,
-`--chip-active-fg` among them) resolve to it.
+**The coupling holds in light and is one step off in dark.** At
+`--blue-glow`, dark `--text-link` measures **4.22:1** on
+`--surface-muted`, under AA normal, so it takes `--blue-glow-soft`
+instead (`#60a5fa`, **5.53:1**). It is the adjacent step on the same
+ramp, so the *you can act on this* reading survives; what does not
+survive is the literal shared value, and a reader comparing the two
+columns should expect the dark one to differ. **Do not move
+`--blue-glow` itself** to close that gap: it is the reserved shade, and
+many other dark tokens (`--selected-bg`, `--focus-ring`,
+`--btn-primary-bg`, `--chip-active-fg` among them) resolve to it.
 
-**The scope is the ambiguity, not the element type** (author,
-2026-09-11, closing `guide/archive/segment_19J_assessment_moves.md` Item 10).
-The reservation exists because a pill and a chip have a **dual
-nature**: one rounded shape states a fact in one place and offers a
-click in another, and before Segment 19J.7 the only thing separating
-them was `cursor: pointer` — invisible until the pointer is on it,
-absent on touch, absent from every screenshot. The shade is what makes
-that difference visible.
+**The scope is the ambiguity, not the element type.** The reservation
+exists because a pill and a chip have a **dual nature**: one rounded
+shape states a fact in one place and offers a click in another. Left to
+`cursor: pointer` that difference is invisible until the pointer is on
+the element, absent on touch, and absent from every screenshot. The
+shade is what makes it visible.
 
 It follows that the rule reaches **any element class carrying the same
 dual nature**, and does *not* reach a class that has no interactive
-twin to be confused with. Two consequences, and both were measured
-before being written here:
+twin to be confused with. Two consequences:
 
 - `--status-info-border` resolves to the pair on a static
   `.banner-info`, and that is **not** an inconsistency. There is no
   such thing as a clickable info banner that looks like a static one,
-  so the border misleads nobody. (Item 7 recorded it as a possible
-  violation and scoped it out; Item 10 measured it and settled that it
-  never was one.)
-- `.btn-icon` **acquired** the dual nature at 19J.9, when the row
-  pager's inactive steps began rendering as `<span class="btn-icon …">`
-  beside live ones that are anchors. It is in scope from that day, and
-  it holds: the inert form takes `--text-subtle` at 0.4 opacity and
-  never the accent.
+  so the border misleads nobody.
+- `.btn-icon` carries the dual nature too: the row pager's inactive
+  steps render as `<span class="btn-icon …">` beside live ones that are
+  anchors. It is in scope, and it holds — the inert form takes
+  `--text-subtle` at 0.4 opacity and never the accent.
 
 `--focus-ring`, `--btn-primary-bg` and `--card-active-border` sit on
 actionable or focus surfaces and are unambiguous either way. Every
@@ -545,9 +522,10 @@ shade, not the hue.
 and fails if anything but a confirmed control lands on the pair. Its
 selector filter is a **consequence** of the rule rather than the rule
 itself, and grows when a new element class acquires the dual nature —
-which is exactly what happened to `.btn-icon`.
-`--lifecycle-validated-fg` used to land on the pair, which is why it
-now reads `--blue-deeper` / `--blue-soft` above.
+which is why `.btn-icon` is in it.
+`--lifecycle-validated-fg` must stay **off** the pair — a lifecycle
+badge states a fact — which is why it reads `--blue-deeper` /
+`--blue-soft` above.
 
 Registry of intentional semantic→semantic couplings (`@coupled` marker in
 `base.html`). Per the independent-slot rule, none exist yet — every slot maps
@@ -573,12 +551,11 @@ Theme-agnostic; not redefined per theme.
 
 ## Notes
 
-- **Migrated from flat tokens** over Segment 19C Item 6 (`guide/archive/semantic_tokens.md`);
-  `base.html` is now fully two-tier — no flat colour-named token remains.
-- **Dropped as unused:** `--accent-red-soft` (never referenced) and the dead
-  standalone `.warning-banner` / `.danger-banner` rules. `--nav-home-bg-hover`
-  joined them on 2026-09-11, when session-nav hover was standardised to wear
-  the selected tab's colours and its one consumer went with it.
-- **Dark neutrals invert, accents stay hued:** e.g. `--text-on-accent` is white
-  in both themes (label on the still-blue Primary), while `--text-on-amber` flips
-  to near-black in dark.
+- **Dark neutrals invert; accent fills stay hued, and their labels flip.** The
+  accent fills remain blue and amber in dark rather than greying out; the
+  labels on them — `--text-on-accent`, `--text-on-amber`, `--btn-alert-fg`,
+  `--btn-primary-fg`, `--selected-fg` — take `--ink` rather than `--white`,
+  because the dark fills are bright. See **The AA floor on text** above.
+- **A token with no consumer is not kept.** When a rule's last consumer goes,
+  its token goes with it in the same change; an orphan token reads as a slot
+  someone forgot to fill.

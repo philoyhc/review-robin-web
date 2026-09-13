@@ -44,7 +44,7 @@ effective display zone:
 **The middle step exists for rows whose `display_timezone` is
 NULL.** The Create and Edit forms both write a concrete zone, so a
 new session resolves at the first step; dropping the fallback would
-render those older rows in UTC rather than their operator's zone. The
+render those rows in UTC rather than in their operator's zone. The
 operator default resolves the same way:
 `users.preferences['display_timezone']` → UTC.
 

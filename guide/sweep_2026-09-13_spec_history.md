@@ -273,3 +273,268 @@ file, as started.** Three batches in it is nowhere near the ~1,000-line
 revisit threshold, and the three-bucket rule's boundary cases — a
 retired-class record that still guards a live allowlist entry, a count
 nobody renews — only make sense read across batches. Revisit after Item 6.
+
+---
+
+## Batch record — Item 4, the domain engine
+
+Six files: `visibility_policy.md`, `assignments.md`, `instruments.md`,
+`sort_by_reviewee.md`, `reconciling_regeneration.md`, `validate_page.md`.
+**3,190 → 3,073 lines, 469 rewritten.**
+
+**This is the first batch to run under §0a's correction, and it behaved as
+§0a predicted: ten divergence findings and almost no deletions.** Absent
+subjects deleted: **2** across six files, against **0** in four of them.
+The batch also **rolled back one of its own earlier edits** once the
+correction arrived — it had written the code's aggregate
+`ReconcileImpact` shape into two specs, and restored the per-instrument
+contract instead. *That is the correction working at the only point where
+it could be observed.*
+
+### Constraints re-expressed forward — the ones worth reading
+
+- **The visibility ban, strengthened rather than restated.** Was: *"Both
+  writers enforce it, since 19C Item 9 … Until then the import checked
+  only the vocabulary."* Now: *"**Both writers enforce it, and both
+  must.** Checking the vocabulary is not enough on the import path: a
+  value can be one of `row` / `aggregated` / `identified` /
+  `deidentified` and still be illegal in the cell it lands in, so a
+  hand-built bundle would otherwise persist a `reviewee`
+  `while_ongoing` grant no editor can author — a disclosure the resolver
+  would then honor like any other row."*
+- **The window is the status column, not the deadline.** *"A session
+  leaves `ready` only when the operator closes it from the Workflow
+  card"* — so the deadline passing does not close the window.
+- **Why reconcile may not become a replace.** *"`Assignment.responses` is
+  `cascade="all, delete-orphan"`, so a wholesale replace takes every
+  saved response with it … neither the wholesale replace nor a
+  keep-or-lose prompt may come back."* And the delete order is stated as
+  load-bearing: these are bulk Core deletes that **bypass** the ORM
+  cascade, so deleting assignments first orphans the responses and breaks
+  the FK.
+- **`unquote()` is not optional, and a test cannot be trusted to say so.**
+  Starlette does not percent-decode cookie values, so without it
+  `json.loads` fails on the browser's own encoding and SSR silently falls
+  back to insertion order — silently, because the client-side JS
+  re-sorts after paint and the badge still shows the column sorted. *A
+  cookie-decoding test must write the value the way the browser writes
+  it; one that sets raw JSON exercises nothing.*
+- **Sorting must not happen in Python on a paged table.** Sorting a
+  fetched window *"would sort page 2 within page 2 — invisible on an
+  unpaged table, a lie on a paged one."*
+- **The palette keys on instrument id, not loop position**, so colour
+  rides with the instrument across reorder, replicate and delete.
+- **A locked card never displays unsaved values** — *"a lock that copied
+  the edited values into the read-only view would leave a collapsed,
+  locked card asserting state the database does not have."*
+
+### Absent subjects deleted — 2, both contract-sanctioned
+
+The legacy single-mode visibility encoding (`visible_when` column: 26
+hits in `app/`, **all** `responses_visible_when_closed` or comments; the
+ORM carries only the four pair columns plus `observer_tag`) and the
+Response Type Definitions card (`ResponseTypeDefinition` → **0** hits; no
+model file). Both were already declared retired by the specs' own bodies,
+so deleting the entries follows the contract rather than softening it, and
+each absence is now stated as a rule (*"There is **no** page-level
+response-type catalogue"*).
+
+### Spec-vs-code divergences — contract left standing
+
+Verified here rather than taken on the batch's word:
+
+- **The `stale` pill is specified and cannot render.** `is_stale = False`
+  at `views/_assignments.py:221` and `any_stale = False` at :202 — both
+  hardcoded — while the same file's docstrings at :73 and :107 still
+  describe the computation they no longer do. `compute_staleness` is live
+  but uncalled on this path. **Confirmed.** Spec left standing: this is a
+  code defect or a deliberate contract retirement, and §4 says that
+  choice is made deliberately.
+- **`stamp_changed` does not exist** — 0 hits in `app/` and `tests/`.
+  **Confirmed.** The same finding one layer down.
+- **A route path disagrees, and a URL is contract.** Spec:
+  `…/assignments/instrument/{iid}/self-reviews-active`. Code
+  (`_assignments.py:479`): `…/assignments/{instrument_id}/self-reviews/active`.
+  **Confirmed.** Left standing; someone must choose which spelling wins.
+- **Band 3 bounds validator** names `Number` / `Rating` / `SingleSelect` /
+  `MultiSelect` where `bulk_save_fields` branches on `String` / `Integer`
+  / `Decimal` / `List` — the four the spec's own Type picker lists eight
+  lines above.
+- **The `include` seed is pair-level in one spec, group-aware in code and
+  in another spec.** Here the **code is right** and
+  `reconciling_regeneration.md` is incomplete; left standing, because
+  completing it is a contract edit.
+- **A stale code comment, not a spec problem:**
+  `visibility_policies.py:365-370` documents `while_ongoing` as
+  `[activated_at, deadline)` while the behaviour matches the spec's
+  status-column rule. The docstring is what is wrong.
+
+### A spec-vs-SPEC conflict — five validation severities
+
+Not spec-vs-code. `validate_page.md` **agrees with the code**; the
+per-page specs do not:
+
+| rule | code + `validate_page.md` | per-page spec |
+|---|---|---|
+| `instruments.no_fields` | error | **warning** |
+| `instruments.no_display_fields` | warning | **info** |
+| `instruments.zero_included` | warning | **error** |
+| `assignments.no_included_pairs` | warning | **error** |
+| `assignments.reviewer_missing` | warning | **error** |
+
+**Verified the two consequential ones**: both `assignments.no_included_pairs`
+and `instruments.zero_included` are `Severity.warning` in
+`app/services/validation.py`. As *errors* they would **block activation**,
+so the direction matters.
+
+**My read, for the author to confirm:** `spec/README.md`'s precedence rule
+gives the subsystem spec authority, and validation's subsystem spec is
+`validate_page.md` — so the per-page lists are the ones to correct. But
+that is an error → warning downgrade in two live specs, which is a
+deliberate contract change and not a sweep's to make. All five left
+untouched.
+
+### Kept as uncertain, and claims not verified
+
+Chief among the uncertain: `assignments.md`'s whole `### Staleness`
+section and its `stale` pill (kept because the spec is left stricter), and
+the `always` visibility window — 0 occurrences of the value anywhere, but
+`spec/README.md` still lists it as one of four windows, so deleting it
+would dangle another spec's summary. Reworded to *"**Reserved**, and not
+authorable — no pair encodes it"* instead of deleted.
+
+Unverified and carried rather than guessed: the status-row copy *"N
+instruments — M accepting responses."*; the word *"pastel"* for the
+`--surface-tint-1..6` palette; the truncation string; the tri-state click
+transitions in the operator JS; `validate_page.md`'s banner copy.
+
+### Two findings in other batches' files
+
+`operator_ui_concept.md:96` lists the `rrw-sort` adopters as *"Reviewers /
+Reviewees / Relationships + the Operations Assignments table"* —
+Invitations and Responses are missing, and Assignments no longer uses
+`apply_cookie_sort` at all. And `instruments.md` contradicts itself on
+whether the action row carries `+Page break`. Reported, not touched.
+
+### Stale colour identifiers: none
+
+`grep -n "accent-\|text-primary\|bg-page"` over all six files → **0**.
+
+---
+
+## Batch record — Item 5, participant and reviewer surfaces
+
+Five files: `reviewer-surface.md`, `participant_model.md`,
+`role_landing_and_visibility.md`, `role_navigator.md`, `preview_hub.md`.
+**65 provenance passages removed.**
+
+**The correction's clearest demonstration.** This batch **reverted six
+contract-to-code rewrites** it had already made, stripped the ship-state
+measurements and reliability caveats it had written into all five files,
+and reported **15 divergences** instead. One revert is worth naming: it
+had deleted the Next Action card's *"See previews"* button as an absent
+subject; under §4 that was wrong, because the button is a **contract** and
+the code is what lacks it. Restored.
+
+### The finding that matters most — a test that cites the spec it contradicts
+
+`reviewer-surface.md` specifies `typical_chars = max_length * 0.75` and
+names `_TYPICAL_RESPONSE_FRACTION` as the factor. **Verified here:**
+`views/_instruments.py:226` sets it to **0.5**, and
+`tests/integration/test_instrument_builder_routes.py:6859` asserts
+`"TYPICAL_RESPONSE_FRACTION = 0.5"` in the rendered body.
+
+So the spec stands against the code **and** against a test that pins the
+code. The same shape appears in divergence 1, where
+`test_reviewer_view_helpers.py` pins the code's heading format *and cites
+this spec section as its authority* — **the test and the spec it names
+disagree, and the test is what would fail if the contract were honored.**
+
+*A test that enshrines an implementation against its own cited spec is a
+harder problem than prose drift: the gate is on the wrong side.* Left
+standing, unfixed; changing it means changing an assertion, which is a
+deliberate call.
+
+### Constraints re-expressed forward
+
+- **No per-row submitted timestamp.** Submit stamps a single `now()`
+  across every row, so a per-row stamp is always NULL or
+  uniform-for-the-reviewer; printing it repeats the summary page's
+  session-level timestamp once per reviewee.
+- **The hub carries no embedded copy of the reviewer surface** — *"a
+  second rendering path is the one thing a production-parity preview
+  cannot afford."* Likewise no preview-only context builder: one that
+  un-collapsed groups is the drift the shared path exists to prevent.
+- **`/results` answers 404, not 403, and carries no role-naming
+  `detail`** — either tells the caller both that the session exists and
+  that they are on it.
+- **`build_role_chips` must not answer from roster membership alone** — a
+  membership-only answer hands a user a live Reviewee chip pointing at the
+  404 `/results` gives them. Reachability is asked per role and never
+  inherited from the route's own gate.
+- **The URL slot carries the page number, never the instrument position**,
+  which keeps a single-page session a degenerate case of one model.
+- **308, not 303, for `/preview`** — it has to keep the GET method and the
+  bookmark semantics, and its target is the route, never a fragment,
+  because *"an anchor into a card is only as durable as the card."*
+- **The archive short-circuit is defense in depth and must not be removed
+  as redundant.** The rule is *emergent* — it holds only while two
+  `session_lifecycle` predicates keep refusing archived sessions — so
+  `_observer_collation.py` carries an explicit `is_archived` branch
+  returning `cohort_empty=False`, because `True` renders "No cohort is
+  configured for you yet" and blames the operator for something that is
+  configured.
+
+### A structural question the sweep could not settle
+
+**`role_landing_and_visibility.md` may be a `docs/` document living in
+`spec/`.** Its own opening answers *"given my role, can I sign in, where
+do I land, and what do I see?"* and its tables were introduced as
+*"recorded from a running app"* — which is §4's question for `docs/`, not
+the contract question for `spec/`. The batch softened the method claim but
+**declined to move or rewrite the file**, and flags it for the author.
+
+*That is the right call: relocating a spec is a contract decision, and it
+is exactly the kind of thing a prose sweep should surface rather than
+perform.*
+
+### Absent subjects deleted — verified 0 occurrences each
+
+`DashboardPageRow` / `_build_dashboard_page_rows` / `_rollup_page_state`
+(the "per-page sub-rows" section, replaced by the rule it implies: *"One
+row per session, never per page"*), `build_preview_context`,
+`.rs-paginated`, and `participant_model.md`'s `### Drift (planned
+cleanup)` subsection. The **Enter / Shift+Enter column-navigation
+requirement was kept** even though no `keydown` handler exists on the
+surface — a requirement the code has not met is the spec working.
+
+### Divergences left standing — 15
+
+Beyond those above: action-row button labels (`Discard` vs `Cancel`, Save
+as Primary vs `.btn.secondary`), the missing `max-width: 16em` /
+`text-overflow: ellipsis` on page buttons, the Operations chrome row
+missing `Extract data`, the per-artifact *"Send test to…"* affordance
+(nothing in `app/`), `show_acknowledge` (0 occurrences, and the file
+already contradicts itself about it), the dashboard `closed` pill
+(`pill-lifecycle-archived` specified, `pill-error` rendered),
+`submit_redirect_url`'s signature, the preview route path, and the
+identity-match mechanism (SQL `func.lower` specified, Python
+`normalize_email` used).
+
+Also reported, not spec: `_operations.py` and `views/_previews.py`
+attribute the preview follow-on to "Segment 18Q" while
+`_preview_surface.py:3-6` explicitly corrects that attribution. **Two code
+comments disagree with each other.**
+
+### Stale identifiers — 3 lines, left for Item 1
+
+`participant_model.md:86` (`--accent-blue`, `--accent-blue-bg-faint`;
+the rule uses `--card-active-border` / `--card-active-bg`),
+`role_navigator.md:113` (`--surface-2`, `--text-muted`; really
+`--surface-muted` / `--text-subtle`) and `:114` (`--text-primary`; really
+`--text-body`).
+
+### One pre-existing dangling pointer, reported not fixed
+
+`reviewer-surface.md:145` says *(See "Form scope" below)*; the section is
+called "Form HTML mechanics".

@@ -336,7 +336,7 @@ preserves the source row's anchor for the Cancel-return path.
 **Cancel-return anchor.** The Cancel button's `href` includes
 a fragment pointing back at the **source row** (the table row
 or card the operator was working on when the banner fired),
-e.g. `#instrument-{iid}` or `#rtd-row-{id}`. When the operator
+e.g. `#instrument-{id}`. When the operator
 clicks Cancel, the browser navigates to a clean URL (no banner
 flag) and the natural fragment-jump returns them to where they
 were before the banner pulled them up. The auto-scroll script
@@ -493,7 +493,7 @@ lands on the numbers without bolding the whole sentence.
 |---|---|---|
 | `.pill-count`, `.pill-info` | `--status-info-bg` / `--text-body` | **One rule for both names.** The blue tint says "this is information" without implying a state. |
 | `.pill-empty`, `.pill-warning` | `--status-warning-bg` / `--status-warning-fg` | **One rule for both names.** The warning brown matches the `.card.lock` / `.card.danger-zone` framing, so chips and surfaces share one warning language. |
-| `.pill-success` | `--status-success-bg` / `--status-success-accent` | Not `--status-success-fg`: the two share a value in light and diverge in dark. |
+| `.pill-success` | `--status-success-bg` / `--status-success-fg` | The `-fg` slot, like every other pill: a pill's label is text, and `-accent` is the marker slot. |
 | `.pill-error` | `--status-error-bg` / `--status-error-fg` | Validation-summary error counts. |
 | `.pill-super` | `--status-super-bg` / `--status-super-fg` | The super-admin tier badge — violet, so the protected top tier is not read as an ordinary blue info pill. |
 | `.pill-handle` | `--surface-muted` / `--text-body` | Monospace, and the one pill that is **not** uppercased — a handle is a literal string and case is part of it. |

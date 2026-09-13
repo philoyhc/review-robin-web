@@ -184,7 +184,7 @@ session** button submits both halves.
 **That page's buttons are not specified in this document** — a gap in
 its coverage, not a page without buttons.
 
-### 5e — Danger Zone — back on Session Home
+### 5e — Danger Zone (`#danger-zone`)
 
 Source: `session_detail.html`, `.card.danger-zone#danger-zone` — the
 bottom-right of Home's `.bottom-grid`.

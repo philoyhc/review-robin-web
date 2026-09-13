@@ -439,10 +439,10 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 - **`field_labels.*` is not a Settings key, and a bundle carrying
   one still imports.** Friendly labels round-trip through the roster
   CSV headers (§1a) as the sole carrier, so the export emits no
-  `field_labels.*` row. A bundle written when it did falls through to
+  `field_labels.*` row. One that arrives on input must fall through to
   the unknown-key **silent ignore** on apply (like an `rtds[` row) —
-  no error, the label is dropped, and re-exporting the roster recovers
-  it in the header. Dropping the tolerance would make every older
+  no error, the label dropped, and re-exporting the roster recovers it
+  in the header. Dropping the tolerance would make every older
   bundle fail to import for a row that carries nothing.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **1-based CSV row position is authoritative**. To reorder
