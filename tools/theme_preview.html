@@ -3679,6 +3679,24 @@
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {
         margin: var(--space-2) 0 0 0;
       }
+      /* Progress pills + constraint summary share one right-aligned
+         row above the per-instrument table. Both the reviewer surface
+         and the operator Instruments card's Band 2 preview render it,
+         and the operator card also rebuilds it in JS on every edit —
+         so the declarations live here rather than in an inline
+         `style`, which is the only way four render paths can be held
+         to one layout. `gap` and the bottom margin are the same 12px
+         and 8px the inline copies hardcoded (`--space-3` /
+         `--space-2`), so this is a move, not a restyle. */
+      body.ui-v2 .rs-progress-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: baseline;
+        gap: var(--space-3);
+        margin: 0 0 var(--space-2) 0;
+      }
+      body.ui-v2 .rs-instrument-progress { margin: 0; }
       /* Per-instrument constraint summary line above the table.
          Right-aligned and muted so it reads as ancillary metadata
          next to the main response columns. */

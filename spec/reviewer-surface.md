@@ -1219,7 +1219,7 @@ from the top bar.
 |---|---|
 | Action row, page-level slot | `Save` |
 | Action row, page-level slot | `Cancel` (hook: `data-rs-discard`) |
-| Action row, page-level slot | `Page #{N}: {Instrument.short_label}` when the operator has set a short label; bare `Page #{N}` otherwise |
+| Action row, navigation cluster (multi-page only) | `< Previous page` · `Page {N} of {M}` · `Next page >` |
 | Action row, review-level slot, after the divider | `Submit` |
 | Danger Zone | `Clear all` — copy explains "every response across every page" |
 
@@ -1231,10 +1231,12 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands on Page button labels
-  (`Page #{N}: {short_label}`) and as the per-instrument H2 title.
-  Capped at 32 characters at the schema layer so button rows don't
-  wrap on typical viewports.
+  operator's reviewer-facing framing. Lands as the per-instrument
+  **H2 title**, composed per the table in "Above the table — heading
+  + help block": `#{N}: {short_label}` on a multi-instrument session,
+  bare `{short_label}` on a single-instrument one. It reaches no
+  control. Capped at 32 characters at the schema layer so the
+  heading stays on one line.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2
   title above each table.

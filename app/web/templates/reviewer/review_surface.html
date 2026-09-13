@@ -251,12 +251,9 @@
            reviewer's eye lands on completion status alongside the
            formatting reminders. #}
         {% if group.completion or group.constraints %}
-          <div class="rs-progress-row"
-               style="display: flex; flex-wrap: wrap;
-                      justify-content: flex-end; align-items: baseline;
-                      gap: 12px; margin: 0 0 8px 0;">
+          <div class="rs-progress-row">
             {% if group.completion %}
-              <p class="rs-instrument-progress" style="margin: 0;">
+              <p class="rs-instrument-progress">
                 <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
                   Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
                 </span>

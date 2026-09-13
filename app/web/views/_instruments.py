@@ -1,7 +1,7 @@
 """Instruments page view-shapes — operator's per-session
 ``/operator/sessions/{id}/instruments`` page plus the reviewer-
-surface heading + page-button helpers and the per-field render
-hints (placeholder / constraint summary).
+surface heading helper and the per-field render hints
+(placeholder / constraint summary).
 
 Slice 6 of the §12.B ladder (``guide/archive/major_refactor.md``).
 

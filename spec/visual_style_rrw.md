@@ -444,9 +444,11 @@ A session may have multiple instruments for a reviewer to complete across their 
 
 (Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle.)
 
-**Pattern: page buttons in the unified action row.** When the session has more than one instrument, the surface's main action row carries one button per instrument labelled `Page #{N}: {Instrument.short_label}` (e.g. `Page #1: Skills` / `Page #2: Cultural Fit`), alongside Save and Cancel, with a vertical divider between those page-level controls and the review-level Submit at the row's right edge. When `short_label` is unset, the button falls back to bare `Page #{N}`. The button for the current page renders disabled (`aria-disabled="true"`); other buttons are Primary anchors that JS-toggle which instrument is visible (no server round-trip — the reviewer's in-progress edits stay in the DOM across page switches). The action row is repeated at the top and bottom of the form so the reviewer can act without scrolling.
+**Pattern: one action row, with page navigation at its right.** The surface's main action row carries `Save` / `Cancel` / `Submit`, and — only when the session runs to more than one page — a vertical divider followed by the navigation cluster: `< Previous page`, a `Page {N} of {M}` counter, and `Next page >`. The row is repeated at the top and bottom of the form so the reviewer can act without scrolling.
 
-Detailed layout contract — Page button position, Save / Cancel ordering, status-pill placement, JS visibility-toggle mechanics, save semantics, dirty-state preservation across page changes — lives in `spec/reviewer-surface.md`. This document covers the chrome philosophy; the surface spec is the implementation contract.
+Navigation is **plain HTTP**: Prev and Next are `<a href>` links to `/me/sessions/{id}/{page_n}`, and the unavailable one at either end renders as a disabled `<button>`. There is no per-instrument button and no client-side visibility toggle — a page change is a server round-trip, which is why unsaved edits do not survive one and `Save` exists. Pages are operator-defined and may carry several instruments each; within a page, instruments stack vertically.
+
+Detailed layout contract — control order within the row, the navigation cluster and its divider, status-pill placement, save semantics — lives in `spec/reviewer-surface.md`. This document covers the chrome philosophy; the surface spec is the implementation contract.
 
 Three persistent guarantees the chrome makes regardless of layout details:
 
@@ -669,33 +671,37 @@ navigation"; restating in this principle's context:
     work samples.").
   The system handle `Instrument.name` is **not** reviewer-facing
   — it carries audit-event copy and is otherwise invisible.
-- **Page button labels carry the operator's framing.** Each button
-  shows `Page #{N}: {short_label}` when the operator has set a
-  short label, falling back to bare `Page #{N}` otherwise. The
-  position grounds the reviewer in the sequence; the short label
-  carries the operator's framing. "Page #1: Round 1" /
-  "Page #2: Round 2" is a different reviewer experience from
-  "Page #1: Skills" / "Page #2: Cultural Fit" /
-  "Page #3: Recommendation". Operators should choose `short_label`
-  values with reviewer-comprehension in mind.
-- **Per-instrument heading mirrors the page button.** The H2 above
-  each table reads `Page #{N}: {short_label}` for multi-instrument
-  sessions and bare `{short_label}` for single-instrument sessions
-  (no `Page #1:` prefix needed when there's only one). The longer
-  description renders as a subtitle on the same row as the H2,
-  baseline-aligned, so "what is this page, and what's it for"
-  reads in one glance. With both fields empty in a single-
-  instrument session, no H2 row renders at all.
-- **`short_label` length constraint.** Because the short label
-  lands on a page button alongside Save and Cancel, **the
-  Instruments Setup page enforces `max_length=32` on
-  `Instrument.short_label`** so the button row doesn't wrap or
-  overflow on typical viewports. This is a Setup-side
-  responsibility; the reviewer surface trusts the value it's
-  given. Spec lives in the forthcoming
-  `spec/instruments.md`. The cap is the whole of the
-  defence — `base.html` carries no `text-overflow`
-  declaration, here or anywhere.
+- **The per-instrument heading carries the operator's framing.**
+  `short_label` reaches the reviewer through the H2 above each
+  table and nowhere else — the navigation cluster shows only
+  `Page {N} of {M}`, which grounds position without naming
+  content. The H2 reads `#{N}: {short_label}` on a multi-instrument
+  session and bare `{short_label}` on a single-instrument one
+  (no `#1:` prefix needed when there is only one). Note the
+  composed form is `#{N}:`, not `Page #{N}:`. "#1: Round 1" /
+  "#2: Round 2" is a different reviewer experience from
+  "#1: Skills" / "#2: Cultural Fit" / "#3: Recommendation", so
+  operators should choose `short_label` values with
+  reviewer-comprehension in mind.
+- **Description renders beside it.** The longer description is the
+  subtitle on the same row as the H2, baseline-aligned, so "what is
+  this page, and what's it for" reads in one glance. With both
+  fields empty in a single-instrument session, no H2 row renders at
+  all; with only a description set on such a session, the
+  description takes the H2 itself (a deliberate deviation recorded
+  on `views.InstrumentHeading`, so operators who have not adopted
+  `short_label` do not silently lose their per-instrument context).
+  The full composition table lives on that dataclass.
+- **`short_label` length constraint.** **`Instrument.short_label`
+  is capped at 32 characters** — `String(32)` on the column, with
+  the check in `instruments/_instrument_crud.py`. The reviewer
+  surface renders it in the per-instrument H2, not on a control, so
+  the cap is about keeping a heading to one line rather than about
+  fitting a button. This is a Setup-side responsibility; the
+  reviewer surface trusts the value it's given
+  (`spec/instruments.md`). The cap is the whole of the defence —
+  `base.html` carries no `text-overflow` declaration, here or
+  anywhere.
 - **Per-page status pills** (per "Multi-instrument navigation")
   live in the right-half status panel above the action rows, not
   on the page buttons themselves. The panel always renders (one
