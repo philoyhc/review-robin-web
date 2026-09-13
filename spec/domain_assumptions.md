@@ -19,13 +19,17 @@ Instruments and their associated Response Forms, Email,
 deadline. (Typically 1-6 Instruments — a description of usage, not
 a cap. Nothing in the code bounds the count.)
 
-At any one time, operating under one assignment mode (FullMatrix,
-Manual, RuleBased; note that FullMatrix should be absorbed as a
-particular rule set).
+Assignments are always produced by the rule engine. `AssignmentMode`
+has one live member, `rule_based`; `manual` retired in 16A alongside
+the manual-CSV upload path, and Full Matrix is a rule set rather than
+a mode of its own — the absorption this line once anticipated.
 
-Status: Draft, Ready (when populated sufficiently, within
-deadline), Expired (when deadline has passed), Archived (data
-collected has been downloaded and deleted).
+Status: five values, all live — `draft`, `validated`, `ready`,
+`expired`, `archived`. Operators read `ready` as **Activated** and
+`expired` as **Closed** (`app/services/lifecycle_display.py`).
+Archiving files a session out of the active lobby; it is
+**reversible and deletes no data** (`archive_session`), so it is a
+filing state, not a disposal one.
 
 Session can be edited when instruments are closed/paused; if there
 are ongoing reviews, reviewers need to be notified.

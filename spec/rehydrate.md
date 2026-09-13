@@ -209,7 +209,7 @@ the handler resolves files by name.
 | File | Needed when | Provides |
 |---|---|---|
 | `*_relationships.csv` | the session used relationships | `ReviewerEmail,RevieweeEmail,PairContextTag1..3,Status` pairs |
-| `*_observers.csv` | the session used observers | `ObserverEmail,ObserverName,ObserverTag1,Status` |
+| `*_observers.csv` | the session used observers | `ObserverEmail,ObserverName,ObserverTag1,Status,CohortRule` |
 
 **Completeness validation (the card's promise, enforced).** Before
 creating anything, the handler verifies the four required files are

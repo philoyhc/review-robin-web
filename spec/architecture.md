@@ -173,8 +173,12 @@ pattern for AJAX endpoints — new client-scripted endpoints should
 **converge on it** (a Pydantic request model + a JSON response) rather
 than inventing a third contract (consistency-audit R1 / R4). The
 instrument-card AJAX endpoints (`_instruments_band2.py`,
-`_instruments_pagination.py`) still hand-roll `request.json()`
-validation rather than following it; R4 aligns them.
+`_instruments_pagination.py`) do not follow it. R4 shipped and
+resolved that deliberately the other way: both now call
+`require_json_object` (`_shared.py:377-400`), which factors out the
+hand-rolled parse but **keeps** the 400-plus-tailored-message
+contract their client JS expects rather than converting them to a
+Pydantic 422. The convergence rule above governs *new* endpoints.
 
 **Spec registration.** A new routing module must be registered in
 `app/web/spec_registry.py`, in exactly one of three ways: mapped in

@@ -69,9 +69,11 @@ On reconcile:
 - `to_keep` rows: recompute the expected `include`; if it differs
   from the stored value (operator toggled `self_reviews_active`
   during the pause), `UPDATE` the single column in place. This is
-  metadata-only and never touches responses. Non-self-review pairs
-  are always `include=True`, so only self-review `to_keep` pairs
-  can ever change.
+  metadata-only and never touches responses. The expected value is
+  `True` for every non-self-review pair, so a row an operator
+  inactivated by hand is reset to `True` here too — the
+  round-trip gap `spec/roundtrip_coverage.md` records, not a
+  self-review-only path.
 
 ## `created_by_mode`
 

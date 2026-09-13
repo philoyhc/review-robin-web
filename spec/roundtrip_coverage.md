@@ -126,7 +126,7 @@ is silently ignored on apply rather than failing the import.
 | Observer `email`, `display_name`, `tag_1` | ✅ | ❌ | **Clone copies no observers at all** |
 | Observer **`status`** | ✅ | ❌ | `parse_observer_csv` reads back the `Status` the extract emits. Clone copies no observers |
 | Observer **`cohort_rule`** (JSON) | ✅ | ❌ | Round-trips via the observers CSV's `CohortRule` column, re-validated through `CohortRuleSet` on import. Clone copies no observers |
-| Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | Relationships is the **only** roster path whose `status` round-trips |
+| Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | `status` round-trips by both paths, as it does for reviewers and reviewees above — observers are the exception, and only because clone copies no observers at all |
 
 ### Assignments (`assignments`) — derived
 

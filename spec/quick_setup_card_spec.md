@@ -49,7 +49,7 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 
 There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
 
-**The per-slot routes (`POST …/quick-setup/{kind}`) still exist and no UI calls them** — zero references in any template. They stay as backend entry points, exercised by tests; the card reaches the same per-slot pipeline through `submit-all`. Anything that describes them as reachable from the card is describing the pre-consolidation shape.
+**The per-slot routes still exist and no UI calls them** — zero references in any template. Four of them take the `POST …/quick-setup/{kind}` shape (`reviewers`, `reviewees`, `relationships`, `observers`); the Settings slot's is `POST …/import-config`, which predates the card and never moved under the `quick-setup` prefix. They stay as backend entry points, exercised by tests; the card reaches the same per-slot pipeline through `submit-all`. Anything that describes them as reachable from the card is describing the pre-consolidation shape.
 
 ### CSV format
 

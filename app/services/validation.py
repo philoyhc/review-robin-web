@@ -280,9 +280,10 @@ def _check_assignments_reviewer_missing(
     Skipped when ``assignment_mode is None`` — a session that has
     never been Generated has no actionable per-reviewer breakdown,
     and surfacing every-reviewer-missing on top of the
-    ``assignments.no_included_pairs`` /
-    ``instruments.no_rule_pinned`` warnings would double up the
-    noise. Also skipped on multi-instrument sessions — the
+    ``assignments.no_included_pairs`` warning would double up the
+    noise. (``instruments.no_rule_pinned`` was named here too
+    until Wave 5 PR 5.3 retired it; it is inert and raises
+    nothing.) Also skipped on multi-instrument sessions — the
     per-instrument rule
     (``assignments.reviewer_missing_for_instrument``) carries the
     breakdown there.
@@ -813,13 +814,15 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="instruments",
         severity=Severity.warning,
         why=(
-            "Each legacy instrument needs a pinned RuleSet so "
-            "Generate knows how to materialise reviewer / reviewee "
-            "pairs. An unpinned legacy instrument is silently "
-            "skipped during generation, leaving its reviewer page "
-            "empty. Pin a rule on the Instruments page card. "
-            "(New-model instruments default to Full Matrix on "
-            "untouched Band 1 and are not affected by this rule.)"
+            "Retired in Wave 5 PR 5.3 and inert by design — this "
+            "rule raises no findings, so no operator reads this "
+            "copy. A NULL ``rule_set_id`` is never \"not set up\": "
+            "every instrument defaults to the synthetic Full "
+            "Matrix on untouched Band 1. "
+            "``instruments.no_visible_response_fields`` covers the "
+            "readiness gap. The key stays registered so audit "
+            "history remains addressable "
+            "(``spec/validate_page.md``)."
         ),
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",
