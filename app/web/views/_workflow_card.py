@@ -103,7 +103,7 @@ def build_workflow_card_context(
     # least one visible response field instead. The old helper it
     # replaced kept a docstring claiming this card still drove it, and
     # has since been deleted as dead
-    # (``guide/findings_2026-09-13_spec_discrepancies.md`` NF-17).
+    # (``guide/archive/findings_2026-09-13_spec_discrepancies.md`` NF-17).
     has_unconfigured = instruments_service.has_unconfigured(
         db, review_session.id
     )

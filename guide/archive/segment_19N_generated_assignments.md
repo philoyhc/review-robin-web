@@ -1,6 +1,6 @@
 # Segment 19N — assignments are always generated
 
-**Opened:** 2026-09-13 · **Theme:** make *"assignments are only ever produced by the rule engine"* true in the code, and give the operator the signal that makes it workable · **Related:** `guide/findings_2026-09-13_spec_discrepancies.md` (`SC-02`, `SC-03`, `SC-09`, `SC-37`…`SC-41`, `CC-04`), `spec/assignments.md`, `spec/rehydrate.md`
+**Opened:** 2026-09-13 · **Theme:** make *"assignments are only ever produced by the rule engine"* true in the code, and give the operator the signal that makes it workable · **Related:** `guide/archive/findings_2026-09-13_spec_discrepancies.md` (`SC-02`, `SC-03`, `SC-09`, `SC-37`…`SC-41`, `CC-04`), `spec/assignments.md`, `spec/rehydrate.md`
 
 ## Item 1 — the generated-only contract, and the staleness signal it needs
 
@@ -107,7 +107,7 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 ### Open questions
 
 - ~~**How is the dropped-responses CSV delivered?**~~ **Answered at slice 3b:** the commit stops rather than redirecting when rows were dropped, and the CSV rides the existing `rehydrate_stash`. The banner option was unbuildable as written — `?rehydrated=1` is read by nothing.
-- **Can `compute_staleness` be given a correct eligible count**, or does the signal need a different basis? **Decides:** the build.
+- ~~**Can `compute_staleness` be given a correct eligible count**, or does the signal need a different basis?~~ **Answered by the build: neither — the basis moved** to the engine's own reconcile diff, so an eligible count is not needed. The retired predicate compared totals and gated on `rule_id is not None`; see `### Status` below.
 
 *Answered 2026-09-13 by the author:* `include` round-trip is deferred to a future improvement, so no carrier is needed now (behaviour 6); and rehydrate loads-and-reports rather than failing loudly (behaviour 4).
 
@@ -568,3 +568,39 @@ not anticipate:
 
 Seven tests; four mutations, each failing exactly the right ones —
 reverting to the two-value ternary fails five.
+
+---
+
+## Segment close — 2026-09-13
+
+**Three items, all closed**, PRs **#2358 → #2377**. Every open question
+is answered or struck; `python3 tools/close_check.py 19N` exits 0, as do
+`19N.1`, `19N.2` and `19N.3`.
+
+**Carried out of the segment into live documents**, because an archived
+plan is not a queue:
+
+- **`close_check`'s manifest check is one-directional.** C3 asks whether
+  every *declared* path was edited, never whether every *edited* path was
+  declared — so 19N.1 edited three specs with no `Doc impact` bullet and
+  nothing failed. Recorded in `guide/todo_master.md` under Upcoming.
+- **Whether a rehydrate should audit observer, relationship and
+  assignment counts** (`SC-44`'s residue). The spec now names the four
+  keys the orchestrator actually builds, so this is not a discrepancy any
+  more — it is an unanswered design question. Also in
+  `guide/todo_master.md`.
+
+`SC-42`'s carry — assignment row status does not round-trip — needs no
+new home: `spec/roundtrip_coverage.md` states it as a knowing gap, which
+is where a reader would look.
+
+**The finding the segment keeps**, and it is the same one in all three
+items: **prose written from the surrounding prose rather than from the
+file it describes.** Item 1 found it four times — a badge, a nudge, a
+`warnings` list appended to at seven sites and read by nothing, a
+`?rehydrated=1` written by a redirect and read by nothing. Item 3 found
+the failure banner naming a button the code never passes. Item 2 spent
+three verification passes on it, and its own structural test had to be
+rewritten twice because the first two versions read prose as if it were
+code. Every error the segment produced was in prose *about* code —
+citations, counts, rationales — and none in reading what the code does.

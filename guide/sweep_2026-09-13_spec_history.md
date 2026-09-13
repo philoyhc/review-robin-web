@@ -2,7 +2,7 @@
 
 **Swept:** 2026-09-13 onward, per batch · **Scope:** all **39 live
 `spec/*.md`** files, 22,493 lines · **Plan:**
-`guide/segment_19M_spec_history_sweep.md` · **Trigger:** not cadence —
+`guide/archive/segment_19M_spec_history_sweep.md` · **Trigger:** not cadence —
 the author's rule, after `guide/sweep_2026-09-13_ui_elements.md`
 established it on one file and then had to be reversed to obey it.
 

@@ -2765,17 +2765,18 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
-### Segment 19N — Assignments are always generated — 🔵 **live** (**one item, closed** — 1; opened and closed 2026-09-13; plan: `guide/segment_19N_generated_assignments.md`)
+### Segment 19N — Assignments are always generated — ✅ **done** (**three items, all closed**; opened and closed 2026-09-13; PRs #2358 → #2377; plan archived: `guide/archive/segment_19N_generated_assignments.md`)
 
-Item 1 closed in seven PRs. The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* **Three paths wrote assignment rows outside the engine**, none visible as such; `app/services/` now holds exactly one `Assignment(...)` constructor, reachable only through `replace_assignments`. **Sequencing was the finding, and it held**: the staleness signal had to come back first, because the instrument-clone workaround existed only to paper over its absence. `SC-40`, the live silent-data-loss path, is closed — a response the rules cannot place is dropped with a reason, counted in the audit event, and downloadable; `rehydrate_enabled` stays false on the author's broader reason. Carried out: `SC-43` (an unwired next-action resolver), `SC-44` (should a rehydrate audit its observer / relationship / assignment counts?), and a `tools/` follow-up for `close_check`'s one-directional manifest check. The segment stays open for further items.
+The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* **Item 1** found three paths writing assignment rows outside the engine, none visible as such; `app/services/` now holds exactly one `Assignment(...)` constructor, reachable only through `replace_assignments`. Sequencing was the finding and it held: the staleness signal had to come back first, because the instrument-clone workaround existed only to paper over its absence. `SC-40`, the live silent-data-loss path, is closed — a response the rules cannot place is dropped with a reason, counted in the audit event, and downloadable; `rehydrate_enabled` **stays false** on the author's broader reason, that nobody has run the pipeline on real data. **Item 3** fixed a workflow failure banner that named the action that failed from a two-branch ternary while the routes pass five values, so three of the five were announced as the wrong button. **Item 2** was `SC-45`, the identity fold, and the investigation reversed its expected answer: casefold merges `ß` with `ss` — two different mailboxes — and the gates that key decides access at made that a fail-**open**, so `normalize_email` folds with `str.lower`. It took **three verification passes** to establish the change had reached its own gates; the first found four inline folds it had missed, the second three more, and the third found none but replaced the module allowlist that had let both happen with a scan over the identity-bearing **columns**, which are a closed set. **The finding the segment keeps**, in all three items: *prose written from the surrounding prose rather than from the file it describes*. **Carried out:** `close_check`'s one-directional manifest check and `SC-44`'s rehydrate-audit question, both filed under Upcoming → Stubs.
 
-### Segment 19M — A general sweep: history out of the specs — 🔵 **live** (**six items, all open** — 1–6; opened 2026-09-13; plan: `guide/segment_19M_spec_history_sweep.md`; record: `guide/sweep_2026-09-13_spec_history.md`)
+### Segment 19M — A general sweep: history out of the specs — ✅ **done** (**ten items, all closed**; opened and closed 2026-09-13; PRs #2350 → #2357; plan archived: `guide/archive/segment_19M_spec_history_sweep.md`; record: `guide/sweep_2026-09-13_spec_history.md`)
 
-All **39 live `spec/*.md`** files, 22,493 lines, in six batches drawn by cross-reference density rather than line count. A spec says what *is*; across `spec/` they also say when things landed, what they used to be called, and what a previous draft got wrong — **273 dated lines and 255 retirement phrases**, plus 86 plan-apparatus blocks confined to `ui_elements.md`. Three buckets: provenance out; **constraints re-expressed forward with a brief reason**, since a reason established historically is not history; absent subjects deleted. Opened at the author's instruction after `guide/sweep_2026-09-13_ui_elements.md` established the rule on one file and then had to be reversed to obey it — that sweep made **five false claims** across two passes, every one possible because the passage being edited was a narrative rather than a checkable description. A mechanical date-strip was refused: its own dead-identifier pass produced twelve candidates of which four were correctly-recorded history.
+All **39 live `spec/*.md`** files, 22,493 lines, in six batches drawn by cross-reference density rather than line count, then four doc-only items on what the batches found. A spec says what *is*; across `spec/` they also said when things landed, what they used to be called, and what a previous draft got wrong. The rule it ran under — `rrw_sdd_in_practice.md` §4, *the spec is the contract* — has a sharp edge: a sweeper who finds spec and code disagreeing **may not quietly rewrite the spec to match**. So the output is two artefacts, not one: the record says what was *changed*, and `guide/archive/findings_2026-09-13_spec_discrepancies.md` said what was *found and left standing* — **75 discrepancies registered, none actioned by the sweep itself**. **The correction the segment could not have planned for:** every batch was briefed to write *"plain present-tense description of what ships"*, which is `docs/`'s function and not `spec/`'s. The author's mid-sweep pointer to §4 caught it, and a sweep briefed that way would have done real damage at scale. All three segment-level open questions closed on their own stated measurements — the record stayed one file at **804** lines against a ~1,000 threshold, the sweep stays `partial` and does not reset the cadence clock, and the stale-identifier class stays a footnote at **15** report lines against a ~40 threshold. **The register outlived the segment:** opened at 86 rows, closed at 86, re-audited from scratch the same day, gained 25 more under `NF-`, closed again at 25/25 across PRs **#2365 → #2377** — most of them after every 19M item had shipped. It archives alongside the plan.
 
-### Segment 19L — UX refinements — 🔵 **live** (**one item, open** — 1; opened 2026-09-12; a log for small, independently-shipping operator-UI refinements, deliberately open-ended; plan: `guide/segment_19L_ux_refinements.md`)
+### Segment 19L — UX refinements — ✅ **done** (**four items, all closed**; opened 2026-09-12, closed 2026-09-13; PRs #2341 → #2349; plan archived: `guide/archive/segment_19L_ux_refinements.md`)
 
-Item 1 is the sessions lobby's selected-row visual cue — today the only row-level signal is the ticked checkbox itself. Graduated from `guide/new_ux_ideas.md` entry 2.
+A deliberately open-ended log for small, independently-shipping operator-UI refinements, closed on the author's instruction rather than by emptying. Each of the four was a signal that was *almost* there. The lobby marked a selection on its injected panel but **no class ever reached the source `<tr>`** (1); the fix shipped an edge *and* a fill, and the fill resolved to the same primitives as `--status-info-bg`, erasing the pills the row carried — so the fill went and a bracket replaced it (2); the archived sessions page had the same rows and none of the marking, deliberately excluded by 19L.2 and admitted by the author hours later (3); and `operator/instruments_index.html` carried a **literal NUL byte**, so the value was right, and `grep` classified the repo's largest template as binary and printed nothing (4). Three of the four were found by looking at the thing rather than at the code that makes it. **Carried out:** 19L.3's open question — whether the archived page wants the single-row expander, which today heads a lone selection *"1 sessions selected"* — to `guide/new_ux_ideas.md` entry 2, still undecided. The declined bulk-expander merge stays declined.
+
 
 ### Segment 19K — The 11sep assessment's three moves — ✅ **done** (**ten items — nine closed, one moved out**; item 9 moved to `guide/post_azure_todo_checklist.md` item 4 on 2026-09-12; opened 2026-09-11, closed 2026-09-12; PRs #2315 → #2335; plan archived: `guide/archive/segment_19K_assessment_moves.md`)
 
@@ -3222,6 +3223,31 @@ dep chains called out at the bottom of this file.
   page-internal nav wrapper as `.tab-strip` where the template and the file's
   own §4 note use `.tab-strip.tab-strip-page`; check before changing, it may be
   deliberate shorthand. One PR, no plan doc needed.
+
+- **`close_check`'s manifest check is one-directional** *(filed 2026-09-13
+  at Segment 19N's close; found by 19N Item 1)*. C3 asks whether every
+  path a plan **declared** was edited in the window. It never asks whether
+  every path **edited** in the window was declared — so 19N.1 edited three
+  specs with no `Doc impact` bullet and the check passed throughout. The
+  manifest's completeness rests entirely on the author noticing, which is
+  the class of guarantee this tool exists to replace. The advisory `note
+  … touched; not in manifest` lines already compute most of what is
+  needed; the open question is whether they can be promoted from a note to
+  a check without drowning in the long-window problem 19C and 19J both
+  recorded — a window that spans other segments' commits names modules
+  those segments touched. **No plan doc**; likely one slice in
+  `tools/close_check/`.
+
+- **Should a rehydrate audit observer, relationship and assignment
+  counts?** *(filed 2026-09-13 at Segment 19N's close; `SC-44`'s residue)*.
+  `spec/rehydrate.md` §7 once promised six count keys on the
+  `session.rehydrated` audit event; the orchestrator builds four
+  (`reviewers`, `reviewees`, `responses`, `responses_dropped`), and three
+  of the six named had never existed. The spec now names the four that are
+  real, so **this is no longer a discrepancy** — it is an unanswered
+  design question the author ruled future work: whether the other three
+  counts are worth carrying. Deciding it needs a reason someone would read
+  them. **No plan doc.**
 
 - **Theme customizer — a full pass over every element** *(author intent,
   logged 2026-09-06 at 19C Item 8's close; **unhomed 2026-09-08** when 19C

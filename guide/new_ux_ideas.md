@@ -280,7 +280,7 @@ reason.
 
 The author's view was that the lobby's own marking wanted improving too,
 **separately** — and it since has been, as Items 1 and 2 of
-`guide/segment_19L_ux_refinements.md`, which is why it is not an entry in
+`guide/archive/segment_19L_ux_refinements.md`, which is why it is not an entry in
 this file. It stood on its own, and this entry never acquired the
 dependency.
 
@@ -797,3 +797,36 @@ records why two greps missed it.
 **Also worth applying to the scoping principle above**: this entry's ask
 is a re-house with **no** new mechanism, which is a stronger position
 than the entry claimed for itself at any point today.
+
+---
+
+## 2. The archived sessions page's lone-row selection
+
+**Carried in from `guide/archive/segment_19L_ux_refinements.md` Item 3's
+open question at the 19L close, 2026-09-13.** Undecided there, and an
+archived plan is not where an undecided refinement should wait.
+
+`sessions_archived.html` has only a **bulk** selection panel. The lobby
+grew a single-row expander; the archived page did not, so selecting one
+archived session opens a panel headed *"1 sessions selected"* — correct
+arithmetic, wrong register, and a plural the operator can see is wrong.
+
+19L.3 deliberately did not touch it. That item's job was the *bracket* —
+marking the selected row itself — and it took the archived page as far as
+the lobby's marking conventions reach. The expander is a different
+affordance with its own panel, its own `refreshExpander()`, and its own
+question about whether an archived session has enough per-row action to
+justify one.
+
+**Three ways it could go**, none costed:
+
+1. **Fix the copy only** — pluralize the heading. Smallest, and leaves the
+   panel mismatched between the two pages.
+2. **Give the archived page the single-row expander**, matching the lobby.
+   Largest, and the honest question is whether an archived session's
+   actions (unarchive, delete) want a per-row panel at all.
+3. **Leave it.** The wrinkle pre-dates 19L and nobody has reported it.
+
+**What would decide it:** the author finding it grates, which is how 19L
+Item 3 itself opened — the same page, the same day, on use rather than on
+a document. Until then this is a description, not a trigger.

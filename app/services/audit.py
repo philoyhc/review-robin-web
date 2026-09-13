@@ -465,7 +465,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     # Emitterless — ``pin_rule_set`` was deleted as a dead write path
     # with no route, template or test reaching it
-    # (``guide/findings_2026-09-13_spec_discrepancies.md`` NF-16). The key
+    # (``guide/archive/findings_2026-09-13_spec_discrepancies.md`` NF-16). The key
     # stays registered because ``EVENT_SCHEMAS.keys()`` is what the
     # audit-log viewer offers as filter checkboxes and validates filter
     # input against (``views/_audit_log.py:163, 206``), so removing it
