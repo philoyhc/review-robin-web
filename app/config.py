@@ -105,6 +105,17 @@ class Settings(BaseSettings):
     # a shape bug would hide the very mutations we're auditing. Tests flip
     # this on via ``tests/conftest.py`` so drift surfaces in CI before
     # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
+    # Segment 19N — Rehydrate is gated off by default. The pipeline
+    # works for unproblematic cases, but not every detail is settled:
+    # a responses row the regenerated rules cannot place is currently
+    # dropped with a warning nobody surfaces (`SC-40`), against a spec
+    # that promises no response is lost. Nobody has run it on real
+    # data, so the surface closes until 19N lands the
+    # dropped-responses export. The machinery stays wired and tested —
+    # the test suite sets ``REHYDRATE_ENABLED=true`` — so re-opening
+    # it is this one flag.
+    rehydrate_enabled: bool = False
+
     audit_strict_mode: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

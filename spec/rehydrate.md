@@ -1,11 +1,17 @@
 # Rehydrate an extracted session — functional spec
 
-> **The whole pipeline is live** — the `/operator/sessions/rehydrate`
-> page (Validate + Rehydrate), the pre-flight analyzer, the
-> operator-scoped stash, the responses importer, and the
-> `session_rehydrate.rehydrate_session` orchestrator. Companion to
-> `spec/sessions_overview.md` (the lobby), `spec/setup_pages.md`, and
-> `spec/assignments.md`.
+> **Gated off.** The pipeline is built and covered by tests — the
+> `/operator/sessions/rehydrate` page (Validate + Rehydrate), the
+> pre-flight analyzer, the operator-scoped stash, the responses importer,
+> and the `session_rehydrate.rehydrate_session` orchestrator — but
+> `rehydrate_enabled` ships **false**, the three routes 404, and the
+> lobby button does not render. Unproblematic restores work; what is
+> unsettled is [§9](#9-limitations-and-known-gaps)'s awkward case, where a
+> response the regenerated rules cannot place is dropped and the warning
+> reaches no one. This spec describes the contract the feature must meet
+> before the flag opens, not a surface an operator can use today.
+> Companion to `spec/sessions_overview.md` (the lobby),
+> `spec/setup_pages.md`, and `spec/assignments.md`.
 
 ## 1. What this is
 
@@ -438,8 +444,24 @@ Stated plainly so the card copy and the PR description stay honest:
   flag) is captured by no export and is reset to `include=True` when
   assignments regenerate. Rehydrate backfills an assignment for any pair
   that *has* responses ([§6.3](#63-import-populations-and-regenerate-assignments)),
-  so no response is lost, but an *empty-but-included* manual assignment
-  won't reappear.
+  so no *per-reviewee* response is lost, but an *empty-but-included*
+  manual assignment won't reappear.
+- **A response the rules cannot place is dropped, and nothing reports
+  it** — the reason the feature is gated off. A group-scoped row whose
+  identity does not resolve, or whose regenerated group has no member
+  assignments, is skipped with a warning, and `ResponseLoadResult.warnings`
+  reaches neither the `session.rehydrated` audit event, nor the commit
+  route, nor the operator. **The contract this must meet before the gate
+  opens:** every response a legitimate assignment can carry is loaded,
+  and every row that cannot be placed comes back to the operator as a
+  dropped-responses CSV — resolving to an existing generated assignment or
+  reporting the row are the only two outcomes. **That replaces the
+  per-reviewee backfill [§6.3](#63-import-populations-and-regenerate-assignments)
+  step 3 still describes**, which creates an assignment to give a response
+  a home and is what the bullet above credits with saving per-reviewee
+  rows: under *assignments are only ever generated*
+  (`spec/assignments.md`) it is the mechanism being retired, not a
+  precedent to extend to the group-scoped case.
 - **Observer cohort rules round-trip, so rehydrate must keep them** —
   not a gap. The observers CSV carries a `CohortRule` column (compact
   JSON) alongside `ObserverEmail` / `ObserverName` / `ObserverTag1` /

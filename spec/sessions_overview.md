@@ -341,7 +341,10 @@ The lobby carries all three:
   carries **Cancel**, **Add new session**
   (`/operator/sessions/new` — the label names the noun, because the
   lobby is the one page where "new *what*" is not obvious from
-  context), **Rehydrate** (`/operator/sessions/rehydrate`), and **Go
+  context), **Rehydrate** (`/operator/sessions/rehydrate`) — **gated off by
+default**: `rehydrate_enabled` ships false, so the button does not render
+and the route 404s in every lobby state, independently of the
+state-dependence described above (`spec/rehydrate.md`), and **Go
   to Archive** (`/operator/sessions/archived`). Which of these are
   live depends on the lobby state — see "Lobby states" above. **Rehydrate** rebuilds a
   live draft session from a complete set of extract CSV files — see

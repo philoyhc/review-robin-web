@@ -55,6 +55,7 @@ At `f60ca533`, 2026-09-13:
 
 Slices, in dependency order. Sizes to be confirmed when each is cut.
 
+0. **Rehydrate gated off** — ✅ landed. `rehydrate_enabled` ships false, the three routes 404, the lobby button does not render, and the machinery stays covered (the suite sets `REHYDRATE_ENABLED=true`). Ruled by the author after establishing nobody has used it on real data: *not ready in the specific sense that not all the possible details are fully worked out, even though unproblematic cases will work.* Stops `SC-40`'s live exposure so slice 3 is unhurried.
 1. **Staleness signal restored** — behaviour (3). Unblocks 2.
 2. **Instrument add / duplicate stop writing assignments** — behaviours (1), (2); closes `SC-39`.
 3. **Rehydrate loads-and-reports** — behaviour (4); closes `SC-37` and `SC-40`. Includes the dropped-responses CSV and its delivery.
@@ -90,7 +91,8 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 ### Doc impact
 
 - `spec/assignments.md` — restore the staleness contract in the form the code can actually compute, and state that only the engine writes assignment rows (Item 1).
-- `spec/rehydrate.md` — §6.3 item 3 and §9: rehydrate refuses rather than backfilling; restate what does and does not round-trip (Item 1).
+- `spec/rehydrate.md` — the header retracts *"the whole pipeline is live"* for the gate; §9 states the dropped-response gap and the contract the feature must meet before the flag opens; §6.3 item 3 follows when slice 3 lands (Item 1).
+- `spec/sessions_overview.md` and `spec/operator_button_audit.md` — both asserted the lobby's Rehydrate button is always rendered, which slice 0's gate falsified; each now names the flag (Item 1).
 - `spec/settings_inventory.md` — drop `manual` from the session-level `assignment_mode` values (Item 1).
 - `guide/findings_2026-09-13_spec_discrepancies.md` — mark `SC-02`, `SC-03`, `SC-09`, `SC-37`, `SC-38`, `SC-39` as they land (Item 1).
 - `guide/todo_master.md` — the live-segment entry and its ordering (Item 1).
