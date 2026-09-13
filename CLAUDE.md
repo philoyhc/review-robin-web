@@ -89,7 +89,8 @@ lines, an item under ~120, one line per file in a sweep record. Measured
 against the archive, most overflow is not the thinking — it is the
 record of the build outgrowing the build, so `## Status` and answered
 open questions **compact at close** rather than accumulating (the
-`segment-plan` skill, "Length"). Say it once, in the section that owns
+`segment-plan` skill — "Revising a plan", and step 4 of "Closing a
+segment"). Say it once, in the section that owns
 it; keep the conclusion and the command that proves it, not the search
 that found it; cite a section rather than reproducing it. Pure
 accretion is not a record — it is a document nobody opens.

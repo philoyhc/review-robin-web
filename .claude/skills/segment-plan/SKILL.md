@@ -58,6 +58,8 @@ The figures come from the archive. Plans ran 370 to **4,840** lines across 19Aâ€
 
 **The bulk is not in the planning.** Measured over one 377-line item: every section the template asks for came in under 50 lines, while `Status` alone ran **110** and a closed `Open questions` block **61** â€” 45% of the item, both written after the thinking, by the append-only rules below. Staying inside the budget is not terser reasoning; it is not letting the record of the build outgrow the build. Three habits cause most of the rest: **saying it twice** (a judgment call restated in `Status`), **narrating the search** rather than keeping the conclusion and the command that proves it, and **quoting at length what a pointer would do**.
 
+**Exempt: anything a tool reads.** `Doc impact` bullets are not consolidated, abbreviated, or stripped of their backticks to save a line, and the five definition-of-done lines stay verbatim. Brevity never buys itself out of a check.
+
 ## Measuring blast radius
 
 Do not estimate. Run and record:

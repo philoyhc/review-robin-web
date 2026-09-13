@@ -83,6 +83,22 @@ costs the reader time. Three habits to cut on sight:
 Where a spec must state something long — a header grammar, a state table — make it a table
 or a list, not prose.
 
+**Two carve-outs, both of which have already cost something:**
+
+- **A figure or table a test reads from this file is exempt.** Restate it in full at the
+  point the test reads it, even where that duplicates prose elsewhere, and grep `tests/`
+  (below) before *consolidating*, not only before deleting.
+  `test_lobby_row_selection.py` parses this repo's `spec/ui_elements.md` for the selected
+  row's rail width and fails loudly if a pointer replaces the number — which is the good
+  case. `test_cascade_ties.py` hardcodes two specificity tuples and only a *comment* claims
+  the spec states them in prose, so consolidating those away leaves the suite green and the
+  premise false. **The silent case is the one to fear.** (The loud one has already
+  happened: a spec left saying `inset 3px` against a shipped 6px went undetected for a day.)
+- **"Say it once" applies *within* a document.** Two entry-point documents may each assert
+  a shared governance rule: `spec/README.md` stating that a per-subsystem spec wins over
+  the functional spec is not a restatement to collapse into a pointer, and neither is the
+  two-altitudes split itself.
+
 ## Before you delete anything
 
 - **Grep `tests/` for it.** Several specs are read as data: `test_doc_conventions.py` (the

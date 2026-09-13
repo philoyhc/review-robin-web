@@ -11,13 +11,13 @@ quietly rewrite the spec to match**. So every divergence became a finding
 instead of an edit. This is that register: one table, every finding, resolved
 rows struck through with what the fix was.
 
-**27 of 75 resolved. 48 open.**
+**27 of 76 resolved. 49 open.**
 
 | what the open rows need | ids | count |
 |---|---|---|
 | **a ruling** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
 | **a contract decision** | `SS-01`, `SS-02`, `SS-07` | 3 |
-| **code** — a comment or a dead mapping | `CC-01`…`CC-11` | 11 |
+| **code** — a comment or a dead mapping | `CC-01`…`CC-12` | 12 |
 | **code** — a guard | `SI-07` | 1 |
 | **prose** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
 
@@ -116,6 +116,7 @@ code, the other spec, or the other comment.
 | `CC-09` | `base.html` comments | `--accent-blue-bg` (2330), "the active side fills accent-blue" (3571), `--accent-blue-marker` (872); and **"Danger Outline (.destructive)"** at 2479 | retired token names, and the pre-19B button vocabulary the doc guard bans in prose | **Code** — the guard reads specs, not CSS comments, so the retired vocabulary survives where nothing looks |
 | `CC-10` | `_display_fields.py:797-801` | a docstring listing 3 `SortSpecError` codes | it raises 5 | **Code** — comment only |
 | `CC-11` | `_serialize.py:561` | a comment saying a behavior "drops in PR 5.2" | PR 5.2 shipped | **Code** — comment only |
+| `CC-12` | `tests/integration/test_cascade_ties.py:291` | the comment *"The two values `spec/ui_elements.md` §6 states in prose"* | the test **hardcodes** both specificity tuples and never reads the spec, so if §6 stopped stating them the suite would stay green and the comment would be false | **Code** — surfaced 2026-09-13 by the pass over the writer instructions, not by the sweep. Either read the figures from §6 (as `test_lobby_row_selection.py` does for the rail width, which is why that one fails loudly) or drop the claim. *A guard whose premise nothing re-derives is the register's own recurring defect, sitting in `tests/`* |
 | ~~`ID-01`~~ | `operator_button_audit.md:42,44,45,46` | `accent-blue`, `accent-red`, `accent-amber`, `accent-amber-dark` | 0 definitions in `base.html` | **Fixed** — **the legend names no tokens at all** now: "Solid fill", "Outline red", "Filled amber, light label", "Outline amber". It exists as a reading key for `ui_elements.md` §6, so it points rather than restates, and cannot drift from §6 again |
 | ~~`ID-02`~~ | `session_home.md:112,147,499` | `accent-blue` ×3 | — | **Fixed** — `--card-active-border` (the card border) and `--btn-primary-bg` (the button fill): **two tokens for what one retired name covered**, which is why the flat vocabulary was retired |
 | ~~`ID-03`~~ | `session_home.md:443-444` | `bg-muted`, `text-muted`, `text-secondary` | the `.card.placeholder` rule | **Fixed** — `--surface-muted`, and `--text-subtle` on **both** heading and body; the shipped rule uses one token for the two |
@@ -137,13 +138,14 @@ longer exists.
 
 ## The tally
 
-**75 findings**, counted by distinct id rather than asserted: `SC` 36, `CC` 11,
+**76 findings**, counted by distinct id rather than asserted: `SC` 36, `CC` 12,
 `SI` 10, `ID` 8, `SS` 6, `DT` 4.
 
 *Recount before quoting this number.* It was published as 64, grew to 75 as the
 verification passes reported, fell to **74** when a section heading turned out to
-have been counted as a finding, and is **75** again since the pass over the
-resolved rows produced `SS-07`. The `SS` ids run 01, 02, 04, 05, 06, 07 — there
+have been counted as a finding, and is **76** after two later passes each
+produced one — `SS-07` from the check over the resolved rows, `CC-12` from the
+pass over the writer instructions. The `SS` ids run 01, 02, 04, 05, 06, 07 — there
 is no third, because that number was the heading. Nothing renews a count, which is the defect this segment exists to
 remove, so a register carrying one had better be honest about it:
 
