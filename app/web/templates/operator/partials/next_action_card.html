@@ -429,18 +429,40 @@
       {% if _has_signals %}
         <div class="next-action-signals">
           {% if super_failure %}
-            {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
+            {# The headline names the action that failed, using the
+               button's own label. Every ``super_button`` the routes
+               pass has an entry; an unrecognised one falls back to
+               the generic "Action" rather than to any named button,
+               so the next value added to the vocabulary reads vague
+               instead of wrong. The routes pass five
+               (``routes_operator/_workflow.py``,
+               ``_session_home.py``) and this map is the only place
+               they become operator-facing copy. #}
+            {% set _button_label_map = {
+              "prepare": "Prepare session",
+              "activate": "Activate session",
+              "close": "Close session",
+              "release_responses": "Release responses",
+              "stop_release": "Stop releasing responses",
+            } %}
+            {% set _button_label = _button_label_map.get(super_failure.button, "Action") %}
             {% set _step_label_map = {
               "generate": "Generate assignments",
               "validate": "Validate setup",
               "activate": "Activate session",
+              "close": "Close session",
               "precondition": "pre-flight check",
             } %}
+            {# A step that merely repeats the action adds nothing —
+               "Close session failed at the Close session." Suppress
+               the phrase when they match. #}
+            {% set _step_label = _step_label_map.get(super_failure.step) %}
+            {% if _step_label == _button_label %}{% set _step_label = None %}{% endif %}
             <p class="next-action-signal next-action-signal--error banner-scroll-target"
                id="next-action-super-failure-banner">
               <span class="next-action-signal-icon" aria-hidden="true">✗</span>
               <span>
-                <strong>{{ _button_label }} failed{% if super_failure.step in _step_label_map %} at the {{ _step_label_map[super_failure.step] }}{% endif %}.</strong>
+                <strong>{{ _button_label }} failed{% if _step_label %} at the {{ _step_label }}{% endif %}.</strong>
                 {% if super_failure.error %}
                   <br>{{ super_failure.error }}
                 {% endif %}

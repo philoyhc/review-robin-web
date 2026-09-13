@@ -348,9 +348,14 @@ def _redirect_url(
     anything else falls through to Session Home. Failure diagnostics
     ride along as ``super_*`` query params (rendered as the Session
     Home flash banner), and the reconcile detour bounces with
-    ``prepare_confirm=responses``. ``super_button`` is ``"prepare"`` or
-    ``"activate"`` so the workflow card's failure banner can vary its
-    copy.
+    ``prepare_confirm=responses``. ``super_button`` names the button
+    that failed so the workflow card's failure banner can headline
+    it: one of ``"prepare"``, ``"activate"``, ``"close"``,
+    ``"release_responses"`` or ``"stop_release"``. The map from
+    those to operator-facing labels lives in
+    ``partials/next_action_card.html``; an unrecognised value
+    headlines the generic "Action failed" rather than a named
+    button.
 
     Lives here (not in ``_workflow.py``) so the Session-Home
     ``/activate`` handler and the Workflow-card ``/workflow/activate``
