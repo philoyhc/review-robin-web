@@ -620,7 +620,7 @@ item; there's no separate heading row.
 
 | State | Per-state status detail |
 | --- | --- |
-| **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments) each prefixed by a ✓ or ✗ pill. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is not a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it and linked to the relevant Operations-row page. Wraps on narrow viewports. |
+| **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
 | **2** (draft, not yet validated) | (no detail) |
 | **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by the per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
 | **4** (validated, no warnings, no invites) | **Status** — "Setup validated." |
