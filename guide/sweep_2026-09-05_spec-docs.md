@@ -52,6 +52,25 @@ touched only the `sweep-scope` marker.
 | C5 — `operator_ui_concept.md` user card omits the admin suffix | 2026-08-18 | 18 d | **done** | Became 2.5; closed 19C Item 7 PR 2 — the `(super admin)` / `(sys admin)` suffix |
 | C6 — `domain_assumptions.md` "1–6 Instruments" implies a cap | 2026-08-18 | 18 d | **done** | Became 2.6; closed 19C Item 7 PR 2 — restated as typical usage, not a bound |
 
+**Where the 13 rows stand today: 10 settled, 3 declined.** The four that
+moved since the sweep are C2, C3, C5 and C6, all closed by 19C Item 7.
+The three declines are not work. Two carry one stated trigger each — a
+standalone Relationships page on pilot feedback, and there has been no
+pilot; a standalone Operator Settings page if the page grows. **The Tier
+3 row does not.** It bundles three items with three different situations
+(`guide/archive/spec_sweep_11may.md` §10–§12): the new-session form
+deferred because Quick Setup already covers it, closer to a non-finding
+than a deferral; the drill-in pages deferred until pilot feedback; the
+outbox needing no spec unless promoted into Segment 16A. Two triggers and
+a non-finding, in one row.
+
+*Headline numbers* still reads **13 / 6 / 7** and stays that way. It is
+the sweep-time figure, `guide/sweep_template.md` fixes that table's shape
+so sweeps stay comparable, and a second live tally there would be a third
+surface to forget. Note it counts a **decline** as still open, where the
+ledger's "seven actioned, one declined" counts it as closed — inherited
+from 2026-09-05, and worth knowing before comparing the two.
+
 `spec_sweep_18Aug.md` §A and §B and `docs_sweep_19Aug.md`'s four buckets
 were all executed at the time; nothing carried from them beyond §C above.
 
@@ -223,29 +242,9 @@ mechanical hit as a lead, not a finding.
 | In scope | 64 (38 `spec/`, 17 `docs/`, 9 root) |
 | Read | 13 |
 | Findings | 8 (write 0 / update 8 / consolidate 0 / retire 0 / move 0) |
-| Carried in / closed / still open | **at sweep** 13 / 6 / 7 · **today** 13 / 10 / 3 |
+| Carried in / closed / still open | 13 / 6 / 7 |
 | False positives rejected | 1 (`role_navigator.md`) |
 | Untouched since the previous sweep | 13 of 64; stalest 117 d |
-
-*The three still open today are the standing **declines**, not work: a
-standalone Relationships page (condition: pilot feedback, and there has
-been no pilot), a standalone Operator Settings page (condition: the page
-grows), and the Tier 3 row. The first two carry one stated trigger each.
-**The Tier 3 row does not**, and saying it did was the first draft of
-this footnote overreaching: it bundles three items with three different
-situations (`guide/archive/spec_sweep_11may.md` §10–§12) — the
-new-session form deferred because Quick Setup already covers it and the
-form is small, which is closer to a non-finding than a deferral; the
-drill-in pages deferred **until pilot feedback**; and the outbox needing
-no spec **unless promoted into Segment 16A Sys Admin**. Two triggers and
-a non-finding, in one row.*
-
-*The four that moved from open to done between the sweep and today are
-C2, C3, C5 and C6, all closed by 19C Item 7. One vocabulary clash is
-inherited rather than introduced: the at-sweep count treats a **decline**
-as still open, while the ledger's "seven actioned, one declined" treats
-it as closed. Both figures are preserved as written; a reader comparing
-them should know they count declines differently.*
 
 **Two observations for the cadence itself.** First, the four
 "non-actionable" notes from August that were still true are the argument
