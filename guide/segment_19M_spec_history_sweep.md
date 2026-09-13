@@ -23,9 +23,25 @@ previous draft got wrong. Measured at `b42e4297` over the **39 live files
 
 | kind of drift | measure | command |
 |---|---|---|
-| dated references | **252 lines** carry a `YYYY-MM-DD` | `grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md` |
-| retirement / provenance language | **239 lines** | `grep -ci 'retired\|no longer exists\|used to \|superseded\|was renamed\|shipped in\|Corrected 20' spec/*.md` |
+| dated references | **273 lines** carry a `YYYY-MM-DD` | `grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md` |
+| retirement / provenance language | **255 lines** | `grep -ci 'retired\|no longer exists\|used to \|superseded\|was renamed\|shipped in\|Corrected 20' spec/*.md` |
 | plan apparatus | **86 blocks, all in `ui_elements.md`** | `grep -c '\*Current:\*\|\*Migration delta:\*\|\*PR:\*\|\*Canonical:\*' spec/*.md` |
+
+> **Two of these three figures were published wrong and are corrected
+> here (2026-09-13).** The table first read **252** dated lines and
+> **239** retirement phrases; re-measured against the git objects at
+> `b42e4297` rather than by summing a printed per-file table, they are
+> **273** and **255**. The error was arithmetic on my part, not a change
+> in the corpus. The *argument* the table supports — three distinct kinds
+> of drift, only the third confined to one file — is unaffected, and the
+> apparatus count of **86** reconciles exactly.
+>
+> Corrected in every place the numbers were spent, not only where the
+> error was found: this table, the blast-radius commands below,
+> `guide/todo_master.md`'s segment row, and the `docs/status.md` row —
+> because *recording that a number is unreliable does not stop you
+> spending it*, which this repo has already learned once
+> (`docs/status.md`, 2026-09-12).
 
 Three separate problems, and only the third is confined to one file:
 
@@ -161,7 +177,7 @@ At `b42e4297`, 2026-09-13:
 ```
 ls spec/*.md | wc -l                     # 39 live spec documents
 cat spec/*.md | wc -l                    # 22,493 lines
-grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md   # 252 dated lines
+grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md   # 273 dated lines
 grep -c '\*Current:\*\|\*Migration delta:\*\|\*PR:\*\|\*Canonical:\*' spec/*.md  # 86, all ui_elements.md
 grep -rln 'spec/' tests/ --include=*.py  # tests that read a spec as data
 ```
@@ -623,6 +639,6 @@ the correction in full.
 - `spec/email_template_editor.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
 - `spec/email_infra_options.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
 - `spec/timezone_display.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
-- `spec/blob_storage.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
+- `spec/blob_storage.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6). <!-- doc-impact-waived: read, no finding — 0 dated lines, 0 provenance, 0 retirement language. Its future-tense options ladder and the deferral itself are the document's subject, so there was nothing in the three buckets to sort. The only file in the corpus with none. -->
 - `guide/sweep_2026-09-13_spec_history.md` — the batch's record: per-file dispositions, the uncertain-and-kept list, and every claim not verified against the code (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).
