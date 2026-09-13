@@ -1,8 +1,12 @@
 """Per-session friendly-label resolver — Segment 15A Slice 1.
 
-Resolves a friendly label for one of the 12 in-scope
-``(source_type, source_field)`` slots a session can rename. The
-chain is three-step:
+Resolves a friendly label for a ``(source_type, source_field)``
+slot. Two sets, and they are not the same size: ``_DEFAULT_LABELS``
+holds a canonical string for every slot the app *displays*, while
+``_VALID_SOURCE_FIELDS`` is the smaller allowlist of what a session
+may *rename* — the reviewee fixed columns kept their defaults when
+their override path closed on 2026-05-31. Neither count is repeated
+here; read it off the constant. The chain is three-step:
 
 1. Session-wide override (``session_field_labels`` row)
 2. Built-in default in ``_DEFAULT_LABELS``
@@ -44,7 +48,9 @@ from app.services import audit
 from app.services import session_lifecycle as lifecycle
 
 
-# The 12 in-scope slots a session can rename. Source-field values
+# The canonical display label for every slot the app names. This is
+# the *display* set, wider than the renameable set below.
+# Source-field values
 # match the canonical column / key names used elsewhere
 # (``reviewee.email_or_identifier`` is the column on the
 # ``reviewees`` table; ``pair_context.1`` / ``.2`` / ``.3`` are
@@ -85,8 +91,8 @@ _VALID_SOURCE_FIELDS: dict[str, frozenset[str]] = {
 
 
 class FieldLabelSourceError(ValueError):
-    """Raised when ``(source_type, source_field)`` is not one of
-    the 12 in-scope slots."""
+    """Raised when ``(source_type, source_field)`` is not a slot a
+    session may rename — that is, not in ``_VALID_SOURCE_FIELDS``."""
 
 
 def _require_known_source(source_type: str, source_field: str) -> None:

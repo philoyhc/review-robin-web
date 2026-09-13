@@ -1,7 +1,7 @@
 # Segment 19M — a general sweep: history out of the specs
 
 **Opened** 2026-09-13, at the author's instruction, after the
-`spec/ui_elements.md` sweep (`guide/sweep_2026-09-13_ui_elements.md`)
+`spec/ui_elements.md` sweep (`guide/archive/sweep_2026-09-13_ui_elements.md`)
 established the rule on one file and then had to be reversed to obey it.
 
 > *"Send agents out to sweep all spec docs to do the same. Express
@@ -254,7 +254,7 @@ Per item:
 - `.venv/bin/pytest` green and `ruff check .` clean, run here before the
   commit.
 - The batch's record is appended to
-  `guide/sweep_2026-09-13_spec_history.md`, including the
+  `guide/archive/sweep_2026-09-13_spec_history.md`, including the
   uncertain-and-kept list and every claim the agent could not verify.
 - `### Doc impact` section present and current
 - `python3 tools/close_check.py 19M.<n>` exits 0; any warning adjudicated
@@ -271,7 +271,7 @@ All three answered at the close, 2026-09-13, each by its own stated test.
 
 1. ~~**Does the sweep record belong in one file or six?**~~ **One.** The
    threshold was ~1,000 lines; the record closed at **804**
-   (`wc -l guide/sweep_2026-09-13_spec_history.md`), so the condition
+   (`wc -l guide/archive/sweep_2026-09-13_spec_history.md`), so the condition
    for splitting never arrived.
 2. ~~**Is this a corpus sweep for cadence purposes?**~~ **No — it stays
    `partial`**, which is what it was marked from the start and what
@@ -339,7 +339,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -405,7 +405,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -469,7 +469,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -532,7 +532,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -592,7 +592,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -659,7 +659,7 @@ the correction in full.
 
 **Adjudication complete (2026-09-13).** The `spec-writer` Mode B pass for
 this batch reported and its flags were adjudicated; corrections are recorded
-in `guide/sweep_2026-09-13_spec_history.md` §7 and in the register's
+in `guide/archive/sweep_2026-09-13_spec_history.md` §7 and in the register's
 verification section. **Across the five passes, thirteen sweep errors were
 corrected and one pass claim was itself wrong** — so the item closes on a
 checked batch rather than on a delivered one.
@@ -1209,7 +1209,7 @@ current; `python3 tools/close_check.py 19M` exits 0.
 `rrw_sdd_in_practice.md` §4 — the spec is the contract — and the rule's
 sharp edge is that a sweeper who finds spec and code disagreeing **may
 not quietly rewrite the spec to match**. That is why the sweep's output
-is two artefacts and not one: `guide/sweep_2026-09-13_spec_history.md`
+is two artefacts and not one: `guide/archive/sweep_2026-09-13_spec_history.md`
 records what was *changed*, and the findings register recorded what was
 *found and left standing*. Seventy-five discrepancies were registered and
 none actioned by the sweep itself.

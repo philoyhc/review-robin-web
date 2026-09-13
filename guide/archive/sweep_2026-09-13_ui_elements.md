@@ -1,7 +1,16 @@
 # Sweep — `spec/ui_elements.md` (2026-09-13)
 
+> **Retired and archived 2026-09-13.** Both things it left open are
+> closed, and by Segment 19M rather than by a follow-up to this file:
+> §4's roughly twenty unconverted `*Current:*` / `*Migration delta:*` /
+> `*PR:*` blocks are **0** today, and §7.4's 28 residual `accent-*` /
+> `text-primary` lines are **1** — `spec/ui_elements.md:23`, which names
+> those roles deliberately, to say that `visual_style_general.md` uses
+> portable role names rather than this app's tokens. Nothing here is
+> carried forward.
+
 **Swept:** 2026-09-13 · **Scope:** one file, `spec/ui_elements.md` (949
-lines) · **Previous sweep:** `guide/sweep_2026-09-10_rrw_functional_spec.md`
+lines) · **Previous sweep:** `guide/archive/sweep_2026-09-10_rrw_functional_spec.md`
 (partial); last corpus sweep `guide/sweep_2026-09-05_spec-docs.md` ·
 **Trigger:** not cadence — requested by the author after 19L.4's
 `spec-writer` pass surfaced three stale RTD references. *"Sweep

@@ -1,5 +1,15 @@
 # Sweep — `spec/rrw_functional_spec.md` (2026-09-10)
 
+> **Retired and archived 2026-09-13.** F1–F15 landed as Segment 19J
+> Item 1. The three *code* findings at the foot of this file — the ones
+> it recorded as "none was fixed in this pass" — are closed too, two of
+> them on the retirement pass: `deps.py`'s "Phase 1 stub" docstring had
+> already gone; `field_labels.py`'s "12 in-scope slots" was wrong twice
+> over (the dict it heads holds 13, the validator admits 9) and now
+> names the constants instead of a count; and `sessions.py`'s
+> "The Edit Session UI" named a page retired in 18R Item 4. Nothing
+> here is carried forward.
+
 **Swept:** 2026-09-10 · **Scope:** one file —
 `spec/rrw_functional_spec.md`, all 108 headings · **Previous
 sweep:** `guide/sweep_2026-09-05_spec-docs.md` (folder-scoped;

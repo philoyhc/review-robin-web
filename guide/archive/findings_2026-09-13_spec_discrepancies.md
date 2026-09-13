@@ -10,7 +10,7 @@
 
 **Opened** 2026-09-13 · **Source:** the `spec/` history sweep
 (`guide/archive/segment_19M_spec_history_sweep.md`, record at
-`guide/sweep_2026-09-13_spec_history.md`).
+`guide/archive/sweep_2026-09-13_spec_history.md`).
 
 **Why this file exists.** 19M was a prose sweep, and the rule it ran under —
 `rrw_sdd_in_practice.md` §4, *the spec is the contract; when the code drifts,
