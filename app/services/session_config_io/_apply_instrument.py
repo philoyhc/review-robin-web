@@ -50,13 +50,6 @@ from ._apply_shared import (
 )
 
 
-class _ApplyConflict(Exception):
-    """Raised by the apply phase when a cross-row reference
-    can't be resolved against the in-progress session state
-    (e.g. an unknown RTD reference). The caller's transaction
-    handler rolls back."""
-
-
 def _apply_instrument_kv(
     plan: _ParsedConfig, field_path: str, value: str, data_type: str
 ) -> None:

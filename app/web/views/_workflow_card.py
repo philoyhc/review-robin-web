@@ -97,10 +97,12 @@ def build_workflow_card_context(
     reviewee_count = csv_imports.existing_reviewee_count(
         db, review_session.id
     )
-    # Wave 4 PR 2 — switched from rule-set-centric ``has_unpinned``
-    # to ``has_unconfigured``, which knows that new-model instruments
+    # Wave 4 PR 2 — switched from a rule-set-centric check to
+    # ``has_unconfigured``, which knows that new-model instruments
     # default to Full Matrix (rule_set_id NULL is fine) but require at
-    # least one visible response field instead.
+    # least one visible response field instead. The old helper it
+    # replaced kept a docstring claiming this card still drove it, and
+    # was deleted as dead in 19N.2.
     has_unconfigured = instruments_service.has_unconfigured(
         db, review_session.id
     )

@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Literal, Union
 
 from pydantic import (
     BaseModel,
@@ -361,20 +361,3 @@ class RuleSetSchema(BaseModel):
             if isinstance(rule, CompositeRule):
                 stack.extend(rule.rules)
         return self
-
-
-class RuleSetRevisionSchema(BaseModel):
-    """Revision metadata. The ``rule_set_revisions`` table it once
-    mirrored has been dropped; these fields are carried in-memory."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: int | None = None
-    rule_set_id: int | None = None
-    revision_no: int = Field(..., ge=1)
-    combinator: Combinator
-    exclude_self_reviews: bool
-    seed: int | None = None
-    rules_json: list[dict[str, Any]]
-    created_at: datetime | None = None
-    created_by_user_id: int | None = None

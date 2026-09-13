@@ -32,7 +32,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     ReviewSession,
-    SessionRuleSet,
     User,
 )
 from app.services import session_lifecycle as lifecycle
@@ -620,82 +619,6 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
     """
     total, configured = configured_counts(db, session_id)
     return total == 0 or configured < total
-
-
-def has_unpinned(db: Session, session_id: int) -> bool:
-    """True iff the session has zero instruments, or any instrument
-    has a NULL ``rule_set_id``. Drives the Next Action card's
-    "Empty Setup" state — a session isn't ready to validate until
-    every instrument has its assignment rule pinned."""
-    total = db.scalar(
-        select(func.count(Instrument.id)).where(
-            Instrument.session_id == session_id
-        )
-    ) or 0
-    if total == 0:
-        return True
-    unpinned = db.scalar(
-        select(func.count(Instrument.id)).where(
-            Instrument.session_id == session_id,
-            Instrument.rule_set_id.is_(None),
-        )
-    ) or 0
-    return unpinned > 0
-
-
-def pin_rule_set(
-    db: Session,
-    *,
-    instrument: Instrument,
-    rule_set_id: int | None,
-    actor: User,
-) -> Instrument:
-    """Pin (or clear) the ``session_rule_sets`` row this instrument
-    applies (Segment 15B Slice 2a).
-
-    ``rule_set_id=None`` clears the pin back to "— No rule —" — the
-    initial post-13D PR 4 state. A non-NULL value must reference a
-    ``session_rule_sets`` row in the *same* session as the instrument;
-    cross-session pins raise ``ValueError``.
-
-    Pinning is **PIN only** — no ``Assignment`` rows are touched and
-    no ``assignments.generated`` event fires. Materialisation happens
-    on the explicit Generate surfaces (Slice 3a / Slice 4). No-op
-    saves (same id) skip the audit + ``invalidate_if_validated``
-    side effects, mirroring the convention in
-    :func:`update_short_label`.
-    """
-    if rule_set_id is not None:
-        rule_set = db.get(SessionRuleSet, rule_set_id)
-        if rule_set is None or rule_set.session_id != instrument.session_id:
-            raise ValueError(
-                f"rule_set_id {rule_set_id} is not a session_rule_sets "
-                f"row in session {instrument.session_id}"
-            )
-    if instrument.rule_set_id == rule_set_id:
-        return instrument
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=instrument.session,
-        user=actor,
-        reason="instrument_rule_pinned",
-    )
-    old_value = instrument.rule_set_id
-    instrument.rule_set_id = rule_set_id
-    db.flush()
-    audit.write_event(
-        db,
-        event_type="instrument.rule_pinned",
-        summary=(
-            f"Pinned rule on instrument {_instrument_label(instrument)}"
-        ),
-        actor_user_id=actor.id if actor else None,
-        session=instrument.session,
-        payload=audit.changes({"rule_set_id": [old_value, rule_set_id]}),
-        refs={"instrument_id": instrument.id},
-    )
-    db.commit()
-    return instrument
 
 
 # ---------------------------------------------------------------------------

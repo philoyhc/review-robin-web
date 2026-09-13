@@ -144,17 +144,6 @@ def all_labels(session: ReviewSession) -> dict[tuple[str, str], str]:
     }
 
 
-def canonical_default(source_type: str, source_field: str) -> str:
-    """Return the built-in default label for a slot (e.g. ``"Tag 1"``).
-
-    Skips the session override layer — useful when an operator-
-    facing surface wants to show the canonical name alongside the
-    friendly override (the two-line ``Friendly / canonical``
-    header render).
-    """
-    return _builtin_default(source_type, source_field)
-
-
 @dataclass(frozen=True)
 class LabelPair:
     """Render-ready pair of friendly + canonical labels for a slot.

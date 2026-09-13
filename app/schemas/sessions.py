@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class SessionCreate(BaseModel):
@@ -59,16 +59,3 @@ class SessionCreate(BaseModel):
     # ``guide/archive/participant_model_upgrade.md`` §3.3 + §3.4.
     responses_release_at: datetime | None = None
     responses_release_until: datetime | None = None
-
-
-class SessionRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-    code: str
-    description: str | None
-    status: str
-    deadline: datetime | None
-    help_contact: str | None
-    created_at: datetime
