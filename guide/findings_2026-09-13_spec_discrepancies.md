@@ -11,12 +11,12 @@ quietly rewrite the spec to match**. So every divergence became a finding
 instead of an edit. This is that register: one table, every finding, resolved
 rows struck through with what the fix was.
 
-**27 of 74 resolved. 47 open.**
+**27 of 75 resolved. 48 open.**
 
 | what the open rows need | ids | count |
 |---|---|---|
 | **a ruling** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
-| **a contract decision** | `SS-01`, `SS-02` | 2 |
+| **a contract decision** | `SS-01`, `SS-02`, `SS-07` | 3 |
 | **code** — a comment or a dead mapping | `CC-01`…`CC-11` | 11 |
 | **code** — a guard | `SI-07` | 1 |
 | **prose** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
@@ -92,8 +92,9 @@ code, the other spec, or the other comment.
 | `SS-01` | the five validation severities | `instruments.no_fields` error; `no_display_fields` warning; `zero_included` warning; `assignments.no_included_pairs` warning; `reviewer_missing` warning — `validate_page.md` **agrees with the code** | `instruments.md` and `assignments.md` say warning / info / error / error / error | **Contract decision.** `spec/README.md`'s precedence rule gives the subsystem spec authority, so the per-page lists are what to correct — but **two are specified as errors where the code warns, and as errors they would block activation**. All five untouched |
 | `SS-02` | `rehydrate.md` §9 | cohort rules are not restored; the observers CSV carries only Email/Name/Tag1/Status | `csv_contracts.md` §3.2b and `roundtrip_coverage.md` say `CohortRule` round-trips, and the code agrees: `observers_extract.HEADER` includes it, `csv_imports.py:532-572` re-validates through `CohortRuleSet` | **Wants confirmation.** The rehydrate bullet **was edited** — its pointer named text the sweep removed. The one spec-vs-spec conflict the sweep settled rather than reported |
 | ~~`SS-04`~~ | `operator_button_audit.md` §1 | 11 nav tabs, omitting **Observers** and **Extract data** | both required by `operator_ui_concept.md` | **Fixed** — added as chrome rows **12 and 13**, appended rather than slotted, because that file states its own rule that numbers are stable identifiers other documents cite |
-| ~~`SS-05`~~ | `operator_button_audit.md` §13 | the page is "Manage Invitations" | `operator_ui_concept.md` and `operations_pages.md` call it "Invitations" | **Fixed** — `Invitations`, the chrome label, in all four places. Not one-sided: `email_infra_options.md` used the long form three times, so it was a vocabulary in circulation |
+| ~~`SS-05`~~ | `operator_button_audit.md` §13 | the page is "Manage Invitations" | `operator_ui_concept.md` and `operations_pages.md` call it "Invitations" | **Fixed** — `Invitations`, the chrome label, in all four places. Not one-sided: `email_infra_options.md` used the long form three times, so it was a vocabulary in circulation. **Not settled** — the long form survives in four more spec locations and one shipped back-link; see `SS-07` |
 | ~~`SS-06`~~ | `session_home.md`, `operator_ui_concept.md` | a "ten-state cascade" | both list twelve, and `workflow_card.md` says twelve | **Fixed — not a mismatch.** Twelve states over ten numbers (1–10 plus `4W` and `4Err`); both counts were right. Now stated in `workflow_card.md`, so the five documents saying *ten-state cascade* stop reading as errors |
+| `SS-07` | `operator_ui_concept.md`, `operations_pages.md` and the chrome itself | the page is `Invitations` — `session_top_nav.html:65` renders that label | `settings_inventory.md:56` and `rrw_functional_spec.md:1241,1263,1710,1767` still say **Manage Invitations**, and `:1263` is a *heading* whose own next sentence says *"The Invitations page"* | **Contract decision**, found by the verification pass over `SS-05`. `SS-05` fixed the four places it named and the vocabulary is still mixed in four more — so the question is not a rename but **whether the long form names anything**: `:1241` calls *Manage Invitations* the Primary action in Activated, and no such button ships (15E moved it into the Workflow card). One shipped user-visible occurrence survives, the back-link at `session_invitations_reviewer_detail.html:19` — every other template hit is a comment |
 | ~~`SI-01`~~ | `instruments.md` | the action-row list omits `+Page break` | the per-instrument action-row section includes it, and the template renders it | **Fixed** — added to **both** lists in rendered order (Delete → `+Instrument` → `+Page break` → Lock/Unlock); ASCII box realigned |
 | ~~`SI-02`~~ | `csv_contracts.md` | header: "five roster-shaped pairs (… Observers, Settings)" | §4's byte-stability contract: "four (Reviewers, Reviewees, Relationships, Settings)" | **Fixed — a distinction, not a correction.** Five pairs exist; byte-stability is established for four; whether Observers meets it is unverified and §4 now says so. *A guarantee that quietly covers four while the header counts five is how a round-trip regression goes unnoticed* |
 | ~~`SI-03`~~ | `settings_inventory.md` §10 | two `audit_events` rows, ✅ analytics-only | …and ❌ out of scope | **Fixed** — duplicate removed; the survivor states what its ✅ does and does not mean |
@@ -136,13 +137,14 @@ longer exists.
 
 ## The tally
 
-**74 findings**, counted by distinct id rather than asserted: `SC` 36, `CC` 11,
-`SI` 10, `ID` 8, `SS` 5, `DT` 4.
+**75 findings**, counted by distinct id rather than asserted: `SC` 36, `CC` 11,
+`SI` 10, `ID` 8, `SS` 6, `DT` 4.
 
 *Recount before quoting this number.* It was published as 64, grew to 75 as the
-verification passes reported, and is **74** — the `SS` ids run 01, 02, 04, 05,
-06, with no third, because that number was a section heading before it was
-de-numbered. Nothing renews a count, which is the defect this segment exists to
+verification passes reported, fell to **74** when a section heading turned out to
+have been counted as a finding, and is **75** again since the pass over the
+resolved rows produced `SS-07`. The `SS` ids run 01, 02, 04, 05, 06, 07 — there
+is no third, because that number was the heading. Nothing renews a count, which is the defect this segment exists to
 remove, so a register carrying one had better be honest about it:
 
 ```
