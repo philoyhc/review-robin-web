@@ -12,6 +12,19 @@
 > `guide/archive/ui_elements_parts_2_3_restyle_history.md` on
 > 2026-05-11.
 >
+> **Swept 2026-09-13 — the body has not finished becoming what this
+> header says it is.** The status above declares the migration complete
+> and this file an implementation catalogue. The body still carries
+> **23 `*Current:*`, 22 `*Canonical:*`, 27 `*Migration delta:*` and 25
+> `*PR:*` blocks** — the shape of the plan it was before 2026-05-11. A
+> `*Current:*` written that day is a frozen snapshot, and every stale
+> reference the sweep found was one: retired classes named as current,
+> templates that no longer exist, deltas long since shipped still
+> phrased as pending. **The mode, not the content, is what drifts.**
+> `guide/sweep_2026-09-13_ui_elements.md` corrects the entries it
+> verified and records the rest; converting the remaining blocks from
+> plan to description is scoped there and not yet done.
+>
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
 > together show every primitive in this catalogue in working form.
@@ -345,19 +358,20 @@ Each element entry follows the same shape:
 > after a redirect-back-with-banner from a mutating route. Carries
 > `.banner-scroll-target` so the page-wide auto-scroll script jumps
 > to it on load.
-> *Current:* mix of patterns:
-> - `.warning-banner` and `.danger-banner` classes defined in
->   `base.html` — used in some places (notably
->   `review_surface.html`'s preview banner, recolored to blue
->   inline).
-> - Most operator usages render an inline-styled `.card` with a
->   bespoke border + background per case (rf-save-error,
->   rtd-error, rtd-would-empty, rtd-delete-blocked in
->   `instruments_index.html`; missing-confirm, upload-blocked in
->   `session_assignments.html`; the cross-template "session is
->   ready" amber warning).
-> - All carry `banner-scroll-target` and a stable id used by the
->   Cancel-return anchor.
+> *Was, at 2026-05-03:* a mix of `.warning-banner` / `.danger-banner`
+> standalones and inline-styled `.card`s with bespoke borders per case
+> (rf-save-error, rtd-error, rtd-would-empty, rtd-delete-blocked in
+> `instruments_index.html`; missing-confirm, upload-blocked in
+> `session_assignments.html`).
+> **Shipped — swept 2026-09-13.** None of that survives:
+> `.warning-banner` and `.danger-banner` have **0 occurrences** in
+> `app/`, the three `rtd-*` banners went with the RTD card
+> (2026-05-26), and `upload-blocked` is gone. The two surviving ids
+> render the canonical shape — `rf-save-error-banner` and
+> `missing-confirm-banner` are both
+> `.banner.banner-error.banner-scroll-target`. **18 banner elements**
+> across the templates now use the four-variant family, and
+> `banner-scroll-target` is still the auto-scroll hook it always was.
 > *Canonical:* four banner variants matched to the four semantic
 > accents:
 > - `.banner.banner-info` (`accent-blue` light bg, `accent-blue`
@@ -373,11 +387,14 @@ Each element entry follows the same shape:
 > All four reuse a single `.banner` base (padding, radius,
 > border-width, scroll-target hooks). Cancel button per the
 > "Banner behaviour conventions" sub-section below.
-> *Migration delta:* introduce four-variant `.banner` family;
-> retire `.warning-banner` / `.danger-banner` standalones; sweep
-> every inline-styled banner-card across operator and reviewer
-> surfaces.
-> *PR:* C (cards & banners).
+> **Two sub-elements shipped with the family and were never
+> catalogued here** (added 2026-09-13): **`.banner-headline`**, the
+> bolded first line, and **`.banner-actions`**, the right-aligned
+> control row that carries the Cancel button §5a requires. Both are
+> defined in `base.html` under `body.ui-v2`.
+> *Migration delta:* **complete.** The family landed, the standalones
+> retired, and the inline-styled banner-cards were swept.
+> *PR:* C (cards & banners) — shipped.
 
 #### 5a. Banner behaviour conventions
 
@@ -609,8 +626,8 @@ the eye lands on the numbers without bolding the whole sentence.
 | `.pill` (base) | base pill — uppercase tiny text, weight 500 | text-transform: uppercase kept from v1 |
 | `.pill-info` (blue) | aliased to **`.pill-count`** under v2 — `accent-blue-bg` background, `text-primary` text | the blue tint signals "this is information" without implying state. Existing `.pill-info` markup picks up the new treatment. |
 | `.pill-warning` (amber) | aliased to **`.pill-empty`** under v2 — `accent-amber-bg` background, `accent-amber-dark` text | warning brown, matches the `.card.lock` / `.card.danger-zone` border color so chips and surfaces share one warning language. Existing `.pill-warning` markup picks up the new treatment. |
-| `.pill-success` (green) | **`.pill-state-ready`** (or `.pill-success`) — `accent-green-bg`, `accent-green` text | unchanged from v1 in spirit |
-| `.pill-error` (red) | **`.pill-error-count`** — `accent-red-bg`, `accent-red` text | for validation-summary error counts |
+| `.pill-success` (green) | **`.pill-success`** — `accent-green-bg`, `accent-green` text | unchanged from v1 in spirit. *Swept 2026-09-13: this column proposed `.pill-state-ready`; it was never adopted and has 0 occurrences in `app/`. The v1 name won.* |
+| `.pill-error` (red) | **`.pill-error`** — `accent-red-bg`, `accent-red` text | for validation-summary error counts. *Swept 2026-09-13: this column proposed `.pill-error-count`; never adopted, 0 occurrences. The v1 name won.* |
 | `.pill-handle` (grey monospace) | **`.pill-handle`** — keep | tokenize colors |
 
 ### Label or control
@@ -659,17 +676,21 @@ a chip says its filter is on, and it appears only on controls.
 > - `ready` → muted green (`accent-green`); rendered as "Activated"
 >   in user copy via the lifecycle display-label mapping
 >   (`spec/session_home.md`)
-> *Current:* rendered as `.pill.pill-info` / `.pill.pill-warning`
-> indiscriminately across `session_detail.html`,
+> *Was, at 2026-05-03:* rendered as `.pill.pill-info` /
+> `.pill.pill-warning` indiscriminately across `session_detail.html`,
 > `session_setup_status_row.html`, `sessions_list.html`,
-> `session_invitations.html`, `session_monitoring.html`.
+> `session_invitations.html`, and a `session_monitoring.html` that no
+> longer exists.
 > *Canonical:* one `.pill-lifecycle-{draft|validated|ready}` set
 > covering the three live states. Reserved future states
 > (`expired`, `archived`, per `spec/session_home.md`) get classes
 > when those states ship. Lifecycle badge always renders through
 > this set, never through generic `pill-info`.
-> *Migration delta:* introduce classes; sweep templates.
-> *PR:* G (badges).
+> *Migration delta:* **complete** (swept 2026-09-13). The
+> `.pill-lifecycle-*` set shipped and covers five states, not the three
+> projected here — `expired` and `archived` landed with the states
+> themselves, as this entry anticipated they would.
+> *PR:* G (badges) — shipped.
 
 > **Status-symbol indicators (✓ / ⚠ in reviewer response table)**
 > *Current:* inline-styled Unicode glyphs with per-symbol
@@ -677,8 +698,9 @@ a chip says its filter is on, and it appears only on controls.
 > font-size: 1.2em;"` in `review_surface.html`.
 > *Canonical:* `.status-icon.status-icon-complete` /
 > `.status-icon-incomplete` classes; tokenize colors.
-> *Migration delta:* small extraction.
-> *PR:* G (badges).
+> *Migration delta:* **complete** — `.status-icon` is defined in
+> `base.html` (swept 2026-09-13).
+> *PR:* G (badges) — shipped.
 
 ### 10. Layout primitives
 
@@ -879,19 +901,32 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > under `body.ui-v2` and the inline-styled variants are retired.
 > *PR:* B.
 
-> **`<pre>` blocks (outbox preview)** — currently inline-styled in
-> `session_outbox.html` (`background: #f3f4f6; padding: 12px;
-> border-radius: 4px; white-space: pre-wrap`). Promote to
-> `.code-block`.
-> *PR:* C (cards & banners) — same family as content surfaces.
+> **`<pre>` blocks (outbox preview)** — *moot, swept 2026-09-13.*
+> This described an inline-styled block in `session_outbox.html`, a
+> template that **no longer exists**; the operator outbox was never
+> brought into the v2 taxonomy (the 2026-09-05 sweep records it as
+> explicitly out of scope). `.code-block` itself shipped in
+> `base.html`, so the target of the promotion exists even though the
+> thing to promote does not.
 
-> **`form style="display: contents;"`** — layout hack on RTD edit
-> form in `instruments_index.html`. Out of scope for #21; flag for
-> a separate cleanup.
+> **`form style="display: contents;"`** — *moot, swept 2026-09-13.*
+> The hack was on the **RTD edit form**, and the RTD card retired
+> 2026-05-26 (`spec/operator_button_audit.md` §9c). `display: contents`
+> has **0 occurrences** in `instruments_index.html`. The cleanup this
+> flagged was done by deletion rather than by cleanup.
 
-> **Inline JS event handlers** — heavy use of `onclick="…"` and
-> `onsubmit="return confirm(…)"` in `instruments_index.html`. Out
-> of scope for #21; flag for a separate cleanup.
+> **Inline JS event handlers** — *half resolved, swept 2026-09-13.*
+> `onsubmit="return confirm(…)"` is gone: **0 occurrences**. But
+> `onclick="…"` is **36 occurrences** in `instruments_index.html`, so
+> this one is still live and is the larger half. It is also
+> load-bearing rather than incidental — the Lock / Unlock anchors
+> carry `onclick="return newModelLockClick(event, <id>)"` with the
+> `?editing` href as the no-JS fallback, so a naive delegation sweep
+> would have to preserve that fallback. Still flagged for a separate
+> cleanup. *Note this is inline `onclick` attributes in a template — a
+> different thing from the element-bound listeners in `base.html`'s
+> script blocks that 19K.2 measured, so that item's finding does not
+> size this one.*
 
 ---
 
