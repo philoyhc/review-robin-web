@@ -4,9 +4,13 @@ Resolves a friendly label for a ``(source_type, source_field)``
 slot. Two sets, and they are not the same size: ``_DEFAULT_LABELS``
 holds a canonical string for every slot the app *displays*, while
 ``_VALID_SOURCE_FIELDS`` is the smaller allowlist of what a session
-may *rename* — the reviewee fixed columns kept their defaults when
-their override path closed on 2026-05-31. Neither count is repeated
-here; read it off the constant. The chain is three-step:
+may *rename*. Four slots are display-only, and they arrived a day
+apart: the three reviewee fixed columns (Name / Email / Profile) kept
+their defaults when their override path closed on 2026-05-31, and
+``reviewer.profile_link`` was added on 2026-06-01 to mirror them —
+default only, never renameable. Neither count is repeated here; read
+it off the constant, and take the difference rather than assuming it
+is one family. The chain is three-step:
 
 1. Session-wide override (``session_field_labels`` row)
 2. Built-in default in ``_DEFAULT_LABELS``
