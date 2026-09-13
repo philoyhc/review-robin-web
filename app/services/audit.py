@@ -463,8 +463,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.sort_fields_updated": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),
-    # Emitterless since 19N.2 — ``pin_rule_set`` was deleted as a dead
-    # write path with no route, template or test reaching it. The key
+    # Emitterless — ``pin_rule_set`` was deleted as a dead write path
+    # with no route, template or test reaching it
+    # (``guide/findings_2026-09-13_spec_discrepancies.md`` NF-16). The key
     # stays registered because ``EVENT_SCHEMAS.keys()`` is what the
     # audit-log viewer offers as filter checkboxes and validates filter
     # input against (``views/_audit_log.py:163, 206``), so removing it
