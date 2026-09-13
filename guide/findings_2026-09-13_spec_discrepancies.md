@@ -53,12 +53,13 @@ spec section it contradicts*), `SC-06` (a route path — and *a URL is
 contract*, so whichever wins, one must move), `SC-08` (`decode_csv`'s
 signature), `SC-09` (`assignment_mode` admits only `rule_based`), `SC-10`
 (`/edit` is a 308, not a page), `SC-11` (Band 3 names a type vocabulary the
-code replaced), `SC-12`/`SC-16` (button labels, a pill colour), `SC-18`/`SC-19`
+code replaced), `SC-12`/`SC-16` (button labels, a pill color), `SC-18`/`SC-19`
 (a preview route, an identity-match mechanism), `SC-22` (a sixth Operations
 tab), `SC-25` (eight vs twelve Guide sections), `SC-29` (an RTD section the
-exporter never emits), `SC-30`…`SC-33` (visual-layer tokens — `SC-33`,
-`.pill-success` resolving to `-accent` where every other pill uses `-fg`, is
-**probably a code bug**).
+exporter never emits), `SC-32` (`.card.danger-zone`'s
+background, where two other specs and the code already agree on amber, so
+§4 was the outlier — **already reconciled by Item 1, and listed here only
+because a contract text change deserves confirmation**).
 
 **(b) The spec states a requirement the code has not met** — here the spec
 is working, and the question is whether to build or to retire. `SC-13`
@@ -67,9 +68,12 @@ navigation — *no `keydown` handler exists on that surface at all*), `SC-20`
 (a per-artifact "Send test to…" affordance), `SC-21`/`SC-34` (a Next Action
 button and a `.next-action-confirm` that render nowhere), `SC-23` (an
 Activated-state layout exception), `SC-35` (a `placeholder_card` macro with
-no callers).
+no callers), **`SC-30`** (Sign out is specified as Secondary; the code ships
+a bespoke rule) and **`SC-33`** (`.pill-success` is specified as
+`--status-success-fg` and ships `--status-success-accent`, which diverges in
+dark — *probably a code bug*, and its contract stands either way).
 
-**(c) A real judgement, where neither side is obviously right.** `SC-15`/`SC-17` (a flag and a helper
+**(c) A real judgment, where neither side is obviously right.** `SC-15`/`SC-17` (a flag and a helper
 signature where the spec also contradicts itself), `SC-24` (a gate the
 template applies and the spec does not), `SC-26`/`SC-27` (the `include` seed
 and `reconcile_impact`'s shape — in `SC-26` **the code is right and the spec
@@ -103,7 +107,7 @@ does not exist.*
 this is dead-matter removal), `CC-03`/`CC-05`/`CC-11` (docstrings naming a
 dropped table, dropped sections, and a shipped PR as pending), `CC-04` (a
 named constant that does not exist), `CC-06` (a window documented as a date
-range where the behaviour is a status check), `CC-07` (**two code comments
+range where the behavior is a status check), `CC-07` (**two code comments
 disagreeing with each other** about which segment did the work), `CC-08` (a
 segment name), `CC-09` (retired token names inside `base.html`'s own
 comments — including the pre-19B button vocabulary the doc guard bans in
@@ -113,7 +117,7 @@ codes it raises).
 **`SI-07`** is the query budget: 43 / 84 / 134 / 234 / 434, presented as
 *"measured through the real routes"*, **pinned by nothing** — the related
 test only asserts relative growth under 2.5×. Rewording it would be
-theatre. *A guard is the right answer and a guard is code.*
+theater. *A guard is the right answer and a guard is code.*
 
 ### The 2 prose rows
 
@@ -191,7 +195,7 @@ nothing usable.
 **Action:** add `library_name` to the recognized-and-skipped set. The
 contract already says so; no contract decision needed.
 
-### SC-02 · A specified pill cannot render, and the code documents behaviour it no longer has
+### SC-02 · A specified pill cannot render, and the code documents behavior it no longer has
 
 **`spec/assignments.md`** status table and its `### Staleness` section
 specify a `stale` pill "when the current rule + roster pass would produce
@@ -396,7 +400,7 @@ because a live spec already carried the answer:
 | CC-03 | `app/schemas/rules.py:6,367` | docstrings describe themselves as mirroring `rule_set_revisions`, a dropped table |
 | CC-04 | `app/services/csv_imports.py:61-63` | names a `MANUAL_CSV_MAX_BYTES` constant and a "manual-assignments importer" that do not exist |
 | CC-05 | `_serialize.serialize_session_config` docstring | still lists "3. Operator-defined RTDs" and "6. Field-label overrides" as emitted sections |
-| CC-06 | `app/services/visibility_policies.py:365-370` | documents `while_ongoing` as `[activated_at, deadline)`; the behaviour matches the spec's status-column rule, so the docstring is what is wrong |
+| CC-06 | `app/services/visibility_policies.py:365-370` | documents `while_ongoing` as `[activated_at, deadline)`; the behavior matches the spec's status-column rule, so the docstring is what is wrong |
 | CC-07 | `_operations.py:264,358-366` + `views/_previews.py:19` vs `_preview_surface.py:3-6` | **two code comments disagree** about whether the preview follow-on was Segment 18Q; the latter explicitly corrects the former |
 | CC-08 | `app/db/models/email_outbox.py` | says "Segment 14-1" where the specs say "Segment 14B" (the equivalence is recorded in the 14B plan header, so this is findability, not error) |
 
@@ -404,7 +408,7 @@ because a live spec already carried the answer:
 
 ## Stale identifiers in specs
 
-Retired colour-token vocabulary — **0 definitions in `base.html`**; the
+Retired color-token vocabulary — **0 definitions in `base.html`**; the
 live tokens are `--status-*` / `--card-*` / `--text-body`.
 **`spec/ui_elements.md`'s own family is Item 1's and still in flight.**
 
@@ -479,7 +483,7 @@ coverage floor. That is the open question this class leaves.
 A fifth kind, added when the author instructed that **`spec-writer`'s
 instruction be updated**. Its charter had a contradiction that cost two
 long per-invocation overrides during 19M: step 3 said *"update the spec to
-match current behaviour … Reflect what the code actually does now"*, while
+match current behavior … Reflect what the code actually does now"*, while
 step 5 said *"flag drift … rather than silently rewriting"*. **Those are
 opposite instructions for the same situation**, and under §4 the first one
 is wrong outside a segment close.
@@ -488,7 +492,7 @@ is wrong outside a segment close.
 makes, as two modes:
 
 - **Mode A — a segment close.** The segment deliberately shipped code, so
-  the shipped behaviour *is* the intended new contract and aligning the
+  the shipped behavior *is* the intended new contract and aligning the
   spec is the deliberate act §4 calls for. *"Spec on the way out."*
 - **Mode B — anything else** (a verification pass, a sweep, a drift someone
   noticed). **The spec wins**; a divergence merely discovered has no
@@ -536,13 +540,13 @@ unique constraint on re-import is a defect rather than a documentation
 question."* Investigated on instruction. **It is not a defect**, and the
 spec's claim was stale on both halves.
 
-The claim was: *"Seeded RTDs and seeded RuleSets auto-materialise on session
+The claim was: *"Seeded RTDs and seeded RuleSets auto-materialize on session
 create, so the export filters them out (re-emitting would either no-op or
 trip `uq_session_rule_set_session_name`)."*
 
 | the claim | what is true |
 |---|---|
-| seeded rule sets auto-materialise on session create | **nothing seeds one on create.** The seeding helper went with the rule-set library; the three `SessionRuleSet(` constructors are clone, Band 1 authoring, and apply itself |
+| seeded rule sets auto-materialize on session create | **nothing seeds one on create.** The seeding helper went with the rule-set library; the three `SessionRuleSet(` constructors are clone, Band 1 authoring, and apply itself |
 | the export filters them out | it emits **every** row — `_non_seeded_session_rule_sets` is "every row for the session" despite its name |
 | re-emitting would trip `uq_session_rule_set_session_name` | **unreachable from this path.** `_apply_session_rule_sets` is an **upsert by name** — it updates a row whose name exists and deletes the ones the CSV omits, so an INSERT never carries a duplicate name |
 
@@ -581,7 +585,7 @@ it, and this one had an unfollowable citation standing in for the attempt.*
 ### Disposition
 
 **Spec corrected; no code changed.** Item 7 now states the upsert-by-name
-behaviour, names the duplicate-name case as the only path to the constraint,
+behavior, names the duplicate-name case as the only path to the constraint,
 and cites the test that holds it. Suite **3,868 → 3,871**.
 
 ---
@@ -960,3 +964,57 @@ updated."
 *The honest reading of the day's error count is now **fifteen**, not
 thirteen: thirteen wrong claims about the code, and two wrong claims about
 having fixed them.*
+
+---
+
+## Codex review on #2354 — three findings, all correct
+
+`chatgpt-codex-connector` reviewed at `963f6247`, one commit before SC-07's
+fix. **All three findings were right**, and one was right about something I
+had already done.
+
+**P1 — US spelling in the new register prose.** Correct, and it cites
+`AGENTS.md` L36-40, which is the rule: *new or rewritten prose is US.* The
+register carried `colour` ×2, `judgement`, `behaviour` ×6, `theatre`,
+`materialise` ×2. **And the same slip was in the other three documents
+written today** — the segment plan, this sweep's record, and the
+`ui_elements` sweep's record, twelve more occurrences. All corrected. *The
+finding named one file; the defect was in four, which is the argument for
+fixing a class rather than an instance.*
+
+**P2 — `SC-31` and `SC-33` were in the wrong buckets.** Correct, and the
+reasoning is the part worth keeping: the buckets exist so rows can be
+**ruled in batches**, so an id in the wrong one is not untidiness — it is a
+ruling applied to the wrong thing. `SC-31` was listed twice, in (a) and
+(c). `SC-33` sat in (a), *"the code looks intended and the spec is stale"*,
+while its own row says the contract stands and the code is probably the bug
+— so accepting bucket (a) wholesale would have rewritten a contract the
+register was defending. `SC-30` had the same shape. Both moved to (b);
+`SC-31` left in (c) only; `SC-32` named explicitly rather than swept in by a
+range. **Verified mechanically afterwards**: no id in two buckets, all 31
+open `SC` rows placed.
+
+**P2 — the obsolete `SC-07` warning.** Correct, and **already fixed** in
+`43ac17d5`, which Codex had not seen. It reached the same conclusion
+independently and by the same evidence — the retired seeding, the
+upsert-by-name — which is worth recording as corroboration rather than
+noise.
+
+It also supplied something the investigation had missed:
+`test_empty_rules_json_round_trips_unchanged` **already** serialises, applies
+over the same session, and asserts byte-identity. So the first of the three
+tests added for SC-07 was a **duplicate** — and because the row exists before
+that apply, the existing test already exercises the update branch, so the
+second apply added nothing. Removed; the existing coverage is now cited in
+the module docstring so the omission is deliberate rather than an oversight.
+Suite **3,871 → 3,870**.
+
+*Removing it immediately created a fresh instance of this segment's own
+defect: the spec cited the file "whose **third** case fails if the cross-row
+check is removed", and there were then two. Now cited by test **name** —
+because an ordinal rots the moment a case is added or dropped.*
+
+**The reviewer that is not me found three things five passes of mine did
+not**, including one that would have mis-ruled a contract. *Maker and
+checker separate, and the checker being a different model is the part that
+worked.*

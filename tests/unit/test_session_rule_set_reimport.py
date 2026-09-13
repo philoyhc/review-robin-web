@@ -15,6 +15,12 @@ The serializer emits every row (``_non_seeded_session_rule_sets`` is
 that makes that safe, because *the guarantee had been resting on a claim
 nobody could check* — the spec even cited a test file that does not exist.
 
+**The single-session re-import case is already covered** by
+``tests/unit/test_apply_session_config.py::test_empty_rules_json_round_trips_unchanged``,
+which serialises, applies over the same session, and asserts the export is
+byte-identical — and because the row exists before that apply, it already
+exercises the update branch. It is not repeated here.
+
 The duplicate-name case is the one place a collision could reach the database:
 ``_apply_session_rule_sets`` calls ``db.add`` per row without flushing between
 them, so two rows sharing a name would both insert. It never gets that far —
@@ -77,17 +83,6 @@ def _names(db: Session, review_session: ReviewSession) -> list[str]:
         .scalars()
         .all()
     )
-
-
-def test_reimport_over_the_same_session(db: Session) -> None:
-    review_session = _session(db, "rsr1")
-    _rule_set(db, review_session, "Full Matrix")
-
-    rows = serialize_session_config(db, review_session)
-    apply_session_config(db, review_session, rows)
-    apply_session_config(db, review_session, rows)
-
-    assert _names(db, review_session) == ["Full Matrix"]
 
 
 def test_import_into_a_session_that_already_carries_the_name(db: Session) -> None:

@@ -55,7 +55,7 @@ Three separate problems, and only the third is confined to one file:
    moved there on 2026-05-22 and came back when 18R Item 4 retired that
    page"*. A reader wanting the contract reads the provenance first.
 3. **Stale identifiers — a second class, found only because of the
-   first.** `ui_elements.md` names five colour tokens that have **0
+   first.** `ui_elements.md` names five color tokens that have **0
    definitions** in `base.html` (`accent-blue`, `accent-green`,
    `accent-amber`, `accent-red`, `text-primary`), on **~28 lines**, while
    `spec/color_tokens.md`'s opening paragraph records that vocabulary as
@@ -718,7 +718,7 @@ validation severities, two of which would block activation) stays with it.
 **Four items, split by what makes each fix decidable**, not by file:
 
 - **Item 7 — ID.** A spec names an identifier that does not exist. Decided
-  by grepping the real name. No judgement.
+  by grepping the real name. No judgment.
 - **Item 8 — SI.** A file contradicts itself. Decided by the file's own
   majority, or by the code where the file is evenly split.
 - **Item 9 — SS, doc-only subset.** Decided by `spec/README.md`'s
@@ -778,14 +778,14 @@ grep -c '^| SI-' guide/findings_2026-09-13_spec_discrepancies.md   # part of 10 
 ```
 
 **Item 7's eight ID rows touch six spec files.** Six are the retired
-colour vocabulary (`accent-*`, `text-primary`, `bg-page`, `surface-2`,
+color vocabulary (`accent-*`, `text-primary`, `bg-page`, `surface-2`,
 `text-muted` — all **0** definitions in `base.html`); two are other wrong
 names. **Code changed: 0.**
 
 ### PR ladder
 
 One rung per item, Items 7 → 10 in order. Item 7 first because it is the
-only one with no judgement in it, so it establishes the shape cheaply.
+only one with no judgment in it, so it establishes the shape cheaply.
 
 ### Definition of done
 
@@ -820,7 +820,7 @@ only one with no judgement in it, so it establishes the shape cheaply.
 
 ### Status — 2026-09-13 (item closed)
 
-**Intended vs done.** As planned, one rung, no judgement calls needed. Two
+**Intended vs done.** As planned, one rung, no judgment calls needed. Two
 things the plan did not predict:
 
 - **Open question 1 answered in the simplest direction.** ID-01's four
@@ -908,7 +908,7 @@ status block constructs positionally is a code change with its own risk.
 At `83282ddb`: **3 spec files** (`settings_inventory.md`,
 `assignments.md`, `reviewer-surface.md`) and **1 code file**, comments
 only (`app/web/views/_assignments.py` — three docstrings and one inline
-comment). **No behaviour changed**; the suite is the check.
+comment). **No behavior changed**; the suite is the check.
 
 ### What correcting the comments turned up
 
@@ -928,7 +928,7 @@ in code rather than in `spec/`:
 
 - All four rows marked **ACTIONED** in the register, with what each became.
 - The author's instruction quoted in the register, not just the commit.
-- No behaviour change: `.venv/bin/pytest` green, `ruff check .` clean.
+- No behavior change: `.venv/bin/pytest` green, `ruff check .` clean.
 - `### Doc impact` section present and current
 - `python3 tools/close_check.py 19M.8` exits 0; any warning adjudicated
 - `spec-writer` run against the batch; flags adjudicated

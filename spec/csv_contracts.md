@@ -520,8 +520,10 @@ Concrete guarantees the importers + serialisers maintain:
    same rule set twice**, because apply adds per row without flushing
    between them. The parse phase rejects that bundle before phase 2 runs —
    a `duplicate session_rule_sets name` error, so nothing is written.
-   Pinned by `tests/unit/test_session_rule_set_reimport.py`, whose third
-   case fails if the cross-row check is removed.
+   Pinned by
+   `tests/unit/test_session_rule_set_reimport.py::test_two_rows_sharing_a_name_are_rejected_before_any_write`,
+   which fails if the cross-row check is removed — named rather than
+   numbered, because an ordinal rots the moment a case is added or dropped.
 
 The round-trip is asserted by `tests/unit/test_apply_session_config.py`,
 `tests/unit/test_session_config_io.py` and
