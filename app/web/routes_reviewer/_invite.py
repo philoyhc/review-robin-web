@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
+from app.services.email_identity import normalize_email
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
@@ -45,7 +46,7 @@ def reviewer_invite(
             detail="This invitation link is invalid or has expired.",
         )
     invitation, review_session, reviewer = found
-    if (user.email or "").casefold() != reviewer.email.casefold():
+    if normalize_email(user.email) != normalize_email(reviewer.email):
         return _templates.TemplateResponse(
             request,
             "reviewer/invite_mismatch.html",

@@ -165,22 +165,156 @@ uniqueness gate that exists to catch it.
 Nothing has failed in production, because the rosters seen so far are
 ASCII. That is why this is an opportunity and not an incident.
 
-### Open questions
+### Decision
 
-- **Which fold wins?** Casefold everywhere is the Unicode-correct
-  answer and matches the docstring's stated intent, but it cannot be
-  done in SQL — it means loading candidates and comparing in Python, or
-  storing a folded column. Lowering everywhere is cheap and wrong for
-  the cases that motivated casefold. **Decides:** the author.
-- **Does a stored normalized column pay for itself?** It would let the
-  database do the matching and index it, at the cost of a migration and
-  a write-path invariant. **Decides:** the author, with the above.
+**`str.lower`, applied in Python, and the fold never enters SQL.**
+Ruled by the author 2026-09-13, on the recommendation below.
+
+**Rejected: casefold everywhere** — the answer the Open Questions
+leaned toward, and the dangerous one. Casefold is the Unicode-correct
+fold for caseless *search*; identity is not search. It maps `ß` to
+`ss`, so `straße@example.com` and `strasse@example.com` — two
+different mailboxes — become one key, and that key decides access at
+the three `web/deps.py` gates, at `auth.roles.is_super_admin`, at the
+reviewer dashboard's roster match and at invite acceptance.
+
+**The first draft of this Decision was wrong about the direction, in
+the safe-sounding direction.** It said the pre-fix state failed
+*closed* — a `ß` holder cannot match their own lower-cased row — and
+concluded there was no pressure to choose quickly. That is one of two
+pairings. The other was never checked: a `ß` holder's casefolded key
+matches an unrelated **`ss`-spelled** row exactly, at every gate
+above, because casefold was applied consistently on both sides there.
+So a real fail-open existed. Low likelihood in an ASCII tenancy and no
+evidence it occurred, but the reassurance was unearned and is
+withdrawn.
+
+**Rejected: fold inside SQL.** It cannot be made trustworthy here,
+and measuring it turned out to be worse than the argument that
+predicted it. Against Postgres 16 stood up in the sandbox, SQLite, and
+CPython:
+
+| input | Python `.lower()` | Postgres `lower()` | SQLite `lower()` |
+|---|---|---|---|
+| `ÄÖÜ` | `äöü` | `äöü` | `ÄÖÜ` — unchanged |
+| `İstanbul` | `i̇stanbul` (9 chars, `i` + U+0307) | `istanbul` (8) | `İstanbul` — unchanged |
+
+**Two hazards, not one.** SQLite's `lower()` is ASCII-only, so a
+`func.lower` comparison means one thing in the suite and another in
+production — a test pinning it would assert two different things in
+the two CI jobs. *And* Python and Postgres disagree on `İ`, so the two
+sides of one comparison can disagree **in production**, where no test
+can show it. The second was not predicted; it was found by measuring
+rather than asserting, after the first draft of this Decision shipped
+the Postgres half as a claim.
+
+**Deferred: the stored normalized column.** Fold in Python at write,
+compare with `==`, index it. That is the design that puts non-ASCII
+identity back in scope, and it is a migration across `users`,
+`reviewers`, `reviewees` and `observers` plus a write-path invariant —
+a segment, not an item. Nothing justifies it yet: **the institution's
+MS365 tenancy is not expected to produce non-ASCII addresses**
+(author, 2026-09-13). This item is future-proofing the *failure
+direction*, not fixing a live incident.
+
+### Semantics
+
+- **Every ASCII identity** — Python and SQL now agree, because
+  `str.lower` and `lower()` agree on ASCII in both dialects. That is
+  every identity this deployment has, and it is what makes the dozen
+  `func.lower(column)` comparisons correct rather than accidentally
+  correct.
+- **`ß` and `ss`** — distinct identities, permanently. Not a gap to
+  close later; closing it would be the fail-open above.
+- **Other non-ASCII case** (`Ä`, `İ`) — out of scope *by
+  construction*, not by neglect: the comparison happens in SQL, where
+  the dialects disagree. The stored-column design above is what would
+  bring it in.
+- **The local part** — lower-cased, which RFC 5321 does not licence
+  (local parts are case-sensitive there). Every mail system ignores
+  that and users expect it. A deliberate concession, recorded in
+  `docs/security_posture.md` rather than left implicit.
+
+### Judgment calls — decided
+
+- **`normalize_email` changed rather than adding a second helper**
+  (2026-09-13). Two folds side by side is the condition this item
+  exists to end; a `normalize_email_strict` would recreate it.
+- **No SQL-side site changed.** They already use `lower`. Moving the
+  fold to Python at a dozen call sites would cost the index and buy
+  nothing once both sides agree.
+- **The module docstring's claim was corrected, not just the code.**
+  It said folding through `normalize_email` meant write-time and
+  read-time "can never disagree". The SQL-side sites never folded
+  through it, so that was false when written and is the claim `SC-45`
+  actually found.
+
+### Blast radius (measured)
+
+Re-run at close, 2026-09-13. Every line states the raw figure the
+command returns **and** what to subtract, because three attempts at
+this block published numbers that did not reproduce:
+
+```
+grep -rn "normalize_email(" app/ --include=*.py | grep -v "def "
+  -> 58 invocations, 20 files
+
+grep -rn "func\.lower" app/ --include=*.py
+  -> 15 lines; 2 are prose in email_identity.py's docstring, 13 code
+
+grep -rn "\.casefold()" app/ --include=*.py
+  -> 23 lines; 1 is prose in email_identity.py's docstring, 22 code,
+     none in a gate module except the `not-identity:`-marked tag
+     search in assignments/_coverage.py
+
+grep -rc "normalize_email" tests/ --include=*.py
+  -> 0 before this item; the fold had no direct coverage at all
+```
+
+**Three wrong versions of this block, each correcting the last.**
+"14 call sites" reconciled to nothing the command produces. The
+correction published `func.lower` and `.casefold()` counts taken
+*before* the fix rather than after. The correction of *that* disclosed
+the 2 prose lines in the `func.lower` figure and silently omitted the
+1 prose line in the `.casefold()` figure — so "22" still did not
+reproduce from the command printed beside it. Stated raw-then-adjusted
+here so the reader can run the command and land on the same place.
+
+**And it measured the wrong thing**, which cost more than the bad
+number. Counting what *calls* `normalize_email` says nothing about
+what bypasses it. Four identity comparisons folded inline —
+`auth/roles.py` (super-admin), `routes_reviewer/_dashboard.py`,
+`routes_reviewer/_invite.py`, and two `assignments/_coverage.py`
+handle filters — so changing one function body did not reach them.
+The `.casefold()` grep is the one that would have shown it, and it was
+not run until the verification pass asked why the gates still merged.
+All four are now routed through the fold, and
+`test_no_identity_gate_folds_inline` makes that structural: a bare
+`.casefold()` in a gate module fails unless the line above it says
+`not-identity:` and why.
+
+### PR ladder
+
+1. The one-line fold change, its docstring, the module docstring's
+   false claim, and the first tests `normalize_email` has ever had.
+
+### Definition of done
+
+- `normalize_email` folds with `str.lower`, and its docstring says why
+  casefold was rejected.
+- `straße@` and `strasse@` are asserted **distinct**, with the premise
+  (that casefold would merge them) asserted alongside so the test
+  cannot quietly stop testing anything.
+- Python and SQLite folds asserted equal on ASCII identities.
+- The SQLite/Postgres `lower()` divergence pinned in a form true on
+  both dialects.
+- `docs/security_posture.md` records the convention and the RFC 5321
+  concession.
 
 ### Out of scope
 
-- Changing any comparison before the fold is chosen. This is behaviour
-  on the access and uniqueness paths; picking wrong fails closed for a
-  real participant.
+- Non-ASCII identity matching. See the deferred stored column above.
+- The four already-consistent `func.lower` sites, which need nothing.
 
 ### Doc impact
 
@@ -189,11 +323,78 @@ ASCII. That is why this is an opportunity and not an incident.
 
 ### Status
 
-**Opened 2026-09-13**, logged for attention at the author's instruction.
-Surfaced while investigating `SC-19`, which asked only which fold *one*
-call site uses; the answer was "Python casefold", and the question that
-mattered turned out to be why the other ten do something else. No code
-has moved.
+**Opened and closed 2026-09-13.** Surfaced while investigating
+`SC-19`, which asked only which fold *one* call site uses; the answer
+was "Python casefold", and the question that mattered turned out to be
+why the other twelve do something else.
+
+**Intended vs done.** The item opened with two open questions and the
+expectation that casefold would win. Investigation reversed that: the
+"Unicode-correct" answer is the one that fails open on an access gate,
+and the cheap answer is the correct one. Two things the plan did not
+anticipate:
+
+- **`normalize_email` had no test at all.** The convention every
+  identity gate rests on was asserted only through the surfaces using
+  it. Eight tests now cover it directly.
+- **The module docstring was itself false** — it claimed write-time
+  and read-time comparisons "can never disagree" because everything
+  folds through `normalize_email`, when the SQL-side sites never did.
+  That claim is what `SC-45` was really about.
+
+- **Changing one function did not close the gates it was written for**,
+  and it took two verification passes to find them all. The first found
+  four identity comparisons folding inline — `auth.roles.is_super_admin`
+  among them. The second found **three more**, and the worst of those
+  was inside a module already on the new test's list:
+  `deps.py:134`, the sign-in resolution deciding which `User` row an
+  authenticated principal becomes, folding with a bare `.lower()` that
+  the test's `.casefold()`-only regex could not see. Also
+  `users.py`'s uniqueness gate and the session-owner lookup, both
+  absent from the list entirely.
+  The root cause each time was the same: the blast radius counted
+  callers of `normalize_email` rather than sites that fold without it.
+  All seven are routed now.
+- **A third pass found no eighth gate — and that is the finding.** It
+  swept every identity comparison in `app/` and came back clean, which
+  two passes of reading could not have promised. What it did find was
+  that the test's protection was still a list: correct today, one new
+  module from being wrong again, and it named three misses in the
+  module list's own spelling of the regex — `key=str.casefold`, already
+  in use in `views/_filters.py`, has no trailing paren and would have
+  slipped past. So the test was inverted onto the **columns**, which
+  are a closed set of two names where the modules are not. Measured
+  cost of the inversion before building it: 10 sites needing a
+  `# not-identity:` marker, against the 67 that marking every
+  `.lower()` in `app/` would have required — the difference between a
+  marker that means "this is not an identity comparison" and one that
+  means "I touched a fold". Four mutations, each caught by the right
+  test; the decisive one is an unfolded `a.email == b.email` dropped
+  into a module on no list at all.
+- **Two corrections to `docs/security_posture.md` §5.5a**, both mine.
+  It named four gates "the audit does not list" and one of them,
+  invite acceptance, is listed — §5.6's `/me/invite/{token}` row. And
+  the strip-widening paragraph named three newly-stripping sites when
+  there were four: `get_or_create_user` also gained stripping, in the
+  same commit that declared the other three, and it is the sharpest of
+  them because `auth/identity.py` never strips the claim and the row
+  it creates keeps the untrimmed address.
+- **`observer_cohort.py` looked like an eighth gate and is not.** Its
+  `IS THE SAME AS` rule can put an observer's email on one side, but
+  `ALLOWED_LEFT_FIELDS` admits only `tag1`/`tag2`/`tag3` on the other,
+  so no two people's emails ever meet. The schema is what makes it
+  safe, not the fold — recorded in a comment there so the next audit
+  does not re-trace it.
+- **The pre-fix state was not merely fail-closed.** The first draft said
+  so and stopped at the self-match direction; a `ß` holder's casefolded
+  key matched an unrelated `ss` row at every gate. Withdrawn and
+  recorded, in the plan and in `docs/security_posture.md`.
+
+Nothing broke: the suite went 3,903 → 3,915, all additions. Every
+mutation run across the three passes was caught by exactly one test —
+reverting to casefold fails the eszett test, reverting any gate fails
+the module-list test, and an unfolded `a.email == b.email` in a module
+on no list fails the column test.
 
 ---
 

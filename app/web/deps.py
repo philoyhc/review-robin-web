@@ -131,7 +131,7 @@ def get_or_create_user(
     # storage-level guard against new duplicates is Slice D.
     user = db.execute(
         select(User)
-        .where(func.lower(User.email) == current_user.email.lower())
+        .where(func.lower(User.email) == normalize_email(current_user.email))
         .order_by(User.id)
         .limit(1)
     ).scalar_one_or_none()
@@ -343,9 +343,12 @@ def require_reviewer_in_session(
 ) -> tuple[Reviewer, ReviewSession]:
     """404 unless the authenticated user has an active Reviewer row in the session.
 
-    Identity match is case-insensitive email equality (``casefold()`` both
-    sides). Reviewer rows whose ``status`` is anything other than ``active``
-    do not grant access.
+    Identity match is case-insensitive email equality through
+    ``email_identity.normalize_email`` on both sides — strip then
+    ``str.lower`` since 19N Item 2, *not* ``casefold``, which merges
+    distinct mailboxes (``docs/security_posture.md`` §5.5a). Reviewer
+    rows whose ``status`` is anything other than ``active`` do not
+    grant access.
     """
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == session_id)

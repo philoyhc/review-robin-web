@@ -39,6 +39,7 @@ from app.services import (
     validation,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services.email_identity import normalize_email
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -622,7 +623,7 @@ def session_owners_add(
 
     target = db.execute(
         select(User).where(
-            sa_func.lower(User.email) == target_email.strip().lower()
+            sa_func.lower(User.email) == normalize_email(target_email)
         )
     ).scalar_one_or_none()
     if target is None:

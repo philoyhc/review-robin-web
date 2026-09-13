@@ -81,6 +81,107 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   (default on) treats the fake operator as a super-admin — inert in any
   deployed env (where `allow_fake_auth` must be false).
 
+## §5.5a Identity matching — the fold
+
+Every identity comparison in the app decides on an email match. Most
+sit behind a gate audited in §5.6; three do not appear in that table
+at all — `get_or_create_user` (which `User` row an authenticated
+principal becomes), `auth.roles.is_super_admin`, and the reviewer
+dashboard's roster match. (An earlier version of this sentence counted
+invite acceptance as a fourth. It is listed: §5.6's `/me/invite/{token}`
+row.) Roster uniqueness and CSV de-duplication fold too, so read this
+as the convention rather than as an enumeration. Settled 19N Item 2
+(2026-09-13):
+
+**`email_identity.normalize_email` — strip, then `str.lower`.** Not
+`str.casefold`, and the reason is a security one rather than a
+stylistic one. Casefold is the Unicode-correct fold for caseless
+*search*; identity is not search. It maps `ß` to `ss`, so
+`straße@example.com` and `strasse@example.com` — two different
+mailboxes — become one comparison key. That key decides access at
+`require_reviewer_in_session` / `require_reviewee_in_session` /
+`require_observer_in_session` (`web/deps.py`), at
+`auth.roles.is_super_admin`, at the reviewer dashboard's roster match
+and at invite acceptance. Merging two people at any of them lets one
+reach the other's surface: a fail-**open**. Lowering keeps them
+distinct.
+
+**The fold also strips**, which four of the sites it reached did not
+do before — `is_super_admin`, the dashboard match, invite acceptance
+and `get_or_create_user` all compared unstripped. Surrounding
+whitespace on an identity now matches where it previously did not. A
+widening, stated rather than absorbed: these identities arrive from
+Easy Auth headers and a roster whose emails are stripped on write, so
+the case is not expected, but the semantics changed and the change was
+not the point of the item. `get_or_create_user` is the sharpest of the
+four, because `auth/identity.py` never strips the parsed claim and the
+row it creates keeps the untrimmed address: before this, a padded
+claim would have missed its own row and created a second one. It was
+omitted from the first version of this paragraph, which named the
+other three. It is also the one site here the fail-open paragraph
+above does not name, which is not an inconsistency: it always folded
+with `.lower()`, never `.casefold()`, so it was exposed to the
+whitespace gap but never to the merge.
+
+**This was a live fail-open, not a hypothetical**, and the first
+write-up of this item got that wrong — it said the pre-fix state
+"failed closed" because a `ß` holder could not match their *own*
+lower-cased row, and stopped there. The other direction was never
+checked: a `ß` holder's casefolded key matched an unrelated
+*`ss`-spelled* row exactly, at every gate above. Low likelihood in an
+ASCII tenancy, no evidence it ever occurred, and closed now — but it
+was a fail-open path and is recorded as one.
+
+**The fold is applied in Python and never composed in SQL.** A dozen
+sites compare `func.lower(column)` against a `normalize_email` value;
+that is sound because the three implementations agree on every ASCII
+identity. It is not extended to non-ASCII because **no two of them
+agree there**. Measured 2026-09-13 against Postgres 16 (`C.UTF-8`),
+SQLite, and CPython:
+
+| input | Python `.lower()` | Postgres `lower()` | SQLite `lower()` |
+|---|---|---|---|
+| `ÄÖÜ` | `äöü` | `äöü` | `ÄÖÜ` — unchanged |
+| `İstanbul` | `i̇stanbul` — 9 chars, `i` + U+0307 | `istanbul` — 8 chars | `İstanbul` — unchanged |
+
+Two separate hazards, not one. **SQLite's `lower()` is ASCII-only**,
+so a `func.lower` comparison means something different in the test
+suite than in production. And **Python and Postgres disagree on `İ`**
+— Python keeps a combining dot the database drops — so the Python and
+SQL sides of one comparison can disagree *in production*, with no test
+able to show it. A fold split across that boundary cannot be made
+correct for non-ASCII; it can only be kept out of the way.
+
+**Known and accepted limits.**
+
+- **Non-ASCII case** (`Ä`, `İ`) does not fold. A roster row and an
+  access check could disagree, which fails *closed* — a legitimate
+  participant refused, never a stranger admitted. Closing this needs a
+  stored normalized column folded in Python at write and compared with
+  `==`; deferred, and unjustified while the tenancy is ASCII.
+- **The local part is lower-cased**, which RFC 5321 does not licence —
+  local parts are case-sensitive there. Universally ignored by mail
+  systems and contrary to user expectation if honoured. A deliberate
+  concession.
+
+**How it is held.** Two structural tests in
+`tests/unit/test_email_identity_fold.py`. The first forbids a second,
+inline fold inside a listed set of identity-deciding modules. The
+second scans **all** of `app/` for a comparison or fold against
+`.email` / `.email_or_identifier` and requires it to reach
+`normalize_email` — on the line or anywhere in its enclosing function
+— or to carry a `# not-identity:` comment above it inside that
+function. The second exists because the first is a list someone has to
+remember to extend, and two verification passes each found a gate it
+had not been extended to; the column set is closed where the module
+set is not. Ten sites carry the marker for that scan — five operator
+picker filters, one audit-log actor filter, three roster dirty checks
+and one picker preview — and three more carry it for the first test,
+all folds of a CSV `Status` value or a tag rather than an address.
+
+Coverage also includes the eszett distinctness and the
+SQLite/Postgres divergence.
+
 ## §5.6 Permission audit
 
 Reviewed 2026-05-18. Every route family resolves identity through

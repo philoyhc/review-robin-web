@@ -10,9 +10,28 @@ gates used to each re-derive:
   three-way split between ``str.casefold``, SQL ``lower``, and
   ``str.lower`` — audit S2).
 
-Every identity-match site — roster uniqueness gates, participant
-access gates, CSV dedup — now folds through :func:`normalize_email`,
-so write-time and read-time comparisons can never disagree.
+Every identity gate folds through :func:`normalize_email` — and that
+sentence was false for three years' worth of call sites until 19N
+Item 2 checked it. ``auth/roles.py``, the reviewer dashboard, invite
+acceptance and two coverage filters case-folded **inline**, so they
+were untouched by any change to this function.
+``tests/unit/test_email_identity_fold.py::test_no_identity_gate_folds_inline``
+now enforces it rather than asserting it: a bare ``.casefold()`` in a
+gate module fails unless the comment above it says ``not-identity:``
+and why.
+
+**Comparisons composed in SQL still do not fold through here** — 13
+code sites compare ``func.lower(column)`` against a Python-folded
+value, and until Item 2 the two sides used different rules. Aligning
+this function on ``str.lower`` makes them agree on every ASCII
+identity, which is every identity this deployment has.
+
+The fold cannot be made trustworthy *inside* SQL here, and that is
+why it is not attempted: **SQLite's ``lower()`` is ASCII-only while
+Postgres's is Unicode-aware**, so ``func.lower`` means one thing in
+the test suite and another in production. A non-ASCII identity is
+therefore out of scope by construction rather than by neglect; see
+19N Item 2 for the stored-column design that would put it back in.
 
 See ``guide/segment_19B_consistency.md`` (S2–S4).
 """
@@ -34,13 +53,24 @@ def looks_like_email(value: str | None) -> bool:
 
 
 def normalize_email(value: str | None) -> str:
-    """Return the canonical case-insensitive comparison key for an
-    email or email-shaped identifier: stripped and case-folded.
+    """Return the canonical comparison key for an email or
+    email-shaped identifier: stripped and lower-cased.
 
-    ``str.casefold`` (not ``str.lower``) is the Unicode-correct fold.
-    Handles ``None`` so callers can pass a possibly-empty column
-    value directly. Use this at *every* identity-comparison site so
-    the uniqueness gate that rejects a duplicate on write and the
-    access gate that grants a surface on read use one convention.
+    **``str.lower``, deliberately, not ``str.casefold``** (19N Item 2).
+    Casefold is the Unicode-correct fold for caseless *search*, and it
+    is the wrong tool for identity: it folds ``ß`` to ``ss``, so
+    ``straße@example.com`` and ``strasse@example.com`` — two different
+    mailboxes — collapse to one key. On an access gate that merges two
+    people, which fails *open*. Email equality is defined by the mail
+    protocol, not by Unicode's notion of sameness, so the fold stops
+    at case.
+
+    ASCII-lower-casing the local part is itself over-permissive —
+    RFC 5321 makes local parts case-sensitive — but every mail system
+    treats them case-insensitively and users expect that. A deliberate
+    concession, recorded in ``docs/security_posture.md``.
+
+    Handles ``None`` so callers can pass a possibly-empty column value
+    directly.
     """
-    return (value or "").strip().casefold()
+    return (value or "").strip().lower()

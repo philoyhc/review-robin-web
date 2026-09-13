@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
+from app.services.email_identity import normalize_email
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
@@ -78,7 +79,7 @@ def reviewer_dashboard(
     email match against the reviewers / email-identified
     reviewees / observers rosters. Inactive rows are excluded —
     deactivation is the operator's "soft remove"."""
-    user_email = (user.email or "").casefold()
+    user_email = normalize_email(user.email)
     if not user_email:
         return _templates.TemplateResponse(
             request,

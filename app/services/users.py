@@ -43,6 +43,7 @@ from sqlalchemy.orm import Session
 from app.auth.roles import effective_super_admin_emails, is_super_admin
 from app.db.models import SessionOperator, User
 from app.services import audit
+from app.services.email_identity import normalize_email
 
 
 @dataclass(frozen=True)
@@ -476,7 +477,9 @@ def invite(
             message=f"'{email}' is not a valid email address.",
         )
     existing = db.execute(
-        select(User).where(func.lower(User.email) == email_normalised.lower())
+        select(User).where(
+            func.lower(User.email) == normalize_email(email_normalised)
+        )
     ).scalar_one_or_none()
     if existing is not None:
         raise UserOperationError(
