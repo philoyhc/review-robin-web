@@ -1,17 +1,14 @@
 # Role landing and visibility
 
-**Current as of 2026-09-08 (Segment 19G Item 9; §4's archived rows
-re-observed then, the rest as of Segment 19F PR 2, 2026-09-07).** Answers one question from
-the reader's side: **given my role — or my lack of one — can I sign in,
-where do I land, and what do I see?**
+Answers one question from the reader's side: **given my role — or my
+lack of one — can I sign in, where do I land, and what do I see?**
 
-Every table below was **recorded from a running app**, not derived from
+Every table below is **recorded from a running app**, not derived from
 reading the routes: a fresh database seeded with one session in each of
 the five lifecycle states, a full roster on each, and one signed-in
-persona per row driving the real Easy Auth header path. Where behaviour
-surprised the author it was re-tested before being written down; two
-first-pass results turned out to be harness faults and are not in these
-tables.
+persona per row driving the real Easy Auth header path. A row that
+surprises its reader should be re-observed the same way rather than
+reasoned about from the routes.
 
 **What this file is not.** The authorization *contract* — which gate
 guards which route, and with what status code — is
@@ -84,24 +81,26 @@ still lands on the lobby.
 | Observer only | `observer` | For observers |
 | Operator + reviewer | `operator`, `reviewer` | both sets — roles union |
 
-**The first row reverses 19E rung 7** (19F decision 6, 2026-09-07). Rung
-7 returned *all four* audiences for a viewer holding nothing, arguing
-that an empty Guide serves nobody and the page carries no session data,
-so too much beat nothing. The reversal's reason is simpler: it made no
-sense for a stranger to see **more** of the Guide than any role-holder
-does — a reviewer sees one section, a stranger saw all eleven.
+**A viewer who resolves no audience gets no sections — not every
+section.** The tempting fallback is the other way round: the Guide
+carries no session data, so an empty page seems to serve nobody. It
+does not survive the comparison it implies — a union of all four
+audiences shows a stranger *more* of the Guide than any role-holder
+sees, while a reviewer sees one section. `visible_audiences` returns
+the empty set and `routes_guide` turns it into the bounce below, so the
+resolver stays pure.
 
 `/about` rather than a 404 because the chrome offers the Guide link to
 everyone, and refusing a link the app itself rendered is a worse answer
-than moving the reader somewhere useful; `/about` has been the "signed
-in but no access" landing since 18R Item 6. The chrome additionally
+than moving the reader somewhere useful; `/about` is the "signed in but
+no access" landing. The chrome additionally
 stops rendering the link for such a viewer, so the bounce is a safety
 net rather than the normal path.
 
-**The reviewee rows are why `participants.disclosable_roles` had to
-become grant-aware first.** Without that, a reviewee granted nothing
-would still resolve the `reviewee` audience and be handed a "For
-reviewees" card — the disclosure 19F closes on `/me` and `/results`,
+**The reviewee rows are why `participants.disclosable_roles` is
+grant-aware, and has to stay so.** Without that, a reviewee granted
+nothing resolves the `reviewee` audience and is handed a "For
+reviewees" card — the same disclosure `/me` and `/results` refuse,
 relocated one page over rather than removed.
 
 ---
@@ -147,8 +146,8 @@ condition and a per-role one cannot be told apart from the outside.
 
 ### Reviewee
 
-**Rewritten for Segment 19F PR 2 (2026-09-07).** The reviewee role no
-longer follows the lifecycle at all; it follows the **grant**.
+The reviewee role does not follow the lifecycle; it follows the
+**grant**.
 
 | Currently-resolving grant? | `/me` row | Linked? | `/results` |
 |---|---|---|---|
@@ -163,8 +162,8 @@ practice this means *inside an open response-release window*, and never
 on an archived session — the archive override closes every non-operator
 grant.
 
-**The grant needs two things, and lifecycle is one of them** (19F
-PR 2a). A reviewee's `while_ongoing` cell is off by construction, so
+**The grant needs two things, and lifecycle is one of them.** A
+reviewee's `while_ongoing` cell is off by construction, so
 their grant lives entirely in the after-release window — and that window
 now requires `sessions.status = "expired"` as well as a reached anchor,
 because responses are released *because the session is over*
@@ -177,15 +176,15 @@ because responses are released *because the session is over*
 | `expired`, anchor reached, policy row set | **shown** |
 | reverted to `draft` after all of the above | **none** |
 
-The last row is the case that prompted PR 2a:
-`revert_session_to_draft` accepts `expired` → `draft` and leaves the
-anchor stamped, so a session the operator had withdrawn used to go on
-showing released responses. The anchor survives the revert but goes
-inert.
+The last row is why the window tests lifecycle and not the anchor
+alone. `revert_session_to_draft` accepts `expired` → `draft` and leaves
+`responses_release_at` stamped, so an anchor-only window would go on
+showing released responses on a session the operator has withdrawn. The
+anchor survives the revert; the grant it used to carry does not.
 
 So a five-state lifecycle table would still mislead — `expired` alone
 does not produce a row, and the grant is what decides — but lifecycle is
-no longer irrelevant to it either.
+not irrelevant to it either.
 
 **A reviewee with no current grant is indistinguishable from a
 stranger** — the same empty `/me`, the same 404 — which is the point of
@@ -203,19 +202,18 @@ the Reviewee pill is missing.
 | `expired` | listed, "closed" | yes | 200 |
 | `archived` | listed, "not opened" **+ an `archived` companion pill** | **no — unlinked** | 200, empty |
 
-**Observers are deliberately not grant-gated** (19F decision 4): being
-appointed an observer is not a disclosure *about* the observer, so the
+**Observers are deliberately not grant-gated**: being appointed an observer is not a disclosure *about* the observer, so the
 privacy argument that gates reviewees does not transfer. They may see
 that they are an observer before their window opens — which is why the
 link is live on `draft` and `validated` as well as `ready` and
 `expired`.
 
-**Archived is the one exception** (decision 7). Archive closes every
+**Archived is the one exception.** Archive closes every
 non-operator grant, so `/collation` there is empty by construction and a
 live link to it is a dead end. The row keeps its "not opened" text and
 loses its link, matching the reviewer row beside it. The surface itself
 still answers **200** — observers are not route-gated the way reviewees
-became at PR 4 — it simply has nothing to render.
+are — it simply has nothing to render.
 
 **Access is not lifecycle-gated on this surface; content is.** The route
 gates only on an active roster row, so it returns 200 in every state
@@ -224,8 +222,8 @@ visibility policy and the release window
 (`spec/visibility_policy.md`).
 
 **Archived sessions stay on `/me` for reviewers and observers**, reading
-"not opened" until the session is deleted — the author declined to
-filter them (2026-09-07). Only the *reviewee* role leaves an archived
+"not opened" until the session is deleted; they are deliberately not
+filtered out. Only the *reviewee* role leaves an archived
 session, and it leaves via the archive override closing its grant rather
 than by a filter.
 
@@ -254,37 +252,28 @@ Guide does not offer them a page they would be refused.
 
 ---
 
-## 6. Known divergences
+## 6. Known divergences and standing guards
 
 Recorded rather than fixed here, because each is a behaviour decision
 rather than a typo.
 
-**~~The archive visibility override does not reach observers.~~
-Closed 2026-09-07** — and the history is worth keeping, because it was
-not closed by the change written to close it.
+**The observer archive rule is emergent, and one line makes it local.**
+No grant resolves for an observer on an archived session — but not
+because `app/web/views/_observer_collation.py` works it out. The
+after-release window requires `sessions.status = "expired"` and an
+archived session is not expired, so both window predicates return
+`False` and `resolve_mode` grants nothing. That is a property of
+`session_lifecycle`, not of this view: relax either predicate and an
+archived session whose release anchor is in the past resolves a live
+grant again — `"raw"`, on a policy authored for the observer audience.
 
-*As recorded:* `app/web/views/_observer_collation.py` had no archive
-check, computing `after_release_open` from
-`lifecycle.is_response_release_window_open`, which was then purely
-anchor-based and returned `True` on an archived session whose release
-anchor was in the past. `resolve_mode` returned a **live grant** —
-verified returning `"raw"`. End-to-end exposure was never demonstrated
-(it also needs the observer's cohort to resolve to assignments carrying
-responses), so this was a live grant to close rather than a proven leak.
-
-*What actually closed it:* **19F PR 2a**, which required
-`sessions.status = "expired"` for the after-release window. An archived
-session is not expired, so both window predicates now return `False`
-here and no grant resolves — verified against a running app before this
-entry was rewritten. The fix was a side effect of a different decision.
-
-*What 19F PR 5 then added:* the `is_archived` short-circuit anyway, as
-**defence in depth**. Without it the archive rule is *emergent* — it
-holds only while two predicates in `session_lifecycle` keep refusing
-archived sessions, which is a property of those functions rather than of
-this view. `tests/unit/test_observer_archive_short_circuit.py` pins it
-by simulating a future relaxation of one of those predicates, which is
-the only condition under which the line is observable at all.
+So the view carries an `is_archived` short-circuit
+(`ObserverCollationContext(sections=[], cohort_empty=False)`) as
+**defense in depth**, and
+`tests/unit/test_observer_archive_short_circuit.py` pins it by
+monkeypatching exactly that relaxation — the only condition under which
+the line is observable at all. **It is not dead code**: every other test
+of the rule passes with the short-circuit deleted.
 
 **Sign-in is open to the whole tenant** (§1). If the intended posture is
 that only allowlisted operators and rostered participants may sign in,

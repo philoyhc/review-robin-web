@@ -40,11 +40,10 @@ cells), not running prose.
 URL slugs, query params, API responses, log messages, database
 values, code identifiers, existing CSS class names.
 
-**Historical note.** Older docs and CSS once carried a
-`.pill-lifecycle-closed` class referencing a `closed` state that
-doesn't exist in the canonical enum. Cleanup landed during
-Segment 11B PR E; `expired` and `archived` are the post-life
-states.
+**There is no `closed` state in the canonical enum.** `expired` is
+the post-response-window state and *displays* as "Closed"; `expired`
+and `archived` are the two post-life states. Nothing — CSS class,
+query param or column value — may name a `closed` state.
 
 ## Page identity
 
@@ -60,7 +59,7 @@ states.
 Two full-width stacked cards below the chrome and status strip,
 then a two-column bottom row.
 
-### Page-card layout (18R Item 4)
+### Page-card layout
 
 ```
 ┌────────────── Workflow ──────────────────────────────────────┐
@@ -75,17 +74,15 @@ then a two-column bottom row.
 └──────────────────────────┘  └──────────────────────────┘
 ```
 
-> **Note.** Segment 18R Item 4 consolidated the session config
-> display **and** edit onto Session Home. The standalone Edit
-> page (`session_edit.html` + its GET/POST routes) was retired;
-> `GET /operator/sessions/{id}/edit` now 301-redirects to
-> `…?editing=1#session-config`. The old read-only "Session
-> Details" metadata card (Created by / Created / Modified grid)
-> and the Schedule-timeline card were both removed — the config
-> card carries the same fields, and resolved fire-moments show
-> inline next to each offset. The Extract Setup card (porting
-> CSVs) moved off Home to the **Extract data** Operations-strip
-> tab (`_extract_data_card.html`); see §2.
+> **There are four cards on Home and no more.** There is no
+> standalone Edit page — session config is displayed *and* edited on
+> the Session details card, and `GET /operator/sessions/{id}/edit`
+> is a redirect to `…?editing=1#session-config`. There is no
+> separate read-only metadata card and no Schedule-timeline card:
+> the config card carries those fields, and resolved fire-moments
+> show inline next to each offset. The Extract Setup card lives on
+> the **Extract data** Operations-strip tab
+> (`_extract_data_card.html`), not here; see §2.
 
 The Workflow card sits full-width at the top of the page-card
 region, just below the chrome (same `next_action_card.html`
@@ -98,31 +95,6 @@ DOM source order = mobile-collapse order:
 **Workflow → Session details → Quick Setup → Danger Zone**.
 Below a narrow viewport threshold the bottom pair collapses into
 a single stacked column in that same order.
-
-*Layout history:*
-- 2026-05-14 (PR #967): Workflow card retired from Session Home;
-  cards reorganised into a 2×2 grid (Session Details / Quick
-  Setup top, Danger Zone / Extract Data bottom).
-- 2026-05-14 (PR #969): Session Details + Quick Setup swapped
-  with Danger Zone + Extract Data so Session Details anchored
-  the top-left slot.
-- 2026-05-14 (PR 6): Workflow card returns to Session Home (the
-  card now functions as Operations-page chrome generally and
-  Session Home is no exception); 2×2 grid replaced with two
-  independent flex columns so Extract Data sits directly below
-  Quick Setup without row-alignment forcing.
-- 2026-05-22 (commit b490825): Danger Zone moved off Session Home
-  into the bottom-right of the Edit Session Details page
-  (`session_edit.html`) so destructive operations live alongside
-  the other edit affordances. The left column now carries Session
-  Details alone.
-- 2026-08 (Segment 18R Item 4): the standalone Edit page retired;
-  session config display + edit consolidated onto Home as the
-  full-width **Session details** card (`?editing=1` swap, `/config`
-  POST). Extract Setup relocated to the Extract data tab; the
-  read-only metadata card + Schedule-timeline card removed; Danger
-  Zone moved **back** to Home's bottom-right, paired with Quick
-  Setup in the `.bottom-grid`.
 
 ## Cards
 
@@ -208,10 +180,9 @@ Notes specific to Session Home:
   exist, Send invites (Primary) until they're sent, then Send
   reminders (Primary). Close session is always Secondary when
   live; Revert to draft is always Secondary when live — the
-  layout never promotes either to Primary. The pre-layout Pause
-  confirmation checkbox retired with the State 6 refresh; the
-  lifecycle-service `confirm` gate is upheld via a hidden field
-  in the form.
+  layout never promotes either to Primary. Pause carries **no
+  confirmation checkbox**; the lifecycle service's `confirm` gate is
+  satisfied by a hidden field in the form.
 - **No "See previews" in `ready`.** Operators monitor live
   responses while Activated; previewing is the validation-time
   affordance.
@@ -221,25 +192,20 @@ Notes specific to Session Home:
   in the right-column `.next-action-status` aside; the left
   column carries prose only. See `spec/workflow_card.md`
   "Right column — per state".
-- **Reserved states (Expired, Archived).** Not yet in scope.
-  Expected treatments:
-  - **Expired** likely gets an Extract data primary action with
-    "Deadline has passed" prominent (the new Operations-strip
-    tab, not the Session Home Extract Setup card).
-  - **Archived** likely renders the card empty or with a
-    "Restore" affordance.
+- **`expired` and `archived` are live states**, and the card's
+  behaviour in each is `spec/workflow_card.md`'s State 10 and the
+  no-buttons case respectively — see the lifecycle-behavior summary
+  below.
 
-### 2. Extract Setup card — relocated to the Extract data tab
+### 2. Extract Setup card — on the Extract data tab, not Home
 
-**As of Segment 18R Item 4 the Extract Setup card no longer
-renders on Session Home.** It moved to the **Extract data**
-Operations-strip tab (`session_extract_data.html`, via the
-`_extract_data_card.html` partial), where it sits in the
-page's right-hand wrap-up column alongside the Archive-session
-and (observers-gated) Token-keys cards. Its contract is
-unchanged — the tile table and grey-out rules below still
-describe it, they just live on the Extract data page now, not
-Home. The rest of this section is retained for that contract.
+**The Extract Setup card does not render on Session Home.** It lives
+on the **Extract data** Operations-strip tab
+(`session_extract_data.html`, via the `_extract_data_card.html`
+partial), in that page's right-hand wrap-up column alongside the
+Archive-session and (observers-gated) Token-keys cards. Its contract
+is specified here, because the round-trip it forms with Quick Setup
+is a Home concern; the surface it renders on is not Home.
 
 The card for porting / archiving — the CSVs Quick Setup can
 re-ingest. Four always-present per-entity download tiles, plus a
@@ -247,50 +213,42 @@ conditional Observers tile when `observers_enabled`, plus a Zip-all
 bundle — arranged in two columns mirroring the Quick Setup slot
 placement:
 
-| Tile | DOM column | Condition | Wired by |
-|---|---|---|---|
-| Reviewers | col 1, top | always | 12A-1 PR 2 (#717) |
-| Reviewees | col 1, bottom | always | 12A-1 PR 2 (#717) |
-| Relationships | col 2, top | always | 12A-3 PR 1 (#779) |
-| Observers | col 2, second | `observers_enabled` | W13, PR #1755 |
-| Settings  | col 2, third | always | 12A-1 PR 1 (#713) |
-| Zip all | col 2, bottom | always | 18D PR E1 |
+| Tile | DOM column | Condition |
+|---|---|---|
+| Reviewers | col 1, top | always |
+| Reviewees | col 1, bottom | always |
+| Relationships | col 2, top | always |
+| Observers | col 2, second | `observers_enabled` |
+| Settings  | col 2, third | always |
+| Zip all | col 2, bottom | always |
 
 The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`.
 
-Originally five tiles (Reviewers / Reviewees / Relationships /
-Settings / Responses) plus a zip footer; the Responses tile
-moved to the new **Extract data** Operations-strip tab on
-2026-05-29 (per `guide/archive/extract_data.md`). The Zip-all bundle
-slimmed in the same change — it now contains only the four
-setup CSVs and exports as `{code}_setup.zip` (was
-`{code}_bundle.zip`). Response-side downloads — unified
-Responses CSV, reviewer/reviewee stats, per-instrument files
-— moved to the responses bundle at
-`/export/responses_bundle.zip` (filename
-`{code}_responses.zip`) behind the Extract data tab's
-Zip-all button.
+**This card is setup-side only.** Its Zip-all bundle carries the four
+setup CSVs and nothing else, exported as `{code}_setup.zip`. The
+response-side downloads — unified Responses CSV, reviewer / reviewee
+stats, per-instrument files — belong to a separate bundle at
+`/export/responses_bundle.zip` (filename `{code}_responses.zip`),
+behind the Extract data tab's own Zip-all button.
 
-The post-15D + post-12A-3 layout settled in 12A-3 PR 2 (#780)
-which also retired the Assignments tile end-to-end (route +
-service + audit event) since assignments are a materialised
-derivative post-15D and the operator's preferred round-trip is
-Settings ↔ Relationships ↔ Reviewers / Reviewees.
+**There is no Assignments tile, and there is no assignments extract
+route or audit event behind one.** Assignments are a materialized
+derivative of the instrument rules, so the round-trip the operator
+needs is Settings ↔ Relationships ↔ Reviewers / Reviewees.
 
 **Grey-out when empty.** The Reviewers / Reviewees /
 Relationships tiles grey out their Download button when the
-underlying count is `0` (post-12A-3 polish #781). The Settings
+underlying count is `0`. The Settings
 tile is always clickable — a session always has settings to
 extract. The Zip-all tile stays clickable for the same reason
 (Settings always contributes).
 
-**No audit-log tile in Extract Setup.** Segment 12B shipped the
-audit-events CSV route (`GET /export/audit_log.csv`) live but
-deliberately **without** an Extract Setup tile — industry best
-practice (GitHub / Stripe / Slack / Notion / Atlassian) parks
-audit data behind an admin / diagnostics doorway. The operator-
-facing surface relocates to the Sys Admin page when Segment 16A
-ships; the route + service + 13 tests stay live in the meantime.
+**No audit-log tile in Extract Setup, deliberately.** The
+audit-events CSV route (`GET /export/audit_log.csv`) is live, but
+audit data belongs behind an admin / diagnostics doorway — as it does
+at GitHub, Stripe, Slack, Notion and Atlassian — so its
+operator-facing affordance is the `Download CSV` button on the Sys
+Admin per-session audit-log page, never a tile here.
 
 **No lifecycle gate.** The card renders identically in every
 session state. Extraction is read-only and useful at every
@@ -301,20 +259,16 @@ state — `draft` (sanity-check the configured artefacts),
 **Filenames** follow `{code}_{kind}.csv` (e.g.
 `CS101_reviewers.csv`) via `app/services/extracts/__init__.py::filename`.
 
-**Out of scope for this card.** The zip-all bundle stream remains
-inert. Excel-format export was never an MVP item. The audit-log
-tile relocates to Sys Admin in Segment 16A.
+**Out of scope for this card.** Excel-format export. The audit-log
+download, which lives on the Sys Admin per-session audit-log page.
 
 ### 3. Danger Zone card (bottom-right)
 
-The Danger Zone card (Delete Data + Delete Session) lived on
-Session Home through 2026-05-21, moved to the Edit Session
-Details page on 2026-05-22 (commit b490825), and **returned to
-Session Home in Segment 18R Item 4** when the Edit page retired.
-It now occupies the bottom-right of Home's `.bottom-grid`,
-paired with Quick Setup in the bottom-left (`#danger-zone`).
+The Danger Zone card (Delete Data + Delete Session) occupies the
+bottom-right of Home's `.bottom-grid`, paired with Quick Setup in the
+bottom-left (`#danger-zone`).
 
-The card's contents and behaviour are unchanged:
+Its contents:
 
 - **Delete Data** — wipes all reviewer responses while preserving
   setup. Confirmation checkbox (`required`) + Destructive button.
@@ -358,10 +312,9 @@ delete.
 
 ### 4. Session details card (full-width, below Workflow)
 
-**Segment 18R Item 4 consolidated the session config display
-*and* edit onto Session Home.** The standalone Edit page was
-retired; this full-width card (`#session-config`) carries every
-config field in an in-place **display ↔ edit swap**. The card
+Session config is displayed *and* edited here: this full-width card
+(`#session-config`) carries every config field in an in-place
+**display ↔ edit swap**, and there is no Edit page to hop to. The card
 element carries `data-config-mode="display|edit"`; each field
 holds one slot in the same position — a read-only value
 (`data-display-only`) in display mode and its `<input>`
@@ -383,24 +336,23 @@ details". Then a two-column body of config fields, each with a
   the **Send invites** (offset from Start) and **Send reminders**
   (offset from End) offset lists. In display mode each offset
   shows as a pill next to its **resolved send datetime**
-  (`views.build_offset_display_rows`) — the Schedule-timeline
-  card that formerly sat below Session Details was retired, its
-  resolved fire-moments now shown inline here.
+  (`views.build_offset_display_rows`). Resolved fire-moments read
+  inline beside their offset; there is no separate
+  Schedule-timeline card.
 
 Below the field block, a half-width `.bottom-grid` pair of
 **sub-cards**:
 
-- **Owners** (`#config-owners-card`, Segment 16B PR 2) —
+- **Owners** (`#config-owners-card`) —
   display mode is a read-only Email / Name / Role / Added table;
   edit mode gains an Action (Remove) column plus an Add-owner
   typeahead over the workspace operator allowlist. Owner
   add/remove POST to `/owners/add` + `/owners/{user_id}/remove`
   and redirect back to Home in edit mode
   (`?editing=1#config-owners-card`); `owners_error` surfaces
-  inline. (Owners moved onto Home with the config consolidation —
-  it no longer lives only on a separate Edit sub-page.)
-- **User interface settings** (`#config-ui-settings-card`,
-  PR #1705) — two checkboxes: **Relationships tab and page**
+  inline.
+- **User interface settings** (`#config-ui-settings-card`) — two
+  checkboxes: **Relationships tab and page**
   (`relationships_enabled`) and **Observers tab and page**
   (`observers_enabled`), letting the operator opt into those
   optional Setup tabs at any point. Each is lock-on-data:
@@ -437,8 +389,10 @@ Below the field block, a half-width `.bottom-grid` pair of
   persistence helper `_apply_session_config_form`) and redirects
   back to Home in **display** mode (`#session-config`) — the
   operator saves in place instead of hopping to a child page.
-- `GET /operator/sessions/{id}/edit` survives only as a **301
-  redirect** to `…?editing=1#session-config` for stale bookmarks.
+- `GET /operator/sessions/{id}/edit` exists only as a **308
+  permanent redirect** to `…?editing=1#session-config` for stale
+  bookmarks. It keeps the `require_session_operator` gate, so a
+  non-owner is refused rather than bounced.
 
 Lifecycle state is shown in the chrome status strip and (on Home)
 in the Workflow card's body copy when relevant.
@@ -446,15 +400,13 @@ in the Workflow card's body copy when relevant.
 ### 5. Quick Setup card (bottom-left)
 
 The Quick Setup card sits in the bottom-left of Home's
-`.bottom-grid`, paired with the Danger Zone card on the right
-(18R Item 4 — relocated from the old right column). It renders
-the real four-slot shape, all wired: Reviewers / Reviewees
-(Segment 11J), Relationships (Segment 15D PR 7c), Settings
-(Segment 12A-3 PR 4), plus a conditional Observers slot when
-`observers_enabled` (W12). The functional spec is
+`.bottom-grid`, paired with the Danger Zone card on the right. It
+renders four wired slots — Reviewers, Reviewees, Relationships,
+Settings — plus a conditional Observers slot when
+`observers_enabled`. The functional spec is
 `spec/quick_setup_card_spec.md`.
 
-Layout: a 2-column grid (post-15D cleanup polish #768) — Reviewers
+Layout: a 2-column grid — Reviewers
 + Reviewees stack in the left column; Relationships + Settings
 stack in the right column. A Lock / Unlock button sits in a footer
 at the bottom-right and renders in every editable-conceivable
@@ -480,10 +432,10 @@ State-conditional copy only — the card frame is constant:
 
 ## Placeholder cards
 
-The shared placeholder pattern is no longer used on Session Home —
-both Quick Setup and Extract Data have graduated. The pattern
-remains documented here for any future placeholder card on any
-page.
+**No card on Session Home is a placeholder** — every one of the four
+is wired. The pattern is documented here because it is the app's one
+shape for an inert card, and any future placeholder on any page
+reuses it.
 
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,
@@ -499,22 +451,6 @@ would desynchronise sibling placeholders. A future placeholder
 card on any page reuses the same macro without further design
 work.
 
-Cards that have graduated out of the placeholder pattern:
-
-- **Quick Setup** graduated in Segment 11H — now ships as a full
-  five-slot card (`_quick_setup_card.html`) with every slot wired
-  (Reviewers / Reviewees in 11J, Relationships in 15D PR 7c,
-  Settings in 12A-3 PR 4, Observers W12 PR #1754; Observers slot
-  conditional on `observers_enabled`).
-- **Extract Data** graduated across the 12A landings — now ships
-  four always-present tiles plus a conditional Observers tile plus
-  a Zip-all bundle footer (`_extract_data_card.html`). See §2
-  above for the tile table.
-- **Rule Based Assignment** (on the Assignments page, not Home)
-  graduated across Segments 13A → 13A-1 — now ships as a wired
-  card via `_rule_based_card.html` with a live RuleSet dropdown
-  and a Generate submit. See `spec/assignments.md`.
-
 ## Lifecycle behavior summary
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
@@ -527,13 +463,12 @@ Cards that have graduated out of the placeholder pattern:
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
-The **Extract Data** column above describes the Extract Setup
-card as it now renders on the **Extract data** Operations tab —
-it relocated off Session Home in 18R Item 4 (see §2); its
-per-state rendering is unchanged.
+The **Extract Data** column above describes the Extract Setup card
+as it renders on the **Extract data** Operations tab, not on Home
+(see §2).
 
-The **Danger Zone** card (Delete Data + Delete Session) returned
-to Home's bottom-right in 18R Item 4 (see §3). Its per-state
+The **Danger Zone** card (Delete Data + Delete Session) sits in
+Home's bottom-right (see §3). Its per-state
 availability: both Delete Data and Delete Session are active in
 `draft` / `validated` and visible-but-disabled in `ready`
 (Activated) — pause first to enable either.
@@ -593,17 +528,3 @@ action card doing the explanatory job.
 - The two-column layout is responsive only insofar as the app
   is generally desktop-first. Below a narrow viewport threshold
   the columns stack (right column below left).
-
-## Implementation history
-
-Segment 11B shipped this spec in seven slices:
-
-| PR | Slice | Outcome |
-|---|---|---|
-| #380 (PR B) | Contextual primary action card (initial shape) | Replaced Run Session + Validation summary cards |
-| #381 (PR A) | Lifecycle display mapping (`ready` → "Activated") | New `lifecycle_display.py` + Jinja filter |
-| #382 (PR C) | Extract Data card | Promoted from CTA to its own placeholder card |
-| #383 (PR D) | Quick Setup disabled in ready + Danger Zone visible-disabled | Two visual changes, no behaviour change beyond the Delete-Session UI |
-| #384 (PR E) | Stale `.pill-lifecycle-closed` cleanup | CSS-only |
-| #385 / #386 / #387 / #388 | Placeholder card unification | Quick Setup + Extract Data + Rule Based Assignment now share `.card.placeholder` + `placeholder_card` macro |
-| #390 / #391 / #392 / #393 | Workflow card refinements | Constant title + bottom button row + sentence-case button copy + state-conditional trims + confirm above buttons + 200px min-height + blue border + Title Case heading |

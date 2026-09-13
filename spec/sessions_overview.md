@@ -2,12 +2,12 @@
 
 The operator's lobby. Lists every session the signed-in user is
 an operator on, surfaces a one-click affordance for creating a new
-session, and (post Segment 18A) carries sortable columns, a tag
-filter, a search box, per-row and bulk row-expanders for
+session, and carries sortable columns, a tag filter, a search box,
+per-row and bulk row-expanders for
 rename / tag / clone / purge-and-archive / delete, and a sibling
 archived-sessions child page.
 
-> Status: shipped (Segment 18A rebuild). URL:
+> URL:
 > `GET /operator/sessions`. Template:
 > `app/web/templates/operator/sessions_list.html`. Archived child
 > page: `GET /operator/sessions/archived` →
@@ -23,7 +23,7 @@ archived-sessions child page.
   via the top-bar identity link or by signing in. `/` redirects
   here for any authenticated operator.
 - **Title.** `Sessions — Review Robin Web` (browser tab) +
-  `Sessions` (page H1).
+  `Sessions Lobby` (page H1).
 - **Body class.** `ui-v2` (no reviewer modifier — this is an
   operator-only surface).
 - **Audience.** Authenticated users only. Reviewers never see this
@@ -71,34 +71,28 @@ Danger Zone card.
 ## Header
 
 - **`<h1>Sessions Lobby</h1>`** — page title, left-aligned, on its
-  own line.
-
-*(Until 2026-09-07 this was a flex strip pairing the title with a
-right-aligned `Create new session` Primary, rendered only when at
-least one session existed. Both the button and the strip are gone:
-the create affordance is now the Search card's `Add new session`,
-present in every state — see "Lobby states" below.)*
+  own line. **The header carries no button.** The page's one create
+  affordance is the Search card's `Add new session`, which renders in
+  every state — see "Lobby states" below.
 
 ## Empty state — the first-run card
 
 When the operator has **zero non-archived sessions**, the page
 renders an onboarding card (`id="lobby-first-run"`) **below the
 `Sessions` and `Search` cards**, in place of the table and the
-bulk-action form. *(Before the 2026-09-07 standardisation the two
-cards went with the table, so this card was the whole page. See
-"Lobby states" below.)*
+bulk-action form — the two cards render in every state, so this card
+is never the whole page. See "Lobby states" below.
 
 The card carries, in order:
 
 1. **`You don't have any sessions yet`** — card `<h2>`, in the
-   ordinary card-header style, no trailing period (2026-09-07).
+   ordinary card-header style, no trailing period.
 2. **A one-sentence definition of a session**, standing on its own
    directly under the header: *"A **session** is one review round
-   with its own people, form, dates, and results."* It sits here
-   rather than inside the first tile (where it was until
-   2026-09-07) because it is what all four tiles are about — it
-   belongs to the card, not to stage one — and it lets the first
-   tile open on an instruction like the other three.
+   with its own people, form, dates, and results."* It belongs to
+   the card rather than to the first tile, because it is what all
+   four tiles are about — and keeping it out of the tile lets the
+   first tile open on an instruction like the other three.
 3. The four stages of a session, as a `.subcard-row` of four
    equal-width **`.card.rs-help-card`** tiles (§10 and §4 of
    `spec/ui_elements.md`): **Set up a session**, **Prepare and
@@ -113,24 +107,19 @@ The card carries, in order:
    order already carries the sequence) and hide below 900px, where
    the row wraps and a horizontal arrow would point at nothing.
 
-   *Changed 2026-09-07 — was a three-item `<ol>`.* A list is read
+   **Four tiles, not a numbered list.** A list is read
    top-to-bottom and its last item is read least; the stage an
    operator most wants reassurance about before committing is
-   getting the data back out, so it should not be the one that
+   getting the data back out, so it must not be the one that
    trails off the bottom. Four tiles of equal width and equal
    height say "four ordinary stages" where a numbered list says
-   the fourth is furthest away. The fourth stage is new copy, not
-   a re-cut of the three.
+   the fourth is furthest away.
 
    Each tile is a table-of-contents entry for one `/guide`
    section; the card is not a second account of the workflow.
-   The four-sub-card rewrite (2026-09-07) pulled three of the
-   tile headings away from the Guide's, and the author's Guide
-   rewrite later the same day pulled them back — the draft
-   reached for the card's vocabulary unprompted — so **three of
-   the four now match verbatim**: "Prepare and activate", "Give
-   reviewers access" and "Download responses" are the headings on
-   both sides. The one remaining divergence is the first and it is
+   **Three of the four headings match the Guide's verbatim** —
+   "Prepare and activate", "Give reviewers access" and "Download
+   responses". The one divergence is the first, and it is
    deliberate: the card is read by someone who has not yet made a
    session, so its tile says "Set up a session", while the Guide
    section it points at covers creating one as well and is headed
@@ -142,23 +131,22 @@ The card carries, in order:
    its partner still fails.
 4. A muted line linking to
    **`/guide?return_to=/operator/sessions`**. This link is why the
-   card exists (Segment 19E): `/guide` is the canonical operator
+   card exists: `/guide` is the canonical operator
    documentation, and the chrome link alone is easy to miss on a
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
 
-**The card has no CTA of its own** (2026-09-07): standardisation
-left it and the Search card offering the same destination in the same
-state under two different names, so the card names that button rather
+**The card has no CTA of its own.** It and the Search card would
+otherwise offer the same destination in the same state under two
+different names, so the card **names** the Search card's button rather
 than competing with it — one way to start a session, one name for it.
 
 The naming happens **once**, in the **Set up a session** tile, where it
-belongs to the stage it describes. A closing sentence in the muted line
-repeated it three lines later; that was removed the same day, because
-saying it twice on one card is not emphasis.
+belongs to the stage it describes. Repeating it in the muted line three
+lines below is not emphasis.
 
 Item 4's muted line also carries the **setup-template download**
-(`GET /templates/starter.zip`, Segment 19E rung 4) — four generic
+(`GET /templates/starter.zip`) — four generic
 roster templates the operator can fill in before creating a
 session. This card and the Guide card are the two surfaces that
 render before any session exists, which is why both offer it;
@@ -172,33 +160,28 @@ never had a session". An operator who archives everything sees the
 card again, which is intended: they are back at the start. No
 "has-ever-had" state is tracked.
 
-**Superseded 2026-09-07, twice, and the second time settles it.** The
-rule was that this state shows a single create affordance. Standardising
-the lobby broke it: the Search card's `Add new session` stays active in
-the empty lobby on purpose — with `Rehydrate` it is one of the two ways
-*out* of one — so the page briefly offered the same destination twice,
-under two names, distinguished only by weight. Removing the first-run
-card's own CTA restores the rule rather than abandoning it: **one create
-affordance in this state, and it is the Search card's.** What the first
-version got wrong was assuming a weight difference was enough to keep
-two names for one action from confusing a first-time operator.
+**One create affordance in this state, and it is the Search card's.**
+`Add new session` stays active in the empty lobby on purpose — with
+`Rehydrate` it is one of the two ways *out* of one — so the first-run
+card must not carry a second button to the same place. A difference in
+weight is not enough to stop two names for one action confusing a
+first-time operator.
 
-> **Known gap — closed 2026-09-07 by the standardisation below.**
-> `Go to Archive` used to live in the Search card *inside the populated
-> branch*, so an operator who archived every session lost their only
-> in-app route to `/operator/sessions/archived`, and the `N archived`
-> stats pill disappeared with it. Their sessions were still there and
-> unreachable. Both cards now render in every state and the button is
-> unconditional, so the count and the route survive.
+> **`Go to Archive` is unconditional, and must stay so.** It renders in
+> every lobby state, including one holding nothing. Gate it on the
+> populated branch and an operator who archives every session loses
+> their only in-app route to `/operator/sessions/archived` — the
+> `N archived` stats pill goes with it, and their sessions are still
+> there and unreachable.
 > `test_lobby_first_run_card.py::test_an_all_archived_lobby_keeps_the_route_to_the_archive`
-> pins the state that used to strand them.
+> pins that state.
 
 ## Lobby states — one shape, three fillings
 
-**Standardised 2026-09-07.** The `Sessions` and `Search` cards render on
-**every** lobby, so an operator learns one page rather than two. Before
-this the whole two-card row sat inside the populated branch and vanished
-with the table. What varies is which Search controls are live:
+The `Sessions` and `Search` cards render on **every** lobby, so an
+operator learns one page rather than two — neither card belongs inside
+the populated branch, where it would vanish with the table. What varies
+is which Search controls are live:
 
 | Lobby holds | `Sessions` card | Search + Cancel | `Add new session` · `Rehydrate` · `Go to Archive` |
 |---|---|---|---|
@@ -220,9 +203,9 @@ aria-disabled="true">`, not disabled anchors.** `a.btn.disabled` in
 cannot be clicked or focused. Same shape as the reserved
 `.nav-tab disabled` tabs in `spec/ui_elements.md` §6.
 
-The first-run card still renders **below** the two cards whenever there
-are no live sessions — including the only-archived case, per the rung 3
-trigger (zero non-archived, not "never had one").
+The first-run card renders **below** the two cards whenever there
+are no live sessions — including the only-archived case, per the
+trigger above (zero non-archived, not "never had one").
 
 ## Sessions table
 
@@ -265,24 +248,21 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
-- **Selected rows are marked** (19L.1, restyled by 19L.2, carried to
-  the archived child page by 19L.3). Every
-  selected row carries `session-row-selected`, styled in `base.html` as
-  a **rail at each end and no fill** — `--selected-bg` as a 6px inset
-  shadow on `td:first-child` and the mirror of it on `td:last-child`.
+- **Selected rows are marked.** Every selected row carries
+  `session-row-selected`, styled in `base.html` as a **rail at each end
+  and no fill** — `--selected-bg` as a 6px inset shadow on
+  `td:first-child` and the mirror of it on `td:last-child`.
   Both rails are inset shadows rather than borders, so selecting a row
   does not change its height and reflow the table under the pointer.
   The bracket has no top or bottom cap for the same reason: caps would
   cost 4px of height on selection.
 
-  **The row has no background, and that is the design.** 19L.1 shipped
-  an edge *and* a fill; the fill was `--row-selected-bg`, resolving to
-  the same primitives as `--status-info-bg`, which under `body.ui-v2`
-  backs both `.pill-count` and `.pill-info` from a single rule. A lobby
-  row carries four to six of those — Created by, Created, Deadline,
-  Timezone, one per tag — so on a selected row every one of them
-  vanished, along with a Validated status pill. No replacement fill
-  escapes it: the six pale pill fills occupy relative luminance
+  **No fill.** A row fill resolves to the same primitives that back
+  `.pill-count` and `.pill-info` — one rule under `body.ui-v2` — so it
+  erases every pill the row carries, and a lobby row carries four to
+  six of them (Created by, Created, Deadline, Timezone, one per tag)
+  plus a Validated status pill. No replacement fill escapes the
+  problem: the six pale pill fills occupy relative luminance
   0.810–0.914 against a 1.000 card, leaving no clearance above the band
   and only a too-dark clearance below. The rails carry the whole signal
   instead, at roughly 5.2 against the card in light and 4.9 in dark,
@@ -291,26 +271,24 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   **The panel closes the bracket.** The injected expander row carries
   `session-expander-bracketed`, which gives its single `colspan` cell
   both rails — the cell is first and last child at once — and fills it
-  with `--selection-panel-bg`, the renamed token whose primitives used
-  to be the row's. The panel renders no pills, so the shade is safe
-  there; see `.session-row-selected` in `spec/ui_elements.md` for the
-  pill-free-zone condition that creates. (Named rather than numbered: it
-  is in §10 Layout primitives today, and this citation said §6 — which
-  is Buttons — until `spec-writer` caught it.) The archived-sessions page injects a panel with the
-  same `session-expander` class names from its own script, so a rule on
-  `.session-expander` alone would style both pages at once — which is why
-  the bracket is opt-in rather than automatic. **Since 19L.3 it opts in
-  too**: its rows take the same `session-row-selected` marking from its
-  own `refreshExpander()`, and its bulk panel carries the same opt-in
-  class, so both pages bracket a selection identically. It needed no new
-  CSS — 19L.2's rules were already written against the class. The class
-  remains the gate; what it gates is two pages, not one. *The two scripts
-  stay separate on purpose (this page has a single bulk panel; the lobby
-  has a single and a bulk one with editable fields and purge options), so
-  the marking function is duplicated rather than shared.*
+  with `--selection-panel-bg`. The panel renders no pills, so the shade
+  is safe there; see `.session-row-selected` in `spec/ui_elements.md`
+  §10 Layout primitives for the pill-free-zone condition that creates.
 
-  This page has no section of its own in this spec, so its selection
-  behaviour is recorded here rather than pointed at.
+  **The bracket is opt-in by class, never by `.session-expander`
+  alone.** The archived-sessions page injects a panel carrying the same
+  `session-expander` class names from its own script, so an unscoped
+  rule would style both pages at once. Both pages do opt in — archived
+  rows take the same `session-row-selected` marking from their own
+  `refreshExpander()`, and the archived bulk panel carries the same
+  opt-in class — so a selection brackets identically on each. *The two
+  scripts stay separate on purpose (the archived page has a single bulk
+  panel; the lobby has a single and a bulk one with editable fields and
+  purge options), so the marking function is duplicated rather than
+  shared.*
+
+  The archived-sessions page has no section of its own in this spec, so
+  its selection behaviour is recorded here rather than pointed at.
 
   The class is applied in `refreshExpander()`, which is the one funnel
   every selection path meets: a row tick, a select-all (which sets
@@ -346,7 +324,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
 ### Sort / filter / search
 
-Post Segment 18A the lobby carries all three:
+The lobby carries all three:
 
 - **Sortable columns.** The table is `data-rrw-sortable` with a
   per-column `rrw-sort-btn`; clicking a header sorts by that key.
@@ -361,13 +339,13 @@ Post Segment 18A the lobby carries all three:
 - **Search.** A Search card with a free-text input matching name,
   code, or tag. Its right-flushed `.sessions-action-buttons` row
   carries **Cancel**, **Add new session**
-  (`/operator/sessions/new`; renamed from `Add new` 2026-09-07 —
-  the lobby is the one page where "new *what*" is not obvious from
+  (`/operator/sessions/new` — the label names the noun, because the
+  lobby is the one page where "new *what*" is not obvious from
   context), **Rehydrate** (`/operator/sessions/rehydrate`), and **Go
   to Archive** (`/operator/sessions/archived`). Which of these are
   live depends on the lobby state — see "Lobby states" above. **Rehydrate** rebuilds a
   live draft session from a complete set of extract CSV files — see
-  `spec/rehydrate.md` (Segment 18P Group 2).
+  `spec/rehydrate.md`.
 
 ## Bulk delete (`bulk-delete`)
 
@@ -392,7 +370,7 @@ button is gated behind a "Yes, delete" checkbox
    - calls `sessions.get_for_user(db, user, id)` — returns `None`
      when the caller isn't an operator on that session.
    - calls `lifecycle.is_editable(...)` — returns `False` for
-     Activated and reserved-state sessions.
+     `ready` (Activated), `expired` and `archived` sessions.
    - skips silently on either miss.
 3. **Delete loop.** For each surviving session, calls
    `sessions.delete_session(...)`, which cascades reviewers /
@@ -403,12 +381,11 @@ button is gated behind a "Yes, delete" checkbox
 
 #### Lifecycle eligibility
 
-The current `lifecycle.is_editable` returns `True` for `draft` and
-`validated` sessions; `ready` (Activated) and the reserved
-`expired` / `archived` states are not deletable through this
-surface. Non-eligible ticks are silently dropped — there is no
-flash banner today. (If field feedback shows operators are
-confused, layer a `?skipped=N` flash on top.)
+`lifecycle.is_editable` returns `True` for `draft` and `validated`
+sessions; `ready` (Activated), `expired` and `archived` sessions are
+not deletable through this surface. Non-eligible ticks are silently
+dropped — there is no flash banner. (If field feedback shows operators
+are confused, layer a `?skipped=N` flash on top.)
 
 ## Behaviours
 
@@ -432,7 +409,7 @@ confused, layer a `?skipped=N` flash on top.)
   currently set programmatically; there is no "Add operator"
   button on this page).
 - Bulk export of session data — that lives on the per-session
-  Extract Data card (Segment 12A).
+  Extract Setup card, on the Extract data Operations tab.
 - "Restore deleted session" — `delete_session` is a hard delete
   with a `session.deleted` audit row; no soft-delete, no undo.
 

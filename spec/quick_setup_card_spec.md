@@ -6,18 +6,16 @@ A Home-body element on the per-session Control Panel page that lets an operator 
 
 Renders in the body of the Session Home / Control Panel page (`session_detail.html`, `GET /operator/sessions/{id}`). Not a separate page; not a sub-page; no dedicated URL.
 
-Position in the Home body, top to bottom (post-18R Item 4):
+Position in the Home body, top to bottom:
 
 1. **Workflow card** — the contextual lifecycle-transition action
    (Prepare / Activate / Close / Pause), full-width.
 2. **Session details card** — the consolidated config
-   display ↔ edit surface (`?editing=1`), full-width.
+   display ↔ edit surface (`?editing=1`), full-width. There is no
+   separate Edit Session sub-page; every config field is edited in
+   place here — see `spec/session_home.md` §4.
 3. **Quick Setup card** — bottom-left of the `.bottom-grid`,
    paired with the Danger Zone card on the right.
-
-(The standalone Edit Session sub-page was retired in 18R Item 4;
-its config editing folded into the Session details card above —
-see `spec/session_home.md` §4.)
 
 ### Visibility
 
@@ -27,7 +25,7 @@ For `ready` and `closed` sessions, the card renders the same body-greying as the
 
 ### Slots
 
-The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. The Assignments slot retired in Segment 15D PR 7a (assignments are a materialised derivative post-15D, generated from the Operations Assignments page rather than uploaded directly); Relationships took its position in 15D PR 7c, and Settings graduated from inert to wired in 12A-3 PR 4 (post-cleanup polish #768 settled the final two-column layout). The Observers slot shipped in W12 (PR #1754).
+The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **There is no Assignments slot, and adding one would be wrong:** assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
 
 **Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships + Settings (+ Observers when visible) stack in the right column. There is no horizontal divider between the slot groups.
 
@@ -47,7 +45,7 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 **Slot 4 — Settings** (right column, bottom).
 - File upload accepting a session-settings CSV (the inverse shape of `serialize_session_config`'s wide CSV output — see `app/services/session_config_io/`).
 - Passive indicator: a "Settings configured" pill (always populated — a session always has settings).
-- Wired in Segment 12A-3 PR 4 against `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
+- Applies through `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
 
 There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
 
@@ -75,11 +73,11 @@ Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` in
 
 **Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments and relationships (they reference reviewer / reviewee IDs); replacing relationships or settings has no cascade beyond its own dataset. The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer / reviewee / relationships replacement, and the operator returns to the Operations Assignments page to regenerate.
 
-The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, relationships or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners (formerly the `banner-warning` per slot) are not used.
+The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, relationships or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners are not used.
 
 **Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked. Greying is not the only signal: when the card is locked, the slot file inputs **and** the replacement-confirmation checkbox also carry the HTML `disabled` attribute, so a locked card cannot have a file staged or the box ticked — not merely a greyed-but-live surface.
 
-**Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, scoped to `/operator/sessions/{id}`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the legacy per-slot endpoints retained for fixture compatibility) are whitelisted so the card's own form submissions don't trigger the relock.
+**Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, scoped to `/operator/sessions/{id}`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the per-slot endpoints) are allowlisted so the card's own form submissions don't trigger the relock.
 
 ### Result reporting
 
@@ -97,7 +95,7 @@ The card validates each file individually for parse correctness and per-file int
 
 ### Interaction with per-entity Setup pages
 
-The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to the card's slots — they share the same parsing, validation, and replacement semantics. Settings has no dedicated Setup page; the Quick Setup Slot 4 + the Settings extract download on the Extract Setup card (on the Extract data Operations tab, post-18R Item 4) are the round-trip pair.
+The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to the card's slots — they share the same parsing, validation, and replacement semantics. Settings has no dedicated Setup page; the Quick Setup Slot 4 + the Settings extract download on the Extract Setup card (on the Extract data Operations tab) are the round-trip pair.
 
 ### Out of scope
 

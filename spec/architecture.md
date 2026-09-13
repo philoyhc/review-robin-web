@@ -1,6 +1,6 @@
 # Architecture Notes
 
-**Current as of 2026-08-18.** Domain entities, the three-layer
+Domain entities, the three-layer
 code split, and the conceptual data-model hierarchy. Per-page
 surface behaviour lives in the surface specs (`spec/lifecycle.md`,
 `spec/instruments.md`, `spec/assignments.md`,
@@ -37,7 +37,7 @@ read surfaces are live:
   / summarized, per the per-instrument visibility policy) plus an
   Acknowledge gesture. Gated by `require_reviewee_with_current_grant`
   (`app/web/deps.py`), which composes the roster check with a
-  currently-resolving visibility grant (Segment 19F PR 4).
+  currently-resolving visibility grant.
 - **Observer collation** — observers view *collated* results across
   the session (not just their own). `observers` has a dedicated CRUD
   Setup page gated by `session.observers_enabled` and an
@@ -98,34 +98,30 @@ anything in between (e.g. computing a status label from instrument
 state) lives here.
 
 **Static assets** — `app/web/static/`, served by the one `StaticFiles`
-mount at `/static` (`app/main.py`). Added 2026-09-07 for the Guide's
-screencaps, which are the first assets that cannot be inlined at a sane
-size; before them the app shipped no image at all and needed no mount.
-It is a directory of files, not an asset pipeline: CSS remains inline in
+mount at `/static` (`app/main.py`). It exists for the Guide's
+screencaps — the first assets that cannot be inlined at a sane size —
+and is a directory of files, not an asset pipeline: CSS remains inline in
 `base.html` per the templating conventions, and nothing here is compiled,
 fingerprinted, or versioned. `app/` ships wholesale in the deploy
 artefact (`.github/workflows/deploy_nus.yml`), so this directory needs no
 workflow change — and equally, anything left in it is shipped.
 `tests/integration/test_guide_screencaps.py` fails both ways: on a file a
 template references but which is not committed, and on a committed file
-no template references. Since Segment 19H Item 3 (2026-09-09) every
-capture is a **light/dark pair** — `x.png` beside `x-dark.png` in the
-same flat directory, the theme picking one (`spec/ui_elements.md`
-§`.guide-figure`) — so the directory carries thirty-two files for
-sixteen figures. The suffix rather than a `dark/` subdirectory is what
-keeps every check above running over both halves unchanged: the test
-collects committed files from a non-recursive `iterdir()`. A third
-failure joins the two: a capture with no twin, which would render an
-empty figure in one theme while every per-file check still passed.
+no template references. Every capture is a **light/dark pair** —
+`x.png` beside `x-dark.png` in the same flat directory, the theme
+picking one (`spec/ui_elements.md` §`.guide-figure`). The suffix rather
+than a `dark/` subdirectory is what keeps every check above running
+over both halves unchanged: the test collects committed files from a
+non-recursive `iterdir()`. A third failure joins the two: a capture
+with no twin, which would render an empty figure in one theme while
+every per-file check still passed.
 
-The mount sends **`Cache-Control: no-cache`** (Segment 19H Item 4,
-2026-09-09) — store, but revalidate before use. Without it Starlette
-sends only `etag` and `last-modified`, and a browser may reuse a stored
-copy for a fraction of its age without asking, so a capture **replaced
-under an unchanged filename** keeps showing the old picture; that is not
-hypothetical, it is how the 2026-09-09 screencap refresh reached a
-reader as the previous image while the light/dark set added the same day
-appeared at once, being new URLs. Revalidation stays cheap: an unchanged
+The mount sends **`Cache-Control: no-cache`** — store, but revalidate
+before use. Without it Starlette sends only `etag` and `last-modified`,
+and a browser may reuse a stored copy for a fraction of its age without
+asking, so a capture **replaced under an unchanged filename** goes on
+showing the old picture while a newly added one appears at once, being a
+new URL. Revalidation stays cheap: an unchanged
 capture still answers 304 with no body. Fingerprinted filenames would
 also solve it and are still refused — versioning the names is the asset
 pipeline this directory exists without.
@@ -177,8 +173,8 @@ pattern for AJAX endpoints — new client-scripted endpoints should
 **converge on it** (a Pydantic request model + a JSON response) rather
 than inventing a third contract (consistency-audit R1 / R4). The
 instrument-card AJAX endpoints (`_instruments_band2.py`,
-`_instruments_pagination.py`) predate this note and still hand-roll
-`request.json()` validation; R4 aligns them.
+`_instruments_pagination.py`) still hand-roll `request.json()`
+validation rather than following it; R4 aligns them.
 
 **Spec registration.** A new routing module must be registered in
 `app/web/spec_registry.py`, in exactly one of three ways: mapped in
@@ -226,10 +222,10 @@ perspective:
   pure — it evaluates a rule set against the reviewer × active-
   reviewee universe and returns surviving pairs. The write-side
   caller (`app/services/assignments/`) materialises those pairs into
-  `Assignment` rows. The per-instrument rule engine **has shipped**
-  (through Wave 5); the earlier operator-side RuleSet *library* tier
-  and standalone Rule Builder page were retired in Wave 5 — every
-  rule now lives on its instrument's Band 1. See `spec/assignments.md`.
+  `Assignment` rows. Every rule lives on its instrument's Band 1:
+  there is no cross-session RuleSet *library* tier and no standalone
+  Rule Builder page, so an instrument's rule cannot be edited from
+  anywhere else. See `spec/assignments.md`.
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
   rows (`session_id` is denormalised onto the row; the logical key is
   the reviewer × reviewee × instrument triple). Each row carries
@@ -271,15 +267,14 @@ stacked. Each table is independent: its own rows (assignments scoped
 to that instrument), its own display columns, its own response
 columns. The same `(reviewer, reviewee)` pair may appear in zero,
 one, or many instruments depending on how generation ran. The
-reviewer-surface render path loops by instrument. Per-instrument
-assignment generation (each instrument runs its own Band 1 rule)
-has shipped; a group-scoped instrument collapses its per-member
-rows into one card per group at render time.
+reviewer-surface render path loops by instrument. Each instrument
+runs its own Band 1 rule at generation time, and a group-scoped
+instrument collapses its per-member rows into one card per group at
+render time.
 
 ### Practical implications today
 
-The operator-controlled instrument layer + Setup-page surface
-have shipped end-to-end. For URL-by-URL ship-state and the
+For URL-by-URL ship-state and the
 authoritative "what works today" list, read **`docs/status.md`**
 ("Capabilities today" + "What's deliberately not yet there").
 
@@ -292,10 +287,10 @@ authoritative "what works today" list, read **`docs/status.md`**
   (`ensure_default_instrument`).
 - Response fields carry a plain `data_type` (String / Integer /
   Decimal / List) plus bounds and an optional `list_options` string.
-  The former per-session **Response Type Definitions** table +
-  `_rtds.py` slice retired 2026-05-26; a small set of operator-facing
-  quick-fill list presets (`instruments/_field_presets.py`) replaced
-  the RTD catalogue.
+  There is no shared type-definition table — every response field
+  carries its own type inline, and the operator-facing quick-fill list
+  presets (`instruments/_field_presets.py`) are convenience only: the
+  preset's identity is not stored.
 - `/operator/sessions/{id}/instruments` is the single consolidated
   page for everything per-instrument: All Instrument Status card +
   one card per instrument (identity + Bands 1/2/3 — the assignment
@@ -331,8 +326,8 @@ machine — the transitions (`mark_validated`, `activate_session`,
 `revert_session_to_draft`, `expire_session`, `archive_session` /
 `unarchive_session`), the route-layer gates, the per-instrument
 open/close model, and the UI lock-card pattern. The paragraphs below
-are the original write-path narrative kept for architectural context;
-where they and `spec/lifecycle.md` diverge, the lifecycle spec wins.
+carry the write-path narrative at architectural altitude; where they
+and `spec/lifecycle.md` diverge, the lifecycle spec wins.
 
 **Session status overrides instrument acceptance.** Activation
 (`validated → ready`, `activate_session`) flips every instrument's
@@ -366,7 +361,7 @@ further setup changes; if any `Response` rows already exist,
 response-loss acknowledgment (`acknowledge_response_loss=true`) is
 required on operations that would invalidate them.
 
-### Invitations + dev outbox (Segment 9.2)
+### Invitations + dev outbox
 
 `Invitation` rows are operator-issued, per-reviewer access tokens. The
 DB stores only `sha256(token)` in `Invitation.token_hash` — the raw
@@ -387,26 +382,24 @@ if the signed-in user's email doesn't match the invitation's reviewer
 email, and otherwise stamps `opened_at` once and 303s to
 `/me/sessions/{id}`.
 
-The `email_outbox` table (Segment 9.2) is the dev-mode replacement
-for SMTP. Rows synchronously flip `queued → sent` when the operator
+The `email_outbox` table is the dev-mode replacement for SMTP. Rows synchronously flip `queued → sent` when the operator
 clicks Send. Real SMTP / production email is deferred to Segment 14B;
 the outbox table itself stays useful for debugging in any environment.
 
-### Reminders (Segment 9.3; monitoring surface reshaped in 11C / 15E)
+### Reminders
 
-The standalone `/operator/sessions/{id}/monitoring` page retired in
-Segment 11C Part 1 — its reviewer-progress view consolidated into the
-**Invitations** Operations page (reviewer-centric) and its
-reviewee-coverage view into the **Responses** page
-(reviewee-centric); see `spec/operations_pages.md`. The legacy
-`/monitoring` URL redirects to
-`/operator/sessions/{id}/invitations` to preserve bookmarks.
+There is no standalone monitoring page: reviewer progress lives on the
+**Invitations** Operations page (reviewer-centric) and reviewee
+coverage on the **Responses** page (reviewee-centric); see
+`spec/operations_pages.md`. `GET /operator/sessions/{id}/monitoring`
+303s to `/operator/sessions/{id}/invitations` so an old bookmark still
+lands somewhere real.
 
 A reviewer is **incomplete** iff their session pill is anything other
 than `submitted` — i.e. any of "never opened", "opened but not
 submitted", or "submitted-with-warn-override that still has missing
 required" classify them as incomplete. The Workflow card's **Send
-reminders** stepper action (Segment 15E) targets every incomplete
+reminders** stepper action targets every incomplete
 reviewer session-wide; the Invitations page's per-row **Send
 reminder** button (`POST /operator/sessions/{id}/invitations/{iid}/remind`)
 targets one reviewer.
@@ -427,8 +420,7 @@ list of invitation/me ids.
 Per-pair context (three `tag_N` slots — e.g. "morning interview",
 "room A", "panel-1") lives on the first-class **`relationships`**
 table — one row per `(session_id, reviewer_id, reviewee_id)`
-triple, seeded in **Segment 13E PR 2** and lit up by the
-Relationships Setup page in **Segment 15D PR 2**. Each row
+triple, authored on the Relationships Setup page. Each row
 carries:
 
 - `tag_1`, `tag_2`, `tag_3` — free-form per-pair labels.
@@ -443,10 +435,9 @@ carries:
   relationship row matching the assignment's `(reviewer_id,
   reviewee_id)` pair.
 - **Rule engine.** The `pair_context.tag1` / `pair_context.tag2`
-  / `pair_context.tag3` predicate field names (Segment 15D PR 3)
-  read via an eager
+  / `pair_context.tag3` predicate field names read via an eager
   `relationships.pair_context_lookup(db, session_id) -> dict`
-  pre-built once per `engine.evaluate` call (15D PR 4). This
+  pre-built once per `engine.evaluate` call. This
   dodges N×M re-queries — the dict is `{(reviewer_id,
   reviewee_id): Relationship}` and the predicate evaluator runs
   single-pass.
@@ -457,25 +448,20 @@ CSV columns on the Relationships extract / importer are
 `app/services/extracts/relationships_extract.py` ↔
 `app/services/relationships.py`).
 
-#### Legacy pre-15D shape (retired)
+`relationships` is the only home for pair context: there is no
+per-assignment context column and no `assignment_context_*` family
+(the logic-engaging variant was scoped and never built). Audit rows
+may carry `relationships.migrated_from_assignment_context` from the
+one-time backfill that filled the table — the event type stays
+registered in `EVENT_SCHEMAS`.
 
-Pre-15D, pair-level context lived on an `Assignment.context`
-JSON column carrying both `pair_context_1/2/3` (informational,
-shown to reviewers) and `assignment_context_1/2/3` (logic-
-engaging, hidden from reviewers). The column was dropped in
-**15D PR 6b**; the `assignment_context_*` family retired
-entirely (it had no production data and never landed an
-operator UI). Migration `e43454fceb1c` (15D PR 5) backfilled
-existing JSON `pair_context_*` values into `relationships`
-rows before the column drop.
-
-#### Lazy display-field seeding (2026-05-01, item #14)
+#### Lazy display-field seeding
 
 `InstrumentDisplayField` rows are seeded **lazily** from import
-data, never unconditionally on session creation. This avoids the
-data-loss-by-illusion shape where reviewers saw three blank
-`Pair Context` columns on full-matrix sessions because the legacy
-default seed assumed manual mode would always populate them.
+data, never unconditionally on session creation. An unconditional
+seed assumes something will populate every slot; on a full-matrix
+session nothing does, and the reviewer is shown three blank
+`Pair Context` columns that look like lost data.
 
 - `ensure_default_instrument` and `create_instrument` create no
   display-field rows.
@@ -486,8 +472,8 @@ default seed assumed manual mode would always populate them.
   re-importing reviewees does not duplicate rows.
 - After a successful relationships CSV import,
   `save_relationships` calls `seed_display_fields_from_assignments`
-  (the legacy-named helper now reads from `relationships.tag_N`
-  per the 15D rewrite), which adds a `pair_context_N` row for any
+  (which, despite its name, reads `relationships.tag_N`), which
+  adds a `pair_context_N` row for any
   slot with at least one populated value across the session's
   relationships. Sessions without populated pair-context slots
   are a no-op.
@@ -495,11 +481,6 @@ default seed assumed manual mode would always populate them.
   rendered by the hardcoded reviewee-identity column in
   `review_surface.html`. The Display Fields card on the
   Instruments page surfaces only the configurable extras.
-
-The `dfedd22a38da` migration (2026-05-01) cleans up legacy
-unconditional seeds — for every existing instrument, drops
-`pair_context_N` rows whose slot is unpopulated. Rows whose
-slot has data (including operator-typed labels) are preserved.
 
 ## Audit-event detail schema
 
@@ -512,11 +493,12 @@ smell that reads as the event trying to do two things at once.
 The convention is enforced by the typed helpers in
 `app/services/audit.py` (`audit.changes(...)` /
 `audit.snapshot(...)` / `audit.counts(...)` /
-`audit.set_changes(...)`). The Pydantic write-validation gate
-shipped in Segment 11K PR 8 catches drift back into the old
-idiosyncratic shapes — strict mode (flipped on in tests) raises
+`audit.set_changes(...)`) and by the per-event-type allowlist
+`EVENT_SCHEMAS` in the same module, which every emitter's
+`event_type` must be registered in. A Pydantic write-validation
+gate holds the shape — strict mode (flipped on in tests) raises
 `AuditDetailValidationError` on any registered-but-malformed
-event.
+event; production mode logs and writes through.
 
 ### Identity slots (top-level, almost always present)
 
@@ -696,8 +678,7 @@ canonical "no payload" marker.
 | `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
 | `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
 
-**Observer roster events** (registered in `EVENT_SCHEMAS` as part
-of the participant-model Phase 1 work — PR #1706):
+**Observer roster events** (registered in `EVENT_SCHEMAS`):
 
 | Event type | Envelope(s) |
 |---|---|
@@ -712,19 +693,15 @@ in `app/services/observers.py` and `app/services/csv_imports.py`
 respectively, following the same per-row / bulk-replace pattern
 as the `reviewer.*` / `reviewers.*` family.
 
-### Cutover
+### Cutover boundary — 2026-05-07
 
-Rows written **before 2026-05-07** use legacy per-emitter
-shapes (each event family had its own idiosyncratic dict
-layout — see `git log app/services/audit.py` and the
-pre-migration emitters for the historical shapes). The
-canonical convention applies to every new write from PR 1 of
-Segment 11K (2026-05-07) onward; existing rows are not
-rewritten, since the audit log is append-only.
-
-The `audit_events.created_at` timestamp is the cutover
-boundary the audit-export consumer (Segment 12B) reads to
-decide which shape to interpret.
+**Rows written before 2026-05-07 do not follow the envelopes
+above.** Each event family had its own idiosyncratic dict layout,
+and the audit log is append-only, so those rows are never
+rewritten. Anything that reads `detail` across the whole table —
+the audit export above all — must branch on
+`audit_events.created_at`, which is the only cutover marker there
+is. Every write from that date onward is canonical.
 
 ## Access-control invariants
 
@@ -737,7 +714,7 @@ decide which shape to interpret.
   regression test in
   `tests/integration/test_operator_lobby_access_gate.py`.
 
-- **Three-tier role model (Segment 18S).** The admin surface is a
+- **Three-tier role model.** The admin surface is a
   strict, nested hierarchy: **super-admin ⊇ admin ⊇ operator**.
   `users.is_operator` and `users.is_sys_admin` (admin) are stored
   columns; **super-admin is derived, never stored** —
@@ -760,7 +737,8 @@ decide which shape to interpret.
   gate the reviewee results and observer collation routes;
   `require_reviewer_in_session` gates the reviewer write-path. All
   refuse with a bare **404**, indistinguishable from an unknown session
-  id (19F PR 1). They match the signed-in user's email
+  id, so a signed-in stranger cannot enumerate session ids by reading
+  status codes. They match the signed-in user's email
   (case-insensitive) against the session roster and require the row
   to be `active`.
 

@@ -30,7 +30,7 @@ The audience name implies a **scope rule** the resolver applies in addition to t
 
 | Audience | Scope of "responses they may see" |
 |---|---|
-| Peer reviewer | The reviewer's **own** submitted responses on this instrument — **never** responses keyed in by another reviewer. The schema name `peer_reviewer` is historical; the policy governs a reviewer viewing their own work post-submit / across pages of the review. |
+| Peer reviewer | The reviewer's **own** submitted responses on this instrument — **never** responses keyed in by another reviewer. The stored name `peer_reviewer` is wider than the grant it names: the policy governs a reviewer viewing **their own** work post-submit / across pages of the review, never a peer's. |
 | Reviewee | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. |
 | Observer | All responses by all reviewers about all reviewees on the session, on instruments this observer is granted (subject to `observer_tag`). Observers are the only audience whose grant is cross-cohort. |
 
@@ -81,36 +81,29 @@ The peer-reviewer audience is constrained per window:
 
 ## 3. Window axis (when they see)
 
-**The `visible_when` column is retired** — it went with the rest of the
-legacy single-mode encoding in the S14 contract step (§4), and the window
-is now carried by the two per-window `(granularity, identification)`
-pairs: a pair that decodes to a mode is a grant in that window, NULL in
-both members is "off". The table below is kept because it defines what
-each window *means*, which the pairs do not restate; read
+**No column stores the window.** It is carried by the two per-window
+`(granularity, identification)` pairs: a pair that decodes to a mode is a
+grant in that window, NULL in both members is "off". The table below
+defines what each window *means*, which the pairs do not restate; read
 `while_ongoing` / `after_release` as the names of the two pairs, and
 `throughout` as "both pairs set" rather than as a stored value.
-*(Framing corrected 2026-09-08 — the section had described the retired
-column as current.)*
 
-| `visible_when` | Window |
+| Window | What it means |
 |---|---|
-| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. *(Corrected 2026-09-07: this row read `[sessions.activated_at, sessions.deadline)`, which the code has never implemented — `lifecycle.is_ready` checks the status column. The difference is visible: `expire_session` is only ever called from the Workflow card's Close button, never automatically at the deadline, so a session past its deadline that nobody has closed is still `ready` and still inside this window.)* |
-| `after_release` | **`sessions.status = "expired"`** AND `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Session Edit Details / Create New Session (W14 + S12); the Release-now / Stop-release buttons write the same columns. *(The lifecycle condition arrived 2026-09-07 — see §3.2.)* |
-| `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
-| `always` | **Reserved.** Today this value is only meaningful for the operator (who is not a row in this table). The column accepts it for forward-compatibility. |
+| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. The **status column**, not the deadline: the resolver reads it through `lifecycle.is_ready`, and `expire_session` is called from one place only — the Workflow card's Close button (`POST /sessions/{id}/workflow/close`) — never automatically at the deadline. So a session past its deadline that nobody has closed is still `ready` and still inside this window. |
+| `after_release` | **`sessions.status = "expired"`** AND `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Session Edit Details / Create New Session; the Release-now / Stop-release buttons write the same columns. The closed-session half of the condition is load-bearing — §3.2 carries why. |
+| `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Not a stored value: it is both pairs set. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
+| `always` | **Reserved**, and not authorable — no pair encodes it. Viewing irrespective of window is the operator's baseline, and the operator is not a row in this table. |
 
 ### 3.1 Per-cell valid modes
 
-*(Rewritten 2026-09-08, 19C Item 9. This section described the retired
-`visible_when` column — see the note under §3 — and its Reviewee row read
-"All three are valid", which is the opposite of the live rule. The table
-below is `_PER_CELL_VALID_MODES` in `app/services/visibility_policies.py`,
-the constant both writers read.)*
+The table below is `_PER_CELL_VALID_MODES` in
+`app/services/visibility_policies.py` — the constant both writers read.
 
 Each `(audience, window)` cell accepts only these modes. `None` means
 "off in this window" and is stored as NULL in both members of the pair.
 
-**The table below is derived, not transcribed** (19G.1 rung 3).
+**The table below is derived, not transcribed.**
 `tests/unit/test_doc_conventions.py` parses it — audiences from the row
 labels, windows from the column headers, modes from the backticked
 tokens in each cell — and fails if it disagrees with
@@ -125,18 +118,19 @@ cells' backticked mode names intact when rewording.
 | `reviewee` | **`None` only.** A reviewee may never read responses while the review is running: the two windows mean literally *as data is coming in* and *after the review has closed*, and the second is the only one that is theirs. | `None`, `raw`, `anonymized`, `summarized`. Default `after_release`. |
 | `observer` | `None` or `summarized`. Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk the summary view dodges. | `None`, `raw`, `anonymized`, `summarized`. |
 
-**Both writers enforce it, since 19C Item 9.** The Band 3 editor refuses
-an illegal cell in `upsert_policy` → `_validate_per_window`; the
+**Both writers enforce it, and both must.** The Band 3 editor refuses an
+illegal cell in `upsert_policy` → `_validate_per_window`; the
 **Settings-CSV import** refuses it in the parse phase
 (`session_config_io/_apply_parse._view_policy_cell_errors`), naming the
-field and the legal modes, before any row is written. Until then the
-import checked only the vocabulary — that a value was one of `row` /
-`aggregated` / `identified` / `deidentified` — never the cell it landed
-in, so a hand-edited or hand-built bundle could persist a `reviewee`
-`while_ongoing` grant the editor would have rejected, and the resolver
-honoured it like any other row. Rehydrate applies its settings bundle
-through the same call and inherits the check. (Clone copies no
-view-policy rows at all — `spec/roundtrip_coverage.md`.)
+field and the legal modes, before any row is written. Checking the
+vocabulary is not enough on the import path: a value can be one of `row`
+/ `aggregated` / `identified` / `deidentified` and still be illegal in
+the cell it lands in, so a hand-edited or hand-built bundle would
+otherwise persist a `reviewee` `while_ongoing` grant no editor can
+author — a disclosure the resolver would then honor like any other row.
+Rehydrate applies its settings bundle through the same call and inherits
+the check. (Clone copies no view-policy rows at all —
+`spec/roundtrip_coverage.md`.)
 
 Two shapes that are not modes are refused by the same pass, each with
 its own message: a **half-set** cell (one member of the pair set, the
@@ -149,12 +143,12 @@ The `after_release` and `throughout` windows depend on `responses_release_at`. W
 
 > *Release window is open* ⇔ **`sessions.status = "expired"`** AND `responses_release_at IS NOT NULL` AND `now() ≥ responses_release_at` AND (`responses_release_until IS NULL` OR `now() < responses_release_until`).
 
-A policy with `visible_when = "after_release"` and no anchor is **inert** — the resolver returns "not viewable" until the operator sets the anchor. Saving the policy without an anchor is allowed and harmless.
+A policy whose `after_release` pair is set while `responses_release_at` is NULL is **inert** — the resolver returns "not viewable" until the operator sets the anchor. Saving the policy without an anchor is allowed and harmless.
 
-**The session must have closed** (author decision, 2026-09-07; Segment 19F PR 2a). The two windows mean literally *as data is coming in* and *after the review has closed*, so responses are released **because the session is over**. That was already the Workflow card's rule — it gates both Release and Stop-release on `is_expired` and says so in a comment — but the predicate itself checked only the anchors, so every path that writes them without the button opened a window the UI would never offer:
+**The session must have closed.** The two windows mean literally *as data is coming in* and *after the review has closed*, so responses are released **because the session is over**. The Workflow card gates both Release and Stop-release on `is_expired`, but the predicate must carry the lifecycle condition itself, because every path that writes the anchors without that button would otherwise open a window the UI never offers:
 
-- an anchor **backdated** on Session Edit or Quick Setup, where `parse_and_validate_responses_release_at` deliberately applies no lead-time floor, opened the window on a `draft` session; and
-- **`revert_session_to_draft`** (`expired` → `draft`) does not clear the anchor, so a session the operator had *withdrawn* went on showing released responses to every non-operator audience. This is the case that prompted the change: an operator who reverts to draft believes the session is back to before activation.
+- an anchor **backdated** on Session Edit or Quick Setup, where `parse_and_validate_responses_release_at` deliberately applies no lead-time floor, would open the window on a `draft` session; and
+- **`revert_session_to_draft`** (`expired` → `draft`) does not clear the anchor, so a session the operator had *withdrawn* would go on showing released responses to every non-operator audience — and an operator who reverts to draft believes the session is back to before activation.
 
 The anchor is deliberately **left in place** across a revert rather than cleared. It simply goes inert, so re-closing the session re-opens the window on the schedule the operator originally set — which is what "release at time T" should mean.
 
@@ -164,7 +158,7 @@ The anchor is deliberately **left in place** across a revert rather than cleared
 
 When `sessions.status = "archived"`, the resolver treats every per-window pair as `(NULL, NULL)` ≡ off for every non-operator audience regardless of window state. No schema change — pure view-time gate. Mirrors how archive retires a session out of reviewer reach today.
 
-**Enforced in two places, deliberately** (19F PR 5). Since PR 2a the rule holds *arithmetically*: `while_ongoing` requires `ready` and `after_release` requires `expired`, and an archived session is neither, so no grant resolves for any audience without anything checking `is_archived` at all. Both `_reviewee_results.py` and `_observer_collation.py` nonetheless short-circuit on `is_archived` before touching the policy table. The redundancy is the point — otherwise this section describes an *emergent* property of two lifecycle predicates rather than a rule the views enforce, and relaxing either predicate would silently reopen archived sessions to non-operators. `tests/unit/test_observer_archive_short_circuit.py` pins that by simulating exactly such a relaxation.
+**Enforced in two places, deliberately.** The rule already holds *arithmetically*: `while_ongoing` requires `ready` and `after_release` requires `expired`, and an archived session is neither, so no grant resolves for any audience without anything checking `is_archived` at all. Both `_reviewee_results.py` and `_observer_collation.py` nonetheless short-circuit on `is_archived` before touching the policy table. The redundancy is the point — otherwise this section describes an *emergent* property of two lifecycle predicates rather than a rule the views enforce, and relaxing either predicate would silently reopen archived sessions to non-operators. `tests/unit/test_observer_archive_short_circuit.py` pins that by simulating exactly such a relaxation.
 
 ---
 
@@ -195,7 +189,6 @@ instrument_view_policies
 - One row per (instrument, audience). Upserts cover both the create and update cases.
 - Rows with both windows off (all four pair columns NULL) persist so the operator's `observer_tag` choice survives a toggle-everything-off / toggle-back-on cycle.
 - `observer_tag` only carries meaning when `audience = "observer"`; the service layer enforces NULL otherwise (no DB CHECK constraint).
-- The legacy single-mode encoding (`enabled` / `granularity` / `identification` / `visible_when`) shipped with Phase 1 and retired in the S14 contract step (Alembic `b8f4c2a91d35`) once the per-window pairs carried the operator's intent end-to-end.
 
 ### 4.1 Default state
 
@@ -217,24 +210,22 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 
 ## 6. Where this is wired
 
-| Slice | What | Status |
-|---|---|---|
-| S2 (PR #1678) | `instrument_view_policies` table | ✓ shipped |
-| S12 (PR #1724) | `visible_when` column (retired in S14 contract) | ✓ shipped, then retired |
-| W15 — Band 3 editor (persistence half) | `app/services/visibility_policies.py` (mode encoder / decoder + per-audience vocabulary + `upsert_policy` + `upsert_many`); Band 3 template renders the chip table with hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"` → `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save` reads the visibility fields and calls `upsert_many`); `build_instruments_context` carries `band3_visibility_by_instrument`. The standalone `/view-policy` route + "Save visibility" submit retired once the card-level Save took over. | ✓ shipped |
-| Band 2 preview of the reviewer-surface visibility card | `build_instruments_context` carries `band2_preview_visibility_rows_by_instrument` (same shape as the reviewer surface's `visibility_rows`); the Band 2 intro grid renders the read-only "Who can see what you wrote (other than admin)" card alongside the description card so the operator can preview the reviewer's view from the operator surface. | ✓ shipped |
-| S14 — per-window mode pairs + Band 3 column-axis swap | Alembic `a7e3b1d92c64` (expand) adds the four pair columns; PR #1730 swaps service + route + view + template to read / write the pair columns and rebuilds Band 3 as 3 audiences × 2 windows of mode chips; Alembic `b8f4c2a91d35` (contract) drops the legacy `enabled` / `granularity` / `identification` / `visible_when` quadruple. | ✓ shipped |
-| Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a half-width read-only "Who can see what you wrote" card in column 2 of each per-instrument intro grid on `review_surface.html`. Renders three rows (You / Reviewees / Observers) × two windows with the persisted mode labels (Raw responses / Anonymized responses / Summarized responses / —). | ✓ shipped |
-| W7 — Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies + applies the scope rules; consumed by the W16 reviewee surface. | ✓ shipped |
-| W16 — Reviewee `/results` body | `build_reviewee_results_context` renders raw / anonymized / summarized modes. W19 Acknowledge card also live (PR #1750). | ✓ shipped |
-| W17 — Observer `/collation` body | Renders the per-instrument 3-row table (Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool / Row 2 distinct-reviewee headcount + same aggregate / Row 3 conditional CSV download) scoped to the observer's cohort. Identification mode follows Band 3 (`raw` / `anonymized`); `summarized` returns no per-row download. MVP shipped 2026-06-02, partition-model refactor 2026-06-03 — see `guide/archive/observers.md` "Status". | ✓ shipped |
+| Surface | What carries it |
+|---|---|
+| Persistence | `app/services/visibility_policies.py` — mode encoder / decoder, per-audience vocabulary, `upsert_policy`, `upsert_many`. |
+| Band 3 editor | The chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`); both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read the visibility fields and call `upsert_many`, so there is no standalone visibility submit to keep in step. `build_instruments_context` carries `band3_visibility_by_instrument`. |
+| Band 2 preview of the reviewer-surface card | `build_instruments_context` carries `band2_preview_visibility_rows_by_instrument` (same shape as the reviewer surface's `visibility_rows`); the Band 2 intro grid renders the read-only "Who can see what you wrote (other than admin)" card alongside the description card, so the operator previews the reviewer's view from the operator surface. |
+| Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a half-width read-only "Who can see what you wrote" card in column 2 of each per-instrument intro grid on `review_surface.html`. Three rows (You / Reviewees / Observers) × two windows, with the persisted mode labels (Raw responses / Anonymized responses / Summarized responses / —). |
+| Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies and applies the scope rules. |
+| Reviewee `/results` body | `build_reviewee_results_context` renders the raw / anonymized / summarized modes, plus the Acknowledge card at the foot of the page. |
+| Observer `/collation` body | The per-instrument 3-row table (Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool / Row 2 distinct-reviewee headcount + same aggregate / Row 3 conditional CSV download), scoped to the observer's cohort. Identification mode follows Band 3 (`raw` / `anonymized`); `summarized` returns no per-row download. |
 
 ---
 
 ## Cross-references
 
 - `guide/archive/participant_model_upgrade.md` §3.3 — design rationale + the audience-scope table.
-- `guide/archive/participant_model_upgrade.md` Appendix A — implementation-phase identifier glossary (S2 / S12 / W7 / W15 / W16 / W17).
+- `guide/archive/participant_model_upgrade.md` Appendix A — the S / P / W implementation-phase identifier glossary, for reading the slice ids that `docs/status.md` and the segment records use (S13, cited above, is one of them).
 - `spec/participant_model.md` — cross-cutting participant-model contract; release-window columns.
 - `spec/instruments.md` — the per-instrument card layout; Band 3 visibility editor sits here.
 - `spec/lifecycle.md` — schedule columns (`responses_release_at` / `responses_release_until`), §8.2.2 anchor-null, §8.2.7 save-time ordering.

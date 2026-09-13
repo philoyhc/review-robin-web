@@ -1,52 +1,28 @@
 # Sort by Reviewee — functional spec
 
-**Status.** **Shipped 2026-05-12** as Segment 13B, two parts:
-Part 1 (PRs #867 / #868 / #869) lit up the per-instrument
-operator-default sort + reviewer-side header click overrides;
-Part 2 (PRs #873 / #874 / #875 / #876 / #877 / #878) extracted
-a shared sort primitive into `base.html`, added cookie
-persistence, rolled the same affordance out to the Reviewers /
-Reviewees / Relationships / Operations-Assignments operator
-tables, and refined the click target to a small per-header
-`↕` button next to each label. Split out of the original
-Segment 13 during the 2026-05-07 wrap-up; locks in the
-decisions reached during the Segment 11 §2.6 discussion
-(2026-05-03).
+Two sorts on one data set: the **operator's default** row order for an
+instrument's reviewer surface, and the **reviewer's live override** on
+top of it. The shared `↕`-button primitive that carries the second is
+`base.html`'s, not this feature's alone.
 
-**The primitive has outlived its segment.** Later work opts new
-tables in without changing anything here — Segment 19I Item 11
-(2026-09-10) added the Operations **Invitations** and **Responses**
-tables, template-and-route work only. The current surface list is
-in "Implementation pointers — shipped" below.
+**The primitive is table-agnostic.** A new sortable table opts in with
+template-and-route work only — the annotation contract plus the shared
+JS — and nothing in this spec changes. The current adopter list is
+under "Implementation pointers" below.
 
-13B is now single-purpose: this sort feature. Sibling segments
-on the same surface family:
-
-- **13A** — rule-based assignment generation
-  (`guide/archive/segment_13A_rulebased_assignment_builder.md`).
-- **13C** — enhanced instruments (group-scoped + duplicate
-  button) (`guide/archive/segment_13C_enhanced_instrument.md`).
-
-The implementation plan for this spec lives at
-`guide/archive/segment_13B_sort_tables.md`. The three sibling
-segments are independent.
-
-This file is the source of truth for the design. Segment 13B
-work implements against it; subsequent edits go here and
-propagate to the implementation, not the other way around.
+This file is the source of truth for the design: edits here propagate
+to the implementation, not the other way around.
 
 ---
 
 ## Rationale
 
-The reviewer surface renders one row per assignment per instrument. Today the row order is **implicit insertion order** — whatever the assignments service produced. The operator has no way to set a deliberate default, and the reviewer has no way to re-sort during their working flow.
-
-Two distinct needs:
+The reviewer surface renders one row per assignment per instrument. With no sort configured the row order is **implicit insertion order** — whatever the assignments service produced, which serves neither of the two needs the feature exists for:
 
 - **Operator side:** "Sort by cohort, then by name" before the reviewer ever sees the form. A deliberate default that frames the work the way the operator wants the reviewer to encounter it.
 - **Reviewer side:** "Let me sort by my own scores so I can see what I rated high." Live, working-flow ergonomics during the review.
 
-Sort is **row sorting**, distinct from **Order** (column ordering on the same surface). Order is already shipped via ▲/▼ buttons. The two are independent: the operator sets columns left-to-right via Order, and rows top-to-bottom via Sort.
+Sort is **row sorting**, distinct from **Order** (column ordering on the same surface, via ▲/▼ buttons). The two are independent: the operator sets columns left-to-right via Order, and rows top-to-bottom via Sort.
 
 ---
 
@@ -113,7 +89,7 @@ Same as the rest of the Display Fields card:
 
 ---
 
-## Reviewer UI: clickable column headers, live-only override
+## Reviewer UI: clickable column headers, view-time override
 
 The reviewer surface table renders by default with the operator's configured sort applied. The reviewer can override at view time by clicking column headers:
 
@@ -125,31 +101,34 @@ The reviewer surface table renders by default with the operator's configured sor
 
 The reviewer's override **spans both display and response columns**. Sort by display field is a read on existing reviewee data; sort by response field is a read on the reviewer's own response values (their `100int` rating, their `Yes_no` choice, etc.).
 
-**Persistence: per-browser cookie.** As shipped 2026-05-12
-(Part 2 PR 5), the reviewer-side override persists in a
-`rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped to
-`/me/sessions/{id}`. The cookie carries the canonical
+**Persistence: per-browser cookie.** The reviewer-side override
+persists in a `rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped
+to `/me/sessions/{id}`. The cookie carries the canonical
 `[{"key": "...", "dir": "asc|desc"}, ...]` shape, **percent-encoded**
-(the browser primitive writes it via `encodeURIComponent`); the
-server reads it at render time, `unquote()`-s the raw value
-before `json.loads`, and threads the decoded spec through
-`views.order_rows_by_sort_spec` so the initial HTML already
-lands in the persisted order (no JS-reorder flicker). *(The
-`unquote()` step was missing until 2026-05-15 — until then SSR
-sort silently fell back to insertion order in real browsers
-while the JS badge still showed the column sorted; the test
-suite missed it because tests set raw-JSON cookies.)* Clearing
-the sort writes an expired cookie, returning the next render
-to the operator default. Cookie scope is per-(browser, session,
-instrument) — different browsers / devices / cleared cookies
-all return cleanly to the operator default.
+(the browser primitive writes it via `encodeURIComponent`); the server
+reads it at render time, `unquote()`-s the raw value before
+`json.loads`, and threads the decoded spec through
+`views.order_rows_by_sort_spec` so the initial HTML already lands in
+the persisted order (no JS-reorder flicker). Clearing the sort writes
+an expired cookie, returning the next render to the operator default.
+Cookie scope is per-(browser, session, instrument) — different
+browsers / devices / cleared cookies all return cleanly to the
+operator default.
 
-The original design called this "live only — no persistence,
-revisit if pilot asks." The cookie path landed pre-pilot once
-the discoverability win (always-visible `↕` button) made
-persistence the obvious next move — operators can see at a
-glance that a column is sorted, so the "I forgot I sorted three
-weeks ago" footgun is defanged.
+**The `unquote()` is not optional, and a test cannot be trusted to
+say so.** Starlette does not percent-decode cookie values, so without
+it `json.loads` fails on the browser's own encoding and SSR falls back
+to insertion order — silently, because the client-side JS re-sorts
+after paint and the badge still shows the column sorted. A test that
+sets a raw-JSON cookie passes either way, so a cookie-decoding test
+has to write the value the way the browser writes it.
+
+**Persistence is safe because the sort is visible.** Every sortable
+header carries a `rrw-sort-badge`: `↕` while the column is not in the
+sort, and the column's priority number plus `↑` / `↓` while it is. A
+sort persisted weeks ago therefore announces itself on the columns it
+orders, rather than quietly reordering a page the reviewer took to be
+unsorted.
 
 ---
 
@@ -222,9 +201,9 @@ entirely on a no-op save (when `old_value == normalised`).
 
 ## Lifecycle behaviour
 
-Sort config edits **invalidate `validated → draft`** via `lifecycle.invalidate_if_validated()`, mirroring every other instrument-mutating service per item #3. Setting a sort doesn't change assignment data, but it changes the reviewer-facing form render, which the validation snapshot covers.
+Sort config edits **invalidate `validated → draft`** via `lifecycle.invalidate_if_validated()`, as every other instrument-mutating service does. Setting a sort doesn't change assignment data, but it changes the reviewer-facing form render, which the validation snapshot covers.
 
-The instrument card's edit lock applies — whenever the session is **not editable** (`ready`, `expired` or `archived`) Sort cells render locked alongside the rest of the Display Fields card, and the operator must leave that state to change them. The lock is not read from the lifecycle directly: Band 2 is `inert` unless the card is unlocked, and `editing_instrument_id` is forced to `None` whenever `can_edit` is false (`app/web/views/_instruments.py`). Segment 19I Item 6 moved `can_edit` from `not is_ready` to `is_editable`, which is what brought `expired` and `archived` under this lock — before it, a closed session's Sort cells were still editable. The way out is the state's own: Revert to draft from `ready` or `expired`, Unarchive from `archived` (`spec/lifecycle.md` §5).
+The instrument card's edit lock applies — whenever the session is **not editable** (`ready`, `expired` or `archived`) Sort cells render locked alongside the rest of the Display Fields card, and the operator must leave that state to change them. Nothing in the Sort cells reads the lifecycle directly: Band 2 is `inert` unless the card is unlocked, and `editing_instrument_id` is forced to `None` whenever `can_edit` — `lifecycle.is_editable` — is false (`app/web/views/_instruments.py`), so the three non-editable states are covered by one predicate rather than by each cell's own guard. The way out is the state's own: Revert to draft from `ready` or `expired`, Unarchive from `archived` (`spec/lifecycle.md` §5).
 
 Reviewer-side override is view-only and never invalidates anything.
 

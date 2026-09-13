@@ -1,41 +1,31 @@
 # Reconciling assignment regeneration
 
-**Status: implemented.** Both slices have landed — slice 1 (the
-reconcile core, `_materialise_one_instrument`) and slice 2 (the
-impact-driven super-button confirmation: `assignments.reconcile_impact`
-+ the dry-run detour). This file is kept as the design record.
+How `assignments.replace_assignments(...)` materialises `Assignment`
+rows from each instrument's rule without destroying saved responses.
 
-## Problem
+## Why a reconcile and not a replace
 
-`assignments.replace_assignments(...)` materialises `Assignment`
-rows from each instrument's pinned rule. Its per-instrument worker,
-`_materialise_one_instrument` (`app/services/assignments/_generate.py`), does
-a **wholesale replace**: delete every `Assignment` row for the
-instrument, then insert the engine's full pair fan-out. Since
-`Assignment.responses` cascades, that delete takes every saved
-response with it.
+`Assignment.responses` is `cascade="all, delete-orphan"`, so a
+wholesale replace — delete every `Assignment` row for the instrument,
+then insert the engine's full pair fan-out — takes **every saved
+response** with it, including responses on pairs the re-run produces
+again unchanged.
 
-PR #1066 guarded the super-button against this with a binary
-confirmation:
-
-- **Activate without regenerating** (`regen_choice=keep`) — skip
-  Generate entirely.
-- **Regenerate & activate** (`regen_choice=regenerate`) — run the
-  wholesale replace, deleting *every* response.
-
-Neither choice serves the common mid-cycle case: the operator
-reverted to draft, **added or removed a reviewer / reviewee**, and
-wants the affected pairs generated or dropped while every unchanged
-pair keeps its responses. Today that operator must either lose all
-responses or skip generation (and never get the new pairs).
+That makes a **binary** confirmation the wrong shape too: offered only
+"skip Generate" or "regenerate and lose everything", the operator has no
+move for the common mid-cycle case — reverted to draft, **added or
+removed a reviewer / reviewee**, wanting the affected pairs generated or
+dropped while every unchanged pair keeps its responses. Reconcile is
+what makes that case expressible, so neither the wholesale replace nor a
+keep-or-lose prompt may come back.
 
 ## The reconciling algorithm
 
-Replace the wholesale delete-then-insert in
-`_materialise_one_instrument` with a **diff-and-reconcile** against
-the existing rows. Per instrument:
+`_materialise_one_instrument`
+(`app/services/assignments/_generate.py`) **diffs and reconciles**
+against the existing rows. Per instrument:
 
-1. Run the engine as today → a new pair set. Reduce it to
+1. Run the engine → a new pair set. Reduce it to
    `N = { (reviewer_id, reviewee_id) }`.
 2. Load the existing `Assignment` rows for
    `(session_id, instrument_id)` into `E`, keyed by
@@ -46,8 +36,10 @@ the existing rows. Per instrument:
      `include` computed as below).
    - **`to_delete = E - N`** — pairs the rule no longer produces
      (e.g. a removed reviewer, or a relationship change). Delete
-     their `Response` rows first, then the `Assignment` rows —
-     reusing the FK-safe delete order from PR #1065.
+     their `Response` rows first, then the `Assignment` rows. The
+     order is load-bearing: these are bulk Core `delete`s, which
+     bypass the ORM `delete-orphan` cascade, so deleting the
+     assignments first leaves the responses behind and breaks the FK.
    - **`to_keep = N ∩ E`** — pairs present before and after. Leave
      the `Assignment` row **and its responses** untouched. Refresh
      `include` in place only if it changed (see below).
@@ -81,18 +73,18 @@ rows get the current run's `mode`.
 
 ## Reconcile is the only materialisation path
 
-`_materialise_one_instrument` should **always** reconcile — there
-is no separate "full reset" mode and none is needed:
+`_materialise_one_instrument` **always** reconciles — there is no
+separate "full reset" mode and none is needed:
 
 - For a session with **no responses**, reconcile produces exactly
-  the same final `Assignment` set as today's delete-then-insert;
-  only the SQL differs.
+  the same final `Assignment` set a delete-then-insert would; only
+  the SQL differs.
 - When the engine output **fully diverges** from the existing rows
   (a reshuffle), `to_keep` is empty, so reconcile deletes
   everything stale and inserts everything new — the same end state
   as a wholesale wipe.
 
-So reconcile strictly subsumes both the old wholesale replace and a
+So reconcile strictly subsumes both a wholesale replace and a
 hypothetical full-reset option.
 
 ## Determinism and random rules
@@ -111,84 +103,69 @@ hypothetical full-reset option.
 
 ## Audit
 
-`assignments.generated` keeps its envelope but its `counts` payload
-changes from the wholesale `new` / `replaced` pair to reconcile
-terms:
+`assignments.generated` carries a `counts` payload in reconcile
+terms, one event per instrument (`refs.instrument_id`):
 
 - `new` — `len(to_insert)`
 - `deleted` — `len(to_delete)`
 - `kept` — `len(to_keep)`
 - `responses_deleted` — `Response` rows removed with `to_delete`
-- `pairs` / `instruments` / `excluded_*` — unchanged.
+- `pairs` / `instruments` / `excluded_*`.
+
+`replace_assignments` still returns a `(replaced, new)` 2-tuple, where
+`replaced` counts the pairs the reconcile **deleted**.
 
 Register any new keys in the `EVENT_SCHEMAS` allowlist
 (`app/services/audit.py`) so the strict-mode test gate accepts the
-emit.
+emit. (The `counts` slot is freeform, so the keys above needed no
+registry change.)
 
-## Super-button confirmation
+## The confirmation is impact-driven, not "responses exist"
 
-With reconcile, the binary keep / regenerate confirmation from
-PR #1066 is no longer the right model:
+The confirmation gates on what a run would actually destroy, because
+with reconcile the two halves of a keep-or-regenerate prompt have both
+lost their meaning: "regenerate" no longer means "lose everything", and
+"skip Generate" is near-redundant when reconciling an unchanged roster
+produces an empty `to_delete`.
 
-- "Regenerate" no longer means "lose everything" — it preserves
-  every unchanged pair's responses.
-- "Keep" (skip Generate) becomes nearly redundant: reconciling a
-  session with no roster/rule change produces an empty `to_delete`,
-  so no response is lost anyway.
+The **Prepare session** button (`POST
+/sessions/{id}/workflow/prepare`, which runs Generate → Validate →
+`mark_validated`) therefore:
 
-The confirmation should become **impact-driven** rather than
-"responses exist at all":
+1. Skips the dry-run entirely when `lifecycle.session_has_responses`
+   is false — a first preparation has nothing to lose, and this keeps
+   the common path off the engine.
+2. Otherwise dry-runs the reconcile — engine plus diff per instrument,
+   **without writing** — through
+   `assignments.reconcile_impact(db, review_session)`, which returns a
+   `ReconcileImpact` carrying the aggregate `new` / `deleted` / `kept`
+   / `responses_deleted` a real run would cause. It shares
+   `_diff_one_instrument` / `_load_reconcile_inputs` with
+   `replace_assignments`, so the confirmation and the run cannot
+   disagree about the diff.
+3. Runs straight through when `responses_deleted == 0`.
+4. 303s to the host page when `responses_deleted > 0`, where the
+   Workflow card renders the `prepare_confirm` banner with both counts
+   named — *"Preparing will delete N saved responses"* over
+   *"Regenerating drops M assignment pairs that the current setup no
+   longer produces, along with their saved responses. Responses on
+   unchanged pairs are kept."* — and offers **Regenerate & prepare** /
+   **Cancel**. Acknowledgement rides back as
+   `acknowledge_response_loss=true`; there is no skip-Generate choice,
+   because reconcile does not destroy unchanged data.
 
-1. Before running, dry-run the reconcile — run the engine and
-   compute the diff per instrument **without writing** — to get the
-   total `responses_deleted` that a real run would cause.
-2. If `responses_deleted == 0`: no confirmation. The super-button
-   runs straight through (Generate → Validate → Activate).
-3. If `responses_deleted > 0`: 303 to the host page with the
-   confirmation banner, but with precise copy — e.g. *"Regenerating
-   drops N saved response(s) on M pair(s) that the current setup no
-   longer produces. Responses on unchanged pairs are kept."* — and
-   a single **Regenerate & activate** / **Cancel** choice. The
-   `regen_choice=keep` skip-Generate path can be retired, since
-   reconcile no longer destroys unchanged data.
-
-A dedicated dry-run helper (e.g.
-`assignments.reconcile_impact(db, review_session)` returning the
-per-instrument `(to_insert, to_delete, to_keep, responses_deleted)`
-counts) keeps both the confirmation builder and any future
-Assignments-page preview on one code path. The engine evaluation is
-in-memory and cheap, so a dry-run plus a real run per click is
-acceptable.
-
-## PR slices
-
-1. **Reconcile core.** *(Done.)* `_materialise_one_instrument`
-   reconciles; the `assignments.generated` `counts` payload moved
-   from `new` / `replaced` to `new` / `deleted` / `kept` /
-   `responses_deleted` (the `counts` slot is freeform, so
-   `EVENT_SCHEMAS` needed no change). `replace_assignments` keeps
-   its `(replaced, new)` 2-tuple, where `replaced` now counts
-   deleted pairs. The final assignment set is unchanged for
-   sessions without responses; the per-instrument tests cover the
-   add / drop / unchanged cases.
-2. **Impact-driven confirmation.** *(Done.)* `reconcile_impact(...)`
-   dry-runs the reconcile (sharing `_diff_one_instrument` /
-   `_load_reconcile_inputs` with `replace_assignments`). The
-   super-button detours only when the dry-run's `responses_deleted`
-   is non-zero, and the confirmation banner shows the precise
-   `responses_deleted` / `deleted_pairs` counts. `regen_choice` was
-   retired in favour of an `acknowledge_response_loss` flag; the
-   banner offers Regenerate & activate / Cancel. `spec/workflow_card.md`
-   updated.
+The engine evaluation is in-memory and cheap, so a dry-run plus a real
+run on one click is acceptable.
 
 ## Source-of-truth pointers
 
 - Materialisation: `app/services/assignments/_generate.py`
-  (`_materialise_one_instrument`, `replace_assignments`).
+  (`_materialise_one_instrument`, `replace_assignments`,
+  `_diff_one_instrument`, `_load_reconcile_inputs`,
+  `reconcile_impact`).
 - Rule engine: `app/services/rules/engine.py` (`evaluate`,
   `EvaluationResult`).
-- FK-safe response delete order: PR #1065.
-- Super-button + current confirmation: `spec/workflow_card.md`
+- Prepare button + the confirmation detour: `spec/workflow_card.md`
   ("Saved-response confirmation detour"),
   `app/web/routes_operator/_workflow.py`.
 - Audit registry: `app/services/audit.py` (`EVENT_SCHEMAS`).

@@ -29,10 +29,8 @@ Operations row order:
 Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
 
-The **Extract data** tab landed 2026-05-29 and is now fully
-wired (per `guide/archive/extract_data.md`). The tab sits at
-the end of the strip because it's an end-of-flow surface —
-operators reach for it once response data is in.
+**Extract data** sits at the end of the strip because it is an
+end-of-flow surface — operators reach for it once response data is in.
 
 The dev-diagnostic Outbox page (`sys_admin_session_outbox.html`)
 sits **outside the chrome** under the Sys Admin doorway at
@@ -47,7 +45,7 @@ invitation and reminder columns stay inactive until email sending is
 switched on, and the reviewee-centric view with its
 `Number of reviewees · With responses · Without responses` counters —
 framed around the question the reviewer view cannot answer, which
-reviewee is under-served. Expanded at 19K.8 from two sentences.
+reviewee is under-served.
 
 ## Why "Invitations" and "Responses"
 
@@ -83,10 +81,9 @@ Both pages render the same four stacked regions, in order:
 4. **Result table** — single-card containing the filtered row list,
    or an empty-state `.muted` message when no rows match.
 
-**The result table is a roster-style table** on both pages
-(Segment 19I Item 11). Each carries the three facilities the Setup
-preview tables have, through the same shared primitives rather
-than page-local copies:
+**The result table is a roster-style table** on both pages. Each
+carries the three facilities the Setup preview tables have, through
+the same shared primitives rather than page-local copies:
 
 - **Sortable headers** — `<table id="..."
   data-rrw-sortable="rrw-sort-{invitations|responses}-{session_id}">`
@@ -95,15 +92,15 @@ than page-local copies:
   See `spec/sort_by_reviewee.md`.
 - **Three tag columns** with a `Show columns:` chip row above the
   table, per the pattern in `spec/setup_pages.md`, "Preview tables
-  (shared toggle pattern)". The chip row sits in the **table card**,
-  which since Segment 19I Item 12 is where every chip row in the app
-  sits. A tag slot with nothing in it across the session's roster
-  renders neither chip nor column.
+  (shared toggle pattern)". The chip row sits in the **table card** —
+  where every chip row in the app sits. A tag slot with nothing in it
+  across the session's roster renders neither chip nor column.
 - **`.table-scroll`** — both tables sit in the wrapper `base.html`
   provides, so ten columns overflow *inside* the card rather than
-  scrolling the page sideways. Measured, not assumed: before it,
-  Invitations' natural width was 1496px against a ~1396px page cap
-  and overflowed at every viewport up to 1920.
+  scrolling the page sideways. The wrapper is load-bearing, not
+  defensive: Invitations' natural width is 1496px against a ~1396px
+  page cap, so without it the page scrolls sideways at every viewport
+  up to 1920.
 
 Neither page has the rosters' select column or bulk actions —
 they are read-only monitoring surfaces, and nothing here mutates a
@@ -111,21 +108,19 @@ roster row.
 
 ### Lifecycle behavior
 
-Both pages render content across all session lifecycle states. Per
-the Workflow-card-as-Operations-chrome rollout, the previous yellow
-`.card.lock` "session must be Activated" notice retired here —
-the Workflow card's stepper makes lifecycle state explicit. 18F
-Part 1 split the previous Activate super-button into a dedicated
-**Prepare session** button (Generate + Validate) and a solo
-**Activate session** button; 18F Part 2 then relaxed the
-invitation gate so Create / Send invites work from
-`validated`, not only `ready`. The Invitations page follows the
-same gate: per-row action buttons are live from `validated`
-onward; the underlying route-layer gate
+Both pages render content across all session lifecycle states, and
+**neither carries a yellow `.card.lock` notice** — the Workflow card's
+stepper already makes lifecycle state explicit, and a second
+lifecycle explanation on the same page is redundant (see
+`spec/operator_ui_concept.md` P4).
+
+**The invitation gate is `validated` or `ready`, not `ready` alone.**
+Create / Send invites and the Invitations page's per-row action
+buttons are live from `validated` onward; the route-layer gate
 (`_require_validated_or_ready` in
-`app/web/routes_operator/_operations.py`) is the source of
-truth. **Send-reminders** keeps the stricter `ready`-only
-requirement.
+`app/web/routes_operator/_operations.py`) is the source of truth.
+**Send reminders** keeps the stricter `ready`-only requirement —
+reminders fire after the response window opens, not before.
 
 ---
 
@@ -136,8 +131,7 @@ nudging individual reviewers throughout the session.
 
 ### Info card — eight lifecycle counters
 
-Opens with a `.muted` note on its own row, **above** the counters
-(Segment 19E):
+Opens with a `.muted` note on its own row, **above** the counters:
 
 > Note: Invitation and reminder columns are inactive until email
 > sending is switched on.
@@ -173,20 +167,18 @@ reminders, and Incomplete reviews).
   by the route via `filter_status_options`.
 - **Search `<input>`** — matches the reviewer's **name and email by
   substring** and their **`tag_1..3` by whole value**, unioned. That
-  is the rosters' own rule (`_matches_row`, Segment 19I Item 1),
-  adopted here by Item 11 rather than re-invented: whole-value on
-  tags keeps `Team A` from dragging in `Team A2`, while substring on
-  a name is what makes a partial name useful. Matching runs against
-  the status-filtered set.
+  is the rosters' own rule (`_matches_row`), shared rather than
+  re-invented: whole-value on tags keeps `Team A` from dragging in
+  `Team A2`, while substring on a name is what makes a partial name
+  useful. Matching runs against the status-filtered set.
 - **The `<datalist>` offers `Name (email)` labels only.** Tag values
   are matchable but never suggested — a tag identifies too many rows
-  to partition a list by (Segment 19I Item 9's finding). Matching a
-  tag and suggesting one are separate questions, and the answer
-  differs.
+  to partition a list by. Matching a tag and suggesting one are
+  separate questions, and the answer differs.
 - **Apply / Clear** — Apply submits the form; Clear (visible only
   when a filter is active) is a link back to the unparameterised
-  page. These are the only things in the row: **Segment 19I Item 10
-  moved the count out of it.**
+  page. **These are the only things in the row** — the count line
+  belongs above the table, not here.
 
 **The preview-count line** sits at the top-left of the table card,
 above the rows it counts, in `.table-showing-hint` — the same helper
@@ -196,35 +188,27 @@ and partial the four roster pages and Assignments use
 reviewer (`build_invitations_rows` iterates
 `monitoring.per_reviewer_progress`).
 
-**This page is paged, and a filtered view is uncapped** (19J.5 rung
-3). ~~This page is uncapped. It renders every matching row, however
-many — there is no 200 / 500 window as on the rosters.~~ It rendered
-every matching row until rung 3, whatever the number, which is why it
-and Responses were the two that hurt most on a large roster. An
-unfiltered view now pages at **200**, with the `.table-pager-cluster`
+**This page is paged, and a filtered view is uncapped.** An
+unfiltered view pages at **200**, with the `.table-pager-cluster`
 (`spec/ui_elements.md` §10) above and below the table and `?offset=`
 clamped rather than rejected — the rosters' rules exactly, shared
-through `views.build_pager` and `_page_operations_rows`. (Through rung
-3 this was the `.table-pager` strip; 19J.9 replaced it with the
-cluster on all seven pages at once, so these two never differed from
-the rosters here.)
+through `views.build_pager` and `_page_operations_rows`.
 
 **A filtered view stays uncapped here**, which is the one place these
-two differ from the four Setup pages. Those carry a 500 filtered cap
-from Segment 15F; these never had a cap, and inventing one would take
-rows away from a filtered view that shows them today — a loss no part
-of 19J.5 asks for. The pager is suppressed while a filter is active
-either way, so the difference is visible only on a filter matching
-more than 500 rows.
+two differ from the four Setup pages. Those carry a 500 filtered cap;
+these have none, and adding one would take rows away from a filtered
+view that shows them today. The pager is suppressed while a filter is
+active either way, so the difference is visible only on a filter
+matching more than 500 rows.
 
 So the count line's **withheld clause is still unreachable here by
 construction**: an unfiltered view says nothing (the ranges speak) and
 a filtered one withholds nothing. What renders is `Showing 3
 reviewers.`, or nothing at all.
 
-Since **19J.5** a filter that matches every row still reports
+**A filter that matches every row still reports**
 (`Showing 1,240 reviewers.`) rather than rendering nothing: the
-sentence and the pager read the same filter flag so they cannot
+sentence and the pager read the same filter flag, so they cannot
 disagree about which mode the page is in, and a filter that ran and
 excluded nothing is worth saying.
 
@@ -275,11 +259,10 @@ row exists:
 - **Regenerate** — always visible when an invitation row exists.
   POSTs to `/operator/sessions/{session_id}/invitations/{id}/regenerate`.
 
-**Send** and **Regenerate** are live from `validated` onward
-(18F Part 2 gate relaxation). **Send reminder** stays
-`ready`-only — reminders fire after the response window opens,
-not before. All three render `disabled` outside their allowed
-state.
+**Send** and **Regenerate** are live from `validated` onward.
+**Send reminder** stays `ready`-only — reminders fire after the
+response window opens, not before. All three render `disabled`
+outside their allowed state.
 
 ### Per-row drill-in
 
@@ -321,12 +304,11 @@ Search `<input>` + Apply / Clear, and the same matching rule —
 reviewee name and email-or-identifier by substring, `tag_1..3` by
 whole value, with the `<datalist>` offering `Name (email)` labels
 only. The preview-count line sits above the table rather than in
-this card (Segment 19I Item 10), and its noun is **`reviewees`** —
-one row per reviewee, from `monitoring.per_reviewee_coverage`. This
-page ~~is uncapped~~ **pages** on the same terms as Invitations
-(19J.5 rung 3): 200 rows to a page unfiltered, a filtered view
-uncapped and without a pager, so only the filter branch of the count
-line ever fires.
+this card, and its noun is **`reviewees`** — one row per reviewee,
+from `monitoring.per_reviewee_coverage`. This page **pages** on the
+same terms as Invitations: 200 rows to a page unfiltered, a filtered
+view uncapped and without a pager, so only the filter branch of the
+count line ever fires.
 
 ### Table columns
 
@@ -427,9 +409,11 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-Until 2026-09-12 each pass read those rows one assignment at a time.
-Measured through the real routes at four roster sizes (SQLite,
-in-process), rendering each page once:
+**Every rollup must read the session's response rows in one query,
+not one assignment at a time.** Measured through the real routes at
+four roster sizes (SQLite, in-process), rendering each page once —
+the figure before the arrow is what a per-assignment read costs, the
+figure after it what the single-query read costs:
 
 | roster | assignments | Assignments | Invitations | Responses |
 |---|---:|---:|---:|---:|
@@ -445,9 +429,8 @@ it: roughly two queries per reviewer plus a constant, from the
 per-reviewer assignment and field lookups that remain. Assignments is
 flat at 43 at every size — its `LIMIT 200` and its indexes hold.
 
-Paging the two pages (Segment 19J) did not change any of these counts,
-by design and confirmed by measurement: the slice is applied after every
-row is built.
+**Paging changes none of these counts**, by design and confirmed by
+measurement: the slice is applied after every row is built.
 
 These are SQLite figures at roughly 0.2 ms per query. Production
 Postgres pays a network round trip per query, so **the query count is
@@ -463,8 +446,8 @@ the portable number and the wall times are a floor, not a ceiling.**
   single source of truth for "send reminder email."
 - Filter parsing lives in `app/web/views/_filters.py` so the
   Invitations and Responses pages reuse the same Status / Search
-  contract — and, since Segment 19I Item 11, the same `_matches_row`
-  the four roster filters use, rather than a third variant of it.
+  contract — and the same `_matches_row` the four roster filters use,
+  rather than a third variant of it.
 - **Sort wiring** is in `app/web/routes_operator/_operations.py`:
   a per-page valid-key set plus an `_invitations_sort_value` /
   `_responses_sort_value` resolver passed to
