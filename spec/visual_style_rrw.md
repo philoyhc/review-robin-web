@@ -212,7 +212,7 @@ Definitions (both counted as **distinct `include` assignments = "reviews"**, mut
 
 The gate is deliberately data-driven, not lifecycle-driven: the numbers appear as soon as any response is saved and **persist even if the session is reverted to draft** after responses came in, rather than snapping back to `Awaiting`. Whichever of drafts / submitted is zero is dropped from the label so the pill stays terse. Detailed per-reviewee / per-instrument coverage lives on the Responses operations page, not the strip.
 
-**Lifecycle pill — enum vs. label.** The lifecycle badge renders through the `lifecycle_label` Jinja filter (`app.services.lifecycle_display`). All values pass through capitalised except `ready → "Activated"` and `expired → "Closed"`. CSS class names continue to use the raw enum (`pill-lifecycle-ready`, not `pill-lifecycle-activated`). See `spec/session_home.md` "Enum vs. display label" for the rationale.
+**Lifecycle pill — enum vs. label.** The lifecycle badge renders through the `lifecycle_label` Jinja filter (`app.services.lifecycle_display`). All values pass through capitalised except `ready → "Activated"` and `expired → "Closed"`. CSS class names continue to use the raw enum (`pill-lifecycle-ready`, not `pill-lifecycle-activated`). See `spec/session_home.md` §"Lifecycle state vocabulary" for the rationale.
 
 ### Page header conventions
 

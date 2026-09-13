@@ -70,9 +70,13 @@ class InstrumentStatusBlock:
       ``include=True``. Drives the **Included** column pill on the
       Assignments page status table; lags ``generated_count`` when
       individual rows (e.g. self-reviews) have been deactivated.
-    - ``is_stale`` — ``eligible_count != generated_count`` AND a
-      rule is pinned. Operator hasn't clicked Generate since the
-      rule / roster last changed.
+    - ``is_stale`` — **always ``False``.** The staleness comparison
+      needed a per-rule eligible count, and the helper that supplied
+      it went with the rule-set library, so nothing can populate it.
+      Kept as a field rather than removed because the status block is
+      constructed positionally in several places; see the comment at
+      its assignment below for why forcing ``False`` is safer than
+      computing it from what remains.
     - ``edit_url`` — deep link to the matching Instrument card.
     """
 
@@ -104,9 +108,10 @@ class AssignmentsPageContext:
       non-NULL ``rule_set_id``. Drives the disabled state on the
       page-level Generate button (zero pinned ⇒ disabled with
       "Pin rules on the Instruments page first" nudge).
-    - ``any_stale`` — ``True`` when any pinned instrument's
-      eligible / generated counts diverge. Drives the
-      "Pairs may be stale" badge near the Generate button.
+    - ``any_stale`` — **always ``False``**, since every
+      ``is_stale`` is. No "Pairs may be stale" badge renders, and the
+      ``"generate"`` next-action state below is unreachable while this
+      holds.
     - ``instruments_url`` — deep link to the Instruments page,
       surfaced on the Generate disabled-state nudge.
     """
@@ -213,11 +218,14 @@ def build_assignments_page_context(
             eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
         included_count = included_by_instrument.get(instrument.id, 0)
-        # Wave 5 PR 5.1 — staleness comparison retired with the
-        # session_library helper that supplied per-rule eligibility.
-        # Without an eligible count, ``compute_staleness`` would
-        # false-positive every pinned instrument. Force False here
-        # until PR 5.3 retires the legacy pinning path entirely.
+        # The staleness comparison retired with the session_library
+        # helper that supplied per-rule eligibility. Without an
+        # eligible count ``compute_staleness`` would false-positive
+        # every pinned instrument, which is worse than reporting
+        # nothing: an always-stale badge trains the operator to ignore
+        # it. So this is False deliberately, not pending — reviving
+        # staleness means restoring a per-rule eligible count first.
+        # spec/assignments.md states the absence as the contract.
         is_stale = False
         sr_active, sr_deactivated = self_review_breakdown.get(
             instrument.id, (0, 0)
@@ -290,14 +298,13 @@ class NextActionGenerateState:
       Segment 15E renders a supporting link to the Instruments
       page in place of a primary button — generation isn't
       meaningful until at least one instrument has a rule.
-    - ``"generate"`` — at least one pinned instrument's
-      materialised state diverges from its current eligible
-      pairs (per Slice 3a's ``InstrumentStatusBlock.is_stale``
-      check). Catches: never-generated instruments, instruments
-      whose pinned rule changed post-Generate, instruments
-      whose roster / relationships changed post-Generate. Will
-      render as a Primary "Generate assignments" button in
-      Segment 15E that POSTs the same
+    - ``"generate"`` — **unreachable today.** It is gated on
+      ``any_stale``, which is forced ``False`` (see above), so this
+      branch never returns. It was meant to catch never-generated
+      instruments, and instruments whose rule or roster changed after
+      a Generate. Reviving it needs a per-rule eligible count, not a
+      change here. Renders as a Primary "Generate assignments" button
+      that POSTs the same
       ``/assignments/generate`` route used by the Assignments
       page's page-level button.
     """

@@ -571,7 +571,7 @@ Columns (left → right):
 |---|---|
 | Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers") — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
-| Generated | Pill carrying the row count, plus a `stale` pill when the current rule + roster pass would produce a different set. "Not generated yet" when zero. |
+| Generated | Pill carrying the row count. "Not generated yet" when zero. No staleness indicator — see "Staleness — not surfaced". |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
 | Self review | Pill carrying the total self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on every self-review row in this instrument. Pill colour is `pill-info` (blue) when all are active, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`; on a session with no roster overlaps it doesn't render. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
@@ -872,19 +872,18 @@ The diff is bit-stable (the engine's deterministic seed
 guarantees the same pass produces the same set), so re-running
 Generate without changing anything is a no-op.
 
-### Staleness
+### Staleness — not surfaced
 
-The status-table "Generated" cell carries a `stale` pill when
-the current rule + roster pass would produce a different set
-from what's stored. The check is `stamp_changed(instrument,
-db)`: hashes the rule + roster + group_kind and compares
-against `instrument.cached_group_pair_stamp` (group instruments)
-or a similar per-instrument digest.
+**There is no `stale` pill and no staleness signal on this page.** The
+status table reports stored counts only, so a rule or roster edit that
+would now generate a different set is invisible until the operator
+regenerates.
 
-A stale instrument doesn't auto-regenerate — the operator must
-click the Generate button (or the Activate super-button, which
-runs Generate transitively). The staleness signal is
-informational.
+That is the shipped contract, and the reason to state it rather than leave
+it unsaid: a reader who assumes the page warns them will not check.
+Regeneration is always the operator's own act — nothing auto-regenerates,
+and the Generate button (or Prepare session, which runs Generate
+transitively) is the only path.
 
 ### `reconcile_impact` dry-run
 

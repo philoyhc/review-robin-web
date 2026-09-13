@@ -39,11 +39,11 @@ shorthand:
 
 | Tag | What it means |
 |---|---|
-| **Primary** | Solid `accent-blue`. The page's single main affirmative action. |
+| **Primary** | Solid fill. The page's single main affirmative action. |
 | **Secondary** | White bg + `border-default` outline. The default button — routine submits, Cancel, View detail, etc. |
-| **Destructive** | Outline `accent-red`. The confirm step inside `.card.danger-zone`, and the roster Setup pages' `Delete` for checkbox-selected rows — which carries the role **outside** a danger zone. See `spec/ui_elements.md` §6. |
-| **Alert** | Filled `accent-amber`, label on `--text-on-amber`. The attention-seeking affirmative — used where an action is safe but consequential. (See `spec/ui_elements.md` §6.) |
-| **Outline-amber** | Outline `accent-amber-dark`. Recovery action inside a `.card.lock`. |
+| **Destructive** | Outline red. The confirm step inside `.card.danger-zone`, and the roster Setup pages' `Delete` for checkbox-selected rows — which carries the role **outside** a danger zone. See `spec/ui_elements.md` §6. |
+| **Alert** | Filled amber, light label. The attention-seeking affirmative — used where an action is safe but consequential. (See `spec/ui_elements.md` §6.) |
+| **Outline-amber** | Outline amber. Recovery action inside a `.card.lock`. |
 | **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. **No operator surface prescribes it**; a page reaching for it needs a design decision first, not a class. |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
@@ -77,6 +77,8 @@ Rendered inside `.session-nav-card` on every session-scoped page.
 | 9 | Operations tab row | Previews | `<a>` | `nav-tab` | Chrome nav | |
 | 10 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
 | 11 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
+| 12 | Setup tab row | Observers | `<a>` | `nav-tab` | Chrome nav | Renders only when `observers_enabled`. **Numbered 12 rather than slotted after Relationships** — numbers here are stable identifiers other documents cite, so a new tab takes the next free one and the row order is not the render order |
+| 13 | Operations tab row | Extract data | `<a>` | `nav-tab` | Chrome nav | The sixth Operations tab. Render order is Assignments, Validate, Previews, Invitations, Responses, Extract data — `spec/operator_ui_concept.md` §5 carries the row contract |
 
 ---
 
@@ -400,7 +402,7 @@ partials.
 
 ---
 
-## Section 13 — Manage Invitations (`/operator/sessions/{id}/invitations`)
+## Section 13 — Invitations (`/operator/sessions/{id}/invitations`)
 
 Source: `app/web/templates/operator/session_invitations.html`.
 

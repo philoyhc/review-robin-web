@@ -109,7 +109,7 @@ context that helps the operator decide whether to take it.
 - H2 title is the literal string **"Workflow"** (constant —
   the per-state action verb lives in the primary button label, not
   in the H2).
-- Border picks up `accent-blue`, the same shade as the Primary
+- Border picks up `--card-active-border`, the same shade as the Primary
   button inside the card. The blue framing signals this is the
   page's single most important card and ties visually to the
   primary action it carries.
@@ -144,7 +144,7 @@ paragraph in `.next-action-body` and skips both
 `.next-action-confirm` and `.next-action-buttons` entirely.
 
 **Buttons.** Primary action uses Primary styling (solid
-`accent-blue`); supporting actions use Secondary styling (white
+`--btn-primary-bg`); supporting actions use Secondary styling (white
 background, default border). Inline middle-dot links are not used
 here. POST forms (Activate, Revert to draft, Pause) declare a
 hidden form id in the body and the submit button declares
@@ -440,8 +440,8 @@ reuse it rather than invent a second.
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,
   button_label, button_tooltip)`.
-- **Class:** `body.ui-v2 .card.placeholder` — `bg-muted`
-  background, `text-muted` heading, `text-secondary` body,
+- **Class:** `body.ui-v2 .card.placeholder` — `--surface-muted`
+  background, with `--text-subtle` on both the heading and the body,
   `not-allowed` cursor.
 
 The visual signal *"this is a placeholder, not a working
@@ -496,7 +496,7 @@ action card doing the explanatory job.
 
 - The Workflow card's content is state-conditional. The card
   frame's constants are the H2 ("Workflow") and the
-  `accent-blue` border; height grows to fit content. The standard
+  `--card-active-border` border; height grows to fit content. The standard
   body / confirm / buttons stack handles every state except
   Activated, which uses an inline two-section layout. Implement as
   a single block in the template that switches body / confirm /

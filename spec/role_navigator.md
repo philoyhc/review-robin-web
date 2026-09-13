@@ -110,8 +110,8 @@ The strip wrapper is `<div class="rs-role-nav">`.
 **CSS** lives in `app/web/templates/base.html` alongside the `.pill-role-*` palette:
 
 - `.rs-role-nav` — `display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0 0 var(--space-4) 0;`. Sits below the page header, before the description card.
-- `.rs-role-nav .rs-role-nav-muted` — `background: var(--surface-2, #f3f4f6); color: var(--text-muted); text-decoration: none;`. Overrides the `.pill-role-*` colour palette so the chip looks "not selected".
-- `.rs-role-nav a.rs-role-nav-muted:hover` — `color: var(--text-primary); text-decoration: underline;`. The hover affordance that says "clickable".
+- `.rs-role-nav .rs-role-nav-muted` — `background: var(--surface-muted); color: var(--text-subtle); text-decoration: none;`. Overrides the `.pill-role-*` colour palette so the chip looks "not selected".
+- `.rs-role-nav a.rs-role-nav-muted:hover` — `color: var(--text-body); text-decoration: underline;`. The hover affordance that says "clickable".
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`. Pairs with the role's own palette (the chip keeps its `.pill-role-<role>` colour) to read as "selected".
 
 ---

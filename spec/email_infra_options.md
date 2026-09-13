@@ -189,7 +189,7 @@ columns are populated by **Segment 14B Part A** when the
 dispatch helper goes live:
 
 - `error_message` (Text, nullable) — captured on failure so the
-  Outbox / Manage Invitations diagnostic surfaces can render the
+  Outbox / Invitations diagnostic surfaces can render the
   reason.
 - `from_address` (String 320, nullable) — the address actually
   sent from. Useful when comparing operator-set and deployment-
@@ -324,7 +324,7 @@ none required today; operator-level credentials are sufficient.
 
 **Implementation work to add.** None for the basic path.
 **Segment 14B Part A** wires the existing transport into the
-Manage Invitations send path against the audit-log columns
+Invitations send path against the audit-log columns
 **Segment 11C Part 2** scaffolds.
 
 **Considerations.**
@@ -620,7 +620,7 @@ A reasonable sequence:
    widened status / kind value-sets so the wiring in Step 4
    doesn't have to ship Alembic churn alongside its logic
    changes.
-4. ◻ **Manage Invitations send activation (SMTP)** — Segment
+4. ◻ **Invitations send activation (SMTP)** — Segment
    14B Part A. First call site for the existing
    `transport_for` factory; first writer of Step 3's columns.
    Per-row Send + bulk Send + Send-test-to-me + dispatch helper

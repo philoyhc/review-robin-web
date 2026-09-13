@@ -642,3 +642,500 @@ the correction in full.
 - `spec/blob_storage.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6). <!-- doc-impact-waived: read, no finding — 0 dated lines, 0 provenance, 0 retirement language. Its future-tense options ladder and the deferral itself are the document's subject, so there was nothing in the three buckets to sort. The only file in the corpus with none. -->
 - `guide/sweep_2026-09-13_spec_history.md` — the batch's record: per-file dispositions, the uncertain-and-kept list, and every claim not verified against the code (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).
+
+---
+
+## Item 7 — the doc-only fixes the sweep's findings ask for
+
+### Opportunity
+
+The sweep registered **75 discrepancies** in
+`guide/findings_2026-09-13_spec_discrepancies.md` and actioned none, on the
+rule that *a sweep recommends*. The author's instruction now splits them:
+**doc-only fixes land here, in 19M.** Everything needing a code change or a
+contract decision stays in the register.
+
+The split is not the same as the register's own five kinds, because
+*kind* and *cost* are different axes:
+
+| register kind | doc-only? |
+|---|---|
+| **ID** stale identifier in a spec | **yes** — the spec names something that does not exist; the fix is the real name |
+| **SI** a spec contradicting itself | **yes** — one of the two statements is wrong and the file settles it |
+| **SS** two specs disagreeing | **mostly** — where one is plainly wrong or the precedence rule decides. **Not** where the code would have to move |
+| **DT** documentation describing its own tooling | **yes** |
+| **SC** spec vs code | **no** — each is *fix the code* or *change the contract deliberately*, and §4 puts that choice with the author |
+| **CC** code comments | **no** — a code change, however small |
+
+So Items 7–10 are ID, SI, SS-where-doc-only, and DT. **SC and CC stay in
+the register**, and the one SS that needs a decision (SS-01, the five
+validation severities, two of which would block activation) stays with it.
+
+### Decision
+
+**Four items, split by what makes each fix decidable**, not by file:
+
+- **Item 7 — ID.** A spec names an identifier that does not exist. Decided
+  by grepping the real name. No judgement.
+- **Item 8 — SI.** A file contradicts itself. Decided by the file's own
+  majority, or by the code where the file is evenly split.
+- **Item 9 — SS, doc-only subset.** Decided by `spec/README.md`'s
+  precedence rule (the per-subsystem spec wins), or by one side being
+  plainly wrong about the other's content.
+- **Item 10 — DT.** Decided by reading the tool.
+
+**Rejected — one item for all four kinds.** They close on different
+evidence, and a single item would let the easy ones carry the hard ones
+through a close check. The ID fixes are mechanical; SS-04 is a re-audit
+nobody has scoped.
+
+**Rejected — fixing SC-01 here** (`library_name`, which makes an older
+bundle unimportable). It is the finding I would act on first and it needs
+no contract decision — but it is a **code** change, so it is not 19M's.
+
+### Two findings that dissolved on verification
+
+Recorded because they are the same shape as the sweep's own
+*"four of twelve candidates were correctly-recorded history"*:
+
+- **SS-06 is not a mismatch.** Three specs say the Workflow card has a
+  *"ten-state cascade"* and `workflow_card.md` says *"twelve states"*. Its
+  table carries states **1–10 plus `4W` and `4Err`** — so twelve rows,
+  ten numbered states. **Both counts are correct**, of different things.
+  The fix is to say which is being counted, not to change a number.
+- **SI-01 has a right answer in the code.** `instruments.md`'s action-row
+  list omits `+Page break`; the per-instrument section includes it.
+  `instruments_index.html:510` renders the button, so the list is the
+  wrong one.
+
+### Semantics
+
+- **A count in a heading is the self-staling class, and removing it is the
+  fix** — not re-measuring it. `validate_page.md`'s *"(18 registered)"* is
+  accurate today and will not stay so.
+- **Where a spec states a verification method, the method must actually
+  find the answer.** `permissions.md`'s recipe would falsely flag ≥9 routes
+  whose gate is two levels deep. *A method producing false positives is
+  worse than none, because the next person runs it and believes the
+  result.*
+- **A distinction is sometimes the fix.** `csv_contracts.md` says "five
+  roster-shaped pairs" in its header and "four" in its byte-stability
+  contract. Both are right about different things: five pairs exist
+  (Observers has both an importer and an extract), and byte-stability is
+  established for four. Whether Observers meets it is **unverified**, so
+  the fix names five pairs, scopes the guarantee to four, and says the
+  fifth is unchecked rather than implying either.
+
+### Blast radius (measured)
+
+At `83282ddb`, 2026-09-13 — 75 findings, of which doc-only:
+
+```
+grep -c '^| ID-' guide/findings_2026-09-13_spec_discrepancies.md   # 8  (Item 7)
+grep -c '^| SI-' guide/findings_2026-09-13_spec_discrepancies.md   # part of 10 (Item 8)
+```
+
+**Item 7's eight ID rows touch six spec files.** Six are the retired
+colour vocabulary (`accent-*`, `text-primary`, `bg-page`, `surface-2`,
+`text-muted` — all **0** definitions in `base.html`); two are other wrong
+names. **Code changed: 0.**
+
+### PR ladder
+
+One rung per item, Items 7 → 10 in order. Item 7 first because it is the
+only one with no judgement in it, so it establishes the shape cheaply.
+
+### Definition of done
+
+- Every ID row either fixed or moved to a later item with a reason.
+- Every replacement token verified to exist in `base.html` before it is
+  written — *the sweep's own thirteen errors were mostly a name or number
+  substituted inside a correct sentence.*
+- `.venv/bin/pytest` green, `ruff check .` clean.
+- The register updated: each actioned row marked, with what it became.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19M.7` exits 0; any warning adjudicated
+- `spec-writer` run against the batch; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+1. **Does `ID-01` need `ui_elements.md` §6 first?** The four retired names
+   are in `operator_button_audit.md`'s **role legend**, which exists to
+   restate §6's vocabulary as a reading key. If §6 names the live tokens,
+   the legend can point rather than restate — which is the same fix §1 took
+   during the verification pass. *Decides: whoever lands Item 7.*
+
+### Out of scope
+
+- **SC and CC rows.** Code changes or contract decisions.
+- **SS-01.** Two of the five severities would block activation as errors;
+  that is a deliberate contract change.
+- **Adding a test to pin anything.** Several findings (SI-07's query
+  budget) would be better held by a guard than by prose. That is a code
+  change and belongs in its own item.
+
+### Status — 2026-09-13 (item closed)
+
+**Intended vs done.** As planned, one rung, no judgement calls needed. Two
+things the plan did not predict:
+
+- **Open question 1 answered in the simplest direction.** ID-01's four
+  names sit in `operator_button_audit.md`'s *role legend*, which exists to
+  restate §6 as a reading key. Rather than repoint the four tokens, the
+  legend **stops naming tokens at all** — so it cannot drift from §6 again.
+  That is the same fix §1 of `ui_elements.md` took during the verification
+  pass, arrived at independently.
+- **One retired name covered two different live tokens.** `session_home.md`
+  used `accent-blue` for both a card border and a button fill; those are
+  `--card-active-border` and `--btn-primary-bg`. *That is the argument for
+  the two-tier system, found by having to undo a flat name.*
+
+**Open question 3 (from the segment's own list) is answered here**: stale
+identifiers came to 8 rows across 7 files, six of them one cluster — a
+footnote, and now closed rather than filed.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+### Doc impact
+
+- `spec/operator_button_audit.md` — the role legend's four retired token names (Item 7).
+- `spec/session_home.md` — `accent-blue` and the `.card.placeholder` rule's three retired names (Item 7).
+- `spec/extract_data.md` — two retired names, one of which has 0 occurrences of any kind (Item 7).
+- `spec/participant_model.md` — the `.rs-acknowledge-card` pair (Item 7).
+- `spec/role_navigator.md` — three retired names across two lines (Item 7).
+- `spec/csv_contracts.md` — `field_labels.apply_captured_labels`, whose real name is `apply_import` (Item 7).
+- `spec/visual_style_rrw.md` — a named cross-reference to a `session_home.md` heading that does not exist (Item 7).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — mark each actioned ID row with what it became (Item 7).
+- `docs/status.md` — row when the item closes (Item 7).
+
+---
+
+## Item 8 — SC-01 … SC-04, where the author ruled the code correct
+
+### Opportunity
+
+Four of the register's spec-vs-code findings were the ones with a
+consequence attached: an older settings bundle that cannot import at all,
+a documented pill that cannot render, a helper named in a spec that does
+not exist, and a figure the code *and a test* both contradict.
+
+§4 puts that choice with the author, and it arrived in one line:
+
+> *"SC01-04 — update spec/comments; code is correct"*
+
+### Decision
+
+**The code stands; the documentation moves** — in all four, and in both
+directions the instruction names: `spec/` prose **and** the code's own
+comments.
+
+This is the deliberate contract change §4 permits, as against the silent
+one it forbids, so **the decision is recorded in the register beside each
+row** rather than only in a commit message. Four contracts changed on one
+line of instruction; the line is part of the record.
+
+**Rejected — treating SC-01 as a bug to fix in code.** It was the finding
+I would have acted on first, and I said so. The author's reading is
+better: strictness on rule-set attributes is worth the cost, because a
+misspelled attribute dropped in silence would change *which pairs
+generate* — and the top-level unknown-key ignore already covers the case
+where silence is safe. **The spec now states the cost** (such a bundle
+needs the column removed before import) rather than pretending there is
+none.
+
+**Rejected — deleting the `stale` field and its plumbing.** Out of scope:
+the instruction was to correct the documentation, and removing a field the
+status block constructs positionally is a code change with its own risk.
+
+### Semantics
+
+- **An absence is a contract and is stated as one.** Not *"staleness is
+  deferred"* but *"there is no `stale` pill and no staleness signal on this
+  page"*, with the consequence a reader needs — a rule edit is invisible
+  until regeneration — because *a reader who assumes the page warns them
+  will not check.*
+- **A docstring describing a computation the function no longer performs is
+  the same defect as a stale spec**, one layer in. `is_stale` said
+  *"`eligible_count != generated_count` AND a rule is pinned"*; it is
+  `False` unconditionally.
+
+### Blast radius (measured)
+
+At `83282ddb`: **3 spec files** (`settings_inventory.md`,
+`assignments.md`, `reviewer-surface.md`) and **1 code file**, comments
+only (`app/web/views/_assignments.py` — three docstrings and one inline
+comment). **No behaviour changed**; the suite is the check.
+
+### What correcting the comments turned up
+
+Two findings the register did not have, both the sweep's own defect sitting
+in code rather than in `spec/`:
+
+- **The `"generate"` next-action state is unreachable** — gated on
+  `any_stale`, which is forced `False`, so the branch never returns. Its
+  docstring described what it *would* catch as though it ran.
+- **The inline comment forecast a PR that had already shipped**: *"force
+  False here **until PR 5.3** retires the legacy pinning path"*. PR 5.3
+  shipped. The force is the design, not a pending state — and the real
+  reason is better than the forecast: an always-stale badge trains the
+  operator to ignore it, which is worse than reporting nothing.
+
+### Definition of done
+
+- All four rows marked **ACTIONED** in the register, with what each became.
+- The author's instruction quoted in the register, not just the commit.
+- No behaviour change: `.venv/bin/pytest` green, `ruff check .` clean.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19M.8` exits 0; any warning adjudicated
+- `spec-writer` run against the batch; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None. The decision was explicit and the four targets were already
+verified by the sweep and its verification passes.
+
+### Out of scope
+
+- **SC-05**, the sibling of SC-04 — a test pinning the code's heading
+  format *while citing the spec section it contradicts*. Not named in the
+  instruction, so it stays in the register.
+- **SC-06 … SC-36**, and every `CC` row. `CC-01`, `CC-03`, `CC-05` and
+  `CC-11` are the same class as the two comment defects this item fixed,
+  and are still open.
+
+### Status — 2026-09-13 (item closed)
+
+**Intended vs done.** The four spec edits landed as planned. The **code
+comments turned out to carry more than the register knew**, which the plan
+records as its own finding:
+
+- **The `"generate"` next-action state is unreachable** — gated on
+  `any_stale`, forced `False`. Its docstring described what it would catch
+  as though it ran.
+- **The inline comment forecast a PR that had shipped** — *"until PR 5.3"*.
+  So the force is the design, not a pending state, and the honest reason is
+  better than the forecast: an always-stale badge trains the operator to
+  ignore it.
+
+**I had argued the other way on SC-01** and the author's reading is better:
+strictness on rule-set attributes is worth the cost, because a misspelled
+attribute dropped in silence would change which pairs generate. The spec now
+states the cost rather than pretending there is none. *Recorded because the
+reversal is the useful part.*
+
+*Decisions confirmed at build:* 2026-09-13, on the author's instruction
+*"SC01-04 — update spec/comments; code is correct"*.
+
+### Doc impact
+
+- `spec/settings_inventory.md` — §10's `session_rule_sets` row: the strict reject, its reason, and its cost (Item 8).
+- `spec/assignments.md` — §Staleness restated as an absence; the status-table Generated row drops the `stale` pill (Item 8).
+- `spec/reviewer-surface.md` — the textarea factor becomes `0.5` in both places that name it (Item 8).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — SC-01..SC-04 marked actioned, with the author's instruction quoted and the two new code-comment findings recorded (Item 8).
+- `docs/status.md` — row when the item closes (Item 8).
+
+---
+
+## Item 9 — the SI and doc-only SS rows
+
+### Opportunity
+
+Ten `SI` rows (a spec contradicting itself) and the `SS` rows a document
+can settle without the code moving. Both are doc-only by construction: one
+of the two statements is wrong, or the precedence rule decides.
+
+### Decision
+
+**Where a file contradicts itself, the code settles it; where two files
+disagree, `spec/README.md`'s precedence rule does.** And twice the right
+fix was **to point rather than to restate**, which is the same conclusion
+Item 7 reached about the role legend and the verification pass reached
+about `ui_elements.md` §1 — *a second copy of a statement is a second thing
+to keep in step.*
+
+**Rejected — renumbering `operator_button_audit.md`'s chrome table** to
+slot the two missing tabs into render order. That file states its own rule:
+numbers are stable identifiers other documents cite. So Observers and
+Extract data are rows **12 and 13**, and the row order is explicitly not
+the render order.
+
+### Semantics
+
+- **A count in a heading is removed, not re-measured.**
+  `validate_page.md`'s *"(18 registered)"* was accurate and would not stay
+  so.
+- **A stated verification method must find the answer it claims to.**
+  `permissions.md`'s decorator scan reports false positives, because
+  several `_instruments.py` routes are gated two levels deep through
+  `Depends(_require_instrument_in_session)`. It now says to follow
+  `Depends()` transitively, and why: *a check that flags a correctly-gated
+  route is worse than none, because the next reader believes it.*
+- **A partial copy of a label is how a clause goes missing.**
+  `setup_pages.md` stated the Upload confirm two ways — a three-clause
+  version and a two-clause one. The template renders three
+  (count / assignments / responses), and the response clause had gone
+  missing once already, so the short version now points at the full one
+  instead of restating it.
+- **Two counts of different things are not a contradiction.** The Workflow
+  card has **twelve states over ten numbers** — 1–10 with `4W` and `4Err`
+  branching off 4. `workflow_card.md` now says both, so the five documents
+  calling it a *ten-state cascade* stop reading as errors.
+
+### Blast radius (measured)
+
+7 spec files. `spec/instruments.md`, `spec/settings_inventory.md`,
+`spec/setup_pages.md`, `spec/permissions.md`, `spec/validate_page.md`,
+`spec/operator_button_audit.md`, `spec/workflow_card.md`, plus
+`spec/email_infra_options.md` for the three `Manage Invitations` mentions.
+**Code changed: 0.**
+
+### Definition of done
+
+- Every SI row fixed or moved with a reason; the doc-only SS subset fixed.
+- Each fix checked against the code or the template first, not against the
+  surrounding prose.
+- `.venv/bin/pytest` green, `ruff check .` clean.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19M.9` exits 0; any warning adjudicated
+- `spec-writer` run against the batch; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- **SS-01**, the five validation severities. Two would block activation as
+  errors; a deliberate contract change.
+- **SI-07's query budget.** Rewording it does not fix it — nothing pins the
+  figures, and the related test only asserts relative growth. **A guard is
+  the right answer and a guard is code**, so it stays registered.
+
+### Status — 2026-09-13 (item closed)
+
+**Intended vs done.** Eight fixes landed. Three things the plan did not
+anticipate:
+
+- **`SS-05` was not one-sided.** *"Manage Invitations"* is used in
+  `email_infra_options.md` three times as well as in the audit's own
+  heading, so it was a vocabulary in circulation rather than one file's
+  slip. All four now use the chrome label, `Invitations`.
+- **`SI-03` needed a distinction, not a deletion.** Two `audit_events` rows
+  carried opposite marks. They were answering different questions — *is
+  there an extract* (yes) and *is it in this inventory's scope* (no) — so
+  the surviving row states what its ✅ does and does not mean.
+- **`SI-01`'s ASCII box had to stay aligned.** Adding `+Page break` to the
+  card diagram meant shortening *"delete-confirm checkbox"* to keep all 66
+  characters; verified by measuring characters rather than bytes, since the
+  box-drawing glyphs are three bytes each.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+### Doc impact
+
+- `spec/instruments.md` — `+Page break` added to both action-row lists, in rendered order (Item 9).
+- `spec/settings_inventory.md` — the duplicate `audit_events` row removed; the survivor states what its mark covers (Item 9).
+- `spec/setup_pages.md` — the partial Upload confirm label points at the full one (Item 9).
+- `spec/permissions.md` — the route-gate verification method follows `Depends()` transitively (Item 9).
+- `spec/validate_page.md` — the rule count comes out of the §3.2 heading (Item 9).
+- `spec/operator_button_audit.md` — Observers and Extract data as chrome rows 12 and 13; §13 renamed to `Invitations` (Item 9).
+- `spec/email_infra_options.md` — three `Manage Invitations` mentions renamed (Item 9).
+- `spec/workflow_card.md` — twelve states over ten numbers, stated so neither count reads as an error (Item 9).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — mark each actioned row (Item 9).
+- `docs/status.md` — row when the item closes (Item 9).
+
+---
+
+## Item 10 — the documentation that describes this segment's own tooling
+
+### Opportunity
+
+Rewriting `.claude/agents/spec-writer.md` left four documents describing a
+charter that had changed. `rrw_sdd_in_practice.md` describes it in **four**
+places; one was already correct and three were not, including a verbatim
+quote of words the file no longer contains.
+
+**The sweep also removed every currency line from `spec/`**, which
+falsifies §6.2's trade-off rather than just its figure: it said *"only the
+functional spec dates itself: 4 of 36"*, and the answer is now **none of
+39**.
+
+### Decision
+
+**Correct the facts; leave the arguments.** These are the author's measured
+analysis, so each edit is the smallest one that makes the sentence true,
+and every surrounding claim about the practice stands.
+
+§6.2's trade-off is restated rather than renumbered, because *what* changed
+is more informative than the count: currency moved from an in-file date to
+a sweep-record pointer, on the reason 19J.1 gave when it did this to
+`spec/README.md` first — *a date nobody owns is what let §9.7 describe a
+card that never shipped.* It trades a figure that rots quietly for one that
+rots visibly, since a sweep record carries its own date and scope.
+
+### `DT-04` dissolves, and that is the finding
+
+`docs/practice-audit-2026-09-04.md` quotes the old charter and
+`guide/todo_master.md` mentions `spec-writer` five times. **Neither is
+changed, and neither is an omission.** The practice audit is a **dated**
+document whose quote was accurate on 2026-09-04, and `todo_master.md`'s
+mentions all record what a *pass found*, not what the charter says.
+Repointing either would falsify a log — the reasoning the sweep applied
+four times to `spec/`, holding here for `docs/` and `guide/`.
+
+*Only `rrw_sdd_in_practice.md` describes the charter in the present tense,
+which is why it is the only file this item edits.*
+
+### Blast radius (measured)
+
+**1 file, 4 edits.** `rrw_sdd_in_practice.md` §6.1 (the quote), §6.2 (the
+currency trade-off), §6.4 (the unqualified clause), and the Appendix
+maker/checker row. **Code changed: 0. Other documents changed: 0**, for the
+reason above.
+
+### Definition of done
+
+- All three DT rows corrected; DT-04 recorded as dissolved with its reason.
+- No argument altered — only claims about the tool and the figure.
+- `.venv/bin/pytest` green, `ruff check .` clean.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19M.10` exits 0; any warning adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- **Every `CC` row.** Code comments.
+- **`docs/practice-audit-2026-09-04.md` and `guide/todo_master.md`** — see
+  above; deliberately unchanged.
+
+### Status — 2026-09-13 (item closed)
+
+**Intended vs done.** Four edits where the plan predicted three, because
+§6.2's figure turned out to be the smaller half of the problem: **no live
+spec carries a currency line at all now**, so the trade-off paragraph
+described a mechanism that no longer exists rather than a count that had
+moved.
+
+**And the item shrank on investigation.** DT-04 named three further
+documents; none needed changing, because a dated audit and a record of what
+a pass found are both legitimate history. *The sweep spent all day learning
+to tell those apart from drift, and the lesson held on the last item.*
+
+*Decisions confirmed at build:* 2026-09-13.
+
+### Doc impact
+
+- `rrw_sdd_in_practice.md` — §6.1's charter quote, §6.2's currency trade-off, §6.4's unqualified clause, and the Appendix maker/checker row (Item 10).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — DT-01..DT-03 marked actioned; DT-04 recorded as dissolved (Item 10).
+- `docs/status.md` — row when the item closes (Item 10).

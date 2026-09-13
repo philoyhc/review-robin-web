@@ -424,6 +424,83 @@ checked when DT-01..DT-03 are actioned.
 
 ---
 
+## ACTIONED — ID-01 … ID-08 (Segment 19M Item 7)
+
+All eight fixed. **Every replacement was verified to exist in `base.html`
+before it was written**, because the sweep's own thirteen errors were
+mostly a name substituted inside an otherwise correct sentence.
+
+| id | was | now |
+|---|---|---|
+| ID-01 | `operator_button_audit.md`'s role legend named `accent-blue` / `accent-red` / `accent-amber` / `accent-amber-dark` | **the legend no longer names tokens at all** — "Solid fill", "Outline red", "Filled amber, light label", "Outline amber". Open question 1 answered: the legend exists to be a reading key for §6, so it points rather than restates, and cannot drift from §6 again |
+| ID-02 | `session_home.md` ×3 `accent-blue` | `--card-active-border` (the card border) and `--btn-primary-bg` (the button fill) — **two different tokens for what one retired name had covered**, which is why the flat vocabulary was retired |
+| ID-03 | `bg-muted` / `text-muted` / `text-secondary` | `--surface-muted`, and `--text-subtle` on **both** heading and body — the shipped rule uses one token for the two, not two |
+| ID-04 | `extract_data.md` `--accent-blue` ×2, `--color-border` | `--card-active-border`, `--border-subtle`. `--color-border` had **0 occurrences of any kind** |
+| ID-05 | `--accent-blue` + `--accent-blue-bg-faint` | `--card-active-border` + `--card-active-bg` |
+| ID-06 | `--surface-2, #f3f4f6`, `--text-muted`, `--text-primary` | `--surface-muted`, `--text-subtle`, `--text-body` — **and the hard-coded hex fallback goes with them**, since a fallback literal cannot follow the theme |
+| ID-07 | `field_labels.apply_captured_labels` | `field_labels.apply_import` (`field_labels.py:277`) |
+| ID-08 | a named cross-reference to `session_home.md` "Enum vs. display label" | §"Lifecycle state vocabulary", the heading that exists. **Not caught by the `§N` guard, because it is a *named* reference** |
+
+**Two retired-token hits remain in `spec/` and are correct:**
+`color_tokens.md:7` is the do-not-reintroduce constraint, which must name
+them to forbid them; `ui_elements.md:23` explains why
+`visual_style_general.md` uses role names deliberately. Its 61 are
+untouched for the reason Item 1 recorded.
+
+*Open question 3 is also answered by this item: stale identifiers were
+**8 rows across 7 files**, six of them one cluster. A footnote, not its own
+segment — and now closed rather than filed.*
+
+---
+
+## ACTIONED — SC-01 … SC-04, on the author's decision (Segment 19M Item 8)
+
+> *"SC01-04 — update spec/comments; code is correct"* — the author,
+> 2026-09-13.
+
+That is the deliberate contract change §4 requires. In all four the **code
+stands and the documentation moves.** Recorded here rather than only in the
+commit, because a contract that changes silently is the thing §4 forbids and
+these four changed on one line of instruction.
+
+| id | what the spec claimed | what it says now |
+|---|---|---|
+| **SC-01** | a `library_name` row on input **must be recognized and skipped**, *"not rejected — a bundle taken while that column existed is otherwise unimportable in full"* | an unrecognized `session_rule_sets[n].<attr>` row **is rejected**: the parse phase raises and the whole apply fails before any write. The strictness is stated as deliberate, distinguished from the top-level unknown-key silent ignore, with its reason (a misspelled rule-set attribute would otherwise be dropped in silence and change which pairs generate) **and its cost** (such a bundle needs the column removed before import) |
+| **SC-02** | the status table carries a `stale` pill when a rule/roster pass would produce a different set | *"**There is no `stale` pill and no staleness signal on this page.**"* Stated as the contract, with the consequence a reader needs: a rule edit is invisible until regeneration, and *"a reader who assumes the page warns them will not check"* |
+| **SC-03** | the check is `stamp_changed(instrument, db)` | gone with §Staleness — the helper does not exist |
+| **SC-04** | `typical_chars = max_length * 0.75` | `* 0.5`, matching the code **and the test that asserts it**. The gate is no longer on the wrong side |
+
+### What the code side turned up, which the finding had not
+
+The docstrings were the point of *"spec/comments"*, and correcting them
+surfaced two things the register did not have:
+
+- **The `"generate"` next-action state is unreachable.** It is gated on
+  `any_stale`, which is forced `False`, so that branch never returns. The
+  docstring described what it *would* catch as though it ran.
+- **The code comment forecast a PR that had already shipped.** It read
+  *"force False here **until PR 5.3** retires the legacy pinning path
+  entirely"* — and PR 5.3 shipped, retiring the group-instrument rule gate
+  (`session_lifecycle.py:779`). So the force is not pending; it is the
+  design. Rewritten to say so, and to give the real reason: an
+  always-stale badge trains the operator to ignore it, *"which is worse
+  than reporting nothing."*
+
+*Both are the same defect as the specs had — a description that outlived
+what it described — sitting in the code rather than in `spec/`. `CC-01`,
+`CC-03`, `CC-05` and `CC-11` are the same class and remain open.*
+
+### Still open from the SC block
+
+**SC-05 through SC-36 are untouched.** SC-05 is the sibling of SC-04 — a
+test pinning the code's heading format *while citing the spec section it
+contradicts* — and was not named in the instruction, so it stays. The
+register's tally is unchanged at **75**; four are now marked actioned
+rather than removed, because *what a finding became is worth more than its
+absence.*
+
+---
+
 ## Verification pass — what the five checks caught, and what it cost
 
 `spec-writer` was run per batch in **Mode B** (report-only; see
@@ -632,3 +709,50 @@ says a `*Current:*` block rots because nothing renews it. §2b said a finding
 rots unless something checks it. This section is the third turn of the same
 screw — **a correction rots too**, and the only thing that catches it is
 another pass that reads the code rather than the prose.
+
+---
+
+## ACTIONED — the SI, doc-only SS, and DT rows (Segment 19M Items 9 and 10)
+
+### Item 9
+
+| id | resolution |
+|---|---|
+| SI-01 | `+Page break` added to **both** action-row lists in rendered order (Delete → `+Instrument` → `+Page break` → Lock/Unlock). The template renders it, so the lists were the wrong side |
+| SI-02 | **a distinction, not a correction** — five roster-shaped pairs exist and byte-stability is established for four; whether Observers meets it is unverified, and the file now says so rather than implying either |
+| SI-03 | the duplicate `audit_events` row removed; the survivor states **what its ✅ does and does not mean** — there is an extract, and audit events are outside this inventory's scope, so there is nothing here to round-trip |
+| SI-04 | the two-clause Upload confirm label now **points at** the three-clause one. The template renders count / assignments / responses, and *the response clause had gone missing once already* |
+| SI-05 | *(See "Form scope" below)* → §"Form HTML mechanics", the section that exists |
+| SI-06 | `permissions.md`'s method now says to follow `Depends()` **transitively**, because a decorator scan flags ≥9 correctly-gated `_instruments.py` routes. *A check that flags a correctly-gated route is worse than none, because the next reader believes it* |
+| SI-09 | the rule count comes **out of** the §3.2 heading rather than being re-measured |
+| SS-04 | Observers and Extract data added as chrome rows **12 and 13** — appended, not slotted, because that file states its own rule that numbers are stable identifiers other documents cite |
+| SS-05 | `Invitations`, the chrome label, in all four places. **Not one-sided**: `email_infra_options.md` used *"Manage Invitations"* three times, so it was a vocabulary in circulation |
+| SS-06 | **twelve states over ten numbers** — 1–10 with `4W` and `4Err` — stated in `workflow_card.md`, so the five documents calling it a *ten-state cascade* stop reading as errors |
+
+**Still registered from this group:** `SI-07` (the query budget). Rewording
+does not fix it — nothing pins the figures and the related test only asserts
+relative growth. **A guard is the right answer and a guard is code.**
+`SI-08` and `SI-10` likewise remain, as prose additions rather than
+corrections.
+
+### Item 10
+
+| id | resolution |
+|---|---|
+| DT-01 | §6.1 requoted to the charter that exists: at a close, align the spec to what shipped; outside one, the spec wins and divergence is reported. Its own default quoted — *"if you cannot tell which mode you are in, you are in Mode B"* |
+| DT-02 | §6.4's unqualified *"updates `spec/` to match the code after a change"* now carries **at a close** — and the passage names the contradiction it had papered over, since it stated both halves side by side without noticing they conflicted |
+| DT-03 | the Appendix maker/checker row qualified the same way |
+| — | **§6.2's trade-off restated.** It said *"only the functional spec dates itself: **4 of 36**"*; **no live spec carries a currency line at all now** — 19M replaced each with a sweep-record pointer. The figure was the smaller half: the paragraph described a *mechanism* that no longer exists |
+
+### DT-04 dissolves — and that is the finding
+
+`docs/practice-audit-2026-09-04.md` quotes the old charter;
+`guide/todo_master.md` mentions `spec-writer` five times. **Neither was
+changed, and neither is an omission.** The practice audit is a **dated**
+document whose quote was accurate on its date, and `todo_master.md`'s
+mentions record what a *pass found* rather than what the charter says.
+Repointing either falsifies a log.
+
+*That is the same call the sweep made four times over `spec/` — and making
+it correctly here, on the last item, is the only evidence that the day's
+lesson took rather than being written down.*

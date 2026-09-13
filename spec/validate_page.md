@@ -206,7 +206,7 @@ orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`, and
 `check` (e.g. the duplicate-email rule sets the anchor to the
 first duplicate row's `#reviewer-row-{id}`).
 
-### 3.2 Current rules (18 registered)
+### 3.2 The registered rules
 
 | `key` | `source` | Severity | What it catches |
 |---|---|---|---|
