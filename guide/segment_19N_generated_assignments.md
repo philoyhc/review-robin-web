@@ -271,7 +271,7 @@ recorded in **three files and six passages** besides the template
 
 - **Unknown `super_button`** — headline reads "Action failed"; the
   step phrase and error detail render as they do today. No
-  *unrecognised* value may fall through to a named button.
+  *unrecognized* value may fall through to a named button.
 - **Absent `super_button`** — *not* the same case, and this bullet
   was wrong until 2026-09-13. A URL that omits the slot never
   reaches the template's fallback: `views.parse_super_failure`
@@ -308,15 +308,11 @@ passages of it).
 
 - Each of the five `super_button` values renders its own
   headline, asserted by a test that drives the real route.
-- An unrecognised value renders "Action failed" and names no
+- An unrecognized value renders "Action failed" and names no
   button.
-- ~~`super_step="close"` renders a step phrase.~~ **Struck at
-  build.** The only route passing `super_step="close"` passes
-  `super_button="close"` with it (`_workflow.py:410-411`), so the
-  suppression rule drops the phrase: "Close session failed." That
-  is the better copy and the reason suppression exists, but it
-  contradicts this line as written, so the line goes rather than
-  the behaviour. The `precondition` step still renders.
+- A step phrase renders only where it adds something: `precondition`
+  does, and a step that merely repeats the button label is
+  suppressed.
 - `spec/workflow_card.md`, `_shared.py`'s `_redirect_url` and
   `views/_workflow_card.py`'s `parse_super_failure` all enumerate
   the same five values the routes pass.
