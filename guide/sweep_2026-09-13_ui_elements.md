@@ -313,3 +313,65 @@ So a wider pass is not a sweep of dates. It has to separate:
 Recorded as an item's worth of work, not done here. *§4 scoped the
 conversion without saying which direction it ran; §6 is the answer, and
 it arrived from the author rather than from the sweep.*
+
+## 7. `spec-writer` on the reversal — two more wrong, and the header was vouching for them
+
+The reversal was checked the same way §2 was, and found two errors. Both
+sit **inside entries §6.1 had just converted**, which is the part that
+matters: the new header tells a reader that converted entries are
+authoritative. *An authority claim is a claim, and it was made over text
+that had not been checked to that standard.*
+
+**7.1 — "an inline-styled `.card`" was wrong on both counts.** §6.1's
+"the family is not universal" paragraph described four out-of-family
+banners that way. None is inline-styled, and one is not a card:
+
+- `sys_admin_users.html` (×2) and `session_detail.html` render
+  `<div class="card banner-scroll-target" role="alert">` — a **plain**
+  card. No inline style, no bespoke border, **no error accent at all**;
+  the generic card border, the scroll hook, and `role="alert"` to name
+  the intent.
+- `next_action_card.html` renders
+  `<p class="next-action-signal next-action-signal--error
+  banner-scroll-target">` — **not a card**, and styled by a real rule
+  (`body.ui-v2 .card.next-action .next-action-signal--error`), not
+  inline.
+
+The wording was inherited verbatim from §2.1, where it entered as a
+softening of an overstatement — so it was never checked, only *added* to.
+That it says "inline-styled" is a leftover from the 2026-05-03 text it
+was correcting: **the correction borrowed the error's vocabulary.**
+
+**7.2 — the entry names five tokens that do not exist.** The four-variant
+bullet list called them `accent-blue`, `accent-green`, `accent-amber`,
+`accent-red` and `text-primary`. **All five have 0 definitions in
+`base.html`**; the shipped tokens are `--status-{info,success,warning,
+error}-{bg,border}` and `--text-body`. `spec/color_tokens.md`'s opening
+paragraph says the flat colour-named tokens are *"fully retired"* — so a
+live spec was naming a vocabulary another live spec records as retired.
+The same names sat in the pills table's middle column, in the two rows
+this sweep rewrote.
+
+Corrected, and the variants' actual contract stated with it: each variant
+sets **only** `background` and `border-color`, everything else coming
+from the `.banner` base.
+
+**7.3 — and the count was a grep count.** *"36 `onclick`s"* is what
+`grep -c` returns; **two of the hits are comments** and one is a JS
+string builder. It is **33 literal attributes plus one injected at
+runtime**. The figure was never wrong as arithmetic and was wrong as a
+description, which is the harder kind to notice.
+
+### 7.4 The residue
+
+`accent-*` / `text-primary` names appear on **28 more lines** of this
+file, outside the six converted entries and outside this sweep's edits.
+That is a **second class of drift** — stale *identifiers*, not stale
+*mode* — and it is not what §1 diagnosed. Recorded here; it belongs to
+the general sweep rather than to this file's conversion.
+
+**The lesson §6 has to carry, because it is the third time today:**
+§2 was wrong in three places and §6 corrected it; §6 was wrong in two
+more, both in text it had just declared authoritative. *Each pass caught
+the previous pass and introduced its own.* The header no longer promises
+that converted entries are right — it says what was checked.
