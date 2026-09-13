@@ -228,3 +228,88 @@ can be false without naming anything that has vanished.
 
 *That distinction is the limit of this sweep and is stated rather than
 left to be assumed.*
+
+## 6. Reversed the same day — the sweep put history *into* a spec
+
+The author, reading §2's edits: *"Let's keep history out of spec docs as
+much as possible."*
+
+That is a reversal of this sweep's direction, not a trim of its prose.
+§1 diagnosed the problem correctly — a `*Current:*` block is a frozen
+snapshot and nothing renews it — and then **§2 made six entries more
+historical, not less**. It rewrote snapshots as *dated* snapshots:
+*"Was, at 2026-05-03"*, *"Shipped — swept 2026-09-13"*, *"corrected the
+same day"*, commit SHAs, *"the entry was complete for four months and
+never marked"*. A reader wanting to know what a banner is had to read
+four months of provenance first.
+
+**The rule.** A spec says what *is*. When something landed, what it
+replaced, which proposal lost, and what a previous draft got wrong are
+all `guide/` and `docs/status.md` material. The spec carries at most a
+pointer to them.
+
+### 6.1 What the entries became
+
+Six entries converted from plan-with-history to plain present-tense
+description, with the `*Current:*` / `*Migration delta:*` / `*PR:*`
+apparatus dropped from them entirely:
+
+| entry | now reads as |
+|---|---|
+| §5 banners | the four variants, their two sub-elements, and the note that the family is not universal |
+| §9 pills table (×2) | `.pill-success` / `.pill-error` keep their v1 names — stated, not narrated |
+| §9 lifecycle badge | one `.pill-lifecycle-*` set over five states |
+| §9 status-symbol | two sibling classes, and that there is **no** bare `.status-icon` base rule |
+| §11 `<pre>` blocks | renders `.code-block`; names the two templates that carry it |
+| §11 inline handlers | 36 live `onclick`s, and the Lock / Unlock asymmetry a delegation sweep must preserve |
+
+Two deletions rather than rewrites:
+
+- **§11 `form style="display: contents;"` is gone from the spec.** It has
+  0 occurrences. An entry describing a hack that no longer exists is not
+  a stale description, it is an absent subject — and the retired-thing
+  record belongs here, not in the catalogue.
+- **§9's status-symbol `*Current:*` line went too.** It described
+  inline-styled glyphs (`#16a34a`, `font-size: 1.2em`) in
+  `review_surface.html`; verified 0 occurrences — the extraction removed
+  them. §2.6 had left this line standing while rewriting the delta below
+  it, so the entry asserted the inline styles *and* their replacement.
+
+The header's dated bulletin — including this sweep's own four block
+counts — was replaced by a **How to read an entry** note. The counts
+were the same mistake one level up: a measurement pasted into a spec,
+where nothing renews it. They live in §1 here instead.
+
+### 6.2 What was *not* stripped, and the distinction that decides it
+
+The file carries a lot of pre-existing history: a dated correction note
+in §6, three *"Corrected 2026-09-08"* annotations, retired-class
+records in §4 / §7 / §10, and an `added <date>` / `restyled` column on
+§10's primitives table — a changelog inside a spec. **None of it was
+touched in this pass**, because the instruction arrived against six
+entries and widening it unilaterally to thirty would be the same
+overreach in the other direction.
+
+But sizing it is not the only open question, because **history that
+explains why something must not change is load-bearing, and history
+that records when something landed is not.** §10's
+`.session-row-selected` entry is the hard case: its account of 19L.1's
+fill — that the fill resolved to `--status-info-bg`'s primitives and so
+erased every pill on the row, and that no replacement escapes the
+0.810–0.914 luminance band — reads as history and functions as a guard.
+Delete it and the next author re-adds the fill. The same is true of the
+§6 `.btn-icon` cascade note and §7's padding correction.
+
+So a wider pass is not a sweep of dates. It has to separate:
+
+- **provenance** — when a class landed, which PR, what it was called
+  before: goes to `guide/` and `docs/status.md`;
+- **rationale expressed historically** — *we tried X and it broke Y*:
+  stays, rewritten forward as a constraint (*"the fill is absent
+  because…"* rather than *"19L.1 shipped a fill and…"*);
+- **absent subjects** — retired classes with 0 occurrences: deleted,
+  recorded here.
+
+Recorded as an item's worth of work, not done here. *§4 scoped the
+conversion without saying which direction it ran; §6 is the answer, and
+it arrived from the author rather than from the sweep.*
