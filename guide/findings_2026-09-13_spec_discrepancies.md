@@ -11,7 +11,7 @@ quietly rewrite the spec to match**. So every divergence became a finding
 instead of an edit. This is that register: one table, every finding, resolved
 rows struck through with what the fix was.
 
-**34 of 84 resolved. 50 open.**
+**34 of 85 resolved. 51 open.**
 
 | what the open rows need | ids | count |
 |---|---|---|
@@ -19,6 +19,7 @@ rows struck through with what the fix was.
 | **carried out of 19N.1**, which closed 2026-09-13 — `SC-42` is a recorded deferral, `SC-43` a wire-or-retire | `SC-42`, `SC-43` | 2 |
 | **a contract decision** | `SC-44`, `SS-01`, `SS-02`, `SS-07` | 4 |
 | **code** — a comment or a dead mapping | `CC-01`…`CC-03`, `CC-05`…`CC-12` | 11 |
+| **prose** — a pointer that never resolved | `CC-13` | 1 |
 | **code** — a guard | `SI-07` | 1 |
 | **prose** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
 
@@ -140,6 +141,7 @@ code, the other spec, or the other comment.
 | `CC-09` | `base.html` comments | `--accent-blue-bg` (2330), "the active side fills accent-blue" (3571), `--accent-blue-marker` (872); and **"Danger Outline (.destructive)"** at 2479 | retired token names, and the pre-19B button vocabulary the doc guard bans in prose | **Code** — the guard reads specs, not CSS comments, so the retired vocabulary survives where nothing looks |
 | `CC-10` | `_display_fields.py:797-801` | a docstring listing 3 `SortSpecError` codes | it raises 5 | **Code** — comment only |
 | `CC-11` | `_serialize.py:561` | a comment saying a behavior "drops in PR 5.2" | PR 5.2 shipped | **Code** — comment only |
+| `CC-13` | `instruments.md:41` | the Contents entry `[Band 1 — Assignment rule + Unit of review](#band-1--assignment-rule--unit-of-review)` | the heading at `:415` is `### Instrument assignment rule (Band 1) + Unit of review`, which slugs to `instrument-assignment-rule-band-1--unit-of-review`. **The anchor has never resolved** | **Decide which side moves** — retitle the heading to match the ToC, or reword the ToC entry to match the heading. Pre-existing and unrelated to any assignment contract; surfaced 2026-09-13 by the spec check at 19N.1's close, which extracted every heading and every link in the doc-impact specs and diffed the two sets. *Nothing re-derives a ToC here, so this is the register's recurring shape once more — a pointer whose premise nothing checks* |
 | `CC-12` | `tests/integration/test_cascade_ties.py:291` | the comment *"The two values `spec/ui_elements.md` §6 states in prose"* | the test **hardcodes** both specificity tuples and never reads the spec, so if §6 stopped stating them the suite would stay green and the comment would be false | **Code** — surfaced 2026-09-13 by the pass over the writer instructions, not by the sweep. Either read the figures from §6 (as `test_lobby_row_selection.py` does for the rail width, which is why that one fails loudly) or drop the claim. *A guard whose premise nothing re-derives is the register's own recurring defect, sitting in `tests/`* |
 | ~~`ID-01`~~ | `operator_button_audit.md:42,44,45,46` | `accent-blue`, `accent-red`, `accent-amber`, `accent-amber-dark` | 0 definitions in `base.html` | **Fixed** — **the legend names no tokens at all** now: "Solid fill", "Outline red", "Filled amber, light label", "Outline amber". It exists as a reading key for `ui_elements.md` §6, so it points rather than restates, and cannot drift from §6 again |
 | ~~`ID-02`~~ | `session_home.md:112,147,499` | `accent-blue` ×3 | — | **Fixed** — `--card-active-border` (the card border) and `--btn-primary-bg` (the button fill): **two tokens for what one retired name covered**, which is why the flat vocabulary was retired |

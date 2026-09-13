@@ -1,12 +1,23 @@
-"""Assignments hub: index page + manual import + delete-all. Slice 4
-of the major refactor.
+"""Assignments hub: the index page plus the six POSTs that act on a
+session's generated set.
 
-Note: The Rule Builder routes (``/assignments/rule-based-editor/...``
-and ``/assignments/rule-based/generate``) live with the Rule Builder
-slice (PR 8), not here, even though they share the URL parent.
+All paths below are under the package's ``/operator`` prefix:
 
-Source ranges in pre-refactor ``routes_operator.py``:
-1261-1342, 2015-2120, 2350-2380.
+- ``GET  /sessions/{id}/assignments`` — the page
+- ``POST /sessions/{id}/assignments/generate`` — run the rule engine
+- ``POST /sessions/{id}/assignments/delete-all``
+- three bulk toggles (activate / inactivate / per-instrument
+  self-reviews)
+
+**Generating is the only way an assignment row comes into being**
+(``spec/assignments.md``); an operator may inactivate a row, and that is
+the whole manual surface. There is no import here — the manual-CSV
+upload route retired in 16A PR 5 — and this docstring went on offering
+one, alongside two Rule Builder routes
+(``/assignments/rule-based-editor/...``,
+``/assignments/rule-based/generate``) that exist nowhere in the codebase
+and a claim that generate lives elsewhere, when it is at line 406 of
+this file.
 """
 
 from __future__ import annotations
