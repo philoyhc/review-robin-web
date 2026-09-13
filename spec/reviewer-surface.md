@@ -921,7 +921,7 @@ flag hasn't been flipped yet by `observe_deadline`.
 |---|---|---|
 | `not opened` | `pill-info` (blue, pending) | Session is `draft` or `validated` — not yet activated. Session column renders plain text (no link). |
 | `open` | `pill-success` (green) | Session is `ready` AND at least one assigned instrument is `accepting_responses` AND deadline (if set) hasn't passed. Session column links to the surface. |
-| `closed` | `pill-lifecycle-archived` (muted grey) | Session is `ready` AND no assigned instruments are accepting (deadline passed or instruments manually closed). Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
+| `closed` | `pill-error` (red) | Session is `ready` AND no assigned instruments are accepting (deadline passed or instruments manually closed). Red matches the past-deadline pill in the End column — both say *the window has closed for this reviewer* — and the muted `pill-lifecycle-archived` grey it replaced read as plain text rather than a pill. Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
 
 `closed` also resolves from `session.status == "expired"`, and must:
 an expired session reports `closed` rather than `not opened` precisely

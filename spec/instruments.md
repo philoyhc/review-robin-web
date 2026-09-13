@@ -730,12 +730,14 @@ editable); only the chip + the reviewer-side renders react.
 Bounds are inline on each row. The service-side validator (`bulk_save_fields` in
 `app/services/instruments/_response_fields.py`) enforces:
 
-- `Number`: `min <= max`, `step <= max - min` (when both
+The four `data_type` values are the ones the Bounds row above uses —
+`String`, `Integer`, `Decimal`, `List` — not response-type display names:
+
+- `Integer` / `Decimal`: `min <= max`, `step <= max - min` (when both
   bounds are set), `step >= smallest representable unit`
   (`Decimal` → 0.1; `Integer` → 1).
-- `Rating`: same numeric rules; UI typically constrains `min=1, max=5, step=1`.
-- `SingleSelect` / `MultiSelect`: at least one list option, no
-  duplicates, options trimmed.
+- `String`: bounds are read as length bounds (`min_length` / `max_length`).
+- `List`: at least one list option, no duplicates, options trimmed.
 
 A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.

@@ -36,13 +36,13 @@ The hub URL is plural (`/previews`) to match the chrome tab and the broader "pre
 
 ### Chrome and navigation
 
-The Operations row of the session chrome carries a `Previews` tab, alongside Assignments, Validate, Invitations and Responses, in this order:
+The Operations row of the session chrome carries a `Previews` tab, alongside Assignments, Validate, Invitations, Responses and Extract data, in this order:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses]
+Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
 
-Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after.
+Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after, and Extract data last because it is what the operator reaches for once responses are in.
 
 Session Home's Next Action card carries a "See previews" secondary button while the session is `validated` and ready-to-activate; the button targets `/previews`, with no fragment — an anchor into a card is only as durable as the card.
 

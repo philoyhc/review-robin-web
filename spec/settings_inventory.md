@@ -75,9 +75,12 @@ Owners section on the Edit page).
   incl. a Timezone field that sets `display_timezone` and scopes
   the deadline picker — plus optional Quick Setup uploads).
 - **Read:** Session Home > Session Details card (`session_detail.html`).
-- **Edit:** `/operator/sessions/{id}/edit` (Edit Session sub-page,
-  reached via the Edit Secondary in the Session Details card).
-  The Edit Session Details form carries a **Timezone** field,
+- **Edit:** **inline on Session Home** —
+  `/operator/sessions/{id}?editing=1#session-config`, reached via the Edit
+  Secondary in the Session Details card. There is no Edit sub-page;
+  `/operator/sessions/{id}/edit` survives only as a **308** shim to the
+  inline surface, so an old bookmark still lands in the right place.
+  The Session Details form carries a **Timezone** field,
   placed before the deadline it scopes; lifecycle-gated like the
   rest of the form. Also hosts the **Owners** card — current
   co-owners + Add-owner typeahead picker over the workspace

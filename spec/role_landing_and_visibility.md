@@ -71,8 +71,8 @@ still lands on the lobby.
 |---|---|---|
 | No role at all | **none** | **303 → `/about`**; no Guide link in the chrome |
 | Reviewee with no current grant | **none** | as above — indistinguishable from no role |
-| Operator | `operator` | the eight operator cards |
-| Sys-admin | `operator` | the eight operator cards |
+| Operator | `operator` | every `operator`-audience card |
+| Sys-admin | `operator` | every `operator`-audience card |
 | Reviewer only | `reviewer` | For reviewers |
 | Reviewee **with** a current grant | `reviewee` | For reviewees |
 | Observer only | `observer` | For observers |

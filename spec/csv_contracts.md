@@ -539,7 +539,7 @@ shares. Public surface:
 
 | Helper | Role |
 |---|---|
-| `decode_csv(content: bytes) -> str` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. |
+| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the two operator-facing failures — file too large, not valid UTF-8 — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
 | `_read_dict_rows(text: str)` | `csv.DictReader` wrapper with empty-line tolerance. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
