@@ -6,10 +6,11 @@
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
 > `rehydrate_enabled` ships **false**, the three routes 404, and the
 > lobby button does not render. Unproblematic restores work; what is
-> unsettled is [§9](#9-limitations-and-known-gaps)'s awkward case, where a
-> response the regenerated rules cannot place is dropped and the warning
-> reaches no one. This spec describes the contract the feature must meet
-> before the flag opens, not a surface an operator can use today.
+> unsettled is [§9](#9-limitations-and-known-gaps)'s awkward case: a
+> response the regenerated rules cannot place is dropped with a reason,
+> but the dropped-responses CSV does not yet reach the operator. This
+> spec describes the contract the feature must meet before the flag
+> opens, not a surface an operator can use today.
 > Companion to `spec/sessions_overview.md` (the lobby),
 > `spec/setup_pages.md`, and `spec/assignments.md`.
 
@@ -420,10 +421,13 @@ and write the `session.rehydrated` audit event.
   constraint violation), roll back and **hard-delete** the new session
   (`sessions.delete_session`) so the lobby never shows a half-built
   rehydrated session. Report the failing step to the operator.
-- **Audit.** Emit one `session.rehydrated` event on success, with a
-  `counts` payload (`reviewers`, `reviewees`, `observers`, `relationships`,
-  `assignments`, `responses`) and a `context`/`refs` recording the original
-  name + code from the extract. Register `session.rehydrated` in
+- **Audit.** Emit one `session.rehydrated` event on success carrying a
+  `counts` payload and a `context` recording the original name + code from
+  the extract. The counts are `reviewers`, `reviewees`, `responses` and
+  `responses_dropped` — the last being the one an operator acts on, since
+  a rehydrate that silently loses rows looks identical to one that does
+  not. `refs` is not carried: `EVENT_SCHEMAS` admits only `counts` and
+  `context` for this event type. Register `session.rehydrated` in
   `EVENT_SCHEMAS` (the strict-mode test gate rejects unregistered emitters
   — see `CLAUDE.md` "Audit events").
 

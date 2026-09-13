@@ -1934,7 +1934,7 @@ With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequis
 **Group 2 — Rehydrate — done** (detailed PR ladder in `guide/archive/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach). `docs/rehydrate.md` flipped from "proposed" to "shipped":
 
 - **PR G0** ✅ — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
-- **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent.
+- **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent. *The backfill was retired in 19N.1 slice 3a — a row no generated assignment can carry is now dropped and reported.*
 - **PR G1** ✅ — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
 - **PR G2** ✅ — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
 - **PR G3 (#1877)** ✅ — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).

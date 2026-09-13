@@ -103,7 +103,7 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 2. **Instrument add / duplicate stop writing assignments** — behaviours (1), (2); closes `SC-39`.
 3. **Rehydrate loads-and-reports** — behaviour (4); closes `SC-37` and `SC-40`. Includes the dropped-responses CSV and its delivery.
 4. **`created_by_mode` defaulted, bound or retired** — behaviour (5); closes `SC-38`.
-5. **`assignment_mode` normalized, then the spec follows** — `SC-09` + `SC-41`. The spec edit alone is not enough: legacy `manual` values need resetting to `None` and `session_clone` must stop propagating them, or the forbidden value stays reachable in newly cloned sessions.
+5. **`assignment_mode` normalized, then the spec follows** — `SC-09` + `SC-41`. The spec edit alone is not enough: ~~legacy `manual` values need resetting to `None`~~ and `session_clone` must stop propagating them, or the forbidden value stays reachable in newly cloned sessions. *The data migration is struck (2026-09-13, author): historic sessions are dispensable at this stage, so a legacy row keeping `manual` costs nothing. `spec/settings_inventory.md` states that a reader must tolerate the value rather than pretending it cannot occur. Stopping the clone was the half that mattered — it was minting new ones.*
 6. **Comment follow-ups** — `CC-04`, the two stale `_generate.py` docstrings.
 
 `include` round-trip (behaviour 6) is unscheduled pending the open question below.
