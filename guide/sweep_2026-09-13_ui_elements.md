@@ -117,6 +117,65 @@ preserve it.
 
 *(Eleven numbered findings, ten edits: 2.7 and 2.8 are one table.)*
 
+## 2b. Corrected the same day — three of §2's own edits were wrong
+
+`spec-writer` was run against the ten edits before the branch merged, and
+**three of them asserted things that are not true.** They are corrected
+in the spec and recorded here rather than quietly fixed, because a sweep
+whose own findings go unchecked is the thing it exists to prevent.
+
+**2b.1 — `.status-icon` is not defined in `base.html`.** §2.6 said the
+delta was complete because that class exists. It does not.
+`base.html` defines `.status-icon-complete` and `.status-icon-incomplete`
+as **siblings**, and `review_surface.html` carries the modifier alone.
+There is no base rule, so the *Canonical* line's compound selector
+`.status-icon.status-icon-complete` never shipped and was aspirational
+when written. *The delta is shipped; the shape it shipped in is not the
+shape the entry specifies.* Corrected to say both.
+
+**2b.2 — the `<pre>` / outbox item is shipped, not moot, and the
+citation propping it up was borrowed from an unrelated finding.** §2.9
+said the outbox "was never brought into the v2 taxonomy", citing the
+2026-09-05 sweep. Both halves are wrong:
+
+- The promotion to `.code-block` **happened**, in `024c48ed` on
+  2026-05-03 — *before* the migration-complete date this file's header
+  cites. `session_outbox.html` is gone only as a filename; 16A split it
+  into `sys_admin_session_outbox.html` + `partials/_sys_admin_outbox.html`,
+  both `body_class = ui-v2`, the latter still rendering
+  `<pre class="code-block">`.
+- The 2026-09-05 sweep entry says `session_outbox.html` "remains
+  explicitly out of the operator taxonomy" — and that entry is about
+  **whether the page warrants its own spec document**, in a
+  *Write or deepen* carry-forward row. It says nothing about CSS. *The
+  citation borrowed authority from a finding on a different subject*,
+  which is how a wrong claim acquires a footnote and stops looking
+  wrong.
+
+**2b.3 — the Lock / Unlock anchor description matched neither anchor.**
+§2.11 described them as one pattern: `newModelLockClick` with a
+`?editing` href. In fact **Lock** has `newModelLockClick` over a *plain*
+href and **Unlock** has `newModelUnlockClick` over the `?editing` one.
+The sentence took the handler from one and the href from the other. The
+substantive point survives — both are load-bearing and a delegation
+sweep must preserve the fallback — but only Unlock has a fallback to
+preserve, because only entering edit mode needs the round trip.
+
+**And one overstatement, softened.** §2.1's "None of that survives" is
+true of the named classes and ids and **not** of the pattern they were
+examples of: an inline-styled `.card` doing banner duty via
+`banner-scroll-target` still ships in `sys_admin_users.html` (×2),
+`session_detail.html`'s owners-error card, and `next_action_card.html`.
+Those are outside the four-variant family and outside this catalogue —
+which makes them a finding this sweep did not have room to pursue, not
+an absence.
+
+*Three wrong out of ten, caught by a check that ran after the words were
+written and before they were merged. The sweep's own §1 argues that a
+`*Current:*` block rots because nothing renews it; §2b is the same
+lesson one level up — **a finding rots unless something checks it**, and
+the checking is not optional because the finder is confident.*
+
 ## 3. Checked and found correct — left alone
 
 A sweep that lists only errors implies everything else was read. These

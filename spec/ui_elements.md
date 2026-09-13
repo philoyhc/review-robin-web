@@ -363,7 +363,8 @@ Each element entry follows the same shape:
 > (rf-save-error, rtd-error, rtd-would-empty, rtd-delete-blocked in
 > `instruments_index.html`; missing-confirm, upload-blocked in
 > `session_assignments.html`).
-> **Shipped — swept 2026-09-13.** None of that survives:
+> **Shipped — swept 2026-09-13.** None of the *named* classes and ids
+> survives:
 > `.warning-banner` and `.danger-banner` have **0 occurrences** in
 > `app/`, the three `rtd-*` banners went with the RTD card
 > (2026-05-26), and `upload-blocked` is gone. The two surviving ids
@@ -372,6 +373,13 @@ Each element entry follows the same shape:
 > `.banner.banner-error.banner-scroll-target`. **18 banner elements**
 > across the templates now use the four-variant family, and
 > `banner-scroll-target` is still the auto-scroll hook it always was.
+> **The pattern is not extinct, though, and this entry should not be
+> read as saying so**: an inline-styled `.card` doing banner duty via
+> `banner-scroll-target` still ships in at least three uncatalogued
+> places — `sys_admin_users.html` (two), `session_detail.html`'s
+> owners-error card, and `next_action_card.html`'s
+> `.next-action-signal--error`. Those are outside the four-variant
+> family and outside this catalogue.
 > *Canonical:* four banner variants matched to the four semantic
 > accents:
 > - `.banner.banner-info` (`accent-blue` light bg, `accent-blue`
@@ -698,8 +706,15 @@ a chip says its filter is on, and it appears only on controls.
 > font-size: 1.2em;"` in `review_surface.html`.
 > *Canonical:* `.status-icon.status-icon-complete` /
 > `.status-icon-incomplete` classes; tokenize colors.
-> *Migration delta:* **complete** — `.status-icon` is defined in
-> `base.html` (swept 2026-09-13).
+> *Migration delta:* **shipped, but not as written** (swept 2026-09-13,
+> corrected the same day). The extraction happened —
+> `.status-icon-complete` and `.status-icon-incomplete` are defined in
+> `base.html` and `review_surface.html` uses them. But **there is no
+> bare `.status-icon` base rule**, and the markup carries the modifier
+> *alone* (`class="status-icon-complete"`), never the compound
+> `class="status-icon status-icon-complete"` the *Canonical* line above
+> specifies. So that line is itself aspirational and always was: the two
+> classes are siblings, not a base and its modifiers.
 > *PR:* G (badges) — shipped.
 
 ### 10. Layout primitives
@@ -901,13 +916,14 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > under `body.ui-v2` and the inline-styled variants are retired.
 > *PR:* B.
 
-> **`<pre>` blocks (outbox preview)** — *moot, swept 2026-09-13.*
-> This described an inline-styled block in `session_outbox.html`, a
-> template that **no longer exists**; the operator outbox was never
-> brought into the v2 taxonomy (the 2026-09-05 sweep records it as
-> explicitly out of scope). `.code-block` itself shipped in
-> `base.html`, so the target of the promotion exists even though the
-> thing to promote does not.
+> **`<pre>` blocks (outbox preview)** — *shipped, swept 2026-09-13.*
+> The promotion to `.code-block` happened in `024c48ed` (2026-05-03),
+> **before** the migration-complete date this file's own header cites.
+> `session_outbox.html` is gone only as a *filename*: Segment 16A split
+> it into `sys_admin_session_outbox.html` +
+> `partials/_sys_admin_outbox.html`, both still `body_class = ui-v2`,
+> and the latter still renders `<pre class="code-block">`. The entry was
+> complete for four months and never marked.
 
 > **`form style="display: contents;"`** — *moot, swept 2026-09-13.*
 > The hack was on the **RTD edit form**, and the RTD card retired
@@ -919,10 +935,14 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > `onsubmit="return confirm(…)"` is gone: **0 occurrences**. But
 > `onclick="…"` is **36 occurrences** in `instruments_index.html`, so
 > this one is still live and is the larger half. It is also
-> load-bearing rather than incidental — the Lock / Unlock anchors
-> carry `onclick="return newModelLockClick(event, <id>)"` with the
-> `?editing` href as the no-JS fallback, so a naive delegation sweep
-> would have to preserve that fallback. Still flagged for a separate
+> load-bearing rather than incidental. **The Lock and Unlock anchors are
+> two different pairings, not one**: Lock carries
+> `onclick="return newModelLockClick(event, <id>)"` over a plain
+> `…/instruments#instrument-<id>` href, while Unlock carries
+> `newModelUnlockClick` over a `…/instruments?editing=<id>#…` href. Only
+> the Unlock side has the `?editing` no-JS fallback, because only
+> entering edit mode needs a server round trip to fall back to. A naive
+> delegation sweep would have to preserve that asymmetry. Still flagged for a separate
 > cleanup. *Note this is inline `onclick` attributes in a template — a
 > different thing from the element-bound listeners in `base.html`'s
 > script blocks that 19K.2 measured, so that item's finding does not
