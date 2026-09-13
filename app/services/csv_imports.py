@@ -58,9 +58,13 @@ def decode_csv(
     failure modes (file too large / not valid UTF-8).
 
     ``max_bytes`` defaults to the reviewer / reviewee import ceiling
-    (``MAX_BYTES``) but is overridable so the manual-assignments
-    importer in ``app.services.assignments`` can stay on its own
-    ``MANUAL_CSV_MAX_BYTES`` constant without forking the helper.
+    (``MAX_BYTES``) and is overridable so a caller with a different
+    ceiling need not fork the helper. **No production caller overrides it
+    today** — only ``test_logging_observability.py``, exercising the
+    too-large path.
+    The one that did was the manual-assignments importer, retired with
+    the CSV-upload path in 16A PR 5 along with its ``MANUAL_CSV_MAX_BYTES``
+    constant — this docstring went on naming both for four months.
     """
     if len(content) > max_bytes:
         log.warning(

@@ -544,10 +544,10 @@ def _load_reconcile_inputs(
     the reviewer / reviewee / relationship / rule-set inputs the engine
     needs. Writes nothing.
 
-    ``instrument_id=None`` targets every rule-pinned instrument
-    (unpinned ones skipped silently); ``instrument_id=<id>`` targets
-    that one instrument and raises ``ValueError`` if it is missing or
-    has no rule pinned.
+    ``instrument_id=None`` targets **every** instrument in the session;
+    a NULL ``rule_set_id`` is the Full Matrix default at the diff site,
+    not a reason to skip. ``instrument_id=<id>`` targets that one and
+    raises ``ValueError`` if it is missing or has no rule pinned.
     """
     from app.services._queries import session_scoped
 
@@ -748,8 +748,13 @@ def replace_assignments(
     session whose ``rule_set_id`` is non-NULL, run the rule engine
     per-instrument against that instrument's pinned
     ``session_rule_sets`` row, and write per-instrument pair fan-outs.
-    Instruments with NULL ``rule_set_id`` are skipped silently — they
-    are "no rule pinned yet", not an error condition.
+    Instruments with NULL ``rule_set_id`` are **not** skipped: since
+    Wave 5 PR 5.3 every instrument flows through one path and a NULL pin
+    resolves to the Full Matrix default at the diff site. This said
+    "skipped silently" until Segment 19N, describing the pre-5.3
+    behaviour — and it was load-bearing, because the retired staleness
+    predicate gated on ``rule_id is not None`` and so never looked at an
+    unpinned instrument.
 
     ``instrument_id=<id>``: scope to that single instrument only. The
     instrument's ``rule_set_id`` must be non-NULL; raises ``ValueError``

@@ -254,3 +254,67 @@ def test_clone_route_redirects_to_the_clone(
     assert clone_id != session_id
     clone = db.get(ReviewSession, clone_id)
     assert clone.name == "Copy of Routed"
+
+
+def test_a_clone_starts_with_no_assignment_mode(db: Session) -> None:
+    """A clone carries no assignments, so it carries no mode. 19N.
+
+    ``assignment_mode`` records *how this session's assignments were
+    produced*, and the codebase treats ``None`` as "never Generated":
+    ``replace_assignments`` sets it, deleting every assignment clears it
+    back to ``None`` (`_coverage.py`), and **three validation rules skip
+    on ``None``** to avoid doubling the "no pairs" warnings with
+    every-reviewer-missing noise.
+
+    A clone copies no ``Assignment`` rows, so copying the source's mode
+    broke that invariant: the clone claimed a generation that never
+    happened, and the three rules ran on it instead of skipping. It also
+    propagated a legacy ``manual`` value — retired in 16A PR 5 — into
+    newly created sessions, which is how `SC-41` was found.
+    """
+    source, op = _source_session(db, "clone-mode")
+    source.assignment_mode = "rule_based"
+    db.flush()
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="all"
+    )
+    db.flush()
+
+    assert clone.assignment_mode is None, (
+        "a clone has no assignments, so it must not claim a mode — "
+        "None is the codebase's marker for 'never Generated'"
+    )
+
+
+def test_a_clone_does_not_trip_the_never_generated_rules(
+    db: Session,
+) -> None:
+    """The consequence of the invariant, not just the invariant.
+
+    ``assignments.reviewer_missing`` skips when ``assignment_mode is
+    None``; its docstring says surfacing every-reviewer-missing on top of
+    the no-pairs warnings would "double up the noise". A clone with a
+    copied mode defeated that skip on a session that has, by
+    construction, no assignments at all.
+    """
+    from app.services.validation import validate_session_setup
+
+    source, op = _source_session(db, "clone-noise")
+    source.assignment_mode = "rule_based"
+    db.flush()
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="all"
+    )
+    db.flush()
+
+    keys = {
+        issue.rule_key
+        for issue in validate_session_setup(db, clone)
+        if getattr(issue, "rule_key", None)
+    }
+    assert "assignments.reviewer_missing" not in keys, (
+        "the clone has no assignments, so the never-Generated skip "
+        "should suppress this rule"
+    )
