@@ -11,11 +11,12 @@ quietly rewrite the spec to match**. So every divergence became a finding
 instead of an edit. This is that register: one table, every finding, resolved
 rows struck through with what the fix was.
 
-**27 of 76 resolved. 49 open.**
+**27 of 79 resolved. 52 open.**
 
 | what the open rows need | ids | count |
 |---|---|---|
 | **a ruling** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
+| **a contract now ruled** — assignments are always generated | `SC-09`, `SC-37`, `SC-38`, `SC-39` | 4 |
 | **a contract decision** | `SS-01`, `SS-02`, `SS-07` | 3 |
 | **code** — a comment or a dead mapping | `CC-01`…`CC-12` | 12 |
 | **code** — a guard | `SI-07` | 1 |
@@ -61,7 +62,10 @@ code, the other spec, or the other comment.
 | `SC-06` | `assignments.md` | `POST …/assignments/instrument/{iid}/self-reviews-active` | `…/assignments/{instrument_id}/self-reviews/active` (`_assignments.py:479`) | **(a)** — **a URL is contract**, so one side must move |
 | ~~`SC-07`~~ | `csv_contracts.md` §4 items 1 and 7 | seeded RuleSets are not re-emitted, or a re-import trips `uq_session_rule_set_session_name` | `_serialize._non_seeded_session_rule_sets` returns every row | **Investigated on instruction: not a bug.** Seeding was retired and apply upserts by name, so neither half held. Spec rewritten, and it had been citing a test file that does not exist |
 | `SC-08` | `csv_contracts.md` §5 | `decode_csv(content: bytes) -> str` | `decode_csv(content, source, *, max_bytes=…) -> tuple[str \| None, ValidationIssue \| None]` | **(a)** |
-| `SC-09` | `settings_inventory.md` §2 | `assignment_mode` values `manual` / `rule_based` | `AssignmentMode` admits only `rule_based`; three tests still set `manual` | **(a)** |
+| `SC-09` | `settings_inventory.md` §2 | the **session-level** `assignment_mode` takes `manual` / `rule_based` | `review_session.assignment_mode` is written only `rule_based` (`_generate.py:717`) and reset to `None` when every assignment is deleted (`_coverage.py:686`) | **(a)** — spec fix. **Ruled 2026-09-13:** the contract is *assignments are always generated*, so `manual` is not a legal value here. Was conflated with the per-row stamp until split; the "three tests still set `manual`" in the original row were setting `created_by_mode`, a different column, and there are **ten** files, not three |
+| `SC-37` | the contract: *assignments are never hand-created, uploaded or edited — always generated* | no operator path creates an assignment outside the rule engine | **Rehydrate does.** `POST …/rehydrate/commit` → `rehydrate_session` → `load_responses` creates `Assignment(…, created_by_mode="manual")` at `responses_import.py:330-341` for any (reviewer, reviewee, instrument) triple the responses CSV carries that the regenerated rules did not produce | **Needs a decision, not just a fix.** The pipeline regenerates via `replace_assignments` first (`session_rehydrate.py:598`) and backfills second (`:608`), so the alternative to creating the row is **dropping the response** — data loss on a restore. Either the backfill is legitimate and the contract needs an exception naming it, or rehydrate must fail loudly when responses reference a pair the rules do not generate. The one place the contract is actually reachable-by-operator today |
+| `SC-38` | the same contract | a row's recorded mode can only be a value the engine produces | `Assignment.created_by_mode` is `String(32)` with **`default="manual"`** (`assignment.py:57`) — not the `AssignmentMode` enum, whose only member is `rule_based`. So the column's default is a value the enum does not admit, and any future `Assignment()` without an explicit mode is stamped `manual`. **Nothing reads the field**: all four app references are writes | **Code.** The field cannot enforce or even report the contract it names. Either default it to `rule_based` and bind it to the enum, or retire it — a write-only column recording a distinction the contract says should not exist is dead weight that still looks authoritative |
+| `SC-39` | the same contract | only the rule engine writes assignment rows | the two **instrument-clone** paths (`_instrument_crud.py:255` and `:412`) create rows directly from a source instrument's pairs, and **inherit `created_by_mode` from the source row** — so a `manual` stamp from `SC-37` propagates onto every instrument cloned afterwards | **Probably fine, worth confirming.** These are derived from already-generated rows rather than hand-authored, which arguably satisfies *always generated* — but they are not the engine, and the inheritance means the stamp outlives its origin |
 | `SC-10` | `settings_inventory.md` §2 | Edit surface is `/operator/sessions/{id}/edit` | `_session_home.py:241` is a **308** to `…?editing=1#session-config`; the page is gone | **(a)** |
 | `SC-11` | `instruments.md` | Band 3 bounds rules for `Number` / `Rating` / `SingleSelect` / `MultiSelect` | `bulk_save_fields` branches on `String` / `Integer` / `Decimal` / `List` — the four the spec's own Type picker lists eight lines above | **(a)** |
 | `SC-12` | `reviewer-surface.md` | Discard labeled `Discard`; a per-page `Page #{N}: {short_label}` button; Save is Primary | `Cancel`; `< Previous page` / `Page {N} of {M}` / `Next page >`; Save is `.btn.secondary` | **(a)** |
@@ -138,14 +142,15 @@ longer exists.
 
 ## The tally
 
-**76 findings**, counted by distinct id rather than asserted: `SC` 36, `CC` 12,
+**79 findings**, counted by distinct id rather than asserted: `SC` 39, `CC` 12,
 `SI` 10, `ID` 8, `SS` 6, `DT` 4.
 
 *Recount before quoting this number.* It was published as 64, grew to 75 as the
 verification passes reported, fell to **74** when a section heading turned out to
-have been counted as a finding, and is **76** after two later passes each
-produced one — `SS-07` from the check over the resolved rows, `CC-12` from the
-pass over the writer instructions. The `SS` ids run 01, 02, 04, 05, 06, 07 — there
+have been counted as a finding, and is **79**: `SS-07` came from the check over the
+resolved rows, `CC-12` from the pass over the writer instructions, and
+`SC-37`…`SC-39` from splitting `SC-09` once the author ruled the assignment
+contract. The `SS` ids run 01, 02, 04, 05, 06, 07 — there
 is no third, because that number was the heading. Nothing renews a count, which is the defect this segment exists to
 remove, so a register carrying one had better be honest about it:
 
