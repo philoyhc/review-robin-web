@@ -147,8 +147,11 @@ helper falls back from the step name (`generate` / `validate` →
 
 ## State machine
 
-The card has twelve states. The body and right column are
-chosen by this cascade in `next_action_card.html`:
+The card has **twelve states over ten numbers**: 1-10, with `4W` and `4Err`
+branching off 4. Prose elsewhere calls this the *ten-state cascade*, counting
+the numbers; the table below counts the rows. Both are right, and the
+difference is worth knowing before reconciling one against the other. The body
+and right column are chosen by this cascade in `next_action_card.html`:
 
 ```
 if is_setup_empty:                              → State 1

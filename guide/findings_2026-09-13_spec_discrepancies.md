@@ -709,3 +709,50 @@ says a `*Current:*` block rots because nothing renews it. §2b said a finding
 rots unless something checks it. This section is the third turn of the same
 screw — **a correction rots too**, and the only thing that catches it is
 another pass that reads the code rather than the prose.
+
+---
+
+## ACTIONED — the SI, doc-only SS, and DT rows (Segment 19M Items 9 and 10)
+
+### Item 9
+
+| id | resolution |
+|---|---|
+| SI-01 | `+Page break` added to **both** action-row lists in rendered order (Delete → `+Instrument` → `+Page break` → Lock/Unlock). The template renders it, so the lists were the wrong side |
+| SI-02 | **a distinction, not a correction** — five roster-shaped pairs exist and byte-stability is established for four; whether Observers meets it is unverified, and the file now says so rather than implying either |
+| SI-03 | the duplicate `audit_events` row removed; the survivor states **what its ✅ does and does not mean** — there is an extract, and audit events are outside this inventory's scope, so there is nothing here to round-trip |
+| SI-04 | the two-clause Upload confirm label now **points at** the three-clause one. The template renders count / assignments / responses, and *the response clause had gone missing once already* |
+| SI-05 | *(See "Form scope" below)* → §"Form HTML mechanics", the section that exists |
+| SI-06 | `permissions.md`'s method now says to follow `Depends()` **transitively**, because a decorator scan flags ≥9 correctly-gated `_instruments.py` routes. *A check that flags a correctly-gated route is worse than none, because the next reader believes it* |
+| SI-09 | the rule count comes **out of** the §3.2 heading rather than being re-measured |
+| SS-04 | Observers and Extract data added as chrome rows **12 and 13** — appended, not slotted, because that file states its own rule that numbers are stable identifiers other documents cite |
+| SS-05 | `Invitations`, the chrome label, in all four places. **Not one-sided**: `email_infra_options.md` used *"Manage Invitations"* three times, so it was a vocabulary in circulation |
+| SS-06 | **twelve states over ten numbers** — 1–10 with `4W` and `4Err` — stated in `workflow_card.md`, so the five documents calling it a *ten-state cascade* stop reading as errors |
+
+**Still registered from this group:** `SI-07` (the query budget). Rewording
+does not fix it — nothing pins the figures and the related test only asserts
+relative growth. **A guard is the right answer and a guard is code.**
+`SI-08` and `SI-10` likewise remain, as prose additions rather than
+corrections.
+
+### Item 10
+
+| id | resolution |
+|---|---|
+| DT-01 | §6.1 requoted to the charter that exists: at a close, align the spec to what shipped; outside one, the spec wins and divergence is reported. Its own default quoted — *"if you cannot tell which mode you are in, you are in Mode B"* |
+| DT-02 | §6.4's unqualified *"updates `spec/` to match the code after a change"* now carries **at a close** — and the passage names the contradiction it had papered over, since it stated both halves side by side without noticing they conflicted |
+| DT-03 | the Appendix maker/checker row qualified the same way |
+| — | **§6.2's trade-off restated.** It said *"only the functional spec dates itself: **4 of 36**"*; **no live spec carries a currency line at all now** — 19M replaced each with a sweep-record pointer. The figure was the smaller half: the paragraph described a *mechanism* that no longer exists |
+
+### DT-04 dissolves — and that is the finding
+
+`docs/practice-audit-2026-09-04.md` quotes the old charter;
+`guide/todo_master.md` mentions `spec-writer` five times. **Neither was
+changed, and neither is an omission.** The practice audit is a **dated**
+document whose quote was accurate on its date, and `todo_master.md`'s
+mentions record what a *pass found* rather than what the charter says.
+Repointing either falsifies a log.
+
+*That is the same call the sweep made four times over `spec/` — and making
+it correctly here, on the last item, is the only evidence that the day's
+lesson took rather than being written down.*

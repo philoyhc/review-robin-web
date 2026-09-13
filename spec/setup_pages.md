@@ -879,8 +879,10 @@ section beneath:
 - **Left:** `Upload Reviewers` card. Required CSV columns
   `ReviewerName`, `ReviewerEmail`; optional `ReviewerTag1..3`. POSTs
   to `/operator/sessions/{id}/reviewers/import`. When existing rows
-  are present, surfaces a "Yes, replace the existing N reviewers
-  (and delete K assignments)" confirm checkbox.
+  are present, surfaces the replace confirm checkbox. Its label names what the
+  replace destroys in three states — see "The Upload card's replace"
+  below for the wording; it is not restated here, because a partial
+  copy of it is how the response clause went missing once already.
 - **Right:** `Danger Zone` card with "Delete all reviewers". Only
   rendered when at least one reviewer exists.
 

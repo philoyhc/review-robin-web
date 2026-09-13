@@ -77,6 +77,8 @@ Rendered inside `.session-nav-card` on every session-scoped page.
 | 9 | Operations tab row | Previews | `<a>` | `nav-tab` | Chrome nav | |
 | 10 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
 | 11 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
+| 12 | Setup tab row | Observers | `<a>` | `nav-tab` | Chrome nav | Renders only when `observers_enabled`. **Numbered 12 rather than slotted after Relationships** — numbers here are stable identifiers other documents cite, so a new tab takes the next free one and the row order is not the render order |
+| 13 | Operations tab row | Extract data | `<a>` | `nav-tab` | Chrome nav | The sixth Operations tab. Render order is Assignments, Validate, Previews, Invitations, Responses, Extract data — `spec/operator_ui_concept.md` §5 carries the row contract |
 
 ---
 
@@ -400,7 +402,7 @@ partials.
 
 ---
 
-## Section 13 — Manage Invitations (`/operator/sessions/{id}/invitations`)
+## Section 13 — Invitations (`/operator/sessions/{id}/invitations`)
 
 Source: `app/web/templates/operator/session_invitations.html`.
 

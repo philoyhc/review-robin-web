@@ -197,7 +197,7 @@ Order of stripes (each separated by a horizontal rule):
 │ Band 3 — response-field table                                  │
 ├────────────────────────────────────────────────────────────────┤
 │ Action row (Save / Cancel / Replicate / Delete / +Instrument / │
-│             Lock-Unlock) + delete-confirm checkbox             │
+│             +Page break / Lock-Unlock) + delete-confirm cbox   │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -768,7 +768,7 @@ No DB migration, no template macro changes.
 Bottom row of the card, right-aligned, in this order:
 
 ```
-[Save] [Cancel] [Replicate] [Delete] [+Instrument] [Lock / Unlock]
+[Save] [Cancel] [Replicate] [Delete] [+Instrument] [+Page break] [Lock / Unlock]
 ```
 
 - **Save** — only in edit mode. Starts disabled; the
