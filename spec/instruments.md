@@ -39,8 +39,8 @@ triples actually get materialised from the Band 1 rule — see
 - [Per-instrument card](#per-instrument-card)
   - [Identity](#identity)
   - [Instrument assignment rule + Unit of review](#instrument-assignment-rule--unit-of-review)
-  - [Display fields + preview row](#display-fields--preview-row)
-  - [Response fields](#response-fields)
+  - [Preview review instrument](#preview-review-instrument)
+  - [Visibility + Response fields](#visibility--response-fields)
   - [Action row](#action-row)
 - [Add / Replicate / Delete](#add--replicate--delete)
 - [Editing flow](#editing-flow)
@@ -180,6 +180,17 @@ boolean carries the operator-controlled page-break layout:
   `validated`.
 
 ## Per-instrument card
+
+**Band 1 / 2 / 3 are shorthand, kept because the code uses them.** The
+sections below are named for the headers the card actually shows; the
+band numbers survive in prose and in identifiers (`band2_state`,
+`band1_touched_links`), which are names and do not change. The mapping:
+
+| Shorthand | What the card heads it |
+|---|---|
+| Band 1 | Instrument assignment rule (+ Unit of review) |
+| Band 2 | Preview review instrument |
+| Band 3 | Visibility, Response fields |
 
 Order of stripes (each separated by a horizontal rule):
 
@@ -572,7 +583,7 @@ Hydration (re-rendering the saved state on edit) reads
 wraps both into the `new_model_band1_state` and
 `new_model_link3_state` dicts the template iterates.
 
-### Display fields + preview row
+### Preview review instrument
 
 Band 2 declares **what reviewee context** the reviewer sees
 alongside each row of their answer surface, and renders a
@@ -670,10 +681,14 @@ names below. Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, the trailing `... + N more` collapses the overflow.
 
-### Response fields
+### Visibility + Response fields
 
-Band 3 is a stack of inline editor rows — one per Response
-Field, plus a trailing empty starter row so the operator can
+The **Visibility** half is the 3 × 2 audience × window chip grid;
+`spec/visibility_policy.md` is its contract and this section does not
+restate it.
+
+The **Response fields** half is a stack of inline editor rows — one per
+Response Field, plus a trailing empty starter row so the operator can
 keep typing without first clicking `+`. Each row defines one
 typed input control the reviewer fills in on the surface form.
 
