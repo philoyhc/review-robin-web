@@ -28,6 +28,29 @@ and put it back". *Those reverts are the most load-bearing thing in this
 document: without the correction, nine contracts would have been silently
 demoted to descriptions of the code.*
 
+## The tally
+
+**75 findings**, counted by distinct id rather than asserted:
+
+| kind | count | what it is |
+|---|---|---|
+| **SC** | 36 | spec says one thing, code does another |
+| **CC** | 11 | two code comments disagree, or one names something absent |
+| **SI** | 10 | one spec contradicts itself |
+| **ID** | 8 | a spec names an identifier that does not exist |
+| **SS** | 6 | two live specs disagree |
+| **DT** | 4 | documentation that describes its own tooling imprecisely |
+
+*Recount before quoting this number.* It was published as 64 and grew to
+75 as the verification passes reported, and nothing renews a count —
+which is the defect this whole segment exists to remove, so a register
+carrying one had better be honest about it. The command:
+
+```
+grep -o '\b\(SC\|SS\|SI\|CC\|ID\|DT\)-[0-9][0-9]\b' \
+  guide/findings_2026-09-13_spec_discrepancies.md | sort -u | wc -l
+```
+
 ## Reading key
 
 | tag | kind |
