@@ -30,12 +30,12 @@ demoted to descriptions of the code.*
 
 ## OPEN — what still needs a decision, and what needs doing
 
-**26 of 74 resolved. 48 open.** This section is the one to read; everything
+**27 of 74 resolved. 47 open.** This section is the one to read; everything
 below it is the evidence.
 
 | what it needs | ids | count |
 |---|---|---|
-| **a ruling from the author** — which side is right | `SC-05`…`SC-36` | 32 |
+| **a ruling from the author** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
 | **a contract decision** | `SS-01`, `SS-02` | 2 |
 | **code, no decision** — a comment or a dead mapping | `CC-01`…`CC-11` | 11 |
 | **code, no decision** — a guard | `SI-07` | 1 |
@@ -69,10 +69,7 @@ button and a `.next-action-confirm` that render nowhere), `SC-23` (an
 Activated-state layout exception), `SC-35` (a `placeholder_card` macro with
 no callers).
 
-**(c) A real judgement, where neither side is obviously right.** `SC-07`
-(seeded RuleSets are re-emitted, which the spec says would trip
-`uq_session_rule_set_session_name` on re-import — *a round-trip stability
-claim, so this one may be a live bug*), `SC-15`/`SC-17` (a flag and a helper
+**(c) A real judgement, where neither side is obviously right.** `SC-15`/`SC-17` (a flag and a helper
 signature where the spec also contradicts itself), `SC-24` (a gate the
 template applies and the spec does not), `SC-26`/`SC-27` (the `include` seed
 and `reconcile_impact`'s shape — in `SC-26` **the code is right and the spec
@@ -80,9 +77,10 @@ is incomplete**, in `SC-27` the reverse), `SC-28` (where the operator is
 sent to regenerate), `SC-31` (a status-strip fill no spec accounts for),
 `SC-36` (orphan CSS — cleanup, not a contract).
 
-*`SC-07` is the one I would look at first, because a round-trip that trips a
-unique constraint on re-import is a defect rather than a documentation
-question.*
+*`SC-07` was the one to look at first and has been: **investigated, not a
+bug**, spec corrected, three tests added. See its ACTIONED entry below — the
+claim was stale on both halves, and the spec had been citing a test file that
+does not exist.*
 
 ### The 2 `SS` rows
 
@@ -528,6 +526,63 @@ the three that are wrong all omitted it.
 `guide/todo_master.md` each describe `spec-writer`'s job. They were not
 read against the new definition — out of 19M's scope — and should be
 checked when DT-01..DT-03 are actioned.
+
+---
+
+## ACTIONED — SC-07 investigated. **Not a bug.** The spec was wrong twice.
+
+Flagged as *"the one I would look at first, because a round-trip that trips a
+unique constraint on re-import is a defect rather than a documentation
+question."* Investigated on instruction. **It is not a defect**, and the
+spec's claim was stale on both halves.
+
+The claim was: *"Seeded RTDs and seeded RuleSets auto-materialise on session
+create, so the export filters them out (re-emitting would either no-op or
+trip `uq_session_rule_set_session_name`)."*
+
+| the claim | what is true |
+|---|---|
+| seeded rule sets auto-materialise on session create | **nothing seeds one on create.** The seeding helper went with the rule-set library; the three `SessionRuleSet(` constructors are clone, Band 1 authoring, and apply itself |
+| the export filters them out | it emits **every** row — `_non_seeded_session_rule_sets` is "every row for the session" despite its name |
+| re-emitting would trip `uq_session_rule_set_session_name` | **unreachable from this path.** `_apply_session_rule_sets` is an **upsert by name** — it updates a row whose name exists and deletes the ones the CSV omits, so an INSERT never carries a duplicate name |
+
+### Established by running it, not by reading
+
+Three cases, now `tests/unit/test_session_rule_set_reimport.py`:
+
+1. **Applying a session's own export back to it, twice** — no error, one row.
+2. **Importing into a session that already carries the name** — upserted, not
+   duplicated. This is the collision the retired claim was about.
+3. **A bundle naming the same rule set twice** — the only path that *could*
+   reach the constraint, because apply `db.add`s per row without flushing
+   between them. The parse phase rejects it first: a clean
+   `duplicate session_rule_sets name 'Dupe' (also at session_rule_sets[1])`
+   in `ApplyResult.errors`, and **phase 2 never runs**.
+
+**Case 3 was mutation-tested rather than assumed.** Removing the cross-row
+check makes it fail — and it fails with
+`SAWarning: transaction already deassociated from connection`, which is the
+proof that *without that check the write does reach the constraint*. The
+guard is load-bearing, and the test says so.
+
+### A second finding, found while looking for the first
+
+**The spec cited a test file that does not exist.**
+`tests/integration/test_apply_session_config.py::test_round_trip_byte_stable`
+— no such file, no such test; the real coverage is three files under
+`tests/unit/`. So *the round-trip guarantee had been resting on a citation
+nobody could follow*, which is how the item-7 claim survived being wrong in
+two places. Repointed, and each of the four named files verified to exist.
+
+*The lesson is narrower and more useful than "the spec was stale": a claim
+about a constraint is exactly the kind that can only be settled by trying
+it, and this one had an unfollowable citation standing in for the attempt.*
+
+### Disposition
+
+**Spec corrected; no code changed.** Item 7 now states the upsert-by-name
+behaviour, names the duplicate-name case as the only path to the constraint,
+and cites the test that holds it. Suite **3,868 → 3,871**.
 
 ---
 

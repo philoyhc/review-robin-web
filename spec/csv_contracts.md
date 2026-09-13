@@ -508,15 +508,25 @@ Concrete guarantees the importers + serialisers maintain:
 6. **Empty-string handling.** A `null` cell in storage is an
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.
-7. **Seeded entries are not re-emitted.** Seeded RTDs and seeded
-   RuleSets auto-materialise on session create, so the export
-   filters them out (re-emitting would either no-op or trip
-   `uq_session_rule_set_session_name`).
+7. **Every `session_rule_sets` row is emitted, and re-importing one
+   cannot collide.** Nothing seeds a rule set on session create, so every
+   row is operator-authored and there is no seeded set to filter. Apply is
+   an **upsert by name**: a row whose name already exists in the
+   destination is updated, and rows the CSV omits are deleted — so
+   `uq_session_rule_set_session_name` is **unreachable from this path**,
+   whether the target is the source session itself or another that already
+   carries the name.
+   **The one case that could reach the constraint is a bundle naming the
+   same rule set twice**, because apply adds per row without flushing
+   between them. The parse phase rejects that bundle before phase 2 runs —
+   a `duplicate session_rule_sets name` error, so nothing is written.
+   Pinned by `tests/unit/test_session_rule_set_reimport.py`, whose third
+   case fails if the cross-row check is removed.
 
-The round-trip is asserted by
-`tests/integration/test_apply_session_config.py::test_round_trip_byte_stable`
-and per-entity round-trip tests in
-`tests/integration/test_extracts_*.py`.
+The round-trip is asserted by `tests/unit/test_apply_session_config.py`,
+`tests/unit/test_session_config_io.py` and
+`tests/unit/test_data_shapes_settings_roundtrip.py`, with per-entity
+round-trip tests in `tests/integration/test_extracts_*.py`.
 
 ---
 
