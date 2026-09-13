@@ -555,9 +555,8 @@ def _session_rule_set_rows(
             )
         )
         # Wave 5 PR 5.1 — the 15C ``library_name`` provenance cell
-        # retired alongside the operator-library tier. The
-        # ``library_origin_id`` column on session_rule_sets stays
-        # for now (drops in PR 5.2); no export cell.
+        # retired alongside the operator-library tier, and the
+        # ``library_origin_id`` column went with it. No export cell.
     return rows
 
 

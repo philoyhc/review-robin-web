@@ -17,7 +17,8 @@ Owns:
   email-template editor's right card).
 
 The iframe-embedded reviewer-surface preview card (Segment 11F PR C)
-was retired in the Segment 18Q follow-on; the picker row now carries
+was retired by the 2026-05-28 preview-surface follow-on to Segment 11F;
+the picker row now carries
 an "Open full preview" link that opens the operator-side full
 preview surface (``routes_operator/_preview_surface.py``) in a new tab.
 

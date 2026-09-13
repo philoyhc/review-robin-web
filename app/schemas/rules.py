@@ -364,7 +364,8 @@ class RuleSetSchema(BaseModel):
 
 
 class RuleSetRevisionSchema(BaseModel):
-    """Revision metadata. Mirrors ``rule_set_revisions`` columns."""
+    """Revision metadata. The ``rule_set_revisions`` table it once
+    mirrored has been dropped; these fields are carried in-memory."""
 
     model_config = ConfigDict(extra="forbid")
 

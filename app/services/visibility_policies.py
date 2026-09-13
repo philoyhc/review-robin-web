@@ -361,8 +361,9 @@ def upsert_policy(
 
     Per-window mode semantics:
 
-    - ``while_ongoing_mode`` — the audience's mode during
-      ``[sessions.activated_at, sessions.deadline)``. ``None``
+    - ``while_ongoing_mode`` — the audience's mode while the session
+      is ongoing. The window is resolved by a **status check**, not by
+      comparing now against ``activated_at`` / ``deadline``. ``None``
       means "off in this window".
     - ``after_release_mode`` — the audience's mode during
       ``[sessions.responses_release_at,
