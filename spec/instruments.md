@@ -22,12 +22,13 @@ For the assignment side — how (reviewer, reviewee, instrument)
 triples actually get materialised from the Band 1 rule — see
 `spec/assignments.md`.
 
-> **Status.** Implemented through Wave 5 (the post-collapse
-> world). Every instrument is a (former) new-model card; the
-> legacy individual + group flavours retired in Wave 5 PR 5.3
-> (PR #1448). The RuleSet library tier retired in Wave 5 PR 5.2
-> (PR #1447). Historical doc set: `spec/archive/instruments.md`,
-> `spec/archive/instrument_builder.md`,
+> **One card shape, one place a rule lives.** Every instrument
+> renders the same card — Group versus Individual is Link 3's
+> binary state, not a separate flavour — and there is no
+> cross-session RuleSet library: each rule lives on its own
+> instrument's Band 1. Superseded designs are kept as records at
+> `spec/archive/instruments.md`,
+> `spec/archive/instrument_builder.md` and
 > `spec/archive/group_scoped_instruments.md`.
 
 ## Contents
@@ -80,12 +81,11 @@ The on-page model maps onto these:
   what the reviewer will see.
 - **Band 3.** Response fields — typed input controls the
   reviewer fills in. Each row carries its own inline
-  `data_type` + `min` / `max` / `step` / `list_options` (the
-  per-session RTD catalogue retired 2026-05-26).
+  `data_type` + `min` / `max` / `step` / `list_options`; there is
+  no per-session response-type catalogue to point at.
 
-The Wave 5 collapse fused the legacy "individual" and "group"
-card flavours into one uniform card; Group vs Individual is now
-just Link 3's binary state on every instrument.
+Group vs Individual is Link 3's binary state on every
+instrument, not a card flavour of its own.
 
 ## Page layout
 
@@ -100,12 +100,10 @@ Top → bottom, full width:
    order; insertion order by default, mutable via Replicate +
    `+Instrument` which spawn immediately after a chosen anchor).
 
-The bottom-of-page **Response Type Definitions card** retired
-2026-05-26 together with the `response_type_definitions` table
-— each Band 3 row now carries its own inline `data_type` +
-bounds + list options, with a small set of pre-filled List
-presets (Boolean / Agreement / Grades) baked into the Band 3
-type picker.
+There is **no page-level response-type catalogue**: each Band 3
+row carries its own inline `data_type` + bounds + list options,
+with a small set of pre-filled List presets (Boolean /
+Agreement / Grades) baked into the Band 3 type picker.
 
 Each card is wrapped in `<div class="card">`; the per-instrument
 card has `id="instrument-{id}"` so deep-links from other surfaces
@@ -118,41 +116,29 @@ One-line status row, left-aligned:
 
 > *N instruments — M accepting responses.*
 
-Right-aligned bulk-action toggle stack (Segment 18M PR 0
-added the Expand/Collapse pair):
+Right-aligned bulk-action toggle stack:
 
 - **Expand all instruments / Collapse all instruments**:
   flip every per-instrument `<details>` open or closed.
   No state persistence across refresh — operators get a
   fresh all-collapsed default on each page load.
 
-**Retired in 18R Item 3:**
-
-- **Open / close all** (bulk-flip `accepting_responses` across
-  every instrument) — this control was never wired into the UI
-  and is dropped from the spec. Per-instrument Open/Close (in the
-  Identity row of each card) remains the accepting control.
-- **Show / hide all when closed** (bulk-flip
-  `responses_visible_when_closed`) — the session-level bulk toggle
-  was removed from this page. Visibility when closed is now
-  governed by the per-instrument **visibility policy**
-  (`spec/visibility_policy.md`); the `responses_visible_when_closed`
-  column persists only for config round-trip. The one-line status
-  row no longer reports a "showing when closed" count.
-
-Historic context: the Status + bulk-actions card was once a
-two-card row (one card per facet); the bulk toggle was small
-enough to absorb into Status without losing affordance, so the
-right-hand "Visibility-when-closed" card retired (Segment 13C
-harmonisation). The bulk toggle itself retired in 18R Item 3.
+**No session-level bulk flip of `accepting_responses` or
+`responses_visible_when_closed`.** Per-instrument Open / Close
+(in the Identity row of each card) is the only accepting
+control, and visibility-when-closed has no operator control at
+all — it is governed by the per-instrument **visibility policy**
+(`spec/visibility_policy.md`), with the
+`responses_visible_when_closed` column persisting for config
+round-trip only. The one-line status row therefore reports an
+accepting count and no "showing when closed" count.
 
 ## Instrument data model
 
 Beyond the standard rows (id / session_id / name /
 short_label / description / order /
-accepting_responses / responses_visible_when_closed)
-Segment 18M added a single boolean for the
-operator-controlled page-break layout:
+accepting_responses / responses_visible_when_closed) one
+boolean carries the operator-controlled page-break layout:
 
 - **`starts_new_page: Boolean NOT NULL`** (Alembic
   revision `e5c1a3b9d472`). `true` means "this instrument
@@ -162,14 +148,13 @@ operator-controlled page-break layout:
   ≥ 2;** the value on the position-1 instrument is
   ignored at render time.
 
-  The migration backfilled `true` on every existing
-  instrument so today's one-per-page reviewer behaviour
-  was preserved on rollout (locked decision 3 in
-  `guide/archive/segment_18M_instrument_layout.md`); the DB-level
-  `server_default` was then flipped to `false` so new
-  instruments default to "continue current page". The
-  Mapped column declares `default=False` so ORM creates
-  match.
+  The DB `server_default` is `false` and the Mapped
+  column declares `default=False`, so a new instrument
+  continues the current page and ORM creates match the
+  DB. Instruments that predate the column were
+  backfilled `true`, which is why an older session still
+  renders one instrument per page (the rationale is
+  `guide/archive/segment_18M_instrument_layout.md`).
 
   Mutated only by the three service helpers in
   `app.services.instruments`:
@@ -190,9 +175,9 @@ operator-controlled page-break layout:
 
   All three call `session_lifecycle.invalidate_if_validated`
   at entry. Routes that call them apply
-  `_require_instrument_editable` so the operations 409
-  unless the session is **editable** — `draft` or `validated`
-  (Segment 19I Item 6; it was `not is_ready` until then).
+  `_require_instrument_editable`, so the operations 409
+  unless the session is **editable** — `draft` or
+  `validated`.
 
 ## Per-instrument card
 
@@ -218,19 +203,19 @@ Order of stripes (each separated by a horizontal rule):
 
 The whole card body is wrapped in a `<form id="dfsave-{id}">`
 that the Save button submits; every editable input on Bands 1+3
-binds to that form via `form="dfsave-{id}"`. Since Segment 18R
-Item 2 the identity fields ride the same form: the card-title
-`short_label` input, Band 2's `description` textarea, and each
-field's `help_text` textarea all carry `form="dfsave-{id}"`, so
-one bulk Save commits identity, Band 1, and Band 3 together
-through the consolidated `/save` endpoint. There are no longer
-any per-field ✎/✓ mini-forms or immediate `/identity` POSTs.
+binds to that form via `form="dfsave-{id}"`. The identity fields
+ride the same form: the card-title `short_label` input, Band 2's
+`description` textarea, and each field's `help_text` textarea all
+carry `form="dfsave-{id}"`, so one bulk Save commits identity,
+Band 1, and Band 3 together through the consolidated `/save`
+endpoint. The page drives no per-field ✎/✓ mini-form and no
+immediate `/identity` POST.
 
 ### Identity
 
 The whole per-instrument card is wrapped in a native
-`<details class="instrument-card-collapsible">` (Segment
-18M PR 0). The `<summary>` is the only thing rendered when
+`<details class="instrument-card-collapsible">`. The
+`<summary>` is the only thing rendered when
 collapsed; expanding reveals the Band 1 / Band 2 / Band 3
 stripes below it. Default state on first render of the
 page is **all collapsed**; cards auto-open when
@@ -240,10 +225,10 @@ reorder the sessionStorage-based restore overrides the
 auto-open so each card preserves its pre-drag collapse
 state exactly.
 
-**Collapse ⇒ lock invariant (Segment 18R Item 2).** There is
-no unlocked-but-collapsed state. Collapsing an **unlocked**
+**Collapse ⇒ lock invariant.** There is no
+unlocked-but-collapsed state. Collapsing an **unlocked**
 card first triggers a Lock (running the usual dirty-change
-confirm, and since 19H Item 2 its discard on accept); if the
+confirm, and its discard on accept); if the
 operator declines the confirm the collapse is cancelled and the
 card stays open and unlocked. Expanding a card
 never changes its lock state. Because a rename / description /
@@ -266,17 +251,17 @@ The `<summary>` carries, in document order:
   `{instrument.short_label}` when the operator has set
   one, else the ugly fallback `"Instrument_{instrument.id}"`
   in muted italic so it reads as a placeholder rather than
-  a chosen name. Per the 2026-05-28 operator-identifier
-  policy: the `#` prefix is reserved for the reviewer-
+  a chosen name. Per the operator-identifier policy: the
+  `#` prefix is reserved for the reviewer-
   facing `#{N}: {short_label}` heading inside Band 2's
   "Preview reviewer instrument" card; operator-facing UI
   uses `short_label` with the `Instrument_{id}` fallback.
   The fallback is generated by
   `app/services/instruments/_state.py::_instrument_label`
   (also drives audit-event copy + validation messages).
-- **Title edit (lock-driven).** Since Segment 18R Item 2
-  the title is a view/edit swap keyed on the card's lock
-  state — there is no per-title ✎/✓ button. When the card
+- **Title edit (lock-driven).** The title is a view/edit
+  swap keyed on the card's lock state — there is no
+  per-title ✎/✓ button. When the card
   is **locked** a read-only `data-card-title-view` span
   renders `short_label` (or the muted `Instrument_{id}`
   fallback). When **unlocked** a 32-char
@@ -287,9 +272,9 @@ The `<summary>` carries, in document order:
   endpoint — no separate `/identity` POST. `newModelSetLock`
   syncs the view span from the input's live value when the
   card locks, so the collapsed title matches the input the
-  card was showing. Since 19H Item 2 a *dirty* card cannot
-  reach that path — it discards and reloads instead — so the
-  sync now only ever copies persisted values. An empty
+  card was showing. A *dirty* card cannot reach that path —
+  it discards and reloads instead — so the sync only ever
+  copies persisted values. An empty
   value clears the label and reverts the view to the muted
   `Instrument_{id}` fallback.
 - **Status pills:**
@@ -326,12 +311,11 @@ The `<summary>` carries, in document order:
   .instrument-card-toggle-icon` CSS selector — no JS for
   the per-card toggle.
 
-The previous two-pill row (`accepting responses` /
-`not accepting responses` + `showing when closed` /
-`not showing when closed`) retired in the Segment 18M
-follow-up: both states are already discoverable at the
-session level via the Status + bulk-actions card, so the
-per-card mirror is redundant.
+**No per-card `accepting responses` pill.** The Status +
+bulk-actions card's one-line summary already reports how
+many instruments are accepting, so a per-card mirror would
+duplicate it — and visibility-when-closed carries no
+operator control to mirror at all (below).
 
 Beneath the `<summary>` (only visible when the card is
 expanded):
@@ -342,15 +326,12 @@ expanded):
   - **Open this Instrument** / **Close this instrument**
     (`POST /sessions/{sid}/instruments/{iid}/open|close`).
 
-The per-card **Show when closed** /
-**Don't show when closed** flip form retired in the
-Segment 18M follow-up, and the session-level bulk
-"Show / hide all when closed" toggle retired in 18R Item 3.
-Visibility when closed is now governed by the per-instrument
+**Visibility when closed has no operator control** — neither
+per-card nor session-wide. It is governed by the per-instrument
 **visibility policy** (`spec/visibility_policy.md`); the
 `responses_visible_when_closed` column and its route
 `POST /sessions/{sid}/instruments/{iid}/visibility` live on
-for config round-trip / programmatic use, with no operator UI.
+for config round-trip / programmatic use only.
 
 `short_label` and `description` are **not** rendered in
 the Identity heading — `short_label` is edited from the
@@ -360,20 +341,18 @@ a lock-driven view/edit swap; both ride the `dfsave-{id}`
 bulk-Save form rather than a separate `/identity` POST, so
 the heading row stays compact. The intro card's
 title prefix reads `#{N}:` where N is the on-page
-position (Segment 18M follow-up dropped the leading
-"Page " word; the reviewer surface keeps `Page #N:` so
-the operator's preview matches what the reviewer sees).
+position — the same prefix `views.instrument_heading`
+gives the reviewer, so the preview matches.
 
 #### Card background colour
 
 Each instrument card's background pulls from a 6-colour
 pastel palette keyed by `(instrument.id - 1) % 6`. The
 palette is in `instruments_index.html` (`instrument_palette`
-list). The colour rides with the instrument across
-reorders / replicates / deletes — pre-Segment 18M the
-palette was keyed off `loop.index0` and the colours
-shuffled on every reorder, which proved confusing once
-drag-to-reorder landed.
+list). Keyed by **instrument id and not by loop position**, so
+the colour rides with the instrument across reorders /
+replicates / deletes; keying it off the loop index instead
+reshuffles every colour on every drag.
 
 #### Page break card
 
@@ -391,7 +370,8 @@ break is cleared.
 A break sits between adjacent instrument cards in
 document order; the loop renders the divider just before
 the per-instrument card whose `starts_new_page=true`.
-Locked decisions (see `guide/archive/segment_18M_instrument_layout.md`):
+The rules a break obeys (rationale recorded in
+`guide/archive/segment_18M_instrument_layout.md`):
 
 - Page breaks are **non-movable** — create + delete only.
   Dragging an instrument across a break naturally
@@ -413,12 +393,11 @@ Locked decisions (see `guide/archive/segment_18M_instrument_layout.md`):
 The bottom action row hosts (in order):
 Save (edit only) | Cancel (edit only) | Replicate |
 Delete | **+Instrument** | **+Page break** | Lock /
-Unlock. The new buttons:
+Unlock. The two add buttons:
 
 - **+Instrument** — creates a new instrument
-  immediately after this one (existing button; sole
-  add-affordance since Wave 5 retired the legacy add
-  buttons).
+  immediately after this one. The only affordance that
+  adds an instrument.
 - **+Page break** — sets `starts_new_page=true` on the
   successor. Disabled (with explanatory tooltip) when:
   - This is the last instrument (would create a
@@ -466,9 +445,9 @@ for Links 1 + 2 (`not_set | all | filter`) and
 
 **Cycle.** Each click advances one step and wraps:
 `not_set → all → filter → not_set → all → filter → …` (and the
-equivalent for Link 3). The cycle wrap was added 2026-05-26
-(PR #1450) so the operator can return a Link to `Not set` and
-surface the instrument as unconfigured on the workflow card
+equivalent for Link 3). **The cycle wraps rather than
+terminating** so the operator can put a Link back to `Not set`
+and surface the instrument as unconfigured on the workflow card
 again.
 
 **Disabled state.** When the session has no usable tags for a
@@ -495,9 +474,9 @@ The workflow card's "Empty Setup" state keys off
 - at least one `visible=True` `InstrumentResponseField`, AND
 - all three Link ids present in `band1_touched_links`.
 
-This is the **safety gate** added 2026-05-26 (PR #1449) so the
-implicit Full Matrix default (synthesised when `rule_set_id`
-is NULL — see `spec/assignments.md`) can't ship silently. The
+This is the **safety gate** that stops the implicit Full Matrix
+default (synthesised when `rule_set_id` is NULL — see
+`spec/assignments.md`) shipping silently. The
 operator has to make a deliberate choice on each Link before
 the instrument reads as configured.
 
@@ -579,8 +558,7 @@ Band 1 saves through `app/services/instruments/_band1.py:set_band1_assignment_ru
   - `combinator="ALL_OF"` (the outer wrap that intersects Links).
   - `exclude_self_reviews=False` — aligned with the synthetic
     Full Matrix default; the per-instrument Self review toggle
-    on the Assignments page is the sole include/exclude surface
-    (PR #1452, 2026-05-26).
+    on the Assignments page is the sole include/exclude surface.
   - `rules_json` carries one COMPOSITE per Link with the
     operator's MATCH rules inside.
   - `name` follows the pattern `"New-model instrument #{id} Band 1"`
@@ -617,8 +595,8 @@ Top-of-band intro card carrying:
   instrument heading: `#{N}: {short_label}` when the
   short label is set, just `#{N}` when not — matching the
   `views.instrument_heading` contract the reviewer surface
-  consumes. Per the 2026-05-28 operator-identifier policy
-  the short label is **edited from the card title** in
+  consumes. Per the operator-identifier policy the short
+  label is **edited from the card title** in
   the `<summary>` above (`Setup → Instruments` card), not
   from this preview surface.
 - **Description** — a lock-driven view/edit swap: a read-only
@@ -629,14 +607,13 @@ Top-of-band intro card carrying:
   through the consolidated `/save` endpoint. `newModelSetLock`
   syncs the read-only paragraph from the textarea when the card
   locks (the same `newModelSyncTextViews` call the card title
-  uses — see that bullet above). Since 19H Item 2 a *dirty* card
-  cannot reach that path — it discards and reloads instead — so
-  this sync, like the title's, now only ever copies persisted
-  values.
+  uses — see that bullet above). A *dirty* card cannot reach that
+  path — it discards and reloads instead — so this sync, like the
+  title's, only ever copies persisted values.
 
-Since Segment 18R Item 2 identity edits **do** ride the bulk-save
-form — one Save commits identity together with Band 1 and Band 3.
-There is no separate `/identity` POST.
+Identity edits ride the bulk-save form: one Save commits identity
+together with Band 1 and Band 3, and the page issues no separate
+`/identity` POST.
 
 #### Chip row
 
@@ -708,21 +685,22 @@ controls (left → right):
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Drives the paired Band 2 pill's label on save. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
-| **R** button | `required` | Toggle. Active = required for reviewers to submit (enforced from Wave 3). |
-| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. Since Segment 18R Item 2 the help-text *text* is edited in a plain `help_text` textarea on the help card (shown when the instrument card is unlocked, `data-lock-only` read view when locked) that binds to the `dfsave-{id}` form — so the text commits with the bulk Save, not via a per-field ✎/✓ POST. |
+| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. |
+| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is edited in a plain `help_text` textarea on the help card (shown when the instrument card is unlocked, `data-lock-only` read view when locked) that binds to the `dfsave-{id}` form, so the text commits with the bulk Save rather than a per-field ✎/✓ POST. |
 | **✓** button | — | Saves *this row's* current values back into the paired Band 2 pill (creating the pill on first save, updating its label / metadata on subsequent saves). Pure UX — nothing persists across reload until the card-wide bulk Save runs. |
 | **X** button | — | Drops this row and its paired pill. Disabled when the row has saved responses; the title pins the reason. |
 
 Below the row stack, a `+` button spawns another empty row.
 The whole card's bulk Save form (form id `dfsave-{iid}`)
 POSTs to the consolidated
-`POST /sessions/{sid}/instruments/{iid}/save` endpoint since
-Segment 18R Item 2 — one request carries identity, Band 1, the
-Band 2/Band 3 state snapshots, and column widths together. (The
-older per-concern routes such as `/fields/save`, `/band2-state`,
-`/column-widths`, `/display-fields/order`, and `/identity` still
-exist server-side for fixture / programmatic callers but the page
-no longer drives them.) It persists every row in its current
+`POST /sessions/{sid}/instruments/{iid}/save` endpoint — one
+request carries identity, Band 1, the Band 2/Band 3 state
+snapshots, and column widths together. The per-concern routes
+`/fields/save`, `/band2-state`, `/column-widths`,
+`/display-fields/order` and `/identity` all still exist
+server-side for fixture / programmatic callers; the page drives
+none of them except `/fields/save`, which is the no-JS
+fallback. It persists every row in its current
 order; row order on save mirrors the **Band 2 pill order**, so
 drag-reordering the response pills in Band 2 is the
 operator-facing reorder affordance (there is no per-row drag
@@ -738,9 +716,8 @@ response field's pill in the Band 2 chip row carries
 `aria-pressed` / `is-selected` state, and on bulk Save
 `bulk_save_fields` writes the new selected state through to
 `InstrumentResponseField.visible`
-(`app/services/instruments/_band2.py:_sync_response_fields_to_db` —
-the dual-write helper carved out of `_instrument_crud.py` in
-Segment 18N PR 2).
+(`app/services/instruments/_band2.py:_sync_response_fields_to_db`,
+the dual-write helper).
 
 The reviewer surface form, the reviewer summary HTML, and the
 reviewer-record CSV all filter response fields by
@@ -751,8 +728,7 @@ editable); only the chip + the reviewer-side renders react.
 
 #### Inline bounds
 
-Bounds are inline on each row (Wave 3 PR i, 2026-05). The
-service-side validator (`bulk_save_fields` in
+Bounds are inline on each row. The service-side validator (`bulk_save_fields` in
 `app/services/instruments/_response_fields.py`) enforces:
 
 - `Number`: `min <= max`, `step <= max - min` (when both
@@ -800,8 +776,8 @@ Bottom row of the card, right-aligned, in this order:
   `newModelInitSaveDirtyTracking` JS helper enables it on the
   first dirty event (any Band 1 input change or Band 3 row
   edit / X / + click). With JS the Save submit is intercepted
-  and fetch-POSTs the consolidated JSON `/save` (Segment 18R
-  Item 2 PR 3); on success the card stays unlocked with **no
+  and fetch-POSTs the consolidated JSON `/save`; on success the
+  card stays unlocked with **no
   reload** and the dirty tracker resets in place, re-disabling
   Save. The success response also carries the state the two
   setup pills are drawn from — `is_configured` for this
@@ -827,16 +803,13 @@ Bottom row of the card, right-aligned, in this order:
 - **+Instrument** — spawns a new instrument with default
   Identity + empty Bands 1+2+3 immediately after this card.
   POSTs to `/sessions/{sid}/instruments/add-new-model` with
-  `after={iid}`. Same disable conditions as Replicate. The
-  legacy `+ instrument` (no `after`) and `+ Group instrument`
-  buttons retired in Wave 4 PR 4c — `+Instrument` is the sole
-  create affordance.
+  `after={iid}`. Same disable conditions as Replicate, and the
+  only affordance that creates an instrument.
 - **Lock / Unlock** — flips between view and edit mode by
   adding / removing `?editing={iid}` from the URL. Save +
   Lock are independent: Save doesn't lock, so the operator can
   keep editing after a Save. Both disabled whenever the session
-  is not editable — `ready`, `expired` or `archived`
-  (Segment 19I Item 6; `is_ready` alone until then).
+  is not editable — `ready`, `expired` or `archived`.
 
 #### Save / Lock interaction
 
@@ -848,17 +821,17 @@ Bottom row of the card, right-aligned, in this order:
 - **Lock-with-unsaved-edits.** When the Lock button is clicked
   on a dirty card, a `confirm()` prompt asks the operator to
   acknowledge that unsaved edits will be discarded. Declining
-  cancels the navigation. **Accepting discards them** (Segment
-  19H Item 2): the page reloads with `?editing` dropped, so the
-  card comes back **locked and showing persisted state**. The
-  discard is Cancel's — one shared `newModelDiscardReload`,
-  which differs between the two callers only in whether
-  `?editing` survives, so there is no second copy of "what the
-  server rendered" to drift. **A locked card therefore never
-  displays unsaved values.** Before 19H Item 2 the confirmed
-  lock neither reverted nor saved and copied the edited values
-  into the read-only view, which left a locked card displaying
-  state the database did not have.
+  cancels the navigation. **Accepting discards them**: the page
+  reloads with `?editing` dropped, so the card comes back
+  **locked and showing persisted state**. The discard is
+  Cancel's — one shared `newModelDiscardReload`, which differs
+  between the two callers only in whether `?editing` survives,
+  so there is no second copy of "what the server rendered" to
+  drift. **A locked card therefore never displays unsaved
+  values**, which is the whole point: a lock that instead copied
+  the edited values into the read-only view would leave a
+  collapsed, locked card asserting state the database does not
+  have.
 - **Save-when-dirty.** Both Save and Cancel start disabled.
   Every editable input on the card is bound to a dirty-tracker
   that enables them on first change. On a successful JSON
@@ -883,9 +856,6 @@ Bottom row of the card, right-aligned, in this order:
     `_require_instrument_editable`, detail `"Instrument
     structure is locked while the session is <status>"`
     (defensive — the button is disabled in these states).
-    Measured 2026-09-09: the spec said `is_ready` → 400 with a
-    different message, and had said so since before Segment 19I;
-    the route has always raised through the shared gate.
 
 ### `Replicate` semantics
 
@@ -936,8 +906,8 @@ The page-wide invariants the lock model enforces:
    mode) or exactly one instrument is unlocked.
 2. **Not-editable lock.** Whenever the session is not `draft`
    or `validated` — `ready`, `expired` or `archived` — every
-   edit affordance disables and the routes behind them 409
-   (Segment 19I Item 6). A **lock card** above the instrument
+   edit affordance disables and the routes behind them 409. A
+   **lock card** above the instrument
    cards says which state the page is in and names that state's
    way out: `ready` and `expired` carry an inline "Revert to
    draft" form, which `revert_session_to_draft` accepts from
@@ -967,19 +937,18 @@ of rules against instruments. Active ones that surface here
 - **`instruments.no_display_fields`** (info) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
-- **`instruments.stale_generated`** (warning) — assignment rows
-  exist but the engine pass on the current rule + roster would
-  produce a different set. The Assignments-page status pill
-  shows `stale`.
+- **`instruments.stale_generated`** — **registered but inert**;
+  the check yields nothing, so no staleness warning reaches this
+  page (`spec/validate_page.md` §3.2).
 - **`instruments.zero_included`** (error) — every assignment row
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.
-- **`instruments.no_rule_pinned`** — *retired in spirit;* still
-  registered for legacy-data compatibility but returns no
-  findings on post-Wave-5 instruments (the synthetic Full Matrix
-  covers NULL `rule_set_id`).
+- **`instruments.no_rule_pinned`** — **registered but inert**;
+  the synthetic Full Matrix covers a NULL `rule_set_id`, so an
+  unpinned instrument is never "not set up"
+  (`spec/validate_page.md` §3.2).
 
-Note: the Wave 5 follow-up "Not set" pill safety gate (see
+Note: the "Not set" pill safety gate (see
 [Band 1](#band-1--assignment-rule--unit-of-review)) is enforced
 **off-validate** — it drives the workflow card's `is_setup_empty`
 state directly via `is_configured` / `has_unconfigured` rather

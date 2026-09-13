@@ -47,13 +47,13 @@ POST /me/sessions/{session_id}/clear
 ```
 
 `{page_n}` is the **1-indexed operator-defined page number** within the
-session. Pages are derived from `Instrument.starts_new_page` (Segment
-18M): instruments walk in `Instrument.order, Instrument.id` order and a
-new page begins at every instrument whose flag is true. Each page
-contains one or more instruments. (Pre-Segment-18L the URL slot was the
-instrument position; the multi-page replan reuses the slot for page
-number so single-page sessions stay degenerate — `/1` is the only valid
-page.)
+session. Pages are derived from `Instrument.starts_new_page`:
+instruments walk in `Instrument.order, Instrument.id` order and a new
+page begins at every instrument whose flag is true. Each page contains
+one or more instruments. The slot carries the **page** number and never
+the instrument position, which is what keeps a single-page session a
+degenerate case of the same model rather than a second shape — `/1` is
+then the only valid page.
 
 `GET /me/sessions/{id}` (no page) **303s to
 `/me/sessions/{id}/1`** so existing invitation links and dashboard
@@ -93,11 +93,10 @@ Top-to-bottom, the page renders:
    Robin" identity (no version, no breadcrumb), user menu with "Signed
    in as …" + optional "My Reviews" + optional **Guide** + **About** +
    "Sign out". The About link (`/about?return_to=<path>`, skipped on
-   `/about` itself) matches the operator chrome's, added 18R Item 6 so
-   `/me` reaches the About / access-help page the same way
-   `/operator/sessions` does. The Guide link
-   (`/guide?return_to=<path>`) was added 2026-09-08 on the same
-   reasoning and carries the operator chrome's condition — the
+   `/about` itself) matches the operator chrome's, so `/me` reaches the
+   About / access-help page the same way `/operator/sessions` does. The
+   Guide link (`/guide?return_to=<path>`) carries the operator chrome's
+   condition — the
    `request.state.guide_hidden` hide flag, read fail-open — so it
    renders for a viewer who resolves at least one Guide audience and is
    absent for one who resolves none.
@@ -108,8 +107,7 @@ Top-to-bottom, the page renders:
    renders in the session's resolved zone followed by that zone's
    compact GMT-offset + raw IANA id in parentheses — e.g.
    `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
-   `date_formatting.gmt_offset_zone_label`. (D7 — settled in
-   Segment 11D PR C and adjusted post-merge.)
+   `date_formatting.gmt_offset_zone_label`.
 4. **Overview card** — a single full-width `.card.rs-status-panel`
    rolling together, top to bottom:
    - The session **description**, when `session.description` is set.
@@ -124,10 +122,10 @@ Top-to-bottom, the page renders:
      server-side from response data (see "Per-page status" below).
 
    The card is omitted entirely only when there is neither a
-   description nor any status pills. (Save / Submit no longer flash
-   — the per-page status pills are the canonical signal — and the
+   description nor any status pills. **Save and Submit raise no flash
+   banner**: the per-page status pills are the canonical signal, and the
    missing-required and invalid-value warnings render as their own
-   full-width cards below, not inside this card.)
+   full-width cards below rather than inside this one.
 5. **Action row (top)** — `.rs-action-row.rs-action-row-top`,
    **left-aligned** so it reads as the lead-in to the form (the
    bottom action row is flush right — see §8). The surface's main
@@ -195,8 +193,7 @@ current page is lost if the reviewer navigates away without saving.
 
 ### How the surface works
 
-Post-Segment-18L replan: each page is its own server-rendered
-HTML response. The GET route at `/me/sessions/{id}/{page_n}`
+Each page is its own server-rendered HTML response. The GET route at `/me/sessions/{id}/{page_n}`
 filters to **only the current page's instruments** (the run between
 the operator-defined `starts_new_page` boundaries) and renders just
 those. Cross-page navigation is plain HTTP — Prev / Next links are
@@ -212,6 +209,16 @@ clicking **Discard** silently drops any unsaved typing on the
 current page. A `beforeunload` warning that keys off the same dirty
 signal is a deferred progressive enhancement (see
 "Designed-for-extensibility").
+
+**The pattern it defers already ships on the operator surface**, so
+whoever implements this here has a working reference rather than a blank
+page: `operator/instruments_index.html` wires one `beforeunload` listener
+that fires only when a card carries
+`[data-instrument-dirty="true"]`, and returns early on
+`window._newModelIntentionalNav` so a deliberate discard or lock is not
+itself treated as an accident. **Both halves are load-bearing** — a guard
+without the dirty gate prompts on every navigation, and one without the
+intentional-nav escape prompts on the app's own controls.
 
 ### Save / Discard / Page navigation / Submit / Clear all
 
@@ -368,17 +375,20 @@ by how many instruments the reviewer is assigned on:
 
 | Case | Title (H2) | Subtitle (`.muted`, body-weight) |
 |---|---|---|
-| Multi-instrument, `short_label` set | `Page #{N}: {short_label}` | `description` if set, else nothing |
-| Multi-instrument, `short_label` empty | `Page #{N}` (bare) | `description` if set, else nothing |
-| Single-instrument, `short_label` set | `{short_label}` (no `Page #1:` prefix) | `description` if set, else nothing |
+| Multi-instrument, `short_label` set | `#{N}: {short_label}` | `description` if set, else nothing |
+| Multi-instrument, `short_label` empty | `#{N}` (bare) | `description` if set, else nothing |
+| Single-instrument, `short_label` set | `{short_label}` (no `#1:` prefix) | `description` if set, else nothing |
+| Single-instrument, `short_label` empty but `description` set | `{description}` | none — the description is the title in this one case |
 | Single-instrument, both empty | none — no heading row renders | n/a |
-| Single-instrument, only `description` set | none — no heading row renders | n/a (description shown elsewhere) |
 
-The `Page #{N}` prefix is the safety-net default for multi-instrument
+Whitespace-only values count as unset on both fields, so a stray space
+never renders an empty title or subtitle slot.
+
+The `#{N}` prefix is the safety-net default for multi-instrument
 sessions: even with `short_label` unset, the reviewer still gets
-"which page am I on" context. Single-instrument sessions don't need
-the `Page #1` prefix; the H1 (session name) at the top of the surface
-already establishes "this is the review."
+"which page am I on" context. Single-instrument sessions don't need it;
+the H1 (session name) at the top of the surface already establishes
+"this is the review."
 
 The view-shape returned by `_surface_context` exposes a structured
 heading dict per instrument group:
@@ -392,8 +402,8 @@ class InstrumentHeading:
 
 The template renders the H2 heading row only when `heading.title`
 is truthy. The instrument card (`.rs-instrument-card`) hosts the
-heading + description only — Wave 4 PR 1437 moved the progress
-pills out of the card.
+heading + description **only**; the progress pills sit outside it, in
+the right-flushed row described next.
 
 **Per-instrument progress pills.** Two `.pill` spans sit in a
 single right-flushed flex row (`.rs-progress-row`,
@@ -420,19 +430,18 @@ together on every Band 3 / R toggle).
 - **Help block** above the table (below the heading row), listing each
   response field that has both `help_text` set and
   `help_text_visible=true`. One shape, whatever the count: a
-  `.rs-help-grid` row of half-width `.rs-help-card` items. The
-  `.rs-help-card-solo` full-width variant for the lone-help case was
-  **retired 2026-05-05** (`62a85fee`) when the per-instrument intro
-  became a half-width card grid — a single help card now lands in
-  column 2 beside the heading card rather than expanding.
-  `test_reviewer_response_flow.py` asserts the modifier does not
-  render.
+  `.rs-help-grid` row of half-width `.rs-help-card` items. **There is
+  no full-width solo variant**: with the per-instrument intro itself a
+  half-width card grid, a lone help card lands in column 2 beside the
+  heading card, and widening it would break that pairing. No
+  `.rs-help-card-solo` class exists, and
+  `tests/integration/test_reviewer_response_flow.py` asserts the
+  modifier never renders — so re-adding it fails the suite rather than
+  quietly changing the layout.
 
 Single-instrument sessions with both `short_label` and `description`
-empty render no H2 at all (regression-tested; see
-`test_surface_single_instrument_no_description_renders_no_heading`,
-which gets renamed once the multi-instrument-rewrite PR γ adds the
-`instrument_heading(...)` helper).
+empty render no H2 at all, pinned by
+`test_surface_single_instrument_no_description_renders_no_heading`.
 
 ### Columns
 
@@ -476,13 +485,14 @@ In rendered order:
    - `<span class="status-icon-incomplete" title="N required field
      missing">⚠</span>` when any required field is empty.
 
-   The per-row ``submitted YYYY-MM-DD HH:MM`` subtitle that used
-   to render under the icon retired 2026-05-28. Submit stamps a
-   single ``now()`` across every Response row for the reviewer in
-   one go (see ``app/services/responses`` submit path), so the
-   per-row timestamp is always either NULL or
-   uniform-for-the-reviewer — redundant with the session-level
-   submission timestamp shown on the reviewer summary page.
+   **The icon is the whole cell — there is no per-row ``submitted
+   YYYY-MM-DD HH:MM`` subtitle under it.** Submit stamps a single
+   ``now()`` across every Response row for the reviewer in one go
+   (see the ``app/services/responses`` submit path), so a per-row
+   timestamp is always either NULL or uniform-for-the-reviewer;
+   printing it per row repeats the session-level submission timestamp
+   already shown on the reviewer summary page, once for every
+   reviewee.
    ``Response.submitted_at`` itself stays in the data model: it
    drives ``is_complete`` rollups, audit-event counts, the
    session-status pill (``Submitted`` / ``Saved but not
@@ -491,9 +501,7 @@ In rendered order:
 
 ### Cell renderers
 
-Response field input markup is driven by the RTD's `data_type`
-(per Slice 4a; pre-Slice-4a code branched on legacy literal type
-names):
+Response field input markup is driven by the RTD's `data_type`:
 
 | `data_type` | Render |
 |---|---|
@@ -506,13 +514,14 @@ names):
 When the assignment isn't accepting (deadline closed or operator-
 paused), every input renders `disabled`.
 
-**Textarea height derivation (2026-05-28).** Long-text textareas
-size their initial `rows` attribute so a typical response (assumed
-to cluster around 75% of the configured `max_length`) fits at the
-column's current width:
+**Textarea height derivation.** Long-text textareas size their
+initial `rows` attribute so a typical response — assumed to cluster
+around **50%** of the configured `max_length`, since operators rarely
+author a cap they expect to be filled — fits at the column's current
+width:
 
 ```
-typical_chars = max_length * 0.75
+typical_chars = max_length * 0.5
 chars_per_row = max(20, column_width_px / 8)
 rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 ```
@@ -522,7 +531,7 @@ rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 grippers); when unset, the default is 224px (matching the
 `td.rs-textlong { min-width: 14em }` CSS at the default 16px body
 font). The 8 px/char ratio is calibrated against the proportional
-sans-serif body font stack; the 0.75 factor is named at
+sans-serif body font stack; the 0.5 factor is named at
 `views/_instruments.py::_TYPICAL_RESPONSE_FRACTION`. Reviewers
 retain native textarea corner-drag at runtime — this only sets
 the initial height. The Band 2 preview cell in
@@ -530,7 +539,7 @@ the initial height. The Band 2 preview cell in
 the same formula (constants kept in sync) so the operator's
 preview matches what the reviewer will see.
 
-**Cell vertical alignment (2026-05-28).** Cells inside
+**Cell vertical alignment.** Cells inside
 `.rs-instrument-group` and `[data-new-model-band2-preview]` carry
 `vertical-align: top` so multi-row textareas anchor at the top of
 the row rather than centering vertically next to single-line
@@ -618,10 +627,10 @@ reviewer-surface specifics:
   `(instrument, group_key)` — a bad or missing group answer
   surfaces once, not once per member.
 - **Operator preview** renders group-scoped instruments collapsed
-  the same way the reviewer surface does — it goes through the
-  same `_surface_context` path (Segment 18Q follow-on retired the
-  earlier synthetic `build_preview_context` builder that used to
-  un-collapse).
+  the same way the reviewer surface does, because it goes through the
+  same `_surface_context` path. There is deliberately **no**
+  preview-only context builder: one that un-collapsed groups is
+  exactly the drift the shared path exists to prevent.
 
 The collapsed row carries the same dict shape plus a
 `group_identity` block (`tag_line` / `member_names` /
@@ -676,7 +685,7 @@ GET requests behave differently depending on which gate fails:
 
 - **Session not yet `ready`** (the operator has prepared the
   session and may have already sent out invitations, but hasn't
-  activated yet — the 18F Part 2 pre-open scenario). The route
+  activated yet). The route
   short-circuits to the **pre-open page**
   (`reviewer/pre_open.html`): session name in the h1 with an
   "opens later" suffix, an info banner explaining the review
@@ -758,20 +767,19 @@ its cross-role union query (inline in
 ## Operator preview mode
 
 The operator-side preview lives at
-`/operator/sessions/{id}/preview-surface/{page_n}` (Segment 18Q
-follow-on, 2026-05-28) and is reached from the Previews hub
-picker card's "Open full preview" button. The route renders this
-template through the same `_surface_context` plumbing the live
-reviewer route uses, with three `preview_mode=True` adjustments:
+`/operator/sessions/{id}/preview-surface/{page_n}` and is reached from
+the Previews hub picker card's "Open full preview" button. The route
+renders this template through the same `_surface_context` plumbing the
+live reviewer route uses, with three `preview_mode=True` adjustments:
 the deadline observer is skipped (no DB mutation on a deadline
-crossing), `accepting=True` is forced on every row so the form
-renders interactive regardless of session lifecycle, and the
-action-row Prev/Next URLs are rewritten via a callback so they
-point back at the operator-side preview route. The Segment 11F
-PR C iframe-embedded surface card on the Previews hub was retired
-in the same follow-on (PR #1531); the legacy `/preview` (singular)
-URL is a permanent (308) redirect whose target was 2026-05-28-
-repointed from `/previews#reviewer-surface` to `/preview-surface/1`.
+crossing), `accepting=True` is forced on every row so the form renders
+interactive regardless of session lifecycle, and the action-row
+Prev/Next URLs are rewritten via a callback so they point back at the
+operator-side preview route. **The hub itself carries no embedded copy
+of the surface** — a second rendering path is the one thing a
+production-parity preview cannot afford. `/preview` (singular) is a
+permanent (308) redirect to `/preview-surface/1`, never to a fragment
+on the hub.
 
 In preview mode:
 
@@ -815,14 +823,14 @@ The participant lobby — where a signed-in user lands directly (no
 invitation token) or via "My Reviews" from any session-scoped
 chrome. Lists **every session the signed-in user touches in any
 participant role** (reviewer / reviewee / observer), as a
-cross-role union (PR #1709). The query hits all three rosters
+cross-role union. The query hits all three rosters
 (`reviewers`, `reviewees`, `observers`) with case-insensitive email
 matching; only `status == "active"` rows contribute; the result is
 deduplicated per session and sorted by `session.updated_at`
 descending.
 
 **The `reviewee` role additionally requires a currently-resolving
-visibility grant** (Segment 19F PR 2). An active, email-identified
+visibility grant.** An active, email-identified
 roster row is necessary but not sufficient: at least one instrument in
 the session must grant the reviewee a mode under the windows open right
 now (`visibility_policies.reviewee_has_current_grant`). Without one the
@@ -840,7 +848,7 @@ reviewee-/observer-only rows show `—` in those cells.
 - **Body** — single `.card` containing a `<table>` (one row per
   session). **Eight columns:**
   - **Session** — session name, with per-role pills on a second
-    line below it (PR #1712). The session name itself links to
+    line below it. The session name itself links to
     the highest-priority reachable role in order Reviewer →
     Reviewee → Observer (first role whose `enabled == True`);
     plain text when no role is reachable. Each role pill is an
@@ -854,11 +862,10 @@ reviewee-/observer-only rows show `—` in those cells.
     deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
   - **View responses** — placeholder; renders `<span
-    class="muted">—</span>` today. The access-window gate it was
-    waiting on landed instead on the **row itself** at 19F PR 2: a
-    reviewee row exists only while a grant currently resolves, so a
-    dedicated window column would now restate what the row's presence
-    already says.
+    class="muted">—</span>`, and **stays one**: the access-window
+    question it would answer is already answered by the row. A reviewee
+    row exists only while a grant currently resolves, so a dedicated
+    window column would restate what the row's presence says.
   - **Until** — placeholder; renders `<span
     class="muted">—</span>` today. Will show the computed
     close time of the results-viewing window once wired.
@@ -875,8 +882,8 @@ reviewee-/observer-only rows show `—` in those cells.
     (`!= "not opened"`), so a new value would re-link the
     reviewer surface on an archived session. It sits inline and
     wraps below the status on its own when the column narrows
-    (measured 2026-09-08: side by side at 1440px, stacked at
-    1024px and 820px). No CSS was added for this — `.pill` is
+    (side by side at 1440px, stacked at 1024px and 820px). No CSS
+    is added for this — `.pill` is
     `inline-block` with a right margin, so the wrap is the
     browser's, not a breakpoint the app defines. For reviewer rows:
     computed via `lifecycle.session_status_for_reviewer`.
@@ -899,14 +906,14 @@ per role the user holds:
 | Role | Target URL | Reachable today |
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
-| `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — and since 19F PR 2 the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
-| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`** (19F PR 5): archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` (W17, shipped 2026-06-02) |
+| `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
+| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` (W17) |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
 as inert `<span>` pills.
 
-The cross-role union is inline in `_dashboard.py`. The `sessions_for_user` stub that was proposed as the canonical home retired with L1 (PR #1757) — the inline shape was the W18 implementation choice and never grew a second consumer.
+The cross-role union is inline in `_dashboard.py`, and has exactly one consumer.
 
 ### Session-status pill vocabulary
 
@@ -923,10 +930,11 @@ flag hasn't been flipped yet by `observe_deadline`.
 | `open` | `pill-success` (green) | Session is `ready` AND at least one assigned instrument is `accepting_responses` AND deadline (if set) hasn't passed. Session column links to the surface. |
 | `closed` | `pill-lifecycle-archived` (muted grey) | Session is `ready` AND no assigned instruments are accepting (deadline passed or instruments manually closed). Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
 
-When the deferred Close-session work and the `expired`
-lifecycle status ship (per `guide/archive/segment_18F_workflow_optimization.md`),
-`closed` will also resolve from `session.status == "expired"`
-without re-plumbing.
+`closed` also resolves from `session.status == "expired"`, and must:
+an expired session reports `closed` rather than `not opened` precisely
+so the dashboard keeps its link live, which is what lets the reviewer
+still reach `/summary` and the read-only surface after the operator has
+closed the session.
 
 ### Reviewer-status pill vocabulary
 
@@ -946,17 +954,21 @@ surface itself — hitting Submit once doesn't lock the form.
 Submitting again replays the same logic and re-stamps
 `submitted_at`.
 
-### Per-page sub-rows (dropped PR #1751)
+### One row per session, never per page
 
-Per-page sub-rows under multi-page sessions were removed in PR #1751. Multi-paged sessions now show only the main session row in the dashboard table; per-page navigation happens via the response surface itself (Prev / Next / Page N controls). `DashboardPageRow`, `_build_dashboard_page_rows`, and `_rollup_page_state` were deleted from `_dashboard.py`; the sub-row block was removed from `dashboard.html`.
+A multi-page session contributes **one** row to the dashboard table —
+there are no per-page sub-rows under it. Page navigation is the response
+surface's own job (Prev / Next / `Page N of M`), and a dashboard that
+also enumerated pages would carry a second, staler copy of the same
+per-page state.
 
 ---
 
 ## Per-session summary (`/me/sessions/{id}/summary`)
 
-Segment 17B Phase 2 PR B — a read-only capstone page that
-renders once the reviewer has submitted every assigned row on
-a session. The surface's `submit_redirect_url` graduates to
+A read-only capstone page that renders once the reviewer has
+submitted every assigned row on a session. The surface's
+`submit_redirect_url` graduates to
 this URL when a submit closes out the last instrument; partial
 submits keep the existing "redirect back to surface"
 behaviour. The page also stays reachable later from the
@@ -1003,10 +1015,9 @@ dashboard's Session column once Reviewer Status is
 
 ### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready session)
 
-Segment 18F Part 2 added a dedicated **pre-open** rendering
-for a reviewer who follows an invitation token (or a
-dashboard link) to a session that's been Prepared
-(`validated`) but not yet Activated. Instead of 403-ing or
+A dedicated **pre-open** rendering serves a reviewer who follows an
+invitation token (or a dashboard link) to a session that's been
+Prepared (`validated`) but not yet Activated. Instead of 403-ing or
 dropping the reviewer into a silently-disabled form, the
 route returns `reviewer/pre_open.html` — h1 with "{session
 name} — opens later", an info banner explaining the review
@@ -1022,7 +1033,7 @@ for the gate semantics.
 `GET /me/sessions/{id}/results` + `POST /me/sessions/{id}/results/acknowledge`.
 
 **Gate** — `require_reviewee_with_current_grant` in
-`app/web/deps.py` (19F PR 4), shared by the GET **and** the
+`app/web/deps.py`, shared by the GET **and** the
 `POST …/acknowledge` companion. It composes two conditions:
 
 1. the roster check from `require_reviewee_in_session` — an active
@@ -1033,19 +1044,19 @@ for the gate semantics.
    instrument granting them a mode under the windows open right now.
 
 **On any failure: a bare HTTP 404**, byte-identical to an unknown
-session id (19F PR 1). Unknown session, not a reviewee here, an inactive
-row, a non-email identifier, and a reviewee with nothing currently
-granted are one outcome with one body — a reviewee granted nothing is
-indistinguishable from a stranger. It answered **403** with a
-role-naming `detail` until 19F, which told the caller the session
-existed and that they were on it.
+session id. Unknown session, not a reviewee here, an inactive row, a
+non-email identifier, and a reviewee with nothing currently granted are
+one outcome with one body — a reviewee granted nothing has to be
+indistinguishable from a stranger. **Not 403, and no role-naming
+`detail`**: either tells the caller both that the session exists and
+that they are on it, which is the disclosure the gate exists to refuse.
 
-**Retired at PR 4: the pre-release scaffolding.** A policy authored on
-`after_release` whose window had not opened used to render the section
-with the reviewer rows visible — names and emails — and only the values
-hidden. That told a reviewee who was lined up to review them before
-anything had been granted, so the page now 404s instead. A preview of
-what a reviewee *will* see belongs on an operator surface.
+**No pre-release scaffolding.** A policy authored on `after_release`
+whose window has not opened must render nothing — not the section with
+the reviewer rows visible and only the values hidden. Rows without
+values still name the people lined up to review the reviewee, before
+anything has been granted to them. A preview of what a reviewee *will*
+see belongs on an operator surface.
 
 **Body** — per-instrument sections built by
 `app/web/views/_reviewee_results.py::build_reviewee_results_context`,
@@ -1069,24 +1080,24 @@ captured as a `{page_n}` value.
 
 ## Observer collation surface (`/me/sessions/{id}/collation`)
 
-PR #1713 — `GET /me/sessions/{id}/collation`.
+`GET /me/sessions/{id}/collation`.
 
 **Gate** — `require_observer_in_session` in `app/web/deps.py`:
 the authenticated user must have an active Observer row whose
 `email` matches (case-insensitive). On mismatch: a bare **HTTP 404**,
-byte-identical to an unknown session id (19F PR 1) — it was a 403 with
-a role-naming `detail` until then, which confirmed the session existed.
+byte-identical to an unknown session id. Not a 403, and no role-naming
+`detail` — either confirms the session exists to a caller who should
+not learn that.
 
-Observers are **not** grant-gated the way reviewees became at 19F PR 4:
-being appointed an observer is not a disclosure *about* the observer, so
-the surface opens in every lifecycle state and simply renders nothing
-until their window does (19F decision 4).
+Observers are **not** grant-gated the way reviewees are: being appointed
+an observer is not a disclosure *about* the observer, so the surface
+opens in every lifecycle state and simply renders nothing until their
+window does.
 
-**Current state** — reviewer-surface chrome (`reviewer/collation.html`)
+**What renders** — reviewer-surface chrome (`reviewer/collation.html`)
 plus the per-instrument 3-row collation table (reviewer-side
-aggregates / reviewee-side aggregates / conditional CSV
-download). MVP shipped 2026-06-02 (W17) — see
-`guide/archive/observers.md` and the cohort-consumer routes in
+aggregates / reviewee-side aggregates / conditional CSV download).
+W17; see `guide/archive/observers.md` and the cohort-consumer routes in
 `app/web/routes_reviewer/_collation.py`.
 
 Route: `app/web/routes_reviewer/_collation.py`. Also registered
@@ -1096,7 +1107,7 @@ before the `_surface` catch-all.
 
 ## Role-navigator chip strip
 
-PR #1715 — shared partial rendered below the session-name H1 on
+A shared partial rendered below the session-name H1 on
 four role-specific surfaces: the response surface
 (`review_surface.html`), the summary page (`summary.html`),
 the results page (`results.html`), and the collation page
@@ -1127,9 +1138,8 @@ Each chip carries:
 `.rs-role-nav-muted` (greyed-out, disabled or inactive role)
 modifiers.
 
-Reachability mirrors the dashboard's `role_links.enabled` logic, and
-since **19F PR 7** it mirrors all three roles rather than only the
-reviewer:
+Reachability mirrors the dashboard's `role_links.enabled` logic, for
+all three roles rather than only the reviewer:
 
 | Role | Chip |
 |---|---|
@@ -1137,24 +1147,24 @@ reviewer:
 | reviewee | **Omitted entirely** unless `visibility_policies.reviewee_has_current_grant` resolves — not greyed. A greyed chip still says *you are a reviewee on this session*, which is the disclosure `/me` stops making, so the chip goes with the role. |
 | observer | Present for any active observer, **greyed on an archived session** (`lifecycle.is_archived`), live otherwise. Being an observer is not a disclosure about the observer, so this one greys rather than disappearing. |
 
-Until PR 7 `build_role_chips` answered from roster membership alone for
-both participant roles, so a user holding another role on the same
-session saw a live Reviewee chip pointing at the 404 PR 4 had just
-introduced — the segment's own contract applied on `/me` and not one
-door over. Each surface asks the question for itself: a caller on
-`/collation` passed the observer gate and nothing else, so their
-reviewee chip needs its own answer.
+**`build_role_chips` must not answer from roster membership alone.** A
+membership-only answer hands a user who holds another role on the
+session a live Reviewee chip pointing at the 404 `/results` gives them
+— the same contract applied on `/me` and not one door over. Each
+surface asks the question for itself: a caller on `/collation` has
+passed the observer gate and nothing else, so their reviewee chip needs
+its own answer.
 
 **W17 (observer)** still applies the `responses_release_at` +
 `responses_release_until` gates inside the per-instrument render only —
 instrument cards fall through to the empty state when the window is
 closed, with no route-level refusal.
 
-**W16 (reviewee) no longer works that way.** 19F PR 4 moved the window
-question to the route: with no instrument granting anything, `/results`
-answers 404 rather than rendering an empty page that named the session
-to its subject. Inside an open page the per-instrument resolver still
-decides what renders, so a sparse body remains normal.
+**W16 (reviewee) does not work that way.** The window question is asked
+at the *route*: with no instrument granting anything, `/results` answers
+404 rather than rendering an empty page that names the session to its
+subject. Inside an open page the per-instrument resolver still decides
+what renders, so a sparse body is normal.
 
 ---
 
@@ -1189,9 +1199,9 @@ followed by a `.btn-pair` with two Secondary anchors:
 The remedy is to sign out and sign back in with the invited
 account. This is the only reviewer-side page that returns a non-200
 status under normal flow **for a caller who is in the right place** —
-a 403, and unrelated to the session-scoped gates. Since 19F the gates
-themselves answer 404 to anyone they refuse, but that is a caller in the
-wrong place rather than a normal flow.
+a 403, and unrelated to the session-scoped gates. Those answer 404 to
+anyone they refuse, but that is a caller in the wrong place rather than
+a normal flow.
 
 The mismatch page renders with the reviewer chrome variant
 (`body.ui-v2 reviewer`) so the operator's identity is suppressed
@@ -1201,15 +1211,19 @@ from the top bar.
 
 ## Button labels
 
-| Where | Old label | New label |
-|---|---|---|
-| Action row (page-level slot) | `Save draft` | `Save` |
-| Action row (page-level slot) | `Cancel — discard unsaved edits` | `Discard` |
-| Action row (page-level slot) | n/a | `Page #{N}: {Instrument.short_label}` when the operator has set a short label; bare `Page #{N}` otherwise |
-| Action row (review-level slot, after divider) | `Submit` | `Submit` (unchanged) |
-| Danger Zone | `Clear all` | `Clear all` (unchanged; copy explains "every response across every page") |
+The labels the surface ships, as rendered:
 
-Other labels (`Sign out`, `My Reviews`) are unchanged.
+| Where | Label |
+|---|---|
+| Action row, review-level cluster | `Save` |
+| Action row, review-level cluster | `Cancel` — **this is the control this spec calls Discard**; the rendered label is `Cancel` and the hook is `data-rs-discard` |
+| Action row, review-level cluster | `Submit` |
+| Action row, page-navigation cluster | `< Previous page` / `Page {N} of {M}` / `Next page >` |
+| Danger Zone | `Clear all` (copy explains "every response across every page") |
+
+There is **no per-page button** carrying an instrument's short label —
+page navigation is Previous / counter / Next, and nothing else. The
+other reviewer-side labels are `Sign out` and `My Reviews`.
 
 ### Friendly short label vs. long description
 
@@ -1217,26 +1231,22 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands on Page button labels
-  (`Page #{N}: {short_label}`) and as the per-instrument H2 title.
-  Capped at 32 characters at the schema layer so button rows don't
-  wrap on typical viewports.
-- **`Instrument.description`** (`String(2000) | None`, nullable —
-  unchanged from today) — the longer per-instrument blurb. Lands
-  as the subtitle next to the H2 title above each table.
+  operator's reviewer-facing framing. Lands as the per-instrument H2
+  title (`#{N}: {short_label}` on a multi-instrument session, bare
+  `{short_label}` on a single-instrument one). Capped at 32 characters
+  at the schema layer so a heading row doesn't wrap on typical
+  viewports.
+- **`Instrument.description`** (`String(2000) | None`, nullable) — the
+  longer per-instrument blurb. Lands as the subtitle next to the H2
+  title above each table.
 
 The system handle `Instrument.name` (`String(255)`, auto-generated
 as `instrument_N` on instrument create) is **not** reviewer-facing.
 It carries audit-event copy and is otherwise invisible.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
-this surface trusts the value it's given. The Instruments Setup
-page enforces it at create / edit time (see
-`guide/archive/segment_11L_instrument_short_label.md` for the single-PR
-plan that adds the column + Setup-side editor). The reviewer
-surface still ships a defensive
-`max-width: 16em; text-overflow: ellipsis` rule on Page buttons
-as belt-and-suspenders against pre-existing oddities.
+this surface trusts the value it's given, and the Instruments Setup
+page enforces the cap at create / edit time.
 
 ---
 
@@ -1276,13 +1286,27 @@ makes today + the small follow-on the deferred work needs.
   **the chrome's `My Reviews` link** all lose the current page's
   unsaved edits with no prompt. The reviewer avoids loss by clicking
   Save before navigating.
-- **Design call.** The template already renders the hooks a future
+- **Design call.** The template already renders the hooks the
   enhancement needs: `data-rs-save` on Save, `data-rs-discard` on
-  Discard, and a `data-rs-saved-value` baseline on every input. A
-  future inline `<script>` can read those to add per-page dirty
-  tracking (Save-disable-until-dirty + in-place Discard) and a
-  `beforeunload` listener that prompts only when the form is dirty,
-  skipping intentional-discard controls.
+  Discard, and a `data-rs-saved-value` baseline on every input. An
+  inline `<script>` can read those to add per-page dirty tracking
+  (Save-disable-until-dirty + in-place Discard) and a `beforeunload`
+  listener that prompts only when the form is dirty, skipping the
+  intentional-discard controls.
+- **The same guard already ships on the operator side, so the design is
+  settled and only the wiring is outstanding.**
+  `app/web/templates/operator/instruments_index.html` wires it for the
+  instrument cards, and it is three parts: one `beforeunload` listener
+  registered once; a warning raised only when
+  `document.querySelector('[data-instrument-card][data-instrument-dirty="true"]')`
+  matches; and an early return when `window._newModelIntentionalNav` is
+  set — the flag Save and Cancel raise so their own deliberate
+  navigation cannot self-trigger the prompt. **That third part is the
+  one worth copying**: without an intentional-nav flag every Save and
+  every Discard fires the browser's own leave-confirmation on the way
+  out. The reviewer-surface version is the same shape against the
+  `data-rs-*` hooks — a per-page dirty marker, an intentional-nav flag
+  raised by Save and Discard, one listener.
 - **What lands later.** A new inline `<script>` block wiring the
   `data-rs-*` hooks — dirty tracking, in-place Discard, and the
   `beforeunload` handler. No template restructuring needed; the
@@ -1312,11 +1336,9 @@ artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
 and column-type ergonomics. **Segment 17B owns these**, pursued as
 targeted progressive enhancement (debounced `fetch` to `POST /save`,
-small inline scripts, CSS) — *not* a JS
-data-grid framework. (Sticky column headers are the one item 17B
-investigated and dropped — see below.) A wholesale grid swap
-(AG Grid or equivalent)
-was considered and taken off the roadmap as overkill; it is
+small inline scripts, CSS) — *not* a JS data-grid framework. (Sticky
+column headers are the one item ruled out — see below.) A wholesale
+grid swap (AG Grid or equivalent) is off the roadmap as overkill, and
 recorded as an aspirational possibility in
 `guide/deferred_consolidated.md`. Notes on how the surface stays
 compatible either way:
@@ -1334,34 +1356,36 @@ compatible either way:
   alongside the row data, so the ergonomics work needs no route or
   view-adapter change — and the same payload would also feed a
   JS-driven grid unchanged, should one ever be adopted.
-- **What has shipped (Segment 17B).** *Keyboard navigation* — Tab
-  walks cells across a row natively; Enter / Shift+Enter move focus
-  down / up a column (an Enter `keydown` handler on `.rs-paginated`
-  intercepts the form submit; textareas keep native Enter for
-  newlines). *Visible progress* — the session-wide status pill plus
-  the per-instrument `Required / All items completed` pills (see
-  "Session-wide status pill" and "Above the table" above). The
-  action row was also reordered to Save / Discard / Submit /
-  divider / Page #N.
-- **What lands later (Segment 17B).** Return-to-place (preserve
-  scroll position across save / reload) is the remaining 17B
-  ergonomics item. Cell autosave and filter-to-incomplete were
-  deferred to `guide/deferred_consolidated.md`
-  (2026-05-16) — both are pure progressive enhancement built only
-  if pilot feedback asks. None of this was ever an all-or-nothing
-  bundle gated on a grid library; that bundling was the AG-Grid
-  framing, now off the roadmap.
-- **Investigated and dropped — sticky column headers.** Pinned as
-  first-class by `visual_style_rrw.md`, but dropped in Segment 17B
-  (2026-05-16). `position: sticky` on the `<th>` row does nothing
-  useful here: the `.table-scroll` wrapper's `overflow-x` forces
-  an `overflow-y` scroll context, so the header sticks relative to
-  that wrapper rather than the window — and the wrapper has no
-  height, so it never scrolls internally. The only working fix is
-  to give the table its own vertical scroll viewport (a
-  `max-height` box), turning a long reviewee list into an internal
-  scroll region; that scroll-model change was judged not worth it.
-  The surface keeps whole-page scroll and a non-sticky header.
+- **Already in place.** *Visible progress* — the session-wide status
+  pill plus the per-instrument `Required items completed` /
+  `All items completed` pills (see "Session-wide status pill" and
+  "Above the table" above). Cell-to-cell **Tab** works natively, with
+  no script. The action row is ordered Save / Discard / Submit /
+  divider / page navigation.
+- **Not in place — Enter / Shift+Enter column navigation.** The
+  reviewer surface wires **no `keydown` handler at all**, and there is
+  no `.rs-paginated` wrapper to hang one on. Whatever adds it carries
+  two obligations: Enter inside a `<textarea>` stays a newline, and
+  Enter anywhere in the table must not submit the page `<form>`.
+- **What lands later.** Return-to-place (preserve scroll position
+  across save / reload) is the remaining ergonomics item. Cell
+  autosave and filter-to-incomplete are deferred to
+  `guide/deferred_consolidated.md` — pure progressive enhancement,
+  built only if pilot feedback asks for them. **None of these is
+  gated on any other**: each is an independent inline script against
+  the markup hooks already rendered, and treating them as one
+  all-or-nothing bundle is what a grid-library framing does to them.
+- **Ruled out — sticky column headers.** `visual_style_rrw.md` pins
+  them as first-class; they do not work on this surface and are not
+  attempted. `position: sticky` on the `<th>` row does nothing useful
+  here: the `.table-scroll` wrapper's `overflow-x` forces an
+  `overflow-y` scroll context, so the header sticks relative to that
+  wrapper rather than the window — and the wrapper has no height, so
+  it never scrolls internally. The only working fix is to give the
+  table its own vertical scroll viewport (a `max-height` box),
+  turning a long reviewee list into an internal scroll region; that
+  scroll-model change is not worth a sticky header. The surface keeps
+  whole-page scroll and a non-sticky header.
 
 ---
 

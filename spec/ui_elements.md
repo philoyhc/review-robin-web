@@ -417,133 +417,110 @@ everywhere, so "you can click this" reads the same way on every control.
 
 > **Row pager** — a table longer than one page carries the cluster described in §10 (`.table-pager-cluster`), above it and again below it. See there for the shape; `spec/setup_pages.md`, `spec/assignments.md` and `spec/operations_pages.md` carry the per-page behaviour.
 
-> **Default table** — header row in `bg-muted` with small
-> medium-weight `text-secondary` labels; body rows white with
-> `border-subtle` 1px bottom border per row; no zebra; subtle
-> hover tint.
-> *Current:* global `table` rule in `base.html` uses
-> `border-collapse: collapse; width: 100%`; `th, td { border: 1px
-> solid var(--border-default); padding: 4px 8px; }` (full grid, every
-> cell bordered). **The border is tokenized** — that half of the
-> migration delta below is done, and since 19C Item 8
-> `--border-default` resolves to `--slate-dim` in both themes. What
-> remains divergent from visual_style_general.md is the shape, not the
-> colour: full grid lines (spec calls for row-only) and tight `4px 8px`
-> cell padding (spec calls for `12px 16px`). *(Corrected 2026-09-08 at
-> 19C's close — this read `#ddd`, a literal the file stopped using.)*
-> *Canonical:* row-only borders, generous cell padding, hover tint.
-> *Migration delta:* rewrite global `th, td` rules; some dense
-> tables (Display Fields, Response Fields, RTD on instruments
-> page) may need a `.table-dense` opt-in if 12/16 padding makes
-> them too tall.
-> *PR:* E (tables).
+> **Default table** — `border-collapse: collapse; width: 100%`, and
+> **row-only borders**: `th, td` set `border: 0` then one
+> `border-bottom: 1px solid var(--border-default)`, so a row reads as a
+> row rather than as a grid of cells. Padding is
+> `var(--space-3) var(--space-4)` (12px / 16px). Header cells fill with
+> `--surface-muted` and carry `--fs-small` labels at weight 500 in
+> `--text-subtle`; body rows take the card's fill and a
+> `--surface-muted` hover tint. **No zebra striping** — the row borders
+> already separate the rows, and a second separator is decoration.
+> Colours come from tokens, never literals: `--border-default` carries
+> every bordered surface in the app and has to be free to move for
+> contrast without a hex here going stale (`spec/color_tokens.md`).
 
-> **`.table-scroll`** — wrapper that adds `overflow-x: auto` for
-> wide tables.
-> *Current:* one rule in `base.html`. Used widely on
-> `instruments_index.html` and around `review_surface.html`'s
-> response table.
-> *Canonical:* keep as-is.
-> *Migration delta:* none.
+> **`.table-scroll`** — a wrapper adding `overflow-x: auto`, so a wide
+> table's overflow stays inside its card instead of scrolling the page.
+> Used on `instruments_index.html` and around `review_surface.html`'s
+> response table. See §10 for which tables need it and which measure
+> inside their card and go without.
 
-> **`.col-shrink`** — width-1% no-wrap idiom for action columns
-> that should hug the right edge.
-> *Current:* one rule in `base.html`. Used on
-> `sessions_list.html` Actions column.
-> *Canonical:* keep; rename in docs to "shrink-to-fit column" for
-> clarity.
-> *Migration delta:* none.
+> **`.col-shrink`** — the shrink-to-fit column idiom: `width: 1%` plus
+> `white-space: nowrap`, for an action column that should hug the right
+> edge. Used on `sessions_list.html`'s Actions column.
 
 > **Reviewer-table column-width hints (`.rs-narrow`,
 > `.rs-reviewee`, `.rs-textlong`)** — column-shape hints for the
-> response-input table on the reviewer surface.
-> *Current:* defined in `base.html`, applied dynamically in
-> `review_surface.html` based on RTD `data_type`.
-> *Canonical:* keep. These are reviewer-surface specific and
-> don't conflict with the general table treatment.
-> *Migration delta:* none beyond palette token swap during PR A.
+> response-input table on the reviewer surface, defined in `base.html`
+> and applied by `review_surface.html` from each response field's
+> `data_type`. Reviewer-surface specific; they shape widths only and do
+> not conflict with the general table treatment.
 
 ### 8. Forms / inputs
 
-> **Text input / textarea / datetime-local** — white bg,
-> `border-default`, `border-radius: 6px`, body text size,
-> `8px / 12px` padding.
-> *Current:* global `input[type="text"], textarea,
-> input[type="datetime-local"]` rule in `base.html` uses
-> `border: 1px solid var(--border-default); border-radius: 6px;
-> padding: 8px; font-size: 1em; width: 100%`. Close to spec; padding is
-> even 8px instead of 8/12. **The border is tokenized**, so the colour
-> divergence this entry recorded is closed. *(Corrected 2026-09-08 at
-> 19C's close — this read "border color is `#ddd` rather than
-> `border-default` (`#D1D5DB`)", wrong twice over: the rule had been
-> tokenized, and `#D1D5DB` was `--border-default`'s **pre-Item-8**
-> value. Item 8 repointed it to `--slate-dim` for 3:1 contrast, so a hex
-> written here would go stale again — see `spec/color_tokens.md`.)*
-> *Canonical:* asymmetric padding `8px 12px`; tokenize border.
-> *Migration delta:* small.
-> *PR:* F (forms).
+> **Text inputs** — one rule covers `input[type="text"]`,
+> `datetime-local`, `number`, `email`, `file`, `textarea` **and**
+> `select`, so a form does not change shape by changing field type:
+> `width: 100%`, `padding: var(--space-2) var(--space-3)` (8px / 12px),
+> `--fs-body`, `border: 1px solid var(--border-default)`,
+> `border-radius: var(--radius-button)`, filled `--surface-page` with
+> `--text-body`. Tokens, not literals — `--border-default` moves for
+> contrast and a hex written here would go stale
+> (`spec/color_tokens.md`).
+> **Focus is two-layered.** `:focus` recolours the border to
+> `--focus-ring` and adds a 1px `--focus-ring-halo` shadow; `:focus-visible`
+> adds a 2px `--focus-ring` outline on top, so the strong ring is
+> keyboard-only and a mouse click does not draw it.
+> **`textarea` resizes vertically only** — a long entry grows downward; a
+> horizontal drag would pull it wider than its column and break the page
+> grid.
+> **`input[type="number"]` hides its native spinners** — the reviewer
+> surface uses numeric inputs for HTML5 `min` / `max` enforcement, not for
+> spinner-driven entry.
 
-> **`<select>` / `<input type="file">` / `<input type="number">`
-> / `<input type="checkbox">` / `<input type="radio">`** —
-> currently un-styled (browser defaults). visual_style_general.md does
-> not yet specify treatment.
-> *Current:* browser defaults.
-> *Canonical:* spec to be written. For #21 we adopt the minimum:
-> match `input[type="text"]` border-color and radius on `select`;
-> leave checkbox / radio as native; leave `file` as native.
-> *Migration delta:* minor — `select` only.
-> *PR:* F (forms).
+> **`<input type="checkbox">` / `<input type="radio">`** — left native.
+> No treatment is specified, deliberately: a restyled checkbox has to
+> reimplement the indeterminate, focus and forced-colors states the
+> platform already ships.
 
-> **Label** — above the input, small text size, `text-primary`
-> medium weight, 4px gap.
-> *Current:* global `label` rule in `base.html`:
-> `display: block; margin-top: 12px; font-weight: 600`. Bold
-> rather than medium; 12px stack rather than 4px.
-> *Canonical:* `font-weight: 500`, `margin-bottom: 4px` to the
-> input that follows; the 12px section-stack belongs on the
-> wrapping form group, not the label.
-> *Migration delta:* tune.
-> *PR:* F (forms).
+> **Label** — `display: block`, `--fs-small` at weight 500 in
+> `--text-body`, with `margin: var(--space-3) 0 var(--space-1) 0`: 12px
+> above to separate one field from the last, 4px below to bind the label
+> to its own input. A nested label that sits inside a flex row with its
+> own gap **must reset that top margin** or the two stack; three rules in
+> `base.html` do so and say why.
 
-> **Helper text / error text** — currently inconsistent (mix of
-> `<p class="muted">` and inline `<small>`).
-> *Canonical:* small text size, `text-secondary` for help,
-> `accent-red` for error, sit below the input.
-> *Migration delta:* introduce `.form-help` and `.form-error`
-> classes; sweep usages.
-> *PR:* F (forms).
+> **Helper text / error text** — `.form-help` (`--fs-small` in
+> `--text-subtle`) and `.form-error` (`--fs-small` in
+> `--status-error-accent`), both below the input. Use these rather than a
+> `<p class="muted">` or a bare `<small>`, so supporting text is one
+> treatment app-wide.
 
 > **Inline-edit pattern (`.display-edit`, `.instrument-edit`,
-> field-builder details/summary)** — `<details>` shells for inline
-> label edits with tick/cross affordances. Used on the
-> Instruments page.
-> *Current:* defined in `base.html` and `domain_assumptions.md`. Works.
-> *Canonical:* keep; verify the toggled-in inputs pick up the
-> standard input treatment after PR F.
-> *Migration delta:* none structurally.
+> field-builder `<details>` / `<summary>`)** — `<details>` shells for
+> inline label edits with tick / cross affordances, defined in
+> `base.html` and used on the Instruments page. `.field-builder.locked`
+> suppresses the summary's pointer and hides the edit / delete / add-row
+> affordances, so a locked builder reads as inert rather than as broken.
 
 ### 9. Badges / pills
 
-Pilot-validated. Pill shape (`9999px` radius, tiny uppercase text,
-medium weight 500). Used both standalone (status indicators) and
-inline in copy — e.g. confirm labels wrap count phrases as pills so
-the eye lands on the numbers without bolding the whole sentence.
+The base `.pill`: `padding: 2px var(--space-2)`,
+`border-radius: var(--radius-pill)` (9999px), `--fs-tiny` at weight 500,
+`text-transform: uppercase`, and `border: 1px solid transparent`.
+**Every pill reserves the edge's space** even when it has no edge, so
+adding one to the interactive chips does not grow them by 2px and reflow
+every table where a status label sits beside a toggle (see "Label or
+control" below). Pills are used standalone as status indicators and
+inline in copy — confirm labels wrap count phrases as pills so the eye
+lands on the numbers without bolding the whole sentence.
 
-| v1 (`.pill` modifier) | v2 canonical | Notes |
+| Class | Fill / text | Notes |
 |---|---|---|
-| `.pill` (base) | base pill — uppercase tiny text, weight 500 | text-transform: uppercase kept from v1 |
-| `.pill-info` (blue) | aliased to **`.pill-count`** under v2 — `accent-blue-bg` background, `text-primary` text | the blue tint signals "this is information" without implying state. Existing `.pill-info` markup picks up the new treatment. |
-| `.pill-warning` (amber) | aliased to **`.pill-empty`** under v2 — `accent-amber-bg` background, `accent-amber-dark` text | warning brown, matches the `.card.lock` / `.card.danger-zone` border color so chips and surfaces share one warning language. Existing `.pill-warning` markup picks up the new treatment. |
-| `.pill-success` (green) | **`.pill-success`** — `--status-success-bg` / `--status-success-fg` | keeps its v1 name; unchanged from v1 in spirit |
-| `.pill-error` (red) | **`.pill-error`** — `--status-error-bg` / `--status-error-fg` | keeps its v1 name; for validation-summary error counts |
-| `.pill-handle` (grey monospace) | **`.pill-handle`** — keep | tokenize colors |
+| `.pill-count`, `.pill-info` | `--status-info-bg` / `--text-body` | **One rule for both names.** The blue tint says "this is information" without implying a state. |
+| `.pill-empty`, `.pill-warning` | `--status-warning-bg` / `--status-warning-fg` | **One rule for both names.** The warning brown matches the `.card.lock` / `.card.danger-zone` framing, so chips and surfaces share one warning language. |
+| `.pill-success` | `--status-success-bg` / `--status-success-accent` | Not `--status-success-fg`: the two share a value in light and diverge in dark. |
+| `.pill-error` | `--status-error-bg` / `--status-error-fg` | Validation-summary error counts. |
+| `.pill-super` | `--status-super-bg` / `--status-super-fg` | The super-admin tier badge — violet, so the protected top tier is not read as an ordinary blue info pill. |
+| `.pill-handle` | `--surface-muted` / `--text-body` | Monospace, and the one pill that is **not** uppercased — a handle is a literal string and case is part of it. |
 
 ### Label or control
 
-A pill states a fact; a chip offers a click. They shared one look until
-2026-09-11, when the only difference was `cursor: pointer` — invisible
-until the pointer is already on the element, absent on touch, and absent
-from every screencap in the Guide.
+A pill states a fact; a chip offers a click. **That difference has to be
+visible without a pointer.** `cursor: pointer` is the whole distinction
+only while the cursor is already on the element; it says nothing on touch
+and nothing in a screencap.
 
 **Every interactive chip carries a 1px edge in the reserved accent
 shade** (`--blue-strong` / `--blue-glow` — see
@@ -561,33 +538,38 @@ Three rules make that work:
   blanket `background: transparent` reads as the tidier rule and trades
   one signal away for the other.
 - **Every `.pill` reserves the space.** The base rule carries
-  `border: 1px solid transparent`, and the 2px comes from an inset
-  shadow rather than `border-width`, so a chip is exactly as tall as the
-  status label beside it and adding an edge reflows nothing.
+  `border: 1px solid transparent` and the edge comes from an inset
+  shadow rather than a wider `border-width`, so a chip is exactly as tall
+  as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
   `cursor: default` and is the one inert chip in the vocabulary; a chip
   that says it cannot be clicked must not also say it can.
 
-`.severity-chip` on Validate is the precedent this generalises: an
-outlined pill since long before, with `.active` taking the shade on its
-border and text.
+`.severity-chip` on Validate is the shape this generalises: an outlined
+pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
 a chip says its filter is on, and it appears only on controls.
 `tests/integration/test_chip_edge.py` pins the treatment;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static.
 
-> **Lifecycle badges (specific to status strip)** — per
-> `spec/visual_style_rrw.md` "Lifecycle state colors":
-> - `draft` → warning amber (`accent-amber-dark` on `accent-amber-bg`)
-> - `validated` → muted blue (`accent-blue`)
-> - `ready` → muted green (`accent-green`); rendered as "Activated"
->   in user copy via the lifecycle display-label mapping
->   (`spec/session_home.md`)
-> One `.pill-lifecycle-*` set covers all five states — `draft`,
-> `validated`, `ready`, `expired`, `archived`. The lifecycle badge
-> always renders through this set, never through a generic
-> `pill-info`.
+> **Lifecycle badges** — one `.pill-lifecycle-*` set covers all five
+> states, each on its own token pair so a state's colour can move without
+> touching the status vocabulary:
+> - `draft` → `--lifecycle-draft-bg` / `-fg` (warning amber — the same
+>   "needs work" treatment as `.pill-empty`, because a draft session is
+>   not ready for action)
+> - `validated` → `--lifecycle-validated-bg` / `-fg` (blue)
+> - `ready` → `--lifecycle-ready-bg` / `-fg` (green)
+> - `expired` → `--lifecycle-expired-bg` / `-fg` (red — the same
+>   treatment as the reviewer dashboard's "closed" pill, so the
+>   post-window state reads consistently across surfaces)
+> - `archived` → `--lifecycle-archived-bg` with `--text-body`
+> **The lifecycle badge always renders through this set**, never through a
+> generic `pill-info`. Operator-facing labels come from the display-label
+> mapping in `app/services/lifecycle_display.py` (`ready` → "Activated",
+> `expired` → "Closed"), never from the raw enum; see
+> `spec/session_home.md` and `spec/lifecycle.md`.
 
 > **Status-symbol indicators (✓ / ⚠ in reviewer response table)**
 > `.status-icon-complete` and `.status-icon-incomplete`, defined in
@@ -598,53 +580,52 @@ a chip says its filter is on, and it appears only on controls.
 
 ### 10. Layout primitives
 
-Most of these are already canonical. The audit confirmed they're
-used consistently; the migration just tokenizes their colors and
-spacing.
+One row per primitive. Colours and spacing come from tokens throughout.
 
-| Class | Status | PR |
-|---|---|---|
-| `.page-grid` + placement classes (`.card-tl/r/bl/l/tr/br`) | keep, gap → spacing token | A |
-| `.bottom-grid` + `.bottom-left` | keep, gap → token | A |
-| `.btn-row` (equal-flex) | keep | — |
-| `.btn-pair` (inline pair) | keep | — |
-| `.setup-grid` (4-col grid for Session Setup card) | keep | — |
-| `.fill-col` (flex column where last child grows) | keep | — |
-| `.card-half` (`max-width: calc(50% - 10px)`) | keep | — |
-| `.session-meta-row`, `.session-status-row` | keep | — |
-| `.field-builder` + `.field-builder.locked` | keep | — |
-| `.subcard-row` (+ `.stepped`, `.subcard-arrow`) — equal-width tile row inside a card | added 2026-09-07 | — |
-| `.guide-figure` (+ `.guide-figure-narrow`) — screencap figure on `/guide` | added 2026-09-07 | — |
-| `.table-scroll` (`overflow-x: auto`) — a wide table's overflow stays inside its card instead of scrolling the page. On the three Operations preview tables, whose chip-hidden columns make them wider than the card by construction; the Setup rosters measure inside theirs and go without | — | — |
-| `.chip-group` — one labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips. Assignments has three | added 2026-09-10 | — |
-| `.col-chip-row` (+ `[data-col-toggles-for]`, `[data-col-toggle]`, `[data-rrw-col-toggles]`) — the column-visibility chips above a table. A chip is `role="button" tabindex="0"` and toggles `col-hidden-{slot}` on the table it names; each page maps its own slots to its own column classes, so the slot vocabulary is not fixed here. The storage key lives on the **table** (`[data-rrw-col-toggles]`) and a page may carry several chip rows against one table — Assignments groups nine slots into three. **Both behaviours are delegated on `document` (19K.2)**: a chip rendered after load works with no registration, because the handler resolves its row, table and storage key from the event target with `closest`. **A re-rendered table card must call two hooks** — `window._rrwHydrateColToggles()` to restore the operator's saved columns, and `_rrwHydrateFromCookies()` to repaint the sort badges — because delegation keeps a chip *clickable* while the server re-renders it all-visible, and neither state is in the markup | added 2026-09-11 | — |
-| `.bottom-grid > .grid-right` (`grid-column: 2`) — a lone card held to the right-hand column at half width. Without it a single child of a `1fr 1fr` grid lands in column 1 and reads as a card that failed to fill the row | added 2026-09-10 | — |
-| `.session-row-selected` — a selected row on the sessions lobby or its archived child page (19L.3). **A rail at each end, and no fill**: `--selected-bg` as a `box-shadow: inset 6px 0 0` on `td:first-child` and `inset -6px 0 0` on `td:last-child`. Inset shadows rather than borders, so selection does not change the row's height and reflow the table under the pointer; no top or bottom cap, for the same reason. **The absent fill is the design, not an omission.** 19L.1 shipped a fill too (`--row-selected-bg`); it resolved to `--status-info-bg`'s own primitives, which under `body.ui-v2` back both `.pill-count` and `.pill-info` from one rule, so every pill on a selected row went invisible. No replacement escapes it — the six pale pill fills sit between relative luminance 0.810 and 0.914 against a 1.000 card, so there is no clearance above the band and the only clearance below it is dark enough to stop reading as a highlight. **The panel closes the bracket**: the injected expander row carries `.session-expander-bracketed`, whose single `colspan` cell is first and last child at once and so takes both rails in one declaration, over `--selection-panel-bg` — the renamed token carrying the fill's old primitives. Opt-in by class because `sessions_archived.html` injects a panel with the same `session-expander` class names from its own script; an unscoped rule would style both pages at once. **Since 19L.3 that page opts in too** — it marks its rows on this same convention, with its own copy of the marking function, because the two scripts have diverged deliberately. Before 19L.3 it marked no rows, so an unscoped rule would have given it a bracket with no top; the class is still the gate, and what it gates is now two pages. **The panel is therefore a pill-free zone**: its fill is `--status-info-bg`'s primitive, so a `.pill-count` rendered inside it reopens the collision one storey down. **Still not a general primitive**: named here so it is findable, deliberately not promoted. It has two callers as of 19L.3 — the lobby and its archived child — but they are one surface family, not evidence of generality. The author declined promotion on 2026-09-12 (*"Local lobby"*), and the speculative third, a Rosters index, is recorded in `guide/new_ux_ideas.md` with the transfer question stated rather than assumed: this was designed for one wide row in a tall table of *like* things. **Not scanned by `tests/unit/test_reserved_shade.py`, and not exempted from it**: that guard's filter is pill / chip / `btn-icon` classes, because its subject is elements with a dual nature — a `<tr>` has one. Applied in `refreshExpander()`, the single funnel every selection path meets, clearing all rows each pass before marking the selected set | added 2026-09-12 | restyled 19L.2; second caller 19L.3 |
-| `.table-pager-cluster` (+ `.table-pager-cluster-bottom`, `.table-pager-step`, `.table-pager-menu`, `.table-pager-menu-panel`, `.table-pager-menu-item`, `.table-pager-anchored`) — the row pager on the seven roster-bearing tables, rendered above the table and again below it. **Five cells**: `«` first, `‹` back, a range menu, `›` forward, `»` last — so any page is one move away whatever the roster size. Ranges (`201–400`), not page numbers. Suppressed whenever a search or status filter is active. The four steps are the `.btn-icon` role and carry no link underline; at the ends they render **in place and inactive** (`<span aria-disabled>`, never absent, or the other cells shift sideways as the operator pages) and take no accent fill — the shade `--blue-strong` / `--blue-glow` stays reserved for things that act, and an inactive step does not. The menu is a `<details>` holding every range as an anchor, **not** a `<select>`: a select navigating on `change` fires on every arrow key, so a keyboard user reaching the fifth option would navigate five times. Its summary names the current range, so one element says where you are and is the way to leave; the current entry is a `<span aria-current="page">` marked by weight and a muted fill. Every cell is an anchor — the pager needs no script to navigate; one delegated `document` listener closes the menu on an outside click or Escape. Each href carries a `#<noun>-table-card` fragment so a page turn arrives at the **table's card**: its top edge, then the column chips, then the cluster, then the new rows. The id sits on the card with a `scroll-margin-top` so the top border reads as a boundary rather than a crop; the route supplies the id, the pager never derives it. The cluster shares the chip line where it fits and wraps to its own line where it does not — the chip row's width is operator data, and a roster with no tags renders no chip row at all, so the row belongs to the cluster and the chips join it | added 2026-09-11 | — |
+| Class | Notes |
+|---|---|
+| `.page-grid` + placement classes (`.card-tl` / `-tr` / `-bl` / `-br`) | Equal-height two-column grid with explicit placement, for the L-shape layouts that need the stretch. `.bottom-grid` is preferred for a new pairing (see below). |
+| `.bottom-grid` + `.bottom-left` | Two-column grid at `align-items: start`, so each side keeps its natural height instead of stretching to match the taller column. `.bottom-left` is the flex column for stacking several cards on one side. |
+| `.btn-row` (equal-flex) | A row of buttons sharing the width equally. |
+| `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. |
+| `.setup-grid` (4-col grid for the Session Setup card) | |
+| `.fill-col` (flex column whose last child grows) | |
+| `.card-half` (`max-width: calc(50% - 10px)`) | |
+| `.session-meta-row`, `.session-status-row` | |
+| `.field-builder` + `.field-builder.locked` | The Display Fields / Response Fields builder, and its inert form (§8). |
+| `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
+| `.guide-figure` (+ `.guide-figure-narrow`) | The `/guide` screencap figure. Detailed below. |
+| `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. On the three Operations preview tables, whose chip-hidden columns make them wider than the card by construction; the Setup rosters measure inside theirs and go without |
+| `.chip-group` | One labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips. Assignments has three |
+| `.col-chip-row` (+ `[data-col-toggles-for]`, `[data-col-toggle]`, `[data-rrw-col-toggles]`) | The column-visibility chips above a table. A chip is `role="button" tabindex="0"` and toggles `col-hidden-{slot}` on the table it names; each page maps its own slots to its own column classes, so the slot vocabulary is not fixed here. The storage key lives on the **table** (`[data-rrw-col-toggles]`) and a page may carry several chip rows against one table — Assignments groups nine slots into three. **Both behaviours are delegated on `document` (19K.2)**: a chip rendered after load works with no registration, because the handler resolves its row, table and storage key from the event target with `closest`. **A re-rendered table card must call two hooks** — `window._rrwHydrateColToggles()` to restore the operator's saved columns, and `_rrwHydrateFromCookies()` to repaint the sort badges — because delegation keeps a chip *clickable* while the server re-renders it all-visible, and neither state is in the markup |
+| `.bottom-grid > .grid-right` (`grid-column: 2`) | A lone card held to the right-hand column at half width. Without it a single child of a `1fr 1fr` grid lands in column 1 and reads as a card that failed to fill the row |
+| `.session-row-selected` | A selected row on the sessions lobby and on its archived child page. **A rail at each end, and no fill**: `--selected-bg` as a `box-shadow: inset 6px 0 0` on `td:first-child` and `inset -6px 0 0` on `td:last-child`. Inset shadows rather than borders, so selection does not change the row's height and reflow the table under the pointer; no top or bottom cap, for the same reason. **No fill.** A row fill resolves to the same primitives that back `.pill-count` and `.pill-info` from one rule, so it erases every pill the row carries; the six pale pill fills sit between relative luminance 0.810 and 0.914 against a 1.000 card, leaving no clearance above the band, and the only clearance below it is dark enough to stop reading as a highlight. **The panel closes the bracket**: the injected expander row carries `.session-expander-bracketed`, whose single `colspan` cell is first and last child at once and so takes both rails in one declaration, over `--selection-panel-bg`. **Opt-in by class**, because `sessions_list.html` and `sessions_archived.html` inject panels with the same `session-expander` class names from their own scripts, which have diverged deliberately; an unscoped rule would style both pages at once whether or not each marks its rows. **The panel is a pill-free zone**: its fill resolves to `--status-info-bg`'s primitive, so a `.pill-count` rendered inside it reopens the collision one storey down. **Not a general primitive**: named here so it is findable, deliberately not promoted. Its two callers are one surface family, not evidence of generality; a speculative third, a Rosters index, is recorded in `guide/new_ux_ideas.md` with the transfer question stated rather than assumed — this was designed for one wide row in a tall table of *like* things. **Not scanned by `tests/unit/test_reserved_shade.py`, and not exempted from it**: that guard's filter is pill / chip / `btn-icon` classes, because its subject is elements with a dual nature — a `<tr>` has none. Applied in `refreshExpander()`, the single funnel every selection path meets, which clears all rows each pass before marking the selected set |
+| `.table-pager-cluster` (+ `.table-pager-cluster-bottom`, `.table-pager-step`, `.table-pager-menu`, `.table-pager-menu-panel`, `.table-pager-menu-item`, `.table-pager-anchored`) | The row pager on the seven roster-bearing tables, rendered above the table and again below it. **Five cells**: `«` first, `‹` back, a range menu, `›` forward, `»` last — so any page is one move away whatever the roster size. Ranges (`201–400`), not page numbers. Suppressed whenever a search or status filter is active. The four steps are the `.btn-icon` role and carry no link underline; at the ends they render **in place and inactive** (`<span aria-disabled>`, never absent, or the other cells shift sideways as the operator pages) and take no accent fill — the shade `--blue-strong` / `--blue-glow` stays reserved for things that act, and an inactive step does not. The menu is a `<details>` holding every range as an anchor, **not** a `<select>`: a select navigating on `change` fires on every arrow key, so a keyboard user reaching the fifth option would navigate five times. Its summary names the current range, so one element says where you are and is the way to leave; the current entry is a `<span aria-current="page">` marked by weight and a muted fill. Every cell is an anchor — the pager needs no script to navigate; one delegated `document` listener closes the menu on an outside click or Escape. Each href carries a `#<noun>-table-card` fragment so a page turn arrives at the **table's card**: its top edge, then the column chips, then the cluster, then the new rows. The id sits on the card with a `scroll-margin-top` so the top border reads as a boundary rather than a crop; the route supplies the id, the pager never derives it. The cluster shares the chip line where it fits and wraps to its own line where it does not — the chip row's width is operator data, and a roster with no tags renders no chip row at all, so the row belongs to the cluster and the chips join it |
 
-**Retired 2026-09-11 (19J.9):** `.table-pager`, `.table-pager-bottom`,
-`.table-pager-link`, `.table-pager-gap`, `.table-pager-jump` — the range
-strip the cluster replaced. It listed a five-wide window of ranges with
-First / Last hung off the ends and `…` for each elided gap, which bounded
-the strip's width and left its reach at two pages per click whatever the
-roster size: five clicks to row 2,400 of 5,861, fifty to the middle of
-40,000. Named here because the class names appear in plans and commit
-messages from 19J.5 through 19J.8, and a reader who greps for one should
-find out that it is gone rather than that the spec is silent.
+**Do not bring back the range strip.** `.table-pager`,
+`.table-pager-bottom`, `.table-pager-link`, `.table-pager-gap` and
+`.table-pager-jump` are not in use and must not return: a five-wide
+window of ranges with First / Last hung off the ends and `…` for each
+elided gap bounds the strip's width, and so bounds its reach at two pages
+per click whatever the roster size — five clicks to row 2,400 of 5,861,
+fifty to the middle of 40,000. The cluster's five fixed cells reach any
+page in one move instead. `tests/integration/test_pager_link_style.py`
+asserts no rule for those selectors survives, on the principle that a
+rule for markup nothing renders leaves the next reader working out
+whether it is dead or whether they have missed the page that uses it.
+The names are listed here because they appear in older plans and commit
+messages, and someone grepping one should find out that it is gone rather
+than that the spec is silent.
 
 **A page turn reloads the page, and that is settled rather than
 pending.** Swapping the table in place — a fragment endpoint per page,
 the table markup extracted to a partial, history handling — was measured
 against the reload and **rejected outright, not deferred**.
 
-Measured 2026-09-11, on local SQLite rather than Azure Postgres: the
-reload costs ~413 KB and 21 ms at 556 rows (116 ms at 5,000), and the
-swap's real precondition is 928 lines of table markup inline across
-seven templates, none of it in a partial. Treat those figures as a
-dated snapshot — the assessment they come from was wrong once already,
-and corrected itself twice.
-
-But the deciding argument is intent, not cost. The one case a reload is
+The cost is not the deciding argument, and the measurements behind it are
+in `guide/archive/inplace_pagination_assessment.md` — re-take them rather
+than trusting them, as that document itself says. What decides it is
+intent. The one case a reload is
 mildly jarring is a click on the **bottom** pager strip, which sends the
 viewport back up; an operator who turns a page and then stays on it is
 almost always intending to read the new range from its start, so the
@@ -656,9 +637,7 @@ Build the swap only if something else comes to need it — live-updating
 rows, or a page turn that must not lose an in-progress edit — never to
 fix the scroll. If it is ever built, the partial extraction lands first
 on its own with no behaviour change, so the swap rung is a swap and not
-a rewrite. The measurements and the three cheaper options considered are
-in `guide/archive/inplace_pagination_assessment.md`; re-take the numbers
-rather than trusting them, as that document itself says.
+a rewrite.
 
 `.setup-nav` is a candidate for deletion (see §2).
 
@@ -691,8 +670,8 @@ padding *is* the gap; leaving both would double the space either side
 of every arrow. Tiles keep `minmax(0, 1fr)`, so arrows narrow them
 rather than widening the row.
 
-`→` (U+2192) is the app's established arrow — 151 uses across the
-templates when this landed — so this introduces no new vocabulary.
+The glyph is `→` (U+2192), which is the app's established arrow — this
+introduces no new vocabulary, and a second arrow character would.
 Arrows render at `--text-subtle`: the tiles are the content and the
 arrow is punctuation.
 
@@ -703,14 +682,14 @@ noise. Below 900px the row wraps to two columns and a horizontal arrow
 between stacked tiles points at nothing, so the arrows go and the plain
 column gap comes back.
 
-*A `.subcard` class shipped alongside the row on 2026-09-07 and was
-retired the same day.* It duplicated `.data-shape-card`'s tile shape,
-and a second answer to "bordered thing inside a bordered thing" earns
-a reader nothing. Reach for `.rs-help-card` in a `.subcard-row`; if a
-row ever wants tiles that are genuinely not help cards, give them an
-existing card variant rather than a new tile look.
+**The row introduces no tile class of its own, and must not acquire one.**
+`.data-shape-card` already answers "bordered thing inside a bordered
+thing", and a second answer earns a reader nothing. Reach for
+`.rs-help-card` inside a `.subcard-row`; if a row ever wants tiles that
+are genuinely not help cards, give them an existing card variant rather
+than a new tile look.
 
-First user: the sessions-lobby first-run card
+Reference user: the sessions-lobby first-run card
 (`spec/sessions_overview.md`).
 
 **`.guide-figure` / `.guide-figure-narrow`.** The `/guide` screencaps.

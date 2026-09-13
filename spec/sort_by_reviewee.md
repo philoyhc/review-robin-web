@@ -229,13 +229,11 @@ The Display Fields available to sort are scoped to the instrument's own display 
 
 ---
 
-## Implementation pointers — shipped
+## Implementation pointers
 
-13B Part 1 (PRs #867 / #868 / #869) + Part 2 (PRs #873 / #874 /
-#875 / #876 / #877 / #878). Key landmarks in the codebase:
+Key landmarks in the codebase:
 
-- **Schema:** `Instrument.sort_display_fields` JSON column
-  (Segment 13D PR 5, 2026-05-09; lit up by 13B PR 1).
+- **Schema:** `Instrument.sort_display_fields` JSON column.
 - **Service:** `app/services/instruments/_display_fields.py
   ::set_sort_display_fields` with `SortSpecError` (codes
   `too_many` / `unknown_dir` / `duplicate_id` /
@@ -279,11 +277,12 @@ The Display Fields available to sort are scoped to the instrument's own display 
   count. `apply_cookie_sort` collapses `""` to `None` and sorts
   `None` last in both directions, matching the client comparator —
   so a row with nothing to do lands in the same place server-side
-  and after a click. **Assignments left this group in Segment
-  19J.5 rung 4** (2026-09-11): its sort now translates to `ORDER BY`
-  in `assignments.list_pairs` rather than running through
-  `apply_cookie_sort` at all, so paging and sorting compose over the
-  whole matching set instead of a fetched page — see
+  and after a click.
+- **Assignments is not in that group**, and must not be folded back
+  into it: its sort translates to `ORDER BY` in
+  `assignments.list_pairs` rather than running through
+  `apply_cookie_sort`, so sorting composes with paging over the whole
+  matching set instead of reordering one fetched page — see
   `spec/assignments.md` "Sorting the pair list".
 - **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
   carrying the canonical
@@ -291,31 +290,29 @@ The Display Fields available to sort are scoped to the instrument's own display 
   percent-encoded (`encodeURIComponent`) — the SSR decoders
   `unquote()` before parsing.
 - **Tests:**
-  - `tests/unit/test_order_rows_by_sort_spec.py` (13
-    helper unit tests).
-  - `tests/integration/test_set_sort_display_fields.py`
-    (10 service-writer tests).
-  - `tests/integration/test_instruments_sort_column.py` (8
-    operator-UI tests).
-  - `tests/integration/test_reviewer_surface_sort.py` (8
-    integration tests on the reviewer surface).
-  - `tests/integration/test_reviewer_surface_sort_cookies.py`
-    (6 cookie-persistence tests).
-  - `tests/integration/test_setup_tables_sort.py` (12
-    operator-table tests).
-  - `tests/integration/test_assignments_sort.py` (5
-    Operations Assignments tests).
-  - `tests/integration/test_operations_sort.py` (Operations
-    Invitations + Responses, Segment 19I Item 11).
-  - Render: reviewer-side override JS reorders visible rows; reset link returns to default. (Probably JS-via-Selenium; if too costly for this segment, defer to a follow-on PR with explicit deferral note.)
-- **Spec cross-ref updates:** when this lands, update `spec/operator_ui_concept.md` Display Fields section to describe the Sort column; update `spec/reviewer-surface.md` to describe the header-click override.
+  - `tests/unit/test_order_rows_by_sort_spec.py` — the pure helper.
+  - `tests/integration/test_set_sort_display_fields.py` — the
+    service writer and its `SortSpecError` codes.
+  - `tests/integration/test_instruments_sort_column.py` — the
+    operator Sort column.
+  - `tests/integration/test_reviewer_surface_sort.py` +
+    `tests/integration/test_reviewer_surface_sort_cookies.py` — the
+    reviewer surface and its cookie.
+  - `tests/integration/test_setup_tables_sort.py` — the four roster
+    tables.
+  - `tests/integration/test_assignments_sort.py` — Operations
+    Assignments (the `ORDER BY` path).
+  - `tests/integration/test_operations_sort.py` — Operations
+    Invitations + Responses.
+  - **No browser-level coverage.** The reviewer-side JS reorder and
+    the reset link are exercised only through the SSR path and the
+    cookie, so a change to the client comparator can pass the suite.
 
 ---
 
 ## Doc cross-references
 
-- **`spec/operator_ui_concept.md`** — per-instrument Display Fields card layout. The Sort column lands here when implemented.
-- **`spec/reviewer-surface.md`** — review surface table. The header-click override lands here when implemented.
+- **`spec/operator_ui_concept.md`** — per-instrument Display Fields card layout, and the shared `rrw-sort` primitive's adopter list.
+- **`spec/reviewer-surface.md`** — the review-surface table these sorts order.
 - **`spec/quick_setup_card_spec.md`** — adjacent operator-card design pattern (single source of truth for an operator-side feature spec).
-- **`guide/archive/segment_13B_sort_tables.md`** — the implementation plan that picks this up.
-- **`docs/status.md`** "What's deliberately not yet there" — entry pointing here, target Segment 13.
+- **`guide/archive/segment_13B_sort_tables.md`** — the implementation plan, for the record of how this landed.

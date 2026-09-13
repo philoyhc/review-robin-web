@@ -171,9 +171,9 @@ elevation of the operator role, not a separate login.
 
 ### 4.1 System administrator (three-tier model)
 
-Workspace governance is a **strict three-tier hierarchy** with **nested capabilities**
-(super-admin ⊇ admin ⊇ operator) and a **config-anchored top
-tier**:
+Workspace governance is a **strict three-tier hierarchy** with
+**nested capabilities** (super-admin ⊇ admin ⊇ operator) and a
+**config-anchored top tier**:
 
 | Tier | Stored as | Added / revoked by |
 |---|---|---|
@@ -460,8 +460,9 @@ the field's own `data_type`.
 
 There is **no shared type catalogue**: each response field carries
 its own inline `data_type` + bounds rather than referencing a
-shared type row. A small set of pre-filled **List presets** (Boolean / Agreement /
-Grades, in `instruments/_field_presets.py`) is baked into the
+shared type row. A small set of pre-filled **List presets**
+(Boolean / Agreement / Grades, in `instruments/_field_presets.py`)
+is baked into the
 Band 3 type picker for convenience; the preset's identity is not
 stored — only the resulting `data_type` + `list_options`.
 

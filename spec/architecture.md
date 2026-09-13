@@ -1,7 +1,7 @@
 # Architecture Notes
 
-Domain entities, the three-layer
-code split, and the conceptual data-model hierarchy. Per-page
+Domain entities, the three-layer code split, and the conceptual
+data-model hierarchy. Per-page
 surface behaviour lives in the surface specs (`spec/lifecycle.md`,
 `spec/instruments.md`, `spec/assignments.md`,
 `spec/participant_model.md`, `spec/session_home.md`, …); this file
@@ -99,8 +99,8 @@ state) lives here.
 
 **Static assets** — `app/web/static/`, served by the one `StaticFiles`
 mount at `/static` (`app/main.py`). It exists for the Guide's
-screencaps — the first assets that cannot be inlined at a sane size —
-and is a directory of files, not an asset pipeline: CSS remains inline in
+screencaps, which cannot be inlined at a sane size, and is a
+directory of files, not an asset pipeline: CSS remains inline in
 `base.html` per the templating conventions, and nothing here is compiled,
 fingerprinted, or versioned. `app/` ships wholesale in the deploy
 artefact (`.github/workflows/deploy_nus.yml`), so this directory needs no
@@ -382,8 +382,9 @@ if the signed-in user's email doesn't match the invitation's reviewer
 email, and otherwise stamps `opened_at` once and 303s to
 `/me/sessions/{id}`.
 
-The `email_outbox` table is the dev-mode replacement for SMTP. Rows synchronously flip `queued → sent` when the operator
-clicks Send. Real SMTP / production email is deferred to Segment 14B;
+The `email_outbox` table is the dev-mode replacement for SMTP.
+Rows synchronously flip `queued → sent` when the operator clicks
+Send. Real SMTP / production email is deferred to Segment 14B;
 the outbox table itself stays useful for debugging in any environment.
 
 ### Reminders
