@@ -86,7 +86,7 @@ def _roster_with_responses(db: Session, s: ReviewSession, *, n: int) -> None:
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        created_by_mode="manual",
+        created_by_mode="rule_based",
     )
     db.add(a)
     db.flush()

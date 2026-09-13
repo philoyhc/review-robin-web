@@ -64,7 +64,7 @@ def seed_session_with_assignment(
             reviewee_id=reviewee.id,
             instrument_id=instrument.id,
             include=True,
-            created_by_mode="manual",
+            created_by_mode="rule_based",
         )
     )
     # A self-review row as well: the per-instrument self-review toggle
@@ -86,7 +86,7 @@ def seed_session_with_assignment(
             reviewee_id=self_reviewee.id,
             instrument_id=instrument.id,
             include=True,
-            created_by_mode="manual",
+            created_by_mode="rule_based",
             is_self_review=True,
         )
     )

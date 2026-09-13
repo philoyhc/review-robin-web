@@ -54,7 +54,20 @@ class Assignment(Base):
     # ``context: JSON`` retired in 15D PR 6b. ``pair_context_*`` keys
     # lifted to the ``relationships`` table; ``assignment_context_*``
     # keys retired entirely (operator-typed via the manual CSV only).
-    created_by_mode: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
+    # Which mechanism wrote this row. ``AssignmentMode`` has one member,
+    # ``rule_based``, and the rule engine is the only writer in ``app/`` —
+    # it passes the value explicitly, so this default only ever applies to
+    # direct construction (fixtures). It defaulted to ``"manual"`` until
+    # 19N.1, naming a mode retired with the CSV-upload path in 16A PR 5:
+    # a row built without an explicit mode was labelled hand-made when no
+    # hand could make one. The column is kept rather than dropped because
+    # the enum is the seam a second mode would arrive through. Spelled as
+    # a literal rather than importing ``AssignmentMode``: no model imports
+    # from ``app/schemas/``, and one column default is not the reason to
+    # start.
+    created_by_mode: Mapped[str] = mapped_column(
+        String(32), default="rule_based", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

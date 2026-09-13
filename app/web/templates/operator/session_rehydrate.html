@@ -71,6 +71,39 @@
     </div>
   </div>
 
+  {# Commit outcome — rendered only when a rehydrate placed the session
+     but could not place every response. The clean case redirects to the
+     new session's Home instead, so this card never appears for it. The
+     download link is the whole point of staying on the page: a 303
+     cannot carry a file, and a count alone does not say *which* rows
+     were lost. #}
+  {% if outcome %}
+  <div class="card">
+    <h2>Rehydrate finished — with responses dropped</h2>
+    <div class="banner banner-warning">
+      <strong>{{ outcome.dropped_count }}</strong>
+      {{ 'response row was' if outcome.dropped_count == 1 else 'response rows were' }}
+      not restored. Every other response was loaded.
+    </div>
+    <p class="form-help">
+      A response is only restored where a generated assignment can carry
+      it. Assignments are always generated, so a row naming a pair the
+      rules did not produce has no row to attach to and is reported here
+      rather than given one. Download the file to see each dropped row
+      with its reason — it is kept briefly and for you only.
+    </p>
+    <div class="sessions-action-buttons" style="margin-top: var(--space-3);">
+      <a class="btn secondary"
+         href="/operator/sessions/rehydrate/dropped.csv?token={{ outcome.dropped_token }}">
+        Download dropped responses
+      </a>
+      <a class="btn" href="/operator/sessions/{{ outcome.session_id }}">
+        Go to {{ outcome.session_name }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {# Details + validation output — full width, below. Empty until a
      Validate run populates it. #}
   <div class="card">

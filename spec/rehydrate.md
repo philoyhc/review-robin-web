@@ -6,10 +6,11 @@
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
 > `rehydrate_enabled` ships **false**, the three routes 404, and the
 > lobby button does not render. Unproblematic restores work; what is
-> unsettled is [§9](#9-limitations-and-known-gaps)'s awkward case, where a
-> response the regenerated rules cannot place is dropped and the warning
-> reaches no one. This spec describes the contract the feature must meet
-> before the flag opens, not a surface an operator can use today.
+> unsettled is not a known defect but the absence of a real run: the
+> pipeline has never been exercised on live data. A response the
+> regenerated rules cannot place is dropped, reported and downloadable
+> ([§6.6](#66-report-what-could-not-be-placed)). This spec describes the
+> contract the feature meets, not a surface an operator can use today.
 > Companion to `spec/sessions_overview.md` (the lobby),
 > `spec/setup_pages.md`, and `spec/assignments.md`.
 
@@ -50,7 +51,7 @@ Grounded in what the extract actually captures and what importers exist:
 | Session metadata, instruments (+ display/response fields), rule sets, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is |
 | Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header |
 | Relationships (reviewer↔reviewee pairs + status + pair tags + pair-context friendly labels) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is; pair-context friendly labels ride the header |
-| **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets, then backfill any pair present in `responses.csv` |
+| **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets. Never created to fit a response: a `responses.csv` row naming a pair the rules did not produce is dropped and reported |
 | **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | Its own importer, `responses_import.py` ([§6.4](#64-load-responses)) |
 | Instrument visibility policies (`instrument_view_policies`) | `settings.csv` | ✅ | Apply as-is |
 | `relationships_enabled` / `observers_enabled` toggles | `settings.csv` | ✅ | Apply as-is |
@@ -332,13 +333,11 @@ forbidden cells serialize as empty and parse back to "off".
 3. **Assignments** — regenerate from the imported rule sets via the
    canonical `assignments.generate` path (deterministic given seed + rules
    + populations, so it reproduces the original assignment graph for
-   rule-driven sessions). Then **backfill**: for every distinct
-   `(reviewer, reviewee, instrument)` that appears in `responses.csv` but
-   has no generated assignment, create one (`include=True`,
-   `is_self_review` = reviewer-email == reviewee-email,
-   `created_by_mode="manual"`). This guarantees every response has a home
-   even where a manual per-pair toggle diverged from the rules
-   ([§9](#9-limitations-and-known-gaps)).
+   rule-driven sessions). **This is the only step that creates assignment
+   rows.** Loading responses never adds one: assignments are only ever
+   generated (`spec/assignments.md`), so a pair the rules did not produce
+   has no legitimate row to carry a response and the response is dropped
+   instead ([§6.4](#64-load-responses)).
 
 ### 6.4 Load responses
 
@@ -355,13 +354,31 @@ identity to the newly-created PKs and insert a `Response`:
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
 - **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**
   ← `RevieweeEmail` (lower-cased / identifier); **Assignment** ←
-  `(reviewer, reviewee, instrument)`, **find-or-create** (backfills a pair
-  the rules didn't regenerate — [§6.3](#63-import-populations-and-regenerate-assignments)).
+  `(reviewer, reviewee, instrument)`, **resolved, never created**. A pair
+  step 3 did not generate drops the row.
 - **Insert** `Response(assignment_id, response_field_id, value=Value,
   saved_at=parse(SavedAt), submitted_at=parse(SubmittedAt),
   version=Version)`, respecting the unique `(assignment_id,
   response_field_id)` constraint. `Value` maps straight to the `Text`
   column (empty cell → `NULL`; no type coercion).
+
+**Every row has exactly two outcomes: loaded, or dropped with a reason.**
+A row is dropped when any identity above fails to resolve (unknown
+reviewer, instrument, response field or reviewee), when `SavedAt` will not
+parse, when a group-scoped row's identity matches no group or the group
+has no member assignments, or when the pair exists on the roster but
+generation did not produce an assignment for it. Nothing is created to
+make a row fit.
+
+`ResponseLoadResult.dropped` carries each dropped row with its reason, and
+`serialize_dropped_responses` renders the set as a CSV: the responses
+extract's own 21-column header plus a trailing `DropReason`, so the file
+sits under the column names it arrived with and diffs against the upload.
+The header is emitted even when nothing was dropped. Rows keep the width
+the header promises — short rows padded, over-long rows truncated — so a
+reader parsing it as a table never sees a shifted column.
+
+`session.rehydrated` records the drop count in `counts.responses_dropped`.
 
 **Group-scoped instruments — fan-out.** The export **collapses** a
 group-scoped instrument's per-member Response rows to *one row per group*:
@@ -398,16 +415,41 @@ Leave the session in **`draft`** — assignments are generated
 loaded, but the session is **not activated** ([§8](#8-target-lifecycle-state)) —
 and write the `session.rehydrated` audit event.
 
+### 6.6 Report what could not be placed
+
+A commit that placed every response redirects to the new session's Home
+(`303`, `?rehydrated=1`). A commit that dropped rows **does not redirect**
+— it re-renders the Rehydrate page with an outcome card naming the count,
+a link to the new session, and a **download of the dropped-responses
+CSV**.
+
+The divergence is the point. A `303` cannot carry a file, and a count
+alone cannot tell an operator *which* responses did not survive, so the
+flow stops where the loss happened rather than handing them a number on
+the way past. The session is still created: a drop is a report, not a
+failure.
+
+The CSV rides the same operator-scoped, TTL-bounded stash as the
+Validate → Commit hand-off (`rehydrate_stash`), served by
+`GET /operator/sessions/rehydrate/dropped.csv?token=…`. Because the stash
+is scoped to the operator who created it, another operator's token reads
+as **absent** rather than as a refusal, and a link kept past the TTL
+simply expires — the route 404s in both cases, and is gated by
+`rehydrate_enabled` like every other rehydrate route.
+
 ## 7. Atomicity and audit
 
 - **All-or-nothing.** If any step fails (bad file, unresolvable identity,
   constraint violation), roll back and **hard-delete** the new session
   (`sessions.delete_session`) so the lobby never shows a half-built
   rehydrated session. Report the failing step to the operator.
-- **Audit.** Emit one `session.rehydrated` event on success, with a
-  `counts` payload (`reviewers`, `reviewees`, `observers`, `relationships`,
-  `assignments`, `responses`) and a `context`/`refs` recording the original
-  name + code from the extract. Register `session.rehydrated` in
+- **Audit.** Emit one `session.rehydrated` event on success carrying a
+  `counts` payload and a `context` recording the original name + code from
+  the extract. The counts are `reviewers`, `reviewees`, `responses` and
+  `responses_dropped` — the last being the one an operator acts on, since
+  a rehydrate that silently loses rows looks identical to one that does
+  not. `refs` is not carried: `EVENT_SCHEMAS` admits only `counts` and
+  `context` for this event type. Register `session.rehydrated` in
   `EVENT_SCHEMAS` (the strict-mode test gate rejects unregistered emitters
   — see `CLAUDE.md` "Audit events").
 
@@ -442,26 +484,18 @@ Stated plainly so the card copy and the PR description stay honest:
   `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
   Assignments page's bulk Activate / Inactivate (the `Assignment.include`
   flag) is captured by no export and is reset to `include=True` when
-  assignments regenerate. Rehydrate backfills an assignment for any pair
-  that *has* responses ([§6.3](#63-import-populations-and-regenerate-assignments)),
-  so no *per-reviewee* response is lost, but an *empty-but-included*
-  manual assignment won't reappear.
-- **A response the rules cannot place is dropped, and nothing reports
-  it** — the reason the feature is gated off. A group-scoped row whose
-  identity does not resolve, or whose regenerated group has no member
-  assignments, is skipped with a warning, and `ResponseLoadResult.warnings`
-  reaches neither the `session.rehydrated` audit event, nor the commit
-  route, nor the operator. **The contract this must meet before the gate
-  opens:** every response a legitimate assignment can carry is loaded,
-  and every row that cannot be placed comes back to the operator as a
-  dropped-responses CSV — resolving to an existing generated assignment or
-  reporting the row are the only two outcomes. **That replaces the
-  per-reviewee backfill [§6.3](#63-import-populations-and-regenerate-assignments)
-  step 3 still describes**, which creates an assignment to give a response
-  a home and is what the bullet above credits with saving per-reviewee
-  rows: under *assignments are only ever generated*
-  (`spec/assignments.md`) it is the mechanism being retired, not a
-  precedent to extend to the group-scoped case.
+  assignments regenerate. Rehydrate no longer backfills such a pair, so a
+  response belonging to one is **dropped and reported**
+  ([§6.4](#64-load-responses)) rather than silently given a fabricated
+  home; an *empty-but-included* manual assignment won't reappear either.
+- **The gate is a judgement, not an open defect.** The data-loss case
+  that prompted it is closed: every response a legitimate assignment can
+  carry is loaded, every other row is dropped with a reason, counted in
+  the audit event, and handed to the operator as a CSV
+  ([§6.4](#64-load-responses), [§6.6](#66-report-what-could-not-be-placed)).
+  `rehydrate_enabled` stays **false** regardless — the reason for it was
+  that the pipeline has never run on real data and not every detail is
+  settled, which no single fix retires. Opening it is a deliberate act.
 - **Observer cohort rules round-trip, so rehydrate must keep them** —
   not a gap. The observers CSV carries a `CohortRule` column (compact
   JSON) alongside `ObserverEmail` / `ObserverName` / `ObserverTag1` /
@@ -476,7 +510,8 @@ Stated plainly so the card copy and the PR description stay honest:
   the [description note](#5-naming-and-description)'s "not restored" line.
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
-  same graph; the responses backfill covers any residual pairs.
+  same graph. Where they do not, the affected responses are dropped and
+  reported — there is no backfill to absorb a residual pair.
 
 ## 10. References
 

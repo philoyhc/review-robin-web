@@ -1934,7 +1934,7 @@ With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequis
 **Group 2 — Rehydrate — done** (detailed PR ladder in `guide/archive/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach). `docs/rehydrate.md` flipped from "proposed" to "shipped":
 
 - **PR G0** ✅ — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
-- **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent.
+- **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent. *The backfill was retired in 19N.1 slice 3a — a row no generated assignment can carry is now dropped and reported.*
 - **PR G1** ✅ — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
 - **PR G2** ✅ — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
 - **PR G3 (#1877)** ✅ — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).
@@ -2765,9 +2765,9 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 
 ---
 
-### Segment 19N — Assignments are always generated — 🔵 **live** (**one item, open** — 1; opened 2026-09-13; plan: `guide/segment_19N_generated_assignments.md`)
+### Segment 19N — Assignments are always generated — 🔵 **live** (**one item, closed** — 1; opened and closed 2026-09-13; plan: `guide/segment_19N_generated_assignments.md`)
 
-Item 1 is a **stub**: the six intended behaviours, no build. The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* Four code paths miss it, one reachable today. **Sequencing is the finding**: the staleness signal `spec/assignments.md` specified and `views/_assignments.py` hardcodes off (`is_stale = False`) comes first, because the instrument-clone workaround exists only to paper over its absence — remove the clone without it and an operator gets no sign their generated set is stale. Registered en route: `SC-40`, a **live silent-data-loss path** — unresolved group-scoped responses are warned-and-skipped on restore and the warnings are surfaced nowhere, while `spec/rehydrate.md` §9 claims no response is lost.
+Item 1 closed in seven PRs. The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* **Three paths wrote assignment rows outside the engine**, none visible as such; `app/services/` now holds exactly one `Assignment(...)` constructor, reachable only through `replace_assignments`. **Sequencing was the finding, and it held**: the staleness signal had to come back first, because the instrument-clone workaround existed only to paper over its absence. `SC-40`, the live silent-data-loss path, is closed — a response the rules cannot place is dropped with a reason, counted in the audit event, and downloadable; `rehydrate_enabled` stays false on the author's broader reason. Carried out: `SC-43` (an unwired next-action resolver), `SC-44` (should a rehydrate audit its observer / relationship / assignment counts?), and a `tools/` follow-up for `close_check`'s one-directional manifest check. The segment stays open for further items.
 
 ### Segment 19M — A general sweep: history out of the specs — 🔵 **live** (**six items, all open** — 1–6; opened 2026-09-13; plan: `guide/segment_19M_spec_history_sweep.md`; record: `guide/sweep_2026-09-13_spec_history.md`)
 

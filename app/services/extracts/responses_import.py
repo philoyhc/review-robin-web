@@ -14,19 +14,28 @@ Two steps:
   file is far larger than ``csv_imports``' 5000-row / 1 MiB limits.
 - :func:`load_responses` — resolve each row's identity against a
   freshly-reconstructed session and insert ``Response`` rows.
-  Per-reviewee instrument rows resolve the reviewee by email and
-  find-or-create the assignment (backfill). **Group-scoped** instrument
-  rows are collapsed in the export (one row per group, empty
-  ``RevieweeEmail``, the group identity composed into ``RevieweeName``);
-  they are **fanned back out** to every member assignment of the matching
-  group. The group is matched by reusing the exporter's own group-identity
-  computation (:func:`responses_extract._group_export_index`), so the
-  import identity and the export identity agree by construction.
+  **Group-scoped** instrument rows are collapsed in the export (one row
+  per group, empty ``RevieweeEmail``, the group identity composed into
+  ``RevieweeName``); they are **fanned back out** to every member
+  assignment of the matching group. The group is matched by reusing the
+  exporter's own group-identity computation
+  (:func:`responses_extract._group_export_index`), so the import identity
+  and the export identity agree by construction.
+
+**A response is only loaded if a generated assignment row can carry it.**
+Assignments are always generated, never hand-created, so a row naming a
+pair the rules did not produce has nowhere legitimate to live: it is
+dropped, with its reason, and :func:`serialize_dropped_responses` renders
+the dropped set back out as a CSV the operator can read. This replaced a
+find-or-create backfill that fabricated an ``Assignment`` per unmatched
+row — which both invented pairs no rule had authorised and wrote the last
+``created_by_mode="manual"`` in the codebase.
 """
 from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Iterable
 from dataclasses import dataclass, field as _dc_field
 from datetime import datetime
 
@@ -48,9 +57,11 @@ from app.services.instruments import _instrument_label
 
 __all__ = [
     "ResponsesFormatError",
+    "DroppedResponseRow",
     "ResponseLoadResult",
     "parse_responses_csv",
     "load_responses",
+    "serialize_dropped_responses",
 ]
 
 
@@ -86,13 +97,28 @@ class _ParsedResponseRow:
     submitted_at: str
     version: str
     flavour: str  # ``per-reviewee`` | ``group-scoped``
+    # The source row, kept verbatim so a dropped row can be written back
+    # out byte-identical to what the operator uploaded.
+    raw: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class DroppedResponseRow:
+    """One uploaded row that no generated assignment can carry, with the
+    reason it could not be placed."""
+
+    raw: tuple[str, ...]
+    reason: str
 
 
 @dataclass
 class ResponseLoadResult:
     responses: int = 0
-    assignments_created: int = 0
-    warnings: list[str] = _dc_field(default_factory=list)
+    dropped: list[DroppedResponseRow] = _dc_field(default_factory=list)
+
+    @property
+    def dropped_count(self) -> int:
+        return len(self.dropped)
 
 
 def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
@@ -130,6 +156,7 @@ def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
                 submitted_at=raw[_C_SUBMITTED_AT],
                 version=raw[_C_VERSION],
                 flavour=raw[_C_FLAVOUR],
+                raw=tuple(raw),
             )
         )
     if not header_seen:
@@ -164,11 +191,19 @@ def load_responses(
     """Insert ``Response`` rows for ``review_session`` from parsed rows.
 
     Assumes the session already has its rosters, instruments (+ response
-    fields), and regenerated assignments. Per-reviewee rows backfill a
-    missing assignment; group-scoped rows fan out to existing member
-    assignments. Returns counts + a warning per unresolved row.
+    fields), and regenerated assignments. Group-scoped rows fan out to
+    every member assignment of the matching group.
+
+    A row is loaded only where a generated assignment already exists to
+    carry it. Every other row — unknown reviewer, unknown instrument or
+    field, unparseable timestamp, unmatched group, or a pair the rules
+    did not generate — is returned in ``result.dropped`` with its reason,
+    and nothing is fabricated to make it fit.
     """
     result = ResponseLoadResult()
+
+    def _drop(row: _ParsedResponseRow, reason: str) -> None:
+        result.dropped.append(DroppedResponseRow(raw=row.raw, reason=reason))
 
     reviewers = {
         normalize_email(r.email): r
@@ -261,32 +296,29 @@ def load_responses(
     for row in rows:
         reviewer = reviewers.get(normalize_email(row.reviewer_email))
         if reviewer is None:
-            result.warnings.append(
-                f"unknown reviewer {row.reviewer_email!r}"
-            )
+            _drop(row, f"unknown reviewer {row.reviewer_email!r}")
             continue
         instrument = instr_by_short.get(
             row.instrument_short_label.strip()
         ) or instr_by_position.get(row.instrument_name.strip())
         if instrument is None:
-            result.warnings.append(
+            _drop(
+                row,
                 "unknown instrument "
-                f"{row.instrument_short_label or row.instrument_name!r}"
+                f"{row.instrument_short_label or row.instrument_name!r}",
             )
             continue
         field = fields.get((instrument.id, row.field_key.strip()))
         if field is None:
-            result.warnings.append(
+            _drop(
+                row,
                 f"unknown response field {row.field_key!r} on "
-                f"instrument {_instrument_label(instrument)!r}"
+                f"instrument {_instrument_label(instrument)!r}",
             )
             continue
         saved_at = _parse_dt(row.saved_at)
         if saved_at is None:
-            result.warnings.append(
-                f"row for {reviewer.email} / {row.field_key} has no "
-                "parseable SavedAt"
-            )
+            _drop(row, "no parseable SavedAt")
             continue
         submitted_at = _parse_dt(row.submitted_at)
         version = _parse_version(row.version)
@@ -297,18 +329,20 @@ def load_responses(
                 (instrument.id, row.reviewee_name.strip())
             )
             if group_key is None:
-                result.warnings.append(
+                _drop(
+                    row,
                     f"couldn't match group {row.reviewee_name!r} on "
-                    f"instrument {_instrument_label(instrument)!r}"
+                    f"instrument {_instrument_label(instrument)!r}",
                 )
                 continue
             member_assignments = members_by.get(
                 (reviewer.id, instrument.id, group_key), []
             )
             if not member_assignments:
-                result.warnings.append(
+                _drop(
+                    row,
                     f"no member assignments for group {row.reviewee_name!r} "
-                    f"/ reviewer {reviewer.email}"
+                    f"/ reviewer {reviewer.email}",
                 )
                 continue
             for member in member_assignments:
@@ -320,29 +354,21 @@ def load_responses(
         # Per-reviewee row.
         reviewee = reviewees.get(normalize_email(row.reviewee_email))
         if reviewee is None:
-            result.warnings.append(
-                f"unknown reviewee {row.reviewee_email!r}"
-            )
+            _drop(row, f"unknown reviewee {row.reviewee_email!r}")
             continue
         triple = (reviewer.id, reviewee.id, instrument.id)
         assignment = asgn_by_triple.get(triple)
         if assignment is None:
-            assignment = Assignment(
-                session_id=review_session.id,
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                instrument_id=instrument.id,
-                include=True,
-                is_self_review=(
-                    normalize_email(reviewer.email)
-                    == normalize_email(reviewee.email_or_identifier)
-                ),
-                created_by_mode="manual",
+            # No generated assignment covers this pair, so nothing may
+            # carry the response. Fabricating one here would invent a
+            # pair no rule authorised.
+            _drop(
+                row,
+                f"no generated assignment for {reviewer.email} → "
+                f"{reviewee.email_or_identifier} on "
+                f"{_instrument_label(instrument)!r}",
             )
-            db.add(assignment)
-            db.flush()
-            asgn_by_triple[triple] = assignment
-            result.assignments_created += 1
+            continue
         _stage(
             assignment.id, field.id, value, saved_at, submitted_at, version
         )
@@ -352,3 +378,29 @@ def load_responses(
     db.flush()
     result.responses = len(staged)
     return result
+
+
+DROPPED_HEADER = HEADER + ("DropReason",)
+
+
+def serialize_dropped_responses(
+    dropped: list[DroppedResponseRow],
+) -> Iterable[tuple[str, ...]]:
+    """Yield CSV rows for the responses a load dropped.
+
+    :data:`DROPPED_HEADER` then one row per drop. A dropped row keeps the
+    cells it arrived with, so the file sits under the same column names
+    as the upload and can be diffed against it; the trailing
+    ``DropReason`` says why it could not be placed. Short rows are padded
+    and over-long ones truncated, because the 21 columns are what the
+    header promises.
+
+    The header is always emitted, so an empty drop set reads as a file
+    with no rows rather than an empty download. Yields rows rather than
+    bytes, per :func:`app.services.extracts.stream_csv`.
+    """
+    yield DROPPED_HEADER
+    for row in dropped:
+        cells = list(row.raw[: len(HEADER)])
+        cells += [""] * (len(HEADER) - len(cells))
+        yield tuple(cells) + (row.reason,)

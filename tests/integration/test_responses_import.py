@@ -14,7 +14,7 @@ import csv
 import datetime as dt
 import io
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -29,9 +29,12 @@ from app.db.models import (
 )
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.responses_import import (
+    DROPPED_HEADER,
+    DroppedResponseRow,
     ResponsesFormatError,
     load_responses,
     parse_responses_csv,
+    serialize_dropped_responses,
 )
 
 _INLINE = dict(
@@ -205,14 +208,18 @@ def test_per_reviewee_round_trip_reserializes_identically(
 
     parsed = parse_responses_csv(_csv_bytes(list(serialize_responses(db, src))))
     result = load_responses(db, review_session=dst, rows=parsed)
-    assert result.warnings == []
+    assert result.dropped == []
     assert result.responses == 2
 
     # The rebuilt session re-serializes to the same data table.
     assert _data_rows(list(serialize_responses(db, dst))) == src_rows
 
 
-def test_per_reviewee_backfills_missing_assignment(db: Session) -> None:
+def test_a_pair_the_rules_did_not_generate_is_dropped_not_backfilled(
+    db: Session,
+) -> None:
+    """The importer used to find-or-create the assignment, which invented
+    a pair no rule had authorised. It now drops the row and says why."""
     src, s_inst, s_field = _build(db, "bf-src")
     rvr = _reviewer(db, src, "r@e.edu")
     a1 = _assignment(db, src, rvr, _reviewee(db, src, "a@e.edu", "A"), s_inst)
@@ -220,7 +227,9 @@ def test_per_reviewee_backfills_missing_assignment(db: Session) -> None:
     _response(db, a1, s_field, "3")
     _response(db, a2, s_field, "4")
 
-    # Target is missing the (r, b) assignment → the importer backfills it.
+    # Target is missing the (r, b) assignment. The roster carries B, so
+    # this is not an unknown-reviewee drop — it is specifically a pair
+    # generation did not produce.
     dst, d_inst, _ = _build(db, "bf-dst")
     d_rvr = _reviewer(db, dst, "r@e.edu")
     _assignment(db, dst, d_rvr, _reviewee(db, dst, "a@e.edu", "A"), d_inst)
@@ -228,14 +237,85 @@ def test_per_reviewee_backfills_missing_assignment(db: Session) -> None:
 
     parsed = parse_responses_csv(_csv_bytes(list(serialize_responses(db, src))))
     result = load_responses(db, review_session=dst, rows=parsed)
-    assert result.assignments_created == 1
-    assert result.responses == 2
+
+    assert result.responses == 1
+    assert len(result.dropped) == 1
+    assert "no generated assignment" in result.dropped[0].reason
+    assert "b@e.edu" in result.dropped[0].reason
+
+    # No assignment was fabricated: the target still carries the one it
+    # was given.
+    assert db.execute(
+        select(func.count()).select_from(Assignment).where(
+            Assignment.session_id == dst.id
+        )
+    ).scalar_one() == 1
     dst_responses = db.execute(
         select(Response)
         .join(Assignment)
         .where(Assignment.session_id == dst.id)
     ).scalars().all()
-    assert len(dst_responses) == 2
+    assert len(dst_responses) == 1
+
+
+def test_a_dropped_row_is_written_back_out_under_the_upload_header(
+    db: Session,
+) -> None:
+    """The dropped CSV must be diffable against what was uploaded, so a
+    dropped row keeps its original cells and gains only a reason."""
+    src, s_inst, s_field = _build(db, "ser-src")
+    rvr = _reviewer(db, src, "r@e.edu")
+    a1 = _assignment(db, src, rvr, _reviewee(db, src, "a@e.edu", "A"), s_inst)
+    _response(db, a1, s_field, "3")
+    src_rows = _data_rows(list(serialize_responses(db, src)))
+
+    # A target with the roster but no assignments at all drops every row.
+    dst, _, _ = _build(db, "ser-dst")
+    _reviewer(db, dst, "r@e.edu")
+    _reviewee(db, dst, "a@e.edu", "A")
+
+    parsed = parse_responses_csv(_csv_bytes(list(serialize_responses(db, src))))
+    result = load_responses(db, review_session=dst, rows=parsed)
+    assert result.responses == 0
+    assert len(result.dropped) == len(src_rows) == 1
+
+    out = list(serialize_dropped_responses(result.dropped))
+    assert out[0] == DROPPED_HEADER
+    assert len(out) == 2
+    # Every original cell survives; the reason is appended, not merged in.
+    assert out[1][:-1] == src_rows[0]
+    assert out[1][-1] == result.dropped[0].reason
+
+
+def test_the_dropped_csv_carries_its_header_when_nothing_was_dropped(
+    db: Session,
+) -> None:
+    assert list(serialize_dropped_responses([])) == [DROPPED_HEADER]
+
+
+def test_every_dropped_row_is_the_width_the_header_promises() -> None:
+    """The header names 21 columns + DropReason, so a row that is not
+    that wide would misalign every cell after it for anyone reading the
+    file as a table. ``parse_responses_csv`` rejects short rows, so the
+    padding is only reachable through the public dataclass — but the
+    over-long case arrives from a real upload, since a row with extra
+    trailing columns is parsed, not skipped."""
+    short = DroppedResponseRow(raw=("just", "three", "cells"), reason="short")
+    long = DroppedResponseRow(
+        raw=tuple(str(n) for n in range(len(DROPPED_HEADER) + 5)),
+        reason="long",
+    )
+
+    rows = list(serialize_dropped_responses([short, long]))[1:]
+
+    assert [len(r) for r in rows] == [len(DROPPED_HEADER)] * 2
+    # Padding fills to width without disturbing the cells that were there.
+    assert rows[0][:3] == ("just", "three", "cells")
+    assert set(rows[0][3:-1]) == {""}
+    assert rows[0][-1] == "short"
+    # Truncation keeps the leading 21 and the reason stays last.
+    assert rows[1][-1] == "long"
+    assert rows[1][:-1] == tuple(str(n) for n in range(len(DROPPED_HEADER) - 1))
 
 
 # --------------------------------------------------------------------------- #
@@ -271,7 +351,7 @@ def test_group_scoped_row_fans_out_to_members(db: Session) -> None:
 
     parsed = parse_responses_csv(_csv_bytes(list(serialize_responses(db, src))))
     result = load_responses(db, review_session=dst, rows=parsed)
-    assert result.warnings == []
+    assert result.dropped == []
     # The 2 group rows fan back out to 3 member Response rows.
     assert result.responses == 3
     # And the rebuilt session re-serializes to the same 2 collapsed rows.

@@ -1588,7 +1588,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
                     reviewer_id=r.id,
                     reviewee_id=e.id,
                     include=True,
-                    created_by_mode="manual",
+                    created_by_mode="rule_based",
                 )
             )
     db.commit()

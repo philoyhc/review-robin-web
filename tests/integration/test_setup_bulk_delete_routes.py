@@ -123,7 +123,7 @@ def _with_responses(
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        created_by_mode="manual",
+        created_by_mode="rule_based",
     )
     db.add(assignment)
     db.flush()

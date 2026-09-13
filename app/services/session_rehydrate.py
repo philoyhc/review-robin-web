@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, Reviewer, ReviewSession, SessionOperator, User
 from app.services.email_identity import normalize_email
 from app.services.extracts.responses_import import (
+    DroppedResponseRow,
     ResponsesFormatError,
     parse_responses_csv,
 )
@@ -447,6 +448,25 @@ def _original_description(rows: list[Any]) -> str:
     return ""
 
 
+@dataclass(frozen=True)
+class RehydrateOutcome:
+    """What a rehydrate produced: the new session, and the response rows
+    no generated assignment could carry.
+
+    ``dropped`` is the operator's business, not a diagnostic — a rehydrate
+    that silently loses rows looks exactly like one that does not, so the
+    caller is expected to put it in front of them
+    (``spec/rehydrate.md`` §6.4).
+    """
+
+    session: ReviewSession
+    dropped: list[DroppedResponseRow]
+
+    @property
+    def dropped_count(self) -> int:
+        return len(self.dropped)
+
+
 def rehydrate_session(
     db: Session,
     *,
@@ -454,15 +474,16 @@ def rehydrate_session(
     user: User,
     correlation_id: str | None = None,
     today: _dt.date | None = None,
-) -> ReviewSession:
+) -> RehydrateOutcome:
     """Rebuild a live session from a complete extract file set.
 
     Runs the full reconstruction pipeline (``spec/rehydrate.md`` §6) as
     one logical unit: create the draft shell → apply settings (with the
     ``_REHYD`` name + unique-code rewrite) → import reviewers / reviewees /
     observers / relationships → regenerate assignments → load responses
-    (Part F, backfilling any missing assignment). The session lands in
-    **draft** — never auto-activated. On any failure the partially-built
+    (Part F). The session lands in **draft** — never auto-activated.
+    Returns the session *and* the dropped rows: a response the regenerated
+    rules cannot place is reported, never given a fabricated home. On any failure the partially-built
     session is hard-deleted so no half-rehydrated session survives.
 
     Assumes the caller has already run :func:`analyze_rehydrate_set` on the
@@ -602,8 +623,9 @@ def rehydrate_session(
             correlation_id=correlation_id or "",
         )
 
-        # 5. Responses — load, backfilling any assignment the rules didn't
-        #    regenerate (e.g. default Full-Matrix instruments).
+        # 5. Responses — load every row a generated assignment can carry.
+        #    Rows naming a pair the rules did not produce are dropped,
+        #    not backfilled: assignments are always generated.
         parsed_responses = parse_responses_csv(resolved["responses"])
         load_result = load_responses(
             db, review_session=review_session, rows=parsed_responses
@@ -613,7 +635,7 @@ def rehydrate_session(
             "reviewers": len(reviewers_parse.rows),
             "reviewees": len(reviewees_parse.rows),
             "responses": load_result.responses,
-            "assignments_backfilled": load_result.assignments_created,
+            "responses_dropped": load_result.dropped_count,
         }
         audit.write_event(
             db,
@@ -641,4 +663,4 @@ def rehydrate_session(
         raise
 
     db.refresh(review_session)
-    return review_session
+    return RehydrateOutcome(session=review_session, dropped=load_result.dropped)

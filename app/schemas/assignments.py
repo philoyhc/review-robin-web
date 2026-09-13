@@ -8,7 +8,8 @@ class AssignmentMode(str, Enum):
 
     ``manual`` retired in 16A PR 5 alongside the manual-CSV upload
     path. ``rule_based`` is the only remaining writer — produced by
-    the rule engine on POST /assignments/rule-based/generate. The
+    the rule engine on
+    ``POST /operator/sessions/{session_id}/assignments/generate``. The
     enum is kept (rather than collapsing to a string column) for
     future expansion when 13C-style group-scoped instruments add
     another mode.

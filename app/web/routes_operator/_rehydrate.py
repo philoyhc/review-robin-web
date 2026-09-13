@@ -37,6 +37,8 @@ from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.services import rehydrate_stash
+from app.services.extracts import stream_csv
+from app.services.extracts.responses_import import serialize_dropped_responses
 from app.services.session_rehydrate import (
     RehydrateReport,
     analyze_rehydrate_set,
@@ -57,6 +59,7 @@ def _render(
     *,
     report: RehydrateReport | None = None,
     token: str | None = None,
+    outcome: dict[str, object] | None = None,
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
@@ -66,6 +69,7 @@ def _render(
             "breadcrumbs": breadcrumbs.operator_rehydrate_session(),
             "report": report,
             "token": token,
+            "outcome": outcome,
         },
     )
 
@@ -181,15 +185,63 @@ def rehydrate_commit(
     if not report.ok:
         return _render(request, user, report=report, token=token)
 
-    review_session = rehydrate_session(
+    result = rehydrate_session(
         db,
         files=files,
         user=user,
         correlation_id=request_correlation_id(),
     )
     rehydrate_stash.delete(db, token=token)
+
+    if not result.dropped:
+        db.commit()
+        return RedirectResponse(
+            url=f"/operator/sessions/{result.session.id}?rehydrated=1",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    # Rows were lost. A 303 cannot carry a download, and a count alone
+    # cannot tell the operator *which* responses did not survive, so the
+    # page stays put and hands them the file. The CSV rides the same
+    # operator-scoped stash the Validate hand-off uses.
+    csv_bytes = b"".join(stream_csv(serialize_dropped_responses(result.dropped)))
+    dropped_token = rehydrate_stash.put(db, payload=csv_bytes, user=user)
     db.commit()
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}?rehydrated=1",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _render(
+        request,
+        user,
+        outcome={
+            "session_id": result.session.id,
+            "session_name": result.session.name,
+            "dropped_count": result.dropped_count,
+            "dropped_token": dropped_token,
+        },
+    )
+
+
+@router.get(
+    "/sessions/rehydrate/dropped.csv",
+    dependencies=[Depends(_require_rehydrate_enabled)],
+)
+def rehydrate_dropped_csv(
+    token: str = "",
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Serve the dropped-responses CSV a commit stashed.
+
+    The stash is operator-scoped and TTL-bounded, so another operator's
+    token reads as absent rather than as a refusal, and a link shared or
+    bookmarked past the TTL simply expires."""
+    payload = rehydrate_stash.get(db, token=token or "", user=user)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return Response(
+        content=payload,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="rehydrate_dropped_responses.csv"'
+            )
+        },
     )

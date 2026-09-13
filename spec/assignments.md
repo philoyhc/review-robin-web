@@ -9,7 +9,12 @@ reviewee on their per-instrument page. Assignments are not
 authored row-by-row; they're **generated** by running a per-
 instrument rule pass over the session's reviewer × reviewee
 matrix and slotting one row per surviving pair (Individual) or
-per (reviewer, group_key) (Group).
+per (reviewer, group_key) (Group). **The rule engine
+(`assignments.replace_assignments`) is the only path that creates
+an `Assignment` row** — nothing hand-creates, uploads or edits one
+into existence; a process that cannot place a row (e.g. rehydrate's
+responses importer, `spec/rehydrate.md` §6.3) drops it rather than
+fabricating one.
 
 This spec covers:
 
@@ -370,9 +375,11 @@ scoped instruments it applies the whole-group rule.
 
 **Source of truth — `Assignment.is_self_review` column.**
 The boolean column on the `assignments` table persists the
-canonical classification for every row. Every write site
-(regenerate, manual add, instrument clone / replicate) and
-every edit trigger (reviewer email, reviewee identifier or
+canonical classification for every row. **Regenerate is the only write
+site** — no other path creates an `Assignment` row — and it calls
+`assignments.recompute_self_review_classification` as part of
+materialising each pass. Every edit trigger (reviewer email, reviewee
+identifier or
 boundary tag, relationship pair-context tag, instrument
 `group_kind`) calls
 `assignments.recompute_self_review_classification` so the
