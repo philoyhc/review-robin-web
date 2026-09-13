@@ -263,13 +263,24 @@ Also to settle in this item: `_shared.py:351` documents
 `spec/workflow_card.md` says the same in four places (`:100-102`,
 `:140-141`, `:442-443`, `:663-665`). The spec, the helper's docstring and the
 template are all two values behind the routes — one vocabulary
-recorded in four places and updated in none.
+recorded in **three files and six passages** besides the template
+(`_shared.py` ×1, `views/_workflow_card.py` ×1,
+`spec/workflow_card.md` ×4) and updated in none.
 
 ### Semantics
 
-- **Unknown or absent `super_button`** — headline reads "Action
-  failed"; the step phrase and error detail render as they do
-  today. No branch may fall through to a named button.
+- **Unknown `super_button`** — headline reads "Action failed"; the
+  step phrase and error detail render as they do today. No
+  *unrecognized* value may fall through to a named button.
+- **Absent `super_button`** — *not* the same case, and this bullet
+  was wrong until 2026-09-13. A URL that omits the slot never
+  reaches the template's fallback: `views.parse_super_failure`
+  infers a button from the step name (`generate` / `validate` →
+  `prepare`, `activate` → `activate`, else `prepare`) so an old
+  bookmark still resolves, which `spec/workflow_card.md` documents.
+  That inference predates the three later buttons and can only ever
+  name one of the original two — a limitation, not a defect, and the
+  reason the slot is now always passed explicitly.
 - **Unknown `super_step`** — unchanged: the phrase is omitted,
   the headline and error still render.
 - **`super_failure` absent** — unchanged: no signal line.
@@ -297,11 +308,14 @@ passages of it).
 
 - Each of the five `super_button` values renders its own
   headline, asserted by a test that drives the real route.
-- An unrecognised value renders "Action failed" and names no
+- An unrecognized value renders "Action failed" and names no
   button.
-- `super_step="close"` renders a step phrase.
-- `spec/workflow_card.md` and `_shared.py:351` enumerate the
-  same five values the routes pass.
+- A step phrase renders only where it adds something: `precondition`
+  does, and a step that merely repeats the button label is
+  suppressed.
+- `spec/workflow_card.md`, `_shared.py`'s `_redirect_url` and
+  `views/_workflow_card.py`'s `parse_super_failure` all enumerate
+  the same five values the routes pass.
 
 ### Open questions
 
@@ -336,9 +350,15 @@ not anticipate:
   read "Stop release". It renders `Stop releasing<br>responses`, so
   the headline is "Stop releasing responses failed". Taken off the
   markup, not from the plan.
-- **A fourth vocabulary site.** `views/_workflow_card.py`'s
-  `parse_super_failure` docstring carried the same two-value claim.
-  The plan named three places plus the template; it was four.
+- **A vocabulary site the plan missed**, and a count that did not
+  reconcile. `views/_workflow_card.py`'s `parse_super_failure`
+  docstring carried the same two-value claim and the plan had not
+  named it. The commit that fixed it then said "four other places",
+  which is neither the file count nor the passage count: it is
+  **three files, six passages** — `_shared.py` ×1,
+  `views/_workflow_card.py` ×1, `spec/workflow_card.md` ×4. Caught
+  by the verification pass, not by me; the fifth unreproducible
+  figure this session's work has produced.
 - **Step suppression, decided at build.** Adding `close` to the step
   map would have produced "Close session failed at the Close session."
   The phrase is now dropped when it repeats the button label, which
