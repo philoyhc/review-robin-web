@@ -81,6 +81,20 @@ placeholder, then wire each card / action in follow-up slices.
 Agreeing the surface before attaching logic keeps UI churn out of
 the wiring PRs and gives a cheap, early look at the real thing.
 
+**Write the `guide/` artefact shorter than feels complete.** A plan, a
+sweep record or a findings register is read under pressure by someone
+checking one thing, so every sentence that is not a constraint, a
+decision or a pointer costs them. Budgets: a segment plan under ~250
+lines, an item under ~120, one line per file in a sweep record. Measured
+against the archive, most overflow is not the thinking — it is the
+record of the build outgrowing the build, so `## Status` and answered
+open questions **compact at close** rather than accumulating (the
+`segment-plan` skill — "Revising a plan", and step 4 of "Closing a
+segment"). Say it once, in the section that owns
+it; keep the conclusion and the command that proves it, not the search
+that found it; cite a section rather than reproducing it. Pure
+accretion is not a record — it is a document nobody opens.
+
 ## Common commands
 
 Run all of these from the repository root with the project virtualenv activated (`pip install -e .[dev]` once).
