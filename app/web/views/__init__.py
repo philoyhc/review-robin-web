@@ -108,6 +108,7 @@ from ._setup import (
 from ._instruments import (
     InstrumentHeading,
     build_instruments_context,
+    instrument_delete_landing_id,
     build_reviewer_visibility_rows,
     constraint_summary_for_field,
     instrument_heading,
@@ -284,6 +285,7 @@ __all__ = [
     "filter_responses_rows",
     "filter_reviewees_rows",
     "filter_reviewers_rows",
+    "instrument_delete_landing_id",
     "instrument_heading",
     "invitations_search_options",
     "observers_search_options",

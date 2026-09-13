@@ -94,6 +94,38 @@ class InstrumentHeading:
     subtitle: str | None
 
 
+def instrument_delete_landing_id(
+    db: Session, *, session_id: int, instrument_id: int
+) -> int | None:
+    """Which instrument the operator should land on after deleting
+    ``instrument_id`` — the next sibling by id, or the previous one
+    when deleting the last.
+
+    Where to put the operator afterwards is a navigation question,
+    not a business rule, so it lives in the view seam rather than in
+    ``instruments.delete_instrument``. **Call before the delete** —
+    it reads the row being removed to find its neighbours.
+
+    Returns ``None`` when ``instrument_id`` is not in the session, so
+    a caller with a stale id gets the page top rather than a crash.
+    """
+    sibling_ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == session_id)
+            .order_by(Instrument.id)
+        ).scalars()
+    )
+    if instrument_id not in sibling_ids:
+        return None
+    idx = sibling_ids.index(instrument_id)
+    if idx + 1 < len(sibling_ids):
+        return sibling_ids[idx + 1]
+    if idx > 0:
+        return sibling_ids[idx - 1]
+    return None
+
+
 def instrument_heading(
     *, instrument: Instrument, position: int, total_count: int
 ) -> InstrumentHeading:
