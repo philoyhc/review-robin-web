@@ -9,7 +9,7 @@
 > unsettled is not a known defect but the absence of a real run: the
 > pipeline has never been exercised on live data. A response the
 > regenerated rules cannot place is dropped, reported and downloadable
-> ([§6.5](#66-report-what-could-not-be-placed)). This spec describes the
+> ([§6.6](#66-report-what-could-not-be-placed)). This spec describes the
 > contract the feature meets, not a surface an operator can use today.
 > Companion to `spec/sessions_overview.md` (the lobby),
 > `spec/setup_pages.md`, and `spec/assignments.md`.
@@ -492,7 +492,7 @@ Stated plainly so the card copy and the PR description stay honest:
   that prompted it is closed: every response a legitimate assignment can
   carry is loaded, every other row is dropped with a reason, counted in
   the audit event, and handed to the operator as a CSV
-  ([§6.4](#64-load-responses), [§6.5](#66-report-what-could-not-be-placed)).
+  ([§6.4](#64-load-responses), [§6.6](#66-report-what-could-not-be-placed)).
   `rehydrate_enabled` stays **false** regardless — the reason for it was
   that the pipeline has never run on real data and not every detail is
   settled, which no single fix retires. Opening it is a deliberate act.
