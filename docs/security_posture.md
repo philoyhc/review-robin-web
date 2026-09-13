@@ -81,6 +81,46 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   (default on) treats the fake operator as a super-admin — inert in any
   deployed env (where `allow_fake_auth` must be false).
 
+## §5.5a Identity matching — the fold
+
+Every gate in §5.5 decides on an email match. The convention, settled
+19N Item 2 (2026-09-13):
+
+**`email_identity.normalize_email` — strip, then `str.lower`.** Not
+`str.casefold`, and the reason is a security one rather than a
+stylistic one. Casefold is the Unicode-correct fold for caseless
+*search*; identity is not search. It maps `ß` to `ss`, so
+`straße@example.com` and `strasse@example.com` — two different
+mailboxes — become one comparison key. The reviewer dashboard and
+`participants.roles_held_anywhere` use that key to decide whose
+sessions and roles a signed-in user sees, so merging two people there
+would let one reach the other's surface: a fail-**open**. Lowering
+keeps them distinct.
+
+**The fold is applied in Python and never composed in SQL.** A dozen
+sites compare `func.lower(column)` against a `normalize_email` value;
+that is sound because the two agree on every ASCII identity. It is not
+extended to non-ASCII because it cannot be made trustworthy there:
+**SQLite's `lower()` is ASCII-only, Postgres's is Unicode-aware**, and
+the suite runs on SQLite while production runs on Postgres. A
+`func.lower` comparison on a non-ASCII identity means one thing in the
+tests and another in production.
+
+**Known and accepted limits.**
+
+- **Non-ASCII case** (`Ä`, `İ`) does not fold. A roster row and an
+  access check could disagree, which fails *closed* — a legitimate
+  participant refused, never a stranger admitted. Closing this needs a
+  stored normalized column folded in Python at write and compared with
+  `==`; deferred, and unjustified while the tenancy is ASCII.
+- **The local part is lower-cased**, which RFC 5321 does not licence —
+  local parts are case-sensitive there. Universally ignored by mail
+  systems and contrary to user expectation if honoured. A deliberate
+  concession.
+
+Coverage: `tests/unit/test_email_identity_fold.py`, including the
+eszett distinctness and the SQLite/Postgres divergence.
+
 ## §5.6 Permission audit
 
 Reviewed 2026-05-18. Every route family resolves identity through
