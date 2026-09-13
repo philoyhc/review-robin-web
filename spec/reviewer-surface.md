@@ -11,7 +11,7 @@ The response surface is **multi-instrument aware**: the URL carries an
 explicit page segment, the page renders one operator-defined page of
 instruments at a time, and an action row at the top *and* bottom of the
 surface carries every control — the review-level controls (Save /
-Discard / Submit) and the per-page navigation — in one strip per side,
+Cancel / Submit) and the per-page navigation — in one strip per side,
 the two groups separated by a vertical divider. Single-instrument
 sessions are a degenerate case of the same model, not a second shape.
 
@@ -130,12 +130,13 @@ Top-to-bottom, the page renders:
    control strip: one row carrying every action — the review-level
    controls first, then the per-page navigation — in this
    left-to-right order:
-   - `Save` (Primary, `type="submit"`, `data-rs-save`) — submits
+   - `Save` (Secondary, `type="submit"`, `data-rs-save`) — submits
      the page `<form>` to persist the current page's inputs. Always
      enabled; there is no dirty-tracking gate (see "Save button
      state" below).
-   - `Discard` (Secondary, rendered as an `<a href>` back to the
-     current page URL, `data-rs-discard`) — a plain GET reload of
+   - `Cancel` (Secondary, rendered as an `<a href>` back to the
+     current page URL, `data-rs-discard` — the hook keeps the older
+     name) — a plain GET reload of
      the current page. Because unsaved typing lives only in the DOM
      of the current page, reloading throws it away and re-renders
      from the last-saved server values. No JS, no separate write.
@@ -144,11 +145,11 @@ Top-to-bottom, the page renders:
      current page's inputs and stamps `submitted_at` on every
      assignment. (See §"Form HTML mechanics" below.)
    - **Vertical divider** — a `.rs-action-divider` element separating
-     the review-level controls (Save / Discard / Submit) from the
+     the review-level controls (Save / Cancel / Submit) from the
      per-page navigation cluster. 1px wide, full button-height,
      `border-default` colored, with horizontal margin. Rendered only
      on multi-page sessions (`page_count > 1`); in operator-preview
-     mode Save / Discard / Submit render as inert disabled buttons
+     mode Save / Cancel / Submit render as inert disabled buttons
      and Prev / Next stay functional.
    - **Prev / Page N of M / Next** — the page-navigation cluster,
      rendered only on multi-page sessions. **Previous page** and
@@ -182,7 +183,7 @@ Top-to-bottom, the page renders:
 Mental model: instruments are **chapters of one review session**, not
 standalone editing surfaces. The reviewer fills each page (saving
 when they like), then **Submit commits the whole review** in one
-action. "Page actions" (Save / Discard / Prev / Next) act on the
+action. "Page actions" (Save / Cancel / Prev / Next) act on the
 current page; "Review-level actions" (Submit / Clear all) act on the
 entire session. Page navigation is a plain server round-trip: each
 page change re-fetches that page's HTML. Persistence to the database
@@ -203,7 +204,7 @@ Reviewer-typed values persist across page navigations only after a
 Save round-trip; the draft store is the database, not the DOM.
 There is **no `beforeunload` guard** in the shipped surface —
 navigating away (Prev / Next, address-bar change, close-tab) or
-clicking **Discard** silently drops any unsaved typing on the
+clicking **Cancel** silently drops any unsaved typing on the
 current page. A `beforeunload` warning that keys off the same dirty
 signal is a deferred progressive enhancement (see
 "Designed-for-extensibility").
@@ -218,12 +219,12 @@ itself treated as an accident. **Both halves are load-bearing** — a guard
 without the dirty gate prompts on every navigation, and one without the
 intentional-nav escape prompts on the app's own controls.
 
-### Save / Discard / Page navigation / Submit / Clear all
+### Save / Cancel / Page navigation / Submit / Clear all
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
-| **Discard** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
+| **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
 | **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
@@ -247,7 +248,7 @@ The Save button is **always enabled** — it is a plain
 gate. Saving with no edits is a harmless no-op 303 back to the same
 page. The `data-rs-save` / `data-rs-discard` / `data-rs-saved-value`
 attributes are rendered as hooks for a future dirty-tracking
-progressive enhancement (Save-disable-until-dirty, in-place Discard,
+progressive enhancement (Save-disable-until-dirty, in-place discard,
 `beforeunload` guard), but **no JS handler is wired for them today**
 — see "Designed-for-extensibility".
 
@@ -286,7 +287,7 @@ group, since they're all in the DOM. The route distinguishes:
 - **Clear all** deletes every `Response` row for this reviewer in
   this session, across every instrument. No partial undo. Writes a
   `responses.cleared` audit event.
-- **Discard** is a plain GET reload of the current page (an
+- **Cancel** is a plain GET reload of the current page (an
   `<a href>`) — no DB write, no audit. The reload re-renders the
   current page's inputs from the server-saved baseline, dropping
   any unsaved typing.
@@ -373,17 +374,24 @@ by how many instruments the reviewer is assigned on:
 
 | Case | Title (H2) | Subtitle (`.muted`, body-weight) |
 |---|---|---|
-| Multi-instrument, `short_label` set | `Page #{N}: {short_label}` | `description` if set, else nothing |
-| Multi-instrument, `short_label` empty | `Page #{N}` (bare) | `description` if set, else nothing |
-| Single-instrument, `short_label` set | `{short_label}` (no `Page #1:` prefix) | `description` if set, else nothing |
+| Multi-instrument, `short_label` set | `#{N}: {short_label}` | `description` if set, else nothing |
+| Multi-instrument, `short_label` empty | `#{N}` (bare) | `description` if set, else nothing |
+| Single-instrument, `short_label` set | `{short_label}` (no `#1:` prefix) | `description` if set, else nothing |
 | Single-instrument, both empty | none — no heading row renders | n/a |
-| Single-instrument, only `description` set | none — no heading row renders | n/a (description shown elsewhere) |
+| Single-instrument, only `description` set | `{description}` | none |
 
-The `Page #{N}` prefix is the safety-net default for multi-instrument
+The `#{N}` prefix is the safety-net default for multi-instrument
 sessions: even with `short_label` unset, the reviewer still gets
 "which page am I on" context. Single-instrument sessions don't need
-the `Page #1` prefix; the H1 (session name) at the top of the surface
+the `#1` prefix; the H1 (session name) at the top of the surface
 already establishes "this is the review."
+
+The last row is a **deliberate legacy fallback**: a single instrument
+with only a description puts that description in the H2 rather than
+rendering no heading, so a session authored before `short_label`
+existed still shows something. `instrument_heading`
+(`app/web/views/_instruments.py`) carries it, and
+`test_reviewer_view_helpers.py` pins it.
 
 The view-shape returned by `_surface_context` exposes a structured
 heading dict per instrument group:
@@ -466,7 +474,7 @@ In rendered order:
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
    required fields get a trailing `*`. Header column-width hint is
-   driven by the field's RTD `data_type`:
+   driven by the field's `data_type`:
    - `Integer` / `Decimal` → `class="rs-narrow"` (numbers are short).
    - `String` with `validation.max_length > 100` → `class="rs-textlong"`.
    - everything else → no width modifier.
@@ -495,7 +503,7 @@ In rendered order:
 
 ### Cell renderers
 
-Response field input markup is driven by the RTD's `data_type`:
+Response field input markup is driven by the field's `data_type`:
 
 | `data_type` | Render |
 |---|---|
@@ -610,7 +618,7 @@ reviewer-surface specifics:
   the fixed layout. Numeric response columns are pinned to a
   `ch`-width via `views.numeric_column_ch_width(field)` — the
   wider of the header label (plus the `required` mark + sort
-  button) and the RTD min/max digit span — so a small-range
+  button) and the field's min/max digit span — so a small-range
   input (e.g. a 1-5 Rating) does not sprawl. Their per-type
   `rs-narrow` / `rs-textlong` hints are dropped (under fixed
   layout `width: 1%` would collapse the column).
@@ -693,7 +701,7 @@ GET requests behave differently depending on which gate fails:
   state. The editing surface degrades to read-only:
 
   - Every input renders `disabled`.
-  - In both action rows: Save / Discard / Submit hide, plus the
+  - In both action rows: Save / Cancel / Submit hide, plus the
     vertical divider that separated them. The Prev / Next page-nav
     links stay so the reviewer can walk through their other
     instruments (which may or may not also be closed).
@@ -787,14 +795,14 @@ In preview mode:
 - The reviewer write-path `<form>` wrapper is replaced by a plain
   `<div>` so no `formaction=` can re-target a write endpoint. The
   action row still renders (so the operator sees the form chrome
-  exactly as the reviewer would), but Save / Discard / Submit
+  exactly as the reviewer would), but Save / Cancel / Submit
   render as inert disabled `<button>` elements; Prev / Next remain
   functional and walk the operator through every operator-defined
   page. The danger zone (Clear all responses) doesn't render.
 - Inputs render enabled (because `accepting=True` is forced), so
   the operator can type into the form to test it; their keystrokes
   go nowhere because the surrounding `<form>` is a `<div>` and the
-  Save/Discard/Submit buttons are disabled.
+  Save/Cancel/Submit buttons are disabled.
 - The overview card renders normally — `_surface_context` builds
   the same per-page status pills the reviewer would see.
 - **Real-row rendering.** The preview shows the picker-selected
@@ -1207,7 +1215,7 @@ from the top bar.
 | Where | Label |
 |---|---|
 | Action row, page-level slot | `Save` |
-| Action row, page-level slot | `Discard` (hook: `data-rs-discard`) |
+| Action row, page-level slot | `Cancel` (hook: `data-rs-discard`) |
 | Action row, page-level slot | `Page #{N}: {Instrument.short_label}` when the operator has set a short label; bare `Page #{N}` otherwise |
 | Action row, review-level slot, after the divider | `Submit` |
 | Danger Zone | `Clear all` — copy explains "every response across every page" |
@@ -1273,25 +1281,25 @@ makes today + the small follow-on the deferred work needs.
 
 - **Today.** There is no dirty-tracking and no `beforeunload` guard.
   Every navigation is a server round-trip that drops unsaved typing
-  on the current page: **Prev / Next**, **Discard** (a GET reload),
+  on the current page: **Prev / Next**, **Cancel** (a GET reload),
   **browser-close**, **tab-close**, **address-bar change**, and
   **the chrome's `My Reviews` link** all lose the current page's
   unsaved edits with no prompt. The reviewer avoids loss by clicking
   Save before navigating.
 - **Design call.** The template already renders the hooks the
   enhancement needs: `data-rs-save` on Save, `data-rs-discard` on
-  Discard, and a `data-rs-saved-value` baseline on every input. An
+  Cancel, and a `data-rs-saved-value` baseline on every input. An
   inline `<script>` can read those to add per-page dirty tracking
-  (Save-disable-until-dirty + in-place Discard) and a `beforeunload`
+  (Save-disable-until-dirty + in-place discard) and a `beforeunload`
   listener that prompts only when the form is dirty, skipping the
   intentional-discard controls.
 - **Shape of the guard.** A per-page dirty marker, an intentional-nav
-  flag raised by Save and Discard so the app's own controls never
+  flag raised by Save and Cancel so the app's own controls never
   trigger the prompt, and one `beforeunload` listener registered once.
   Both the dirty gate and the intentional-nav escape are load-bearing
   (see "How the surface works" above).
 - **What lands later.** A new inline `<script>` block wiring the
-  `data-rs-*` hooks — dirty tracking, in-place Discard, and the
+  `data-rs-*` hooks — dirty tracking, in-place discard, and the
   `beforeunload` handler. No template restructuring needed; the
   markup hooks are already in place.
 
@@ -1345,7 +1353,7 @@ compatible either way:
 - **Visible progress.** The session-wide status pill plus the
   per-instrument `Required items completed` / `All items completed`
   pills carry it (see "Session-wide status pill" and "Above the table"
-  above). The action row is ordered Save / Discard / Submit / divider /
+  above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
 - **Keyboard navigation.** Tab walks cells across a row, which the
   browser gives for free. **Enter moves focus down a column and

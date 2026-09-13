@@ -106,8 +106,10 @@ def _validation_block_from_default_spec(
 ) -> dict[str, Any] | None:
     """Build the ``instrument_response_fields.validation`` JSON for
     a DEFAULT_RESPONSE_FIELDS entry. Mirrors
-    :func:`validation_block_for_rtd` shape but reads the inline
-    spec instead of an RTD instance."""
+    the same validation-block shape as
+    :func:`validation_block_from_inline`, but reads a
+    ``DEFAULT_RESPONSE_FIELDS`` spec rather than the operator's inline
+    columns."""
     data_type = spec["data_type"]
     if data_type == "String":
         block: dict[str, Any] = {}

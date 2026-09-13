@@ -67,7 +67,7 @@ for the form's button taxonomy.
 Stored on the `sessions` table. Owned by the creating operator;
 co-owners are surfaced + managed via the `session_operators`
 table (per-session permission rows, not settings — see the
-Owners section on the Edit page).
+Owners card on the Session Details surface).
 
 **Surface:**
 
@@ -84,7 +84,7 @@ Owners section on the Edit page).
   placed before the deadline it scopes; lifecycle-gated like the
   rest of the form. Also hosts the **Owners** card — current
   co-owners + Add-owner typeahead picker over the workspace
-  operator allowlist. The Edit page is gated by
+  operator allowlist. The editing surface is gated by
   `require_session_operator` (real ownership), so a sys-admin must
   own the session to manage owners — they self-add first via the
   Sessions Diagnostics **"Manage"** (adopt) action. The

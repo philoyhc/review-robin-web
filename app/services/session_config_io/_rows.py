@@ -18,7 +18,7 @@ class Row(NamedTuple):
     ``field`` is a stable, dotted / bracketed key path; ``value``
     is the cell's string representation (empty cell ⇒ unset on
     import); ``data_type`` is the cell's parsing rule, descriptive
-    of the cell only — independent of any underlying RTD's
+    of the cell only — independent of the response field's own
     ``data_type``.
     """
 

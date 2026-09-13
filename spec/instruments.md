@@ -727,17 +727,24 @@ editable); only the chip + the reviewer-side renders react.
 
 #### Inline bounds
 
-Bounds are inline on each row. The service-side validator (`bulk_save_fields` in
-`app/services/instruments/_response_fields.py`) enforces:
+Bounds are inline on each row. The service-side validator is
+`_validate_response_field_shape` in
+`app/services/instruments/_band2.py`, reached from
+`_sync_response_fields_to_db` on every Save. It branches on the row's
+`data_type` — the same four values the Bounds row above uses, not
+response-type display names — and enforces:
 
-The four `data_type` values are the ones the Bounds row above uses —
-`String`, `Integer`, `Decimal`, `List` — not response-type display names:
+- `Integer` / `Decimal`: `max >= min` when both are set; `step > 0`;
+  and `step <= max - min` when all three are set, so the field has at
+  least two valid values rather than only `min`. Equality is accepted
+  (`min=0, max=1, step=1` is a useful Boolean-like field).
+- `String`: the `max` slot is read as `max_length` and must be `> 0`
+  when set.
+- `List`: at least one option once blanks are trimmed.
 
-- `Integer` / `Decimal`: `min <= max`, `step <= max - min` (when both
-  bounds are set), `step >= smallest representable unit`
-  (`Decimal` → 0.1; `Integer` → 1).
-- `String`: bounds are read as length bounds (`min_length` / `max_length`).
-- `List`: at least one list option, no duplicates, options trimmed.
+Nothing else is enforced here: there is **no** minimum-step rule tied to
+the type's precision, and **no** duplicate-option check. Both were
+specified once and never built, so do not read them as shipped.
 
 A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.

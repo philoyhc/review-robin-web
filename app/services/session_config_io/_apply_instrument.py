@@ -222,10 +222,10 @@ def _wipe_instruments_and_dependents(
 
     Drops the session's Responses + Assignments + Instrument rows
     so the downstream apply step can rebuild the instrument tree
-    from scratch. The pre-2026-05-26 ``_apply_rtds`` did the same
-    instrument wipe as a prelude to RTD upsert; the RTD table
-    retired but the wipe-and-replace shape is still load-bearing
-    for instrument re-import.
+    from scratch. Wipe-and-replace is load-bearing for instrument
+    re-import: the CSV is a full snapshot of the instrument tree, so
+    merging into surviving rows would leave orphans the snapshot does
+    not mention.
     """
     # Responses FK ``assignments``; the bulk Core delete below would
     # trip that constraint on a session reverted from ``ready`` (which
@@ -263,8 +263,9 @@ def _apply_instruments(
     db: Session, review_session: ReviewSession, plan: _ParsedConfig
 ) -> dict[str, int]:
     """Re-create instruments + display_fields + response_fields
-    from the CSV. ``_apply_rtds`` already wiped any pre-existing
-    instruments + their child rows in this same transaction."""
+    from the CSV. :func:`_wipe_instruments_and_dependents` has already
+    removed any pre-existing instruments + their child rows in this
+    same transaction."""
 
     counts = {
         "instruments": 0,

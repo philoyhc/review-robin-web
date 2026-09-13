@@ -64,13 +64,17 @@ def serialize_session_config(
     2. Email-template overrides (invitation → reminder →
        responses_received, with subject → body → cc → bcc →
        enabled inside each kind).
-    3. Operator-defined RTDs, ``(seed_order, response_type)``.
-    4. Each instrument block in ``(order, id)``:
+    3. Each instrument block in ``(order, id)``:
        - Instrument-level rows (incl. ``rule_set_name`` if any).
        - Display fields, ``(order, id)``.
        - Response fields, ``(order, id)``.
-    5. Per-session RuleSets (non-seeded only), ``(id)``.
-    6. Field-label overrides, ``(source_type, source_field)``.
+    4. Per-session RuleSets (non-seeded only), ``(id)``.
+    5. Data shapes.
+    6. Session tags.
+
+    There is no response-type section and no field-label section: the
+    per-session table behind the first retired, and roster CSV headers
+    are the sole carrier for the second.
     """
 
     rows: list[Row] = []
@@ -256,16 +260,10 @@ def _email_override_rows(review_session: ReviewSession) -> list[Row]:
     return rows
 
 
-# --------------------------------------------------------------------------- #
-# Section 3 — operator-defined RTDs
-# --------------------------------------------------------------------------- #
-
-
-# Per-session ``response_type_definitions`` table retired
-# 2026-05-26 — the previous ``_rtd_rows`` exporter is gone.
-# Imports of pre-retirement bundles silently ignore any ``rtds[...]``
-# rows (see ``_apply.py``). Response field bounds + data_type now
-# round-trip inline on each ``response_field_*`` row.
+# A response field's bounds and ``data_type`` round-trip inline on its
+# own ``response_field_*`` row. There is no separate response-type
+# section to export; a pre-retirement bundle carrying ``rtds[...]`` rows
+# imports with them silently ignored (see ``_apply_parse``).
 
 
 # --------------------------------------------------------------------------- #

@@ -193,22 +193,18 @@ def _route_row(
     if field_path.startswith("email_overrides."):
         _apply_email_kv(plan, field_path, value, data_type)
         return
-    if field_path.startswith("rtds["):
-        # Per-session ``response_type_definitions`` table retired
-        # 2026-05-26 — old bundles may carry these rows. Silently
-        # accept and drop; the response field bounds + data_type now
-        # round-trip inline on the response_field_* rows.
-        return
     if field_path.startswith("instruments["):
         _apply_instrument_kv(plan, field_path, value, data_type)
         return
     if field_path.startswith("session_rule_sets["):
         _apply_rule_set_kv(plan, field_path, value, data_type)
         return
-    # Segment 19C Item 1 — ``field_labels.*`` retired from the Settings
-    # CSV (roster headers carry labels now). Old bundles may still carry
-    # these rows; let them fall through to the unknown-key silent-ignore
-    # below, exactly like the retired ``rtds[`` keys.
+    # ``field_labels.*`` (retired 19C Item 1 — roster headers carry
+    # labels now) and ``rtds[`` (retired with the
+    # ``response_type_definitions`` table on 2026-05-26) both fall
+    # through to the unknown-key silent-ignore below. Neither needs a
+    # branch of its own: an old bundle carrying them imports with the
+    # rows dropped, which is what a branch would have done anyway.
     if field_path.startswith("data_shapes["):
         _apply_data_shape_kv(plan, field_path, value, data_type)
         return

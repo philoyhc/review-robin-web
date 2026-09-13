@@ -46,7 +46,7 @@ class ApplyResult:
     """Outcome of an ``apply_session_config`` call.
 
     On success ``counts`` carries the number of rows written per
-    section (e.g. ``{"rtds": 3, "instruments": 2, ...}``) and
+    section (e.g. ``{"instruments": 2, "response_fields": 9, ...}``) and
     ``errors`` is empty. On failure ``errors`` enumerates every
     parse / validation issue and ``counts`` is empty (the apply
     transaction never ran)."""
@@ -105,7 +105,11 @@ def _apply_plan(
     counts = {
         "session": 0,
         "email_overrides": 0,
-        "rtds": 0,
+        # No ``rtds`` counter: the per-session
+        # ``response_type_definitions`` table retired 2026-05-26, and
+        # ``_apply_parse`` accepts-and-drops any ``rtds[`` row an old
+        # bundle still carries. A counter that can only ever report
+        # zero is not a count.
         "instruments": 0,
         "display_fields": 0,
         "response_fields": 0,

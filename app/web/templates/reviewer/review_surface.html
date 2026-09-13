@@ -331,7 +331,7 @@
                   {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong rrw-sortable' %}{% endif %}
                 {% endif %}
                 {# Pin a numeric column on a fixed-layout group table
-                   to a width keyed to its header + RTD digit span, so
+                   to a width keyed to its header + the field's digit span, so
                    a 1-5 Rating box doesn't sprawl. #}
                 {% set col_width = numeric_column_ch_width(cell.field) if group.is_group else none %}
                 <th scope="col" class="{{ col_class }}"
@@ -398,11 +398,11 @@
                        so a screen-reader user hears "{field} for
                        {reviewee}" rather than an unlabelled box. #}
                     {% set cell_aria = cell.field.label ~ " for " ~ (row.group_label if group.is_group else row.assignment.reviewee.name) ~ (" (required)" if cell.field.required else "") %}
-                    {# Render is driven by the RTD's ``data_type`` —
+                    {# Render is driven by the field's ``data_type`` —
                        any String row with max_length > 100 gets a
                        textarea, smaller String rows get a text input,
                        Integer / Decimal get a number input, List gets
-                       a <select> over the RTD's ``choices``. Slice 4a
+                       a <select> over the field's ``choices``. Slice 4a
                        contract; pre-Slice-4a rendering branched on
                        legacy literal type names. #}
                     {# PR δ — `data-rs-saved-value` carries the

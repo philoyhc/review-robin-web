@@ -129,9 +129,9 @@ def _format_band2_bound(value: float) -> str:
 
 def placeholder_for_field(field: InstrumentResponseField) -> str:
     """Short hint shown inside the input box when empty, so reviewers
-    know what shape a value should take. Mirrors the RTD's validation
-    block; returns ``""`` for List rows or when the validation block is
-    incomplete (e.g. an Integer RTD missing ``step``)."""
+    know what shape a value should take. Reads the field's own
+    ``validation`` block; returns ``""`` for List rows or when that
+    block is incomplete (e.g. an Integer field missing ``step``)."""
     validation = field.validation or {}
     data_type = field.data_type
     if data_type == "String":
@@ -189,7 +189,7 @@ def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
     sprawling across a fixed-layout group-scoped instrument table.
     Sized to the wider of the header label (plus room for the
     ``required`` mark and the sort button) and the digit span of
-    the field's RTD min / max range. Returns ``None`` for
+    the field's own min / max range. Returns ``None`` for
     non-numeric fields — the caller skips the width hint for those.
     """
     if field.data_type not in ("Integer", "Decimal"):
