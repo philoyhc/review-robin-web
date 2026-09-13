@@ -53,7 +53,7 @@ operator to wherever they came from (`?return_to=<path>`).
 | `preferences` | `JSON` | General per-operator preferences container. JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings`. NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
 **Send-as-me identity model.** The operator who initiates a send in
-Manage Invitations sends from their own SMTP credentials. There is
+Invitations sends from their own SMTP credentials. There is
 no shared mailbox.
 
 **Canonical spec:** `spec/email_infra_options.md` for the wider

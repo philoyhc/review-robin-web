@@ -152,8 +152,15 @@ The settings an operator can set that survive **no** export/import path
 2. **Observers under clone** — `session_clone` copies **no observer rows at
    all**, so `email` / `display_name` / `tag_1` / `status` / `cohort_rule`
    are all lost on that path. The observers CSV carries every one of them.
-3. **Manual per-pair assignment include overrides** — no export, no clone,
-   not regenerated.
+3. **Assignment row status does not round-trip** (`Assignment.include`,
+   the Assignments page's bulk Activate / Inactivate) — no export, no
+   clone, and regenerating resets it to `True`. **This is the one place
+   the author's contract is knowingly unmet**: *"individual rows can be
+   turned inactive, and that's the extent of operator manual work and
+   export import round trip."* Inactivation is the whole manual surface,
+   and it is the part that does not survive a round trip.
+   **Carrying it is future work** — deferred 2026-09-13, recorded here
+   rather than left to be rediscovered as a bug.
 4. **Session-operator role grants** — co-operators aren't carried by any
    config path; only the acting operator's own owner row is created.
 

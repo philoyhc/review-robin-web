@@ -21,7 +21,6 @@ Read alongside:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -32,7 +31,6 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
-from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
 
 
@@ -108,20 +106,12 @@ class AssignmentsPageContext:
       non-NULL ``rule_set_id``. Drives the disabled state on the
       page-level Generate button (zero pinned ⇒ disabled with
       "Pin rules on the Instruments page first" nudge).
-    - ``any_stale`` — whether any instrument is stale. **No live
-      consumer:** no template reads it, and the only caller is
-      :func:`compute_next_action_generate_state` below, which is
-      itself wired to no route. Kept because the aggregate is free
-      once the per-instrument walk has run, and because the resolver
-      is a decision to make rather than dead weight to delete
-      silently — see the findings register.
     - ``instruments_url`` — deep link to the Instruments page,
       surfaced on the Generate disabled-state nudge.
     """
 
     status_blocks: list[InstrumentStatusBlock]
     pinned_instrument_count: int
-    any_stale: bool
     instruments_url: str
 
 
@@ -206,7 +196,6 @@ def build_assignments_page_context(
     )
 
     pinned_count = 0
-    any_stale = False
     blocks: list[InstrumentStatusBlock] = []
     for instrument in instruments:
         rule_id = instrument.rule_set_id
@@ -221,7 +210,6 @@ def build_assignments_page_context(
         state = reconcile_state.get(instrument.id)
         is_stale = state.stale if state is not None else False
         eligible_count = state.eligible if state is not None else 0
-        any_stale = any_stale or is_stale
         sr_active, sr_deactivated = self_review_breakdown.get(
             instrument.id, (0, 0)
         )
@@ -263,87 +251,7 @@ def build_assignments_page_context(
     return AssignmentsPageContext(
         status_blocks=blocks,
         pinned_instrument_count=pinned_count,
-        any_stale=any_stale,
         instruments_url=(
             f"/operator/sessions/{review_session.id}/instruments"
         ),
-    )
-
-
-@dataclass(frozen=True)
-class NextActionGenerateState:
-    """Pre-Validate Generate signal for the Session Home Next Action
-    card (Segment 15B Slice 4 wiring + Segment 15E button render).
-
-    Slice 4 lands the resolver + plumbs it through the Session Home
-    route context. The matching template branches — the primary
-    "Generate assignments" button and the supporting "Pin rules on
-    the Instruments page" link — ship in Segment 15E. The data
-    shape is final, so Segment 15E reads from this dataclass with
-    no further service-layer work.
-
-    ``state`` values:
-
-    - ``"hidden"`` — nothing to nudge. Covers the post-Generate
-      steady state (every pinned instrument has fresh
-      ``Assignment`` rows) and any active / ready session
-      (post-Validate the next action moves to Activate; this
-      pre-Validate signal stays out of the way).
-    - ``"pin_rules"`` — operator hasn't pinned any rule yet.
-      Segment 15E renders a supporting link to the Instruments
-      page in place of a primary button — generation isn't
-      meaningful until at least one instrument has a rule.
-    - ``"generate"`` — at least one instrument's rows are stale: the
-      pinned rule changed, or the rosters or relationships moved after
-      Generate. Reachable again since Segment 19N restored the
-      staleness signal; it was dead while ``any_stale`` was forced
-      ``False``. Never-generated instruments are *not* caught here —
-      that case has its own carriers, and treating it as staleness
-      lights up every fresh session."""
-
-    state: Literal["hidden", "pin_rules", "generate"]
-    pinned_instrument_count: int
-    instruments_url: str
-    generate_url: str
-
-
-def compute_next_action_generate_state(
-    db: Session, review_session: ReviewSession
-) -> NextActionGenerateState:
-    """Pre-Validate Generate signal for the Session Home Next Action
-    card.
-
-    Reads from the same page context the Assignments page renders so
-    the two surfaces stay in lockstep: if the Assignments page's
-    "Pairs may be stale" badge is showing, this resolver returns
-    ``state="generate"``; if every instrument is fresh, it returns
-    ``state="hidden"``.
-    """
-    urls = {
-        "instruments_url": (
-            f"/operator/sessions/{review_session.id}/instruments"
-        ),
-        "generate_url": (
-            f"/operator/sessions/{review_session.id}/assignments/generate"
-        ),
-    }
-    if lifecycle.is_ready(review_session):
-        return NextActionGenerateState(
-            state="hidden", pinned_instrument_count=0, **urls
-        )
-    page_ctx = build_assignments_page_context(db, review_session)
-    if page_ctx.pinned_instrument_count == 0:
-        return NextActionGenerateState(
-            state="pin_rules", pinned_instrument_count=0, **urls
-        )
-    if page_ctx.any_stale:
-        return NextActionGenerateState(
-            state="generate",
-            pinned_instrument_count=page_ctx.pinned_instrument_count,
-            **urls,
-        )
-    return NextActionGenerateState(
-        state="hidden",
-        pinned_instrument_count=page_ctx.pinned_instrument_count,
-        **urls,
     )

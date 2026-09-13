@@ -970,17 +970,17 @@ The Validate page (`spec/validate_page.md`) registers a number
 of rules against instruments. Active ones that surface here
 (see `app/services/validation.py:REGISTERED_RULES`):
 
-- **`instruments.no_fields`** (warning) — instrument has zero
+- **`instruments.no_fields`** (error) — instrument has zero
   response fields.
 - **`instruments.no_visible_response_fields`** (warning) — every
   response field has `visible=False`. Reviewer page would render
   empty; toggle a row's Visible checkbox.
-- **`instruments.no_display_fields`** (info) — instrument has
+- **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
 - **`instruments.stale_generated`** — raises no findings; it is
   inert by design and `spec/validate_page.md` §3.2 carries why.
-- **`instruments.zero_included`** (error) — every assignment row
+- **`instruments.zero_included`** (warning) — every assignment row
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.
 - **`instruments.no_rule_pinned`** — raises no findings: the

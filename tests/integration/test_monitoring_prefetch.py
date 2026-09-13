@@ -288,3 +288,62 @@ def test_the_prefetch_loads_only_this_session(
     assert not (set(prefetched) & other_assignment_ids), (
         "the prefetch reached into another session's assignments"
     )
+
+
+# --------------------------------------------------------------------------- #
+# SI-07 — the query budget in spec/operations_pages.md, pinned by a guard
+# --------------------------------------------------------------------------- #
+
+
+def test_the_assignments_page_query_count_is_flat_in_the_roster(
+    client: TestClient, db: Session
+) -> None:
+    """`spec/operations_pages.md` prints a budget table and says
+    *"Assignments stays flat at 43 at every size — its ``LIMIT 200`` and
+    its indexes are what hold it there, so a change that drops either
+    belongs in this table."*
+
+    Until now nothing pinned that. The relative-growth guards above cover
+    the two pages that scale with the roster; the Assignments page's
+    claim is stronger — **flat, not linear** — and a stronger claim needs
+    its own check.
+
+    **Flatness is what this asserts, not the number 43.** A figure
+    self-stales: any legitimately added query would fail a test pinned to
+    43 while the contract still held. What cannot change without the
+    contract breaking is that the count does not move with the roster at
+    all. If this fails, either the `LIMIT 200` or an index has gone — and
+    the spec's table wants re-measuring either way.
+    """
+    small = _seeded(client, db, 4, code="QBSM")
+    large = _seeded(client, db, 8, code="QBLG")
+
+    small_assignments = len(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == small.id)
+        ).scalars().all()
+    )
+    large_assignments = len(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == large.id)
+        ).scalars().all()
+    )
+    assert large_assignments >= small_assignments * 3, "fixture is not quadratic"
+
+    small_q = _count_queries(
+        db,
+        lambda: client.get(f"/operator/sessions/{small.id}/assignments"),
+    )
+    large_q = _count_queries(
+        db,
+        lambda: client.get(f"/operator/sessions/{large.id}/assignments"),
+    )
+
+    assert small_q == large_q, (
+        f"the Assignments page is no longer flat in the roster: "
+        f"{small_q} queries at {small_assignments} assignments against "
+        f"{large_q} at {large_assignments}. spec/operations_pages.md "
+        f"claims flat at every size, held by LIMIT 200 plus indexes — "
+        f"check whether one of those has gone, and re-measure the "
+        f"budget table there."
+    )

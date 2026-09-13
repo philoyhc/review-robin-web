@@ -45,9 +45,7 @@ from ._extract_data import (
 from ._assignments import (
     AssignmentsPageContext,
     InstrumentStatusBlock,
-    NextActionGenerateState,
     build_assignments_page_context,
-    compute_next_action_generate_state,
 )
 
 # Manage Invitations page rows (sliced in PR 3).
@@ -238,7 +236,6 @@ __all__ = [
     "InstrumentStatusBlock",
     "InvitationsRow",
     "IssueSourceGroup",
-    "NextActionGenerateState",
     "PreviewPickerContext",
     "PreviewPickerOption",
     "QuickSetupContext",
@@ -274,7 +271,6 @@ __all__ = [
     "build_workflow_card_context",
     "chip_slots",
     "parse_super_failure",
-    "compute_next_action_generate_state",
     "constraint_summary_for_field",
     "new_model_usable_tags",
     "numeric_column_ch_width",
