@@ -282,10 +282,13 @@ All three answered at the close, 2026-09-13, each by its own stated test.
    scope decided it.
 3. ~~**Does the stale-identifier class want its own item?**~~ **No, a
    footnote.** The test was ~40 lines of report outside the token
-   family; the measurement is **15 non-blank lines** across the three
+   family; the measurement is **14 report lines** across the three
    sections that carry one — Item 3's *found and since fixed here* (8),
-   Item 4's *none* (2), Item 5's *3 lines, left for Item 1* (5). Items
-   2 and 6 have no such section at all.
+   Item 4's *none* (1), Item 5's *3 lines, left for Item 1* (5). Items
+   2 and 6 have no such section at all. *(First written as 15, counting
+   a `---` rule under Item 4's one-line section as report. A horizontal
+   rule is not a report line; corrected on the close's verification
+   pass.)*
 
 ## Out of scope
 
