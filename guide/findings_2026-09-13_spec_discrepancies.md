@@ -424,6 +424,83 @@ checked when DT-01..DT-03 are actioned.
 
 ---
 
+## ACTIONED — ID-01 … ID-08 (Segment 19M Item 7)
+
+All eight fixed. **Every replacement was verified to exist in `base.html`
+before it was written**, because the sweep's own thirteen errors were
+mostly a name substituted inside an otherwise correct sentence.
+
+| id | was | now |
+|---|---|---|
+| ID-01 | `operator_button_audit.md`'s role legend named `accent-blue` / `accent-red` / `accent-amber` / `accent-amber-dark` | **the legend no longer names tokens at all** — "Solid fill", "Outline red", "Filled amber, light label", "Outline amber". Open question 1 answered: the legend exists to be a reading key for §6, so it points rather than restates, and cannot drift from §6 again |
+| ID-02 | `session_home.md` ×3 `accent-blue` | `--card-active-border` (the card border) and `--btn-primary-bg` (the button fill) — **two different tokens for what one retired name had covered**, which is why the flat vocabulary was retired |
+| ID-03 | `bg-muted` / `text-muted` / `text-secondary` | `--surface-muted`, and `--text-subtle` on **both** heading and body — the shipped rule uses one token for the two, not two |
+| ID-04 | `extract_data.md` `--accent-blue` ×2, `--color-border` | `--card-active-border`, `--border-subtle`. `--color-border` had **0 occurrences of any kind** |
+| ID-05 | `--accent-blue` + `--accent-blue-bg-faint` | `--card-active-border` + `--card-active-bg` |
+| ID-06 | `--surface-2, #f3f4f6`, `--text-muted`, `--text-primary` | `--surface-muted`, `--text-subtle`, `--text-body` — **and the hard-coded hex fallback goes with them**, since a fallback literal cannot follow the theme |
+| ID-07 | `field_labels.apply_captured_labels` | `field_labels.apply_import` (`field_labels.py:277`) |
+| ID-08 | a named cross-reference to `session_home.md` "Enum vs. display label" | §"Lifecycle state vocabulary", the heading that exists. **Not caught by the `§N` guard, because it is a *named* reference** |
+
+**Two retired-token hits remain in `spec/` and are correct:**
+`color_tokens.md:7` is the do-not-reintroduce constraint, which must name
+them to forbid them; `ui_elements.md:23` explains why
+`visual_style_general.md` uses role names deliberately. Its 61 are
+untouched for the reason Item 1 recorded.
+
+*Open question 3 is also answered by this item: stale identifiers were
+**8 rows across 7 files**, six of them one cluster. A footnote, not its own
+segment — and now closed rather than filed.*
+
+---
+
+## ACTIONED — SC-01 … SC-04, on the author's decision (Segment 19M Item 8)
+
+> *"SC01-04 — update spec/comments; code is correct"* — the author,
+> 2026-09-13.
+
+That is the deliberate contract change §4 requires. In all four the **code
+stands and the documentation moves.** Recorded here rather than only in the
+commit, because a contract that changes silently is the thing §4 forbids and
+these four changed on one line of instruction.
+
+| id | what the spec claimed | what it says now |
+|---|---|---|
+| **SC-01** | a `library_name` row on input **must be recognized and skipped**, *"not rejected — a bundle taken while that column existed is otherwise unimportable in full"* | an unrecognized `session_rule_sets[n].<attr>` row **is rejected**: the parse phase raises and the whole apply fails before any write. The strictness is stated as deliberate, distinguished from the top-level unknown-key silent ignore, with its reason (a misspelled rule-set attribute would otherwise be dropped in silence and change which pairs generate) **and its cost** (such a bundle needs the column removed before import) |
+| **SC-02** | the status table carries a `stale` pill when a rule/roster pass would produce a different set | *"**There is no `stale` pill and no staleness signal on this page.**"* Stated as the contract, with the consequence a reader needs: a rule edit is invisible until regeneration, and *"a reader who assumes the page warns them will not check"* |
+| **SC-03** | the check is `stamp_changed(instrument, db)` | gone with §Staleness — the helper does not exist |
+| **SC-04** | `typical_chars = max_length * 0.75` | `* 0.5`, matching the code **and the test that asserts it**. The gate is no longer on the wrong side |
+
+### What the code side turned up, which the finding had not
+
+The docstrings were the point of *"spec/comments"*, and correcting them
+surfaced two things the register did not have:
+
+- **The `"generate"` next-action state is unreachable.** It is gated on
+  `any_stale`, which is forced `False`, so that branch never returns. The
+  docstring described what it *would* catch as though it ran.
+- **The code comment forecast a PR that had already shipped.** It read
+  *"force False here **until PR 5.3** retires the legacy pinning path
+  entirely"* — and PR 5.3 shipped, retiring the group-instrument rule gate
+  (`session_lifecycle.py:779`). So the force is not pending; it is the
+  design. Rewritten to say so, and to give the real reason: an
+  always-stale badge trains the operator to ignore it, *"which is worse
+  than reporting nothing."*
+
+*Both are the same defect as the specs had — a description that outlived
+what it described — sitting in the code rather than in `spec/`. `CC-01`,
+`CC-03`, `CC-05` and `CC-11` are the same class and remain open.*
+
+### Still open from the SC block
+
+**SC-05 through SC-36 are untouched.** SC-05 is the sibling of SC-04 — a
+test pinning the code's heading format *while citing the spec section it
+contradicts* — and was not named in the instruction, so it stays. The
+register's tally is unchanged at **75**; four are now marked actioned
+rather than removed, because *what a finding became is worth more than its
+absence.*
+
+---
+
 ## Verification pass — what the five checks caught, and what it cost
 
 `spec-writer` was run per batch in **Mode B** (report-only; see

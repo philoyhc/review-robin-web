@@ -912,11 +912,11 @@ Clicking `✎` on a saved sub-card:
 
 The sub-card currently in edit mode renders with its
 border tinted to the same accent blue used for primary
-buttons + selected chips (`var(--accent-blue)`). Concretely:
+buttons + selected chips (`var(--card-active-border)`). Concretely:
 
-* Default sub-card border: `1px solid var(--color-border)`
+* Default sub-card border: `1px solid var(--border-subtle)`
   (existing).
-* Selected sub-card border: `1px solid var(--accent-blue)`
+* Selected sub-card border: `1px solid var(--card-active-border)`
   + a tighter / brighter `box-shadow` inset to lift the
   card out of the stack.
 

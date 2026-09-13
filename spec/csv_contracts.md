@@ -607,7 +607,7 @@ roster CSVs an operator cannot guess, and a template that
 demonstrates it teaches more than one that avoids it.
 
 The consequence is live: on import a labelled header **sets** that
-slot's override (`field_labels.apply_captured_labels`), so
+slot's override (`field_labels.apply_import`), so
 uploading a template unedited renames the session's tag columns to
 *Tutor* / *Group* / *Interest Group*. That is the intended lesson —
 the operator edits labels alongside rows. The same mechanism in

@@ -514,7 +514,7 @@ around **75%** of the configured `max_length` — fits at the column's
 current width:
 
 ```
-typical_chars = max_length * 0.75
+typical_chars = max_length * 0.5
 chars_per_row = max(20, column_width_px / 8)
 rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 ```
@@ -524,7 +524,7 @@ rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
 grippers); when unset, the default is 224px (matching the
 `td.rs-textlong { min-width: 14em }` CSS at the default 16px body
 font). The 8 px/char ratio is calibrated against the proportional
-sans-serif body font stack; the 0.75 factor is named at
+sans-serif body font stack; the 0.5 factor is named at
 `views/_instruments.py::_TYPICAL_RESPONSE_FRACTION`. Reviewers
 retain native textarea corner-drag at runtime — this only sets
 the initial height. The Band 2 preview cell in

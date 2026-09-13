@@ -83,7 +83,7 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 
 When a policy's window is not open, Raw and Anonymized sections still render their row scaffolding (reviewer identity visible, value cells empty); Summarized sections are omitted entirely because the aggregate has nothing to show.
 
-The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at the foot of the page — bottom-right half-width, `border-color: var(--accent-blue)` + 1px shadow + `--accent-blue-bg-faint` tint. Pre-acknowledgement: checkbox (required by JS `data-delete-confirm` / `data-delete-btn` pattern) + "Acknowledge" submit button gated by the checkbox. Post-acknowledgement: the form collapses to a passive "✓ Acknowledged on {date}" strip; the page header gains a `pill-success` "✓ Acknowledged" chip.
+The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at the foot of the page — bottom-right half-width, `border-color: var(--card-active-border)` + a 1px shadow in the same token + a `--card-active-bg` tint. Pre-acknowledgement: checkbox (required by JS `data-delete-confirm` / `data-delete-btn` pattern) + "Acknowledge" submit button gated by the checkbox. Post-acknowledgement: the form collapses to a passive "✓ Acknowledged on {date}" strip; the page header gains a `pill-success` "✓ Acknowledged" chip.
 
 `POST /me/sessions/{id}/results/acknowledge` calls `app/services/reviewees.py::acknowledge_results`, which stamps `reviewees.results_acknowledged_at = now()` and emits `reviewee.results_acknowledged` (snapshot envelope: `reviewee_id` + `acknowledged_at`). The operation is **idempotent** — a second POST is a no-op (original timestamp preserved). On success, 303 → `GET /results`.
 
