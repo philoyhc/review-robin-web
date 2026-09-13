@@ -53,8 +53,15 @@ A pair's identity is `(reviewer_id, reviewee_id)` within the
 ## The `include` flag
 
 `_materialise_one_instrument` sets `include` per pair: self-review
-pairs (`is_self_review(reviewer, reviewee)`) take
-`review_session.self_reviews_active`; all other pairs are `True`.
+pairs take `review_session.self_reviews_active`; all other pairs are
+`True`.
+
+**What counts as a self-review is not a pair-level test.** On a
+group-scoped instrument the engine applies the **whole-group** rule —
+the reviewer reviewing a group they belong to is a self-review for
+every member of it, not only for their own row. `spec/assignments.md`
+§*Self-review policy* is the contract; this file describes when
+`include` is set, not what the rule is.
 
 On reconcile:
 
@@ -144,9 +151,13 @@ The **Prepare session** button (`POST
    **without writing** — through
    `assignments.reconcile_impact(db, review_session)`, which returns
    the `new` / `deleted` / `kept` / `responses_deleted` counts a real
-   run would cause, **per instrument**, so that the confirmation
-   builder and any per-instrument Assignments-page preview sit on one
-   code path. It shares `_diff_one_instrument` /
+   run would cause, **aggregated across the session** — the banner is
+   the only consumer and asks one question, "what will this cost?".
+   A per-instrument shape exists separately as
+   `staleness_by_instrument`, which returns
+   `dict[int, InstrumentReconcileState]`; a per-instrument preview
+   should read that rather than widen this one. Both share
+   `_diff_one_instrument` /
    `_load_reconcile_inputs` with `replace_assignments`, so the
    confirmation and the run cannot disagree about the diff.
 3. Runs straight through when `responses_deleted == 0`.

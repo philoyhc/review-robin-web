@@ -780,21 +780,6 @@
         align-items: center;
         margin: 6px 0 0 0;
       }
-      .btn-cta {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px 14px;
-        border: 1px solid var(--btn-primary-border);
-        border-radius: 8px;
-        background: var(--btn-primary-bg);
-        color: var(--text-on-accent);
-        text-decoration: none;
-        text-align: center;
-        font-size: 0.95em;
-        line-height: 1.25;
-        cursor: pointer;
-      }
       .btn-row {
         display: flex;
         gap: 16px;
@@ -828,15 +813,6 @@
       }
       .btn-reset:hover { text-decoration: underline; }
       .btn-reset:disabled { opacity: 0.5; cursor: not-allowed; text-decoration: none; }
-      .setup-nav {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .setup-nav > .btn {
-        flex: 0 0 140px;
-        box-sizing: border-box;
-      }
       /* Session-scoped top card: two-row chrome with double-height
          Home anchor on the left. Implements the navigation model
          spec'd in `spec/operator_ui_concept.md` "Navigation model".
@@ -1085,7 +1061,6 @@
         row-gap: 10px;
         align-items: center;
       }
-      .setup-grid > .btn-cta { grid-column: 1; }
       .setup-grid > .setup-content { grid-column: 2 / -1; }
       .page-grid {
         display: grid;
@@ -2546,29 +2521,6 @@
         color: var(--btn-amber-fg);
         border-color: var(--btn-amber-border);
       }
-      /* CTA — Primary style applied to the layout-and-prominence
-         .btn-cta variant. Same token palette + hover convention as
-         body.ui-v2 .btn (filled lightens on hover); the layout
-         properties (flex centering, multi-line label support) come
-         from the v1 .btn-cta rule above and aren't repeated. */
-      body.ui-v2 .btn-cta {
-        background: var(--btn-primary-bg);
-        border-color: var(--btn-primary-border);
-        color: var(--btn-primary-fg);
-      }
-      body.ui-v2 .btn-cta:hover {
-        background: var(--btn-primary-bg-hover);
-        border-color: var(--btn-primary-bg-hover);
-        color: var(--btn-primary-fg);
-      }
-      body.ui-v2 .btn-cta.disabled,
-      body.ui-v2 .btn-cta[aria-disabled="true"] {
-        opacity: 0.5;
-        cursor: not-allowed;
-        pointer-events: none;
-        background: var(--btn-primary-bg);
-        border-color: var(--btn-primary-border);
-      }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
       body.ui-v2 .btn:disabled,
@@ -3068,8 +3020,7 @@
          state-conditional body and button row. Fixed min-height
          keeps the card frame from reflowing as the session moves
          between lifecycle states; body flex-grows to push the
-         optional .next-action-confirm block and the .next-action-
-         buttons row to the bottom of the card. The border picks
+         .next-action-buttons row to the bottom of the card. The border picks
          up the same ``--btn-primary-bg`` as the Primary action button
          inside it, signalling that this is the page's
          single most important card. */
@@ -3078,21 +3029,8 @@
         flex-direction: column;
         border-color: var(--card-active-border);
       }
-      /* Horizontal divider between the two sections that the
-         activated state renders inside the body (Manage / Monitor
-         vs Pause). Picks up the same border token as other
-         dividers; small vertical breathing room reads the two
-         concerns as distinct without forcing a sub-card. */
-      body.ui-v2 .card.next-action hr.next-action-divider {
-        border: 0;
-        border-top: 1px solid var(--border-default);
-        margin: var(--space-4) 0;
-      }
       body.ui-v2 .card.next-action .next-action-body {
         flex: 1 1 auto;
-      }
-      body.ui-v2 .card.next-action .next-action-confirm {
-        padding-bottom: var(--space-2);
       }
       /* 18G consolidated signals (2026-05-21). The scheduled-event
          captions and the workflow-failure message render inline in
@@ -3288,7 +3226,12 @@
       }
       body.ui-v2 .pill.pill-success {
         background: var(--status-success-bg);
-        color: var(--status-success-accent);
+        /* ``-fg`` is the text-on-pill token; ``-accent`` is for
+           standalone glyphs on the page background (signal icons,
+           status symbols). This pill reached for the icon token —
+           invisible in light, where both resolve to --green-deep, and
+           a contrast drop in dark (6.3:1 against 8.0:1). */
+        color: var(--status-success-fg);
       }
       body.ui-v2 .pill.pill-super {
         background: var(--status-super-bg);

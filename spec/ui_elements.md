@@ -49,9 +49,12 @@ classes.
 > right carries the signed-in line, the `.chrome-link` detours (Settings /
 > Admin / Guide / About) and Sign out. Bottom border `--border-subtle`,
 > identity text and the signed-in line `--text-subtle`.
-> **Sign out is a Secondary control**, rendered at chrome scale. §6 owns
-> what Secondary means and this entry does not restate it: a second
-> definition is a second thing to keep in step. Chrome scale, not page
+> **Sign out is a bespoke chrome control, not a `.btn` role.** It ships
+> its own rule — `--border-default` (not `--btn-secondary-border`),
+> `--text-body`, `--surface-muted` on hover — so it reads as
+> Secondary-ish at chrome scale without joining the button vocabulary.
+> §6's roles govern page-scale buttons; this one is deliberately outside
+> them. Chrome scale, not page
 > scale — the
 > chrome's one control must not read as loudly as the page's default
 > button.
@@ -213,12 +216,10 @@ classes.
 > in body copy, never in an opacity flip: two placeholders on one page
 > that differ visually invite the reader to look for a difference in
 > meaning that is not there.
-> A Jinja macro `placeholder_card(id, title, description, button_label,
-> button_tooltip)` in
-> `app/web/templates/operator/partials/_placeholder_card.html` packages the
-> canonical heading + body + disabled action button. **A new placeholder
-> card reuses the macro** rather than hand-writing the treatment, which is
-> how every instance stays identical without anyone comparing them.
+> There is **no macro**: one existed, went uncalled, and was retired.
+> A placeholder card writes the canonical heading + body + disabled
+> action button directly, and the class above is what keeps every
+> instance identical.
 
 > **`.card.next-action` (Session Home's Workflow card)** —
 > `.card`'s shape with a `--card-active-border` border and
@@ -229,10 +230,10 @@ classes.
 > **The H2 is the constant string "Workflow"**; the per-state action verb
 > belongs in the primary button's label, never in the heading.
 > The card's parts are `.next-action-body` (flex-grows),
-> `.next-action-confirm`, `.next-action-buttons`, `.next-action-signals` /
-> `.next-action-signal` (the tone-coded inline captions) and
-> `hr.next-action-divider`. Which of them each lifecycle state renders is
-> `spec/session_home.md`'s contract, not this catalogue's.
+> `.next-action-buttons`, and `.next-action-signals` /
+> `.next-action-signal` (the tone-coded inline captions). Which of them
+> each lifecycle state renders is `spec/session_home.md`'s contract, not
+> this catalogue's.
 > **A POST form declares its id in the body and its submit button
 > declares `form="next-action-{name}-form"`**, so the form definition
 > stays next to the checkbox it gates while the submit sits in the bottom

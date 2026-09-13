@@ -480,8 +480,9 @@ In rendered order:
    - everything else → no width modifier.
 4. **Status indicator** (trailing, narrow): only renders when
    `group.show_status_col` is true (i.e. when at least one row has
-   `submitted_at` set or `show_acknowledge` is true after a
-   missing-required Submit attempt). Cell content is icon-only:
+   `submitted_at` set, or `show_incomplete_marks` is true after a
+   missing-required Submit attempt). There is no `show_acknowledge`
+   flag — the same absence §"no checkbox" states below. Cell content is icon-only:
    - `<span class="status-icon-complete" title="Complete">✓</span>`
      when the row's required fields are all filled.
    - `<span class="status-icon-incomplete" title="N required field
@@ -656,9 +657,9 @@ field before the submit lands.
    `Page N: Reviewee X — field Y` so the reviewer knows where to
    navigate.
 3. The reviewer fills the gaps (using the per-page navigation
-   to reach each one) and re-clicks Submit. There is no checkbox,
-   no `show_acknowledge` template flag, and no
-   `acknowledged_missing` audit detail.
+   to reach each one) and re-clicks Submit. There is no checkbox and
+   no `acknowledged_missing` audit detail. The flag that turns the
+   status column on after a failed Submit is `show_incomplete_marks`.
 
 The card carries a Cancel link back to the originating instrument
 page so the reviewer can also dismiss the warning without scrolling
@@ -968,11 +969,13 @@ per-page state.
 ## Per-session summary (`/me/sessions/{id}/summary`)
 
 A read-only capstone page that renders once the reviewer has
-submitted every assigned row on a session. The surface's
-`submit_redirect_url` graduates to
-this URL when a submit closes out the last instrument; partial
-submits keep the existing "redirect back to surface"
-behaviour. The page also stays reachable later from the
+submitted every assigned row on a session.
+`submit_redirect_url(review_session, *, fully_submitted=False)`
+returns this URL when `fully_submitted` — every assigned row now has
+`submitted_at` — and the bare session URL otherwise, which 303s on to
+`/1`. It takes no page position: since 18L the URL slot is the
+operator-defined page number, so submit does not try to return the
+reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
 
@@ -1242,9 +1245,9 @@ It carries audit-event copy and is otherwise invisible.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given, and the Instruments Setup
-page enforces the cap at create / edit time. As belt-and-braces
-against a value that slipped past it, Page buttons carry
-`max-width: 16em; text-overflow: ellipsis`.
+page enforces the cap at create / edit time. Page buttons carry no
+truncation rule of their own — a label that slipped past the cap
+renders at its full width.
 
 ---
 
@@ -1356,12 +1359,16 @@ compatible either way:
   above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
 - **Keyboard navigation.** Tab walks cells across a row, which the
-  browser gives for free. **Enter moves focus down a column and
-  Shift+Enter up it**, and the handler that does so carries two
-  obligations: Enter anywhere in the table must not submit the page
-  `<form>`, and Enter inside a `<textarea>` must stay a newline.
-- **What lands later.** Return-to-place (preserve scroll position
-  across save / reload) is the remaining ergonomics item. Cell
+  browser gives for free, and that is all that ships: the surface
+  binds no `keydown` handler. Column-wise Enter / Shift+Enter movement
+  is listed below as unbuilt; the two obligations it would carry are
+  recorded there so they are not rediscovered.
+- **What lands later.** Column-wise keyboard movement — Enter down a
+  column, Shift+Enter up — which any handler must implement without
+  letting Enter submit the page `<form>` and without stealing Enter
+  from inside a `<textarea>`. Return-to-place (preserve scroll
+  position across save / reload) is the other remaining ergonomics
+  item. Cell
   autosave and filter-to-incomplete are deferred to
   `guide/deferred_consolidated.md` — pure progressive enhancement,
   built only if pilot feedback asks for them. **None of these is
