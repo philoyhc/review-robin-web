@@ -2,7 +2,24 @@
 
 A read-only Operations Page that renders, for an operator-selected reviewer, every reviewer-facing artifact the session generates: invitation email, response form, reminder email, responses-received email, and any future reviewer-facing artifacts. The operator uses this surface to eyeball the reviewer experience before activating the session and sending real communications.
 
-> **Implementation status — Segment 11F shipped fully (5/5 PRs, 2026-05-07); 2026-05-28 follow-on retired the iframe surface card.** Page chrome + reviewer picker (PR A) and the tabbed email region with all three tabs (Invitation, Reminder, Responses-received) wired to real render adapters (PRs B / D / E) are in production. The reviewer-surface iframe card on the hub (PR C) was retired by the **2026-05-28 operator-preview-surface follow-on** (PRs #1530 / #1531): the picker card's action row now carries an **"Open full preview"** button that opens the dedicated operator-side preview route ``/operator/sessions/{id}/preview-surface/{page_n}`` in a new tab. That route renders the same ``reviewer/review_surface.html`` template the live reviewer surface uses, through the same ``_surface_context`` plumbing — production parity by construction, including multi-page navigation, sorted columns, sized textareas, etc. Send-test affordances per artifact moved to **Segment 14B Part A** (the wider email send-activation segment) since they need the same dispatch helper. Plan at `guide/archive/segment_11F_previews_page.md`.
+> **What is live, and the one region that is not.** The page chrome, the
+> reviewer picker, and the tabbed email region — Invitation, Reminder and
+> Responses-received, all three wired to the real render adapters — are in
+> production. The **per-artifact send-test affordance (§3 below) is not
+> built**; it needs the same dispatch helper as the live send paths, so it
+> belongs with the email send-activation work rather than here. Read §3 and
+> the send-test clauses under "Lifecycle behavior" as the contract it must
+> meet, not as a description of the page today.
+>
+> **The reviewer-surface render is a separate route, not a card on this
+> page.** The picker card's action row carries an **"Open full preview"**
+> button, targeting ``/operator/sessions/{id}/preview-surface/{page_n}`` in
+> a new tab. That route renders the same ``reviewer/review_surface.html``
+> template the live reviewer surface uses, through the same
+> ``_surface_context`` plumbing, so every rendering decision the reviewer
+> surface makes the preview makes too — production parity by construction
+> rather than by two code paths agreeing. An iframe-embedded copy on the hub
+> could not make that claim, and the hub does not carry one.
 
 ### Rationale and placement
 
@@ -23,19 +40,17 @@ For that reason, the hub is an **Operations Page**, not a Setup Page and not a s
 | URL | `/sessions/{id}/previews` |
 | Grouping | Operations |
 
-The hub URL is plural (`/previews`) to match the chrome tab and the broader "preview hub" framing — a singular `/preview` would imply a single preview rather than the multi-artifact hub the page actually is. The previously-shipped `GET /operator/sessions/{id}/preview` (the form-only reviewer preview) is retained as a permanent (308) redirect; **2026-05-28 follow-on** repointed the target from `/sessions/{id}/previews#reviewer-surface` (now-dead anchor) to `/operator/sessions/{id}/preview-surface/1` (the operator-side full preview route — see "Implementation status" above).
+The hub URL is plural (`/previews`) to match the chrome tab and the broader "preview hub" framing — a singular `/preview` would imply a single preview rather than the multi-artifact hub the page actually is. `GET /operator/sessions/{id}/preview` (singular) stays reachable as a **permanent (308) redirect** to `/operator/sessions/{id}/preview-surface/1`, so a bookmark or an old link still lands on a reviewer-surface render. 308 rather than 303 because it has to keep the GET method and the bookmark semantics for stragglers. Its target is the preview *route*, never a fragment on this hub — an anchor into a card is only as durable as the card.
 
 ### Chrome and navigation
 
-The Operations row of the session chrome carries a `Previews` tab, sitting alongside Assignments, Validate, Invitations, and Responses (Segment 11C Part 1 retired the standalone Monitoring tab into Invitations + Responses; Segment 15D moved Assignments onto the Operations row and Segment 15B Slice 3b ordered it left of Validate; Outbox is no longer a chrome tab — it's a dev-diagnostic surface reachable via "View outbox" on Manage Invitations). Shipped order:
+The Operations row of the session chrome carries a `Previews` tab. Shipped order:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses]
+Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
 
 Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after.
-
-Session Home's Next Action card carries a "See previews" secondary button while the session is `validated` and ready-to-activate; the button targets `/previews` (the `#reviewer-surface` anchor went away with the 2026-05-28 iframe retirement).
 
 ### Page layout
 
@@ -55,14 +70,14 @@ A picker that selects which reviewer the artifacts are previewed for. Renders:
 
 A list of preview cards, one per reviewer-facing artifact. Cards render top-to-bottom in the order the reviewer would encounter them:
 
-1. **Invitation email** — the message that brings the reviewer into the session. *Shipped in 11F PR B.*
-2. **Response form** — the page where the reviewer completes their review. *Shipped in 11F PR C as an iframe surface card on the hub; **retired 2026-05-28** in favor of the dedicated operator-side preview route ``/operator/sessions/{id}/preview-surface/{page_n}`` reachable via the "Open full preview" button on the picker card. The form artifact is no longer rendered inline on the hub; the link is the affordance.*
-3. **Reminder email** — the message sent if the reviewer hasn't responded by the configured threshold. *Shipped in 11F PR D.*
-4. **Responses-received email** — the confirmation sent after the reviewer submits. *Shipped in 11F PR E (coordinates with Segment 11E PR 6's `render_responses_received` follow-on).*
+1. **Invitation email** — the message that brings the reviewer into the session.
+2. **Response form** — the page where the reviewer completes their review. **Not rendered inline on the hub**: the picker card's "Open full preview" button opens the dedicated ``/operator/sessions/{id}/preview-surface/{page_n}`` route instead, because that route *is* the reviewer surface and an embedded copy would be a second rendering path to keep honest. The link is the affordance.
+3. **Reminder email** — the message sent if the reviewer hasn't responded by the configured threshold.
+4. **Responses-received email** — the confirmation sent after the reviewer submits.
 
 The list is **extensible**: new reviewer-facing artifacts added to the system in future segments should appear in this list automatically (or with minimal addition). The hub's structure should not hard-code exactly four artifacts; it should iterate over a registry of reviewer-facing artifacts.
 
-> **Page layout, as built (11F PR B + PR C drift, harmonised through the 2026-05-28 iframe retirement).** The shipped layout has three regions stacked vertically: (1) **Reviewer picker** at the top — a two-card `.bottom-grid` ("Previewing as" + "About this reviewer"), with the picker card's action row carrying ← Previous / Next → / Random / **Open full preview** (the last button targets the dedicated operator-side preview route in a new tab); (2) **Email previews** — a single full-width card with a `<div class="tab-strip tab-strip-page">` tab row using the chrome's `.nav-tab` styling, where only the active tab's body renders and `?email=invitation|reminder|responses_received` keeps each tab bookmarkable; (3) **Workflow card** — the same card that lives on every Operations Page. The iframe-embedded reviewer-surface card from PR C was retired in the 2026-05-28 follow-on (PR #1531); see "Implementation status" above. Two emails would be visually redundant when stacked, hence the tab-strip. Tab-strip styling is documented in `spec/ui_elements.md` §6 "Nav button".
+> **Page layout, as built.** The shipped layout has three regions stacked vertically: (1) **Reviewer picker** at the top — a two-card `.bottom-grid` ("Previewing as" + "About this reviewer"), with the picker card's action row carrying ← Previous / Next → / Random / **Open full preview** (the last button targets the dedicated operator-side preview route in a new tab); (2) **Email previews** — a single full-width card with a `<div class="tab-strip tab-strip-page">` tab row using the chrome's `.nav-tab` styling, where only the active tab's body renders and `?email=invitation|reminder|responses_received` keeps each tab bookmarkable; (3) **Workflow card** — the same card that lives on every Operations Page. Two emails would be visually redundant when stacked, hence the tab-strip. Tab-strip styling is documented in `spec/ui_elements.md` §6 "Nav button".
 
 Each card contains:
 - Artifact name and a one-line description ("Sent when the operator activates the session").

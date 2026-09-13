@@ -29,10 +29,8 @@ Operations row order:
 Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
 
-The **Extract data** tab landed 2026-05-29 and is now fully
-wired (per `guide/archive/extract_data.md`). The tab sits at
-the end of the strip because it's an end-of-flow surface —
-operators reach for it once response data is in.
+**Extract data** sits at the end of the strip because it is an
+end-of-flow surface — operators reach for it once response data is in.
 
 The dev-diagnostic Outbox page (`sys_admin_session_outbox.html`)
 sits **outside the chrome** under the Sys Admin doorway at
@@ -47,7 +45,7 @@ invitation and reminder columns stay inactive until email sending is
 switched on, and the reviewee-centric view with its
 `Number of reviewees · With responses · Without responses` counters —
 framed around the question the reviewer view cannot answer, which
-reviewee is under-served. Expanded at 19K.8 from two sentences.
+reviewee is under-served.
 
 ## Why "Invitations" and "Responses"
 
@@ -83,10 +81,9 @@ Both pages render the same four stacked regions, in order:
 4. **Result table** — single-card containing the filtered row list,
    or an empty-state `.muted` message when no rows match.
 
-**The result table is a roster-style table** on both pages
-(Segment 19I Item 11). Each carries the three facilities the Setup
-preview tables have, through the same shared primitives rather
-than page-local copies:
+**The result table is a roster-style table** on both pages. Each
+carries the three facilities the Setup preview tables have, through
+the same shared primitives rather than page-local copies:
 
 - **Sortable headers** — `<table id="..."
   data-rrw-sortable="rrw-sort-{invitations|responses}-{session_id}">`
@@ -95,15 +92,15 @@ than page-local copies:
   See `spec/sort_by_reviewee.md`.
 - **Three tag columns** with a `Show columns:` chip row above the
   table, per the pattern in `spec/setup_pages.md`, "Preview tables
-  (shared toggle pattern)". The chip row sits in the **table card**,
-  which since Segment 19I Item 12 is where every chip row in the app
-  sits. A tag slot with nothing in it across the session's roster
-  renders neither chip nor column.
+  (shared toggle pattern)". The chip row sits in the **table card** —
+  where every chip row in the app sits. A tag slot with nothing in it
+  across the session's roster renders neither chip nor column.
 - **`.table-scroll`** — both tables sit in the wrapper `base.html`
   provides, so ten columns overflow *inside* the card rather than
-  scrolling the page sideways. Measured, not assumed: before it,
-  Invitations' natural width was 1496px against a ~1396px page cap
-  and overflowed at every viewport up to 1920.
+  scrolling the page sideways. The wrapper is load-bearing, not
+  defensive: Invitations' natural width is 1496px against a ~1396px
+  page cap, so without it the page scrolls sideways at every viewport
+  up to 1920.
 
 Neither page has the rosters' select column or bulk actions —
 they are read-only monitoring surfaces, and nothing here mutates a
@@ -111,21 +108,19 @@ roster row.
 
 ### Lifecycle behavior
 
-Both pages render content across all session lifecycle states. Per
-the Workflow-card-as-Operations-chrome rollout, the previous yellow
-`.card.lock` "session must be Activated" notice retired here —
-the Workflow card's stepper makes lifecycle state explicit. 18F
-Part 1 split the previous Activate super-button into a dedicated
-**Prepare session** button (Generate + Validate) and a solo
-**Activate session** button; 18F Part 2 then relaxed the
-invitation gate so Create / Send invites work from
-`validated`, not only `ready`. The Invitations page follows the
-same gate: per-row action buttons are live from `validated`
-onward; the underlying route-layer gate
+Both pages render content across all session lifecycle states, and
+**neither carries a yellow `.card.lock` notice** — the Workflow card's
+stepper already makes lifecycle state explicit, and a second
+lifecycle explanation on the same page is redundant (see
+`spec/operator_ui_concept.md` P4).
+
+**The invitation gate is `validated` or `ready`, not `ready` alone.**
+Create / Send invites and the Invitations page's per-row action
+buttons are live from `validated` onward; the route-layer gate
 (`_require_validated_or_ready` in
-`app/web/routes_operator/_operations.py`) is the source of
-truth. **Send-reminders** keeps the stricter `ready`-only
-requirement.
+`app/web/routes_operator/_operations.py`) is the source of truth.
+**Send reminders** keeps the stricter `ready`-only requirement —
+reminders fire after the response window opens, not before.
 
 ---
 

@@ -1,57 +1,33 @@
 # UI elements catalogue
 
-> **Status (2026-05-03 → 2026-05-11):** Pilot-validated then
-> migration-complete. Initial audit-derived draft; iterated
-> through `/operator/sessions/{id}/reviewers1` (the first page
-> on `body.ui-v2`) over PRs #333 → #341; the seven-PR restyle
-> ladder shipped end-to-end. Pilot-derived principles have been
-> folded back into `spec/visual_style_general.md`. This doc is
-> now the implementation catalogue: it tracks per-element
-> current state and canonical naming. The historical Drift
-> catalogue + restyle-bundle PR ladder were archived to
-> `guide/archive/ui_elements_parts_2_3_restyle_history.md` on
-> 2026-05-11.
->
-> **How to read an entry.** Many entries below still carry a
-> `*Current:*` / `*Canonical:*` / `*Migration delta:*` / `*PR:*` shape
-> inherited from the migration plan this file used to be. **In those, a
-> `*Current:*` line is a 2026-05-03 snapshot, not a statement about
-> today** — nothing renews it. Treat an unconverted entry as a lead to
-> check against `base.html`, not as a description of what ships.
-> Entries written as plain present-tense description, with no delta
-> apparatus, have been checked against `base.html` and the templates —
-> which is a statement about what was done, not a guarantee. **Token
-> names are the known weak spot**: `accent-*` and `text-primary` are a
-> retired vocabulary (`spec/color_tokens.md`) and still appear on ~28
-> lines here. The conversion is tracked in
-> `guide/sweep_2026-09-13_ui_elements.md`.
->
+The operator surface's element catalogue: every visual primitive the app
+ships, the class that carries it, and the constraints a future change has
+to respect. `app/web/templates/base.html` owns the entire stylesheet
+inline and is the source of truth for values; this document is what makes
+them findable and says why they are what they are.
+
+Every template that extends `base.html` sets its `body_class` block to
+`ui-v2` (six reviewer templates to `ui-v2 reviewer`), so the
+`body.ui-v2`-scoped block is what paints every page; the unprefixed rules
+earlier in the sheet apply only where that block does not override them.
+
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
 > together show every primitive in this catalogue in working form.
-> When porting a page to v2, mirror that template's class usage.
-
-This document expands the original buttons-only restyle item
-(retired with `guide/archive/unfinished_business.md` 2026-05-10)
-into a full operator-surface settling pass covering navigation
-chrome, cards, tables, buttons, forms, banners, badges, and layout
-primitives. Today it is **Part 1 (Element catalogue)** plus a
-short "Pilot decisions worth remembering" tail; the historical
-Part 2 (Drift catalogue) and Part 3 (Restyle bundle PR split)
-shipped to completion and were archived to
-`guide/archive/ui_elements_parts_2_3_restyle_history.md` on
-2026-05-11.
+> When porting a page, mirror that template's class usage.
 
 Cross-references:
 
 - **`spec/visual_style_general.md`** — authoritative design system (palette,
-  type scale, spacing, component shapes, app-specific accent
-  assignments). This catalogue instantiates that spec against the
-  current codebase.
-- **`spec/domain_assumptions.md`** — load-bearing domain assumptions
-  (the UI-vocabulary sections that used to live there were
-  archived 2026-05-11; the banner-behaviour content moved into
-  this file at §5a).
+  type scale, spacing, component shapes). It names colour **roles**
+  (`accent-blue`, `text-primary` and the rest) rather than the app's
+  shipped token identifiers, deliberately, because it is portable; this
+  catalogue names the shipped tokens, which `spec/color_tokens.md`
+  catalogues.
+- **`spec/color_tokens.md`** — the two-tier token catalogue. Every token
+  named below resolves there.
+- **`spec/domain_assumptions.md`** — load-bearing domain assumptions. The
+  banner-behaviour contract lives here instead, at §5a.
 - **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
 - **`spec/reviewer-surface.md`** — reviewer-surface page contracts.
@@ -65,41 +41,27 @@ classes.
 
 ## Part 1 — Element catalogue
 
-Each element entry follows the same shape:
-
-> **Canonical name** — one-line role.
-> *Current* (what's in the codebase today): CSS class(es) + the
-> file(s) that own the rules.
-> *Canonical* (what it should be after #21): treatment per
-> `visual_style_general.md`.
-> *Migration delta* (what changes): brief.
-> *PR* (which slice of the bundle owns it): see Part 3.
-
 ### 1. Page chrome (top of every page)
 
-> **App identity bar** — small "Review Robin Web App (version …)"
-> link in the top-left, sign-in info + Sign-out button on the right.
-> *Current:* `.chrome` flex row + `.chrome-left` / `.chrome-user` /
-> `.chrome-app-identity` / `.signout` in `base.html`. Bottom border
-> at `#eee`.
-> *Canonical:* unchanged shape. Tighten to the visual_style palette
-> (`border-subtle` for the bottom border, `text-secondary` for the
-> identity link). The Sign-out button becomes a Secondary button
-> (see §6).
-> *Migration delta:* swap raw greys for palette tokens; adopt
-> Secondary button shape for Sign-out.
-> *PR:* D (chrome).
+> **App identity bar** — a `.chrome` flex row: `.chrome-left` carries the
+> "Review Robin Web App (version …)" identity plus the theme toggle in a
+> `.chrome-identity-row`, with the breadcrumb below; `.chrome-user` on the
+> right carries the signed-in line, the `.chrome-link` detours (Settings /
+> Admin / Guide / About) and Sign out. Bottom border `--border-subtle`,
+> identity text and the signed-in line `--text-subtle`.
+> **Sign out is `<a class="signout">`, not `.btn.secondary`** — its own
+> rule wears the Secondary values (`--border-default` border,
+> `--text-body` label, `--surface-muted` on hover) at a smaller size, so
+> the chrome's one control does not read as the page's default button.
 
 > **Breadcrumb** — `_partials/breadcrumb.html`, rendered inside
-> `.chrome-left`. Links in `accent-blue`, current segment in
-> `text-primary` semibold, separator " / " in `text-muted`.
-> *Current:* `.breadcrumb`, `.breadcrumb-sep`, `[aria-current="page"]`
-> rules in `base.html`. Already close to spec.
-> *Canonical:* match `visual_style_general.md` "Breadcrumb" pattern (no home
-> icon, small text, consistent spacing).
-> *Migration delta:* swap `#999` separator for `text-muted` token;
-> verify type scale.
-> *PR:* D (chrome).
+> `.chrome-left`. `.breadcrumb` links in `--text-link`, the current
+> segment a `span[aria-current="page"]` in `--text-body` semibold, and a
+> `.breadcrumb-sep` " / " in `--text-subtle`. No home icon and no other
+> ornamentation, per `visual_style_general.md` "Breadcrumb".
+> Operator pages build the trail through `app/web/breadcrumbs.py`
+> (`operator_root`, `operator_session_child`) rather than hand-rolling the
+> markup, so the segment vocabulary stays in one place.
 
 > **Navigation busy indicator** — a 3px indeterminate bar fixed to the
 > top of the viewport, plus a visually-hidden `role="status"` region.
@@ -107,7 +69,7 @@ Each element entry follows the same shape:
 > when the next page paints, so a fast navigation never flashes it and
 > a slow one stops looking like a hang. Indeterminate by construction:
 > a page is one blocking response, so there is no progress to report.
-> *Current:* `.rrw-busy` / `.rrw-busy-fill` / `body.rrw-navigating` /
+> Carried by `.rrw-busy` / `.rrw-busy-fill` / `body.rrw-navigating` /
 > `.rrw-navigating [aria-busy="true"]` in `base.html`, driven by a
 > delegated listener in the same file. Inherited by every template
 > that extends `base.html`; there is no per-page markup and no
@@ -127,7 +89,6 @@ Each element entry follows the same shape:
 > *Reduced motion:* `prefers-reduced-motion` renders a static bar
 > rather than a travelling one.
 > *JS off:* nothing renders and nothing breaks.
-> *Segment:* 19J.4.
 
 ### 2. Session-scoped chrome
 
@@ -135,67 +96,61 @@ Each element entry follows the same shape:
 > double-height Home anchor on the left and Setup / Operations tab
 > rows on the right. Specified in detail in
 > `spec/visual_style_rrw.md` "Operator session chrome > Navigation chrome (two-row layout)".
-> *Current:* `.session-nav-card`, `.session-nav-grid`,
+> Carried by `.session-nav-card`, `.session-nav-grid`,
 > `.session-home-anchor`, `.row-label`, `.tab-strip-setup`,
 > `.tab-strip-ops`, `.nav-tab`, `.status-row` rules in `base.html`;
 > rendered by `operator/partials/session_top_nav.html` and included
 > by every session-scoped operator template.
-> *Canonical:* already implements the two-row spec. Delta is small:
-> recheck row tints (`accent-blue` / `accent-green` at 5% opacity,
-> not the current `#f3f4f6` / `#f0fdf4`), active-tab marker uses the
-> row's accent rather than a global `--tab-marker-color: #93c5fd`,
-> row labels darken to `text-primary` when their row is active.
-> *Migration delta:* recolor row tints and the active-tab underline
-> to match per-row accent assignment; tighten label / arrow colors
-> to palette tokens.
-> *PR:* D (chrome).
+> **Each row wears its group's own tint and its own marker**, so the
+> Setup / Operations split is legible before any label is read: the
+> strips fill with `--nav-strip-setup-bg` / `--nav-strip-ops-bg`, and the
+> active tab's `::after` underline takes `--tab-marker-color`, which the
+> grid defaults to `--nav-marker-setup` and the Operations row overrides
+> to `--nav-marker-ops`. The Home anchor fills with `--nav-home-bg` and
+> marks itself with `--nav-home-marker`. Row labels and the right-pointing
+> triangle after them — drawn in CSS from borders rather than set as a
+> glyph, so its height matches the surrounding cap-height — sit at
+> `--text-subtle` and darken to `--text-body` when their
+> row is active **or** when the cursor is over any tab in that row's strip
+> (a `:has()` selector, so hovering previews the row's emphasis without
+> transferring active state).
 
-> **Hover = selected** (2026-09-11). Hovering any session-nav target —
-> a Setup or Operations tab, or the Home anchor — paints it in that
-> target's own **selected** colours: `--nav-tab-active-bg` /
-> `--nav-tab-active-fg` for a tab, and the anchor's selected
-> background for Home (`--nav-tab-active-bg` on v1, `--surface-page`
-> on v2). Standardised because the three had drifted: the tab strip
-> hovered to a literal `rgba(255, 255, 255, 0.7)`, which reads as a
-> tinted near-white over the light strips and a pale block over the
-> dark ones, a value being unable to follow the theme.
+> **Hover = selected.** Hovering any session-nav target — a Setup or
+> Operations tab, or the Home anchor — paints it in that target's own
+> **selected** colours: `--nav-tab-active-bg` / `--nav-tab-active-fg` for
+> a tab, and the anchor's selected background for Home.
+> **A hover value must be a token, never a literal.** A literal
+> near-white (the shape this replaced) cannot follow the theme: it reads
+> as a tint over the light strips and a pale block over the dark ones.
 > **The active underline is not part of it.** The `::after` marker
 > stays on `.active` alone — painted under the cursor it would leave
 > the operator unable to tell which page they are on while hovering.
-> **Disabled tabs never hover.** The rules carry
-> `:not(.disabled):not([aria-disabled="true"])` rather than relying on
-> a later override: `body.ui-v2 .nav-tab:hover` is specificity (0,3,1)
-> against `.nav-tab.disabled:hover`'s (0,3,0), so the guard had been
-> losing on every v2 page.
-> *Current:* `base.html`, pinned by
-> `tests/unit/test_session_nav_hover.py`.
+> **Disabled tabs never hover, and the guard has to be in the selector.**
+> The rules carry `:not(.disabled):not([aria-disabled="true"])` rather
+> than relying on a later override: `body.ui-v2 .nav-tab:hover` is
+> specificity (0,3,1) against `.nav-tab.disabled:hover`'s (0,3,0), so an
+> override loses on specificity wherever it sits.
+> Pinned by `tests/unit/test_session_nav_hover.py`.
 
 > **Status strip (`.status-row`)** — horizontal compact strip of
 > "Lifecycle · Reviewers · Reviewees · Assignments · Instruments ·
 > Email Template" sitting inside the nav card.
-> *Current:* `.status-row` rules in `base.html`; rendered by
-> `operator/partials/session_setup_status_row.html`. Today emits
-> `<p>` tags rather than the canonical "key: badge · key: badge"
-> middle-dot row.
-> *Canonical:* `visual_style_rrw.md` "Operator session chrome > Status strip" — middle-dot
-> separators, lifecycle badge first, count / empty badges per slot,
-> `bg-muted` background.
-> *Migration delta:* template rewrite of
-> `session_setup_status_row.html` to the canonical strip; lift
-> lifecycle badge into the strip (currently lives on Session
-> Details card on session_detail.html).
-> *PR:* D (chrome).
+> `.status-row` in `base.html`, rendered by
+> `operator/partials/session_setup_status_row.html` as one `<p>` of
+> "key: badge · key: badge" pairs separated by middle dots — lifecycle
+> badge first, then a count pill or an empty pill per slot, per
+> `visual_style_rrw.md` "Operator session chrome > Status strip". The
+> strip sits inside the nav card on `--surface-card` with a
+> `--border-subtle` top border separating it from the tab rows, rather
+> than on the muted fill `visual_style_general.md` describes for a
+> free-standing strip.
 
-> **Setup nav (`.setup-nav`)** — equal-width 140px button row at the
-> top of session-scoped pages.
-> *Current:* `.setup-nav` rules in `base.html`. Documented in
-> `domain_assumptions.md`. Audit found no template currently using
-> `.setup-nav` — it appears to have been superseded by the
-> `.session-nav-card` two-row chrome.
-> *Canonical:* obsolete; remove the class once we confirm no
-> template references it.
-> *Migration delta:* delete `.setup-nav` rule from `base.html`.
-> *PR:* D (chrome).
+> **Setup nav (`.setup-nav`)** — an equal-width 140px button row. The
+> rule is still defined in `base.html`; **no template uses it**, the
+> `.session-nav-card` two-row chrome having taken over session-scoped
+> navigation. A candidate for deletion: a rule for markup nothing renders
+> leaves the next reader working out whether it is dead or whether they
+> have missed the page that uses it.
 
 ### 3. Page headings
 
