@@ -931,8 +931,13 @@ The Cancel link on the surface is just `<a>` back to `GET /me/sessions/{id}` —
   deactivation of self-review pairs the engine produced. Per-row
   `Assignment.include` overrides individually post-flip.
 - **`assignment_mode`** column on `sessions` records the strategy
-  used (`rule_based` / `manual` / `full_matrix` for legacy rows);
-  `Assignment.created_by_mode` records the same per row.
+  that last generated. `AssignmentMode` has one member,
+  `rule_based`, so that is the only value written today; NULL means
+  the session has never generated (a clone starts NULL). Legacy
+  `manual` / `full_matrix` rows predate 16A PR 5 and no data
+  migration has rewritten them. `Assignment.created_by_mode` records
+  the same per row, but still defaults to `"manual"` at the model
+  level — 19N.1 slice 4.
 - **Per-pair attributes** live on the new `relationships` table
   (Setup page at `/operator/sessions/{id}/relationships`), not on
   `Assignment.context` — that JSON column dropped in 15D PR 6b.

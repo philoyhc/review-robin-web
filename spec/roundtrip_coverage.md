@@ -52,7 +52,7 @@ responses. See `spec/rehydrate.md`.
 | `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ *(by design)* | Clone resets the schedule **on purpose** — a clone is a fresh cycle the operator re-schedules, like the deadline. Settings-CSV round-trips these for backup / restore |
 | `retention_exception`, `retention_overrides` | ✅ | ✅ | Clone copies retention config |
 | **`relationships_enabled`, `observers_enabled`** | ✅ | ✅ | Both paths carry them — a cloned "all"-mode session's copied observer / relationship rows would otherwise be hidden by a `False` toggle |
-| `assignment_mode` | ❌ | ✅ | Settings-CSV defensively drops it (machine-derived); clone copies it |
+| `assignment_mode` | ❌ | ❌ | Machine-derived: the Settings CSV drops it, and a clone starts NULL because it copies no assignment rows (19N) |
 | `status`, `activated_at`, `created_by_user_id` | — | — | Runtime / identity — intentionally reset |
 
 ### Instruments (`instruments`)
@@ -163,10 +163,14 @@ wrong tool):
 5. **Scheduling anchors** stay clone-reset **by design** — a clone is a
    fresh cycle the operator re-schedules. The Settings CSV round-trips
    them, so use it, not clone, for backup / restore.
-6. **`assignment_mode`** is clone-only by design: the Settings CSV drops it
-   as machine-derived. There is no `library_origin_id` to carry — that
-   column, its FK and its index were dropped with the rule-set library, so
-   neither mechanism has anything to omit.
+6. **`assignment_mode`** travels by neither mechanism. The Settings CSV
+   drops it as machine-derived, and since 19N a clone starts NULL rather
+   than copying it: a clone carries no `Assignment` rows, and NULL is how
+   this codebase says *never Generated* — the state the delete-all path
+   restores, and the one three validation rules skip on. There is no
+   `library_origin_id` to carry — that column, its FK and its index were
+   dropped with the rule-set library, so neither mechanism has anything
+   to omit.
 
 ## Asymmetries and footguns
 

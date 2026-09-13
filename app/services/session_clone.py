@@ -104,7 +104,15 @@ def clone_session(
         description=source.description,
         status="draft",
         deadline=None,
-        assignment_mode=source.assignment_mode,
+        # ``assignment_mode`` is deliberately NOT carried (Segment 19N).
+        # A clone copies no ``Assignment`` rows, and ``None`` is this
+        # codebase's marker for "never Generated": ``replace_assignments``
+        # sets the column, deleting every assignment clears it, and three
+        # validation rules skip on ``None`` so a never-generated session
+        # is not told every reviewer is missing on top of the no-pairs
+        # warning. Copying the source's value claimed a generation that
+        # never happened and defeated that skip — and propagated a legacy
+        # ``manual`` into new sessions (`SC-41`).
         self_reviews_active=source.self_reviews_active,
         help_contact=source.help_contact,
         email_template_overrides=(
