@@ -251,29 +251,34 @@ direction*, not fixing a live incident.
 
 ### Blast radius (measured)
 
-Re-run post-fix, 2026-09-13. Each line says what its command counts,
-because two of these were published once without being re-run:
+Re-run at close, 2026-09-13. Every line states the raw figure the
+command returns **and** what to subtract, because three attempts at
+this block published numbers that did not reproduce:
 
 ```
 grep -rn "normalize_email(" app/ --include=*.py | grep -v "def "
-  -> 55 invocations, 18 files
+  -> 58 invocations, 20 files
 
 grep -rn "func\.lower" app/ --include=*.py
-  -> 15 lines, of which 2 are prose inside email_identity.py's own
-     docstring; 13 are code
+  -> 15 lines; 2 are prose in email_identity.py's docstring, 13 code
 
 grep -rn "\.casefold()" app/ --include=*.py
-  -> 22 remaining, none in a gate module except the one marked
-     `not-identity:` in assignments/_coverage.py
+  -> 23 lines; 1 is prose in email_identity.py's docstring, 22 code,
+     none in a gate module except the `not-identity:`-marked tag
+     search in assignments/_coverage.py
 
 grep -rc "normalize_email" tests/ --include=*.py
   -> 0 before this item; the fold had no direct coverage at all
 ```
 
-**The first measurement said "14 call sites" and was wrong** — it
-reconciles to nothing the command produces. So did the first
-correction of it, which published a `func.lower` count and a
-`.casefold()` count taken before the fix rather than after.
+**Three wrong versions of this block, each correcting the last.**
+"14 call sites" reconciled to nothing the command produces. The
+correction published `func.lower` and `.casefold()` counts taken
+*before* the fix rather than after. The correction of *that* disclosed
+the 2 prose lines in the `func.lower` figure and silently omitted the
+1 prose line in the `.casefold()` figure — so "22" still did not
+reproduce from the command printed beside it. Stated raw-then-adjusted
+here so the reader can run the command and land on the same place.
 
 **And it measured the wrong thing**, which cost more than the bad
 number. Counting what *calls* `normalize_email` says nothing about
@@ -337,12 +342,20 @@ anticipate:
   folds through `normalize_email`, when the SQL-side sites never did.
   That claim is what `SC-45` was really about.
 
-- **Changing one function did not close the gates it was written for.**
-  Four identity comparisons folded inline and never called it — one of
-  them `auth.roles.is_super_admin`. Found by the verification pass, not
-  by the build, because the blast radius counted callers rather than
-  bypassers. All four routed through the fold; a structural test now
-  fails on any new inline fold in a gate module.
+- **Changing one function did not close the gates it was written for**,
+  and it took two verification passes to find them all. The first found
+  four identity comparisons folding inline — `auth.roles.is_super_admin`
+  among them. The second found **three more**, and the worst of those
+  was inside a module already on the new test's list:
+  `deps.py:134`, the sign-in resolution deciding which `User` row an
+  authenticated principal becomes, folding with a bare `.lower()` that
+  the test's `.casefold()`-only regex could not see. Also
+  `users.py`'s uniqueness gate and the session-owner lookup, both
+  absent from the list entirely.
+  The root cause each time was the same: the blast radius counted
+  callers of `normalize_email` rather than sites that fold without it.
+  All seven are routed now; the test matches both folds in both
+  spellings and covers eight modules.
 - **The pre-fix state was not merely fail-closed.** The first draft said
   so and stopped at the self-match direction; a `ß` holder's casefolded
   key matched an unrelated `ss` row at every gate. Withdrawn and

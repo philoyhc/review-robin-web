@@ -221,7 +221,20 @@ def test_no_identity_gate_folds_inline() -> None:
         "app/web/routes_reviewer/_invite.py",
         "app/services/participants.py",
         "app/services/assignments/_coverage.py",
+        # Added after the first version of this test missed them: both
+        # resolve "does this email identify an existing User", which is
+        # deciding who someone is, not filtering what a viewer sees.
+        "app/services/users.py",
+        "app/web/routes_operator/_session_home.py",
     ]
+
+    # Both folds, both spellings. The first version matched only
+    # ``.casefold()`` and so could not see ``deps.py``'s sign-in
+    # resolution folding with a bare ``.lower()`` — the single most
+    # consequential identity comparison in the app, inside a module
+    # already on this list. ``func.lower(col)`` is the SQL side and is
+    # not matched: these patterns require empty parens.
+    INLINE_FOLD = re.compile(r"\.(casefold|lower)\(\)|\bstr\.(casefold|lower)\(")
 
     offenders: list[str] = []
     for rel in gates:
@@ -229,7 +242,7 @@ def test_no_identity_gate_folds_inline() -> None:
         assert path.exists(), f"gate module moved: {rel}"
         lines = path.read_text().splitlines()
         for n, line in enumerate(lines, 1):
-            if not re.search(r"\.casefold\(\)", line):
+            if not INLINE_FOLD.search(line):
                 continue
             if "normalize_email" in line:
                 continue

@@ -83,8 +83,12 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 
 ## §5.5a Identity matching — the fold
 
-Every gate in the audit below decides on an email match. The
-convention, settled 19N Item 2 (2026-09-13):
+Every identity comparison in the app decides on an email match — the
+gates audited in §5.6, and four more that audit does not list:
+`get_or_create_user` (which `User` row an authenticated principal
+becomes), `auth.roles.is_super_admin`, the reviewer dashboard's roster
+match, and invite acceptance. The convention, settled 19N Item 2
+(2026-09-13):
 
 **`email_identity.normalize_email` — strip, then `str.lower`.** Not
 `str.casefold`, and the reason is a security one rather than a
@@ -98,6 +102,14 @@ mailboxes — become one comparison key. That key decides access at
 and at invite acceptance. Merging two people at any of them lets one
 reach the other's surface: a fail-**open**. Lowering keeps them
 distinct.
+
+**The fold also strips**, which three of those sites did not do
+before — `is_super_admin`, the dashboard match and invite acceptance
+compared unstripped. Surrounding whitespace on an identity now
+matches where it previously did not. A widening, stated rather than
+absorbed: these identities arrive from Easy Auth headers and a roster
+whose emails are stripped on write, so the case is not expected, but
+the semantics changed and the change was not the point of the item.
 
 **This was a live fail-open, not a hypothetical**, and the first
 write-up of this item got that wrong — it said the pre-fix state
