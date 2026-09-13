@@ -322,7 +322,7 @@ it could be observed.*
 - **Sorting must not happen in Python on a paged table.** Sorting a
   fetched window *"would sort page 2 within page 2 — invisible on an
   unpaged table, a lie on a paged one."*
-- **The palette keys on instrument id, not loop position**, so colour
+- **The palette keys on instrument id, not loop position**, so color
   rides with the instrument across reorder, replicate and delete.
 - **A locked card never displays unsaved values** — *"a lock that copied
   the edited values into the read-only view would leave a collapsed,
@@ -366,7 +366,7 @@ Verified here rather than taken on the batch's word:
   completing it is a contract edit.
 - **A stale code comment, not a spec problem:**
   `visibility_policies.py:365-370` documents `while_ongoing` as
-  `[activated_at, deadline)` while the behaviour matches the spec's
+  `[activated_at, deadline)` while the behavior matches the spec's
   status-column rule. The docstring is what is wrong.
 
 ### A spec-vs-SPEC conflict — five validation severities
@@ -416,7 +416,7 @@ Invitations and Responses are missing, and Assignments no longer uses
 `apply_cookie_sort` at all. And `instruments.md` contradicts itself on
 whether the action row carries `+Page break`. Reported, not touched.
 
-### Stale colour identifiers: none
+### Stale color identifiers: none
 
 `grep -n "accent-\|text-primary\|bg-page"` over all six files → **0**.
 
@@ -761,7 +761,7 @@ source of truth for values"* — removed.
   one.**
 - **2px card border, not 1px** — at 1px the card edge is visually
   swallowed by the table grid lines and form borders beside it.
-- **There is no flat colour-named token, and one must not be
+- **There is no flat color-named token, and one must not be
   reintroduced** — *"a name that says blue cannot be remapped for dark, or
   moved for contrast, without lying about what it is, which is the whole
   reason the two tiers exist."*

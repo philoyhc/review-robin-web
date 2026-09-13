@@ -347,7 +347,7 @@ bullet list called them `accent-blue`, `accent-green`, `accent-amber`,
 `accent-red` and `text-primary`. **All five have 0 definitions in
 `base.html`**; the shipped tokens are `--status-{info,success,warning,
 error}-{bg,border}` and `--text-body`. `spec/color_tokens.md`'s opening
-paragraph says the flat colour-named tokens are *"fully retired"* — so a
+paragraph says the flat color-named tokens are *"fully retired"* — so a
 live spec was naming a vocabulary another live spec records as retired.
 The same names sat in the pills table's middle column, in the two rows
 this sweep rewrote.

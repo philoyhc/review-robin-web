@@ -28,9 +28,118 @@ and put it back". *Those reverts are the most load-bearing thing in this
 document: without the correction, nine contracts would have been silently
 demoted to descriptions of the code.*
 
+## OPEN — what still needs a decision, and what needs doing
+
+**27 of 74 resolved. 47 open.** This section is the one to read; everything
+below it is the evidence.
+
+| what it needs | ids | count |
+|---|---|---|
+| **a ruling from the author** — which side is right | `SC-05`, `SC-06`, `SC-08`…`SC-36` | 31 |
+| **a contract decision** | `SS-01`, `SS-02` | 2 |
+| **code, no decision** — a comment or a dead mapping | `CC-01`…`CC-11` | 11 |
+| **code, no decision** — a guard | `SI-07` | 1 |
+| **prose, no decision** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
+
+### The 32 `SC` rows need one ruling each, and they group
+
+`SC-01`…`SC-04` took one line — *"update spec/comments; code is correct"* —
+and the rest divide the same way. **My read is offered so they can be ruled
+in batches rather than thirty-two times**, and it is a read, not a finding:
+
+**(a) The code looks intended and the spec is stale** — the `SC-01`…`SC-04`
+shape. `SC-05` (a test pins the code's heading format *while citing the
+spec section it contradicts*), `SC-06` (a route path — and *a URL is
+contract*, so whichever wins, one must move), `SC-08` (`decode_csv`'s
+signature), `SC-09` (`assignment_mode` admits only `rule_based`), `SC-10`
+(`/edit` is a 308, not a page), `SC-11` (Band 3 names a type vocabulary the
+code replaced), `SC-12`/`SC-16` (button labels, a pill color), `SC-18`/`SC-19`
+(a preview route, an identity-match mechanism), `SC-22` (a sixth Operations
+tab), `SC-25` (eight vs twelve Guide sections), `SC-29` (an RTD section the
+exporter never emits), `SC-32` (`.card.danger-zone`'s
+background, where two other specs and the code already agree on amber, so
+§4 was the outlier — **already reconciled by Item 1, and listed here only
+because a contract text change deserves confirmation**).
+
+**(b) The spec states a requirement the code has not met** — here the spec
+is working, and the question is whether to build or to retire. `SC-13`
+(`max-width`/ellipsis on page buttons), `SC-14` (Enter / Shift+Enter column
+navigation — *no `keydown` handler exists on that surface at all*), `SC-20`
+(a per-artifact "Send test to…" affordance), `SC-21`/`SC-34` (a Next Action
+button and a `.next-action-confirm` that render nowhere), `SC-23` (an
+Activated-state layout exception), `SC-35` (a `placeholder_card` macro with
+no callers), **`SC-30`** (Sign out is specified as Secondary; the code ships
+a bespoke rule) and **`SC-33`** (`.pill-success` is specified as
+`--status-success-fg` and ships `--status-success-accent`, which diverges in
+dark — *probably a code bug*, and its contract stands either way).
+
+**(c) A real judgment, where neither side is obviously right.** `SC-15`/`SC-17` (a flag and a helper
+signature where the spec also contradicts itself), `SC-24` (a gate the
+template applies and the spec does not), `SC-26`/`SC-27` (the `include` seed
+and `reconcile_impact`'s shape — in `SC-26` **the code is right and the spec
+is incomplete**, in `SC-27` the reverse), `SC-28` (where the operator is
+sent to regenerate), `SC-31` (a status-strip fill no spec accounts for),
+`SC-36` (orphan CSS — cleanup, not a contract).
+
+*`SC-07` was the one to look at first and has been: **investigated, not a
+bug**, spec corrected, three tests added. See its ACTIONED entry below — the
+claim was stale on both halves, and the spec had been citing a test file that
+does not exist.*
+
+### The 2 `SS` rows
+
+- **`SS-01` — five validation severities.** `validate_page.md` agrees with
+  the code; the per-page specs do not. **Two are specified as errors where
+  the code warns, and as errors they would block activation**, so the
+  direction matters. My read: `spec/README.md`'s precedence rule gives the
+  subsystem spec authority, so the per-page lists are what to correct — but
+  that is an error → warning downgrade in two live specs, which is a
+  deliberate contract change. **All five untouched.**
+- **`SS-02` — observer cohort rules.** Already **resolved by editing**
+  `rehydrate.md`, because its pointer named text the sweep removed. It is
+  the one spec-vs-spec conflict the sweep settled rather than reported, and
+  it wants confirmation rather than work.
+
+### The 11 `CC` rows and `SI-07` need code, not a decision
+
+`CC-01` (a `SessionStatus` docstring calling two written states "reserved"),
+`CC-02` (a dead 409 mapping — **verified as a deliberate retirement**, so
+this is dead-matter removal), `CC-03`/`CC-05`/`CC-11` (docstrings naming a
+dropped table, dropped sections, and a shipped PR as pending), `CC-04` (a
+named constant that does not exist), `CC-06` (a window documented as a date
+range where the behavior is a status check), `CC-07` (**two code comments
+disagreeing with each other** about which segment did the work), `CC-08` (a
+segment name), `CC-09` (retired token names inside `base.html`'s own
+comments — including the pre-19B button vocabulary the doc guard bans in
+prose but cannot see in CSS), `CC-10` (a docstring listing 3 of the 5 error
+codes it raises).
+
+**`SI-07`** is the query budget: 43 / 84 / 134 / 234 / 434, presented as
+*"measured through the real routes"*, **pinned by nothing** — the related
+test only asserts relative growth under 2.5×. Rewording it would be
+theater. *A guard is the right answer and a guard is code.*
+
+### The 2 prose rows
+
+`SI-08` — restore the fact that the Quick Setup per-slot endpoints have **no
+live caller** (0 template hits), which went out with an unverifiable
+*"retained for fixture compatibility"*. `SI-10` — give the `rtds[` import
+tolerance its own bullet, since the enforcement is unconditional and
+stronger than its documentation.
+
+### One structural question, not a finding
+
+**`role_landing_and_visibility.md` may be a `docs/` document living in
+`spec/`.** Its own opening answers *"given my role … what do I see"*, which
+is `docs/`'s question. Moving it is a contract decision, and
+`tests/unit/test_spec_coverage.py` maps routing modules to governing specs,
+so it is not a file rename.
+
+---
+
 ## The tally
 
-**75 findings**, counted by distinct id rather than asserted:
+**74 findings**, counted by distinct id rather than asserted:
 
 | kind | count | what it is |
 |---|---|---|
@@ -38,11 +147,11 @@ demoted to descriptions of the code.*
 | **CC** | 11 | two code comments disagree, or one names something absent |
 | **SI** | 10 | one spec contradicts itself |
 | **ID** | 8 | a spec names an identifier that does not exist |
-| **SS** | 6 | two live specs disagree |
+| **SS** | 5 | two live specs disagree |
 | **DT** | 4 | documentation that describes its own tooling imprecisely |
 
-*Recount before quoting this number.* It was published as 64 and grew to
-75 as the verification passes reported, and nothing renews a count —
+*Recount before quoting this number.* It was published as 64, grew to
+75 as the verification passes reported, and is **74**, and nothing renews a count —
 which is the defect this whole segment exists to remove, so a register
 carrying one had better be honest about it. The command:
 
@@ -86,7 +195,7 @@ nothing usable.
 **Action:** add `library_name` to the recognized-and-skipped set. The
 contract already says so; no contract decision needed.
 
-### SC-02 · A specified pill cannot render, and the code documents behaviour it no longer has
+### SC-02 · A specified pill cannot render, and the code documents behavior it no longer has
 
 **`spec/assignments.md`** status table and its `### Staleness` section
 specify a `stale` pill "when the current rule + roster pass would produce
@@ -236,7 +345,7 @@ named text the sweep removed. **This is the one spec-vs-spec conflict the
 sweep resolved by editing rather than reporting; flagged for
 adjudication.**
 
-### SS-03 · Others, left standing
+### Others, left standing
 
 | id | conflict | left |
 |---|---|---|
@@ -291,7 +400,7 @@ because a live spec already carried the answer:
 | CC-03 | `app/schemas/rules.py:6,367` | docstrings describe themselves as mirroring `rule_set_revisions`, a dropped table |
 | CC-04 | `app/services/csv_imports.py:61-63` | names a `MANUAL_CSV_MAX_BYTES` constant and a "manual-assignments importer" that do not exist |
 | CC-05 | `_serialize.serialize_session_config` docstring | still lists "3. Operator-defined RTDs" and "6. Field-label overrides" as emitted sections |
-| CC-06 | `app/services/visibility_policies.py:365-370` | documents `while_ongoing` as `[activated_at, deadline)`; the behaviour matches the spec's status-column rule, so the docstring is what is wrong |
+| CC-06 | `app/services/visibility_policies.py:365-370` | documents `while_ongoing` as `[activated_at, deadline)`; the behavior matches the spec's status-column rule, so the docstring is what is wrong |
 | CC-07 | `_operations.py:264,358-366` + `views/_previews.py:19` vs `_preview_surface.py:3-6` | **two code comments disagree** about whether the preview follow-on was Segment 18Q; the latter explicitly corrects the former |
 | CC-08 | `app/db/models/email_outbox.py` | says "Segment 14-1" where the specs say "Segment 14B" (the equivalence is recorded in the 14B plan header, so this is findability, not error) |
 
@@ -299,7 +408,7 @@ because a live spec already carried the answer:
 
 ## Stale identifiers in specs
 
-Retired colour-token vocabulary — **0 definitions in `base.html`**; the
+Retired color-token vocabulary — **0 definitions in `base.html`**; the
 live tokens are `--status-*` / `--card-*` / `--text-body`.
 **`spec/ui_elements.md`'s own family is Item 1's and still in flight.**
 
@@ -374,7 +483,7 @@ coverage floor. That is the open question this class leaves.
 A fifth kind, added when the author instructed that **`spec-writer`'s
 instruction be updated**. Its charter had a contradiction that cost two
 long per-invocation overrides during 19M: step 3 said *"update the spec to
-match current behaviour … Reflect what the code actually does now"*, while
+match current behavior … Reflect what the code actually does now"*, while
 step 5 said *"flag drift … rather than silently rewriting"*. **Those are
 opposite instructions for the same situation**, and under §4 the first one
 is wrong outside a segment close.
@@ -383,7 +492,7 @@ is wrong outside a segment close.
 makes, as two modes:
 
 - **Mode A — a segment close.** The segment deliberately shipped code, so
-  the shipped behaviour *is* the intended new contract and aligning the
+  the shipped behavior *is* the intended new contract and aligning the
   spec is the deliberate act §4 calls for. *"Spec on the way out."*
 - **Mode B — anything else** (a verification pass, a sweep, a drift someone
   noticed). **The spec wins**; a divergence merely discovered has no
@@ -421,6 +530,63 @@ the three that are wrong all omitted it.
 `guide/todo_master.md` each describe `spec-writer`'s job. They were not
 read against the new definition — out of 19M's scope — and should be
 checked when DT-01..DT-03 are actioned.
+
+---
+
+## ACTIONED — SC-07 investigated. **Not a bug.** The spec was wrong twice.
+
+Flagged as *"the one I would look at first, because a round-trip that trips a
+unique constraint on re-import is a defect rather than a documentation
+question."* Investigated on instruction. **It is not a defect**, and the
+spec's claim was stale on both halves.
+
+The claim was: *"Seeded RTDs and seeded RuleSets auto-materialize on session
+create, so the export filters them out (re-emitting would either no-op or
+trip `uq_session_rule_set_session_name`)."*
+
+| the claim | what is true |
+|---|---|
+| seeded rule sets auto-materialize on session create | **nothing seeds one on create.** The seeding helper went with the rule-set library; the three `SessionRuleSet(` constructors are clone, Band 1 authoring, and apply itself |
+| the export filters them out | it emits **every** row — `_non_seeded_session_rule_sets` is "every row for the session" despite its name |
+| re-emitting would trip `uq_session_rule_set_session_name` | **unreachable from this path.** `_apply_session_rule_sets` is an **upsert by name** — it updates a row whose name exists and deletes the ones the CSV omits, so an INSERT never carries a duplicate name |
+
+### Established by running it, not by reading
+
+Three cases, now `tests/unit/test_session_rule_set_reimport.py`:
+
+1. **Applying a session's own export back to it, twice** — no error, one row.
+2. **Importing into a session that already carries the name** — upserted, not
+   duplicated. This is the collision the retired claim was about.
+3. **A bundle naming the same rule set twice** — the only path that *could*
+   reach the constraint, because apply `db.add`s per row without flushing
+   between them. The parse phase rejects it first: a clean
+   `duplicate session_rule_sets name 'Dupe' (also at session_rule_sets[1])`
+   in `ApplyResult.errors`, and **phase 2 never runs**.
+
+**Case 3 was mutation-tested rather than assumed.** Removing the cross-row
+check makes it fail — and it fails with
+`SAWarning: transaction already deassociated from connection`, which is the
+proof that *without that check the write does reach the constraint*. The
+guard is load-bearing, and the test says so.
+
+### A second finding, found while looking for the first
+
+**The spec cited a test file that does not exist.**
+`tests/integration/test_apply_session_config.py::test_round_trip_byte_stable`
+— no such file, no such test; the real coverage is three files under
+`tests/unit/`. So *the round-trip guarantee had been resting on a citation
+nobody could follow*, which is how the item-7 claim survived being wrong in
+two places. Repointed, and each of the four named files verified to exist.
+
+*The lesson is narrower and more useful than "the spec was stale": a claim
+about a constraint is exactly the kind that can only be settled by trying
+it, and this one had an unfollowable citation standing in for the attempt.*
+
+### Disposition
+
+**Spec corrected; no code changed.** Item 7 now states the upsert-by-name
+behavior, names the duplicate-name case as the only path to the constraint,
+and cites the test that holds it. Suite **3,868 → 3,871**.
 
 ---
 
@@ -756,3 +922,99 @@ Repointing either falsifies a log.
 *That is the same call the sweep made four times over `spec/` — and making
 it correctly here, on the last item, is the only evidence that the day's
 lesson took rather than being written down.*
+
+---
+
+## The register was wrong about two of its own fixes
+
+Asked whether the register reflected the fixes, I audited all **25 actioned
+claims** mechanically rather than answering from memory. **23 held. Two did
+not:**
+
+| id | the register claimed | the truth |
+|---|---|---|
+| **SI-02** | *"the file now says so"* — five pairs exist, byte-stability established for four, Observers unverified | `csv_contracts.md` still said *"five main roster-shaped pairs"* in its header and *"the four roster-shaped pairs"* in §4, **with no distinction between them.** The fix existed only in the plan's Semantics section and in this register |
+| **SI-05** | *(See "Form scope" below)* → §"Form HTML mechanics" | `reviewer-surface.md:145` still said *"Form scope"* |
+
+**Both are now actually fixed**, and `csv_contracts.md` §4 states the gap
+rather than implying either way: *"Observers is the fifth pair and is not
+claimed here … a guarantee that quietly covers four while the header counts
+five is how a round-trip regression goes unnoticed."*
+
+### Why this happened, precisely
+
+Both were described in Item 9's **plan** — SI-02 in its `Semantics`, SI-05
+in its finding list — and **neither was in the script that ran.** I wrote
+the intent, wrote the record of having done it, and did not do it. The
+suite could not catch it: nothing tests spec prose against a register.
+
+*This is the fifth turn of the same screw, and the sharpest, because it is
+the register's own integrity rather than a spec's.* §1: a `*Current:*` block
+rots because nothing renews it. §2b: a finding rots unless something checks
+it. §7: a correction rots too. The tally section: a count rots. **And now: a
+claim that a thing was fixed rots the moment it is written, because it is
+believed on sight and nothing re-derives it.**
+
+**What the audit is, so it can be re-run.** 25 predicates, one per actioned
+row, each `True` only if the edit is present in the file — not a search for
+the finding's *description*, which is what made the two invisible. Two
+minutes to write, and it is the only reason this answer is not "yes,
+updated."
+
+*The honest reading of the day's error count is now **fifteen**, not
+thirteen: thirteen wrong claims about the code, and two wrong claims about
+having fixed them.*
+
+---
+
+## Codex review on #2354 — three findings, all correct
+
+`chatgpt-codex-connector` reviewed at `963f6247`, one commit before SC-07's
+fix. **All three findings were right**, and one was right about something I
+had already done.
+
+**P1 — US spelling in the new register prose.** Correct, and it cites
+`AGENTS.md` L36-40, which is the rule: *new or rewritten prose is US.* The
+register carried `colour` ×2, `judgement`, `behaviour` ×6, `theatre`,
+`materialise` ×2. **And the same slip was in the other three documents
+written today** — the segment plan, this sweep's record, and the
+`ui_elements` sweep's record, twelve more occurrences. All corrected. *The
+finding named one file; the defect was in four, which is the argument for
+fixing a class rather than an instance.*
+
+**P2 — `SC-31` and `SC-33` were in the wrong buckets.** Correct, and the
+reasoning is the part worth keeping: the buckets exist so rows can be
+**ruled in batches**, so an id in the wrong one is not untidiness — it is a
+ruling applied to the wrong thing. `SC-31` was listed twice, in (a) and
+(c). `SC-33` sat in (a), *"the code looks intended and the spec is stale"*,
+while its own row says the contract stands and the code is probably the bug
+— so accepting bucket (a) wholesale would have rewritten a contract the
+register was defending. `SC-30` had the same shape. Both moved to (b);
+`SC-31` left in (c) only; `SC-32` named explicitly rather than swept in by a
+range. **Verified mechanically afterwards**: no id in two buckets, all 31
+open `SC` rows placed.
+
+**P2 — the obsolete `SC-07` warning.** Correct, and **already fixed** in
+`43ac17d5`, which Codex had not seen. It reached the same conclusion
+independently and by the same evidence — the retired seeding, the
+upsert-by-name — which is worth recording as corroboration rather than
+noise.
+
+It also supplied something the investigation had missed:
+`test_empty_rules_json_round_trips_unchanged` **already** serialises, applies
+over the same session, and asserts byte-identity. So the first of the three
+tests added for SC-07 was a **duplicate** — and because the row exists before
+that apply, the existing test already exercises the update branch, so the
+second apply added nothing. Removed; the existing coverage is now cited in
+the module docstring so the omission is deliberate rather than an oversight.
+Suite **3,871 → 3,870**.
+
+*Removing it immediately created a fresh instance of this segment's own
+defect: the spec cited the file "whose **third** case fails if the cross-row
+check is removed", and there were then two. Now cited by test **name** —
+because an ordinal rots the moment a case is added or dropped.*
+
+**The reviewer that is not me found three things five passes of mine did
+not**, including one that would have mis-ruled a contract. *Maker and
+checker separate, and the checker being a different model is the part that
+worked.*
