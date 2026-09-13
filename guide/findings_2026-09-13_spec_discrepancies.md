@@ -144,7 +144,7 @@ of them are **likely code bugs** rather than contract questions.
 
 | id | where | contract | code |
 |---|---|---|---|
-| SC-30 | `ui_elements.md` §1 | Sign out is a **Secondary** control | `base.html:517` ships a bespoke `.chrome-user .signout` rule instead — `--border-default` (not `--btn-secondary-border`), `--text-body`, `--surface-muted` hover, 0.9em / `4px 10px`. The spec is now stated at role level, naming no token, so it does not encode the divergence |
+| SC-30 | `ui_elements.md` §1 | Sign out is a **Secondary** control | `base.html:3414-3417` ships a bespoke `.chrome-user .signout` rule instead — `--border-default` (not `--btn-secondary-border`), `--text-body`, and a `--surface-muted` hover. **This row's own description was wrong until the verification pass**: it said the spec named no token, when §1 had come to restate §6's `--btn-secondary-*` pair. §1 now points at §6 instead of restating it, per `operator_button_audit.md`'s own rule that the role definition lives in one place |
 | SC-31 | `visual_style_general.md` Patterns | status strip fills `bg-muted` with `border-subtle` **top and bottom**, sitting between chrome and page body | `--surface-card`, top border only, **inside** the nav card. RRW overrides the *placement* explicitly but **not** the fill — so the fill is unaccounted for. **Needs a decision** |
 | SC-32 | `ui_elements.md` §4 vs two other specs | §4 said `.card.danger-zone` has a **white** background; `visual_style_general.md` and `visual_style_rrw.md` both contract the **same amber surface as the lock card, "fill included"**; code ships `--card-warning-bg` | **Resolved to amber** by `ui_elements.md`'s own header precedence rule. Flagged because it is a **contract text change**, not a provenance edit |
 | SC-33 | `ui_elements.md` pills | `.pill-success` text is `--status-success-fg` | `base.html:3289` ships `--status-success-accent`. They share `--green-deep` in light but **diverge in dark** (`--green-glow` vs `--green-bright`), and every other pill uses its `-fg`. **Contract left as `-fg`; likely a code bug.** Item 1 had written `-accent` to match the code and reverted it |
@@ -398,3 +398,143 @@ the three that are wrong all omitted it.
 `guide/todo_master.md` each describe `spec-writer`'s job. They were not
 read against the new definition — out of 19M's scope — and should be
 checked when DT-01..DT-03 are actioned.
+
+---
+
+## Verification pass — what the five checks caught, and what it cost
+
+`spec-writer` was run per batch in **Mode B** (report-only; see
+`.claude/agents/spec-writer.md`). Two passes have reported. **Both found
+errors the sweep introduced**, which is the fourth time today a pass has
+caught the previous one.
+
+### Corrected here — six, each verified independently before the edit
+
+- **A corrupted primitive name made a published contrast figure wrong.**
+  `color_tokens.md` said *"a pair at `--gray-soft` / `--slate-deeper`
+  measures 1.47:1 light and 1.95:1 dark"*. **I recomputed both:**
+  `--slate-deeper` (`#2b3547`) on `--ink-abyss` is **1.50**;
+  `--slate-deep` (`#3a465c`) is **1.95**. The pre-sweep text named
+  `--slate-deep` and even carried a footnote reconciling that exact
+  figure. One letter, and the number attached to it became false.
+- **An overclaimed test guarantee.** `ui_elements.md` said
+  `test_pager_link_style.py` *"asserts no rule for those selectors
+  survives"* for **five** class names. It pins **four**;
+  bare `.table-pager` and `.table-pager-jump` are asserted nowhere. Now
+  states which four the test holds and that the other two are held **by
+  the paragraph alone** — *"a rule for either would pass the suite; that
+  is what the prohibition is for."* **The sweep invented a stronger
+  guarantee than exists**, which is worse than the retirement record it
+  replaced.
+- **A cross-theme match that holds in one theme.** `visual_style_rrw.md`
+  said `expired` is red *"matching the reviewer dashboard's 'closed' pill
+  so the post-window state reads the same on both surfaces."* In dark the
+  lifecycle pair resolves to `--red-bright` and the dashboard's error pill
+  to `--red-soft`. Now says the **hue** is the shared signal and the value
+  is not — which is what the surrounding paragraph already argued.
+- **A categorical claim false outside one wrapper.** *"No
+  `margin-bottom`. A card's vertical spacing comes from its wrapper's flex
+  or grid `gap`."* True inside `.page-grid` / `.bottom-grid`, which zero
+  it; a bare `.card` keeps the base margin, which is what stacks
+  consecutive top-level cards on the sys-admin pages.
+- **`301` where the code says `308`, twice.**
+  `rrw_functional_spec.md:1016,1052`. The sweep corrected this same fact
+  in `session_home.md` and left it standing here, producing a **three-way
+  disagreement** in which the functional spec was the sole outlier.
+  `_session_home.py:249` is `HTTP_308_PERMANENT_REDIRECT`.
+- **A mechanical artifact of a trim.** `setup_pages.md` had an orphan
+  semicolon opening a line where a parenthetical had been cut.
+
+### Two `spec/README.md` rows, both pre-existing
+
+Neither was touched by the sweep, and both were caught by asking for a
+second opinion on them:
+
+- The `roundtrip_coverage.md` row described that file's gap list by its
+  **old** contents — *"feature toggles"* has **0** occurrences in the file,
+  and *"roster status"* is listed there as something that **does**
+  round-trip. Repointed to the four gaps the file actually names.
+- The `ui_elements.md` row called it *"current implementation per element
+  family"* — ship-state framing for a file whose own opening says it is
+  **the contract**. Reframed.
+
+### Reported and left standing
+
+- **`permissions.md`'s verification recipe does not find its own answer.**
+  The invariant holds — a mechanical parse of 132 session-scoped routes
+  found 0 violations — but the *method* the spec describes ("scan every
+  `@router.get/post` decorator") would falsely flag at least 9 routes in
+  `_instruments.py`, whose gate is two levels deep via
+  `_require_instrument_in_session`. **A stated method that would produce
+  false positives is worse than no method**, because the next person runs
+  it and believes the result. Filed as **SI-06**.
+- **`operations_pages.md`'s query budget is pinned by nothing.** The
+  43 / 84 / 134 / 234 / 434 table is presented as *"measured through the
+  real routes"*; the only related test asserts **relative growth under
+  2.5×** and would pass with every figure drifted. Filed as **SI-07** —
+  the frozen-measurement class, in the one place it was kept deliberately.
+- `quick_setup_card_spec.md` lost the fact that the per-slot endpoints have
+  **no live caller** (0 hits across the templates) when *"retained for
+  fixture compatibility"* was trimmed as unverifiable. The trim was right;
+  the fact is worth restoring. Filed as **SI-08**.
+- `docs/status.md:308` narrates the *earlier, partial* `ui_elements.md`
+  sweep — a "How to read an entry" note and residual apparatus blocks —
+  which this segment has since removed entirely. It is a dated journal
+  entry so it is not wrong, but a reader following it will not find what it
+  describes. Out of `spec/`'s scope.
+
+*The pattern across all four passes today is the same and worth stating
+once: **every pass caught the previous one and introduced its own.** Ten
+edits, three wrong; the reversal, two wrong; the sweep, six wrong. The
+defect rate is not falling, so the check is not optional — and the two
+errors here that mattered most were both a **single token or number
+substituted inside an otherwise correct sentence**, which is the hardest
+kind to see and the easiest kind to compute.*
+
+### Passes 3 and 4 — four more corrected, two registered
+
+**Corrected (verified independently first):**
+
+- **A route path missing its router prefix.** `reconciling_regeneration.md`
+  gave Prepare session as `POST /sessions/{id}/workflow/prepare`. The
+  router mounts at `prefix="/operator"`, so the path is
+  `/operator/sessions/{id}/workflow/prepare` — which `workflow_card.md` and
+  `next_action_card.html` both carry correctly. **A URL is contract**, and
+  this one 404s for anyone who builds the request from it.
+- **`spec/README.md` contradicted the spec it indexes.** It described the
+  reviewer sort as having *"live-only persistence"* while
+  `sort_by_reviewee.md` had just corrected its own heading to *"view-time
+  override"* and its body describes a cookie. Both were edited the same
+  day, in different batches — *the index is the one place a
+  cross-batch inconsistency has nowhere to hide, and nothing checks it.*
+- **`spec/README.md` described `role_landing_and_visibility.md` by removed
+  text** — its *"recorded from a running app"* method claim and an
+  observer-archive item now written as a standing guard rather than an open
+  divergence. The sweep touched the target and not its index row.
+- **`preview_hub.md` denied a live sibling section.** It said *"there is no
+  Preview Pages grouping in the page taxonomy"* while
+  `operator_ui_concept.md` §"4. Preview Pages" carries the grouping,
+  `README.md` lists it, and `operator_ui_concept.md:22` names
+  `preview_hub.md` as *"the Preview Pages contract"*. The pre-sweep text
+  said the grouping *"is retired"* — false the same way — so the sweep
+  **restated a pre-existing falsehood in the present tense** rather than
+  introducing it. Now states that the grouping has one member and that the
+  grouping and the tab row are different axes.
+
+**Registered, not fixed:**
+
+| id | where | what |
+|---|---|---|
+| SI-06 | `permissions.md` | the stated verification recipe would falsely flag ≥9 routes whose gate is two levels deep via `_require_instrument_in_session`. **A method that produces false positives is worse than no method**, because the next person runs it and believes the result. The invariant itself holds — 132 routes, 0 violations |
+| SI-07 | `operations_pages.md` | the 43/84/134/234/434 query budget is presented as *"measured through the real routes"* and **nothing pins it**; the related test only asserts relative growth under 2.5× |
+| SI-08 | `quick_setup_card_spec.md` | lost the fact that the per-slot endpoints have **no live caller** (0 template hits) when *"retained for fixture compatibility"* was trimmed as unverifiable. The trim was right; the fact is worth restoring |
+| SI-09 | `validate_page.md` | `### 3.2 Current rules (18 registered)` — accurate today (18 `ValidationRule` entries) but a tree measurement in a heading, the self-staling class. Predates 19M |
+| CC-10 | `_display_fields.py:797-801` | the `SortSpecError` docstring lists **3** of the **5** codes it raises. Code-internal |
+
+**One verification claim was itself wrong, and the repo's own guard
+settles it.** The Item 5 pass wrote that `instruments_index.html` has
+*"embedded NULs elsewhere in it"*. It has **none** — `tests/unit/test_templates_are_text.py`
+passes and a byte count returns 0. That guard exists because of 19L.4, and
+this is the first time it has answered a question rather than prevented
+one. *Five verification passes, one false claim: the same rate as the
+sweeps they were checking.*

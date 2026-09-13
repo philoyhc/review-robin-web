@@ -49,9 +49,10 @@ classes.
 > right carries the signed-in line, the `.chrome-link` detours (Settings /
 > Admin / Guide / About) and Sign out. Bottom border `--border-subtle`,
 > identity text and the signed-in line `--text-subtle`.
-> **Sign out is a Secondary control** (§6) rendered at chrome scale: white
-> fill, a medium-grey border, a `--btn-secondary-fg` label, and
-> `--btn-secondary-bg-hover` on hover. Chrome scale, not page scale — the
+> **Sign out is a Secondary control**, rendered at chrome scale. §6 owns
+> what Secondary means and this entry does not restate it: a second
+> definition is a second thing to keep in step. Chrome scale, not page
+> scale — the
 > chrome's one control must not read as loudly as the page's default
 > button.
 
@@ -165,10 +166,14 @@ classes.
 > filled with `--surface-page`.
 > **2px, not 1px**: at 1px the card edge is visually swallowed by the
 > table grid lines and form borders sitting next to it.
-> **No `margin-bottom`.** A card's vertical spacing comes from its
-> wrapper's flex or grid `gap`, because a margin on the card compounded
-> with `.bottom-grid`'s own margin and the `align-items: start` offset and
-> doubled the gap on the Setup pages.
+> **Inside `.page-grid` and `.bottom-grid`, no `margin-bottom`**: those
+> wrappers zero it and the card's vertical spacing comes from their flex
+> or grid `gap`, because a margin on the card compounded with
+> `.bottom-grid`'s own margin and the `align-items: start` offset and
+> doubled the gap on the Setup pages. **A bare `.card` outside such a
+> wrapper still carries the base `margin-bottom`** and spaces itself —
+> which is what stacks consecutive top-level cards on the sys-admin
+> pages.
 
 > **`.card.lock` (warning-framed, lifecycle-locked)** — `.card`'s shape
 > with `--card-warning-bg` fill and `--card-warning-border` border (the
@@ -592,10 +597,14 @@ window of ranges with First / Last hung off the ends and `…` for each
 elided gap bounds the strip's width, and so bounds its reach at two pages
 per click whatever the roster size — five clicks to row 2,400 of 5,861,
 fifty to the middle of 40,000. The cluster's five fixed cells reach any
-page in one move instead. `tests/integration/test_pager_link_style.py`
-asserts no rule for those selectors survives, on the principle that a
-rule for markup nothing renders leaves the next reader working out
-whether it is dead or whether they have missed the page that uses it.
+page in one move instead. A rule for markup nothing renders leaves the
+next reader working out whether it is dead or whether they have missed
+the page that uses it, which is why none may come back.
+`tests/integration/test_pager_link_style.py` pins **four** of the five —
+`.table-pager-link`, `.table-pager-link.is-current`, `.table-pager-gap`
+and `.table-pager-bottom`. **Bare `.table-pager` and
+`.table-pager-jump` are held by this paragraph alone**, so a rule for
+either would pass the suite; that is what the prohibition is for.
 The names are listed here because they appear in older plans and commit
 messages, and someone grepping one should find out that it is gone rather
 than that the spec is silent.

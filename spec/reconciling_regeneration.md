@@ -129,7 +129,7 @@ lost their meaning: "regenerate" no longer means "lose everything", and
 produces an empty `to_delete`.
 
 The **Prepare session** button (`POST
-/sessions/{id}/workflow/prepare`, which runs Generate → Validate →
+/operator/sessions/{id}/workflow/prepare`, which runs Generate → Validate →
 `mark_validated`) therefore:
 
 1. Skips the dry-run entirely when `lifecycle.session_has_responses`

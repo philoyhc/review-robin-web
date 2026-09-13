@@ -1013,7 +1013,7 @@ Clone action lands on Session Home the same way.
 The Session Home page (`/operator/sessions/{id}`) is the
 operator's primary working surface for a session. Session config
 is both **displayed and edited** here — there is no separate Edit
-page, and `/edit` 301-redirects to
+page, and `/edit` 308-redirects to
 `…?editing=1#session-config`. Top → bottom:
 
 - **Workflow card** (full width) — the lifecycle-driven card
@@ -1049,7 +1049,7 @@ Home: they live on the Operations-strip **Extract data** tab (see
 
 The Session details card on Session Home (`#session-config`) is
 the only surface for session config.
-`GET /operator/sessions/{id}/edit` 301-redirects to
+`GET /operator/sessions/{id}/edit` 308-redirects to
 `…?editing=1#session-config`.
 
 - **Display ↔ edit swap.** The card carries

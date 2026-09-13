@@ -169,7 +169,7 @@ themes**, and that is deliberate. It carries the whole boundary of every
 bordered surface — inputs and cards fill with `--surface-page`, so the fill
 contributes nothing and the border is the entire delineation. **It is held to
 the 3:1 WCAG 1.4.11 asks of a UI-component boundary**, and a light grey cannot
-meet that: a pair at `--gray-soft` / `--slate-deeper` measures **1.47:1** light
+meet that: a pair at `--gray-soft` / `--slate-deep` measures **1.47:1** light
 and **1.95:1** dark against that surface, with light the worse of the two.
 `--slate-dim` is the one primitive that clears 3:1 in both themes
 near-symmetrically (**4.29:1** light, **4.31:1** dark), so a single primitive

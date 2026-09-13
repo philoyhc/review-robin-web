@@ -48,7 +48,7 @@ Each state has its **own** token pair (`--lifecycle-<state>-bg` / `-fg`, catalog
 - **`draft`** — warning amber. The same treatment as `.pill-empty`, because the session is *not ready for action*: setup work remains, and the operator's eye should land on the badge as a "needs work" cue rather than a neutral "nothing happening here" grey.
 - **`validated`** — muted blue. Setup is complete and validated; ready to activate.
 - **`ready`** — muted green. The session is live. Renders as **"Activated"** in user-facing copy via the lifecycle display-label mapping (see `spec/session_home.md`).
-- **`expired`** — red, matching the reviewer dashboard's "closed" pill so the post-window state reads the same on both surfaces. Renders as **"Closed"**.
+- **`expired`** — red. Renders as **"Closed"**. It shares the reviewer dashboard's red in light and **not** in dark, where the lifecycle pair resolves to `--red-bright` and the dashboard's error pill to `--red-soft`; the hue is the shared signal, not the value, and the per-state pair is what lets this move without disturbing the status-pill vocabulary.
 - **`archived`** — neutral grey.
 
 Lifecycle state always appears first in the status strip, leftmost, before per-entity counts.

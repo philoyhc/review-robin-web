@@ -1066,8 +1066,8 @@ whose `cohort_rule` is null or carries an empty `rules` list matches
 `EMPTY_COHORT`, and the collation surface renders its empty-cohort
 message rather than a section list. So an observer saved without a rule
 is silently blind: the roster shows them `—` in the Cohort column and
-nothing warns the operator. The page's guidance card states this
-; `tests/integration/test_page_guidance.py`
+nothing warns the operator. The page's guidance card states this, and
+`tests/integration/test_page_guidance.py`
 pins that sentence to this behaviour so a flipped default fails a test
 rather than turning the copy into a lie.
 

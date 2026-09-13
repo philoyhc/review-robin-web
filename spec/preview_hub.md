@@ -143,7 +143,7 @@ This is forward-looking and not a current deliverable. Recorded here so the impl
 What the UI concept doc (`spec/operator_ui_concept.md`) has to agree with:
 
 - The Operations Pages section of the page taxonomy carries `session_previews.html` (`/sessions/{id}/previews`) under tab label "Previews", plus the satellite `preview-surface/{page_n}` route reachable from the picker's "Open full preview" button.
-- **There is no Preview Pages grouping in the page taxonomy.** Its one member, the form-only reviewer preview, belongs to the Operations hub — as the picker-row "Open full preview" link to `/preview-surface/{N}`. A grouping with one member that lives somewhere else is a heading, not a grouping.
+- **The Preview Pages grouping has one member, and this file is its contract** (`spec/operator_ui_concept.md` §"4. Preview Pages" carries the grouping; the name stays plural because further preview surfaces are anticipated). The operator-facing tab sits in the Operations row, and the form-only reviewer preview is reached from the picker's "Open full preview" link — so the grouping and the tab row are not the same axis, which is the thing to keep straight rather than to collapse.
 - `/preview` (singular) is a permanent (308) redirect to `/operator/sessions/{id}/preview-surface/1`.
 - Session Home's Next Action card "See previews" link targets `/previews`.
 
