@@ -765,3 +765,133 @@ def test_revert_from_expired_preserves_responses(
         select(Response).where(Response.id == response_id)
     ).scalar_one_or_none()
     assert surviving is not None, "revert from expired must not drop responses"
+
+
+# --------------------------------------------------------------------------- #
+# 19N Item 3 — the failure headline names the action that failed
+# --------------------------------------------------------------------------- #
+#
+# The headline was computed from a two-branch ternary: "Prepare
+# session" when the button was ``prepare``, "Activate session"
+# otherwise. The routes pass FIVE values, so a failed Close session
+# was headlined "Activate session failed" — naming an action the
+# operator had not taken, on a session that was already activated.
+# The error detail below it was correct, which made it worse: the
+# two disagreed and the bold one was wrong.
+#
+# The author's ruling (2026-09-13): the copy follows the button
+# labels. Each case below asserts the label exactly as the button
+# renders it in ``next_action_card.html``.
+
+
+def _failure_banner(
+    client: TestClient, session_id: int, *, button: str, step: str
+) -> str:
+    return client.get(
+        f"/operator/sessions/{session_id}/assignments"
+        f"?super_status=failed&super_button={button}&super_step={step}"
+        f"&super_error=Boom."
+    ).text
+
+
+def test_close_failure_is_not_headlined_as_activate(
+    client: TestClient, db: Session
+) -> None:
+    """The defect itself. ``_workflow.py`` passes
+    ``super_button="close"`` from both of Close session's failure
+    paths."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-close")
+    body = _failure_banner(
+        client, review_session.id, button="close", step="precondition"
+    )
+    assert "Close session failed" in body
+    assert "Activate session failed" not in body
+
+
+def test_release_responses_failure_uses_its_own_label(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-rel")
+    body = _failure_banner(
+        client,
+        review_session.id,
+        button="release_responses",
+        step="precondition",
+    )
+    assert "Release responses failed" in body
+    assert "Activate session failed" not in body
+
+
+def test_stop_release_failure_uses_the_buttons_two_line_label(
+    client: TestClient, db: Session
+) -> None:
+    """The button reads ``Stop releasing<br>responses``; the
+    headline spells it out as one line."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-stop")
+    body = _failure_banner(
+        client,
+        review_session.id,
+        button="stop_release",
+        step="precondition",
+    )
+    assert "Stop releasing responses failed" in body
+    assert "Activate session failed" not in body
+
+
+def test_prepare_and_activate_still_read_as_before(
+    client: TestClient, db: Session
+) -> None:
+    """The two the ternary got right stay right."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-keep")
+    assert "Prepare session failed" in _failure_banner(
+        client, review_session.id, button="prepare", step="validate"
+    )
+    assert "Activate session failed" in _failure_banner(
+        client, review_session.id, button="activate", step="precondition"
+    )
+
+
+def test_unknown_button_reads_vague_rather_than_wrong(
+    client: TestClient, db: Session
+) -> None:
+    """A value the map doesn't carry must not fall through to a
+    named button. "Action failed" is uninformative; "Activate
+    session failed" would be false."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-unk")
+    body = _failure_banner(
+        client, review_session.id, button="teleport", step="precondition"
+    )
+    assert "Action failed" in body
+    for label in (
+        "Prepare session failed",
+        "Activate session failed",
+        "Close session failed",
+        "Release responses failed",
+        "Stop releasing responses failed",
+    ):
+        assert label not in body
+
+
+def test_a_step_that_repeats_the_action_is_suppressed(
+    client: TestClient, db: Session
+) -> None:
+    """``super_step="close"`` is Close session's own failure step
+    (``_workflow.py`` LifecycleError path). "Close session failed
+    at the Close session." says nothing twice."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-dup")
+    body = _failure_banner(
+        client, review_session.id, button="close", step="close"
+    )
+    assert "Close session failed." in body
+    assert "at the Close session" not in body
+
+
+def test_a_distinct_step_still_renders(
+    client: TestClient, db: Session
+) -> None:
+    """Suppression must not swallow an informative step."""
+    review_session = _seed_pair_plus_pinned(client, db, code="hdl-step")
+    body = _failure_banner(
+        client, review_session.id, button="close", step="precondition"
+    )
+    assert "at the pre-flight check" in body

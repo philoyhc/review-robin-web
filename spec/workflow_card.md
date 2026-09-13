@@ -99,8 +99,9 @@ returns:
 - `super_failure` — `dict | None` decoded from the redirect's
   `?super_status=failed&super_button=...&super_step=...&super_error=...`
   query-param set via `views.parse_super_failure`. Slots:
-  `button` (`"prepare"` / `"activate"`), `step`, `error`. Drives
-  the workflow-failure signal line.
+  `button` (one of `"prepare"`, `"activate"`, `"close"`,
+  `"release_responses"`, `"stop_release"`), `step`, `error`.
+  Drives the workflow-failure signal line.
 - `prepare_confirm` — `dict | None`. Populated
   (`responses_deleted` / `deleted_pairs` keys) when the builder
   is called with `prepare_confirm="responses"` AND a dry-run
@@ -139,7 +140,7 @@ A companion helper `views.parse_super_failure(super_status,
 super_step, super_error, super_button)` decodes the workflow
 buttons' redirect failure params into the `super_failure` dict
 (or `None`). The `super_button` slot identifies which button
-failed (`"prepare"` or `"activate"`) so the failure line's copy
+failed (one of the five above) so the failure line's copy
 varies accordingly. **The slot is optional**: when a URL omits it the
 helper falls back from the step name (`generate` / `validate` →
 `"prepare"`; `activate` → `"activate"`; `precondition` →
@@ -439,7 +440,7 @@ POST in the first place.
 Both routes wrap their step chain in a try/except that catches
 `lifecycle.LifecycleError`, `ValueError`, and the route's
 internal `_StepFailed` sentinel. The redirect URL carries
-`super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`
+`super_status=failed&super_button=<prepare|activate|close|release_responses|stop_release>&super_step=<step>&super_error=<msg>`
 so the workflow-failure signal line adapts.
 
 **Prepare failures:**
@@ -660,13 +661,22 @@ auto-send reminders.
 #### Workflow-failure signal
 
 Renders when `super_failure` is populated (i.e. the page was hit
-with `?super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`).
-Bold headline: **"Prepare session failed at the <step>."** or
-**"Activate session failed at the <step>."** — the button name
-comes from `super_failure.button`, and the step maps via
-`_step_label_map` (`generate` → "Generate assignments",
-`validate` → "Validate setup", `activate` → "Activate session",
-`precondition` → "pre-flight check"). The error detail (when
+with `?super_status=failed&super_button=<button>&super_step=<step>&super_error=<msg>`).
+Bold headline: **"<Button label> failed at the <step>."** — the
+label comes from `super_failure.button` through a map in the
+partial that carries **all five** values the routes pass, each
+spelled as its button renders it: `prepare` → "Prepare session",
+`activate` → "Activate session", `close` → "Close session",
+`release_responses` → "Release responses", `stop_release` →
+"Stop releasing responses". An unrecognised value headlines the
+generic **"Action failed"** rather than any named button, so a
+sixth value added to the vocabulary reads vague instead of wrong.
+The step maps via `_step_label_map` (`generate` → "Generate
+assignments", `validate` → "Validate setup", `activate` →
+"Activate session", `close` → "Close session", `precondition` →
+"pre-flight check"), and **the step phrase is suppressed when it
+repeats the button label** — "Close session failed at the Close
+session." says nothing twice. The error detail (when
 present) renders inline below the headline. State 3 / 4Err
 issue lists continue to render in the per-state detail block —
 the failure signal doesn't suppress them.

@@ -391,10 +391,14 @@ def parse_super_failure(
 ) -> dict[str, str] | None:
     """Convert a workflow button's redirect failure params into the
     ``super_failure`` dict the partial expects (or ``None`` when
-    the URL doesn't carry a failure signal). ``super_button`` is
-    ``"prepare"`` or ``"activate"`` per 18F Part 1; when absent (a
-    legacy URL), it falls back to ``"prepare"`` for ``generate`` /
-    ``validate`` steps and ``"activate"`` for ``activate``."""
+    the URL doesn't carry a failure signal). ``super_button`` is one
+    of ``"prepare"``, ``"activate"``, ``"close"``,
+    ``"release_responses"`` or ``"stop_release"`` — the five the
+    workflow routes pass. When absent (a legacy URL from before 18F
+    Part 1 carried the slot), it falls back to ``"prepare"`` for
+    ``generate`` / ``validate`` steps and ``"activate"`` for
+    ``activate``; that inference covers only the two buttons that
+    existed then, which is why the slot is passed explicitly now."""
     if super_status != "failed":
         return None
     step = super_step or "unknown"

@@ -305,10 +305,11 @@ passages of it).
 
 ### Open questions
 
-- **Copy for `release_responses` / `stop_release`.** The buttons
-  read "Release responses" and "Stop release"; the headlines
-  presumably match. **Decides:** the author, at build, unless
-  the button labels settle it.
+None. **Answered 2026-09-13 by the author: "copy follow button
+labels."** Reading them off the shipped markup corrected my own
+guess in this section — the button is `Stop releasing<br>responses`,
+so the headline is **"Stop releasing responses failed"**, not the
+"Stop release" written above.
 
 ### Out of scope
 
@@ -323,7 +324,26 @@ passages of it).
 
 ### Status
 
-**Opened 2026-09-13**, logged for attention at the author's
-instruction. Found by the second-pass audit as `NF-01` — the only
-live user-facing defect in that register of 22. No code has
-moved.
+**Opened and closed 2026-09-13.** Found by the second-pass audit as
+`NF-01` — the only live user-facing defect in that register of 22.
+
+**Intended vs done.** The ladder's single rung landed as planned: the
+keyed lookup, the `_step_label_map` addition, the vocabulary fix in
+`_shared.py` and `spec/workflow_card.md`. Three things the plan did
+not anticipate:
+
+- **The plan's own copy guess was wrong.** It assumed the fifth button
+  read "Stop release". It renders `Stop releasing<br>responses`, so
+  the headline is "Stop releasing responses failed". Taken off the
+  markup, not from the plan.
+- **A fourth vocabulary site.** `views/_workflow_card.py`'s
+  `parse_super_failure` docstring carried the same two-value claim.
+  The plan named three places plus the template; it was four.
+- **Step suppression, decided at build.** Adding `close` to the step
+  map would have produced "Close session failed at the Close session."
+  The phrase is now dropped when it repeats the button label, which
+  also retires the same redundancy the shipped `activate` path had.
+  Beyond the literal ask, small, and flagged in the PR.
+
+Seven tests; four mutations, each failing exactly the right ones —
+reverting to the two-value ternary fails five.
