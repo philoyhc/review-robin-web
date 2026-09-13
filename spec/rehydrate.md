@@ -6,11 +6,11 @@
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
 > `rehydrate_enabled` ships **false**, the three routes 404, and the
 > lobby button does not render. Unproblematic restores work; what is
-> unsettled is [§9](#9-limitations-and-known-gaps)'s awkward case: a
-> response the regenerated rules cannot place is dropped with a reason,
-> but the dropped-responses CSV does not yet reach the operator. This
-> spec describes the contract the feature must meet before the flag
-> opens, not a surface an operator can use today.
+> unsettled is not a known defect but the absence of a real run: the
+> pipeline has never been exercised on live data. A response the
+> regenerated rules cannot place is dropped, reported and downloadable
+> ([§6.5](#66-report-what-could-not-be-placed)). This spec describes the
+> contract the feature meets, not a surface an operator can use today.
 > Companion to `spec/sessions_overview.md` (the lobby),
 > `spec/setup_pages.md`, and `spec/assignments.md`.
 
@@ -415,6 +415,28 @@ Leave the session in **`draft`** — assignments are generated
 loaded, but the session is **not activated** ([§8](#8-target-lifecycle-state)) —
 and write the `session.rehydrated` audit event.
 
+### 6.6 Report what could not be placed
+
+A commit that placed every response redirects to the new session's Home
+(`303`, `?rehydrated=1`). A commit that dropped rows **does not redirect**
+— it re-renders the Rehydrate page with an outcome card naming the count,
+a link to the new session, and a **download of the dropped-responses
+CSV**.
+
+The divergence is the point. A `303` cannot carry a file, and a count
+alone cannot tell an operator *which* responses did not survive, so the
+flow stops where the loss happened rather than handing them a number on
+the way past. The session is still created: a drop is a report, not a
+failure.
+
+The CSV rides the same operator-scoped, TTL-bounded stash as the
+Validate → Commit hand-off (`rehydrate_stash`), served by
+`GET /operator/sessions/rehydrate/dropped.csv?token=…`. Because the stash
+is scoped to the operator who created it, another operator's token reads
+as **absent** rather than as a refusal, and a link kept past the TTL
+simply expires — the route 404s in both cases, and is gated by
+`rehydrate_enabled` like every other rehydrate route.
+
 ## 7. Atomicity and audit
 
 - **All-or-nothing.** If any step fails (bad file, unresolvable identity,
@@ -466,16 +488,14 @@ Stated plainly so the card copy and the PR description stay honest:
   response belonging to one is **dropped and reported**
   ([§6.4](#64-load-responses)) rather than silently given a fabricated
   home; an *empty-but-included* manual assignment won't reappear either.
-- **The dropped-responses CSV does not yet reach the operator** — the
-  remaining reason the feature is gated off. Loading now meets its half of
-  the contract: every response a legitimate assignment can carry is
-  loaded, every other row is dropped with a reason, and the set
-  serializes to a CSV ([§6.4](#64-load-responses)). What is missing is
-  delivery. The commit flow ends in a 303 to the new session's Home, and a
-  download cannot ride a redirect, so the CSV is produced and discarded.
-  **Before the gate opens the operator must be able to read it** — the
-  count alone is not the contract, because a count cannot tell them *which*
-  responses did not survive.
+- **The gate is a judgement, not an open defect.** The data-loss case
+  that prompted it is closed: every response a legitimate assignment can
+  carry is loaded, every other row is dropped with a reason, counted in
+  the audit event, and handed to the operator as a CSV
+  ([§6.4](#64-load-responses), [§6.5](#66-report-what-could-not-be-placed)).
+  `rehydrate_enabled` stays **false** regardless — the reason for it was
+  that the pipeline has never run on real data and not every detail is
+  settled, which no single fix retires. Opening it is a deliberate act.
 - **Observer cohort rules round-trip, so rehydrate must keep them** —
   not a gap. The observers CSV carries a `CohortRule` column (compact
   JSON) alongside `ObserverEmail` / `ObserverName` / `ObserverTag1` /

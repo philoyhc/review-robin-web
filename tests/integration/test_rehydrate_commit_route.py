@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import io
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -261,3 +262,112 @@ def test_commit_with_bad_token_creates_nothing(
         select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
     ).scalars().all()
     assert after == []
+
+
+# --------------------------------------------------------------------------- #
+# 19N.1 slice 3b — the dropped-responses CSV reaches the operator
+# --------------------------------------------------------------------------- #
+
+
+def _with_an_unplaceable_row(files: dict[str, bytes], code: str) -> dict[str, bytes]:
+    """Append a responses row the loader cannot place.
+
+    The pre-flight analyzer already rejects unknown reviewer / reviewee /
+    instrument / field references, so those four drop reasons can never
+    reach a commit. The four that can are the ones it cannot pre-check: an
+    unparseable ``SavedAt``, a group identity that resolves to nothing, a
+    group with no member assignments, and a pair the rules did not
+    generate. This uses the first — the only one a test can force without
+    reaching into the rule engine.
+    """
+    name = f"{code}_responses.csv"
+    rows = list(csv.reader(io.StringIO(files[name].decode("utf-8"))))
+    header = next(r for r in rows if "SavedAt" in r)
+    saved_at_col = header.index("SavedAt")
+    last = rows[-1]
+    assert last[saved_at_col], "the last data row has no SavedAt to break"
+    broken = list(last)
+    broken[saved_at_col] = "not-a-timestamp"
+    out = dict(files)
+    out[name] = _to_csv(rows + [broken])
+    return out
+
+
+def test_a_commit_that_drops_rows_hands_the_operator_the_csv(
+    client: TestClient, db: Session
+) -> None:
+    """A 303 cannot carry a download, so a commit that lost rows stays on
+    the page and offers the file instead of redirecting."""
+    rs = _seed(db)
+    files = _with_an_unplaceable_row(_file_set(db, rs), rs.code)
+    token = _validate_for_token(client, files)
+
+    response = client.post(
+        "/operator/sessions/rehydrate/commit",
+        data={"token": token},
+        follow_redirects=False,
+    )
+
+    # Not a redirect — the outcome card is the point.
+    assert response.status_code == 200, response.text
+    assert "Rehydrate finished" in response.text
+    assert "not restored" in response.text
+    assert "Download dropped responses" in response.text
+
+    # The session was still created: a drop is a report, not a failure.
+    rehyd = db.execute(
+        select(ReviewSession).where(ReviewSession.name == "Spring_REHYD")
+    ).scalar_one()
+    assert rehyd.status == "draft"
+    assert f"/operator/sessions/{rehyd.id}" in response.text
+
+    # And the link serves a CSV carrying the dropped row and its reason.
+    match = re.search(r'dropped\.csv\?token=([^"]+)', response.text)
+    assert match, "no download link rendered"
+    csv_response = client.get(
+        f"/operator/sessions/rehydrate/dropped.csv?token={match.group(1)}"
+    )
+    assert csv_response.status_code == 200
+    assert csv_response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in csv_response.headers["content-disposition"]
+    body = list(csv.reader(io.StringIO(csv_response.text)))
+    assert body[0][-1] == "DropReason"
+    assert len(body) == 2
+    assert "not-a-timestamp" in body[1]
+    assert body[1][-1] == "no parseable SavedAt"
+
+
+def test_a_clean_commit_still_redirects_and_stashes_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """The happy path must not acquire a stop on the way out."""
+    rs = _seed(db)
+    token = _validate_for_token(client, _file_set(db, rs))
+
+    response = client.post(
+        "/operator/sessions/rehydrate/commit",
+        data={"token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    # The Validate stash is consumed and no dropped-CSV stash replaces it.
+    assert db.execute(select(RehydrateStash)).scalars().all() == []
+
+
+def test_another_operator_cannot_fetch_a_dropped_csv(
+    client: TestClient, db: Session
+) -> None:
+    """The stash is operator-scoped; a leaked token is not a key."""
+    from app.services import rehydrate_stash
+
+    other = User(email="someone.else@e.edu", display_name="Other")
+    db.add(other)
+    db.flush()
+    stolen = rehydrate_stash.put(db, payload=b"a,b\n1,2\n", user=other)
+    db.flush()
+
+    response = client.get(
+        f"/operator/sessions/rehydrate/dropped.csv?token={stolen}"
+    )
+    assert response.status_code == 404
+

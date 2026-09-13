@@ -152,9 +152,13 @@ def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     rs, user = _seed(db)
     files = _file_set(db, rs)
 
-    rehyd = session_rehydrate.rehydrate_session(
+    outcome = session_rehydrate.rehydrate_session(
         db, files=files, user=user, today=dt.date(2026, 8, 15)
     )
+    rehyd = outcome.session
     assert rehyd.status == "draft"
     assert rehyd.name == "Spring_REHYD"
     assert "Rehydrated 2026-08-15" in (rehyd.description or "")
+    # A clean set places every response, so there is nothing to report.
+    assert outcome.dropped == []
+    assert outcome.dropped_count == 0

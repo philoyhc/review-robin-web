@@ -2,12 +2,16 @@
 
 The pipeline works for unproblematic cases, which is exactly why the gate
 needs a guard rather than a note: nothing in the running app looks wrong.
-What is unsettled is the awkward case — a responses row the regenerated
-rules cannot place is dropped with a warning **surfaced nowhere** (not the
-``session.rehydrated`` audit counts, not the route, not the operator),
-against a ``spec/rehydrate.md`` §9 that promises *"no response is lost"*.
-Nobody has run it on real data, so the surface closes until 19N lands the
-dropped-responses export.
+It was gated because a responses row the regenerated rules could not
+place was dropped with a warning **surfaced nowhere** — not the
+``session.rehydrated`` audit counts, not the route, not the operator —
+against a ``spec/rehydrate.md`` §9 that promised *"no response is lost"*.
+19N.1 slices 3a and 3b closed that: the row is dropped with a reason,
+counted in the audit event, and handed to the operator as a CSV. **The
+gate stays shut regardless**, because the author's reason was broader
+than the one defect — nobody has run this on real data, and not every
+detail is worked out. Re-opening it is a decision, not a consequence of
+this file going green.
 
 **Why this file exists.** ``tests/conftest.py`` sets
 ``REHYDRATE_ENABLED=true`` for the whole suite so the machinery stays
@@ -34,10 +38,10 @@ def test_the_shipped_default_is_off() -> None:
     with no env var set is the question worth pinning.
     """
     assert Settings.model_fields["rehydrate_enabled"].default is False, (
-        "rehydrate_enabled now ships ON. The gate exists because a "
-        "response the regenerated rules cannot place is dropped with a "
-        "warning nobody surfaces — re-open this only when 19N's "
-        "dropped-responses export has landed."
+        "rehydrate_enabled now ships ON. 19N.1 closed the data-loss "
+        "defect that prompted the gate, but the author gated this on a "
+        "broader reason — nobody has run it on real data. Flipping the "
+        "default is their call, not a side effect of a green suite."
     )
 
 
@@ -47,6 +51,7 @@ def test_the_shipped_default_is_off() -> None:
         ("get", "/operator/sessions/rehydrate"),
         ("post", "/operator/sessions/rehydrate/validate"),
         ("post", "/operator/sessions/rehydrate/commit"),
+        ("get", "/operator/sessions/rehydrate/dropped.csv"),
     ],
 )
 def test_every_route_404s_when_the_gate_is_shut(

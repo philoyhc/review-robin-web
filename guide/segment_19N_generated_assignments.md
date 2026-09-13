@@ -98,6 +98,14 @@ The retired-behaviour test (`test_per_reviewee_backfills_missing_assignment`) is
 
 Of the rung's three options (*defaulted, bound or retired*), only the first is proportionate, and the blast radius is why: **67 `Assignment(...)` constructions across `tests/` omit the field**, so binding it as required would have churned 67 sites to change nothing in `app/`, where the single writer already passes it explicitly. Retiring it outright would close the seam the enum exists to hold open for a second mode. 2 mutations, 2 caught.
 
+**2026-09-13, slice 3b — the CSV reaches the operator, and the open question is answered.** Closes `SC-37` and `SC-40`. A commit that placed everything still redirects to Session Home; a commit that dropped rows **does not redirect** — it re-renders the Rehydrate page with an outcome card carrying the count, a link to the new session, and the download. The CSV rides `rehydrate_stash`, the operator-scoped TTL-bounded store already built for the Validate → Commit hand-off.
+
+**The open question's own option list was wrong.** Option 2 read *"a count plus download link on the `rehydrated=1` banner"* — and `?rehydrated=1`, written by the redirect since 18P PR H, **is read by nothing**. There is no banner. Choosing that option would have meant building the surface it assumed existed. *Fourth instance in this segment of asserting a consumer that does not exist, and the first where the assertion was mine in a plan rather than a spec.*
+
+Two other things the build established rather than assumed. The **pre-flight analyzer already rejects four of the eight drop reasons** (unknown reviewer / reviewee / instrument / field), so only the four it cannot pre-check — unparseable `SavedAt`, unresolved group identity, a group with no member assignments, and a pair the rules did not generate — can reach a commit at all; the test forces the first, being the only one reachable without driving the rule engine. And a `spec/rehydrate.md` pointer I wrote aimed at `§6.5 Report what could not be placed`, a section that did not exist — §6.5 is *Land the session*. The new section is §6.6 and both pointers were corrected before the commit.
+
+**The gate stays shut.** The defect that prompted it is closed, but the author's reason was broader — nobody has run this on real data. `test_rehydrate_gate.py` now says so in its own failure message, so a future reader does not mistake a green suite for permission to flip the default.
+
 ### PR ladder
 
 Slices, in dependency order. Sizes to be confirmed when each is cut.
@@ -124,7 +132,7 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 
 ### Open questions
 
-- **How is the dropped-responses CSV delivered?** The commit flow redirects to the new session's Home, which a file download does not ride. Options: a stored artefact alongside the session's extracts, a count plus download link on the `rehydrated=1` banner, or a stash the operator collects once. **Decides:** the author, at slice 3.
+- ~~**How is the dropped-responses CSV delivered?**~~ **Answered at slice 3b:** the commit stops rather than redirecting when rows were dropped, and the CSV rides the existing `rehydrate_stash`. The banner option was unbuildable as written — `?rehydrated=1` is read by nothing.
 - **Can `compute_staleness` be given a correct eligible count**, or does the signal need a different basis? **Decides:** the build.
 
 *Answered 2026-09-13 by the author:* `include` round-trip is deferred to a future improvement, so no carrier is needed now (behaviour 6); and rehydrate loads-and-reports rather than failing loudly (behaviour 4).
