@@ -179,7 +179,7 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. The enqueue paths write only `queued` until the dispatch helper lands. |
+| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the enqueue path writes `queued` and flips it to `sent` in the same transaction, with no transport call. `sending` and `failed` exist for a dispatcher that does not yet run. |
 | `created_at` | timestamp | When the row was written. |
 
 **Segment 11C Part 2 (truncated)** lands the audit-log columns

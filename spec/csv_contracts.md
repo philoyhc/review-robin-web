@@ -323,7 +323,7 @@ banner-error.
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `PhotoLink` may be absent. An absent column is `None` for every
-row; an empty cell is `None` for that row. `Status` (18P PR C) is
+row; an empty cell is `None` for that row. `Status` is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
 else a per-row error. The `*Tag1..3` columns may also carry a
 `.<label>` friendly-label suffix (§1a).

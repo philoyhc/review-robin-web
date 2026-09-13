@@ -538,3 +538,74 @@ passes and a byte count returns 0. That guard exists because of 19L.4, and
 this is the first time it has answered a question rather than prevented
 one. *Five verification passes, one false claim: the same rate as the
 sweeps they were checking.*
+
+### Pass 5 — Item 6, the highest-risk batch. Three more corrected.
+
+**All seven compatibility tolerances survive and are stated as
+obligations**, each re-verified against the code by the pass: the
+`field_labels.*` silent ignore (`_apply_parse.py:196-222`, where an
+unmatched top-level key falls through to "Unknown field path — silently
+ignore"); the `display_fields[m].label` drop (`_apply_instrument.py:81-86`);
+case-insensitive `data_type` (`_apply_parse.py:59-60` lowercases before
+validating — **and the spec generalized it correctly**, since it is every
+row's third column, not an RTD quirk); the data-shape fallbacks;
+permissive-read / strict-write on identity label slots; the six
+`localStorage` keys; and rehydrate's presence inference
+(`session_rehydrate.py:496-507`, inferred *before* `apply_session_config`
+at :515). **The two wholesale section deletions cost no input obligation** —
+neither §4.5 nor §6 carried one, both only pointed elsewhere, and no
+`see §4.5` / `see §6` survives anywhere.
+
+**Corrected:**
+
+- **The sweep replaced an accurate statement with a false one.**
+  `email_infra_options.md` came to read *"the enqueue paths write only
+  `queued` until the dispatch helper lands."* **Verified false:**
+  `invitations.py:297` writes `status="queued"`, flushes, and **flips it to
+  `sent` six lines later in the same call** — no row is ever persisted at
+  `queued`. The pre-sweep text said *"`queued`, `sent` today"*, which was
+  right, and the rewrite also contradicted `email_template_editor.md`,
+  untouched, which describes the same path correctly. *This is the clearest
+  instance of the failure mode: a sentence written from the surrounding
+  prose rather than from the code it describes.* Now states that only
+  `queued` and `sent` are persisted and that `sending` / `failed` exist for
+  a dispatcher that does not run.
+- **A column that does not exist, asserted more firmly than before.**
+  `roundtrip_coverage.md` carried a matrix row and an asymmetry note for
+  `session_rule_sets.library_origin_id`. **Verified gone**: column, FK and
+  index were dropped by
+  `alembic/versions/d8f4a92c1e6b_wave5_pr2_retire_rule_set_library.py`, and
+  the model's own docstring says so. The claim predates 19M — but the sweep
+  **rewrote that line and made it more specific** (*"emits no
+  `library_origin_id` cell"*, which asserts the column exists), without
+  checking. Row removed; the asymmetry now names only `assignment_mode`.
+- **A provenance citation the sweep removed everywhere else in the same
+  file.** `csv_contracts.md` §3.1 kept *"`Status` (18P PR C)"* while the
+  parallel §2.1 / §2.2 tables and §3.2b had theirs stripped. `csv_contracts.md`
+  now carries **0** such citations.
+
+**Registered:**
+
+| id | where | what |
+|---|---|---|
+| CC-11 | `_serialize.py:561` | comment reads *"the `library_origin_id` column … stays for now (drops in PR 5.2)"*. PR 5.2 shipped and dropped it — a code comment that outlived its own forecast |
+| SI-10 | `csv_contracts.md` §3.3 | the `rtds[` import tolerance exists only as an aside inside the `field_labels.*` bullet (*"like an `rtds[` row"*), before and after the sweep. **The enforcement is stronger than its documentation**: `_apply_parse.py:196-201` returns early unconditionally. Worth its own bullet |
+
+### The verification tally, stated plainly
+
+**Five passes; thirteen sweep errors corrected; one pass wrong itself.**
+
+Three of the thirteen share a shape worth naming, because it is not
+carelessness and re-reading would not have caught it: a **single token or
+number substituted inside an otherwise correct sentence** —
+`--slate-deeper` for `--slate-deep`, `301` for `308`, *"writes only
+`queued`"* for *"`queued`, `sent`"*. In each case the sentence read
+plausibly, the surrounding argument was sound, and the only way to catch it
+was to compute the value or open the file. *Two of the three replaced text
+that had been **correct** before the sweep touched it.*
+
+That is the argument for the check, and for its cost: the sweep's own §1
+says a `*Current:*` block rots because nothing renews it. §2b said a finding
+rots unless something checks it. This section is the third turn of the same
+screw — **a correction rots too**, and the only thing that catches it is
+another pass that reads the code rather than the prose.
