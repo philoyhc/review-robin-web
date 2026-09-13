@@ -49,6 +49,8 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 
 There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
 
+**The per-slot routes (`POST …/quick-setup/{kind}`) still exist and no UI calls them** — zero references in any template. They stay as backend entry points, exercised by tests; the card reaches the same per-slot pipeline through `submit-all`. Anything that describes them as reachable from the card is describing the pre-consolidation shape.
+
 ### CSV format
 
 Each CSV's expected schema (column names, required vs. optional fields, encoding) is defined in the existing per-entity import paths (Reviewers, Reviewees, Relationships, Settings). The card reuses the same schemas and the same parsing/validation logic — it does not introduce a new file format. If those schemas are documented elsewhere in the spec, link to them; if not, document them in the same module that handles the existing per-entity uploads.

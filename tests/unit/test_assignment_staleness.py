@@ -7,8 +7,9 @@ retired, and without it every pinned instrument read as stale. The
 comment recording that was right about the failure mode — *an
 always-stale badge trains the operator to ignore it* — and the fix was to
 turn the signal off rather than re-base it, which left three consumers
-dead: the pill, the ``any_stale`` aggregate, and the
-``instruments.stale_generated`` validation rule, which stayed in the
+dead: the pill, the ``any_stale`` aggregate (retired in turn once its
+only consumer was), and the ``instruments.stale_generated`` validation
+rule, which stayed in the
 registry as a **no-op** with a severity, a fix link, and a ``why``
 describing exactly the situation it no longer detected.
 

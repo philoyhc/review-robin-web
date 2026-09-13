@@ -441,10 +441,19 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
   one still imports.** Friendly labels round-trip through the roster
   CSV headers (§1a) as the sole carrier, so the export emits no
   `field_labels.*` row. One that arrives on input must fall through to
-  the unknown-key **silent ignore** on apply (as a retired `rtds[` row does) —
-  no error, the label dropped, and re-exporting the roster recovers it
-  in the header. Dropping the tolerance would make every older
-  bundle fail to import for a row that carries nothing.
+  the unknown-key **silent ignore** on apply — no error, the label
+  dropped, and re-exporting the roster recovers it in the header.
+  Dropping the tolerance would make every older bundle fail to import
+  for a row that carries nothing.
+- **A retired `rtds[…]` row is silently ignored on import, and that is
+  unconditional.** The per-session response-type table went in
+  2026-05-26 and the export has emitted no `rtds[` row since, but a
+  bundle taken before then still carries them. There is no branch for
+  these keys and none is needed: they land on the same unknown-key
+  ignore as any other unrecognised path, so such a bundle imports with
+  the rows dropped rather than failing. Stated on its own because the
+  guarantee is the import's, not an aside of the friendly-labels rule
+  that happens to cite it.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **1-based CSV row position is authoritative**. To reorder
   instruments, reorder their row blocks in the file.

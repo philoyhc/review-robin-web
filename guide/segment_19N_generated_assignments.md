@@ -130,3 +130,67 @@ Slices, in dependency order. Sizes to be confirmed when each is cut.
 - `guide/findings_2026-09-13_spec_discrepancies.md` — mark `SC-02`, `SC-03`, `SC-09`, `SC-37`, `SC-38`, `SC-39` as they land (Item 1).
 - `guide/todo_master.md` — the live-segment entry and its ordering (Item 1).
 - `docs/status.md` — row when the item lands.
+
+---
+
+## Item 2 — one email fold, not two
+
+### Opportunity
+
+`email_identity.normalize_email` is `.strip().casefold()`, and its
+docstring says to use it *"at **every** identity-comparison site so the
+uniqueness gate that rejects a duplicate on write and the access gate
+that grants a surface on read use one convention."* The convention is
+not one. **Ten-plus sites compare SQL-side** with `func.lower(column)`:
+
+| file | line(s) |
+|---|---|
+| `app/services/users.py` | 479 |
+| `app/services/participants.py` | 94, 102, 118 |
+| `app/services/assignments/_coverage.py` | 296, 360, 368 |
+| `app/services/audit.py` | 894 |
+| `app/web/routes_operator/_session_home.py` | 625 |
+| `app/web/routes_reviewer/_dashboard.py` | 100 |
+
+Several compare a `func.lower` column against a value already folded in
+Python, so the two conventions meet inside one expression.
+
+`lower()` and `casefold()` agree on ASCII and **diverge on real
+inputs** — German ß folds to `ss` under casefold but not under lower;
+Turkish İ likewise — and `func.lower` does not strip. So a roster row
+and its access check can fold differently: a legitimate participant
+refused entry to a surface they are on, or a duplicate slipping past the
+uniqueness gate that exists to catch it.
+
+Nothing has failed in production, because the rosters seen so far are
+ASCII. That is why this is an opportunity and not an incident.
+
+### Open questions
+
+- **Which fold wins?** Casefold everywhere is the Unicode-correct
+  answer and matches the docstring's stated intent, but it cannot be
+  done in SQL — it means loading candidates and comparing in Python, or
+  storing a folded column. Lowering everywhere is cheap and wrong for
+  the cases that motivated casefold. **Decides:** the author.
+- **Does a stored normalized column pay for itself?** It would let the
+  database do the matching and index it, at the cost of a migration and
+  a write-path invariant. **Decides:** the author, with the above.
+
+### Out of scope
+
+- Changing any comparison before the fold is chosen. This is behaviour
+  on the access and uniqueness paths; picking wrong fails closed for a
+  real participant.
+
+### Doc impact
+
+- `docs/security_posture.md` — the identity-matching convention, once chosen (Item 2).
+- `guide/findings_2026-09-13_spec_discrepancies.md` — `SC-45` closes when this lands (Item 2).
+
+### Status
+
+**Opened 2026-09-13**, logged for attention at the author's instruction.
+Surfaced while investigating `SC-19`, which asked only which fold *one*
+call site uses; the answer was "Python casefold", and the question that
+mattered turned out to be why the other ten do something else. No code
+has moved.

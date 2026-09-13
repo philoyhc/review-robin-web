@@ -1238,7 +1238,7 @@ cascade:
    live; Revert to draft is a Secondary action.
 6. **Validated, warnings only** — Activate Session detours
    through `/validate?activate=1` for warning acknowledgement.
-7. **Activated, pre-invitations** — Manage Invitations is the
+7. **Activated, pre-invitations** — Invitations is the
    Primary action; the second body section carries the Pause
    Session affordance with its own confirm checkbox.
 8. **Activated, mid-cycle** — Monitor Responses is the
@@ -1707,7 +1707,7 @@ outbox's correlation_id prevents duplicate reminders to the
 same reviewer for the same offset.
 
 The Session details config card previews every resolved fire
-moment inline next to its offset; the Manage Invitations page
+moment inline next to its offset; the Invitations page
 surfaces the same information as a captioned auto-send line.
 
 ### 11.5 Backend options
@@ -1764,7 +1764,7 @@ The following invitation-and-email surface is **wired**:
   that warns the operator about pending auto-sends.
 - The resolved fire-moment preview inline on the Session
   details config card, showing every scheduled send.
-- The Manage Invitations page with per-reviewer status,
+- The Invitations page with per-reviewer status,
   per-row Send / Send-reminder / Regenerate buttons, and
   the auto-send captions.
 - The chrome strip's four-state Invitations pill

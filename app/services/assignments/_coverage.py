@@ -208,9 +208,9 @@ def compute_staleness(
     (``eligible > 0``, ``generated == 0``), instruments whose
     pinned rule changed post-Generate, instruments whose roster /
     relationships changed post-Generate. The view-shape
-    ``InstrumentStatusBlock.is_stale`` field, the per-page
-    ``any_stale`` aggregate, and the ``instruments.stale_generated``
-    validation rule all share this one definition.
+    ``InstrumentStatusBlock.is_stale`` field and the
+    ``instruments.stale_generated`` validation rule share this one
+    definition.
     """
     return rule_id is not None and eligible_count != generated_count
 

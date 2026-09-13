@@ -934,10 +934,10 @@ from it and gates the re-POST on
 Registered rules in `app/services/validation.py:REGISTERED_RULES`
 that fire on this page's domain:
 
-- **`assignments.no_included_pairs`** (error) — every row on
+- **`assignments.no_included_pairs`** (warning) — every row on
   every instrument has `include=False`. The reviewer page would
   show nothing.
-- **`assignments.reviewer_missing`** (error) — a reviewer has
+- **`assignments.reviewer_missing`** (warning) — a reviewer has
   zero `include=True` rows across every instrument. They'd
   receive an invitation pointing at an empty surface.
 - **`assignments.reviewer_missing_for_instrument`** (warning) —
