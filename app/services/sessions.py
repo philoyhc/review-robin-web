@@ -187,11 +187,14 @@ def update_session(
 
     # Lock-on-data — once a roster has rows, the corresponding
     # toggle cannot flip True→False (it would orphan the data).
-    # The Edit Session UI renders the checkbox `disabled` in this
-    # state, so the form simply omits the field; but a direct
-    # API call could still attempt the flip. Silent no-op for
-    # safety. See ``guide/archive/participant_model_upgrade.md`` §3.8
-    # "Lock-on-data".
+    # The Session details config card on Session Home renders the
+    # checkbox `disabled` in this state
+    # (``operator/session_detail.html``), so the form simply omits the
+    # field; but a direct API call could still attempt the flip. Silent
+    # no-op for safety. See
+    # ``guide/archive/participant_model_upgrade.md`` §3.8 "Lock-on-data".
+    # (Said "the Edit Session UI" until 2026-09-13; that page retired in
+    # 18R Item 4 and ``/sessions/{id}/edit`` is a 308 redirect.)
     if "relationships_enabled" in diffs:
         old, new = diffs["relationships_enabled"]
         if old is True and new is False and _has_relationships(

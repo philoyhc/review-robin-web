@@ -1,9 +1,15 @@
 # Sweep — history out of `spec/` (2026-09-13, Segment 19M)
 
+> **Retired and archived 2026-09-13**, with Segment 19M and the findings
+> register it opened. This is the record of what the sweep *changed*;
+> `guide/archive/findings_2026-09-13_spec_discrepancies.md` is what it
+> *found and left standing*, closed at 86/86 then 25/25. Nothing here is
+> carried forward.
+
 **Swept:** 2026-09-13 onward, per batch · **Scope:** all **39 live
 `spec/*.md`** files, 22,493 lines · **Plan:**
 `guide/archive/segment_19M_spec_history_sweep.md` · **Trigger:** not cadence —
-the author's rule, after `guide/sweep_2026-09-13_ui_elements.md`
+the author's rule, after `guide/archive/sweep_2026-09-13_ui_elements.md`
 established it on one file and then had to be reversed to obey it.
 
 <!-- sweep-scope: partial -->

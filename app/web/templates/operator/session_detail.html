@@ -306,9 +306,10 @@
               <input type="checkbox" data-display-only disabled
                      {% if session.relationships_enabled %}checked{% endif %}>
               {# Lock-on-data — once a roster has rows the toggle can't flip
-                 True→False (would orphan data); mirror the Edit page by
-                 disabling it, and the service-layer guard rejects the flip
-                 for direct API calls. #}
+                 True→False (would orphan data); this card disables it, and
+                 the service-layer guard rejects the flip for direct API
+                 calls. (Said "mirror the Edit page" until 2026-09-13; that
+                 page retired in 18R Item 4.) #}
               <input type="checkbox" name="relationships_enabled" value="true"
                      data-edit-only data-config-input
                      form="config-save-{{ session.id }}"

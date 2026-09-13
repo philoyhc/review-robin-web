@@ -12,7 +12,7 @@
 > **Currency.** The functional contract is stable; ship-state may
 > move ahead of it. Whether this document has been read end to end
 > against the code is recorded in its sweep record
-> (`guide/sweep_2026-09-10_rrw_functional_spec.md`), not by a date
+> (`guide/archive/sweep_2026-09-10_rrw_functional_spec.md`), not by a date
 > kept here — a date in this header moves only when someone
 > remembers to move it, so it reads as currency the document may
 > not have.

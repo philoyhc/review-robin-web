@@ -161,7 +161,7 @@ that both archived; live prose grew ~1,100 — `spec/setup_pages.md` +446,
 `guide/todo_master.md`. 19J then added ~5,800 more, again mostly a plan, a
 record, and this document's own amendments:
 `guide/archive/segment_19J_assessment_moves.md` (824),
-`guide/sweep_2026-09-10_rrw_functional_spec.md` (515), and +584 here —
+`guide/archive/sweep_2026-09-10_rrw_functional_spec.md` (515), and +584 here —
 against **+110 net** of live spec prose, which is what fifteen corrections to
 `spec/rrw_functional_spec.md` and a rewritten `spec/README.md` row come to once
 struck text is counted against added. **The planning artefacts are ~80% of the docs delta at both counts, and
@@ -581,7 +581,7 @@ The close audit earned its keep more visibly than in any prior window: five of
 **Recommended next moves.**
 
 1. ~~**Sweep `spec/rrw_functional_spec.md` against the code.**~~ **Done
-   2026-09-10 as Segment 19J.1** (`guide/sweep_2026-09-10_rrw_functional_spec.md`).
+   2026-09-10 as Segment 19J.1** (`guide/archive/sweep_2026-09-10_rrw_functional_spec.md`).
    15 findings, 14 sections, all fixed; the ⚠ row in §3 closes. See the amended
    §5 entry for what the measurement corrected about this move's own premise.
 2. ~~**Carry the refinement allowance into the next projection, or refute it.**~~

@@ -214,7 +214,7 @@ $ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 file
 
 **2026-09-10 — rung 1 landed. Rungs 2 and 3 follow.**
 
-`guide/sweep_2026-09-10_rrw_functional_spec.md`, 467 lines, all
+`guide/archive/sweep_2026-09-10_rrw_functional_spec.md`, 467 lines, all
 **108** headings read (the plan and the 10sep assessment both said
 107 — that count excluded the `#` title; the file is 1 + 20 `##` +
 87 `###`). **Fifteen findings across fourteen sections; 94 of 108
