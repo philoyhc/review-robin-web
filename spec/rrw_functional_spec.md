@@ -13,8 +13,9 @@
 > move ahead of it. Whether this document has been read end to end
 > against the code is recorded in its sweep record
 > (`guide/sweep_2026-09-10_rrw_functional_spec.md`), not by a date
-> kept here: a date in this header moves only when someone
-> remembers it, and this one did not move through nine edits.
+> kept here — a date in this header moves only when someone
+> remembers to move it, so it reads as currency the document may
+> not have.
 
 ---
 
@@ -171,9 +172,9 @@ elevation of the operator role, not a separate login.
 
 ### 4.1 System administrator (three-tier model)
 
-Workspace governance is a **strict three-tier hierarchy** with **nested capabilities**
-(super-admin ⊇ admin ⊇ operator) and a **config-anchored top
-tier**:
+Workspace governance is a **strict three-tier hierarchy** with
+**nested capabilities** (super-admin ⊇ admin ⊇ operator) and a
+**config-anchored top tier**:
 
 | Tier | Stored as | Added / revoked by |
 |---|---|---|
@@ -460,8 +461,9 @@ the field's own `data_type`.
 
 There is **no shared type catalogue**: each response field carries
 its own inline `data_type` + bounds rather than referencing a
-shared type row. A small set of pre-filled **List presets** (Boolean / Agreement /
-Grades, in `instruments/_field_presets.py`) is baked into the
+shared type row. A small set of pre-filled **List presets**
+(Boolean / Agreement / Grades, in `instruments/_field_presets.py`)
+is baked into the
 Band 3 type picker for convenience; the preset's identity is not
 stored — only the resulting `data_type` + `list_options`.
 
@@ -1011,13 +1013,13 @@ Clone action lands on Session Home the same way.
 The Session Home page (`/operator/sessions/{id}`) is the
 operator's primary working surface for a session. Session config
 is both **displayed and edited** here — there is no separate Edit
-page, and `/edit` 301-redirects to
+page, and `/edit` 308-redirects to
 `…?editing=1#session-config`. Top → bottom:
 
 - **Workflow card** (full width) — the lifecycle-driven card
   explaining the current state and offering the single
   most-important next action(s). The card frame is constant (H2
-  "Workflow", accent-blue border, height grows to fit); the
+  "Workflow", blue-framed, height grows to fit); the
   contents differ across the lifecycle states (see
   [§9.8](#98-validation-and-activation)).
 - **Session details card** (full width, below Workflow) — a
@@ -1047,7 +1049,7 @@ Home: they live on the Operations-strip **Extract data** tab (see
 
 The Session details card on Session Home (`#session-config`) is
 the only surface for session config.
-`GET /operator/sessions/{id}/edit` 301-redirects to
+`GET /operator/sessions/{id}/edit` 308-redirects to
 `…?editing=1#session-config`.
 
 - **Display ↔ edit swap.** The card carries

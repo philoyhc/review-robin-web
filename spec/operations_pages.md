@@ -409,28 +409,28 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-**Every rollup must read the session's response rows in one query,
-not one assignment at a time.** Measured through the real routes at
-four roster sizes (SQLite, in-process), rendering each page once —
-the figure before the arrow is what a per-assignment read costs, the
-figure after it what the single-query read costs:
+**Every rollup reads the session's response rows in one query, never
+one assignment at a time.** `responses_service.responses_by_assignment`
+loads them once and both rollups read from it. The query count must
+stay **linear in the roster**, not quadratic in it — a per-assignment
+read is quadratic, and on a 200 × 200 roster that is the difference
+between hundreds of queries and tens of thousands. The budget, measured
+through the real routes (SQLite, in-process, one render each):
 
 | roster | assignments | Assignments | Invitations | Responses |
 |---|---:|---:|---:|---:|
-| 25 × 25 | 625 | 43 q | 708 → **84** | 1,332 → **84** |
-| 50 × 50 | 2,500 | 43 q | 2,633 → **134** | 5,132 → **134** |
-| 100 × 100 | 10,000 | 43 q | 10,233 → **234** | 20,232 → **234** |
-| 200 × 200 | 40,000 | 43 q | 40,433 → **434** | 80,432 → **434** |
+| 25 × 25 | 625 | 43 | 84 | 84 |
+| 50 × 50 | 2,500 | 43 | 134 | 134 |
+| 100 × 100 | 10,000 | 43 | 234 | 234 |
+| 200 × 200 | 40,000 | 43 | 434 | 434 |
 
-`responses_service.responses_by_assignment` now loads the session's
-response rows in one query and the two rollups read from it. The counts
-after the arrow are **linear in the roster** rather than quadratic in
-it: roughly two queries per reviewer plus a constant, from the
-per-reviewer assignment and field lookups that remain. Assignments is
-flat at 43 at every size — its `LIMIT 200` and its indexes hold.
+Roughly two queries per reviewer plus a constant, from the per-reviewer
+assignment and field lookups that remain. Assignments stays **flat at
+43 at every size** — its `LIMIT 200` and its indexes are what hold it
+there, so a change that drops either belongs in this table.
 
-**Paging changes none of these counts**, by design and confirmed by
-measurement: the slice is applied after every row is built.
+**Paging must not change any of these counts**: the slice is applied
+after every row is built.
 
 These are SQLite figures at roughly 0.2 ms per query. Production
 Postgres pays a network round trip per query, so **the query count is

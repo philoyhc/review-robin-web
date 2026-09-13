@@ -1,10 +1,9 @@
 # Permissions and authorization
 
-**Current as of 2026-09-05 (`36e7b1e7`).** The authorization
-contract — *who may reach which route, what happens when they may
-not, and what a change of role or ownership must leave behind*. The
-altitude is the gate and the route family: which dependency guards
-which surface, and with what status code.
+The authorization contract — *who may reach which route, what
+happens when they may not, and what a change of role or ownership
+must leave behind*. The altitude is the gate and the route family:
+which dependency guards which surface, and with what status code.
 
 What this file is **not**: the audience taxonomy and the reasoning
 behind the three-tier role model live in
@@ -80,10 +79,10 @@ is emitted on every miss.
 | `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email |
 | `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
-| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable (19F PR 1). **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
+| `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable and session ids cannot be enumerated. **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
 | `require_sys_admin_or_session_operator` | `is_sys_admin`, else falls through to `require_session_operator` | `ReviewSession` | as above; a sys-admin gets **404** on an unknown id |
 | `require_relationships_enabled_session` / `require_observers_enabled_session` | wraps `require_session_operator`, then the per-session feature toggle | `ReviewSession` | **404** when the feature is off — a deep link to a disabled tab misses cleanly rather than rendering an orphan page. The permission check still runs first |
-| `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically (19F PR 1) |
+| `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically |
 | `require_reviewee_in_session` | an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above. A confidential reviewee (non-email identifier) can never reach the surface, by construction |
 | `require_observer_in_session` | an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above |
 
@@ -108,21 +107,21 @@ Two things the table implies and the code relies on:
 | Route family | Gate | How mounted |
 |---|---|---|
 | **every** `/operator/*` route | `require_operator` | router-level dependency on the `routes_operator` package — no operator route can opt out |
-| session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **128 of 128** such routes carry one (counted 2026-09-05 by scanning every `@router.get/post` decorator under `routes_operator/` whose path begins `/sessions/{session_id}`) |
+| session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **Every** such route carries one — the invariant to check when adding a route, by scanning every `@router.get/post` decorator under `routes_operator/` whose path begins `/sessions/{session_id}` |
 | the two **relaxed** session routes: `POST …/owners/add`, `POST …/clone` | `require_sys_admin_or_session_operator` | a non-owner sys-admin may reach them; `owners/add` additionally enforces **self-only** for a non-owner in its handler (`self_only` error otherwise); `clone` makes the cloner owner of the copy, leaving the original untouched |
 | lobby bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
-| `/operator/sys-admin/*` (13 routes: root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card (19C Item 10) — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on the Band 3 editor, which refuses to author the value in the first place |
-| `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable — tightened in Segment 16C PR 1 when the operator-facing entry point retired |
+| `/operator/sys-admin/*` (13 routes: root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on the Band 3 editor, which refuses to author the value in the first place |
+| `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
 | reviewer surface, save / submit / clear, post-submit summary | `require_reviewer_in_session` | per route |
-| `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant` (19F PR 4); both the GET and the acknowledge POST share it |
+| `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant`; both the GET and the acknowledge POST share it |
 | `/me/sessions/{id}/collation` (+ CSV) | `require_observer_in_session` | per route |
 | `/me` dashboard, `/me/invite/{token}`, `/` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change) |
 | `/about`, `/auth/me`, `/auth/me/debug` | `get_current_user` only (no `users` row created) | identity display and diagnostics |
 | bare `/operator`, `/operator/` | none | a 302 to the lobby, deliberately unguarded so that one place — the lobby's `require_operator` — decides operator access |
 | `/health` | none | liveness only |
 
-**Sys-admin does not mean edit access.** Since Segment 18S Item 3 a
-sys-admin can *read* any session's diagnostics (Outbox, Audit log)
+**Sys-admin does not mean edit access.** A sys-admin can *read*
+any session's diagnostics (Outbox, Audit log)
 but every session **mutation** — config, lobby rename / tag, owner
 removal, every Setup and Operations action — is behind
 `require_session_operator`, i.e. real ownership. The elevation door
@@ -164,10 +163,10 @@ status.
 | Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions` | `workspace.user_removed` |
 | Invite (pre-seed a `users` row before first sign-in) | admin | `invalid_email`, `duplicate` (case-insensitive) | `workspace.user_invited` |
 
-**No-super-tier fallback (18S Item 2).** `requires_super_admin`
-engages only once a super-admin actually exists in the effective
-set; with `SUPER_ADMIN_EMAILS` empty (and no fake-auth fold-in) any
-admin may promote / demote, as before 18S. This keeps a deployment
+**No-super-tier fallback.** `requires_super_admin` engages only
+once a super-admin actually exists in the effective set; with
+`SUPER_ADMIN_EMAILS` empty (and no fake-auth fold-in) any admin
+may promote / demote. This keeps a deployment
 that never configures the top tier from locking itself out of admin
 management.
 
@@ -213,38 +212,31 @@ the operation-level mappings.
 | every other owner error (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to Session Home with `?owners_error=<code>` | same |
 | Lifecycle refusals (`_require_editable`, `not_draft`, `locked`, …) | **409** (or 400 for missing acknowledgements) | `_shared.py`; contract in `spec/lifecycle.md` |
 
-**Why the session-scoped refusals collapsed into 404** (Segment 19F
-PR 1). They used to split: 404 for "no such session", 403 with a
-one-line `detail` for "the session exists but you are not on it". Any
-signed-in person could therefore enumerate session ids — and count
-them — by reading the status code. Content never leaked; existence and
-count did.
-
-This table previously argued the opposite, and the argument is worth
-keeping as a correction rather than deleting: it read that
-`require_session_operator` runs its membership check first "so a
-non-member sees 403, never a 404 that leaks existence". That has the
-threat model backwards. A 404 discloses nothing; it is the **403** that
-confirms a session is there, and each `detail` string
-(*"You are not an active reviewer in this session"*) confirmed it in
-prose. The gate order was right for a reason that did not hold.
+**Why every session-scoped refusal is a bare 404.** Splitting them —
+404 for "no such session", 403 with a one-line `detail` for "the
+session exists but you are not on it" — lets any signed-in person
+enumerate session ids, and count them, by reading the status code. It
+is the **403** that confirms a session is there, and a `detail` string
+(*"You are not an active reviewer in this session"*) confirms it in
+prose; a 404 discloses nothing. Content would not leak either way;
+existence and count would.
 
 `require_operator` and `require_sys_admin` keep their codes: neither
 takes a session id, so neither discloses anything about one.
 
-**The one exemption, and why it is not a hole** (author, 2026-09-07).
+**The one exemption, and why it is not a hole.**
 Overseeing the workspace as a whole *is* the sys-admin role, and
 `/operator/sys-admin/sessions` already lists every session by name —
 linking each one to `/operator/sessions/{id}`, the route this gate
 guards. A 404 therefore conceals nothing from a sys-admin that the app
 does not already hand them on a page of their own, while turning a link
 that page renders into a dead end. They get the legible refusal instead,
-naming the adopt action that is the sanctioned way in (18S Item 3).
+naming the adopt action that is the sanctioned way in.
 
 Two properties keep it narrow. It is **behind an existence check**:
 without one the exemption would answer *"you are not an owner of this
 session"* for ids that have never existed, turning a refusal into a
-confirmation — a worse leak than the one 19F closed. And it is
+confirmation — a worse leak than the bare 404 prevents. And it is
 **`require_session_operator` only**: nothing in the app routes a
 sys-admin to `/results` or `/collation`, so there is no affordance to
 keep legible on the three participant gates, and they answer 404 to
@@ -282,25 +274,7 @@ a case when a gate changes.
 
 ---
 
-## 8. Drift noted at writing (2026-09-05)
-
-Recorded rather than silently rewritten, per the spec-writer charter.
-
-- `spec/rrw_functional_spec.md` §17 listed four gates and described
-  the reviewer gate as "email match *or* a valid invitation token".
-  The code has six gates and the token never grants access (§2 here).
-  §17 is corrected in the same change as this file.
-- `spec/audience_and_identity_model.md` §4b placed the Owners card
-  on `/operator/sessions/{id}/edit`; since Segment 18R Item 4 it is
-  the Session Home config card in edit mode (`?editing=1
-  #config-owners-card`). Corrected alongside.
-- `app/db/models/user.py` still says `is_sys_admin` gates "Manual
-  assignment upload"; that route retired 2026-05-11 (16A PR 5). Code
-  comment, not spec — left for a code change.
-
----
-
-## 9. Cross-references
+## 8. Cross-references
 
 - `spec/audience_and_identity_model.md` §4 / §4b — the three-tier
   model's rationale, the who-can-manage-whom matrix, owner delegation.
@@ -314,5 +288,7 @@ Recorded rather than silently rewritten, per the spec-writer charter.
 - `spec/settings_inventory.md` — `OPERATOR_EMAILS` /
   `SYS_ADMIN_EMAILS` / `SUPER_ADMIN_EMAILS` and the fake-auth knobs.
 - `guide/archive/segment_16A_sys_admin_page.md` (Option C
-  strict-allowlist posture), `guide/archive/segment_18S_security.md`
-  (three tiers, protected super-admin, ownership tightening).
+  strict-allowlist posture) and
+  `guide/archive/segment_18S_security.md` (three tiers, protected
+  super-admin, ownership tightening) — the design records behind
+  §1 and §4.

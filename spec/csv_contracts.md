@@ -186,8 +186,8 @@ instrument.order, field.order)`.
 ### 2.5 Audit events — `extracts/audit_events_extract.py`
 
 No operator-facing tile on the session pages; the route
-`GET /export/audit_log.csv` is live and is reached from the Sys Admin
-page's per-session Diagnostics row.
+`GET /export/audit_log.csv` is reached from the Sys Admin page's
+per-session Diagnostics row.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
@@ -323,7 +323,7 @@ banner-error.
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `PhotoLink` may be absent. An absent column is `None` for every
-row; an empty cell is `None` for that row. `Status` (18P PR C) is
+row; an empty cell is `None` for that row. `Status` is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
 else a per-row error. The `*Tag1..3` columns may also carry a
 `.<label>` friendly-label suffix (§1a).
@@ -439,10 +439,10 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 - **`field_labels.*` is not a Settings key, and a bundle carrying
   one still imports.** Friendly labels round-trip through the roster
   CSV headers (§1a) as the sole carrier, so the export emits no
-  `field_labels.*` row. A bundle written when it did falls through to
+  `field_labels.*` row. One that arrives on input must fall through to
   the unknown-key **silent ignore** on apply (like an `rtds[` row) —
-  no error, the label is dropped, and re-exporting the roster recovers
-  it in the header. Dropping the tolerance would make every older
+  no error, the label dropped, and re-exporting the roster recovers it
+  in the header. Dropping the tolerance would make every older
   bundle fail to import for a row that carries nothing.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **1-based CSV row position is authoritative**. To reorder
@@ -455,8 +455,9 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 ### 3.4 What's not an importer
 
-- **Assignments.** A materialized derivative — no operator-facing
-  CSV importer, and no importer of any kind.
+- **Assignments.** A materialized derivative of the rule engine,
+  the roster and the relationships — no operator-facing CSV
+  importer.
 - **Responses.** Reviewer-generated; no operator-facing importer.
 - **Audit events.** System-emitted; no importer.
 
@@ -486,11 +487,12 @@ Concrete guarantees the importers + serialisers maintain:
    dialect-stable, and round-trip-safe (any ISO 8601 offset parses
    back). The audit-events extract is the exception: it stays in
    UTC (`spec/timezone_display.md`).
-5. **Vocabulary normalisation.** The `data_type` column is
-   lower-cased before it is validated, so a file written with the
-   capitalised tokens (`String`, `DateTime`) validates identically
-   to the documented lowercase ones — a hand-edited or older bundle
-   imports either way. RTD `data_type` accepts both
+5. **Vocabulary normalisation.** The `data_type` column is matched
+   **case-insensitively**, so a file written with capitalised tokens
+   (`String`, `DateTime`) must validate identically to the
+   documented lowercase ones — otherwise a hand-edited or older
+   bundle fails on a cell whose meaning is unambiguous. RTD
+   `data_type` accepts both
    lowercase tokens (`long_text`) and capitalised model values
    (`Long_text`) on import; serialise emits the capitalised
    form.

@@ -3,9 +3,9 @@
 **The find-and-fix readiness surface.** Inventories every setup
 issue the session has and offers per-issue "Fix on X ↗" deep-
 links that drop the operator onto the specific row that
-triggered the check. Shipped in Segment 11G.
+triggered the check.
 
-The Validate page sits in the Operations row (post-15D) and is
+The Validate page sits in the Operations row and is
 the canonical pre-activation gate. The operator iterates on
 errors here until the readiness report passes; the Activate
 button on the Workflow card then flips `validated → ready`.
@@ -36,7 +36,7 @@ Cross-references:
 | Page name | Validate |
 | URL | `GET /operator/sessions/{id}/validate` |
 | Template | `app/web/templates/operator/session_validate.html` |
-| Operations row position | #2 (between Validate and Previews — actually #1; Previews is #3 post-15D Assignments insert) |
+| Operations row position | #2 — after Assignments, before Previews. |
 | Audience | Operator (`require_session_operator`). |
 
 The page is reachable in every lifecycle state. It's read-only
@@ -62,9 +62,9 @@ inventories the current session against the rule set.
 (`guide.html`, section key `validate`) tells an operator what this page
 is for, that its issues carry "Fix on … ↗" deep links, that warnings are
 acknowledged at activation rather than cleared here, and that the body
-below the Workflow card is read-only. Added at 19K.8; before that the
-Guide named the page only in passing inside neighbouring sections, so a
-reader learned it existed without learning what it shows them.
+below the Workflow card is read-only. Those four claims are this page's
+contract restated for an operator — change one here and that section is
+the second place to edit.
 
 ## 2. Page body (top to bottom)
 
@@ -217,17 +217,17 @@ first duplicate row's `#reviewer-row-{id}`).
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
-| `instruments.no_rule_pinned` | instruments | warning | **Retired in Wave 5 PR 5.3** — the check returns nothing. Pre-PR-5.3 it fired on legacy instruments with `rule_set_id IS NULL`; with the legacy / new-model split collapsed every instrument now defaults to Full Matrix on untouched Band 1, so a NULL `rule_set_id` is never "not set up." The `instruments.no_visible_response_fields` rule below covers the remaining readiness gap. The rule key stays registered so audit history remains addressable. |
-| `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. (Wave 4 PR 2.) |
+| `instruments.no_rule_pinned` | instruments | warning | **Inert by design** — raises no findings, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap. The key stays registered so audit history remains addressable. |
+| `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
 | `assignments.reviewer_missing` | assignments | warning | A reviewer has no assignment rows at all (pinned rule excluded them, or they joined the roster after the last Generate). |
 | `assignments.reviewer_missing_for_instrument` | assignments | warning | A reviewer is present on some instruments but missing on others — a partial review surface on a multi-instrument session. |
 | `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
-| `instruments.stale_generated` | instruments | warning | **Retired in Wave 5 PR 5.1** — the check returns nothing. Pre-PR-5.1 it compared a pinned instrument's eligible-pair count against its generated row count, via `session_library.evaluate_session_rule_eligibility`; that helper retired with the operator-library tier, and the Workflow card plus the Generate button already cover the "pinned a rule but never generated" case it was catching. The rule key stays registered so audit history remains addressable. *(Annotated at 19K.8 — the row had described the retired behaviour as live, unlike `instruments.no_rule_pinned` above, which was correctly marked. Found while checking which rules carry a `fix_anchor` for the Guide's new Validate copy.)* |
+| `instruments.stale_generated` | instruments | warning | **Inert by design** — raises no findings. The Workflow card and the Generate button carry the "pinned a rule but never generated" signal instead, so this rule adds nothing an operator can act on. The key stays registered so audit history remains addressable. |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
-| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. Shipped W8 (PR #1758). |
+| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 
 Severity guidance:
 
@@ -264,7 +264,7 @@ Severity.error`.
 
 The five fix-link fields (`rule_key`, `fix_url`, `fix_anchor`,
 `fix_page_label`, `why`) default to `None` so issues emitted
-outside the registry (e.g. legacy `csv_imports`-time validation
+outside the registry (e.g. `csv_imports`-time validation
 errors) render without a Fix link. Issues emitted from
 `REGISTERED_RULES` always carry the full set.
 
@@ -371,8 +371,9 @@ references would otherwise dangle).
   reviewer surface's per-field constraints (`min` / `max` /
   `step`, `setCustomValidity`); not part of the Validate page.
 - **Cross-session validation** — rules consider one session at a
-  time. A future "system admin" surface (Segment 16A) might add
-  cross-session checks.
+  time. Cross-session checks would belong to the system-admin
+  surface (`app/web/routes_operator/_sys_admin.py`), not to this
+  registry.
 - **Validation-time fixes** — the page only reports. Operators
   fix issues on the Setup pages the deep-links target; the
   Validate page itself doesn't carry edit affordances.

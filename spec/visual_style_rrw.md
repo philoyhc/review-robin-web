@@ -8,8 +8,8 @@ Instantiates the general visual style spec (`spec/visual_style_general.md`) for 
 Read alongside:
 
 - `spec/visual_style_general.md` — the design system this document instantiates. Components and visual vocabulary defined there (palette, typography, spacing, button shapes, card shapes, badge shapes, etc.) apply uniformly across all surfaces.
-- `spec/ui_elements.md` — element catalogue the app-level UI vocabulary lives in: the canonical `.btn` roles (Primary / Secondary / Destructive [outline red] / Alert [filled amber] / Outline-amber [lock-card recovery]) in §6 — streamlined in 19B Items 8–9 from the earlier six-name scheme (Primary Outline / Alert Outline / Danger Outline; `.alert-solid` now collapses to Primary and `.danger` is a context class) — the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment) in §5a, and the `.page-grid` / `.bottom-grid` layout primitives in §10. When this doc names a button or banner pattern, the mechanics live there. The legacy home for this content was `spec/domain_assumptions.md`; the UI sections retired 2026-05-11 to `guide/archive/assumptions_ui_legacy.md`. <!-- retired-term-ok -->
-- `spec/domain_assumptions.md` — load-bearing domain (Session + Instrument) assumptions only, post-retirement of the UI sections.
+- `spec/ui_elements.md` — element catalogue the app-level UI vocabulary lives in: the five canonical `.btn` roles (Primary / Secondary / Destructive [outline red] / Alert [filled amber] / Outline-amber [lock-card recovery]) in §6, where `.alert-solid` resolves to Primary and `.danger` is a context class; the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment) in §5a; and the `.page-grid` / `.bottom-grid` layout primitives in §10. When this doc names a button or banner pattern, the mechanics live there.
+- `spec/domain_assumptions.md` — load-bearing domain (Session + Instrument) assumptions only; the UI vocabulary lives in `spec/ui_elements.md`.
 - `spec/audience_and_identity_model.md` — audience definitions, auth posture, and customization boundaries that this document's chrome decisions implement.
 
 The visual vocabulary defined in `visual_style_general.md` applies uniformly across all surfaces. What differs by surface is the *chrome* — the framing and navigation patterns that surround page content.
@@ -18,14 +18,14 @@ The visual vocabulary defined in `visual_style_general.md` applies uniformly acr
 
 ## App-specific accent assignments
 
-The general spec defines four semantic accents (blue, green, amber, red). Review Robin assigns them as follows:
+The general spec defines four semantic accents by role — blue, green, amber, red. Review Robin assigns them as follows. **The role names below are `visual_style_general.md`'s, not token identifiers**; the tokens each role resolves to are catalogued in `spec/color_tokens.md`.
 
-- **`accent-blue`** — the **Setup** navigation group identity. Active states across the app. Links. Primary actions.
-- **`accent-green`** — the **Operations** navigation group identity. Successful states. The `ready` lifecycle indicator.
-- **`accent-amber`** — setup-incomplete indicators (`NONE`, `NOT SET UP`). The yellow lock card pattern. Lifecycle-locked surfaces.
-- **`accent-red`** — destructive action confirmations (e.g., replacing existing setup data via Quick Setup). Validation errors. Used rarely.
+- **Blue** — the **Setup** navigation group identity. Active states across the app. Links. Primary actions.
+- **Green** — the **Operations** navigation group identity. Successful states. The `ready` lifecycle indicator.
+- **Amber** — setup-incomplete indicators (`NONE`, `NOT SET UP`). The yellow lock card pattern. Lifecycle-locked surfaces.
+- **Red** — destructive action confirmations (e.g., replacing existing setup data via Quick Setup). Validation errors. Used rarely.
 
-Setup and Operations are two parallel series of pages (see `spec/operator_ui_concept.md` for the taxonomy). The blue/green pairing for these two groups is the app's most visible color decision and should be preserved across the entire chrome.
+Setup and Operations are two parallel series of pages (see `spec/operator_ui_concept.md` for the taxonomy). The blue/green pairing for these two groups is the app's most visible colour decision and should be preserved across the entire chrome.
 
 ---
 
@@ -37,17 +37,19 @@ Review Robin themes **light or dark**, chosen per-viewer and stored browser-loca
 - **The control** is a two-segment pill `[☀ Light | 🌙 Dark]` (`_partials/theme_toggle.html`) in the top-left chrome, inline after the app identity, in **both** the operator chrome and the reviewer top bar — so operators and participants share one control.
 - **Browser-local**, never synced to the server; the storage key + no-FOUC mechanism are specced in `spec/settings_inventory.md` §7 (`rrw-theme`).
 
-Shipped Segment 19C Item 2 (2026-08-21).
-
 ---
 
 ## Lifecycle state colors
 
 Sessions move through three live states (and two reserved future states; see `app/services/session_lifecycle.py` for the canonical enum). Each renders as a badge in the status strip and (where relevant) inline elsewhere:
 
-- **`draft`** — warning amber (`accent-amber-dark` text on `accent-amber-bg` background). Same treatment as `.pill-empty`. The session is *not ready for action* — setup work remains, the operator's eye should land on the badge as a "needs work" cue rather than a neutral "nothing happening here" grey.
-- **`validated`** — muted blue (`accent-blue` text on `accent-blue-bg` background). Setup is complete and validated; ready to activate.
-- **`ready`** — muted green (`accent-green` text on `accent-green-bg` background). The session is live. Renders as **"Activated"** in user-facing copy via the lifecycle display-label mapping (see `spec/session_home.md`).
+Each state has its **own** token pair (`--lifecycle-<state>-bg` / `-fg`, catalogued in `spec/color_tokens.md`), so a state's colour can move without disturbing the status-pill vocabulary that happens to share its hue:
+
+- **`draft`** — warning amber. The same treatment as `.pill-empty`, because the session is *not ready for action*: setup work remains, and the operator's eye should land on the badge as a "needs work" cue rather than a neutral "nothing happening here" grey.
+- **`validated`** — muted blue. Setup is complete and validated; ready to activate.
+- **`ready`** — muted green. The session is live. Renders as **"Activated"** in user-facing copy via the lifecycle display-label mapping (see `spec/session_home.md`).
+- **`expired`** — red. Renders as **"Closed"**. It shares the reviewer dashboard's red in light and **not** in dark, where the lifecycle pair resolves to `--red-bright` and the dashboard's error pill to `--red-soft`; the hue is the shared signal, not the value, and the per-state pair is what lets this move without disturbing the status-pill vocabulary.
+- **`archived`** — neutral grey.
 
 Lifecycle state always appears first in the status strip, leftmost, before per-entity counts.
 
@@ -65,8 +67,8 @@ Cards are either **half-width** or **full-width**:
 
 - **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
   - Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair, with the Upload card (left) + Danger Zone (right) pair below it.
-  - Session Home: the **Workflow card** on top full-width, the in-place `#session-config` card below it, then a `.bottom-grid` with **Quick Setup** on the left and **Danger Zone** on the right. *(Corrected 2026-09-08 at 19C's close. This read "Next Action card … Session Details on the left and Quick Setup + Extract Data stacked … (Danger Zone moved to the Edit Session Details page on 2026-05-22)". Segment 18R Item 4 reversed that move and retired the Edit page; `spec/session_home.md` §3 has said so since, and this summary did not follow. There is no Extract Data card on Home — Extract Setup lives on the Extract data page.)*
-  - There is no **Edit Session Details** page: `/operator/sessions/{id}/edit` is a 308 redirect to `…?editing=1#session-config`, which opens the config card in place (18R Item 4).
+  - Session Home: the **Workflow card** on top full-width, the in-place `#session-config` card below it, then a `.bottom-grid` with **Quick Setup** on the left and **Danger Zone** on the right. There is no Extract Data card on Home; Extract Setup lives on the Extract data page. `spec/session_home.md` §3 is authoritative for this page.
+  - **There is no Edit Session Details page.** `/operator/sessions/{id}/edit` is a 308 redirect to `…?editing=1#session-config`, which opens the config card in place — session details are edited where they are read, not on a separate page.
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
   - Wide tables (Reviewers / Reviewees / Relationships / Invitations / Responses data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
@@ -103,9 +105,9 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 - Next Action card on Session Home (the state-conditional Validate / Activate / Pause card).
 - The Rule Based Assignment card on the Operations Assignments page.
 
-**Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `accent-amber-bg` background, `accent-amber-dark` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
+**Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `--card-warning-bg` background, `--card-warning-border` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
 
-**Danger zone card** — groups destructive actions. `accent-amber-bg` tinted background, `accent-amber-dark` border, H2 in `accent-amber-dark` — the same amber surface as the lock card (see "Warning surfaces — shared brown framing" below). Destructive buttons inside use the outline-red Destructive role.
+**Danger zone card** — groups destructive actions. `--card-warning-bg` tinted background, `--card-warning-border` border, H2 in `--card-warning-fg` — the same amber surface as the lock card (see "Warning surfaces — shared brown framing" below). Destructive buttons inside use the outline-red Destructive role.
 
 Status / info and Action cards share the same default visual treatment; the kinds are about *role*, not visual differentiation. The two warning kinds (Lock card, Danger zone) carry their own visual treatment because the warning framing is doing semantic work.
 
@@ -141,9 +143,9 @@ The session-scoped chrome consists of:
 Specifics:
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them.
 - **Row labels** ("SETUP", "OPERATIONS") sit at the left edge of each row, in tiny text, medium weight. The `▶` glyph sits adjacent to indicate the row's tabs follow.
-- **Row backgrounds** use the row's accent color at 5% opacity (`accent-blue` for Setup, `accent-green` for Operations).
-- **Active tab** uses an underline in the row's marker tone (`accent-blue-marker` for Setup, `accent-green-marker` for Operations) — lighter than the full accent so the marker signals position without competing with the label.
-- **Active row** (the one containing the active tab): row label renders at `text-primary` instead of `text-muted`; the `▶` glyph emphasizes correspondingly.
+- **Row backgrounds** use a very subtle tint of the row's own accent — `--nav-strip-setup-bg` for Setup, `--nav-strip-ops-bg` for Operations.
+- **Active tab** uses an underline in the row's marker tone (`--nav-marker-setup` for Setup, `--nav-marker-ops` for Operations) — lighter than the full accent so the marker signals position without competing with the label.
+- **Active row** (the one containing the active tab): the row label renders at `--text-body` instead of `--text-subtle`, and the triangle after it emphasizes correspondingly.
 - **Hovering a tab** in a non-active row previews-emphasizes that row's label without transferring active state — gives the operator a sense of "this is the row you're about to enter."
 - **Same tab shape** across both rows. Differences between rows are carried by row labels and row tints, not by tab shape.
 - **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (User interface settings on Edit Session Details). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
@@ -166,7 +168,7 @@ Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Re
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 
-**Instruments state values (2026-09-07).** The Instruments pill reports **two** numbers, `total / configured`, computed by `app.web.views.session_status_pills` from `instruments.configured_counts`:
+**Instruments state values.** The Instruments pill reports **two** numbers, not one, computed by `app.web.views.session_status_pills` from `instruments.configured_counts`. One number cannot distinguish an instrument a reviewer would meet as an empty page from a finished one, so a count alone lets the strip read *done* for a session that cannot be answered:
 
 | Pill text | Pill class | Condition |
 |---|---|---|
@@ -176,9 +178,9 @@ The strip is a setup + ops at-a-glance summary, not a running-session dashboard.
 
 **Configured** is `instruments.is_configured`: at least one `visible=True` response field, **and** all three Band 1 links touched (`band1_touched_links`). Both that predicate and the batched `configured_counts` apply the same rule, and `has_unconfigured` reads its answer from the latter, so there is one definition rather than three.
 
-Until 2026-09-07 the pill showed the bare total. An instrument with no visible response field — one a reviewer would meet as an empty page — therefore counted exactly like a finished one, and the strip read *done* for a session that could not be answered. The colour is what makes this scannable: the numbers say what is left, the tint says whether anything is.
+The colour is what makes this scannable: the numbers say what is left, the tint says whether anything is.
 
-Order is **done over total**, matching the Responses pill in the same row (`3 drafts / 5`). It shipped total-first and was corrected the same day: `5 / 3` reads backwards as a fraction — not a proportion anyone can complete — and the test asserts the direction, not merely that both numbers appear.
+Order is **done over total**, matching the Responses pill in the same row (`3 drafts / 5`). `5 / 3` reads backwards as a fraction — not a proportion anyone can complete — so the direction is part of the contract and the test asserts the direction, not merely that both numbers appear.
 
 Zero reads `none` rather than `0 / 0`, matching Reviewers and Reviewees; instruments are likewise required to validate, so the same warning tint applies rather than a third treatment.
 
@@ -226,7 +228,7 @@ For all other session-scoped pages (the five Setup pages, the Operations pages),
 
 ### Warning surfaces — shared brown framing
 
-Two card variants in the app's vocabulary frame "this region needs care": the **lock card** (intentionally non-interactive due to lifecycle) and the **danger-zone card** (groups destructive actions). Both share the same amber surface — `accent-amber-dark` border (the warning brown) over an `accent-amber-bg` tinted infill — so the operator's eye recognises the same visual category whether reading "you can't change this right now" or "here's where you delete data". The framing *and* the fill are one; the action inside differentiates them (the lock card's outline-amber recovery vs. the danger zone's outline-red Destructive).
+Two card variants in the app's vocabulary frame "this region needs care": the **lock card** (intentionally non-interactive due to lifecycle) and the **danger-zone card** (groups destructive actions). Both share the same amber surface — `--card-warning-border` (the warning brown) over a `--card-warning-bg` tinted infill — so the operator's eye recognises the same visual category whether reading "you can't change this right now" or "here's where you delete data". The framing *and* the fill are one; the action inside differentiates them (the lock card's outline-amber recovery vs. the danger zone's outline-red Destructive).
 
 Per **P7**, recovery / primary actions inside these cards adopt the card's color family:
 
@@ -247,7 +249,7 @@ The lock card pattern is consistent across all of these. Its prominence and expl
 
 #### Danger-zone card uses
 
-Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / relationships / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `accent-amber-dark`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on.
+Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / relationships / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `--card-warning-fg`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on.
 
 ---
 
@@ -288,7 +290,7 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 
 The existing top bar pattern continues:
 
-- **Left:** "Review Robin Web App (version dev)" — small, in `text-secondary`. App identity and version, modest.
+- **Left:** "Review Robin Web App (version …)" — small, in `--text-subtle`. App identity and version, modest.
 - **Right:** A small **user menu** containing:
   - "Signed in as [Operator Name]" (informational, not a link).
   - About — opens About page, with return-to-origin behavior (see below).
@@ -302,7 +304,7 @@ The user menu can render as inline links (when the menu has three or four items)
 About and Settings are detour destinations: the operator opens them to consult or adjust something, then wants to return to whatever they were doing. The pattern:
 
 - When the operator opens About or Settings, the URL captures the origin via a query parameter (e.g., `?return_to=/sessions/abc123`) or session state.
-- The About/Settings page renders a clear "Back" affordance — a link in `accent-blue` near the top of the page body, labeled with context where possible: "← Back to Sessions" or "← Back to Student Associate Selection 2026 Peer Review".
+- The About/Settings page renders a clear "Back" affordance — a `.back-link` in `--text-link` near the top of the page body, labeled with context where possible: "← Back to Sessions" or "← Back to Student Associate Selection 2026 Peer Review".
 - Clicking the affordance returns the operator to the origin URL.
 - If no origin is recorded (e.g., the operator deep-linked to Settings), the affordance defaults to "← Back to Sessions" — the app's natural lobby.
 
@@ -325,17 +327,17 @@ No breadcrumb is needed; the page hierarchy is too shallow. The H1 and the user 
 This page is the operator's "lobby" and is the natural landing page when signing in or returning from a session. It deserves slightly more care than other non-session pages, but uses the same chrome.
 
 - **H1:** "Sessions" or "My Sessions".
-- **Body:** A v2 table inside a single `.card`. Columns:
+- **Body:** A table inside a single `.card`. Columns:
   - **Session Name** — linked to that session's Home. The name is the row's primary affordance; there's no separate Access button.
   - **Session Code** — rendered in `<code>`.
   - **Deadline** — `.pill.pill-info` carrying the ISO date when set; plain muted "No deadline" when unset.
   - **Created by** — display name of the operator who created the session (falls back to email).
   - **Created** — `YYYY-MM-DD`.
   - **Last Modified** — `YYYY-MM-DD`.
-  - **Action** — unlabelled trailing column carrying an unwired select-row checkbox. (The per-row Delete anchor that briefly lived here was retired in favour of a future bulk-action affordance — when the bulk-select handler ships, the checkbox feeds it.)
-- **Create Session affordance:** a single Primary button labeled "Add new session", in the Search card, present in every lobby state. It is the page's only route to `/operator/sessions/new`; the empty state's first-run card names this button rather than carrying a second one. *(Until 2026-09-07 the label was "Create new session", it sat in a header strip, and the empty state promoted its own larger `.btn-cta` copy — see `spec/sessions_overview.md`.)*
+  - **Action** — unlabelled trailing column carrying a select-row checkbox. The column carries **no per-row Delete**: deletion from the lobby is a bulk action over the checkbox selection, so a per-row affordance here would be a second route to the same thing.
+- **Create Session affordance:** a single Primary button labeled "Add new session", in the Search card, present in every lobby state. **It is the page's only route to `/operator/sessions/new`** — the empty state's first-run card names this button rather than carrying a second one, because two buttons to one route is two affordances for one action (`spec/sessions_overview.md`).
 
-> **History.** This page tried a per-session-card layout briefly during Segment 11D PR B (D4) on the rationale that cards read more like a "lobby" than a table does. The card layout was reverted on 2026-05-04 in favour of the table — at the operator's lobby, dense scannable rows matter more than per-card framing, and the columns above all have natural width budgets. A short-lived intermediate Status column (lifecycle pill) was retired the same day once the column set above settled. The table picks up the v2 row-only borders + muted header treatment from `body.ui-v2 table`.
+**A table, not a grid of session cards.** At the operator's lobby dense scannable rows matter more than per-card framing, and every column above has a natural width budget. The table takes the row-only borders and muted header treatment from the app's default table (`spec/ui_elements.md` §7) and adds no framing of its own.
 
 #### About / Settings / Create Session
 
@@ -365,12 +367,12 @@ What this means in practice:
 
 Reviewer-facing pages have a top bar, but lighter than the operator's:
 
-- **Left:** "Review Robin" — small, `text-secondary`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
+- **Left:** "Review Robin" — small, `--text-subtle`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
 - **Right:** A small **user menu** containing:
   - "Signed in as [Reviewer Name]" — informational. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
   - "My Reviews" — link back to the reviewer's review list (only rendered when the reviewer has more than one review pending or completed; suppressed when there's just one).
-  - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself), rendered only for a viewer who resolves at least one Guide audience. Added 2026-09-08; before that the participant bar had no Guide entry at all, so a reviewer or observer holding roster rows could reach `/guide` and saw the link once they were on `/about` (which uses the operator chrome) but had no route to it from `/me`. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, with the same fail-open test: unset renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
-  - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link (added 18R Item 6).
+  - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself), rendered only for a viewer who resolves at least one Guide audience. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, and **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
+  - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link.
   - "Sign out" — ends the reviewer's session.
 
 The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions.
@@ -407,7 +409,7 @@ The reviewer's "home" after sign-in. A simple list of pending and recent reviews
   - Deadline.
   - Completion status (e.g., "Not started," "In progress: 2 of 5 reviewees," "Completed").
   - Optional: institution name if relevant for cross-institution reviewers.
-- Empty state when the reviewer has no pending reviews: "You have no pending reviews." in `text-secondary`. Not an error; just informational.
+- Empty state when the reviewer has no pending reviews: "You have no pending reviews." in `--text-subtle`. Not an error; just informational.
 
 **Deep-linking behavior:** when a reviewer signs in via a session-specific invitation link and has only one pending review, the sign-in flow can deep-link them past the review list to the response surface directly. The list exists for the cases where it's useful (multiple reviews, returning to find a specific one); it's not a forced waypoint for every visit.
 
@@ -420,8 +422,8 @@ The main task surface, where the reviewer completes their evaluations.
 - Standard reviewer top bar (Review Robin identity + user menu).
 - **Page header** with session context:
   - Session name — rendered at H1 size.
-  - Deadline — small reminder in `text-secondary`, near the session name.
-  - Optional: institution or operator name (small, `text-secondary`) — useful for reviewers participating across institutions or with multiple operators in mind.
+  - Deadline — small reminder in `--text-subtle`, near the session name.
+  - Optional: institution or operator name (small, `--text-subtle`) — useful for reviewers participating across institutions or with multiple operators in mind.
   - Optional: operator-configured welcome message / instructions, shown above the form on first visit. Plain text or limited markdown.
 - **Page navigation** (only when the session has more than one instrument; see "Multi-instrument navigation" below).
 - **Form body.**
@@ -718,14 +720,13 @@ this principle imposes are:
   leftmost column.
 - **Sticky column headers.** When the reviewer is on row 60, the
   column headers (question text) should still be visible at the
-  top of the viewport. *Investigated and dropped in Segment 17B
-  (2026-05-16):* the reviewer table sits in a `.table-scroll`
-  wrapper whose `overflow-x` forces an `overflow-y` scroll
-  context, so a `position: sticky` header would only stay visible
-  if the table became its own internal scroll viewport (a
-  `max-height` box). That scroll-model change was judged not worth
-  a header that stays put — the surface keeps whole-page scroll
-  and a non-sticky header.
+  top of the viewport. **Ruled out, not deferred:** the reviewer
+  table sits in a `.table-scroll` wrapper whose `overflow-x`
+  forces an `overflow-y` scroll context, so a `position: sticky`
+  header stays visible only if the table becomes its own internal
+  scroll viewport (a `max-height` box). The surface keeps
+  whole-page scroll and a non-sticky header — a header that stays
+  put does not buy that scroll-model change.
 - **Filter to incomplete.** A "show only unscored" toggle is
   invaluable for reviewers working across multiple sessions or
   returning to a table they partially filled.
@@ -815,19 +816,6 @@ there, and still open design notes:
   pacing decisions are made.
 - `spec/reviewer-surface.md` — the response form itself; the
   large-table handling above is not yet written there.
-
----
-
-## Migration approach
-
-The pre-v2 Review Robin UI used high-contrast solid-colored buttons (saturated blue, orange, red) and other patterns this spec retired. The migration sequence (complete; the v2 sweep was tracked in `guide/archive/ui_checklist.md`, retired to archive once finished):
-
-1. **Establish the palette and component primitives** in a shared stylesheet. Define colors, spacing, type scale, and core component classes (`button-primary`, `button-secondary`, `card`, `badge`, `tab`, etc.) in one place.
-2. **Migrate the chrome first** — the two-row navigation, breadcrumbs, status strip, page header. The chrome appears on every session-scoped page, so migrating it once visually unifies the entire app.
-3. **Migrate page-by-page**, starting with the highest-traffic pages: Home / Control Panel, then the five Setup pages. Operations pages and sub-pages follow.
-4. **Retire the old styles last.** Once every page uses the new components, the old CSS classes can be removed.
-
-A useful checkpoint: after the chrome migration but before page-body migration, screenshot every page in the app and compare. The chrome unification alone should already make the app feel substantially calmer. If it doesn't, the chrome work isn't done.
 
 ---
 

@@ -14,8 +14,9 @@ parts follow from the decisions here.
 
 ## Audiences
 
-The app has two live audiences and a small number of forward-looking
-ones.
+The app has four live audiences — operator, reviewer, reviewee and
+observer — plus the system-administrator tier above the operator,
+and a small number of forward-looking ones.
 
 ### 1. Operator
 
@@ -52,12 +53,13 @@ assigned reviewees, submits responses.
 
 ### 3. Reviewee
 
-The reviewee is a live participant audience. W16 + W19 (PRs #1737–#1752) shipped the full results surface:
+The reviewee is a live participant audience with a full results
+surface:
 
 - A `require_reviewee_in_session` gate in `app/web/deps.py` that
   matches a signed-in user to an active Reviewee row by
-  case-insensitive email equality. Since Segment 19F the surface itself
-  is gated by **`require_reviewee_with_current_grant`**, which composes
+  case-insensitive email equality. The surface itself is gated by
+  **`require_reviewee_with_current_grant`**, which composes
   that roster check with a currently-resolving visibility grant
   (`visibility_policies.reviewee_has_current_grant`); without one the
   page answers a bare **404**, identical to what a stranger gets.
@@ -72,11 +74,11 @@ valid email to confer access (confidential reviewees — non-email
 identifiers — never grant access; the surface stays unavailable
 by construction per `participants.is_email_identified`).
 
-### 3b. Observer (participant-model Phase 1 — partially live)
+### 3b. Observer
 
 The observer audience can view collated results across the whole
-session (as opposed to a reviewee who sees only their own
-results). Phase 1 has:
+session (as opposed to a reviewee, who sees only their own
+results). It has:
 
 - An `Observer` model and per-session `observers` table with a
   dedicated CRUD Setup page (gated by `session.observers_enabled`).
@@ -99,17 +101,15 @@ results). Phase 1 has:
   tokens are exposed as an operator-side CSV at
   `GET /sessions/{id}/export/participant_tokens.csv` (the
   Extract data tab's Token keys card) for ad-hoc
-  deanonymization. MVP shipped 2026-06-02, partition refactor
-  + Token keys card 2026-06-03.
+  deanonymization.
 
 Observers are always email-identified (`observers.email` is NOT
 NULL); no parse check is needed before identity matching.
 
 ### 4. System administrator (three-tier role model)
 
-Since Segment 18S Item 1 the admin surface is a **strict three-tier
-hierarchy** with **nested capabilities** and a **config-anchored top
-tier**:
+The admin surface is a **strict three-tier hierarchy** with
+**nested capabilities** and a **config-anchored top tier**:
 
 | Tier | Stored as | Added / revoked by |
 |---|---|---|
@@ -119,13 +119,13 @@ tier**:
 
 **Capability nesting (strict superset).** Everything an operator can do
 an admin can do; everything an admin can do a super-admin can do, i.e.
-**super-admin ⊇ admin ⊇ operator**. Today's gates already treat sys-admin
+**super-admin ⊇ admin ⊇ operator**. Every gate treats sys-admin
 as implying operator (`is_operator OR is_sys_admin`); a super-admin
 **self-heals** to `is_sys_admin = is_operator = True` on **every** sign-in
 (`app/web/deps.py::_reassert_super_admin`, narrow — super-admin emails
 only), so every admin/operator gate passes for a super-admin with no
-special-casing, and a manual/pre-feature demotion can't strand a
-protected account.
+special-casing, and a demotion applied outside the app cannot
+strand a protected account.
 
 **Super-admin is derived, never stored** (`app/auth/roles.py::is_super_admin`
 — case-insensitive membership in `SUPER_ADMIN_EMAILS`, plus a fake-auth
@@ -146,8 +146,8 @@ Two surfaces:
    promote / demote `users.is_sys_admin`, delete `users` rows
    outright, and bulk-remove a user from every session they
    appear on, all via the Sys Admin → Accounts Management page
-   (Segment 16A PR 6, reshaped 2026-05-12 to a per-row checkbox
-   + bulk toolbar). Server-side guards (`app/services/users.py`):
+   (per-row checkbox + bulk toolbar). Server-side guards
+   (`app/services/users.py`):
    - **Actor guard** — `promote` / `demote` require the **actor** to be
      a super-admin (`requires_super_admin` → 403). Operator admit /
      revoke stays admin-gated.
@@ -156,16 +156,16 @@ Two surfaces:
      super-admin (`protected_super_admin` → 409), sitting *above* the
      count-based `last_admin` floor — it protects a specific identity,
      not just a count.
-   - Plus the pre-existing `owns_sessions` / `still_owner` / `sole_owner`
+   - Plus the `owns_sessions` / `still_owner` / `sole_owner`
      / `last_admin` guards.
    The Accounts page mirrors these in the UI (three-tier badges;
    Promote/Demote shown only to a super-admin actor; destructive controls
    disabled on super-admin rows) — the server guards are the real
    enforcement.
 2. **Per-session diagnostics + explicit self-add** — the Sessions
-   Diagnostics page lists every session in the workspace. Since
-   **Segment 18S Item 3**, a sys-admin can *read* a non-owned session's
-   diagnostics (Outbox, Audit log) but must **own** it to edit. The
+   Diagnostics page lists every session in the workspace. A
+   sys-admin can *read* a non-owned session's diagnostics (Outbox,
+   Audit log) but must **own** it to edit. The
    row's **"Manage"** action is a POST to
    `/operator/sys-admin/sessions/{id}/adopt` that **self-adds the
    sys-admin as an owner** (audited `session.owner_added`) and opens the
@@ -188,9 +188,8 @@ The session creator becomes the inaugural `session_operators`
 row with `role="owner"` at session-create time. Additional
 owners are added / removed by current owners via the Owners
 sub-card on Session Home's config card in edit mode
-(`/operator/sessions/{id}?editing=1#config-owners-card` —
-Segment 16B PR 2, relocated from the retired Edit page by 18R
-Item 4; gate and invariant contract in `spec/permissions.md` §4.2);
+(`/operator/sessions/{id}?editing=1#config-owners-card`; gate and
+invariant contract in `spec/permissions.md` §4.2);
 the Add-owner picker offers any workspace operator
 (`users WHERE (is_operator OR is_sys_admin) AND NOT EXISTS
 (SELECT 1 FROM session_operators ...)`). The service-layer
@@ -199,8 +198,9 @@ owners, and the audit log carries `session.owner_added` /
 `session.owner_removed` events for every transition.
 
 Per-session role granularity beyond `"owner"` (e.g.
-`"viewer"` / `"deputy"`) is deferred to Segment 16B PR 3
-pending pilot feedback.
+`"viewer"` / `"deputy"`) is deferred pending pilot feedback;
+`session_operators.role` already admits `"manager"`, and nothing
+writes it.
 
 ## Identity model: Reviewer-as-form-respondent (Model A, middle position)
 
@@ -350,17 +350,15 @@ navigation patterns are audience-specific.
 | Operator (in session) | Per-session pages | Heavy: two-row chrome, status strip, lifecycle context | Rich: Setup pages, Operations pages, sub-pages |
 | Operator (out of session) | App-level pages | Light: minimal top bar, user menu | Sparse: Sessions, About, Settings |
 | Reviewer | Response surface | Light: page header, role-navigator chips | Sparse: `/me` dashboard, response form, summary |
-| Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card, W16 + W19) |
-| Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` — per-instrument 3-row table (reviewer / reviewee aggregates + conditional CSV download); MVP shipped 2026-06-02 |
+| Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card) |
+| Observer | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` — per-instrument 3-row table (reviewer / reviewee aggregates + conditional CSV download) |
 
 ### `/guide` — one surface, audience-filtered content
 
 `/guide` is the exception to the table above: **one page, addressed to
-every audience**, rather than one surface per audience. That was the
-decision at Segment 19E (`guide/archive/segment_19E_operator_onboarding.md` →
-`## Judgment calls`) — one URL to link from an email, and the roles
-overlap enough in practice that per-role pages would duplicate most of
-their content.
+every audience**, rather than one surface per audience: one URL to
+link from an email, and the roles overlap enough in practice that
+per-role pages would duplicate most of their content.
 
 Each card declares the audience it is **addressed to** in
 `app/web/views/_guide.py`'s `SECTIONS`, and a viewer is shown the cards
@@ -369,15 +367,13 @@ to read*: an operator wanting to know what a reviewer sees is served by
 the operator-facing material, not by being handed the reviewer's own
 card.
 
-**How a viewer's audiences are resolved** (`visible_audiences`, live
-since 19E rung 7 — before it the resolver returned every audience for
-everyone — and narrowed at 19F PR 3):
+**How a viewer's audiences are resolved** (`visible_audiences`):
 
 | Audience | Held when |
 |---|---|
-| Operator | `user.is_operator or user.is_sys_admin` — the same predicate `require_operator` gates on, derived from it rather than restated (sys-admin implies operator, F4) |
+| Operator | `user.is_operator or user.is_sys_admin` — the same predicate `require_operator` gates on, derived from it rather than restated (sys-admin implies operator) |
 | Reviewer / Observer | An **active** roster row in **any** session matching the signed-in email, case-insensitively — `participants.disclosable_roles`, applying the same rules as the per-session gates in `app/web/deps.py` |
-| Reviewee | The same, **plus** a currently-resolving visibility grant on at least one of those sessions (`visibility_policies.reviewee_has_current_grant`, 19F PR 3) |
+| Reviewee | The same, **plus** a currently-resolving visibility grant on at least one of those sessions (`visibility_policies.reviewee_has_current_grant`) |
 
 The roles are **unioned, not exclusive**: an operator who reviews on
 someone else's session sees both sets.
@@ -388,28 +384,25 @@ page that will 404.
 
 **Why the reviewee row differs from the other two.** Being asked to
 review, or appointed to observe, is not a disclosure *about* the person
-— they are entitled to know it before any window opens (19F decision 4).
-For a reviewee, **membership itself is the disclosure**: telling them the
+— they are entitled to know it before any window opens. For a
+reviewee, **membership itself is the disclosure**: telling them the
 app has a "For reviewees" page is telling them they are being reviewed.
 So the reviewee audience follows the grant, exactly as their `/me` row
-and `/results` surface do. The name `disclosable_roles` records that
-asymmetry; it was `roles_held_anywhere` until 19F PR 3, when the reviewee
-arm stopped answering *holds the role* and started answering *may be told
-they hold it*.
+and `/results` surface do, and the name `disclosable_roles` records
+that asymmetry: the reviewee arm answers *may this person be told
+they hold the role*, not *do they hold it*.
 
 **A viewer holding no audience is redirected to `/about`, and the chrome
-offers them no Guide link.** This **reverses** 19E rung 7 (19F decision
-6, 2026-09-07), which returned every audience for such a viewer on the
-reasoning that an empty Guide serves nobody and the page carries no
-session data, so too much beat nothing. The reversal's reason is
-simpler: a stranger seeing **more** of the Guide than any role-holder
-does is backwards — a reviewer sees one section, a stranger saw all
-eleven.
+offers them no Guide link.** The tempting alternative — return every
+audience to a viewer holding none, on the reasoning that an empty Guide
+serves nobody and the page carries no session data — shows a stranger
+**more** of the Guide than any role-holder sees: a reviewer sees one
+section, against every section in `SECTIONS`.
 
 `/about` rather than a 404, because the chrome offers the link to
 everyone and refusing a link the app itself rendered is a worse answer
 than moving the reader somewhere useful; `/about` has carried the
-"signed in but no access" copy since 18R Item 6. The link-hiding is
+"signed in but no access" copy. The link-hiding is
 cosmetic and fails **open** — a page that does not stamp the flag still
 renders the link, and following it lands on `/about` anyway. Note that
 the participant chrome (`reviewer/_top_bar.html`) has never offered a
@@ -451,14 +444,9 @@ conventions.
 
 Recorded for visibility; **none committed.**
 
-- **Reviewee surface** is live (W16 + W19). The Observer
-  collation surface (W17) shipped 2026-06-02 as the MVP — per-
-  instrument 3-row table + cohort-scoped CSV downloads via
-  `app/web/routes_reviewer/_collation.py`.
-- **System administrator surface.** Shipped — the three-tier
-  operator / admin / super-admin model + Accounts Management +
-  Sessions Diagnostics (Segment 16A + 18S); see §4 above.
-  Multi-tenancy + system-wide settings remain forward-looking.
+- **Multi-tenancy and workspace-wide settings.** The three-tier
+  admin model in §4 governs one workspace; more than one is not
+  modelled anywhere.
 - **Vetted institutional wordmarks** as a constrained customization
   vector for operators — drawn from a registry rather than uploaded.
   Possible future enhancement to the customization boundary; not

@@ -244,7 +244,7 @@ extract. The Zip-all tile stays clickable for the same reason
 (Settings always contributes).
 
 **No audit-log tile in Extract Setup, deliberately.** The
-audit-events CSV route (`GET /export/audit_log.csv`) is live, but
+audit-events CSV route (`GET /export/audit_log.csv`) exists, but
 audit data belongs behind an admin / diagnostics doorway — as it does
 at GitHub, Stripe, Slack, Notion and Atlassian — so its
 operator-facing affordance is the `Download CSV` button on the Sys
@@ -432,10 +432,10 @@ State-conditional copy only — the card frame is constant:
 
 ## Placeholder cards
 
-**No card on Session Home is a placeholder** — every one of the four
-is wired. The pattern is documented here because it is the app's one
-shape for an inert card, and any future placeholder on any page
-reuses it.
+**Session Home carries no placeholder card** — all four of its cards
+are wired. The pattern is documented here because it is the app's one
+shape for an inert card, and any future placeholder on any page must
+reuse it rather than invent a second.
 
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,

@@ -33,8 +33,8 @@ This document is app-agnostic. It defines the design system itself: principles, 
 > with example hexes for orientation. They are deliberately not the
 > identifiers in the app's CSS.
 >
-> Review Robin's shipped tokens are **two-tier** since Segment 19C Item 6
-> (Tier 1 primitives, Tier 2 semantic), defined in
+> Review Robin's shipped tokens are **two-tier** (Tier 1 primitives,
+> Tier 2 semantic), defined in
 > `app/web/templates/base.html` and catalogued in `spec/color_tokens.md` —
 > which is authoritative for the names, and which explicitly retires the
 > flat `accent-*` / `bg-*` vocabulary used here. To *change* a colour, edit

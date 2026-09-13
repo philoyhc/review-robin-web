@@ -10,10 +10,10 @@ do **not** come back.
 
 Companion to `spec/settings_inventory.md` (the full index of every
 persisted setting). Where that doc's §10 coverage table and this doc
-disagree, **this doc is authoritative** — it was built from a
-field-by-field sweep of the serialize/apply/import/clone code and lists
-several config surfaces the inventory's matrix omits (view policies,
-observer cohort rules, `band1_touched_links`, reviewer `profile_link`).
+disagree, **this doc governs** — it is the field-by-field matrix, and it
+covers several config surfaces the inventory's matrix does not name (view
+policies, observer cohort rules, `band1_touched_links`, reviewer
+`profile_link`).
 
 ## Scope
 
@@ -90,7 +90,6 @@ responses. See `spec/rehydrate.md`.
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
 | `name`, `description`, `combinator`, `exclude_self_reviews`, `seed`, `rules_json` | ✅ | ✅ | `exclude_self_reviews` is vestigial (engine hardcodes `False`) |
-| `library_origin_id` | ❌ | ✅ | Settings-CSV doesn't carry it (left NULL); clone copies it |
 
 ### Field labels (`session_field_labels`)
 
@@ -164,9 +163,10 @@ wrong tool):
 5. **Scheduling anchors** stay clone-reset **by design** — a clone is a
    fresh cycle the operator re-schedules. The Settings CSV round-trips
    them, so use it, not clone, for backup / restore.
-6. **`assignment_mode` and `library_origin_id`** are clone-only by design:
-   the Settings CSV drops `assignment_mode` as machine-derived and emits no
-   `library_origin_id` cell.
+6. **`assignment_mode`** is clone-only by design: the Settings CSV drops it
+   as machine-derived. There is no `library_origin_id` to carry — that
+   column, its FK and its index were dropped with the rule-set library, so
+   neither mechanism has anything to omit.
 
 ## Asymmetries and footguns
 

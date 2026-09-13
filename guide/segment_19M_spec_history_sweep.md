@@ -23,9 +23,25 @@ previous draft got wrong. Measured at `b42e4297` over the **39 live files
 
 | kind of drift | measure | command |
 |---|---|---|
-| dated references | **252 lines** carry a `YYYY-MM-DD` | `grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md` |
-| retirement / provenance language | **239 lines** | `grep -ci 'retired\|no longer exists\|used to \|superseded\|was renamed\|shipped in\|Corrected 20' spec/*.md` |
+| dated references | **273 lines** carry a `YYYY-MM-DD` | `grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md` |
+| retirement / provenance language | **255 lines** | `grep -ci 'retired\|no longer exists\|used to \|superseded\|was renamed\|shipped in\|Corrected 20' spec/*.md` |
 | plan apparatus | **86 blocks, all in `ui_elements.md`** | `grep -c '\*Current:\*\|\*Migration delta:\*\|\*PR:\*\|\*Canonical:\*' spec/*.md` |
+
+> **Two of these three figures were published wrong and are corrected
+> here (2026-09-13).** The table first read **252** dated lines and
+> **239** retirement phrases; re-measured against the git objects at
+> `b42e4297` rather than by summing a printed per-file table, they are
+> **273** and **255**. The error was arithmetic on my part, not a change
+> in the corpus. The *argument* the table supports — three distinct kinds
+> of drift, only the third confined to one file — is unaffected, and the
+> apparatus count of **86** reconciles exactly.
+>
+> Corrected in every place the numbers were spent, not only where the
+> error was found: this table, the blast-radius commands below,
+> `guide/todo_master.md`'s segment row, and the `docs/status.md` row —
+> because *recording that a number is unreliable does not stop you
+> spending it*, which this repo has already learned once
+> (`docs/status.md`, 2026-09-12).
 
 Three separate problems, and only the third is confined to one file:
 
@@ -161,7 +177,7 @@ At `b42e4297`, 2026-09-13:
 ```
 ls spec/*.md | wc -l                     # 39 live spec documents
 cat spec/*.md | wc -l                    # 22,493 lines
-grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md   # 252 dated lines
+grep -c '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]' spec/*.md   # 273 dated lines
 grep -c '\*Current:\*\|\*Migration delta:\*\|\*PR:\*\|\*Canonical:\*' spec/*.md  # 86, all ui_elements.md
 grep -rln 'spec/' tests/ --include=*.py  # tests that read a spec as data
 ```
@@ -303,6 +319,32 @@ Finishes `ui_elements.md`'s plan-apparatus conversion (~17 entries remain of ~23
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
 
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **`visual_style_general.md` swept only one line.** Its 61 `accent-*` names
+  were read and deliberately left: the file's own preamble states forward
+  that they are the portable design system's role names and points at
+  `color_tokens.md` as authoritative, so renaming them would break its
+  stated portability and contradict its own guard paragraph. **This is a
+  scope reduction the plan's Item 1 text did not predict** — it had named
+  the retired-token fix as one of two specific jobs across all four files.
+- **The plan expected the apparatus conversion to be partial.** It went to
+  **0**, which is more than the item promised.
+- **Two "kept as uncertain" entries are guard-shaped**, and that category
+  was not in the plan: the retired-pager-strip paragraph and §10's
+  `.session-row-selected` row are both retained *because a test depends on
+  them*, not because their subject is live.
+
 ### Doc impact
 
 - `spec/ui_elements.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 1).
@@ -335,6 +377,27 @@ The densest narrative batch: `operator_button_audit.md` carries 24 dated lines a
 ### Decision
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
+
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **The batch wrote, then removed, a header inverting §4's authority.** It
+  had told a reader of `operator_button_audit.md` to *"treat a contradicting
+  row as the row being wrong"*. Recorded because it is the clearest instance
+  of the pre-correction brief producing a wrong result.
+- **Fifteen spec-vs-spec contradictions were resolved**, which the plan did
+  not scope — it anticipated provenance removal. Most were a file
+  contradicting itself; the rest were settled by `spec/README.md`'s
+  precedence rule rather than by preference.
 
 ### Doc impact
 
@@ -372,6 +435,28 @@ The segment's three-bucket rule, unchanged: provenance out, constraints re-expre
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
 
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **This batch closed before the correction reached it**, so it ran under the
+  pre-correction brief. Its record marks the two places the old framing
+  shows rather than presenting them as settled.
+- **An open decision was created rather than closed**: the batch removed
+  `rrw_functional_spec.md`'s currency line in favour of a sweep-record
+  pointer. 19J.1 set that precedent on `spec/README.md`; §6.2 presents the
+  currency date as a property of the functional altitude. **Both knock-ons
+  — §6.2's "4 of 36" figure and its line-38 quotation — are in the record,
+  unedited**, because they are the author's measured analysis.
+
 ### Doc impact
 
 - `spec/rrw_functional_spec.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 3).
@@ -406,6 +491,27 @@ Rule-shaped specs, so the constraint bucket dominates and the forward-expression
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
 
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **First batch under the correction, and it behaved as §0a predicted:** ten
+  divergence findings, **two** absent-subject deletions across six files,
+  and **zero** in four of them. The plan's Item 4 text had said to expect
+  "fewer deletions and more rewrites"; the outcome was fewer of both and
+  more *reports*.
+- **It reverted one of its own edits** — it had written the code's aggregate
+  `ReconcileImpact` shape into two specs and restored the per-instrument
+  contract.
+
 ### Doc impact
 
 - `spec/instruments.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 4).
@@ -437,6 +543,31 @@ The segment's three-bucket rule, unchanged: provenance out, constraints re-expre
 ### Decision
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
+
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **Six rewrites reverted** once the correction arrived — the largest number
+  of any batch, including one where it had deleted a Next Action button as
+  an absent subject when the button is a **contract** and the code is what
+  lacks it.
+- **A structural question was surfaced and deliberately not acted on:**
+  `role_landing_and_visibility.md` may be a `docs/` document living in
+  `spec/`. Relocating a spec is a contract decision and
+  `test_spec_coverage.py` maps routing modules to governing specs, so a move
+  is not a rename.
+- **The plan asked for a pointer this batch did not add** — that the
+  `beforeunload` pattern ships on the operator side. Added by hand
+  afterwards, verified against `instruments_index.html:3737` at that head.
 
 ### Doc impact
 
@@ -473,6 +604,31 @@ Contract documents, where a dated note is often a **compatibility** statement ra
 
 The segment's three-bucket rule, unchanged: provenance out, constraints re-expressed forward with a brief reason, absent subjects deleted. See `## Decision` above — it is not restated per item, because an item restating a shared rule is how the two copies drift apart.
 
+
+### Status — 2026-09-13 (batch landed; item open pending adjudication)
+
+**Intended vs done.** The batch landed as one rung, as the ladder said. What
+the plan did **not** anticipate is that the brief itself was wrong: every
+batch was told to write *"plain present-tense description of what ships"*,
+which is `docs/`'s function, not `spec/`'s. The author's mid-sweep pointer
+to `rrw_sdd_in_practice.md` §4 corrected it, and §0a of the record carries
+the correction in full.
+
+*Decisions confirmed at build:* 2026-09-13.
+
+- **Two rewrites reverted**, both where a contract had been narrowed to match
+  the code (`library_name`, `assignment_mode`).
+- **The compatibility-tolerance category was larger than the plan implied.**
+  The plan called it "the batch's highest-risk category"; in practice seven
+  distinct tolerances had to be kept and re-expressed as obligations, any one
+  of which would have broken a real importer if deleted.
+- **One spec-vs-spec conflict was resolved by editing rather than
+  reporting** — the observer-cohort-rule bullet in `rehydrate.md` — because
+  its pointer named text this sweep removed. Flagged in the record for
+  adjudication rather than presented as settled.
+- **`blob_storage.md`: read, no finding.** The only file in the corpus with
+  none.
+
 ### Doc impact
 
 - `spec/csv_contracts.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
@@ -483,6 +639,6 @@ The segment's three-bucket rule, unchanged: provenance out, constraints re-expre
 - `spec/email_template_editor.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
 - `spec/email_infra_options.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
 - `spec/timezone_display.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
-- `spec/blob_storage.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6).
+- `spec/blob_storage.md` — history-shaped passages sorted into the three buckets; constraints re-expressed forward (Item 6). <!-- doc-impact-waived: read, no finding — 0 dated lines, 0 provenance, 0 retirement language. Its future-tense options ladder and the deferral itself are the document's subject, so there was nothing in the three buckets to sort. The only file in the corpus with none. -->
 - `guide/sweep_2026-09-13_spec_history.md` — the batch's record: per-file dispositions, the uncertain-and-kept list, and every claim not verified against the code (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).

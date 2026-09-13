@@ -2,16 +2,12 @@
 
 How Review Robin Web decides which timezone every date / time is
 **rendered** in. Storage is uniform — every timestamp is stored in
-UTC — so this doc is only about display. The mechanics (the
-canonical format, the `app/services/date_formatting.py` helpers
-`format_datetime` / `format_date` / `parse_local_datetime` /
-`format_datetime_local`, the `SHOW_ZONE_TOKEN` switch) landed in
-Segment 18B; see
-`guide/archive/segment_18B_date_and_time_settings.md` for that
-history. The zone-identity helpers `gmt_offset_label` /
-`gmt_offset_zone_label` (and the now-unused CLDR-name helper
-`timezone_label`) live in the same module — see Rendering format
-below.
+UTC — so this doc is only about display. The mechanics live in
+`app/services/date_formatting.py`: `format_datetime` / `format_date`
+/ `parse_local_datetime` / `format_datetime_local`, the
+`SHOW_ZONE_TOKEN` switch, and the zone-identity helpers
+`gmt_offset_label` / `gmt_offset_zone_label` (plus the unused
+CLDR-name helper `timezone_label` — see Rendering format below).
 
 ## Layers
 
@@ -45,11 +41,12 @@ effective display zone:
 
     session.display_timezone  →  creating operator's default  →  UTC
 
-The middle fallback is load-bearing only for legacy rows whose
-`display_timezone` is NULL — since Segment 18B PR 4 / PR 5 the
-Create and Edit forms always write a concrete zone, so new
-sessions resolve at the first step. The operator default
-resolves similarly: `users.preferences['display_timezone']` → UTC.
+**The middle step exists for rows whose `display_timezone` is
+NULL.** The Create and Edit forms both write a concrete zone, so a
+new session resolves at the first step; dropping the fallback would
+render those rows in UTC rather than in their operator's zone. The
+operator default resolves the same way:
+`users.preferences['display_timezone']` → UTC.
 
 ## Which timezone each surface shows
 
@@ -107,9 +104,10 @@ filter are labelled `(UTC)`.
   tighter still: the cell shows just the compact GMT-offset
   (`gmt_offset_label`, e.g. `GMT+8`), with the full
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
-- The **CLDR long display name** (e.g. `Australian Eastern
-  Standard Time`, via `timezone_label`) is no longer shown on any
-  surface; the helper is retained for potential reuse.
+- **No surface shows the CLDR long display name** (e.g.
+  `Australian Eastern Standard Time`) — the offset-plus-IANA forms
+  above are the only zone renderings. `date_formatting.timezone_label`
+  is retained for reuse.
 
 ## See also
 
@@ -117,5 +115,5 @@ filter are labelled `(UTC)`.
   (per-session settings), §8.5 (the `SHOW_ZONE_TOKEN` switch).
 - `spec/csv_contracts.md` — extract column shapes, including the
   ISO-8601-with-session-offset timestamp rule.
-- `guide/archive/segment_18B_date_and_time_settings.md` — the
-  segment that built this.
+- `guide/archive/segment_18B_date_and_time_settings.md` — design
+  record for the helpers and the switch.

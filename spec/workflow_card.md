@@ -9,9 +9,11 @@ entry-point for every lifecycle-advancing action on a session —
 from preparing the assignment pairs through to sending reminders,
 manually releasing responses, closing, and archiving.
 
-The H2 the operator reads is "Workflow". The template / CSS
-class names use the `next_action` prefix (the card's earlier
-name); the prefix is kept to avoid touching every consumer.
+The H2 the operator reads is "Workflow"; the template, partial and
+CSS class names all use the `next_action` prefix. The two do not
+match, and the prefix stays: it reaches the partial, the context keys,
+the form ids and a block of `base.html`, and renaming it would change
+every one of them for no behaviour difference.
 
 ## Where it renders
 
@@ -23,9 +25,9 @@ useful while the session is mid-lifecycle:
 - **Operations-row pages** — full-width, just below the chrome,
   on Assignments / Validate / Previews / Invitations / Responses.
 
-The card does not render on Setup-row pages (Reviewers /
-Reviewees / Relationships / Instruments) or on the per-session
-edit / extract / outbox sub-pages.
+The card does not render on Setup-row pages (Reviewers / Reviewees /
+Relationships / Observers / Instruments / Email Template) or on the
+Extract data and outbox surfaces.
 
 Each host page sets `next_action_return_to` to its Operations-row
 slug so that every POST the card emits — `/workflow/prepare`,
@@ -66,10 +68,9 @@ returns:
   per-model `is_configured(instrument)` predicate). Legacy
   instruments are configured iff `rule_set_id IS NOT NULL`;
   new-model instruments are configured iff they have at least
-  one `visible=True` response field (Wave 4 PR 2 — replaces
-  the previous rule-set-centric `has_unpinned` predicate).
+  one `visible=True` response field.
 - `is_pre_generate` — retained for external consumers; the card's
-  state cascade no longer branches on it.
+  state cascade does not branch on it.
 - `invitations_generated` — `True` iff at least one `Invitation`
   row exists for the session.
 - `invitations_sent` — `True` iff at least one `Invitation` row
@@ -139,9 +140,10 @@ super_step, super_error, super_button)` decodes the workflow
 buttons' redirect failure params into the `super_failure` dict
 (or `None`). The `super_button` slot identifies which button
 failed (`"prepare"` or `"activate"`) so the failure line's copy
-varies accordingly; when absent on a legacy URL it falls back
-from the step name (`generate` / `validate` → `"prepare"`;
-`activate` → `"activate"`; `precondition` → `"prepare"`).
+varies accordingly. **The slot is optional**: when a URL omits it the
+helper falls back from the step name (`generate` / `validate` →
+`"prepare"`; `activate` → `"activate"`; `precondition` →
+`"prepare"`), so a hand-built or bookmarked URL still resolves.
 
 ## State machine
 
@@ -225,10 +227,9 @@ buttons the row left-aligns naturally — the empty grid cells
 on the right collapse.
 
 **Stable card height.** The `.next-action-body` div flex-grows
-(`flex: 1 1 auto`) and carries `min-height: 7.5em` — enough to
-reserve the vertical space that the previous multi-row layout
-occupied, so the single button row lands at the same Y position
-the old run-phase row sat at. The card doesn't grow / shrink as
+(`flex: 1 1 auto`) and carries `min-height: 7.5em`, which reserves
+enough vertical space that the button row lands at the same Y
+position in every state. The card doesn't grow / shrink as
 the state-specific copy or the visible-button count varies.
 Multi-paragraph states (e.g. State 3's two-line body) or the
 prepare-confirm banner still expand the body beyond the min —
@@ -256,14 +257,11 @@ the row height across states (regardless of which buttons
 render, every cell is the same height) and absorb the narrower
 visual width the 25% column-width grid gives each button.
 
-The body div above the buttons carries a `min-height` that
-reserves the vertical space previously occupied by the older
-two-row layout, so the card height stays stable when the
-visible-button count drops from 4 to 0 (and the buttons land at
-the same Y position the old Row 2 occupied).
+The body div above the buttons carries a `min-height` so the card
+height stays stable when the visible-button count drops from 4 to 0,
+and the buttons land at the same Y position in every state.
 
-The 10 conceptual button slots (preserving the legacy
-prep-then-run ordering) are:
+The 10 conceptual button slots, in prep-then-run order, are:
 
 ```
 1. Revert to draft   2. Prepare session   3. Create invites   4. Send invites
@@ -771,12 +769,12 @@ routes:
 | `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
 
-The per-step `/assignments/generate` and `/activate` routes
-remain alive even though the Workflow card no longer POSTs to
-them directly. `/activate` is load-bearing for the Validate
-page's warnings-detour banner; `/assignments/generate` has no UI
-consumer but stays as a small surface for direct callers (test
-fixtures, programmatic-validate hooks).
+**The per-step `/assignments/generate` and `/activate` routes stay
+alive although the Workflow card POSTs to neither directly.**
+`/activate` is load-bearing for the Validate page's warnings-detour
+banner; `/assignments/generate` has no UI consumer and stays as a
+small surface for direct callers (test fixtures,
+programmatic-validate hooks).
 
 All `/activate` and `/revert` routes honour the form field
 `return_to` against the `_REVERT_RETURN_TO` allowlist and 303 to

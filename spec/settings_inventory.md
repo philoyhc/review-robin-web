@@ -31,10 +31,10 @@ Auth). The same row backs every session that operator owns or
 co-operates.
 
 **Surface:** `/operator/settings`. The Email send (SMTP) form-card
-carries Cancel + Save (both Secondary); since Segment 18B the page
-also carries a **Date & time** card (its own Save, Secondary)
-editing the `display_timezone` preference key, with a live
-worked-sample preview that names the selected zone in full. The
+carries Cancel + Save (both Secondary); the page also carries a
+**Date & time** card (its own Save, Secondary) editing the
+`display_timezone` preference key, with a live worked-sample preview
+that names the selected zone in full. The
 `← Back to {{ return_to_label }}` chrome back-link returns the
 operator to wherever they came from (`?return_to=<path>`).
 
@@ -49,8 +49,8 @@ operator to wherever they came from (`?return_to=<path>`).
 | `smtp_password_encrypted` | `LargeBinary` | Fernet ciphertext keyed off the deployer's `SMTP_ENCRYPTION_KEY` env var. **Plaintext is never persisted.** |
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
 | `smtp_encryption` | `String(16)` | `starttls` / `ssl` (validated against `operator_settings.SMTP_ENCRYPTION_MODES`); unset / empty = no encryption. |
-| `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
-| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings` (18B PR 2). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
+| `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the backend swaps Segment 14B plans (Microsoft Graph, ACS). |
+| `preferences` | `JSON` | General per-operator preferences container. JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings`. NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
 **Send-as-me identity model.** The operator who initiates a send in
 Manage Invitations sends from their own SMTP credentials. There is
@@ -67,29 +67,28 @@ for the form's button taxonomy.
 Stored on the `sessions` table. Owned by the creating operator;
 co-owners are surfaced + managed via the `session_operators`
 table (per-session permission rows, not settings — see the
-Owners section on the Edit page, Segment 16B PR 2).
+Owners section on the Edit page).
 
 **Surface:**
 
 - **Create:** `/operator/sessions/new` (Session Details form —
   incl. a Timezone field that sets `display_timezone` and scopes
-  the deadline picker, Segment 18B PR 4 — plus optional Quick
-  Setup uploads).
+  the deadline picker — plus optional Quick Setup uploads).
 - **Read:** Session Home > Session Details card (`session_detail.html`).
 - **Edit:** `/operator/sessions/{id}/edit` (Edit Session sub-page,
   reached via the Edit Secondary in the Session Details card).
-  The Edit Session Details form carries a **Timezone** field
-  (Segment 18B PR 5 — folded in from the former standalone Display
-  timezone card), placed before the deadline it scopes; lifecycle-
-  gated like the rest of the form. Also hosts the **Owners** card
-  (Segment 16B PR 2) — current co-owners + Add-owner typeahead
-  picker over the workspace operator allowlist. Since **Segment 18S
-  Item 3** the Edit page is gated by `require_session_operator`
-  (real ownership), so a sys-admin must own the session to manage
-  owners — they self-add first via the Sessions Diagnostics
-  **"Manage"** (adopt) action. The `owners/add` route keeps a
-  relaxed entry but is **self-only** for a non-owner sys-admin;
-  `owners/remove` requires ownership.
+  The Edit Session Details form carries a **Timezone** field,
+  placed before the deadline it scopes; lifecycle-gated like the
+  rest of the form. Also hosts the **Owners** card — current
+  co-owners + Add-owner typeahead picker over the workspace
+  operator allowlist. The Edit page is gated by
+  `require_session_operator` (real ownership), so a sys-admin must
+  own the session to manage owners — they self-add first via the
+  Sessions Diagnostics **"Manage"** (adopt) action. The
+  `owners/add` route keeps a relaxed entry
+  (`require_sys_admin_or_session_operator`) but is **self-only**
+  for a non-owner sys-admin, so the bypass cannot be used to grant
+  anyone else access; the remove route requires ownership.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -97,22 +96,22 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `code` | `String(64)` (unique) | Stable short code; appears in `<code>` on lobby + Session Details. |
 | `description` | `String(2000)` | Free-text. |
 | `status` | `String(32)` | `draft` / `validated` / `ready` / `expired` / `archived`. **Not directly editable** — driven by the lifecycle-transition actions (Validate / Activate / Pause / Close session / Archive). Listed here because it's the ground truth that gates every other operator action. |
-| `deadline` | `DateTime(timezone=True)` | Optional. Rendered on operator + reviewer surfaces via the `format_datetime` Jinja filter as bare `YYYY-MM-DD HH:MM` in the session's resolved display timezone (Segment 18B); CSV extracts and audit-detail JSON keep ISO 8601. The Create / Edit `datetime-local` input is wall-clock in the form's Timezone field (Segment 18B PR 4 / PR 5) — `parse_local_datetime` converts it to a stored UTC instant, `format_datetime_local` renders it back; changing the zone re-renders the picker, the instant is fixed. Cross-field ordering rule **Start ≤ End** (and **End ≤ Release-from**) enforced by `scheduled_events.validate_schedule_ordering` after parse. |
-| `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
+| `deadline` | `DateTime(timezone=True)` | Optional. Rendered on operator + reviewer surfaces via the `format_datetime` Jinja filter as bare `YYYY-MM-DD HH:MM` in the session's resolved display timezone; CSV extracts and audit-detail JSON keep ISO 8601. The Create / Edit `datetime-local` input is wall-clock in the form's Timezone field — `parse_local_datetime` converts it to a stored UTC instant, `format_datetime_local` renders it back; changing the zone re-renders the picker, the instant is fixed. Cross-field ordering rule **Start ≤ End** (and **End ≤ Release-from**) enforced by `scheduled_events.validate_schedule_ordering` after parse. |
+| `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — written by whichever assignment-generation path the operator ran, and reset to NULL when every assignment is deleted. The rule-based engine is the operator-facing path and sets `rule_based`. |
 | `self_reviews_active` | `Boolean` | Whether self-review pairs (reviewer reviewing themselves) are included when assignments are generated. Defaults to `True`. Edited on the Assignments page; round-trips through the Settings CSV (force-applied on import, see §10). |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |
-| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B PR 3). Resolution order: session value → creating operator's default → UTC; NULL ("inherit the operator default") survives only for legacy rows — the Create form (PR 4) stamps a concrete zone and the Edit form (PR 5) always writes one, so new sessions are never NULL. Set on the Create Session form's **Timezone** field and the Edit Session Details form's **Timezone** field — both pre-filled, both also scoping the deadline picker (the deadline is wall-clock in this zone). Every session-scoped operator + reviewer surface renders dates / times in the resolved zone. |
-| `scheduled_activate_at` | `DateTime(timezone=True)` | Operator-set Start anchor (Segment 18G Part 0a / Part 1). When set, the lazy observer fires the scheduled `validated → ready` transition at this moment. Editor sits in the Schedule sub-grid of Create / Edit Session; save-time validator enforces a minimum lead-time of `SCHEDULED_OPERATIONAL_LEAD_HOURS` (default 1), plus the cross-field ordering rule **Start ≤ End** via `scheduled_events.validate_schedule_ordering`. Cleared as a side effect of activation (auto or manual). Persists across `validated → draft` reverts. |
-| `invite_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `scheduled_activate_at` (Segment 18G Part 0b / Part 2). Each entry resolves to a fire moment `scheduled_activate_at + offset` for the auto-send-invites trigger. Editor entries are comma-separated; per-entry save-time rules: must parse as ISO 8601 duration, must be negative (fires before Start), `\|offset\| >=` `REVIEWER_NOTICE_MIN_HOURS`, `\|offset\| <=` 10 days, resolved fire moment `>= now + SCHEDULED_OPERATIONAL_LEAD_HOURS`. Inert when `scheduled_activate_at` is unset (§8.2.2 anchor-null). |
-| `reminder_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `deadline` (Segment 18G Part 0b / Part 3). Each entry resolves to a fire moment `deadline + offset` for the auto-send-reminders trigger. Same per-entry rules as `invite_offsets` (must be negative; 10-day magnitude cap; lead-time + notice-gap minimums). Inert when `deadline` is unset. |
-| `archive_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `deadline` (Segment 18G Part 0b / Part 4, pre-positioned inert). Resolves to `deadline + archive_offset` for the auto-archive trigger. Editor default `P30D`. Not yet wired — Part 4 outstanding. |
-| `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor — the moment reviewees / observers can start viewing collated results. Editor sits in the Schedule sub-grid of Create / Edit Session (wired end-to-end in W14 / PR #1716). Save-time validator `parse_and_validate_responses_release_at` converts a `datetime-local` value to UTC; **no minimum lead-time floor** (the operator can backdate to "immediately viewable"). Cross-field ordering rule **End ≤ Release-from** enforced by `scheduled_events.validate_schedule_ordering` after parse. |
-| `responses_release_until` | `DateTime(timezone=True)` | Operator-set absolute close datetime for the responses-release window. Editor in the Schedule sub-grid alongside Release-from — a `datetime-local` input matching the Release-from shape. Save-time validator `parse_and_validate_responses_release_until` in `app/services/scheduled_events/` enforces ordering (must close *after* `responses_release_at` when both are set) and a 365-day magnitude check (must be within 365 days of `responses_release_at`). Accepts an until without an anchor (the resolver treats the window as inert per the §8.2.2 anchor-null rule). S12 retired the W14 `release_until_offset` (ISO 8601 duration) so the form input and the operator's forthcoming **Stop release** button can write to the same column. |
+| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times. Resolution order: session value → creating operator's default → UTC. NULL means "inherit the operator default"; the Create and Edit forms both write a concrete zone, so a new session is never NULL, and the middle resolution step exists for the rows that are. Set on the Create Session form's **Timezone** field and the Edit Session Details form's **Timezone** field — both pre-filled, both also scoping the deadline picker (the deadline is wall-clock in this zone). Every session-scoped operator + reviewer surface renders dates / times in the resolved zone. |
+| `scheduled_activate_at` | `DateTime(timezone=True)` | Operator-set Start anchor. When set, the lazy observer fires the scheduled `validated → ready` transition at this moment. Editor sits in the Schedule sub-grid of Create / Edit Session; save-time validator enforces a minimum lead-time of `SCHEDULED_OPERATIONAL_LEAD_HOURS` (default 1), plus the cross-field ordering rule **Start ≤ End** via `scheduled_events.validate_schedule_ordering`. Cleared as a side effect of activation (auto or manual). Persists across `validated → draft` reverts. |
+| `invite_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `scheduled_activate_at`. Each entry resolves to a fire moment `scheduled_activate_at + offset` for the auto-send-invites trigger. Editor entries are comma-separated; per-entry save-time rules: must parse as ISO 8601 duration, must be negative (fires before Start), `\|offset\| >=` `REVIEWER_NOTICE_MIN_HOURS`, `\|offset\| <=` 10 days, resolved fire moment `>= now + SCHEDULED_OPERATIONAL_LEAD_HOURS`. Inert when `scheduled_activate_at` is unset (§8.2.2 anchor-null). |
+| `reminder_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `deadline`. Each entry resolves to a fire moment `deadline + offset` for the auto-send-reminders trigger. Same per-entry rules as `invite_offsets` (must be negative; 10-day magnitude cap; lead-time + notice-gap minimums). Inert when `deadline` is unset. |
+| `archive_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `deadline`, resolving to `deadline + archive_offset` for the auto-archive trigger. Editor default `P30D`. **Pre-positioned inert — no consumer wired yet.** |
+| `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor — the moment reviewees / observers can start viewing collated results. Editor sits in the Schedule sub-grid of Create / Edit Session. Save-time validator `parse_and_validate_responses_release_at` converts a `datetime-local` value to UTC; **no minimum lead-time floor** (the operator can backdate to "immediately viewable"). Cross-field ordering rule **End ≤ Release-from** enforced by `scheduled_events.validate_schedule_ordering` after parse. |
+| `responses_release_until` | `DateTime(timezone=True)` | Operator-set absolute close datetime for the responses-release window. Editor in the Schedule sub-grid alongside Release-from — a `datetime-local` input matching the Release-from shape. Save-time validator `parse_and_validate_responses_release_until` in `app/services/scheduled_events/` enforces ordering (must close *after* `responses_release_at` when both are set) and a 365-day magnitude check (must be within 365 days of `responses_release_at`). Accepts an until without an anchor (the resolver treats the window as inert per the §8.2.2 anchor-null rule). An absolute datetime rather than an offset, so the form input and the operator's forthcoming **Stop release** button write to the same column. |
 | `relationships_enabled` | `Boolean` | Per-session toggle enabling the Relationships Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Relationships tab appears in the Setup chrome and the `/operator/sessions/{id}/relationships` routes resolve; when `False` those routes return 404 (gated by `require_relationships_enabled_session` in `app/web/routes_operator/_shared.py`). |
 | `observers_enabled` | `Boolean` | Per-session toggle enabling the Observers Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Observers tab appears in the Setup chrome and `GET /operator/sessions/{id}/observers` resolves; when `False` that route returns 404 (gated by `require_observers_enabled_session` in `app/web/routes_operator/_shared.py`). |
-| `retention_exception` | `Boolean \| None` | Per-session opt-out of the deployment retention policy (Segment 18G Part 0c, pre-positioned inert; consumer Part 5 outstanding). |
-| `retention_overrides` | `JSON \| None` | Per-session retention-policy overrides (Segment 18G Part 0c, pre-positioned inert). Recognised keys: `response_days`, `audit_days`, `archived_days`, `delete_after_archive` (ISO 8601 duration anchored on the system-stamped archive timestamp). |
+| `retention_exception` | `Boolean \| None` | Per-session opt-out of the deployment retention policy. **Pre-positioned inert — no consumer wired yet.** |
+| `retention_overrides` | `JSON \| None` | Per-session retention-policy overrides. **Pre-positioned inert — no consumer wired yet.** Recognised keys: `response_days`, `audit_days`, `archived_days`, `delete_after_archive` (ISO 8601 duration anchored on the system-stamped archive timestamp). |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
 
 **Canonical specs:** `spec/session_home.md` (Session Details card),
@@ -121,18 +120,17 @@ Owners section on the Edit page, Segment 16B PR 2).
 
 ---
 
-## 2.5. Per-session friendly labels (Segment 15A)
+## 2.5. Per-session friendly labels
 
 Operator-renamable display labels for the **nine in-scope tag
 slots** across the three Setup pages (reviewer / reviewee tag 1-3
 + pair-context 1-3). The reviewee identity slots (Name / Email /
-Profile) were **retired as renamable 2026-05-31** — they're
-identity, not labels (participant-model §3.7) — so they no longer
-appear in the editor or the allowlist, though the built-in
-defaults ("Name" / "Email" / "Profile") still render. Stored as
-one row per `(session_id, source_type, source_field)` override on
-the `session_field_labels` table (landed inert in Segment 13D
-PR 1; wired by 15A Slices 1-3, shipped 2026-05-12).
+Profile) are **not renamable** — they are identity, not labels, and
+renaming them added no signal — so they appear in neither the
+editor nor the allowlist, though their built-in defaults ("Name" /
+"Email" / "Profile") still render. Stored as one row per
+`(session_id, source_type, source_field)` override on the
+`session_field_labels` table.
 
 **Surface:**
 
@@ -145,7 +143,7 @@ PR 1; wired by 15A Slices 1-3, shipped 2026-05-12).
   disabled when the session is active/closed; the page's
   existing `.card.lock` already messages "revert to draft to
   modify". The same nine slots can also be set via the roster
-  CSV header suffix (Segment 19C Item 1; see §2.5 round-trip).
+  CSV header suffix (see **Round-trip** below).
 - **Read:** Friendly label flows through every operator
   preview surface (Reviewers / Reviewees / Relationships /
   Assignments column headers + the Assignments
@@ -157,23 +155,22 @@ PR 1; wired by 15A Slices 1-3, shipped 2026-05-12).
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
 | `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. |
-| `source_field` | `String(64)` | The nine renamable slots: `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources, and `1` / `2` / `3` for `pair_context`. (The reviewee identity sources `name` / `email_or_identifier` / `profile_link` are **no longer renamable** — retired 2026-05-31; a legacy row for one is tolerated but never re-created.) Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `field_label_csv._LABELABLE_COLUMNS` on roster-CSV import. |
+| `source_field` | `String(64)` | The nine renamable slots: `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources, and `1` / `2` / `3` for `pair_context`. The reviewee identity sources `name` / `email_or_identifier` / `profile_link` are **not renamable**: `resolve` is permissive on read, so a row already stored for one still resolves, but `upsert` / `clear` are strict, so no new one can be created. Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `field_label_csv._LABELABLE_COLUMNS` on roster-CSV import. The column is `VARCHAR(64)` with no enum gate, so that allowlist is the only validation layer. |
 | `label` | `String(255)` | The override label (stripped on upsert; empty input clears the row). |
 
 Unique on `(session_id, source_type, source_field)`. Resolver
 chain: session override → built-in default in
 `_DEFAULT_LABELS` → `f"{source_type}:{source_field}"` fallback.
 The per-instrument `InstrumentDisplayField.label` override is
-**not** in the chain (retired in 15A Slice 2; column stays in
-the schema as dead data pending a follow-on cleanup segment).
+**not** in the chain; the column stays in the schema as dead data.
 
-**Round-trip:** **roster CSV headers only** (Segment 19C Item 1).
-A tag friendly label rides on its column as a `ReviewerTag1.<label>`
-suffix — import upserts, bare header / absent column clears
-(mirrors the roster's wipe-and-replace). Export re-emits the suffix
-when an override exists. The Settings CSV **no longer** carries
-`field_labels.*` (a stale row in an old bundle is silently ignored
-on apply). See `spec/csv_contracts.md` §1a; handled by
+**Round-trip:** **roster CSV headers only.** A tag friendly label
+rides on its column as a `ReviewerTag1.<label>` suffix — import
+upserts, bare header / absent column clears (mirrors the roster's
+wipe-and-replace). Export re-emits the suffix when an override
+exists. The Settings CSV carries no `field_labels.*` row, and one in
+an older bundle is silently ignored on apply rather than failing the
+import. See `spec/csv_contracts.md` §1a; handled by
 `app.services.field_label_csv`.
 
 **Logic vs display layer:** friendly labels are a
@@ -185,7 +182,8 @@ the canonical name renders below the friendly label as `.muted`
 subtext when an override is in effect, so operators stay
 oriented to the underlying field.
 
-**Canonical spec:** `guide/archive/segment_15A_friendly_labels.md`.
+**Canonical spec:** `spec/csv_contracts.md` §1a (the CSV carrier);
+design record in `guide/archive/segment_15A_friendly_labels.md`.
 
 ---
 
@@ -214,7 +212,7 @@ meaning "use the default"):
 
 | Key | Default | Notes |
 |---|---|---|
-| `responses_received_enabled` | `True` (when absent) | Gates the post-submit confirmation auto-send introduced in Segment 11C Part 2 PR H. |
+| `responses_received_enabled` | `True` (when absent) | Gates the post-submit confirmation auto-send. Stored, round-tripped and previewed; **no submit-time consumer reads it yet** (`spec/email_template_editor.md` §7). |
 
 **Canonical spec:** `spec/operator_ui_concept.md` "Email Template"
 section; `app/services/email_templates.py` for the resolver
@@ -240,35 +238,13 @@ a per-instrument Danger sub-card.
 | `accepting_responses` | `Boolean` | Per-instrument open/close. |
 | `responses_visible_when_closed` | `Boolean` | Whether reviewers can see their own past responses after the instrument closes. |
 | `deadline_closed_at` | `DateTime` | Auto-closed timestamp; populated when the deadline passes. |
-| `sort_display_fields` | `JSON` | Operator-defined default sort spec for this instrument's reviewer-surface table (Segment 13B). Canonical shape: `[{"display_field_id": int, "dir": "asc|desc"}, ...]`, max 3 entries. NULL or `[]` = "no operator default" (insertion order). Edited via the Sort column on the per-instrument Display Fields card; reviewer-side override + cookie persistence on top, see `spec/sort_by_reviewee.md`. Column landed in 13D PR 5 (2026-05-09); lit up by 13B Part 1 + Part 2 (2026-05-12). |
-| `group_kind` | `String(32)` | Group-scoping flavour for Segment 13C's group-scoped instruments — one shared answer covers a whole group of reviewees instead of per-reviewee. NULL = "regular per-reviewee instrument". **Inert** until 13C wires the render adapter (landed in 13D PR 6). |
-| `rule_set_id` | `Integer` (FK → `session_rule_sets.id` ON DELETE SET NULL) | Per-instrument selection of which `session_rule_sets` row applies (Segment 15B). NULL = "no RuleSet currently selected" — the initial state for every existing instrument and the state after a reset-assignments action. **Inert** until 15B Slice 2 wires per-instrument selection (landed in 13D PR 4). |
+| `sort_display_fields` | `JSON` | Operator-defined default sort spec for this instrument's reviewer-surface table. Canonical shape: `[{"display_field_id": int, "dir": "asc|desc"}, ...]`, max 3 entries. NULL or `[]` = "no operator default" (insertion order). Edited via the Sort column on the per-instrument Display Fields card; reviewer-side override + cookie persistence on top, see `spec/sort_by_reviewee.md`. |
+| `group_kind` | `String(32)` | Group-scoping flavour — one shared answer covers a whole group of reviewees instead of per-reviewee. NULL = "regular per-reviewee instrument". |
+| `rule_set_id` | `Integer` (FK → `session_rule_sets.id` ON DELETE SET NULL) | Per-instrument selection of which `session_rule_sets` row applies. NULL = "no RuleSet currently selected" — the initial state for a new instrument and the state after a reset-assignments action. |
 | Display fields (per-instrument list) | rows in `instrument_display_fields` | Operator picks which reviewee attributes (name, email, tags, etc.) the reviewer sees on the response surface. |
-| Response fields (per-instrument list) | rows in `instrument_response_fields` | The actual question schema — labels, types, options. Wave 2 of Segment 18J (2026-05-24) inlined the data-type + bounds onto the row itself (`_inline_data_type` / `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv`); the `response_type_id` FK to `response_type_definitions` retired in PR #1405 along with the operator-library tier. Wave 3 (2026-05-25) added `visible` (Boolean, default true) and made the table the sole source of truth for new-model response fields — `band2_state.response_fields` JSON retired. `help_text` + `help_text_visible` columns added by Wave 2½ for the in-card help-text UX. |
+| Response fields (per-instrument list) | rows in `instrument_response_fields` | The actual question schema — labels, types, options. **This table is the sole source of truth for response fields.** Data type + bounds live inline on the row (`_inline_data_type` / `_inline_response_type` / `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv`), alongside `visible` (Boolean, default true), `help_text` and `help_text_visible`. There is no FK to a per-session type table. |
 
 **Canonical spec:** `spec/instruments.md`.
-
----
-
-## 4.5. Per-session Response Type Definitions — *retired 2026-05-26*
-
-The `response_type_definitions` table — the per-session source of
-truth for `instrument_response_fields.response_type_id` — was
-dropped in PR #1454 alongside the per-instrument RTD card.
-Numeric / string / List bounds now live inline on
-`instrument_response_fields` as the `_inline_data_type` /
-`_inline_min` / `_inline_max` / `_inline_step` /
-`_inline_min_length` / `_inline_max_length` / `_inline_list_csv`
-columns; Band 3's response-field rows write them directly.
-Type-preset chips (Likert / Numeric / Single-line / Multi-line /
-List) replace the previous "pick an RTD" dropdown.
-
-The pre-retirement section is preserved at
-`spec/archive/instruments.md` for historical reference. The
-companion operator-library tier
-(`operator_response_type_definitions`) is described under §9
-below — also retired (never shipped to UI; Wave 2 retired the
-auto-copy seed mechanism in PR #1405).
 
 ---
 
@@ -285,9 +261,7 @@ state.
 `/operator/sessions/{id}/observers` (gated by
 `session.observers_enabled`). Bulk-populated via Quick Setup or
 per-entity CSV; managed inline — per-row Edit / Add /
-bulk inactivate-reactivate shipped in Segment 15F
-(`guide/archive/segment_15F_enhanced_setup_pages.md`).
-Observer per-row CRUD shipped in PR #1706.
+bulk inactivate-reactivate on all four pages, observers included.
 
 ### Reviewer
 
@@ -295,7 +269,7 @@ Observer per-row CRUD shipped in PR #1706.
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
-| `status` | `String(32)` | `active` / `inactive`. Flipped via the per-row Edit / bulk inactivate-reactivate UI shipped in Segment 15F. |
+| `status` | `String(32)` | `active` / `inactive`. Flipped via the per-row Edit / bulk inactivate-reactivate UI. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
 ### Reviewee
@@ -308,24 +282,22 @@ Observer per-row CRUD shipped in PR #1706.
 | `status` | `String(32)` | `active` / `inactive`. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Same shape as reviewer tags. |
 
-### Relationship (per-pair, post-15D)
+### Relationship (per-pair)
 
 Per-pair attributes table — one row per `(session_id, reviewer_id,
-reviewee_id)` triple. The home for pair-context tags, lifted out
-of `assignments` so per-pair attributes exist independently of
-whether the rule engine has materialised an assignment for the
-pair (Segment 13E PR 2 + 15D). The legacy
-`Assignment.context.pair_context_*` JSON column it replaced was
-dropped in 15D PR 6b.
+reviewee_id)` triple. The home for pair-context tags, held here
+rather than on `assignments` so per-pair attributes exist
+independently of whether the rule engine has materialized an
+assignment for the pair.
 
 | Field | Type | Notes |
 |---|---|---|
 | `reviewer_id` | `Integer` (FK → `reviewers.id` ON DELETE CASCADE) | Identity. |
 | `reviewee_id` | `Integer` (FK → `reviewees.id` ON DELETE CASCADE) | Identity. Unique with `reviewer_id` per session via `uq_relationships_session_reviewer_reviewee`. |
-| `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form pair-context labels. Consumed by the rule-based engine via the eager `pair_context_lookup` dict (15D PR 4). Surfaced as the third Ctx-toggle group on the Assignments preview table. |
+| `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form pair-context labels. Consumed by the rule-based engine via the eager `pair_context_lookup` dict. Surfaced as the third Ctx-toggle group on the Assignments preview table. |
 | `status` | `String(32)` | `active` / `inactive`. Defaults to `active`. |
 
-### Observer (PR #1706)
+### Observer
 
 Per-session observer rows — one per audience member who will view
 collated results. Identity is `email` (required, NOT NULL, unique
@@ -345,32 +317,6 @@ column orders).
 
 ---
 
-## 6. Per-user RuleSets — *retired 2026-05-25*
-
-The cross-session operator-library RuleSet tier
-(`operator_rule_sets` + `rule_set_revisions`) and its Rule
-Builder editor page (`/operator/sessions/{id}/assignments/rule-based-editor`)
-both retired in Segment 18J Wave 5:
-
-- **PR #1446 (Wave 5 PR 5.1)** retired the UI: Rule Builder
-  child page, "Save to library" / "Add from library"
-  affordances, the Available RuleSets sidebar.
-- **PR #1447 (Wave 5 PR 5.2)** dropped the
-  `operator_rule_sets` + `operator_rule_set_versions` +
-  `session_rule_set_library_origins` tables and the 5-seeded-
-  RuleSets default-seed flow.
-
-The sole remaining tier is `session_rule_sets` — per-session
-rows auto-managed by Band 1's inline rule editor on the
-per-instrument card. See §4 (Per-instrument) for the link to
-`instrument.rule_set_id`, and `spec/assignments.md` /
-`spec/instruments.md` Band 1 for the authoring surface. The
-pre-retirement section is preserved at
-`spec/archive/rule_based_assignment.md` for historical
-reference.
-
----
-
 ## 7. Browser-local UI state
 
 State the operator implicitly drives via interaction; not persisted
@@ -382,7 +328,7 @@ preference stored?" finds the answer quickly.
 | Cookie | Scope | Purpose |
 |---|---|---|
 | `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't Session Home or a `/operator/sessions/{id}/quick-setup/...` endpoint (so leaving Home for the lobby, operator settings, or `/about` relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
-| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`) — the SSR decoders `unquote()` before `json.loads` (fixed 2026-05-15; see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page; the last two added by Segment 19I Item 11, 2026-09-10). The three Setup tables added an `updated_at` sort key in Segment 15F. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. Segment 13B Part 2 PR 5 (#874). |
+| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`), so the SSR decoders must `unquote()` before `json.loads` (see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page). The three Setup tables also offer an `updated_at` sort key. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. |
 
 ### `localStorage` (per browser, per origin; survives sessions)
 
@@ -391,21 +337,20 @@ preference stored?" finds the answer quickly.
 | `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Photo / Tag1 / Tag2 / Tag3). |
 | `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
-| `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). The legacy assignment-context group retired in 15D. Three chip rows, one key: the key rides on the table, not the row. |
-| `rrw-invitation-tag-visibility` | Operations > Invitations table | Per-column toggle state (reviewer Tag1 / Tag2 / Tag3). Segment 19I Item 11 (2026-09-10). |
-| `rrw-response-tag-visibility` | Operations > Responses table | Per-column toggle state (reviewee Tag1 / Tag2 / Tag3). Segment 19I Item 11 (2026-09-10). |
-| `rrw-theme` | Chrome light/dark toggle (every page) | Display mode. Values `"light"` / `"dark"` (absent = light). Applied as `data-theme` on `<html>` — Light removes the attribute (bare `:root`), Dark stamps `data-theme="dark"` (the `:root[data-theme="dark"]` palette + `color-scheme: dark`). A synchronous no-FOUC `<script>` at the top of `base.html`'s `<head>` reads the key and sets the attribute before first paint; the shared `_partials/theme_toggle.html` pill (in the operator chrome + reviewer top bar) writes it. **Two-state, no OS-follow** (no `prefers-color-scheme`). Browser-local only — never synced to the server. `error.html` (standalone) carries its own copy of the same read-script + palette. Segment 19C Item 2 (2026-08-21). |
+| `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). Three chip rows, one key: the key rides on the table, not the row. |
+| `rrw-invitation-tag-visibility` | Operations > Invitations table | Per-column toggle state (reviewer Tag1 / Tag2 / Tag3). |
+| `rrw-response-tag-visibility` | Operations > Responses table | Per-column toggle state (reviewee Tag1 / Tag2 / Tag3). |
+| `rrw-theme` | Chrome light/dark toggle (every page) | Display mode. Values `"light"` / `"dark"` (absent = light). Applied as `data-theme` on `<html>` — Light removes the attribute (bare `:root`), Dark stamps `data-theme="dark"` (the `:root[data-theme="dark"]` palette + `color-scheme: dark`). A synchronous no-FOUC `<script>` at the top of `base.html`'s `<head>` reads the key and sets the attribute before first paint; the shared `_partials/theme_toggle.html` pill (in the operator chrome + reviewer top bar) writes it. **Two-state, no OS-follow** (no `prefers-color-scheme`). Browser-local only — never synced to the server. `error.html` (standalone) carries its own copy of the same read-script + palette. |
 
 **The six column-visibility keys share one implementation and no
-naming scheme.** Segment 19I Item 11 replaced four byte-identical
-copies of the toggle JS with a single primitive in `base.html` that
-reads its key from the table's `data-rrw-col-toggles` attribute —
-and deliberately **renamed none of the four keys that predated it**,
-because a rename silently resets every operator's saved columns on
-that page. That is why Assignments says `col-visibility` where the
-rest say `tag-visibility`. All six are pinned by
-`tests/unit/test_column_visibility_primitive.py`; the pattern itself
-is specified in `spec/setup_pages.md`.
+naming scheme.** One primitive in `base.html` reads its key from the
+table's `data-rrw-col-toggles` attribute, so the six keys are data,
+not code — and **none of them may be renamed**, because a rename
+silently resets every operator's saved columns on that page. That is
+why Assignments says `col-visibility` where the rest say
+`tag-visibility`; the inconsistency is cheaper than the reset. All
+six are pinned by `tests/unit/test_column_visibility_primitive.py`;
+the pattern itself is specified in `spec/setup_pages.md`.
 
 ### `sessionStorage` (per browser tab; cleared on tab close)
 
@@ -417,17 +362,17 @@ is specified in `spec/setup_pages.md`.
 
 | Param | Surface | Purpose |
 |---|---|---|
-| `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. Rule Builder also used this param before its retirement in Wave 5 PR 5.1 (see §6). |
+| `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. |
 | `?validated=1` | Session Home | Triggers a fresh validation run on this render. |
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
 | `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
 | `?rule_based_error=…` | Assignments page | Slot-scoped error feedback after a failed rule-based generate. |
-| `?edit_id=<id>` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers (Segment 15F). |
-| `?add=1` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table (Segment 15F). |
-| `?selected=<id>` (repeatable) | Reviewers / Reviewees / Relationships Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked (Segment 15F). |
-| `?status=…` / `?q=…` | Reviewers / Reviewees / Relationships / Observers Setup pages | Operator-actions status filter (`all` / `active` / `inactive`) + search term, one shape on all four pages. Preserved through Edit / bulk actions via hidden `filter_status` / `filter_q` form fields (Segment 15F; Relationships' `?search_by=` side-picker retired in Segment 19I — see `spec/setup_pages.md` "Search matching and suggestions"). |
+| `?edit_id=<id>` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers. |
+| `?add=1` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table. |
+| `?selected=<id>` (repeatable) | Reviewers / Reviewees / Relationships Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked. |
+| `?status=…` / `?q=…` | Reviewers / Reviewees / Relationships / Observers Setup pages | Operator-actions status filter (`all` / `active` / `inactive`) + search term, one shape on all four pages. Preserved through Edit / bulk actions via hidden `filter_status` / `filter_q` form fields. One search box per page, no side-picker — see `spec/setup_pages.md` "Search matching and suggestions". |
 | `?template={invitation\|reminder\|responses_received}` | Email Template page (`/operator/sessions/{id}/setup-invite`) | Selects which of the three template tabs is active. Defaults to `invitation`. |
-| `?editing=…&saved=…` plus `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field errors and would-empty / delete-blocked confirmation flows. The `?rtd_*` family retired alongside the per-instrument RTD card in PR #1454. |
+| `?editing=…&saved=…` plus `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field errors and would-empty / delete-blocked confirmation flows. |
 
 **Canonical specs:** `spec/setup_pages.md` (visibility-toggle
 pattern), `spec/quick_setup_card_spec.md` (cookie + lock semantics),
@@ -453,10 +398,10 @@ deployed environments. Source: `app/config.py`.
 | `FAKE_AUTH_NAME` | `Local Operator` | Fake-auth identity slot. |
 | `FAKE_AUTH_OPERATOR` | `True` | Sandbox-only: the fake identity is seeded as operator. Honoured only when `ALLOW_FAKE_AUTH` is also `True`; inert in deployed envs. |
 | `FAKE_AUTH_SYS_ADMIN` | `True` | Sandbox-only: the fake identity is seeded as sys-admin (admin tier). Same gating. |
-| `FAKE_AUTH_SUPER_ADMIN` | `True` | Sandbox-only (Segment 18S): the fake identity is treated as **super-admin** — its email is folded into the effective super-admin set by `app/auth/roles.py`. Honoured only when `ALLOW_FAKE_AUTH` is also `True`, so the localhost operator holds super-admin for testing with zero env coordination; inert in deployed envs. |
+| `FAKE_AUTH_SUPER_ADMIN` | `True` | Sandbox-only: the fake identity is treated as **super-admin** — its email is folded into the effective super-admin set by `app/auth/roles.py`. Honoured only when `ALLOW_FAKE_AUTH` is also `True`, so the localhost operator holds super-admin for testing with zero env coordination; inert in deployed envs. |
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap of `users.is_operator`). |
 | `SYS_ADMIN_EMAILS` | empty | Comma-separated admin allowlist (first-sign-in bootstrap of `users.is_sys_admin`). In a deployed env, at least one of `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` must be non-empty or the app refuses to boot. |
-| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier (Segment 18S). **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
+| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier. **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
 | `DATABASE_URL` | `sqlite:///./review_robin_web.db` | SQLAlchemy connection string. Postgres in deployed environments; SQLite locally / in tests. |
 | `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |
@@ -478,21 +423,16 @@ framework.
 
 | Constant | Default | Purpose |
 |---|---|---|
-| `date_formatting.SHOW_ZONE_TOKEN` | `False` | When `True`, the `format_datetime` helper appends the resolved zone's `%Z` token (`UTC` / `+08` / `EDT`) to every date-time render, and both timezone-card live previews follow via the operator Jinja env's `show_zone_token` global. Off by default — IANA reports a numeric offset for many zones and a letter code for others, so the mixed token reads unevenly; the zone is instead named on the `/operator/settings` and Session Edit cards. Segment 18B follow-up. |
+| `date_formatting.SHOW_ZONE_TOKEN` | `False` | When `True`, the `format_datetime` helper appends the resolved zone's `%Z` token (`UTC` / `+08` / `EDT`) to every date-time render, and both timezone-card live previews follow via the operator Jinja env's `show_zone_token` global. Off by default — IANA reports a numeric offset for many zones and a letter code for others, so the mixed token reads unevenly; the zone is instead named on the `/operator/settings` and Session Edit cards. |
 
 ---
 
 ## 9. `session_rule_sets` — backing store for Band 1's inline rule editor
 
-> **History.** Originally landed inert in Segment 13D PR 2 as
-> pre-positioning for what was then-imagined as a library /
-> per-session-copy split. Wired by 15B (`instruments.rule_set_id`
-> points into this table). The companion operator-library tier
-> + the Rule Builder editor page retired in Segment 18J Wave 5
-> (see §6); ``session_rule_sets`` is now the sole tier.
-> Band 1's inline editor on the per-instrument card is the sole
-> authoring surface; rows are auto-managed by `set_band1_*`
-> service calls.
+``session_rule_sets`` is the only RuleSet tier: `instruments.rule_set_id`
+points into it, Band 1's inline editor on the per-instrument card is the
+sole authoring surface, and rows are auto-managed by `set_band1_*`
+service calls.
 
 Per-session rule rows. Each row carries a complete snapshot of
 the rule tree.
@@ -503,7 +443,7 @@ the rule tree.
 | `name` | `String(255)` | Snapshot name. Unique per session via `uq_session_rule_set_session_name`. |
 | `description` | `Text` | Snapshot description. |
 | `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE` — see `app/schemas/rules.py::Combinator`. |
-| `exclude_self_reviews` | `Boolean` | Vestigial — the engine layer hardcodes `excludeSelfReviews=False` regardless (project-wide policy; see `spec/assignments.md` "Self-review policy"). Backfill migration `d2e4f6a8c1b3` keeps every existing row at `False`; `_create_band1_rule_set` writes `False` on every save. |
+| `exclude_self_reviews` | `Boolean` | Vestigial — the engine layer hardcodes `excludeSelfReviews=False` regardless (project-wide policy; see `spec/assignments.md` "Self-review policy"). Every row is `False`: `_create_band1_rule_set` writes `False` on every save. |
 | `seed` | `Integer` | Global RNG seed for any RANDOM-strategy quota rule whose own selection seed is unset. |
 | `rules_json` | `JSON` | Serialised rule tree. Schema validated against `RuleSetSchema` in `app/schemas/rules.py`. Empty list = Full Matrix. |
 
@@ -514,12 +454,6 @@ surface). Backing model: `app/db/models/session_rule_set.py`.
 ---
 
 ## 9.5. `data_shapes` — operator-saved Data shaper shapes
-
-> **History.** Per-session library landed 2026-05-30 across the
-> Extract data slice (PRs #1565 → #1627; persistence slice
-> #1618 → #1623). The Self-review handling chip's per-shape
-> state column followed in PR #1643 (Phase 2 of
-> `guide/archive/extract_data.md`).
 
 Per-session library of custom column compositions the operator
 composes via the Data shaper card and downloads as CSVs.
@@ -536,8 +470,8 @@ references (instrument by ``short_label``, response field by
 | `instrument_id` | `Integer` (FK → `instruments.id` ON DELETE CASCADE; nullable) | Scope-filter chip: NULL = aggregates span every session instrument. |
 | `response_field_id` | `Integer` (FK → `instrument_response_fields.id` ON DELETE CASCADE; nullable) | Scope-filter chip: NULL = aggregates span every field on the chosen instrument. |
 | `column_chip_slots` | `Text` (JSON list) | Operator's column-chip selection in click order. Drives the preview-row + CSV header order. |
-| `self_review_handling` | `String(16)` | Self-review handling chip state: ``include_self`` (default) / ``exclude_self`` / ``both``. Drives the column-name suffix (`_self` / `_noself` / `_both`), filename suffix, audit ``context.self_review_handling`` slot, and the in-pool ``Assignment.is_self_review.is_(False)`` filter on the non-default states. Added by PR #1643 (Phase 2 of the Extract data slice). |
-| `include_empty_rows` | `Boolean` | Empty-row drop chip state: ``True`` (default, "All rows" — every relevant row ships, including empty ones) / ``False`` ("Rows with data" — drops body rows whose ``_Acc.is_empty()`` on per-individual / per-tag-combo shapes; single-summary always emits its one row). Added by PR #1654 (chip-controlled-drop slice). |
+| `self_review_handling` | `String(16)` | Self-review handling chip state: ``include_self`` (default) / ``exclude_self`` / ``both``. Drives the column-name suffix (`_self` / `_noself` / `_both`), filename suffix, audit ``context.self_review_handling`` slot, and the in-pool ``Assignment.is_self_review.is_(False)`` filter on the non-default states. |
+| `include_empty_rows` | `Boolean` | Empty-row drop chip state: ``True`` (default, "All rows" — every relevant row ships, including empty ones) / ``False`` ("Rows with data" — drops body rows whose ``_Acc.is_empty()`` on per-individual / per-tag-combo shapes; single-summary always emits its one row). |
 | `created_by_user_id` | `Integer` (FK → `users.id` ON DELETE SET NULL; nullable) | Audit-trail anchor for the operator who saved the shape. |
 
 **Canonical spec:** `guide/archive/extract_data.md` (the
@@ -550,44 +484,25 @@ CRUD + validation lives in `app/services/data_shapes.py`.
 
 ## 10. CSV export / import coverage
 
-Two segment plans co-author the porting / template-capture
-workflow:
+> **Inclusion rule:** *if the operator were setting up an
+> equivalent new session from scratch, would they have to retype
+> this?* Yes → in the export. No (machine-derived from operator
+> typing, system-emitted record, per-instance state, or per-operator
+> credential) → excluded.
 
-- **`guide/archive/segment_12A-1_export.md`** — five CSVs off the Extract
-  Data card on Session Home (settings, reviewers, reviewees,
-  manual assignments, responses). Fully shipped 2026-05-09 across
-  PRs #713, #716, #717, #718, #721.
-- **`guide/archive/segment_12A-3_export_import_updates.md`** — Settings
-  CSV importer (absorbed from 12A-2) + Relationships per-entity
-  export + import (parallel to rosters) + manual-assignments CSV
-  adjustments around 15D's "always derived" model. Planned, 4
-  PRs. (The earlier `guide/archive/segment_12A-2_import.md` is kept as a
-  historical-reference document for the Settings importer
-  contract — the implementation lands as 12A-3 PR 1.)
-
-> **Inclusion rule** (paraphrased from 12A-1): *if the operator
-> were setting up an equivalent new session from scratch, would
-> they have to retype this?* Yes → in the export. No
-> (machine-derived from operator typing, system-emitted record,
-> per-instance state, or per-operator credential) → excluded.
-
-The five CSVs split the work three ways:
+The CSVs split the work three ways:
 
 1. **Settings CSV** (`{code}_settings.csv`) — 3-column
    `field,value,data_type` shape capturing every per-session
-   configuration field the operator typed. Round-trip target for
-   12A-2.
+   configuration field the operator typed.
 2. **Per-entity CSVs** (`{code}_reviewers.csv`,
-   `{code}_reviewees.csv`, `{code}_relationships.csv`) —
-   round-trip with the existing per-entity importers. The
-   relationships CSV ships in 12A-3 PR 1 alongside its
-   importer (already shipped in 15D). The legacy
-   `{code}_assignments.csv` retired in 12A-3 PR 2 —
-   assignments are derived (rule-based engine + roster +
-   relationships), not an input to a new session, so the
-   download has no place in a porting bundle. The RuleSet
-   selection itself travels in the Settings CSV via the
-   per-instrument `rule_set_name` field.
+   `{code}_reviewees.csv`, `{code}_relationships.csv`,
+   `{code}_observers.csv`) — round-trip with the per-entity
+   importers. **There is no `{code}_assignments.csv`:** assignments
+   are derived (rule-based engine + roster + relationships), not an
+   input to a new session, so the download has no place in a
+   porting bundle. The RuleSet selection itself travels in the
+   Settings CSV via the per-instrument `rule_set_name` field.
 3. **Responses CSV** (`{code}_responses.csv`) — wide
    row-per-observation shape for downstream analysis.
    **Independent of the porting workflow** — no import
@@ -598,44 +513,30 @@ The five CSVs split the work three ways:
 | § | Section | In CSV? | Where / why |
 |---|---------|---------|-------------|
 | §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
-| §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, `relationships_enabled`, `observers_enabled`, plus the eight 18G + S12 scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). `relationships_enabled` / `observers_enabled` (the participant-model Phase 1 feature toggles) joined the round-trip in **Segment 18P PR A1** (force-applied on import — config, not operator-typed identity). On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, both feature toggles, and the eight 18G / S12 columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). Added to the export by Segment 18D PR E2; 18G columns added by Segment 18N PR 5; S12 swapped `release_until_offset` (string) → `responses_release_until` (datetime); feature toggles by 18P PR A1. |
+| §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, `relationships_enabled`, `observers_enabled`, plus the eight scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). `relationships_enabled` / `observers_enabled` (the participant-model feature toggles) are force-applied on import — config, not operator-typed identity. On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, both feature toggles, and the eight scheduled-event columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). |
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
-| §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. **Per-instrument visibility policy:** the `instruments[n].view_policies[<audience>].*` rows (the 3 × 2 chip grid — Reviewers / Reviewees / Observers × Session-ongoing / Responses-released, each Raw / Anonymized / Summarized), added to the round-trip by **Segment 18P PR A2** (see `spec/visibility_policy.md`). The columns take only the values legal for their `(audience, window)` **cell**, not merely any word from the vocabulary: since **19C Item 9** the import validates each cell against `_PER_CELL_VALID_MODES` and rejects the apply with a named error on an illegal one — a `reviewee` `while_ongoing` grant being the case that matters, since it is the one with a disclosure behind it (`spec/visibility_policy.md` §3.1). **Band 1 link rule:** `band1_touched_links` (the operator's hand-touched link set), added by **Segment 18P PR D**. `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the source of truth for a pinned instrument; the legacy fallback to the latest `assignments.generated` audit row's `refs.rule_set_id` retired alongside seeded RuleSets in Wave 5 PR 5.2. Inline response-field type + bounds + visible added by Segment 18N PR 5 (the serializer hadn't been updated after 18J Wave 2 PR iii-b4 retired the RTD table and moved type / bounds inline — every response field was silently losing its semantic bounds on round-trip for ~2 weeks); `column_widths` / `starts_new_page` / `band2_state` added by the same PR. |
-| §4.5 | Per-session RTDs (retired) | — | Section retired with the `response_type_definitions` table in PR #1454. Numeric / string / List bounds are now inline columns on `instrument_response_fields` (covered under §4; round-tripped via Segment 18N PR 5). |
-| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All | Reviewers / Reviewees / Relationships / Observers each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` / `observers.imported` audit-event paths). The `{code}_observers.csv` download is exposed on the Extract Setup card (conditionally, when `observers_enabled`) via `GET /operator/sessions/{id}/export/observers.csv` (W13, PR #1755); the Zip-all bundle includes it when the toggle is on. |
-| §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
+| §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. **Per-instrument visibility policy:** the `instruments[n].view_policies[<audience>].*` rows (the 3 × 2 chip grid — Reviewers / Reviewees / Observers × Session-ongoing / Responses-released, each Raw / Anonymized / Summarized; see `spec/visibility_policy.md`). The columns take only the values legal for their `(audience, window)` **cell**, not merely any word from the vocabulary: the import validates each cell against `_PER_CELL_VALID_MODES` and rejects the apply with a named error on an illegal one — a `reviewee` `while_ongoing` grant being the case that matters, since it is the one with a disclosure behind it (`spec/visibility_policy.md` §3.1). **Band 1 link rule:** `band1_touched_links` (the operator's hand-touched link set). `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the sole source of truth for a pinned instrument — there is no fallback to an audit row. |
+| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All | Reviewers / Reviewees / Relationships / Observers each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` / `observers.imported` audit-event paths). The `{code}_observers.csv` download is exposed on the Extract Setup card (conditionally, when `observers_enabled`) via `GET /operator/sessions/{id}/export/observers.csv`; the Zip-all bundle includes it when the toggle is on. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
-| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ Roster headers | Round-trip via the **roster CSV headers** as the sole carrier (Segment 19C Item 1): the tag friendly label rides on its column as a `ReviewerTag1.<label>` suffix. **Not** in the Settings CSV (a stale `field_labels.*` row in an old bundle is silently ignored on apply). Allowlist: the nine tag slots, via `field_label_csv._LABELABLE_COLUMNS`. |
-| §9 | `session_rule_sets` | Partial | All rows → Settings CSV (the seeded-vs-authored distinction retired alongside the 5-seeded-RuleSets default-seed in Wave 5 PR 5.2). The `library_name` provenance column also retired in the same wave; the importer recognises-and-skips legacy CSVs that still carry it. |
-| §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 7 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), `self_review_handling` (Self-review handling chip state), and `include_empty_rows` (Empty-row drop chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). The `self_review_handling` row was added by PR #1643 (Phase 2); the `include_empty_rows` row by PR #1654 (chip-controlled-drop slice). Pre-PR-B CSVs without the `self_review_handling` row import to `include_self`; pre-PR-6 CSVs without `include_empty_rows` import to `True`. |
+| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ Roster headers | Round-trip via the **roster CSV headers** as the sole carrier: the tag friendly label rides on its column as a `ReviewerTag1.<label>` suffix. **Not** in the Settings CSV (a stale `field_labels.*` row in an old bundle is silently ignored on apply). Allowlist: the nine tag slots, via `field_label_csv._LABELABLE_COLUMNS`. |
+| §9 | `session_rule_sets` | Partial | All rows → Settings CSV. The export emits no `library_name` cell; **a `session_rule_sets[n].library_name` row on input must be recognized and skipped**, not rejected — a bundle taken while that column existed is otherwise unimportable in full, and the cell carries nothing the destination session can use. |
+| §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 7 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), `self_review_handling` (Self-review handling chip state), and `include_empty_rows` (Empty-row drop chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). **A bundle missing either chip row still imports:** absent `self_review_handling` applies `include_self`, absent `include_empty_rows` applies `True` — the chip defaults. An unrecognized `self_review_handling` string falls back to `include_self` rather than failing the apply. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
-| n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` (Segment 12B PR 1) — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route ships live but **without an Extract Data tile** — operator-facing surface relocates to the Sys Admin page when Segment 16A ships, per industry best practice for audit-data downloads. |
+| n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route carries **no Extract Data tile**: the operator-facing surface is the Sys Admin page's per-session Diagnostics row, which is where audit-data downloads belong. |
 | n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
 
-### Deferred follow-ons
+### Bundles
 
-- ~~**Zip bundle**~~ — shipped. Two bundles are now live: the setup
-  bundle (`{code}_setup.zip`, all setup CSVs including Observers
-  when enabled) via the Extract Setup card's Zip-all tile, and the
-  responses bundle (`{code}_responses.zip`) via the Extract data
-  Operations tab. The import side always reads a single Settings
-  CSV per upload.
-- ~~**Operator-library RTD / RuleSet portability**~~ —
-  retired 2026-05-25 alongside the operator-library tier (Wave
-  5 PR 5.2). Workspace-scoped portability was meant to anchor
-  on Operator Settings + Rule Builder; both surfaces are gone.
-  Per-session rule rows now travel as part of the Settings CSV
-  via §9 above; numeric / string / List bounds travel with
-  their `instrument_response_fields` rows via §4.
+Two zip bundles: the **setup bundle** (`{code}_setup.zip`,
+all setup CSVs including Observers when enabled) via the Extract
+Setup card's Zip-all tile, and the **responses bundle**
+(`{code}_responses.zip`) via the Extract data Operations tab. The
+import side always reads **a single Settings CSV per upload** — no
+bundle importer.
 
-**Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
-CSV shapes + inclusion rule),
-`guide/archive/segment_12A-3_export_import_updates.md` (Settings
-importer + Relationships export + import + post-15D
-assignments-CSV adjustments). The earlier
-`guide/archive/segment_12A-2_import.md` is kept as historical reference
-for the Settings importer contract.
+**Canonical spec:** `spec/csv_contracts.md` (column shapes, parsing
+rules, and the round-trip stability contract).
 
 ---
 
@@ -644,10 +545,7 @@ for the Settings importer contract.
 - `app/config.py` — env-config source of truth.
 - `app/db/models/` — SQLAlchemy declarations for every persisted
   setting named here. The §2.5 / §9 backing tables live in
-  `session_field_label.py` and `session_rule_set.py`; their
-  docstrings link back to the segment plans that wired them. (The
-  `operator_response_type_definition.py` model retired with the
-  RTD table — see §4.5.)
+  `session_field_label.py` and `session_rule_set.py`.
 - `app/services/operator_settings.py` — Operator Settings save /
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
@@ -655,15 +553,8 @@ for the Settings importer contract.
 - `app/main.py` — Quick Setup unlock-cookie navigation
   middleware (mirrors the `qsu_` prefix in
   `app/web/routes_operator/_shared.py`).
-- `guide/archive/segment_13D_db_prep.md` — rationale for every §9
-  inert table / column.
-- `guide/archive/segment_12A-1_export.md` / `guide/archive/segment_12A-3_export_import_updates.md`
-  — CSV export / import contract referenced by §10.
-  (`guide/archive/segment_12A-2_import.md` is the superseded importer
-  plan, kept as historical reference.)
-- `guide/archive/segment_15F_enhanced_setup_pages.md` —
-  inline-editable Setup rows + Add + Inactivate / Reactivate UI
-  for Reviewers / Reviewees / Relationships (covers the two
-  deferred-settings surfaces that were previously catalogued as
-  items #25 + #36 in the retired
-  `guide/archive/unfinished_business.md`).
+- `spec/csv_contracts.md` — the CSV export / import contract
+  referenced by §10.
+- `spec/setup_pages.md` — the inline-editable Setup rows + Add +
+  Inactivate / Reactivate UI for Reviewers / Reviewees /
+  Relationships / Observers.

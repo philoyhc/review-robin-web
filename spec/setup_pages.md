@@ -48,8 +48,8 @@ import paths these pages expose, see
 
 Every Setup Page renders, top-to-bottom:
 
-0. **Page guidance** (`partials/_page_guidance.html` — Segment 19E
-   rung 6). A `<details class="card page-guidance">` — a **half-width
+0. **Page guidance** (`partials/_page_guidance.html`).
+   A `<details class="card page-guidance">` — a **half-width
    card**, not an inline band. **Closed by default**, showing one
    line: the summary `What this page is for`, set in **card-header
    type** (`--fs-h2`, weight 600 — the summary *is* this card's
@@ -116,7 +116,8 @@ Every Setup Page renders, top-to-bottom:
    *transient* page-level feedback — persistent explanation is not
    that.
 
-   **All six pages carry the card**, each with real copy.
+   **Every one of the six pages carries the card**, with real copy —
+   none is exempt.
 
    **The copy contract.** The shipped words live in the six templates
    and nowhere else — reproducing them here would make every wording
@@ -223,7 +224,7 @@ Every Setup Page renders, top-to-bottom:
    `.card-columns` container (see the placement table above).
    **Not** a `.bottom-grid`: that class carries only the Upload +
    Danger Zone pair further down.
-   - The **friendly-label editor** (Segment 15A Slice 3) is the
+   - The **friendly-label editor** is the
      inline editor card via
      `operator/partials/_field_labels_editor.html`. Reviewers +
      Relationships render a 3-cell row; Reviewees a 2-row stacked
@@ -234,7 +235,7 @@ Every Setup Page renders, top-to-bottom:
      (`app/web/routes_operator/_setup_reviewers.py` /
      `_setup_reviewees.py` / `_setup_relationships.py`) upsert /
      clear via `app/services/field_labels.py`.
-   - The **Operator actions card** (Segment 15F) is the per-row
+   - The **Operator actions card** is the per-row
      authoring surface — search / status filter strip + a
      selection-driven button row (Edit · Inactivate · Activate ·
      Add · Delete). See "Operator actions card" below.
@@ -497,9 +498,8 @@ Sortable columns per table:
   stays non-sortable — it renders a link, not a comparable
   value.)
 - **Relationships:** `reviewer` / `reviewee` (both sort on the
-  resolved member **name** — the prominent identity text since
-  Segment 15F), `tag_1` / `tag_2` / `tag_3`, `status`,
-  `updated_at`.
+  resolved member **name**, which is the prominent identity text in
+  the cell), `tag_1` / `tag_2` / `tag_3`, `status`, `updated_at`.
 
 The right-end **Updated** column shows each row's `updated_at`
 timestamp (`%Y-%m-%d %H:%M`); sorting it descending surfaces the
@@ -891,7 +891,7 @@ section beneath:
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). W11, PR #1756. **Not toggleable** — unlike the Reviewees Photo column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry is long-standing and deliberate; the `✓` here was stale (corrected 2026-09-10). |
+| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). **Not toggleable** — unlike the Reviewees Photo column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry with Reviewees is deliberate. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
@@ -933,13 +933,11 @@ consistent across reviewers / reviewees.
 
 ## Relationships page (`session_relationships.html`)
 
-The home for **pair-level context** — the `relationships` table
-seeded in Segment 13E PR 2 and lit up by this Setup page in
-Segment 15D PR 2. One row per `(reviewer, reviewee)` pair within
-a session, carrying three `tag_N` slots consumed by the rule
-engine via the `pair_context.tag1` / `pair_context.tag2` /
-`pair_context.tag3` predicate field names (15D PR 3 / PR 4)
-plus a per-row `active` / `inactive` status.
+The home for **pair-level context** — the `relationships` table. One
+row per `(reviewer, reviewee)` pair within a session, carrying three
+`tag_N` slots consumed by the rule engine via the
+`pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3`
+predicate field names, plus a per-row `active` / `inactive` status.
 
 ### Body grid (when not Activated)
 
@@ -961,7 +959,7 @@ when `Status` is omitted. POSTs to
 | 3 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 4 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 5 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
-| 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment (post-15 cleanup polish #768) |
+| 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment |
 | 7 | Updated | — | `relationship.updated_at` (`%Y-%m-%d %H:%M`) |
 
 The `Show columns:` chip row sits in the preview-table card, above
@@ -978,8 +976,9 @@ The CSV column shape here is the inverse of
 `app/services/extracts/relationships_extract.py` (8-column wide
 CSV: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`,
 `Status` — same six columns the importer accepts). Round-trip is
-byte-stable on the export's own output. The Extract Data card on
-Session Home carries the corresponding Download button.
+byte-stable on the export's own output. The Extract Setup card on the
+**Extract data** Operations tab carries the corresponding Download
+button (`spec/session_home.md` §2).
 
 ## Observers page (`session_observers.html`)
 
@@ -1021,9 +1020,8 @@ The Observers page renders, top-to-bottom:
      Edit / Inactivate / Activate / Add-new-row button row.
      Same 200-row (500-when-filtered) cap. Same
      selection-preservation post-action redirect contract.
-     Hidden whenever the session is not `is_editable` (Segment
-     19I Item 3; `is_ready` until then) so the bulk roster
-     actions can't fire once setup is closed. Its **checkboxes**
+     Hidden whenever the session is not `is_editable`, so the bulk
+     roster actions can't fire once setup is closed. Its **checkboxes**
      keep the looser `not is_archived` gate — they drive the
      cohort rule editor.
    - When only one of the two should render (e.g. during
@@ -1034,8 +1032,7 @@ The Observers page renders, top-to-bottom:
 6. **Upload card (left) + Danger Zone (right)** — a
    `.bottom-grid` pair below the table, mirroring the
    Reviewers / Reviewees layout. Hidden whenever the session is
-   not `is_editable` (Segment 19I Item 3; `is_ready` until then) or
-   while a row is being edited / added.
+   not `is_editable`, or while a row is being edited / added.
    - **Upload card** (`#upload-csv`): CSV file in UTF-8, max
      5 000 rows. Required column: `ObserverEmail`. Optional
      columns: `ObserverName`, `ObserverTag1`. Destructive
@@ -1045,10 +1042,8 @@ The Observers page renders, top-to-bottom:
 
 There is no friendly-label editor (observers have no renamable
 label slots) and **no column-visibility chips** — the tag schema is
-fixed at one slot, and Segment 19I Item 11 settled that a one-tag
-chip row is a different question from the three-tag one. Observers
-also never carried the "Fields with data" pill row that the other
-three pages had until Segment 19I Item 12 rung 4 retired it.
+fixed at one slot, and a one-tag chip row is a different question from
+the three-tag one.
 
 ### Preview table
 
@@ -1071,8 +1066,8 @@ whose `cohort_rule` is null or carries an empty `rules` list matches
 `EMPTY_COHORT`, and the collation surface renders its empty-cohort
 message rather than a section list. So an observer saved without a rule
 is silently blind: the roster shows them `—` in the Cohort column and
-nothing warns the operator. The page's guidance card states this
-(Segment 19E rung 6b); `tests/integration/test_page_guidance.py`
+nothing warns the operator. The page's guidance card states this, and
+`tests/integration/test_page_guidance.py`
 pins that sentence to this behaviour so a flipped default fails a test
 rather than turning the copy into a lie.
 
@@ -1092,16 +1087,16 @@ Instruments page (`new_model_rule_list("link2", …)` in
     operator-cycle button (`IS THE SAME AS` /
     `IS DIFFERENT FROM` / `IS` / `IS NOT` / `CONTAINS` /
     `DOES NOT CONTAIN`). `pair_context.*` tags are accepted
-    by the schema but dropped from the dropdown (PR #1812)
-    since the pair-level join isn't implemented; legacy
-    saved rules degrade safely via `ensureStaleOption`.
+    by the schema but **dropped from the dropdown** since the
+    pair-level join isn't implemented; a saved rule naming one
+    degrades safely via `ensureStaleOption`.
   - Row 2: operand dropdown (Observer attrs only — Name /
     Email / Tag 1) **only shown for the two cross-attribute
     ops**; otherwise a text input (for the four literal ops)
     + the `X` remove-rule button (disabled on the first
     cell). Cross-roster `Reviewer:` / `Reviewee:` operands
-    are accepted by the schema but dropped from the dropdown
-    (PR #1813), same pair-level deferral.
+    are accepted by the schema but dropped from the dropdown, the
+    same pair-level deferral.
 - Bottom-right: a primary `Save` button. `disabled` when no
   observer is checked; otherwise submits the editor state to
   every selected observer.
@@ -1159,89 +1154,67 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
 
 ## Out of scope for these pages
 
-- **A row-local delete affordance (a ✕ on the row itself).**
-  Superseded in part by Segment 19I: deleting one or several
-  **selected** rows is no longer out of scope and is documented under
-  "Deleting the selected rows" above. What remains out of scope is a
-  *second*, row-local affordance for the same act, which would need
-  its own justification now that the selection mechanism carries it.
+- **A row-local delete affordance (a ✕ on the row itself).** Deleting
+  selected rows is in scope and documented under "Deleting the
+  selected rows" above; a *second*, row-local affordance for the same
+  act would need its own justification now that the selection
+  mechanism carries it.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
-- ~~**Paging.** The 200-row (500-when-filtered) cap + the search /
-  status filter cover the long-list case; there is no pager.~~
-  **Shipped as Segment 19J.5** (2026-09-11): the unfiltered view pages
-  at 200 rows via `?offset=`; a filtered view keeps the 500 cap and no
-  pager. The control is the `.table-pager-cluster` since 19J.9. See
-  "The row pager (Segment 19J.5)" above.
-- **Assignments generation.** Moved to the Operations row in
-  Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
-
-Per-row inline Edit / Add / bulk inactivate-reactivate and the
-search / status filter strip — previously listed here as
-deferred — **shipped in Segment 15F** (2026-05-15); see
-"Operator actions card" and "Per-row Edit / Add / bulk actions"
-above.
+- **Assignments generation.** It lives on the Operations row — see
+  `spec/operator_ui_concept.md` §5.
 
 ## Implementation pointers
 
-- The shared visibility-toggle **behavior** lives in `base.html`
-  (Segment 19I Item 11); each template supplies only the HTML
-  structure and its scoped `<style>`, naming its own storage key
-  and CSS classes so pages don't collide. A page that
+- The shared visibility-toggle **behavior** lives in `base.html`;
+  each template supplies only the HTML structure and its scoped
+  `<style>`, naming its own storage key and CSS classes so pages
+  don't collide. A page that
   re-implements the toggle instead of opting in fails
   `tests/unit/test_column_visibility_primitive.py`.
 - **Which columns hold data** is answered by
   `app/services/_queries.py::tag_slot_presence` — three
   `slot_has_data` calls, so three indexed `LIMIT 1`s — and re-keyed
   to the page's own chip slot names by `views.chip_slots`. The route
-  passes one `col_data` map; **no template computes the flag**
-  (Segment 19I Item 12 rung 2). `reviewer_fields_with_data` /
+  passes one `col_data` map; **no template computes the flag**.
+  `reviewer_fields_with_data` /
   `reviewee_fields_with_data` in `app/services/assignments/` survive
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- Lifecycle gating on the four roster pages is one predicate:
-  `is_editable` — `draft` or `validated`. The Upload + Danger Zone
-  cards and the friendly-label editor render behind
-  `{% if is_editable %}`, and a `card lock` at the top of the body
-  renders behind `{% if not is_editable %}`, so the explanation and
-  the controls cannot disagree. That claim was false when it was
-  first written, in Segment 19H Item 6 — see the editor's own
-  paragraph below — and Item 7 made it true rather than softening
-  it.
+- **Lifecycle gating on the four roster pages is one predicate,
+  `is_editable` — `draft` or `validated` — and nothing may use a
+  narrower one.** The Upload + Danger Zone cards, the friendly-label
+  editor and the whole selection surface render behind
+  `{% if is_editable %}`; the `card lock` at the top of the body
+  renders behind `{% if not is_editable %}`. Because both halves read
+  the same flag, the explanation and the controls cannot disagree.
 
-  Both halves arrived late: the cards read `{% if not is_ready %}` until
-  Segment 19I Item 3, which is what left them rendering on `expired`
-  and `archived` where the routes answered 409, and the card stayed
-  keyed to `is_ready` until Segment 19H Item 6, which left those two
-  states correct and silent. The card's three branches — one per
-  locked state, `archived` carrying no control — are specified in
-  `spec/lifecycle.md` §5; all four pages render it from
+  **`is_ready` is the wrong predicate here, and the failure mode is
+  silent.** It is true only in `ready`, so a control keyed to it stays
+  live on `expired` and `archived` while its route answers 409 or 303
+  — a page offering a Save the server will refuse, with no yellow card
+  to explain why. Every gate on these pages reads `is_editable` for
+  that reason, template and route alike (`_save_field_labels` in
+  `app/web/routes_operator/_shared.py`). What the operator meets in
+  every locked state:
+
+  | State | `POST …/field-labels` | Card locked | Save button |
+  |---|---|---|---|
+  | `draft` | 303 | no | yes |
+  | `validated` | 303 | no | yes |
+  | `ready` | 409 | yes | no |
+  | `expired` | 409 | yes | no |
+  | `archived` | 409 | yes | no |
+
+  The page offers what its routes will accept and nothing else, in
+  every state. Renaming labels on a finished session means reverting it
+  to draft, which is what the card already says.
+
+  The card's three branches — one per locked state, `archived`
+  carrying no control — are specified in `spec/lifecycle.md` §5; all
+  four pages render it from
   `operator/partials/_roster_lock_card.html`. The preview table
   renders unconditionally so the operator can read the current rows
   even while the session is Activated.
-
-  **The friendly-label editor was the exception until Segment 19H
-  Item 7, and is no longer.** It was gated on `is_ready` alone from
-  Segment 15A, in both the template and `_save_field_labels`
-  (`app/web/routes_operator/_shared.py`). Item 6 put the lock card on
-  `expired` and `archived`, and so turned a quiet inconsistency into
-  a page contradicting itself — a card saying the roster could not be
-  modified, above a live Save labels button whose route answered 303.
-  Item 7 moved both halves of the editor's gate to `is_editable`.
-  Measured before and after:
-
-  | State | POST before | POST after | Card locked | Save button after |
-  |---|---|---|---|---|
-  | `draft` | 303 | 303 | no | yes |
-  | `validated` | 303 | 303 | no | yes |
-  | `ready` | 409 | 409 | yes | no |
-  | `expired` | **303** | **409** | yes | no |
-  | `archived` | **303** | **409** | yes | no |
-
-  So the page offers what its routes will accept and nothing else, in
-  every state — the rule 19I.3 applied to the Upload and Danger Zone
-  cards and the selection surface, now true of the last control still
-  keyed to `is_ready`. Renaming labels on a finished session means
-  reverting it to draft, which is what the card already says.
 

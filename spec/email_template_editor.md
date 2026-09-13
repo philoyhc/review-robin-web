@@ -1,6 +1,6 @@
 # Email Template editor
 
-**Current as of 2026-09-05 (`36e7b1e7`).** The per-session editor
+The per-session editor
 for the three outbound reviewer emails — **Invitation**, **Reminder**
 and **Responses received** — at `/operator/sessions/{id}/setup-invite`.
 This file is the page's contract: what it renders, what each control
@@ -14,8 +14,7 @@ the invitation-and-email subsystem in user terms; `spec/preview_hub.md`
 owns the read-only previews that render these templates;
 `spec/email_infra_options.md` and `guide/segment_14B_email_infrastructure.md`
 own the dispatch leg. The design record is
-`guide/archive/segment_11E_email_template_editor.md` (shipped
-2026-05-05 → 05-07, PRs #461 → #465, #468, #532).
+`guide/archive/segment_11E_email_template_editor.md`.
 
 ---
 
@@ -25,9 +24,11 @@ own the dispatch leg. The design record is
   `[Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]`.
   Tab label and breadcrumb leaf are both **Email Template**; the page
   `<title>` is `Email Template — {session name}`.
-- The URL slug `setup-invite` predates the Setup / Operations split
-  and is kept for link stability; the settled page name is Email
-  Template (`spec/operator_ui_concept.md`).
+- **The URL slug is `setup-invite`, not the page name.** It does not
+  match the settled page name (Email Template,
+  `spec/operator_ui_concept.md`) and is kept that way for link
+  stability — renaming it breaks every bookmark and every
+  `?template=` link in circulation.
 - Also reached from the Previews hub: each email preview card's footer
   reads "Rendered from **Email Template (Setup)** and Reviewers
   (Setup)", linking to `…/setup-invite?template=<kind>` for the kind
@@ -41,20 +42,17 @@ Chrome → status-pill strip → template selector → `.card-columns`:
 composer in the left column, **page guidance** then merge tags in the
 right.
 
-*(Was a three-slot `.page-grid` with the composer spanning both rows.
-That aligned the right column to the left column's rows, so the
-merge-tag card began at row 2 — level with the composer's midpoint —
-leaving a gap beneath the guidance card and bottom-aligning merge tags
-with the composer. Column stacks have no rows to align to.)*
+**Columns, not a three-slot `.page-grid`.** A grid aligns the right
+column to the left column's rows, so a merge-tag card under the
+guidance card starts at row 2 — level with the composer's midpoint —
+leaving a gap beneath the guidance and bottom-aligning the merge tags
+against the composer. Column stacks have no rows to align to.
 
 **Page guidance.** The shared half-width
 `<details class="card page-guidance">` card specced in
 `spec/setup_pages.md` "Shared body shape", stacked directly above the
-merge-tag reference it introduces. *(Rung 6a placed it full-width
-above the template selector, reasoning that page-level guidance should
-precede the page's own sub-navigation; rung 6b's card form answers
-that differently — the guidance reads as one of the page's cards
-rather than a band over them.)*
+merge-tag reference it introduces — the guidance reads as one of the
+page's cards rather than a band over them.
 Its body states three things this page's controls do not: that a
 session has three emails and each tab edits one of them for this
 session only; that a blank field falls back to the default shown as
@@ -230,7 +228,7 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 |---|---|---|
 | `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and flipped to `sent` in the same transaction with no transport call — the dev-mode preview state described in `spec/rrw_functional_spec.md` §11.6. Lighting the `EmailTransport` is Segment 14B. |
 | Previews hub (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the picked reviewer | Wired. |
-| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` | **No consumer exists.** The toggle is stored, round-tripped, audited and previewed, but no submit-time code path reads it — the docstrings' "consumed by Segment 11C Part 2 PR H" describes intent, not a caller. Until 14B wires it, the checkbox is inert. |
+| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` | **No consumer exists.** The toggle is stored, round-tripped, audited and previewed, but no submit-time code path reads it; until Segment 14B wires the send, the checkbox is inert. |
 | Settings CSV export / import, clone | the JSON wholesale (§8) | Wired. |
 
 ---
@@ -302,45 +300,7 @@ are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
 
 ---
 
-## 12. Drift noted at writing (2026-09-05)
-
-Corrected in the same change as this file:
-
-- `spec/lifecycle.md` §5 listed Email Template among the Setup pages
-  that lock at `ready`. It does not lock (§5 here).
-- `spec/rrw_functional_spec.md` §11.2 said the reminder carries no
-  `$invite_url` (it does — the default body is the link), that
-  unmatched tags "render as empty" (they pass through verbatim), and
-  that a 2000-character body limit applies (nothing enforces one;
-  the subject has a 255-character client-side cap). §11.6 repeated the
-  limit.
-- `spec/csv_contracts.md`'s Settings-CSV example used
-  `email_template_overrides.invitation_subject`, a path the importer
-  rejects; the grammar is `email_overrides.invitation.subject` (§8).
-- `spec/settings_inventory.md` §3 described "a side-by-side composer +
-  preview region"; the right card is the merge-tag reference and
-  previews live on the Previews hub.
-
-~~Left for a code change (not spec):~~ **Both fixed in `0b5caf9f`
-(2026-09-05), hours after this section was written, and this section did
-not notice until Segment 19G's close.** Kept rather than deleted, because
-a list of open code items that quietly became a list of closed ones is
-the drift class this repository concedes it cannot check.
-
-- ~~The right-card description of `$deadline` reads "(YYYY-MM-DD)";
-  the renderer has produced `YYYY-MM-DD HH:MM` with a zone token since
-  Segment 18B.~~ `app/web/views/_previews.py:416` now reads
-  `"Session deadline as YYYY-MM-DD HH:MM (UTC); blank when unset."`
-- ~~`ReviewSession.email_template_overrides`'s column comment and the
-  `responses_received_enabled` docstring cite a submit-time consumer
-  that does not exist (§7).~~ Both now say plainly that nothing reads it
-  at submit time and that Segment 14B wires the send
-  (`app/db/models/review_session.py:45`,
-  `app/services/email_templates.py:279`).
-
----
-
-## 13. Cross-references
+## 12. Cross-references
 
 - `spec/settings_inventory.md` §3 — the key inventory; §7 "URL state" the
   `?template=` UI-state param.
