@@ -28,10 +28,13 @@ save.
 findings ledger at the foot of this file — those two are the live
 surfaces here, and the ledger wins if they ever disagree. Everything
 else, *Headline numbers* included, is frozen at 2026-09-05. Said
-explicitly because this section is where the next sweep starts reading:
-between 2026-09-08 and 2026-09-13 the ledger was kept current while this
-column was not, so for five days §0 reported four findings as open that
-the ledger already recorded closed.
+explicitly because this section is where the next sweep starts reading,
+and because it had already failed once: the ledger reached *all eight
+closed* at **13:52 on 2026-09-05**, fifty-one minutes after this file was
+written, and these rows still said "still open" **eight days later**. The
+two surfaces were never in step at all — the same afternoon that closed
+the findings left §0 stating the opposite, and the next eight days
+touched only the `sweep-scope` marker.
 
 | Finding | From | Age | Now | Note |
 |---|---|---|---|---|
@@ -173,6 +176,19 @@ claim otherwise.
 The next sweep should start here rather than re-running the same
 mechanical passes over the files this one already opened.
 
+**Update 2026-09-13 — the `spec/` half of that residue is gone, and the
+count above is not restated because it cannot be restated
+reproducibly.** Segment 19M read **all 39 live `spec/*.md`** files
+(`guide/archive/segment_19M_spec_history_sweep.md`), and this sweep's 38
+in-scope `spec/` files are a subset of them. What 19M did **not** touch
+it names in its own Out of scope: `docs/`, root documents and `guide/`.
+So the unread residue is now confined to the `docs/` + root half — where
+the next sweep should start. The bare "51" is left standing rather than
+replaced because this file does not tabulate its 13 read files by
+folder, so any smaller number would be a reconstruction, and a
+reconstructed count in a document read under pressure is worse than a
+stale one that says it is stale.
+
 ## Findings ledger
 
 Kept current as the findings close, so the **next** sweep reads this table
@@ -214,9 +230,22 @@ mechanical hit as a lead, not a finding.
 *The three still open today are the standing **declines**, not work: a
 standalone Relationships page (condition: pilot feedback, and there has
 been no pilot), a standalone Operator Settings page (condition: the page
-grows), and the Tier 3 trio. Each reopens on a stated trigger and on
-nothing else. The four that moved from open to done between the sweep and
-today are C2, C3, C5 and C6, all closed by 19C Item 7.*
+grows), and the Tier 3 row. The first two carry one stated trigger each.
+**The Tier 3 row does not**, and saying it did was the first draft of
+this footnote overreaching: it bundles three items with three different
+situations (`guide/archive/spec_sweep_11may.md` §10–§12) — the
+new-session form deferred because Quick Setup already covers it and the
+form is small, which is closer to a non-finding than a deferral; the
+drill-in pages deferred **until pilot feedback**; and the outbox needing
+no spec **unless promoted into Segment 16A Sys Admin**. Two triggers and
+a non-finding, in one row.*
+
+*The four that moved from open to done between the sweep and today are
+C2, C3, C5 and C6, all closed by 19C Item 7. One vocabulary clash is
+inherited rather than introduced: the at-sweep count treats a **decline**
+as still open, while the ledger's "seven actioned, one declined" treats
+it as closed. Both figures are preserved as written; a reader comparing
+them should know they count declines differently.*
 
 **Two observations for the cadence itself.** First, the four
 "non-actionable" notes from August that were still true are the argument
