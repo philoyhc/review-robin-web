@@ -855,6 +855,12 @@ Bottom row of the card, right-aligned, in this order:
     `_require_instrument_editable`, detail `"Instrument
     structure is locked while the session is <status>"`
     (defensive — the button is disabled in these states).
+- **No assignment rows.** A new instrument starts with none, in a
+  generated session as much as an empty one, and gets its pairs from the
+  next Generate — assignments are only ever written by the rule engine
+  (`spec/assignments.md`). Until then the Assignments page reports the
+  instrument as not generated and flags the session **stale**, which is
+  the prompt to regenerate.
 
 ### `Replicate` semantics
 
@@ -877,6 +883,13 @@ key + the `order` slot:
 - `column_widths`, `sort_display_fields` — copied as-is.
 - `accepting_responses` / `responses_visible_when_closed` —
   copied as-is.
+
+**Not cloned: assignment rows.** The duplicate starts with no pairs and
+gets them from the next Generate, exactly as `+Instrument` does. A
+duplicate carrying the source's rows would be assignments written by
+something other than the engine, which `spec/assignments.md` forbids —
+and the pairs it copied could already be wrong for the duplicate, since
+the two instruments may differ in `group_kind`.
 
 ### `Delete` semantics
 

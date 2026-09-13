@@ -154,14 +154,31 @@ def test_regenerate_populates_is_self_review_on_fresh_rows(
 # --------------------------------------------------------------------------- #
 
 
-def test_create_instrument_clone_populates_is_self_review(
+def test_create_instrument_writes_no_assignment_rows(
     db: Session,
 ) -> None:
-    """When ``create_instrument`` clones assignments from an existing
-    instrument, the new instrument's rows pick up the correct value
-    — and crucially can DIVERGE from the source's value when the
-    new instrument's grouping shape differs from the source's."""
-    user, review_session = _seed(db, code="create-clone")
+    """A new instrument starts with no pairs. Segment 19N.
+
+    This asserted the opposite until 19N: ``create_instrument`` cloned
+    the lowest-ordered instrument's rows onto the new one and recomputed
+    ``is_self_review`` over them, and the test proved the recompute
+    handled divergence when the two instruments' grouping shapes
+    differed.
+
+    The clone is gone — rows are only ever written by the rule engine —
+    so there is nothing to recompute here. The property that test
+    protected is still covered where it lives: ``set_group_boundary``
+    and ``set_unit_of_review`` both recompute, and five other test files
+    exercise that path.
+
+    Why the clone went: a new session's Default Instrument has zero
+    assignments until the operator prepares, so a zero-assignment
+    instrument is the ordinary state. The clone was
+    ``if existing:``-guarded and therefore did nothing before the first
+    generate; it only papered over an already-generated session going
+    inconsistent, which the staleness signal now reports instead.
+    """
+    user, review_session = _seed(db, code="create-noclone")
     alice_r = Reviewer(
         session_id=review_session.id, name="Alice", email="alice@example.edu"
     )
@@ -171,94 +188,52 @@ def test_create_instrument_clone_populates_is_self_review(
         email_or_identifier="alice@example.edu",
         tag_1="X",
     )
-    bob_e = Reviewee(
-        session_id=review_session.id,
-        name="Bob",
-        email_or_identifier="bob@example.edu",
-        tag_1="X",
-    )
-    db.add_all([alice_r, alice_e, bob_e])
+    db.add_all([alice_r, alice_e])
     db.flush()
 
-    # Source instrument: individual-scoped. Alice's row about Alice
-    # is the only self-review; Alice's row about Bob is not.
     source = ensure_default_instrument(db, review_session)
-    db.add_all(
-        [
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=alice_r.id,
-                reviewee_id=alice_e.id,
-                instrument_id=source.id,
-            ),
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=alice_r.id,
-                reviewee_id=bob_e.id,
-                instrument_id=source.id,
-            ),
-        ]
-    )
-    db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
-
-    # Sanity: source rows reflect the individual rule.
-    assert (
-        _assignment_for(
-            db,
+    db.add(
+        Assignment(
+            session_id=review_session.id,
             reviewer_id=alice_r.id,
             reviewee_id=alice_e.id,
             instrument_id=source.id,
-        ).is_self_review
-        is True
+        )
     )
-    assert (
-        _assignment_for(
-            db,
-            reviewer_id=alice_r.id,
-            reviewee_id=bob_e.id,
-            instrument_id=source.id,
-        ).is_self_review
-        is False
-    )
+    db.flush()
 
-    # ``create_instrument`` auto-clones from the lowest-ordered
-    # existing instrument (the source above) when one exists —
-    # see ``_instrument_crud.py`` ~line 244. The new instrument
-    # picks up cloned assignments + the recompute fires.
     new_instrument = create_instrument(
         db,
         review_session=review_session,
         actor=user,
     )
     db.flush()
-    # Cloned rows landed; recompute fired during the clone path.
-    assert (
-        _assignment_for(
-            db,
-            reviewer_id=alice_r.id,
-            reviewee_id=alice_e.id,
-            instrument_id=new_instrument.id,
-        ).is_self_review
-        is True
+
+    rows = (
+        db.query(Assignment)
+        .filter_by(instrument_id=new_instrument.id)
+        .count()
     )
+    assert rows == 0, (
+        "adding an instrument must not write assignment rows — the "
+        "engine is the only writer (Segment 19N)"
+    )
+    # The source is untouched.
     assert (
-        _assignment_for(
-            db,
-            reviewer_id=alice_r.id,
-            reviewee_id=bob_e.id,
-            instrument_id=new_instrument.id,
-        ).is_self_review
-        is False
+        db.query(Assignment).filter_by(instrument_id=source.id).count() == 1
     )
 
 
-def test_replicate_instrument_populates_is_self_review(
+def test_replicate_instrument_writes_no_assignment_rows(
     db: Session,
 ) -> None:
-    user, review_session = _seed(db, code="replicate")
+    """A duplicated instrument starts with no pairs. Segment 19N.
+
+    Same reversal as its sibling above, for the duplicate path. The
+    duplicate inherits the source's fields and configuration; its pairs
+    come from the next Generate.
+    """
+    user, review_session = _seed(db, code="replicate-noclone")
     alice_r = Reviewer(
         session_id=review_session.id, name="Alice", email="alice@example.edu"
     )
@@ -266,68 +241,32 @@ def test_replicate_instrument_populates_is_self_review(
         session_id=review_session.id,
         name="Alice",
         email_or_identifier="alice@example.edu",
+        tag_1="X",
     )
-    bob_e = Reviewee(
-        session_id=review_session.id,
-        name="Bob",
-        email_or_identifier="bob@example.edu",
-    )
-    db.add_all([alice_r, alice_e, bob_e])
+    db.add_all([alice_r, alice_e])
     db.flush()
     source = ensure_default_instrument(db, review_session)
-    db.add_all(
-        [
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=alice_r.id,
-                reviewee_id=alice_e.id,
-                instrument_id=source.id,
-            ),
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=alice_r.id,
-                reviewee_id=bob_e.id,
-                instrument_id=source.id,
-            ),
-        ]
-    )
-    db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
-
-    replicated = replicate_instrument(
-        db,
-        review_session=review_session,
-        source=source,
-        actor=user,
-    )
-    db.flush()
-    assert (
-        _assignment_for(
-            db,
+    db.add(
+        Assignment(
+            session_id=review_session.id,
             reviewer_id=alice_r.id,
             reviewee_id=alice_e.id,
-            instrument_id=replicated.id,
-        ).is_self_review
-        is True
+            instrument_id=source.id,
+        )
     )
+    db.flush()
+
+    copy = replicate_instrument(
+        db, review_session=review_session, source=source, actor=user
+    )
+    db.flush()
+
     assert (
-        _assignment_for(
-            db,
-            reviewer_id=alice_r.id,
-            reviewee_id=bob_e.id,
-            instrument_id=replicated.id,
-        ).is_self_review
-        is False
+        db.query(Assignment).filter_by(instrument_id=copy.id).count() == 0
+    ), (
+        "duplicating an instrument must not write assignment rows "
+        "(Segment 19N)"
     )
-
-
-# --------------------------------------------------------------------------- #
-# Reviewer email change
-# --------------------------------------------------------------------------- #
-
-
 def test_reviewer_email_change_recomputes_is_self_review(
     db: Session,
 ) -> None:

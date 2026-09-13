@@ -94,9 +94,15 @@ def _setup_two_instrument_session(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != first.id)
     ).scalar_one()
-    # ``instruments/add`` clones full-matrix assignments onto the new
-    # instrument automatically (per ``create_instrument``), so no
-    # manual Assignment seeding is needed.
+    # Segment 19N: adding an instrument no longer clones assignment
+    # rows onto it, so the fixture regenerates — which is what the
+    # operator now does, prompted by the staleness signal. Rows already
+    # exist, so the route requires ``confirm_replace``; without it the
+    # POST is a no-op redirect and the second instrument stays empty.
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(
+        operator_client, review_session.id, confirm_replace=True
+    )
     instruments_service.update_short_label(
         db, instrument=first, short_label="Self-eval", actor=None
     )

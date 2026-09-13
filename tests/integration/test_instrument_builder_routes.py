@@ -531,9 +531,13 @@ def test_replicate_instrument_clones_content(
     client: TestClient, db: Session
 ) -> None:
     """Replicate clones an instrument's description, response /
-    display fields, group_kind and assignment rows into a new card
-    slotted immediately after the source — without the source's
-    pinned rule (Segment 13C PR 3)."""
+    display fields and group_kind into a new card slotted immediately
+    after the source — without the source's pinned rule (13C PR 3) and,
+    since Segment 19N, **without its assignment rows**.
+
+    The duplicate starts empty and gets its pairs from the next
+    Generate, like any other instrument: rows are only ever written by
+    the rule engine."""
     from app.db.models import (
         AuditEvent,
         InstrumentDisplayField,
@@ -584,7 +588,10 @@ def test_replicate_instrument_clones_content(
     assert copy.order == db.get(Instrument, source_id).order + 1
     assert _count(InstrumentResponseField, copy.id) == src_fields
     assert _count(InstrumentDisplayField, copy.id) == src_displays
-    assert _count(_Assignment, copy.id) == src_assignments
+    assert _count(_Assignment, copy.id) == 0, (
+        "a duplicated instrument starts with no assignment rows "
+        "(Segment 19N) — its pairs come from the next Generate"
+    )
 
     event = db.execute(
         select(AuditEvent).where(

@@ -28,7 +28,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    Assignment,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
@@ -230,51 +229,25 @@ def create_instrument(
     db.flush()
     ensure_locked_display_fields(db, instrument=instrument)
 
-    # Replicate assignment rows from any existing instrument so the
-    # new instrument joins the matrix on every (reviewer, reviewee)
-    # pair that's already assigned. Without this, full-matrix +
-    # instrument.add leaves the new instrument with zero
-    # assignments — the reviewer surface then hides its Page button
-    # because it has nothing to render. Pick the lowest-ordered
-    # existing instrument as the source so the clone is
-    # deterministic; the (reviewer, reviewee, include, context)
-    # tuples are identical across instruments today, so any source
-    # would yield the same rows.
-    cloned_assignments = 0
-    if existing:
-        source_instrument = existing[0]
-        source_rows = list(
-            db.execute(
-                select(Assignment)
-                .where(Assignment.session_id == review_session.id)
-                .where(Assignment.instrument_id == source_instrument.id)
-            ).scalars()
-        )
-        for source in source_rows:
-            db.add(
-                Assignment(
-                    session_id=review_session.id,
-                    reviewer_id=source.reviewer_id,
-                    reviewee_id=source.reviewee_id,
-                    instrument_id=instrument.id,
-                    include=source.include,
-                    created_by_mode=source.created_by_mode,
-                )
-            )
-            cloned_assignments += 1
-        db.flush()
-        # Cloned rows inherit the source instrument's (reviewer,
-        # reviewee) pairs but the new instrument may carry a
-        # different ``group_kind`` — recompute against the post-
-        # clone population so each row's is_self_review flag
-        # matches the new instrument's grouping shape.
-        from app.services.assignments import (
-            recompute_self_review_classification,
-        )
-
-        recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+    # A new instrument gets **no assignment rows**. Segment 19N: rows
+    # are only ever written by the rule engine.
+    #
+    # This used to clone the lowest-ordered existing instrument's pairs,
+    # so the new instrument "joined the matrix" immediately. The
+    # justification does not survive the question that prompted 19N: a
+    # new session's Default Instrument has zero assignments until the
+    # operator prepares, so a zero-assignment instrument is the ordinary
+    # state, not a broken one. The clone was `if existing:`-guarded, so
+    # it did nothing before the first generate — it only papered over an
+    # already-generated session going internally inconsistent, which is
+    # what the staleness signal now reports instead (slice 1).
+    #
+    # Its stated premise — "the (reviewer, reviewee, include, context)
+    # tuples are identical across instruments today" — was already false
+    # for ``is_self_review``, which the clone recomputed immediately
+    # afterwards because "the new instrument may carry a different
+    # group_kind". Instruments can already differ; copying assumed they
+    # could not.
 
     created_refs: dict[str, int] = {"instrument_id": instrument.id}
     if after_instrument_id is not None:
@@ -295,7 +268,6 @@ def create_instrument(
             }
         ),
         refs=created_refs,
-        context={"cloned_assignments": cloned_assignments},
     )
     db.commit()
     return instrument
@@ -403,36 +375,11 @@ def replicate_instrument(
         )
     db.flush()
 
-    cloned_assignments = 0
-    source_rows = db.execute(
-        select(Assignment).where(Assignment.instrument_id == source.id)
-    ).scalars()
-    for source_row in source_rows:
-        db.add(
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=source_row.reviewer_id,
-                reviewee_id=source_row.reviewee_id,
-                instrument_id=instrument.id,
-                include=source_row.include,
-                created_by_mode=source_row.created_by_mode,
-            )
-        )
-        cloned_assignments += 1
-    db.flush()
-    # Replicated rows inherit the source's pairs but live on a
-    # fresh instrument id; the canonical helper still re-keys
-    # them correctly because ``classify_self_review`` is keyed on
-    # ``(instrument_id, reviewer_id)``. Recompute over the
-    # session to set the column on every freshly inserted row.
-    from app.services.assignments import (
-        recompute_self_review_classification,
-    )
-
-    recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
-
+    # A duplicated instrument gets **no assignment rows** either
+    # (Segment 19N) — same reason as ``create_instrument`` above. The
+    # duplicate inherits the source's fields and configuration; its
+    # pairs come from the next Generate, and until then the Assignments
+    # page reports it as not generated.
     audit.write_event(
         db,
         event_type="instrument.replicated",
@@ -450,7 +397,6 @@ def replicate_instrument(
             "instrument_id": instrument.id,
             "source_instrument_id": source.id,
         },
-        context={"cloned_assignments": cloned_assignments},
     )
     db.commit()
     return instrument
