@@ -223,7 +223,11 @@ def test_consolidated_save_handles_multi_instrument_payload(
         f"/operator/sessions/{review_session.id}/instruments/add-new-model"
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(operator, review_session.id)
+    # Rows already exist from the first generate, so the route requires
+    # ``confirm_replace`` — without it the POST is a no-op redirect and
+    # the second instrument never gets pairs. Segment 19N removed the
+    # clone that used to hide this.
+    generate_via_page_button(operator, review_session.id, confirm_replace=True)
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
