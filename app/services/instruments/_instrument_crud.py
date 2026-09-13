@@ -290,9 +290,13 @@ def replicate_instrument(
     is the source name +
     " (copy)"; it starts ``accepting_responses=False`` and carries
     **no** pinned rule (``rule_set_id``) — the operator pins one
-    before opening it. Assignment rows are cloned from the source
-    so the replica joins the matrix immediately, mirroring
-    :func:`create_instrument`."""
+    before opening it.
+
+    **No ``Assignment`` rows are created**, here or in
+    :func:`create_instrument`. Both cloned them until Segment 19N.1, so
+    a replica joined the matrix immediately; that is hand-creating
+    assignment rows, which the contract forbids — only the rule engine
+    writes them. The replica's pairs arrive with the next Generate."""
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
