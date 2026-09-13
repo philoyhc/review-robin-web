@@ -142,7 +142,7 @@ Top-to-bottom, the page renders:
    - `Submit` (Primary, `type="submit"` with
      `formaction="…/submit"`) — review-session-wide. Persists the
      current page's inputs and stamps `submitted_at` on every
-     assignment. (See "Form scope" below.)
+     assignment. (See §"Form HTML mechanics" below.)
    - **Vertical divider** — a `.rs-action-divider` element separating
      the review-level controls (Save / Discard / Submit) from the
      per-page navigation cluster. 1px wide, full button-height,

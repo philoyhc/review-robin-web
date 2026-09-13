@@ -3,8 +3,10 @@
 **The column shapes and parsing rules that govern every CSV the
 operator extracts or uploads.** Multiple extract paths and five
 import paths share a small library of primitives and a strict
-round-trip guarantee on the five main roster-shaped pairs
-(Reviewers, Reviewees, Relationships, Observers, Settings).
+round-trip guarantee. **Five roster-shaped pairs** exist — Reviewers,
+Reviewees, Relationships, Observers, Settings — and the byte-stability
+contract in §4 is stated for **four** of them; see there for which, and
+why Observers is not among them.
 Observers has both a wired importer and an extract; its tile is
 conditionally shown on the Extract Setup card when
 `observers_enabled`.
@@ -465,10 +467,17 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 ## 4. Round-trip stability contract
 
-The four roster-shaped pairs (Reviewers, Reviewees,
-Relationships, Settings) are **byte-stable** on round-trip:
+**Four** of the five roster-shaped pairs — Reviewers, Reviewees,
+Relationships, Settings — are **byte-stable** on round-trip:
 `serialize(session) → write to file → read file → apply to
 session → serialize` yields a byte-identical CSV.
+
+**Observers is the fifth pair and is not claimed here.** It has a wired
+importer and an extract, and `Status` and `CohortRule` both read back — but
+whether the pair is *byte*-stable has not been established, so it is
+outside this contract rather than inside it by assumption. Stating the gap
+is the point: a guarantee that quietly covers four while the header counts
+five is how a round-trip regression goes unnoticed.
 
 Concrete guarantees the importers + serialisers maintain:
 

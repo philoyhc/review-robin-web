@@ -756,3 +756,45 @@ Repointing either falsifies a log.
 *That is the same call the sweep made four times over `spec/` — and making
 it correctly here, on the last item, is the only evidence that the day's
 lesson took rather than being written down.*
+
+---
+
+## The register was wrong about two of its own fixes
+
+Asked whether the register reflected the fixes, I audited all **25 actioned
+claims** mechanically rather than answering from memory. **23 held. Two did
+not:**
+
+| id | the register claimed | the truth |
+|---|---|---|
+| **SI-02** | *"the file now says so"* — five pairs exist, byte-stability established for four, Observers unverified | `csv_contracts.md` still said *"five main roster-shaped pairs"* in its header and *"the four roster-shaped pairs"* in §4, **with no distinction between them.** The fix existed only in the plan's Semantics section and in this register |
+| **SI-05** | *(See "Form scope" below)* → §"Form HTML mechanics" | `reviewer-surface.md:145` still said *"Form scope"* |
+
+**Both are now actually fixed**, and `csv_contracts.md` §4 states the gap
+rather than implying either way: *"Observers is the fifth pair and is not
+claimed here … a guarantee that quietly covers four while the header counts
+five is how a round-trip regression goes unnoticed."*
+
+### Why this happened, precisely
+
+Both were described in Item 9's **plan** — SI-02 in its `Semantics`, SI-05
+in its finding list — and **neither was in the script that ran.** I wrote
+the intent, wrote the record of having done it, and did not do it. The
+suite could not catch it: nothing tests spec prose against a register.
+
+*This is the fifth turn of the same screw, and the sharpest, because it is
+the register's own integrity rather than a spec's.* §1: a `*Current:*` block
+rots because nothing renews it. §2b: a finding rots unless something checks
+it. §7: a correction rots too. The tally section: a count rots. **And now: a
+claim that a thing was fixed rots the moment it is written, because it is
+believed on sight and nothing re-derives it.**
+
+**What the audit is, so it can be re-run.** 25 predicates, one per actioned
+row, each `True` only if the edit is present in the file — not a search for
+the finding's *description*, which is what made the two invisible. Two
+minutes to write, and it is the only reason this answer is not "yes,
+updated."
+
+*The honest reading of the day's error count is now **fifteen**, not
+thirteen: thirteen wrong claims about the code, and two wrong claims about
+having fixed them.*
