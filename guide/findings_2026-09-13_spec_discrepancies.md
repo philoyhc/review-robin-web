@@ -16,7 +16,7 @@ rows struck through with what the fix was.
 | what the open rows need | ids | count |
 |---|---|---|
 | **a ruling** — which side is right | `SC-05`, `SC-06`, `SC-08`, `SC-10`…`SC-36` | 30 |
-| **a contract now ruled** — assignments are always generated, planned in `guide/segment_19N_generated_assignments.md` | `SC-42`, `SC-43` | 2 |
+| **carried out of 19N.1**, which closed 2026-09-13 — `SC-42` is a recorded deferral, `SC-43` a wire-or-retire | `SC-42`, `SC-43` | 2 |
 | **a contract decision** | `SC-44`, `SS-01`, `SS-02`, `SS-07` | 4 |
 | **code** — a comment or a dead mapping | `CC-01`…`CC-03`, `CC-05`…`CC-12` | 11 |
 | **code** — a guard | `SI-07` | 1 |
@@ -28,6 +28,14 @@ again by slice 1 — they stay struck throughout, because both fixes happened
 and the second replaced the first rather than undoing it. `SC-09` closed in
 slice 5, which is why the ruling bucket's range above now reads
 `SC-08`, `SC-10`…`SC-36` rather than a continuous run.*
+
+**Resweep 2026-09-13, after 19N.1 closed.** Every open row re-read against the
+code that item left behind. Eight rows closed across its seven PRs (`SC-02`,
+`SC-03`, `SC-09`, `SC-37`, `SC-38`, `SC-39`, `SC-40`, `SC-41`) and one opened
+(`SC-44`). One open row changed shape rather than closing: `SC-27` now has a
+cheaper fix available. `SC-06`, `SC-22`, `SC-26`, `SC-28`, `SC-32` and `SS-02`
+were re-checked and stand as written — 19N.1 touched none of the code they
+name.
 
 ## Reading key
 
@@ -90,7 +98,7 @@ code, the other spec, or the other comment.
 | `SC-24` | `operator_button_audit.md` §11.5 | Inactivate / Activate gated on "≥1 selection" only | the template also gates them, and the count pill, on `can_edit` | **(c)** |
 | `SC-25` | `role_landing_and_visibility.md` §3 | "the eight operator cards"; a stranger "saw all eleven" | `_guide.py` `SECTIONS` has **12** (9 operator + 3 role) | **(a)** |
 | `SC-26` | `reconciling_regeneration.md` | the `include` seed is pair-level via `is_self_review(reviewer, reviewee)` | `_generate.py:334-347` applies the **whole-group** rule on group-scoped instruments, which `assignments.md` specifies | **(c)** — here the **code is right and this spec is incomplete** |
-| `SC-27` | `reconciling_regeneration.md` + `assignments.md` | `reconcile_impact` returns per-instrument counts | returns one aggregate `ReconcileImpact` for the session | **(c)** — the design's reason (one path serving the banner *and* a per-instrument preview) needs per-instrument. A batch had written the aggregate in and reverted it |
+| `SC-27` | `reconciling_regeneration.md` + `assignments.md` | `reconcile_impact` returns per-instrument counts | returns one aggregate `ReconcileImpact` for the session | **(c)** — the design's reason (one path serving the banner *and* a per-instrument preview) needs per-instrument. A batch had written the aggregate in and reverted it. *Resweep 2026-09-13: the cheaper fix now exists.* 19N.1 slice 1 added `staleness_by_instrument` → `dict[int, InstrumentReconcileState]`, which is the per-instrument shape this row wants. So this is likely a **pointer** fix — name the function that has the shape — rather than a change to `reconcile_impact`, which is aggregate by design and has its own callers |
 | `SC-28` | `quick_setup_card_spec.md` | operator is sent to the Operations Assignments page to regenerate | generation fires from the Workflow card's stepper | **(c)** |
 | `SC-29` | `csv_contracts.md` §3.3 | the Settings CSV has an RTDs section (example `rtd.Long_text.data_type,…`) | `_serialize` emits no RTD rows; such a row hits the unknown-key ignore | **(a)** |
 | `SC-30` | `ui_elements.md` §1 | Sign out is a **Secondary** control | `base.html:3414-3417` ships a bespoke `.chrome-user .signout` — `--border-default` (not `--btn-secondary-border`), `--text-body`, `--surface-muted` hover | **(b)**. §1 now points at §6 rather than restating it, per `operator_button_audit.md`'s rule that a role is defined in one place |

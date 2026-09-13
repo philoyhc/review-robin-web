@@ -872,7 +872,7 @@ Bottom row of the card, right-aligned, in this order:
 Clones every field of the source instrument except the surrogate
 key + the `order` slot:
 
-- Identity (`name` gets a `" copy"` suffix; `short_label` /
+- Identity (`name` gets a `" (copy)"` suffix; `short_label` /
   `description` carried as-is).
 - Display fields (cloned in order).
 - Response fields (cloned in order — including the inline
