@@ -94,6 +94,10 @@ The retired-behaviour test (`test_per_reviewee_backfills_missing_assignment`) is
 
 **Blocked, not deferred:** the CSV is produced and discarded. Delivery is the open question below, and it is the last thing standing between rehydrate and its gate opening. `app/services/rehydrate_stash.py` — operator-scoped, 1h TTL, Postgres-backed, built for exactly the Validate → Commit hand-off this CSV has to cross — already exists, which makes the stash option cheaper than it looked when the question was written.
 
+**2026-09-13, slice 4 — a row built without a mode is no longer labelled hand-made.** Closes `SC-38`. `Assignment.created_by_mode` defaulted to `"manual"`, a mechanism retired with the CSV-upload path in 16A PR 5, so any row constructed without an explicit mode claimed a hand that could not exist. Defaulted to `rule_based`, and the 14 fixture files seeding `"manual"` — **16 occurrences, the measured figure that corrected an earlier "ten"** — now seed the real value.
+
+Of the rung's three options (*defaulted, bound or retired*), only the first is proportionate, and the blast radius is why: **67 `Assignment(...)` constructions across `tests/` omit the field**, so binding it as required would have churned 67 sites to change nothing in `app/`, where the single writer already passes it explicitly. Retiring it outright would close the seam the enum exists to hold open for a second mode. 2 mutations, 2 caught.
+
 ### PR ladder
 
 Slices, in dependency order. Sizes to be confirmed when each is cut.

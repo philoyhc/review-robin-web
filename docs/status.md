@@ -936,8 +936,8 @@ The Cancel link on the surface is just `<a>` back to `GET /me/sessions/{id}` —
   the session has never generated (a clone starts NULL). Legacy
   `manual` / `full_matrix` rows predate 16A PR 5 and no data
   migration has rewritten them. `Assignment.created_by_mode` records
-  the same per row, but still defaults to `"manual"` at the model
-  level — 19N.1 slice 4.
+  the same per row and defaults to `rule_based`; it defaulted to
+  `"manual"` until 19N.1, naming a mechanism retired in 16A PR 5.
 - **Per-pair attributes** live on the new `relationships` table
   (Setup page at `/operator/sessions/{id}/relationships`), not on
   `Assignment.context` — that JSON column dropped in 15D PR 6b.

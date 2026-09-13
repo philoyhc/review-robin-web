@@ -71,6 +71,11 @@ On reconcile:
 `to_keep` rows retain their original `created_by_mode`. `to_insert`
 rows get the current run's `mode`.
 
+The engine is the only writer, and `AssignmentMode` has one member, so
+every row it inserts carries `rule_based`. The column's own default
+covers direct construction only; it must never name a mechanism that
+cannot write — a row nobody made by hand may not be labelled as one.
+
 ## Reconcile is the only materialisation path
 
 `_materialise_one_instrument` **always** reconciles — there is no

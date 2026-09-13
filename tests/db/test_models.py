@@ -19,6 +19,7 @@ from app.db.models import (
     SessionOperator,
     User,
 )
+from app.schemas.assignments import AssignmentMode
 
 
 def _make_user(db: Session, email: str = "operator@example.edu") -> User:
@@ -149,7 +150,7 @@ def test_can_create_an_assignment_linking_reviewer_reviewee_instrument(db: Sessi
         reviewer_id=reviewer.id,
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
-        created_by_mode="manual",
+        created_by_mode="rule_based",
     )
     db.add(assignment)
     db.flush()
@@ -159,6 +160,37 @@ def test_can_create_an_assignment_linking_reviewer_reviewee_instrument(db: Sessi
     assert fetched.reviewee.email_or_identifier == "bob@example.edu"
     assert fetched.instrument.name == "General review"
     assert fetched.include is True
+
+
+def test_an_assignment_built_without_a_mode_is_not_labelled_hand_made(
+    db: Session,
+) -> None:
+    """``created_by_mode`` defaulted to ``"manual"`` until 19N.1 — a mode
+    retired with the CSV-upload path, so a row built without an explicit
+    mode claimed a hand that no longer exists. The engine is the only
+    writer and it always passes the value, so this default is what direct
+    construction gets."""
+    user = _make_user(db)
+    review = _make_session(db, user)
+    reviewer = Reviewer(session_id=review.id, name="A", email="a@example.edu")
+    reviewee = Reviewee(
+        session_id=review.id, name="B", email_or_identifier="b@example.edu"
+    )
+    instrument = Instrument(session_id=review.id, name="I")
+    db.add_all([reviewer, reviewee, instrument])
+    db.flush()
+
+    assignment = Assignment(
+        session_id=review.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
+    db.add(assignment)
+    db.flush()
+
+    assert assignment.created_by_mode == AssignmentMode.rule_based.value
+    assert assignment.created_by_mode != "manual"
 
 
 def test_can_create_a_response_for_an_assignment_field(db: Session) -> None:

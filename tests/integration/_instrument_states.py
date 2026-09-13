@@ -74,7 +74,7 @@ def seed_session_with_instruments(
         reviewee_id=reviewee.id,
         instrument_id=first.id,
         include=True,
-        created_by_mode="manual",
+        created_by_mode="rule_based",
     )
     db.add(assignment)
     db.flush()

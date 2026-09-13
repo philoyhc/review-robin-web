@@ -1774,7 +1774,7 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
         reviewee_id=carol.id,
         instrument_id=instrument.id,
         include=True,
-        created_by_mode="manual",
+        created_by_mode="rule_based",
     )
     db.add(assignment)
     db.flush()
@@ -1897,7 +1897,7 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
             reviewee_id=reviewee_id,
             instrument_id=instrument.id,
             include=True,
-            created_by_mode="manual",
+            created_by_mode="rule_based",
         )
         db.add(a)
         db.flush()
