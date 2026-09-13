@@ -153,13 +153,22 @@ def test_hidden_state_when_fresh_after_generation(
     assert result.pinned_instrument_count == 1
 
 
-def test_hidden_state_when_roster_added_post_generate(
+def test_generate_state_when_roster_added_post_generate(
     db: Session,
 ) -> None:
-    """Wave 5 PR 5.1 — staleness detection retired. The Next Action
-    card no longer flips back to ``"generate"`` when a roster
-    change makes materialised pairs stale (operator clicks
-    Generate manually). Stays ``"hidden"``."""
+    """A roster change after Generate flips the card back to
+    ``"generate"``. Segment 19N behaviour (3).
+
+    This asserted ``"hidden"`` from Wave 5 PR 5.1 until 19N, because
+    staleness detection had been retired and the resolver could not tell
+    that the materialised pairs no longer matched the roster. The
+    operator was expected to notice and click Generate unprompted.
+
+    The reversal is deliberate: the whole point of the signal is that an
+    added reviewer who is in no assignment is invisible until someone
+    says so. The branch this exercises was unreachable while
+    ``any_stale`` was forced ``False``.
+    """
 
     user, review_session, instrument, rule_set = _seed(db, code="na-stale")
     instrument.rule_set_id = rule_set.id
@@ -183,7 +192,10 @@ def test_hidden_state_when_roster_added_post_generate(
 
     result = compute_next_action_generate_state(db, review_session)
 
-    assert result.state == "hidden"
+    assert result.state == "generate", (
+        "a reviewer added after Generate leaves the materialised pairs "
+        "out of step, and the card should say so"
+    )
 
 
 def test_hidden_state_when_session_is_ready(db: Session) -> None:

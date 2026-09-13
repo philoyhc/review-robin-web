@@ -22,10 +22,10 @@ rows struck through with what the fix was.
 | **code** — a guard | `SI-07` | 1 |
 | **prose** — a fact worth restoring | `SI-08`, `SI-10` | 2 |
 
-*19N also revisits three rows not counted here: `SC-09` (already inside the
-`SC-08`…`SC-36` range above) and `SC-02` / `SC-03`, which are **resolved** but
-whose fix 19N behaviour (3) reverses — the spec now states the absence of a
-staleness signal as the contract, and the segment intends to restore one.*
+*19N also covers `SC-09`, already inside the `SC-08`…`SC-36` range above.
+`SC-02` and `SC-03` were resolved, reopened by 19N behaviour (3), and closed
+again by slice 1 — the register keeps them struck throughout, because both
+fixes happened and the second replaced the first rather than undoing it.*
 
 ## Reading key
 
@@ -60,8 +60,8 @@ code, the other spec, or the other comment.
 | id | where | contract / one side | reality | disposition |
 |---|---|---|---|---|
 | ~~`SC-01`~~ | `settings_inventory.md` §10 | a `session_rule_sets[n].library_name` row on input must be **recognized and skipped** | `_apply_rule_set.py:53` raises; apply is two-phase, so the **whole import is rejected** | **Fixed** — spec now states the strict reject as deliberate, with its reason (a misspelled attribute would otherwise be dropped in silence) and its cost (such a bundle needs the column removed first) |
-| ~~`SC-02`~~ | `assignments.md` | a `stale` pill when a rule + roster pass would produce a different set | `views/_assignments.py:221` hardcodes `is_stale = False`; `:202` `any_stale = False` | **Fixed** — spec states the absence as the contract: no `stale` pill, no staleness signal, and a rule edit is invisible until regeneration. Also surfaced that the `"generate"` next-action state is unreachable, and a code comment forecasting a PR that had shipped | **Revisited by 19N behaviour (3)** — the fix stated the absence as contract; 19N intends to restore the signal, so this closes again only when that lands
-| ~~`SC-03`~~ | `assignments.md` §Staleness | the check is `stamp_changed(instrument, db)` | 0 occurrences in `app/` or `tests/` | **Fixed** — section removed with `SC-02`; the helper does not exist | **Revisited by 19N behaviour (3)** — the fix stated the absence as contract; 19N intends to restore the signal, so this closes again only when that lands
+| ~~`SC-02`~~ | `assignments.md` | a `stale` pill when a rule + roster pass would produce a different set | `views/_assignments.py:221` hardcodes `is_stale = False`; `:202` `any_stale = False` | **Fixed** — spec states the absence as the contract: no `stale` pill, no staleness signal, and a rule edit is invisible until regeneration. Also surfaced that the `"generate"` next-action state is unreachable, and a code comment forecasting a PR that had shipped | **Closed again by 19N slice 1 (2026-09-13).** The first fix stated the absence as the contract; the signal is now restored on a different basis — the engine's own reconcile diff rather than a count of eligible pairs — so `spec/assignments.md` states the presence again. Three dead consumers revived with it: the pill, `any_stale`, and `instruments.stale_generated`, which had been a **registered no-op** giving Validate a clean bill on exactly what it existed to catch
+| ~~`SC-03`~~ | `assignments.md` §Staleness | the check is `stamp_changed(instrument, db)` | 0 occurrences in `app/` or `tests/` | **Fixed** — section removed with `SC-02`; the helper does not exist | **Closed again by 19N slice 1 (2026-09-13).** The first fix stated the absence as the contract; the signal is now restored on a different basis — the engine's own reconcile diff rather than a count of eligible pairs — so `spec/assignments.md` states the presence again. Three dead consumers revived with it: the pill, `any_stale`, and `instruments.stale_generated`, which had been a **registered no-op** giving Validate a clean bill on exactly what it existed to catch
 | ~~`SC-04`~~ | `reviewer-surface.md` | `typical_chars = max_length * 0.75` | `views/_instruments.py:226` is `0.5`, and `test_instrument_builder_routes.py:6859` **asserts** `0.5` | **Fixed** — spec now `0.5`. The gate is no longer on the wrong side |
 | `SC-05` | `reviewer-surface.md` | the spec's heading format | `test_reviewer_view_helpers.py` pins the code's format **while citing the spec section it contradicts** | **(a)** — sibling of `SC-04`; whichever wins, the test moves too |
 | `SC-06` | `assignments.md` | `POST …/assignments/instrument/{iid}/self-reviews-active` | `…/assignments/{instrument_id}/self-reviews/active` (`_assignments.py:479`) | **(a)** — **a URL is contract**, so one side must move |

@@ -571,7 +571,7 @@ Columns (left → right):
 |---|---|
 | Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers") — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
-| Generated | Pill carrying the row count. "Not generated yet" when zero. No staleness indicator — see "Staleness — not surfaced". |
+| Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
 | Self review | Pill carrying the total self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on every self-review row in this instrument. Pill colour is `pill-info` (blue) when all are active, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`; on a session with no roster overlaps it doesn't render. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
@@ -872,18 +872,38 @@ The diff is bit-stable (the engine's deterministic seed
 guarantees the same pass produces the same set), so re-running
 Generate without changing anything is a no-op.
 
-### Staleness — not surfaced
+### Staleness
 
-**There is no `stale` pill and no staleness signal on this page.** The
-status table reports stored counts only, so a rule or roster edit that
-would now generate a different set is invisible until the operator
-regenerates.
+An instrument is **stale** when it has materialised rows and a
+regeneration would insert or delete at least one pair — the pinned rule
+changed, or the rosters or relationships moved after Generate. The page
+carries a `stale` pill per instrument and a "Pairs may be stale" badge
+when any is; `instruments.stale_generated` raises a matching warning on
+Validate, and the Next Action card offers Generate.
 
-That is the shipped contract, and the reason to state it rather than leave
-it unsaid: a reader who assumes the page warns them will not check.
+**The verdict is the engine's own diff**, not a comparison of counts.
+Two properties follow, and both are the contract rather than an
+implementation note:
+
+- **A change that swaps one pair for another is stale**, even though the
+  totals match. A count comparison reports a session fresh while every
+  row names a reviewer the rule no longer selects.
+- **Unpinned instruments go stale too.** A NULL `rule_set_id` is the Full
+  Matrix default at the diff site, so an unpinned instrument generates
+  like any other and can fall out of step like any other.
+
+**A never-generated instrument is not stale.** A run would insert its
+whole fan-out, so treating that as staleness lights up every fresh
+session, and a badge that is always on is one the operator learns to
+ignore. That case belongs to the Workflow card's Generate step and the
+`assignments.*` empty rules. The same boundary means an instrument whose
+roster was emptied reads as never-generated rather than stale: deleting a
+roster entry cascades its rows away, and the empty rules carry it.
+
 Regeneration is always the operator's own act — nothing auto-regenerates,
 and the Generate button (or Prepare session, which runs Generate
-transitively) is the only path.
+transitively) is the only path. **Staleness is a prompt, never a
+blocker:** it is a warning, so it does not gate activation.
 
 ### `reconcile_impact` dry-run
 

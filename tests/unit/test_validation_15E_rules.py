@@ -337,27 +337,43 @@ def test_stale_generated_silent_when_no_instrument_pinned(
     assert _issues_with_key(issues, "instruments.stale_generated") == []
 
 
-def test_stale_generated_silent_after_wave_5_retirement(
+def test_stale_generated_fires_once_rows_fall_out_of_step(
     db: Session,
 ) -> None:
-    """Wave 5 PR 5.1 — ``instruments.stale_generated`` retired as a
-    no-op check. The per-rule eligibility helper retired with the
-    operator-library tier; without it the rule can't compare
-    eligible vs. generated counts. The rule key stays registered
-    so audit history remains addressable, but it never fires."""
+    """Silent before Generate, loud after a roster change. Segment 19N.
+
+    Between Wave 5 PR 5.1 and 19N this rule was a **registered no-op** —
+    it sat in the registry with a severity, a fix link and a ``why``
+    describing exactly this situation, and returned nothing. An operator
+    running Validate got a clean bill on the one thing it exists to
+    catch.
+
+    The two halves are different properties, not one:
+
+    - **Before Generate: still silent**, and now deliberately so.
+      Never-generated is not staleness — every fresh session would light
+      up, and an always-stale badge trains the operator to ignore it.
+      The Workflow card's Generate step carries that case.
+    - **After a roster change: fires.** The materialised rows no longer
+      match what the engine would produce, which is the definition.
+    """
     user, review_session, instrument, rule_set = _seed(
         db, code="stale-retired"
     )
     instrument.rule_set_id = rule_set.id
     db.flush()
     db.commit()
-    # Pre-generate: would have fired pre-Wave-5; now silent.
+    # Nothing materialised yet — not stale, by design.
     assert _issues_with_key(
         validate_session_setup(db, review_session),
         "instruments.stale_generated",
     ) == []
     _generate(db, review_session=review_session, user=user)
-    # Post-roster change: would have fired pre-Wave-5; now silent.
+    # Freshly generated — in step with the engine, so still silent.
+    assert _issues_with_key(
+        validate_session_setup(db, review_session),
+        "instruments.stale_generated",
+    ) == []
     db.add(
         Reviewer(
             session_id=review_session.id,
@@ -367,10 +383,16 @@ def test_stale_generated_silent_after_wave_5_retirement(
     )
     db.flush()
     db.commit()
-    assert _issues_with_key(
+    # The added reviewer is in no assignment: the rows are now stale.
+    issues = _issues_with_key(
         validate_session_setup(db, review_session),
         "instruments.stale_generated",
-    ) == []
+    )
+    assert len(issues) == 1, (
+        "a reviewer added after Generate should raise the staleness "
+        f"warning; got {issues}"
+    )
+    assert issues[0].severity is Severity.warning
 
 
 # --------------------------------------------------------------------------- #

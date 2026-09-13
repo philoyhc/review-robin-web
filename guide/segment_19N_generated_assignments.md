@@ -65,6 +65,8 @@ At `f60ca533`, 2026-09-13:
 
 *`close_check 19N.1` reports **FAIL** while this item is open, and that is correct: C3 names `spec/assignments.md` and `spec/settings_inventory.md` as committed-but-unedited, because the slices that edit them have not shipped. The three specs slice 0 touched pass. It is a close gate — the definition of done requires exit 0 at close, not at every commit.*
 
+**2026-09-13, slice 1 — staleness signal restored.** Closes `SC-02` and `SC-03`. The open question *"can `compute_staleness` be given a correct eligible count"* is answered **no, and it did not need one**: the basis moved to the engine's own reconcile diff. The retired predicate was wrong in two ways beyond the missing count — it compared totals, so a rule change swapping one pair for another read as fresh, and it gated on `rule_id is not None`, so unpinned Full-Matrix instruments were invisible. **Cost measured rather than assumed: 10 queries for 5 instruments over a 10×10 roster** — linear in instruments, independent of roster size. Three dead consumers revived, the third being `instruments.stale_generated`, a **registered no-op** with a severity, a fix link and a `why` describing the situation it no longer detected. Two tests that pinned the retirement were reversed, and `eligible_count` — a field promising "pairs the engine would produce" and fed by a dict that was never populated — now carries a real figure from the same walk.
+
 Decisions confirmed at build:
 
 - **The backfill's stated reason is obsolete**, established by running rather than reading: a rehydrate of a session whose instrument is unpinned and carries responses reports **0 backfills**. `_generate.py:548` and `:668` still claim unpinned instruments are "skipped silently" and are stale.

@@ -517,19 +517,55 @@ def _check_new_model_no_visible_response_fields(
 def _check_instruments_stale_generated(
     db: Session, review_session: ReviewSession
 ) -> Iterable[ValidationIssue]:
-    """Wave 5 PR 5.1 — retired. The rule used
-    ``session_library.evaluate_session_rule_eligibility`` to
-    compare per-rule eligible-pair counts against materialised
-    counts. That helper retired with the operator-library tier.
-    The Workflow card + Generate button already cover the
-    "operator pinned a rule but never generated" case the rule
-    was catching, so no replacement is needed. The
-    ``instruments.stale_generated`` rule key stays in
-    ``ValidationRule`` registry as a no-op check so the rule key
-    remains addressable from audit history.
+    """Warning per instrument whose generated rows have fallen out of
+    step with what the engine would produce now.
+
+    The verdict is the engine's own diff
+    (``assignments.staleness_by_instrument``), so it cannot disagree with
+    what Generate would actually do. It fires when the pinned rule
+    changed, when the rosters or relationships moved after Generate, and
+    when an instrument has never generated at all.
+
+    **This rule was a registered no-op between Wave 5 PR 5.1 and Segment
+    19N.** Its predecessor compared per-rule eligible counts via a helper
+    that retired with the operator-library tier, and the replacement was
+    judged unnecessary because "the Workflow card + Generate button
+    already cover the *operator pinned a rule but never generated* case".
+    That covered one of the three situations this rule's own ``why``
+    names; the other two — rule changed, roster changed — were covered by
+    nothing, while the rule stayed in the registry with a fix link. *A
+    check that returns nothing reports a clean bill on exactly the thing
+    it exists to catch*, which is worse than its absence, because the
+    operator reads the silence as an answer.
     """
-    return
-    yield  # pragma: no cover — make this an Iterable
+    from app.services import assignments as assignments_service
+
+    state_by_instrument = assignments_service.staleness_by_instrument(
+        db, review_session
+    )
+    if not any(state.stale for state in state_by_instrument.values()):
+        return
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    for instrument in instruments:
+        state = state_by_instrument.get(instrument.id)
+        if state is None or not state.stale:
+            continue
+        yield ValidationIssue(
+            severity=Severity.warning,
+            source="instruments",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r} would "
+                f"change if assignments were regenerated — re-Generate "
+                f"to refresh the pairs"
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
 
 
 def _check_instruments_zero_included(
