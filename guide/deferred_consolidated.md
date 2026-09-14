@@ -693,18 +693,22 @@ posts an unmodified Band 1 form, and asserts
 
 #### Self-review exclusion as a Link 3 shortcut (~100 LOC + a design call)
 
-> Author's proposal, 2026-09-14. Recorded here rather than in a
-> segment because the group-scoped half is a design question, not a
-> build.
+> Author's proposal, 2026-09-14 — **not carved from a segment**,
+> unlike every other entry in Part A. Recorded here rather than in a
+> segment plan because the group-scoped half is a design question,
+> not a build. Part A's shape otherwise fits: scoped, paused, and
+> carrying a lift trigger.
 
 **The two paths, and why this is the second one.** Self-review rows
 are **always materialised** (`spec/assignments.md` § *Self-review
-policy*), so everything on the Assignments page — the per-instrument
-**Self review** toggle that ships today, and the wider per-row and
-bulk status work still to come — operates on rows that already exist.
-The other path is to never generate them: an operator can already
-write a Link rule that excludes the pair, but has to reach for the
-logic builder and compose it by hand.
+policy*), so the whole Assignments-page surface operates on rows that
+already exist — the per-instrument **Self review** toggle, and the
+per-row Include checkbox with its bulk select and
+`bulk-inactivate` / `bulk-activate` routes, all shipped
+(19I Item 9, 2026-09-09). The other path is to never generate the
+rows: an operator can already write a Link rule that excludes the
+pair, but has to reach for the logic builder and compose it by hand.
+**This item is only about making that second path one click.**
 
 **Ships.**
 
@@ -737,10 +741,18 @@ not the `(R, R)` cell. A pair predicate would leave the group review
 standing with one member missing, which is exactly hazard (b) above.
 `ALLOWED_PREDICATE_FIELDS` (`app/schemas/rules.py`) is pair-level
 only — `reviewer.*`, `reviewee.*`, `pair_context.*` — so **no
-predicate expresses the group exclusion today**. Someone has to
-choose: a group-aware predicate, a desugar step that is visible and
-inspectable rather than silent, or the checkbox disabled on group
-mode with the reason on its tooltip.
+predicate expresses the group exclusion today**.
+
+*And the failure is quieter than "one member short."*
+`classify_self_review` identifies a self-review group **by finding
+the `(R, R)` row in it** (`_self_review.py`, `self_group_key`). Drop
+that row with a pair predicate and the group is never marked as a
+self-review at all: the remaining members materialise as an ordinary
+review, invisible to the Self review column and to every downstream
+reader of `Assignment.is_self_review`. Someone has to choose: a
+group-aware predicate, a desugar step that is visible and inspectable
+rather than silent, or the checkbox disabled in Group mode with the
+reason on its tooltip.
 
 **Why deferred.** The individual-scoped half is a genuine
 convenience and nearly free; the group-scoped half needs a decision
