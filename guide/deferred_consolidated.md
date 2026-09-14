@@ -689,6 +689,81 @@ posts an unmodified Band 1 form, and asserts
 
 ---
 
+### Assignment rule authoring
+
+#### Self-review exclusion as a Link 3 shortcut (~100 LOC + a design call)
+
+> Author's proposal, 2026-09-14. Recorded here rather than in a
+> segment because the group-scoped half is a design question, not a
+> build.
+
+**The two paths, and why this is the second one.** Self-review rows
+are **always materialised** (`spec/assignments.md` § *Self-review
+policy*), so everything on the Assignments page — the per-instrument
+**Self review** toggle that ships today, and the wider per-row and
+bulk status work still to come — operates on rows that already exist.
+The other path is to never generate them: an operator can already
+write a Link rule that excludes the pair, but has to reach for the
+logic builder and compose it by hand.
+
+**Ships.**
+
+- A checkbox at the **bottom of the Link 3 column** (*Unit of
+  review*, the rightmost of the three) on the instrument rule card,
+  reading **"Exclude if the individual/group reviewed is the
+  reviewer"** — *individual* or *group* following Link 3's own mode.
+- Ticking it writes the exclusion into the ruleset. **No
+  pre-computation** of whether such pairs would exist: it sets up the
+  exclusion, it does not report on it.
+
+**The trap, stated because the name invites it.** This must be sugar
+over the **Link-rule** path, *never* `RuleSetOptions.excludeSelfReviews`.
+That flag is pinned `False` in three layers on purpose
+(`spec/assignments.md` § *Self-review policy*), and the reasoning is
+the same reasoning that makes a checkbox attractive: a desugar-stage
+drop is **invisible to the operator** — the row never appears to be
+inspected or toggled — and it under-counted group composition by one
+whenever the sample reviewer was a member of the group. A shortcut
+that silently revives it would be the defect the three layers exist
+to prevent, wearing a friendlier label.
+
+**The design call, which is the real work.** The spec's suggested
+rule is pair-level — `reviewee.email IS DIFFERENT FROM
+reviewer.email` — and that is correct on an **individual**-scoped
+instrument. On a **group**-scoped one it is wrong: the whole-group
+rule says a review counts as a self-review iff the reviewer is a
+member of the group, and excluding it must drop **the whole group**,
+not the `(R, R)` cell. A pair predicate would leave the group review
+standing with one member missing, which is exactly hazard (b) above.
+`ALLOWED_PREDICATE_FIELDS` (`app/schemas/rules.py`) is pair-level
+only — `reviewer.*`, `reviewee.*`, `pair_context.*` — so **no
+predicate expresses the group exclusion today**. Someone has to
+choose: a group-aware predicate, a desugar step that is visible and
+inspectable rather than silent, or the checkbox disabled on group
+mode with the reason on its tooltip.
+
+**Why deferred.** The individual-scoped half is a genuine
+convenience and nearly free; the group-scoped half needs a decision
+that touches the rule schema or the engine. Shipping only the easy
+half would put a checkbox on a card whose Link 3 pill can be cycled
+to Group, which is worse than no checkbox.
+
+**Lift trigger.** An operator finds composing the Link rule by hand
+fiddly enough to say so, or the Assignments per-row / bulk status
+work lands and the author wants the never-generate path to sit
+beside it.
+
+**Wire-up.** `app/web/templates/operator/instruments_index.html`
+Link 3 block (the `_link3_*` locals) for the control;
+`app/services/instruments/_instrument_crud.py::set_unit_of_review`
+is the neighbouring Link 3 writer; the rule it composes lands in
+`rules_json` through the Band 1 materialisation path. Spec impact:
+`spec/assignments.md` § *Self-review policy* gains the shortcut as a
+third supported affordance, and `spec/instruments.md`'s Link 3 row
+(§ *Unit of review*) gains the control.
+
+---
+
 ### Data integrity & template maintainability
 
 #### Codex Slice D — Storage-level uniqueness guard on email-bearing identities (~100 LOC + migration)
