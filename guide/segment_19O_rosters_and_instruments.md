@@ -10,6 +10,138 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 2 — The self-review control's heading and live copy
+
+### Opportunity
+
+Item 1's checkbox shipped and the author found two faults on the rendered
+page (screenshot, 2026-09-14).
+
+**The copy does not follow the pill.** The label reads *"Exclude if the
+**individual** reviewed is the reviewer"* while the Link 3 pill above it
+reads **GROUP USING TAGS**. The mode word is rendered server-side from
+`_link3_grouped` — the *persisted* `group_kind` — but the pill cycles
+client-side in `newModelToggleUnitMode`, which rewrites the pill label, the
+builder's dimming and the hidden `link3_mode` input and knows nothing about
+the checkbox. So between cycling the pill and saving the card, the control
+describes the opposite of what the operator has just selected. Every other
+thing the pill governs updates live; this one does not.
+
+**The control has no heading.** It sits under a `.col-divider` with no name,
+so what the divider separates is left to inference. Item 1 chose the divider
+precisely to say *this is a second thing* — a heading is the other half of
+that sentence, and it was not written.
+
+### Decision
+
+**Heading `Self reviews`**, matching the unbold weight of the three Link
+labels — the card's bold is reserved for its own title
+(`spec/instruments.md` § *Instrument assignment rule + Unit of review*).
+
+**The mode word is rewritten by the pill handler**, from a `data-` attribute
+on the label so the two spellings live in one place. Rejected: recomputing
+the copy from `link3_mode` on submit (the operator would still read the
+wrong sentence while deciding), and dropping the mode word for something
+mode-neutral — the author's ruling is that the copy names what is dropped,
+and a group and an individual are different things to drop.
+
+**Group copy is the author's wording** (2026-09-14): *"Exclude if the
+reviewer is in the group being reviewed"* — not a substitution into the
+individual sentence. *The reviewer is in the group* is the actual test on a
+grouped instrument, and the Item 1 phrasing (*"the group reviewed is the
+reviewer"*) says something that cannot happen.
+
+### Semantics
+
+- **Two whole sentences, not one with a swapped noun.** They differ in
+  structure, so the handler swaps the sentence.
+- **The `not_set` pill state reads as individual.** `link3_mode` already
+  submits `individual` for `not_set`, so the copy follows the value that
+  would be saved rather than inventing a third wording.
+- **No behavior change.** Copy and a heading; the flag, its storage and its
+  effect are Item 1's and untouched.
+
+### Judgment calls — decided
+
+- **Rewritten by the existing Link 3 handler, not a new listener**
+  (2026-09-14). That handler already owns every live consequence of the
+  pill; a second listener on the same event is a second thing to keep in
+  step.
+
+### Blast radius (measured)
+
+Measured 2026-09-14 at `8fc0c172`.
+
+```
+grep -c "exclude_self_reviews" app/web/templates/operator/instruments_index.html   # 2
+grep -rln "Exclude if the" app/ spec/ tests/ --include=*.py --include=*.html --include=*.md  # 3
+```
+
+### Status
+
+**Closed 2026-09-14**, one PR, as planned. Intended versus done:
+
+- **Both faults were as diagnosed**, and the cause of the first was the one
+  named: the copy was server-rendered from the persisted `group_kind` while
+  the pill cycles client-side.
+- **A test of mine passed vacuously and the de-vacuuming exposed a second
+  scoping bug.** The first copy assertion read the element's raw markup —
+  which carries *both* sentences as `data-copy-*` attributes for the
+  handler — so it held in either mode. Narrowed to the span's text, it then
+  failed for an unrelated reason: it was reading the **first** instrument
+  card on the page rather than this one, the same trap that produced a
+  wrong-but-passing assertion in Item 1 rung 2. Every assertion in these
+  tests now goes through one `_instrument_card` helper, with the reason in
+  its docstring. *Scope first, assert second.*
+- **Both fixes are mutation-checked**, each failing exactly the test that
+  should catch it.
+- **This item created one drift of its own and the close pass caught it.**
+  `spec/assignments.md` § *Suppressing self-reviews* quoted the old
+  *"individual / group reviewed is the reviewer"* wording — the phrasing
+  this item replaced for describing something that cannot happen on a
+  grouped instrument. *Doc impact* named only `spec/instruments.md`, so the
+  second copy of the label went unedited. It now points at the spelling's
+  owner instead of repeating it, which is why it can't drift again.
+  **My own check for it was the wrong shape**: a single-line grep, against a
+  quote that wraps across two lines.
+- **The `_instrument_card` helper was subtly wrong** — its end bound matched
+  the card's own `id="instrument-delete-N"` form, truncating the slice
+  partway through the card it returns. Harmless for these three assertions
+  and wrong for the next one; both bounds now anchor on the card's opening
+  `class="card" id="instrument-N"`.
+
+### PR ladder
+
+One PR: heading, both sentences, the handler rewrite, and its tests.
+
+### Definition of done
+
+- The heading `Self reviews` renders above the checkbox.
+- Cycling the pill to *Group using tags* rewrites the copy without a save,
+  asserted against the handler's own contract.
+- A grouped instrument renders the group sentence on load; an individual or
+  unset one renders the individual sentence.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19O.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- **The Link 3 pill's own three-state cycle.** Unchanged.
+- **Whether the control belongs in Link 3 at all.** Settled in Item 1 by the
+  author: it is there for space, and the divider plus this heading say so.
+
+### Doc impact
+
+- `spec/instruments.md` — § *Self-review exclusion* gains the heading and both label spellings (Item 2).
+- `spec/assignments.md` — § *Suppressing self-reviews* stops quoting the replaced wording and points at the spelling's owner (Item 2).
+
 ## Item 1 — Exclude self-reviews from the Link 3 column
 
 ### Opportunity
