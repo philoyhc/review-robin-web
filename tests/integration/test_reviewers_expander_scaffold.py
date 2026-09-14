@@ -170,3 +170,154 @@ def test_unlock_is_absent_while_editing_a_row(client, db):
     assert 'id="roster-index-scaffold"' in html, "the index row is informational"
     assert 'id="roster-unlock-btn"' not in html
     assert 'id="roster-unlock-panel"' not in html
+
+
+def _index_cells(html: str) -> str:
+    """The index row's markup, so a "Name (2)" assertion cannot be
+    satisfied by the roster table further down the page."""
+    row = re.search(r'id="roster-index-row".*?</tr>', html, re.S)
+    assert row, "index row not found"
+    return row.group(0)
+
+
+def test_populated_columns_show_counts_not_presence(client, db):
+    """The plan called these counts a "free re-house" of ``col_data``.
+    They are not — that map is presence only — so they are their own
+    query (``tag_slot_counts`` / ``slot_row_count``). Assert the number,
+    which is what distinguishes a count from a flag."""
+    rs = _session_with_reviewers(client, db, "scafc1")
+    cells = _index_cells(_page(client, rs))
+    assert "Name (2)" in cells, cells
+    assert "Email (2)" in cells, cells
+
+
+def test_populated_counts_are_per_column_not_the_row_count(client, db):
+    """A column half-filled must read its own number, not the roster's.
+
+    The cheap wrong implementation — reusing ``total_row_count`` for
+    every chip — passes the test above and fails this one.
+    """
+    client.post(
+        "/operator/sessions",
+        data={"name": "Partial", "code": "scafc2"},
+        follow_redirects=False,
+    )
+    rs = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "scafc2")
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{rs.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+                b"R1,r1@example.com,alpha\n"
+                b"R2,r2@example.com,\n"
+                b"R3,r3@example.com,gamma\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    cells = _index_cells(_page(client, rs))
+    assert "Name (3)" in cells, cells
+    # Two of three rows carry a tag — the blank one must not count.
+    # Named, not a bare "(2)": the roster count pill sits in the same row.
+    assert "Tag 1 (2)" in cells, cells
+    assert "Tag 1 (3)" not in cells, cells
+
+
+def test_populated_columns_use_the_session_friendly_label(client, db):
+    """The chip reads the same ``field_label_pair`` as the roster's own
+    column headers, so the index cannot disagree with the table below."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Labelled", "code": "scafc3"},
+        follow_redirects=False,
+    )
+    rs = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "scafc3")
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{rs.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+                b"R1,r1@example.com,alpha\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{rs.id}/reviewers/field-labels",
+        data={"tag_1": "Tutor"},
+        follow_redirects=False,
+    )
+    cells = _index_cells(_page(client, rs))
+    assert "Tutor (1)" in cells, cells
+    assert "Tag 1 (1)" not in cells, cells
+
+
+def test_a_column_with_no_data_gets_no_chip(client, db):
+    """Presence still gates which chips appear; the count says how many."""
+    cells = _index_cells(_page(client, _session_with_reviewers(client, db, "scafc4")))
+    assert "Tag 1" not in cells, cells
+    assert "Tag 2" not in cells, cells
+
+
+def test_the_index_card_does_not_repeat_the_roster_name_as_a_heading(client, db):
+    """The Roster column names it; an <h2> above the table said it twice."""
+    html = _page(client, _session_with_reviewers(client, db, "scafc5"))
+    card = re.search(
+        r'id="roster-index-scaffold".*?</table>', html, re.S
+    )
+    assert card, "index card not found"
+    assert "<h2>" not in card.group(0), card.group(0)[:400]
+
+
+def test_the_replace_confirm_is_one_tick_naming_both_losses(client, db):
+    """The first draft split the replace into two ticks — one for the
+    roster, one for the responses — so the operator agreed twice to a
+    single action. The live card does not: it gates on one visible tick
+    and carries the response-loss acknowledgement as a hidden field."""
+    rs = _session_with_reviewers(client, db, "scafc6")
+    panel = re.search(
+        r'id="roster-unlock-panel".*?</tr>', _page(client, rs), re.S
+    )
+    assert panel
+    upload = panel.group(0).split("<h3>Reviewer tag labels</h3>")[0]
+    ticks = re.findall(r"<input[^>]*type=\"checkbox\"[^>]*>", upload)
+    assert len(ticks) == 1, f"expected one replace confirm, got {len(ticks)}"
+    # One sentence, both losses named.
+    assert "replace the existing" in upload, upload
+    assert "discard the existing" in upload, upload
+
+
+def test_the_unlock_panel_uses_the_two_column_primitive(client, db):
+    """1/3 upload, 2/3 labels + danger zone. The widths are CSS in
+    `base.html` (`CLAUDE.md`: primitives go there, not inline), so what
+    the suite can assert is that the panel reaches for them."""
+    html = _page(client, _session_with_reviewers(client, db, "scafc7"))
+    panel = re.search(r'id="roster-unlock-panel".*?</tr>', html, re.S)
+    assert panel
+    assert 'class="unlock-cols"' in panel.group(0)
+    assert panel.group(0).count('class="unlock-col"') == 2
+    assert "grid-template-columns: minmax(0, 1fr) minmax(0, 2fr)" in html
+
+
+def test_the_index_row_has_doubled_outer_gutters(client, db):
+    """Roster name and Edit control sit off the card's rule, not against
+    it. Geometry, so this asserts the rule exists rather than its effect
+    — the dev slot is what judges the look."""
+    html = _page(client, _session_with_reviewers(client, db, "scafc8"))
+    first = re.search(
+        r"\.roster-index-table td:first-child\s*\{([^}]*)\}", html
+    )
+    last = re.search(
+        r"\.roster-index-table td:last-child\s*\{([^}]*)\}", html
+    )
+    assert first and "padding-left: var(--space-6)" in first.group(1), first
+    assert last and "padding-right: var(--space-6)" in last.group(1), last
+

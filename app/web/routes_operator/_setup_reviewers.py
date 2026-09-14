@@ -25,7 +25,11 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
-from app.services._queries import tag_slot_presence
+from app.services._queries import (
+    slot_row_count,
+    tag_slot_counts,
+    tag_slot_presence,
+)
 from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewers import ReviewerOperationError
@@ -289,6 +293,24 @@ def _render_reviewers_page(
                 ),
                 prefix="tag-",
             ),
+            # 19P.1 — the roster index row shows "Name (154)", not a
+            # bare presence chip, so it needs counts as well as flags.
+            # Same whole-roster answer as ``col_data``: by query, not
+            # by scanning whichever rows this render produced.
+            "col_counts": views.chip_slots(
+                tag_slot_counts(
+                    db, session_id=review_session.id, model=Reviewer
+                ),
+                prefix="tag-",
+            )
+            | {
+                "name": slot_row_count(
+                    db, session_id=review_session.id, column=Reviewer.name
+                ),
+                "email": slot_row_count(
+                    db, session_id=review_session.id, column=Reviewer.email
+                ),
+            },
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,
