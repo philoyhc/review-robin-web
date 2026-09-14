@@ -153,24 +153,25 @@ def test_set_band1_assignment_rules_replaces_owned_touched_slice(
     assert instrument.band1_touched_links == ["link3"]
 
 
-def test_set_band1_assignment_rules_heals_pre_pr1452_exclude_self_reviews(
+def test_set_band1_assignment_rules_preserves_exclude_self_reviews(
     client: TestClient, db: Session
 ) -> None:
-    """A session whose ``SessionRuleSet`` was materialised before
-    PR #1452 carries ``exclude_self_reviews=True``. The next Band 1
-    save heals the column to ``False`` so self-review pairs
-    materialise as Assignment rows on the next Generate."""
+    """A Band 1 save leaves ``exclude_self_reviews`` alone (19O Item 1,
+    rung 1). It used to be force-normalized to ``False`` on every save
+    to heal rows predating PR #1452 — migration ``d2e4f6a8c1b3``
+    backfilled those, so the re-write now only overwrites operator
+    intent. The column is an operator-settable per-instrument setting,
+    and a ``True`` must survive a save on which the rules also change."""
     from app.db.models import SessionRuleSet
 
-    review_session = _make_session(client, db, code="self-review-heal")
+    review_session = _make_session(client, db, code="self-review-keep")
     instrument = _default_instrument(db, review_session.id)
     user = review_session.created_by_user
 
-    # Simulate a pre-fix materialisation: create the SessionRuleSet
-    # with the old default and pin it to the instrument.
+    # An operator-set exclusion, pinned to the instrument.
     legacy_rule_set = SessionRuleSet(
         session_id=review_session.id,
-        name="legacy Band 1",
+        name="excluding Band 1",
         description="",
         combinator="ALL_OF",
         exclude_self_reviews=True,
@@ -202,8 +203,8 @@ def test_set_band1_assignment_rules_heals_pre_pr1452_exclude_self_reviews(
     instrument.rule_set_id = legacy_rule_set.id
     db.flush()
 
-    # Operator saves Band 1 — the heal kicks in regardless of
-    # whether the rules_json shape changed.
+    # Operator saves Band 1 with a changed rule — the save must
+    # take the rules and leave the flag as the operator set it.
     instruments_service.set_band1_assignment_rules(
         db,
         instrument=instrument,
@@ -213,7 +214,7 @@ def test_set_band1_assignment_rules_heals_pre_pr1452_exclude_self_reviews(
             {
                 "field": "reviewer.tag1",
                 "op": "IS",
-                "operand_value": "Lead",
+                "operand_value": "Manager",
                 "operand_tag": "",
             }
         ],
@@ -224,7 +225,11 @@ def test_set_band1_assignment_rules_heals_pre_pr1452_exclude_self_reviews(
         touched_links={"link1", "link2"},
     )
     db.refresh(legacy_rule_set)
-    assert legacy_rule_set.exclude_self_reviews is False
+    assert legacy_rule_set.exclude_self_reviews is True
+    # The rules themselves did land, so this is not a no-op save.
+    assert legacy_rule_set.rules_json[0]["rules"][0]["predicate"][
+        "operand"
+    ] == "Manager"
 
 
 def test_set_band1_assignment_rules_materialises_rule_set_without_self_review_exclusion(

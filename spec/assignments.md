@@ -298,8 +298,12 @@ layers so it can't be silently re-enabled:
 2. `assignments._session_rule_set_to_schema` hard-codes
    `excludeSelfReviews=False` when wrapping a `SessionRuleSet`
    row into a schema — the row's `exclude_self_reviews` column is
-   ignored (it stays `False` on every Band-1 materialisation
-   anyway, but the hardcode is defence-in-depth).
+   ignored, and this hardcode is what makes the engine ignore it.
+   The column itself is operator-settable (config import today;
+   the Link 3 checkbox from 19O.1 rung 2) and is no longer reset
+   on each Band-1 save, so a `True` can persist in the row and in
+   the by-instrument extract's *Self-review excluded* cell while
+   the engine still ignores it.
 3. `instruments._band1.find_sample_in_scope_reviewee` (the
    `/preview-sample` workhorse) constructs its schema with
    `excludeSelfReviews=False`.
