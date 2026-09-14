@@ -234,6 +234,13 @@ Also corrected here: `_generate.py`'s policy comment still said the column
 rung 1 falsified, and still cited the unreachable Link-rule workaround with
 the wrong field spelling.
 
+**`spec/ui_elements.md` added to *Doc impact* at build.** The plan named
+the two specs the behavior touches and missed the one the *primitive*
+touches: `.col-divider` is a new `base.html` class, and §10 is where those
+are recorded. Nothing enforces that, which is why it was missable — the
+convention lives in `CLAUDE.md` and in §10's own completeness, not in a
+check.
+
 ### PR ladder
 
 1. **Unpin the existing flag.** No migration: drop the
@@ -300,5 +307,6 @@ Rung 3 must not touch `RuleSetOptions`, `_session_rule_set_to_schema` or
 
 - `spec/assignments.md` — § *Self-review policy* gains the shortcut as a supported affordance, drops the unreachable Link-rule claim, and reconciles its "enforced in three layers" paragraph (Item 1).
 - `spec/instruments.md` — the Link 3 / *Unit of review* material gains the control and its interaction with Generate (Item 1).
+- `spec/ui_elements.md` — §10 gains the `.col-divider` primitive the control is separated by (Item 1).
 - `guide/deferred_consolidated.md` — the Part A entry is lifted into this plan and deleted (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
