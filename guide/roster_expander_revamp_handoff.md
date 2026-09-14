@@ -30,14 +30,32 @@ happens, because all four pages would already share the expander.
 >   carries a comment saying exactly this, stale since the formactions landed
 >   in `d2c8671`.
 > - **§7's plan home does not exist.** 19L is archived. The live home is 19O.
-> - **§2.4's "bottom cards" miscounts.** The friendly-labels editor is a *top*
->   card inside `card-columns` beside Operator actions, not one of the two
->   bottom cards (`#upload-csv`, `.danger-zone`).
+> - **§2.5's "cards at/near the bottom" miscounts** (`:182-184`, not §2.4). The
+>   friendly-labels editor is a *top* card inside `card-columns` beside Operator
+>   actions, not a bottom card. All three do retire — the author confirmed — but
+>   only two are at the bottom.
 > - **§7's sequencing is backwards.** Reviewers / Reviewees / Relationships are
 >   identical in action set, so they cannot falsify the expander's shape;
->   Observers must come second, not fourth. See 19O.4's Decision.
+>   Observers must come second, not fourth. See 19P Item 1's Decision.
 >
-> Scheduled as **19O.4** (Reviewers) and **19O.5** (Observers).
+> **Four more, found on the second cold read:**
+>
+> - **§3 cites `#bulk-session-expander`.** No such id. It is `#bulk-expander`,
+>   `sessions_list.html:243`.
+> - **§3's insert mechanic is wrong twice.** Not `insertBefore` "beneath the
+>   selected row" but `insertAdjacentElement("afterend", …)` (`:582`, `:586`),
+>   anchored on `currentAnchor() || selected[selected.length - 1]` (`:585`) —
+>   the *most recently ticked row still selected*, DOM order only as fallback.
+>   19L settled that rule; restating it loosely is how a reuse diverges.
+> - **§5 open question 4 names two gates where there is one.** `is_editable`
+>   hides the action controls; `is_ready` gates only `Add`.
+> - **§6's visual reference resolves to nothing.** `rosters_mockup.html` and its
+>   `claude.ai/code/artifact/…` URL are not in this repository and the URL is
+>   session-scoped, so §2.5 and §6 defer to an authority a later reader cannot
+>   open. The target shape is described in 19P Item 1 instead.
+>
+> **The status line below is superseded.** It reads "not scheduled"; this work
+> is scheduled as **19P.1** (Reviewers) and **19P.2** (Observers).
 
 **Status: not scheduled.** This is a proposal for an intermediate slice.
 It fits the 19L "UX refinements" family (19L Items 1–3 built the lobby

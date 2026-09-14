@@ -180,8 +180,13 @@
     </form>
 
     {# Inline row-expander fragments — cloned + injected by the
-       expander script below. Placeholder: the action buttons are
-       disabled; only the selection-management buttons are wired. #}
+       expander script below. The action buttons are wired: each carries
+       a live ``formaction``. Only the two ``data-expander-delete``
+       buttons are ``disabled``, as the first half of a two-stage delete
+       gate (see the ``exp-allow-delete`` handler below). This comment
+       read "Placeholder: the action buttons are disabled" until
+       2026-09-14 — stale since ``d2c8671`` wired them, and it had
+       already propagated into a downstream handoff as fact. #}
     <template id="single-session-expander">
       <tr class="session-expander session-expander-bracketed session-expander-single">
         <td colspan="9">
