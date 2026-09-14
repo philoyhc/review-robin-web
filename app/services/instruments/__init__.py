@@ -136,9 +136,12 @@ from ._band1 import (
     Band1ParseError,
     decode_band1_state,
     find_sample_in_scope_reviewee,
+    get_exclude_self_reviews,
     parse_band1_form,
+    parse_exclude_self_reviews_form,
     parse_link3_form,
     set_band1_assignment_rules,
+    set_exclude_self_reviews,
 )
 
 
@@ -181,9 +184,12 @@ __all__ = [
     "Band1ParseError",
     "decode_band1_state",
     "find_sample_in_scope_reviewee",
+    "get_exclude_self_reviews",
     "parse_band1_form",
+    "parse_exclude_self_reviews_form",
     "parse_link3_form",
     "set_band1_assignment_rules",
+    "set_exclude_self_reviews",
     "set_unit_of_review",
     "group_boundary_pairs",
     "replicate_instrument",

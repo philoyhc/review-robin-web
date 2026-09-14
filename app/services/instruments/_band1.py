@@ -252,6 +252,96 @@ def parse_band1_form(form: Any) -> dict[str, Any]:
     }
 
 
+def parse_exclude_self_reviews_form(form: Any) -> bool:
+    """Parse the Link 3 self-review exclusion checkbox (19O Item 1).
+
+    An unchecked HTML checkbox submits nothing, so absence is
+    ``False`` — the same convention the Response-fields help-text
+    visibility checkboxes use on this page.
+    """
+    return str(form.get("exclude_self_reviews") or "").strip() == "true"
+
+
+def get_exclude_self_reviews(db: Session, instrument: Instrument) -> bool:
+    """Read the instrument's self-review exclusion flag.
+
+    Stored on the instrument's ``SessionRuleSet`` row. An instrument
+    with untouched Band 1 has ``rule_set_id = NULL`` and no row, which
+    reads as ``False`` — the default-off state.
+    """
+    if instrument.rule_set_id is None:
+        return False
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    return bool(rule_set is not None and rule_set.exclude_self_reviews)
+
+
+def set_exclude_self_reviews(
+    db: Session,
+    *,
+    instrument: Instrument,
+    value: bool,
+    actor: User,
+) -> Instrument:
+    """Write the instrument's self-review exclusion flag.
+
+    Materializes an empty (Full Matrix) ``SessionRuleSet`` when the
+    operator turns the flag ON and the instrument has none — Band 1
+    only creates a row once a Link 1 / Link 2 rule exists, and the
+    flag needs somewhere to live before then. Setting it OFF with no
+    row is a no-op: ``False`` is the default, so there is nothing to
+    record and no reason to leave an empty row behind.
+
+    An empty rule set is output-identical to the synthetic Full
+    Matrix schema the engine substitutes for ``rule_set_id = NULL``
+    (``assignments._full_matrix_schema``): same empty rules, same
+    ``ALL_OF``, and the ``revision_seed`` difference is inert because
+    the seed is only ever read inside the quota-rule loop, which an
+    empty rule set never enters.
+
+    No-op writes skip the audit + lifecycle side effects.
+    """
+    current = get_exclude_self_reviews(db, instrument)
+    if current == value:
+        return instrument
+    if instrument.rule_set_id is None:
+        if not value:
+            return instrument
+        rule_set = _create_band1_rule_set(
+            db, instrument=instrument, rules_json=[]
+        )
+        instrument.rule_set_id = rule_set.id
+        db.flush()
+    else:
+        rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+        if rule_set is None:
+            return instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_exclude_self_reviews_updated",
+    )
+    rule_set.exclude_self_reviews = value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session_rule_set.exclude_self_reviews_set",
+        summary=(
+            f"Self-review exclusion "
+            f"{'enabled' if value else 'disabled'} on new-model "
+            f"instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id,
+        session=instrument.session,
+        payload=audit.changes({"exclude_self_reviews": [current, value]}),
+        refs={
+            "session_rule_set_id": rule_set.id,
+            "instrument_id": instrument.id,
+        },
+    )
+    return instrument
+
+
 def parse_link3_form(
     form: Any,
 ) -> tuple[str, list[tuple[str, str]], bool]:

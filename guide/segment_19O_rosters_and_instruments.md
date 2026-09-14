@@ -127,6 +127,18 @@ Rejected:
 - **The checkbox writes no predicate** (2026-09-14). It is not sugar over a
   rule the operator could have written, so composing one would misdescribe
   it in the readback.
+- **Turning the flag ON materializes an empty rule set; turning it OFF with
+  no rule set is a no-op** (2026-09-14, rung 2). Band 1 only creates a
+  `SessionRuleSet` once a Link 1 / Link 2 rule exists, so an untouched
+  instrument has nowhere to store the flag. An empty rule set is
+  output-identical to the synthetic Full Matrix schema, so this costs no
+  assignment row — verified: the `revision_seed` difference is read only
+  inside the quota-rule loop, which an empty rule set never enters. Not
+  creating a row for an OFF write keeps untouched instruments clean, since
+  `False` is the default and records nothing.
+- **The checkbox label follows the Link 3 mode** (2026-09-14, rung 2):
+  "individual" or "group", so the copy names what would actually be
+  dropped.
 
 ### Blast radius (measured)
 
@@ -203,6 +215,24 @@ deferring to the item close: `spec/assignments.md` layer 2 said the column
 "stays `False` on every Band-1 materialisation anyway". It no longer does.
 Narrowed to state what layer 2 actually guarantees (the engine ignores the
 column) without touching the three-layer contract itself.
+
+**Rung 2 landed 2026-09-14.** The control, the `.col-divider` class in
+`base.html`, the two save sites, and the spec section. Two things the
+ladder did not anticipate:
+
+- **Storage had a hole.** An instrument with untouched Band 1 has
+  `rule_set_id = NULL` and no row to hold the flag — and that is exactly
+  the instrument most likely to want it, since Full Matrix generates every
+  self-pair. Resolved by the judgment call above.
+- **`base.html` is a generated-tool source.** Adding the class desynced
+  `tools/theme_preview.html` and `tools/theme_customizer.html`, caught by
+  `test_generated_tools_are_current`. Regenerated with their own
+  generators, as that test's docstring requires.
+
+Also corrected here: `_generate.py`'s policy comment still said the column
+"is already backfilled / kept at `False` by the Band 1 save path", which
+rung 1 falsified, and still cited the unreachable Link-rule workaround with
+the wrong field spelling.
 
 ### PR ladder
 

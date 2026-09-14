@@ -525,6 +525,12 @@ async def instrument_bulk_save_fields(
         actor=user,
         touched=link3_touched,
     )
+    instruments_service.set_exclude_self_reviews(
+        db,
+        instrument=instrument,
+        value=instruments_service.parse_exclude_self_reviews_form(form),
+        actor=user,
+    )
     # Column-widths race fix: the drag-resize handler POSTs to
     # /column-widths asynchronously. A fast Save click can win
     # the race and navigate the page before the async fetch
@@ -743,6 +749,12 @@ async def instrument_consolidated_save(
         boundary_pairs=link3_pairs,
         actor=user,
         touched=link3_touched,
+    )
+    instruments_service.set_exclude_self_reviews(
+        db,
+        instrument=instrument,
+        value=instruments_service.parse_exclude_self_reviews_form(form),
+        actor=user,
     )
 
     # Column widths (mirrored into the form snapshot on every drag).
