@@ -2745,63 +2745,6 @@
         box-shadow: inset 6px 0 0 var(--selected-bg),
                     inset -6px 0 0 var(--selected-bg);
       }
-      /* Roster-level index row (19P.1). One row per roster carrying its
-         name, populated columns and count, with an Unlock expander
-         beneath. Page-agnostic primitives, so they live here rather
-         than in a template <style> — and `body.ui-v2`-scoped like every
-         rule around them. */
-      body.ui-v2 .roster-index-table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-      body.ui-v2 .roster-index-table th,
-      body.ui-v2 .roster-index-table td {
-        border: 1px solid var(--border-default);
-        padding: var(--space-2) var(--space-3);
-        text-align: left;
-      }
-      body.ui-v2 .roster-index-table th { background: var(--surface-muted); }
-      /* Double gutters on the outer edges of the index row, so the
-         roster name and the Edit control sit off the card's rule
-         rather than against it. First and last cell only — the
-         interior columns keep the table's own rhythm. */
-      body.ui-v2 .roster-index-table th:first-child,
-      body.ui-v2 .roster-index-table td:first-child {
-        padding-left: var(--space-6);
-      }
-      body.ui-v2 .roster-index-table th:last-child,
-      body.ui-v2 .roster-index-table td:last-child {
-        padding-right: var(--space-6);
-      }
-      /* The Unlock panel's two columns: upload on the left at 1/3,
-         labels + danger zone on the right at 2/3. `minmax(0, …)` on
-         both tracks so a long CSS-column name or a wide input cannot
-         push a track past its share — the default `auto` minimum
-         would let it. Stacks below 800px, where 1/3 of the width is
-         narrower than the file input itself. */
-      body.ui-v2 .unlock-cols {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-        gap: var(--space-4);
-      }
-      @media (max-width: 800px) {
-        body.ui-v2 .unlock-cols { grid-template-columns: minmax(0, 1fr); }
-      }
-      /* Doubled inside gutters, matching the index row above. The
-         panel cell already carries the table's 12px, so this is the
-         column's own padding on top of it. */
-      body.ui-v2 .unlock-col {
-        min-width: 0;
-        padding: 0 var(--space-6);
-      }
-      body.ui-v2 .unlock-col h3 {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        color: var(--text-subtle);
-        margin: 0 0 var(--space-2);
-      }
-
       body.ui-v2 .session-expander-body {
         display: flex;
         flex-direction: column;
