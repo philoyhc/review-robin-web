@@ -461,9 +461,18 @@ behind. Writes emit
 session.
 
 The checkbox is inert with the rest of the Band 1 grid while the card is
-locked. **It records intent only** until the engine honors it (19O Item
-1 rung 3); see `spec/assignments.md` § *Self-review policy* for the three
-layers that currently keep the rule engine ignoring the column.
+locked.
+
+**It takes effect at the next Generate**, not on save — the generator
+honors it at the `pair_include` branch, after the engine's pair
+fan-out, so a group-scoped instrument drops the reviewer's whole group
+rather than one `(R, R)` pair. On an instrument that has already
+generated, this **deletes** the self-review rows and their saved
+responses; the reconcile dry-run counts them and the Prepare card
+confirms before anything is written. See `spec/assignments.md`
+§ *Self-review policy* for why the exclusion is honored there rather
+than at the rule engine's desugar stage, which still never drops a
+self-pair.
 
 #### Pill-driven state machine
 
@@ -615,13 +624,35 @@ alongside each row of their answer surface, and renders a
 live preview of one sample row inline.
 
 > **Self-review policy.** The preview's sample-picker engine runs
-> with `excludeSelfReviews=False` — same project-wide rule as
-> assignments generation. The preview shows the team's actual
-> composition; if the sample reviewer is themselves a team member,
-> they appear in their own group. See `spec/assignments.md`
-> "Self-review policy" for the rationale and the supported ways to
-> suppress self-reviews (Link rule, or the Self-review toggle on
-> the Assignments page).
+> with `excludeSelfReviews=False`, the same desugar-stage rule
+> assignments generation follows. The preview shows the team's
+> actual composition; if the sample reviewer is themselves a team
+> member, they appear in their own group.
+>
+> **The preview follows the instrument's self-review rule.** When
+> the Link 3 checkbox is set, the picker drops self-reviews from the
+> engine's **output** before choosing a sample — never by flipping
+> `excludeSelfReviews`, which would drop pairs before group
+> composition is known. On a grouped instrument the whole group
+> goes, so a reviewer who is one of their own group's reviewees
+> takes that group out of the preview entirely; if no group
+> survives, the preview renders empty rather than showing a row
+> Generate would not produce. Same rule, same placement **and the
+> same keying** as `assignments._diff_one_instrument`: the group key
+> comes from `group_key_for_pair` over the full decoded boundary,
+> pair-context tags included. That is deliberately *not* the
+> reviewee-only field list this function uses for the member-id
+> partition — a pair-context-only boundary would leave that list
+> empty and silently drop the test to pair level while the generator
+> still grouped.
+>
+> It reads the **persisted** flag: the checkbox is not among the
+> fields the Refresh handler posts, so an unsaved tick shows after
+> the card is saved. The preview already blends live Link 1 / Link 2
+> edits with persisted Link 3 state.
+>
+> See `spec/assignments.md` § *Self-review policy* for the two
+> supported ways to suppress self-reviews.
 
 #### Intro card (left of the preview row)
 

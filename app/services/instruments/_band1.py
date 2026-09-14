@@ -657,6 +657,69 @@ def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
     ]
 
 
+def _preview_group_boundary(
+    instrument: Instrument, link3_boundary: list[str] | None
+) -> list[tuple[str, str]]:
+    """The FULL decoded group boundary the preview should group by —
+    reviewee tags **and** pair-context tags, in the shape
+    ``group_key_for_pair`` expects.
+
+    Distinct from ``reviewee_boundary_fields``, which is deliberately
+    reviewee-only because it drives the member-id partition. Grouping
+    for self-review exclusion has to match the generator exactly or the
+    preview shows samples Generate will not produce.
+
+    Live ``link3_boundary`` (canonical keys like ``"pair_context.tag2"``)
+    wins when the Refresh handler supplies it, falling back to the
+    persisted ``group_kind`` — the same precedence the rest of this
+    function uses.
+    """
+    from app.services.instruments._instrument_crud import decode_group_kind
+
+    if link3_boundary is None:
+        return decode_group_kind(instrument.group_kind)
+    boundary: list[tuple[str, str]] = []
+    for raw in link3_boundary:
+        if not isinstance(raw, str):
+            continue
+        source, _, slot = raw.strip().partition(".")
+        if not slot.startswith("tag"):
+            continue
+        num = slot[len("tag") :]
+        if num not in {"1", "2", "3"}:
+            continue
+        if source == "reviewee":
+            pair = ("reviewee", f"tag_{num}")
+        elif source == "pair_context":
+            # ``group_key_for_pair`` takes the bare slot number for
+            # pair-context and derives ``tag_N`` itself.
+            pair = ("pair_context", num)
+        else:
+            continue
+        if pair not in boundary:
+            boundary.append(pair)
+    return boundary
+
+
+def _preview_excludes_self_reviews(
+    db: Session, instrument: Instrument
+) -> bool:
+    """Whether the Band 2 preview should drop self-reviews for this
+    instrument — i.e. whether its pinned rule set carries
+    ``exclude_self_reviews`` (19O Item 1).
+
+    Reads the PERSISTED flag rather than a form field: the Link 3
+    checkbox is not among the inputs the Refresh handler posts, so an
+    unsaved tick is not reflected until the card is saved. The preview
+    already blends live Link 1 / Link 2 edits with persisted Link 3
+    state, so this matches what is around it.
+    """
+    if instrument.rule_set_id is None:
+        return False
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    return bool(rule_set is not None and rule_set.exclude_self_reviews)
+
+
 def find_sample_in_scope_reviewee(
     db: Session,
     *,
@@ -753,15 +816,16 @@ def find_sample_in_scope_reviewee(
         combinator=Combinator.ALL_OF,
         rules=rules,
         # Project-wide policy: ``excludeSelfReviews`` is ALWAYS
-        # ``False`` for assignments generation AND for the
-        # Band 2 instrument preview. If the operator wants to
-        # suppress self-reviews they should either add a Link 2
-        # rule (e.g. ``reviewee.email_or_identifier IS DIFFERENT
-        # FROM reviewer.email``) or mark the (R, R) row
-        # ``inactive`` on the Assignments page. Excluding them
-        # automatically here used to silently undercount the
-        # team's composition by 1 on every symmetric session —
-        # see ``spec/assignments.md`` "Self-review policy".
+        # ``False`` at the DESUGAR stage — here as in assignments
+        # generation. Excluding at this stage drops pairs before
+        # group composition is known, which silently undercounts a
+        # team by one on every symmetric session
+        # (``spec/assignments.md`` "Self-review policy").
+        #
+        # The instrument's own ``exclude_self_reviews`` flag is
+        # honored below instead, AFTER the fan-out, where whole
+        # groups can be recognized — the same placement the
+        # generator uses (19O Item 1).
         options=RuleSetOptions(excludeSelfReviews=False),
     )
     try:
@@ -775,20 +839,16 @@ def find_sample_in_scope_reviewee(
         return None
     if not result.pairs:
         return None
-    sample_reviewer, reviewee = result.pairs[0]
-    # Gap 10: compute rule-surviving group member IDs for the
-    # sample's reviewee-side boundary key. Skipped when there's no
-    # reviewee-side boundary (per-reviewee mode or grouped-by-
-    # pair-context-only) — render falls back to its existing
-    # unconstrained partition. Iterates result.pairs the engine
-    # already produced; no second engine call.
-    #
-    # ``link3_boundary`` is the live Band 1 boundary list (canonical
-    # keys like ``"reviewee.tag3"``) — the operator's in-progress
-    # edit, posted by the Refresh handler. Falls back to the
-    # persisted ``instrument.group_kind`` when None so callers that
-    # don't supply it (older / non-Refresh paths) keep their old
-    # behaviour.
+
+    # ``pairs`` rather than ``result.pairs`` from here down: the
+    # self-review filter below narrows it, and everything after must
+    # see the narrowed set (the sample pick AND the member-id scan).
+    pairs = list(result.pairs)
+
+    # The boundary fields are needed BEFORE the sample is picked now,
+    # because self-review exclusion is whole-group and the group key
+    # is built from them. (They are also used further down, for the
+    # sample's member ids.)
     from app.services.instruments._instrument_crud import decode_group_kind
 
     if link3_boundary is not None:
@@ -810,6 +870,68 @@ def find_sample_in_scope_reviewee(
             for (src, field) in decode_group_kind(instrument.group_kind)
             if src == "reviewee"
         ]
+
+    # 19O Item 1 — the preview follows the instrument's self-review
+    # rule (author, 2026-09-14). Applied to the engine's OUTPUT, not
+    # to its options: on a grouped instrument a reviewer who is one of
+    # their own group's reviewees makes the whole group a self-review,
+    # so every pair in it goes, not just the ``(R, R)`` one.
+    #
+    # **Keyed exactly as the generator keys it** — ``group_key_for_pair``
+    # over the FULL decoded boundary, pair-context tags included. The
+    # reviewee-only ``reviewee_boundary_fields`` above is the right key
+    # for the member-id partition further down and the wrong one here:
+    # a pair-context-only boundary (``group_kind="p1"``) leaves it
+    # empty, which would drop this to a pair-level test while the
+    # generator still groups — so the preview would offer a teammate
+    # Generate is about to exclude. A mixed boundary (``"r1,p1"``) fails
+    # the other way, merging groups the generator keeps apart. Two
+    # keyings of one concept is one too many.
+    if _preview_excludes_self_reviews(db, instrument):
+        from app.services.assignments import is_self_review
+        from app.services.responses import group_key_for_pair
+
+        full_boundary = _preview_group_boundary(instrument, link3_boundary)
+
+        def _group_key(r: Any, e: Any) -> tuple[str, ...]:
+            return group_key_for_pair(
+                reviewee=e,
+                reviewer_id=r.id,
+                reviewee_id=e.id,
+                boundary=full_boundary,
+                pair_context_lookup=pair_context_lookup,
+            )
+
+        if instrument.group_kind is not None:
+            self_groups = {
+                (r.id, _group_key(r, e))
+                for r, e in pairs
+                if is_self_review(r, e)
+            }
+            pairs = [
+                (r, e)
+                for r, e in pairs
+                if (r.id, _group_key(r, e)) not in self_groups
+            ]
+        else:
+            pairs = [(r, e) for r, e in pairs if not is_self_review(r, e)]
+        if not pairs:
+            return None
+
+    sample_reviewer, reviewee = pairs[0]
+    # Gap 10: compute rule-surviving group member IDs for the
+    # sample's reviewee-side boundary key. Skipped when there's no
+    # reviewee-side boundary (per-reviewee mode or grouped-by-
+    # pair-context-only) — render falls back to its existing
+    # unconstrained partition. Iterates the pairs the engine already
+    # produced; no second engine call.
+    #
+    # ``link3_boundary`` is the live Band 1 boundary list (canonical
+    # keys like ``"reviewee.tag3"``) — the operator's in-progress
+    # edit, posted by the Refresh handler. Falls back to the
+    # persisted ``instrument.group_kind`` when None so callers that
+    # don't supply it (older / non-Refresh paths) keep their old
+    # behaviour.
     if not reviewee_boundary_fields:
         return reviewee, None
     sample_key = tuple(
@@ -827,10 +949,13 @@ def find_sample_in_scope_reviewee(
     # The rule engine runs with ``excludeSelfReviews=False`` (the
     # project-wide policy — see ``spec/assignments.md`` "Self-
     # review policy"), so the sample reviewer's reviewee-side twin
-    # (when one exists, matched by email) lands in ``result.pairs``
-    # naturally as ``(sample_reviewer, twin)`` and is counted here.
+    # (when one exists, matched by email) lands in the fan-out
+    # naturally as ``(sample_reviewer, twin)`` and is counted here —
+    # unless the instrument's own rule excluded it above, in which
+    # case the whole group went with it and this sample is from a
+    # different group.
     member_ids: set[int] = set()
-    for r, e in result.pairs:
+    for r, e in pairs:
         if r.id != sample_reviewer.id:
             continue
         if (

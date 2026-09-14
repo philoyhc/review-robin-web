@@ -165,106 +165,87 @@ place to overstate by double.*
 
 ### Status
 
-**Rung 1 landed 2026-09-14 as one deletion, not two.**
+**Closed 2026-09-14**, four rungs, four PRs. Intended versus done:
 
-The ladder said to drop both the `exclude_self_reviews` re-normalization
-and the `exclude_self_reviews=False` seed. **Dropping the seed would have
-inverted the default.** The mapped column is `default=True`
-(`session_rule_set.py:63`), vestigial from the retired library tier and
-unreachable today only because all three creation paths write the column
-explicitly (`_band1.py:426`, `_apply_rule_set.py:82`, and
-`session_clone.py:150`, which carries it through `_column_values`). Remove
-the explicit `False` and new instruments would start *excluding*
-self-reviews, against *Semantics*' "default off", latent until rung 3 makes
-the column live. The seed stays; only its comment changed.
+- **The mechanism landed as designed** and its load-bearing claim held under
+  verification: `_diff_one_instrument` already computes whole-group `is_self`
+  from the engine's full `result.pairs` before the `pair_include` branch, so
+  honoring the flag there gives whole-group correctness for free, and a pair
+  omitted from `new_pairs` is not re-added downstream.
+- **Rung 1 was one deletion, not the two the ladder named, and the second
+  would have been a bug.** Storage already existed
+  (`SessionRuleSet.exclude_self_reviews`) and was being force-normalized to
+  `False` on every Band 1 save — a heal for pre-#1452 rows that migration
+  `d2e4f6a8c1b3` had already completed, so the re-write only discarded
+  operator intent. But the ladder also said to drop the
+  `exclude_self_reviews=False` seed: the mapped column is `default=True`, so
+  that would have inverted the default for every new instrument, silent until
+  rung 3. The seed stays.
+- **Rung 2 found a hole in the storage decision.** Band 1 creates a rule set
+  only once a Link rule exists, so an untouched instrument had nowhere to put
+  the flag — and is the likeliest to want it. Turning it on materializes an
+  empty rule set, verified output-identical to the synthetic Full Matrix
+  schema; turning it off with no row is a no-op. Also: `base.html` is a
+  generated-tool source, so the new `.col-divider` class desynced
+  `tools/theme_*.html`.
+- **Rung 4's premise was slightly wrong and the fix is better for it.** The
+  plan assumed the Self review count is always `0` when the flag is set.
+  Between ticking the box and the next Generate it is not, so the cell reads
+  "Excluded by rule" only once the count is actually `0`; a
+  flagged-but-not-yet-regenerated instrument keeps its real count and its
+  toggle, which are still true and still actionable.
+- **`spec/ui_elements.md` added to *Doc impact* at build.** The plan named the
+  specs the behavior touches and missed the one the *primitive* touches. At
+  close, `spec/roundtrip_coverage.md` joined it for the same reason — the
+  column was described there as "vestigial", true until rung 3 made it govern
+  generation.
+- **The Band 2 preview diverged, was reported, and the author closed it.**
+  `find_sample_in_scope_reviewee` built its schema from the live Link 1 /
+  Link 2 fields and never read the column, so an instrument with the checkbox
+  set could still preview a sample in which the reviewer reviews themselves.
+  Found by the close pass and raised rather than fixed, since rung 3's scope
+  rule forbids touching that function and closing the gap means deciding what
+  the preview is *for*. **Author's ruling 2026-09-14: "the preview should
+  follow the rule too."** Implemented the same way the generator does it — by
+  filtering the engine's *output*, whole group at a time, never by flipping
+  `excludeSelfReviews`, which would drop pairs before group composition is
+  known and reintroduce the exact hazard the three layers exist to prevent.
+  A grouped instrument whose only group is the reviewer's own now previews
+  empty rather than showing a row Generate would not produce. **The first
+  implementation keyed the groups wrongly** and the close pass reproduced
+  it: it reused this function's reviewee-only boundary list, which is
+  correct for the member-id partition and wrong here, so a
+  pair-context-only boundary dropped the test to pair level while the
+  generator still grouped — the preview offering a teammate Generate was
+  about to exclude, which is the same class of divergence the ruling was
+  meant to end. Both now call `group_key_for_pair` over the full boundary.
+  *Two keyings of one concept is one too many.*
 
-*Corrected after the `spec-writer` pass: this block first claimed the table
-also carries `server_default=sa.text("true")` from `d8f4a92c1e6b`. It does
-not. That server default is on `rule_set_revisions` — a retired table —
-inside that migration's `downgrade()`; `session_rule_sets` was created at
-`e216f472ac47:44` with no server default at all. The decision stands on the
-Python-side default alone; the reason given for it was wrong, read off a
-grep hit's neighborhood instead of its enclosing function.*
+- **Two real defects came from the review bot after the close pass, and
+  both were in the mechanism rather than the prose.** *(a)* Self-review
+  groups were detected over `result.pairs` — the survivors — so a Link rule
+  that filtered the `(R, R)` pair out of the fan-out left the group with no
+  self-review marker at all, and the reviewer went on reviewing their own
+  group with the checkbox set. Membership is a fact about the **roster**;
+  the rules decide only which rows survive. Fixed at the root, which also
+  fixes the same blind spot in the pre-existing `self_reviews_active` path.
+  *(b)* "Excluded by rule" was driven by configuration alone, so a roster
+  with no self-review candidate read as an exclusion that never happened —
+  the same ambiguity the cell exists to remove, one step over. It now
+  requires evidence (`InstrumentReconcileState.self_reviews_excluded`).
+  Also: the dry-run's *eligible* figure and the audit event's pair count
+  were still taken from the pre-exclusion fan-out, advertising rows Generate
+  would never create.
 
-**Dropping the normalization is safer than the plan knew.** Migration
-`d2e4f6a8c1b3` (2026-05-26) already backfilled every `session_rule_sets`
-row to `False`, so no pre-#1452 rows remain for the save-time re-write to
-heal — its stated job is done, and all it still did was overwrite operator
-intent. `test_..._heals_pre_pr1452_exclude_self_reviews` inverted into
-`test_..._preserves_exclude_self_reviews`, which also asserts the rules
-landed so the save is not a no-op.
-
-Config import (`_apply_rule_set.py:47`) is therefore the first live writer
-of `True`, which is the round-trip the *Definition of done* asks for. A
-session clone propagates it too (`session_clone.py:150`).
-
-**"Inert" was too strong, and contradicted this plan's own judgment call.**
-The change is inert to the *assignment engine* — `_session_rule_set_to_schema`
-hardcodes `excludeSelfReviews=False`, so no assignment row moves. It is not
-inert to every reader: `by_instrument_extract.py:326-332` renders the column
-as the **Self-review excluded** cell, which the judgment call above already
-cited. A `True` set by import could always reach that cell; what rung 1
-changes is that it now *persists* there instead of self-healing on the next
-Band 1 save. So between rungs 1 and 3 the extract can report
-*Self-review excluded: Yes* for an instrument whose assignments are
-unaffected. Accepted as a transient of the ladder — rung 3 closes it — but
-it is a real user-visible state, not nothing.
-
-That falsified a live spec sentence, so rung 1 edits it rather than
-deferring to the item close: `spec/assignments.md` layer 2 said the column
-"stays `False` on every Band-1 materialisation anyway". It no longer does.
-Narrowed to state what layer 2 actually guarantees (the engine ignores the
-column) without touching the three-layer contract itself.
-
-**Rung 2 landed 2026-09-14.** The control, the `.col-divider` class in
-`base.html`, the two save sites, and the spec section. Two things the
-ladder did not anticipate:
-
-- **Storage had a hole.** An instrument with untouched Band 1 has
-  `rule_set_id = NULL` and no row to hold the flag — and that is exactly
-  the instrument most likely to want it, since Full Matrix generates every
-  self-pair. Resolved by the judgment call above.
-- **`base.html` is a generated-tool source.** Adding the class desynced
-  `tools/theme_preview.html` and `tools/theme_customizer.html`, caught by
-  `test_generated_tools_are_current`. Regenerated with their own
-  generators, as that test's docstring requires.
-
-Also corrected here: `_generate.py`'s policy comment still said the column
-"is already backfilled / kept at `False` by the Band 1 save path", which
-rung 1 falsified, and still cited the unreachable Link-rule workaround with
-the wrong field spelling.
-
-**Two side effects the rung-2 framing missed**, found by the
-`spec-writer` pass and fixed here:
-
-- **A rule set could be created with no `session_rule_set.created`
-  event.** `_create_band1_rule_set` emits nothing itself — its other
-  caller emits the event after it returns — so the checkbox's
-  materialize path had to as well. Now does, with a test.
-- **It invalidates a validated session, and that needed saying.**
-  `session_lifecycle.invalidate_if_validated` names the
-  visibility-when-closed services as deliberate non-callers, because a
-  display flag is outside the validation snapshot. This flag is not a
-  display flag — it is an assignment-rule input whose only purpose is to
-  change which rows generate — so it invalidates from the rung that
-  ships the control rather than the rung that honors it. Otherwise a
-  session validated between rungs 2 and 3 would carry a setting its
-  snapshot never saw.
-
-**Two stale `spec/assignments.md` passages fixed.** §*Where the rule
-lives* said no `SessionRuleSet` is materialized when both Links are
-`all` — rung 2 falsifies that, since the checkbox materializes one with
-no Link rule at all. And the *Self-review policy* attribute list still
-called the column "vestigial", carrying `False` on every row — stale
-since rung 1, and contradicting a paragraph rung 1 corrected four
-sections above it in the same file.
-
-**`spec/ui_elements.md` added to *Doc impact* at build.** The plan named
-the two specs the behavior touches and missed the one the *primitive*
-touches: `.col-divider` is a new `base.html` class, and §10 is where those
-are recorded. Nothing enforces that, which is why it was missable — the
-convention lives in `CLAUDE.md` and in §10's own completeness, not in a
-check.
+**The defect pattern, stated because it repeated at every rung:** every error
+was in prose *about* the code, never in reading what the code does. A
+`server_default` cited on the wrong table, read off a grep hit's neighborhood
+instead of its enclosing function. A test-file count doubled by `__pycache__`.
+A "lands inert" claim contradicted by this plan's own judgment call two
+sections above it. A spec drift reported in the prior session that was not
+real. A rule set that could be created with no `.created` audit event. Four
+`spec-writer` passes caught them; each was verified at `file:line` before
+being fixed. *A row-scoped fix is not a claim-scoped fix.*
 
 ### PR ladder
 
@@ -333,5 +314,6 @@ Rung 3 must not touch `RuleSetOptions`, `_session_rule_set_to_schema` or
 - `spec/assignments.md` — § *Self-review policy* gains the shortcut as a supported affordance, drops the unreachable Link-rule claim, and reconciles its "enforced in three layers" paragraph (Item 1).
 - `spec/instruments.md` — the Link 3 / *Unit of review* material gains the control and its interaction with Generate (Item 1).
 - `spec/ui_elements.md` — §10 gains the `.col-divider` primitive the control is separated by (Item 1).
+- `spec/roundtrip_coverage.md` — the `exclude_self_reviews` row stops calling the column vestigial (Item 1).
 - `guide/deferred_consolidated.md` — the Part A entry is lifted into this plan and deleted (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
