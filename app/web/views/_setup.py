@@ -18,7 +18,6 @@ Source ranges in pre-PR-5 ``_legacy.py``: lines 37-101
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypeVar
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
@@ -267,19 +266,11 @@ def session_status_pills(
     )
 
 
-_SlotValue = TypeVar("_SlotValue")
-
-
 def chip_slots(
-    presence: dict[str, _SlotValue], *, prefix: str
-) -> dict[str, _SlotValue]:
-    """Re-key a ``{"tag_1": <value>, ...}`` slot map to the chip slot
+    presence: dict[str, bool], *, prefix: str
+) -> dict[str, bool]:
+    """Re-key a ``{"tag_1": bool, ...}`` presence map to the chip slot
     names a page's markup actually uses.
-
-    Generic in the value so the same re-keying serves the presence
-    flags (``tag_slot_presence``) and the roster index row's populated
-    counts (``tag_slot_counts``, 19P.1). It only renames keys; what
-    hangs off them is the caller's business.
 
     The column-visibility primitive knows no slot vocabulary — it
     toggles ``col-hidden-{slot}`` for whatever slot a chip names — so
