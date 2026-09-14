@@ -248,6 +248,13 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **Purging unlinks the email outbox.** Both purge modes delete rows
+  that `email_outbox` references — invitations under either, reviewers
+  under `rosters` — so each clears those foreign keys before the delete
+  and keeps the outbox rows, which are the email audit log.
+  `spec/setup_pages.md` § *What a delete takes with it* owns that
+  contract; `spec/email_infra_options.md` § *Audit log* owns the
+  column-level detail.
 - **The archived-sessions page has one panel, not two.** Its
   `archived-bulk-expander` `<template>` opens on **any** selection of one
   or more rows — the lobby's count-keyed switch between a single and a
