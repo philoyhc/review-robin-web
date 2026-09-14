@@ -2745,6 +2745,45 @@
         box-shadow: inset 6px 0 0 var(--selected-bg),
                     inset -6px 0 0 var(--selected-bg);
       }
+      /* Roster-level index row (19P.1). One row per roster carrying its
+         name, populated columns and count, with an Unlock expander
+         beneath. Page-agnostic primitives, so they live here rather
+         than in a template <style> — and `body.ui-v2`-scoped like every
+         rule around them. */
+      body.ui-v2 .roster-index-table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      body.ui-v2 .roster-index-table th,
+      body.ui-v2 .roster-index-table td {
+        border: 1px solid var(--border-default);
+        padding: var(--space-2) var(--space-3);
+        text-align: left;
+      }
+      body.ui-v2 .roster-index-table th { background: var(--surface-muted); }
+      body.ui-v2 .pop-col {
+        display: inline-block;
+        font-size: 12px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border-subtle);
+        border-radius: 5px;
+        padding: 1px 7px;
+        margin: 0 3px 3px 0;
+      }
+      body.ui-v2 .unlock-cols {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .unlock-col { flex: 1 1 280px; min-width: 0; }
+      body.ui-v2 .unlock-col h3 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--text-subtle);
+        margin: 0 0 var(--space-2);
+      }
+
       body.ui-v2 .session-expander-body {
         display: flex;
         flex-direction: column;
