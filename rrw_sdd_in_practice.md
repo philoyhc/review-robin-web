@@ -122,6 +122,29 @@ Two caveats belong beside that result. The reviewer's checklist was written afte
 
 **Trade-off.** The reader works when run, and "when run" is the honest qualifier. Both agents are invoked on request, not by a hook; six commit messages name `spec-writer` and five name `diff-reviewer`. A reader that is not run is a paragraph — and a reader that is run returns twelve findings on a thousand-line PR, which is a reading cost the author pays every time. Making the pass routine is the open item; making it cheap enough to *stay* routine is the constraint on how.
 
+**Annotated 2026-09-14.** "When run" was the honest qualifier and the
+honest answer turned out to be *not at all*. Measured on this date: since
+2026-09-06, **70** pull requests name `spec-writer` and **0** name
+`diff-reviewer`; across the 180 commits preceding `ef62b4a`, 33 non-merge
+commit messages name the first and none the second. *Re-take the first
+pair from the GitHub API, not the repo — PR bodies are not in git, and a
+session clone is shallow:* `is:pr "spec-writer" created:>2026-09-06`
+against `repo:philoyhc/review-robin-web`, and the same for
+`diff-reviewer`. *The second pair is* `git log -n 180 --no-merges
+--grep=<name>`; *read as a 180-commit window rather than 180 non-merge
+commits it is 32, which does not move the* **0**. Every pull request that has ever named
+`diff-reviewer` belongs to the 2026-09-04/05 arc that created it. So the
+reader validated retrospectively above has not read a diff since, and
+`spec-writer` — whose charter placed it **at a close** — became the de
+facto per-rung reader by default, which is what 19K.3 was really
+responding to when it moved that pass before the push. The two are now
+given separate cadences rather than one standing in for the other:
+`diff-reviewer` on every rung, `spec-writer` at the close and before a
+push only on the narrow cases in `CLAUDE.md` "Where work runs". *This
+paragraph's own open item is answered by naming the cadence, not by
+demonstrating it holds; whether the reader is now routinely run is a
+measurement for the next audit, made the same way.*
+
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
 
 **Decision.** Keep spec and code in agreement by scheduled whole-folder sweeps and dated snapshots rather than by a per-PR sync requirement. Thirteen dated codebase assessments have been written (twelve archived, 2026-05-09 → 2026-08-19, plus the current 2026-09-04 one), each auditing every functional area against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". Two whole-`spec/` sweeps (2026-05-11: 25 files, 10,224 lines touched; 2026-08-18) and a `docs/` sweep (2026-08-19) have run. Segment 19A exists to make the sweep a cadence rather than an event.
@@ -198,7 +221,7 @@ RRW practises a form of spec-driven development in which **plans carry intent in
 | Spec before code | On day one, literally; thereafter *plan* before code, *spec* after | First-day commit order 2026-04-27; 14% spec co-change vs 20% (51% recent) plan co-change over first-parent merges; #2047 → #2062 arc shape |
 | Requirements / design / tasks | One segment-plan file per scope: Opportunity → Decision → Judgment calls → Blast radius (measured) → PR ladder → Definition of done → Doc impact | `guide/archive/segment_19C_refinements.md` Item 1 |
 | Spec catches drift tests cannot | Where a code constant exists, a test derived from it does (four gates); elsewhere `diff-reviewer`; last, the sweeps | `tests/unit/test_doc_conventions.py` (**9 checks** as of 2026-09-08 — 3 when this row was written); `app/services/audit.py` `EVENT_SCHEMAS`; 6/30 fix commits were doc drift |
-| Maker and checker separate | `spec-writer` (writes spec to match what shipped, at a close; reports divergence otherwise) + `diff-reviewer` (reads diff cold against spec; report-only; no model pin). Validated retrospectively: run cold at `9b9cc457` it found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; 6 + 5 commit messages naming them; §6.4 |
+| Maker and checker separate | `spec-writer` (writes spec to match what shipped, at a close; reports divergence otherwise) + `diff-reviewer` (reads diff cold against spec; report-only; no model pin). Validated retrospectively: run cold at `9b9cc457` it found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; 6 + 5 commit messages naming them; §6.4 *(the 5 was the high-water mark: re-measured 2026-09-14, `diff-reviewer` has 0 mentions since 2026-09-06 and `spec-writer` 70 — see §6.4's annotation)* |
 | Machine-checkable definition of done | For code and specs, yes: 2,700 tests on two dialects + the gates. For UI, no — the author on the dev slot | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs" |
 | Spec coverage enforced | Yes, since 2026-09-05 — the route-to-spec registry shipped as 19A Item 3, and both Tier-1 gaps closed. Three assertions: every routing module registered, every mapped spec path a live file, and the declared-debt baseline held at empty (`SPEC_PENDING` and `EXPECTED_PENDING` are both `()`). What it cannot see is whether a spec that exists says enough — Article II's stated blind spot. *(This row read "Not yet … deferred" until 2026-09-08, three days after the gate shipped on 2026-09-05.)* | `tests/unit/test_spec_coverage.py`; `app/web/spec_registry.py`; `constitution.md` II |
 | Living spec, continuously synced | Periodic instead: 13 dated assessments, 2 spec sweeps, 1 docs sweep; a sweep missed a 3-month drift → gate (§6.3) | `guide/archive/codebase_assessment_*.md` (12) + current; `docs/practice-audit-2026-09-04.md` §2 |

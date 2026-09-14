@@ -215,6 +215,19 @@ reject it.
   (`ci.yml`) on every PR, alongside `ci-postgres.yml`, which
   round-trips the Alembic chain and runs the full suite against
   Postgres 16.
+- **Two cold readers, different cadences.** A slice is read cold before
+  it is marked **ready for review** — not before it is pushed: a draft
+  PR is not a merge, and an unpushed commit in an ephemeral container is
+  a loss risk. `diff-reviewer` does that read on **every** slice; it is
+  the maker ≠ checker gate (`constitution.md` III) and is not
+  conditional. `spec-writer` runs **at the close** (`segment-plan`,
+  "Closing a segment" step 3), and earlier only when the slice touches
+  `spec/`, touches a path its plan's `Doc impact` names, or is the
+  closing slice. **A slice with no plan meets none of those** and takes
+  `diff-reviewer` alone. Outside a close `spec-writer` may not re-align
+  a spec to the code, so a deferred slice loses a report, not an
+  alignment — and a later slice can falsify what an earlier pass
+  verified.
 - End-to-end verification happens on the Azure dev slot after deploy,
   not in the agent's sandbox. When a change touches UI or anything
   the test suite can't exercise (templates, redirects, real auth),
