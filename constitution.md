@@ -56,6 +56,14 @@ author.
 reading each time. Making the pass routine is the open item; making it
 cheap enough to *stay* routine is the constraint on how.
 
+*(Annotated 2026-09-14, after `rrw_sdd_in_practice.md` §6.4.* "Only when
+run" was measured and the answer was **never**: `diff-reviewer` had not
+read a diff since the arc that created it, and `spec-writer` — chartered
+at a close — had become the per-rung reader by default. The two now have
+separate cadences, stated in `CLAUDE.md` "Where work runs". The open item
+is answered by *naming* a cadence, not by demonstrating it holds; the next
+audit re-measures it.*)
+
 ## IV. The human is the verifier of last resort, and nothing runs unattended
 
 Anything the suite and the reader cannot see — layout, rendering,

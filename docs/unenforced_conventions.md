@@ -136,6 +136,36 @@ the joke it sounds like.
   precisely the kind of claim a cold reader takes at face value, because
   the number looks like evidence.
 
+### 1.7 The two cold readers run at their stated cadences
+
+- **Written down at** `CLAUDE.md` / `AGENTS.md` "Where work runs";
+  `constitution.md` III; `rrw_sdd_in_practice.md` §6.4.
+- **The instance.** Article III has required a separate reader since
+  2026-09-04. Measured **2026-09-14**: `diff-reviewer` had never run on a
+  real slice outside the arc that created it — 0 pull requests and 0
+  commit messages name it since 2026-09-06, against 70 and 33 for
+  `spec-writer`. The article was not being broken deliberately; nothing
+  observed whether it was being followed at all, and `spec-writer`,
+  chartered *at a close*, silently took the per-rung seat instead. The
+  cadences are now separate and stated; this entry records that nothing
+  checks them.
+- **Why not.** A check would have to establish that a *subagent was
+  invoked* before a push. Nothing in the tree records that: the run
+  leaves no artefact, and the only durable trace is whether the author
+  chose to mention it in a commit message or PR body. Deriving the rule
+  from that trace enforces **the mention**, not the reading — and a gate
+  that can be satisfied by typing a name is worse than the paragraph,
+  which is exactly VI's disqualifying shape. A per-PR gate would also
+  contradict Article I for the `spec-writer` half (§6.5).
+- **What would change this.** Nothing in the code; there is no constant
+  behind it, and II says the rule therefore stays prose. What can change
+  is the *measurement*: the counts above are re-takeable by the commands
+  in §6.4's annotation, so a later audit can ask the question again
+  cheaply. **That audit is the enforcement** — this is the one entry in
+  §1 whose subject is a practice rather than a property of the tree, and
+  the reason it is here is that the last four months of it went
+  unobserved.
+
 ---
 
 ## 2. Enforceable but not enforced — the revisit queue
