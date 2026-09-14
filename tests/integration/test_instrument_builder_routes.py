@@ -7487,3 +7487,48 @@ def test_preview_sample_exclusion_is_not_the_desugar_stage(
     src = inspect.getsource(_band1.find_sample_in_scope_reviewee)
     assert "excludeSelfReviews=False" in src
     assert "excludeSelfReviews=True" not in src
+
+
+def test_preview_sample_exclusion_keys_like_the_generator(
+    client: TestClient, db: Session
+) -> None:
+    """A pair-context-only boundary groups in the preview exactly as it
+    does in generation.
+
+    Found by the close pass on #2386. The filter first keyed off
+    ``reviewee_boundary_fields``, which is reviewee-only by design (it
+    drives the member-id partition). With ``group_kind="p1"`` that list
+    is empty, so the filter silently dropped to a pair-level test while
+    the generator still grouped — and the preview offered a teammate
+    Generate was about to exclude. Now both call ``group_key_for_pair``
+    over the full decoded boundary.
+    """
+    from app.db.models import Relationship
+
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-paircontext"
+    )
+    sam_r = db.execute(
+        select(Reviewer).where(Reviewer.email == "sam@example.edu")
+    ).scalar_one()
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars():
+        db.add(
+            Relationship(
+                session_id=review_session.id,
+                reviewer_id=sam_r.id,
+                reviewee_id=reviewee.id,
+                status="active",
+                tag_1="SquadA",
+            )
+        )
+    # Group by the pair-context tag alone — no reviewee-side boundary.
+    instrument.group_kind = "p1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    assert _sample(db, instrument) is None, (
+        "Sam and Zoe share one pair-context group and Sam is in it, so "
+        "the whole group is excluded and no sample remains"
+    )

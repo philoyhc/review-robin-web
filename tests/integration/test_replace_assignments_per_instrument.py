@@ -614,7 +614,7 @@ def test_delete_all_scoped_keeps_other_instruments(db: Session) -> None:
 
 
 # --------------------------------------------------------------------- #
-# 19O Item 1 rung 3 — per-instrument self-review exclusion, honoured
+# 19O Item 1 rung 3 — per-instrument self-review exclusion, honored
 # after the engine's fan-out.
 # --------------------------------------------------------------------- #
 
@@ -673,7 +673,7 @@ def test_exclude_self_reviews_drops_the_whole_group(db: Session) -> None:
     member row of the reviewer's group — not just the ``(R, R)`` pair.
 
     This is the property the rule-engine desugar stage cannot express,
-    and the reason the flag is honoured after the fan-out instead
+    and the reason the flag is honored after the fan-out instead
     (``spec/assignments.md`` § *Self-review policy*).
     """
     user, review_session, instrument = _seed_self_review_session(db)
@@ -807,3 +807,92 @@ def test_exclude_self_reviews_deletes_saved_responses(db: Session) -> None:
         db, review_session=review_session, user=user, correlation_id="c2"
     )
     assert db.get(Response, resp_id) is None
+
+
+
+def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(
+    db: Session,
+) -> None:
+    """A Link rule can filter the ``(R, R)`` pair out of the fan-out
+    while leaving the reviewer's group-mates in it. The exclusion must
+    still drop the whole group.
+
+    Found by Codex on #2386 (P1). Self-review groups were detected over
+    ``result.pairs`` — the survivors — so with the ``(R, R)`` row
+    filtered away the group carried no self-review marker at all, every
+    remaining row read as an ordinary review, and the reviewer went on
+    reviewing their own group with the checkbox set. Membership is a
+    fact about the roster; the rules decide only which rows survive.
+    """
+    user, review_session, instrument = _seed_self_review_session(db)
+    sam_e = db.execute(
+        select(Reviewee).where(
+            Reviewee.email_or_identifier == "sam@example.edu"
+        )
+    ).scalar_one()
+    sam_e.tag_1 = "TeamA"
+    sam_e.tag_2 = "SELF"
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Zoe",
+            email_or_identifier="zoe@example.edu",
+            tag_1="TeamA",
+            tag_2="OTHER",
+        )
+    )
+    instrument.group_kind = "r1"
+    db.flush()
+
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    # Link 2 keeps only tag_2 == OTHER, so Sam's own reviewee row never
+    # reaches the fan-out while his group-mate Zoe does.
+    rule_set.rules_json = [
+        {
+            "id": "link2",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "link2-r0",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewee.tag2",
+                        "operator": "equals",
+                        "operand": "OTHER",
+                        "case_sensitive": False,
+                    },
+                }
+            ],
+        }
+    ]
+    rule_set.exclude_self_reviews = True
+    db.flush()
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="p1"
+    )
+
+    sam_r_id = db.execute(
+        select(Reviewer).where(Reviewer.email == "sam@example.edu")
+    ).scalar_one().id
+    zoe_id = db.execute(
+        select(Reviewee).where(
+            Reviewee.email_or_identifier == "zoe@example.edu"
+        )
+    ).scalar_one().id
+    leaked = [
+        row
+        for row in db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id == instrument.id
+            )
+        ).scalars()
+        if row.reviewer_id == sam_r_id and row.reviewee_id == zoe_id
+    ]
+    assert leaked == [], (
+        "Sam reviews his own group through Zoe: the (R, R) pair was "
+        "filtered by the Link rule, so the group was never marked"
+    )

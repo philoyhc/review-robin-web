@@ -211,7 +211,31 @@ place to overstate by double.*
   `excludeSelfReviews`, which would drop pairs before group composition is
   known and reintroduce the exact hazard the three layers exist to prevent.
   A grouped instrument whose only group is the reviewer's own now previews
-  empty rather than showing a row Generate would not produce.
+  empty rather than showing a row Generate would not produce. **The first
+  implementation keyed the groups wrongly** and the close pass reproduced
+  it: it reused this function's reviewee-only boundary list, which is
+  correct for the member-id partition and wrong here, so a
+  pair-context-only boundary dropped the test to pair level while the
+  generator still grouped — the preview offering a teammate Generate was
+  about to exclude, which is the same class of divergence the ruling was
+  meant to end. Both now call `group_key_for_pair` over the full boundary.
+  *Two keyings of one concept is one too many.*
+
+- **Two real defects came from the review bot after the close pass, and
+  both were in the mechanism rather than the prose.** *(a)* Self-review
+  groups were detected over `result.pairs` — the survivors — so a Link rule
+  that filtered the `(R, R)` pair out of the fan-out left the group with no
+  self-review marker at all, and the reviewer went on reviewing their own
+  group with the checkbox set. Membership is a fact about the **roster**;
+  the rules decide only which rows survive. Fixed at the root, which also
+  fixes the same blind spot in the pre-existing `self_reviews_active` path.
+  *(b)* "Excluded by rule" was driven by configuration alone, so a roster
+  with no self-review candidate read as an exclusion that never happened —
+  the same ambiguity the cell exists to remove, one step over. It now
+  requires evidence (`InstrumentReconcileState.self_reviews_excluded`).
+  Also: the dry-run's *eligible* figure and the audit event's pair count
+  were still taken from the pre-exclusion fan-out, advertising rows Generate
+  would never create.
 
 **The defect pattern, stated because it repeated at every rung:** every error
 was in prose *about* the code, never in reading what the code does. A

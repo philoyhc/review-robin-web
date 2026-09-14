@@ -350,7 +350,11 @@ Two supported affordances, answering different questions —
   rather than written with `include=False`. On a group-scoped
   instrument this drops **every member row of the reviewer's
   group**, which is the behavior the desugar stage could not
-  give. Takes effect **at the next Generate**, not on save.
+  give. **Group membership is read from the roster, not from the
+  surviving pairs** — a Link rule can filter the `(R, R)` pair out
+  of the fan-out while leaving the reviewer's group-mates in it,
+  and the group is still the reviewer's own. Takes effect **at the
+  next Generate**, not on save.
   **Destructive on an already-generated instrument**: the dropped
   pair falls into `to_delete` and its saved `Response` rows go
   with it, counted by the reconcile dry-run's `responses_deleted`

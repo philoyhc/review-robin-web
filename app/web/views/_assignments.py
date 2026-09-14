@@ -75,6 +75,13 @@ class InstrumentStatusBlock:
       cell keeps showing the real count and its checkbox, because
       those rows do exist and are still toggleable. The stale
       badge is what says a regenerate would remove them.
+      **And the rule must have actually excluded something**
+      (``InstrumentReconcileState.self_reviews_excluded``): on a
+      roster with no self-review candidate at all — disjoint
+      reviewer / reviewee rosters, or anonymous reviewees — a
+      configured rule excludes nothing, and saying "Excluded by
+      rule" there would recreate the very ambiguity this field
+      exists to remove, one step over.
     - ``included_count`` — generated rows on this instrument with
       ``include=True``. Drives the **Included** column pill on the
       Assignments page status table; lags ``generated_count`` when
@@ -260,6 +267,8 @@ def build_assignments_page_context(
                     sr_total == 0
                     and rule_row is not None
                     and rule_row.exclude_self_reviews
+                    and state is not None
+                    and state.self_reviews_excluded > 0
                 ),
                 is_stale=is_stale,
                 edit_url=(

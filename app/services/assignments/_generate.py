@@ -210,6 +210,25 @@ def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
     )
 
 
+def _with_self_review_exclusions(
+    engine_counts: dict[str, int], excluded_by_rule: int
+) -> dict[str, int]:
+    """Fold the post-fan-out self-review exclusions into the engine's
+    own ``excluded_counts``.
+
+    Under the engine's ``self_review`` key — the key its desugar stage
+    would have used had the exclusion happened there. The operator
+    asked one question ("don't generate self-reviews") and should get
+    one number back, whichever stage answered it; and in practice the
+    desugar count is always ``0`` here, since layer 2 pins
+    ``excludeSelfReviews=False``.
+    """
+    counts = dict(engine_counts)
+    if excluded_by_rule:
+        counts["self_review"] = counts.get("self_review", 0) + excluded_by_rule
+    return counts
+
+
 def _full_matrix_schema() -> Any:
     """Synthetic ``RuleSetSchema`` representing the Full Matrix
     default: empty rules, ALL_OF combinator, self-reviews allowed.
@@ -312,6 +331,18 @@ def _diff_one_instrument(
     # out the whole group the reviewer is a member of — not just
     # the ``(R, R)`` pair (Segment 13C). Mark each group whose
     # reviewer appears as one of its own reviewees.
+    #
+    # **Detected over the full reviewee roster, not over
+    # ``result.pairs``.** A Link rule can filter the ``(R, R)`` pair
+    # out of the fan-out while leaving the reviewer's group-mates in
+    # it — e.g. a Link 2 predicate on ``reviewee.tag2`` that the
+    # reviewer's own reviewee row fails and a teammate passes. Keying
+    # off the survivors alone, the group would then carry no
+    # self-review marker at all and every remaining row would read as
+    # an ordinary review: the reviewer would keep reviewing their own
+    # group under both the session toggle and the per-instrument
+    # exclusion. The roster is what decides whether a reviewer is a
+    # member of a group; the rules decide only which rows survive.
     pair_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
     self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
     if instrument.group_kind is not None:
@@ -321,19 +352,30 @@ def _diff_one_instrument(
         boundary = instruments_service.decode_group_kind(
             instrument.group_kind
         )
-        for reviewer, reviewee in result.pairs:
-            key = group_key_for_pair(
+
+        def _key(reviewer_id: int, reviewee: Any) -> tuple[str, ...]:
+            return group_key_for_pair(
                 reviewee=reviewee,
-                reviewer_id=reviewer.id,
+                reviewer_id=reviewer_id,
                 reviewee_id=reviewee.id,
                 boundary=boundary,
                 pair_context_lookup=pair_context_lookup,
             )
-            pair_group_key[(reviewer.id, reviewee.id)] = key
-            if is_self_review(reviewer, reviewee):
-                self_review_groups.add((reviewer.id, key))
 
-    # Per-instrument self-review exclusion (19O Item 1 rung 3). Honoured
+        # Membership, from the roster.
+        for reviewer in reviewers:
+            for reviewee in reviewees:
+                if is_self_review(reviewer, reviewee):
+                    self_review_groups.add(
+                        (reviewer.id, _key(reviewer.id, reviewee))
+                    )
+        # Keys for the pairs that actually survived.
+        for reviewer, reviewee in result.pairs:
+            pair_group_key[(reviewer.id, reviewee.id)] = _key(
+                reviewer.id, reviewee
+            )
+
+    # Per-instrument self-review exclusion (19O Item 1 rung 3). Honored
     # HERE, after the engine's fan-out, and deliberately not at the
     # rule-engine desugar stage: by this point ``self_review_groups``
     # already knows whole-group membership, so a group-scoped
@@ -350,6 +392,7 @@ def _diff_one_instrument(
     # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
     # — the same tuple ``uq_assignment_unique`` enforces.
     new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
+    excluded_by_rule = 0
     for reviewer, reviewee in result.pairs:
         if instrument.group_kind is not None:
             is_self = (
@@ -365,6 +408,14 @@ def _diff_one_instrument(
             # takes its ``Response`` rows with it — counted by
             # ``responses_deleted`` below and confirmed on the Prepare
             # card before anything is written.
+            #
+            # Counted under the engine's own ``self_review`` key, the
+            # one its desugar stage would have used. The dry-run's
+            # *eligible* figure and the audit event's pair count are
+            # taken from ``new_pairs`` below rather than from
+            # ``result.pairs``, so neither advertises a row Generate
+            # will never create.
+            excluded_by_rule += 1
             continue
         pair_include = (
             review_session.self_reviews_active if is_self else True
@@ -408,8 +459,10 @@ def _diff_one_instrument(
         to_delete=to_delete,
         to_keep=to_keep,
         responses_deleted=responses_deleted,
-        pairs_count=len(result.pairs),
-        excluded_counts=dict(result.excluded_counts),
+        pairs_count=len(new_pairs),
+        excluded_counts=_with_self_review_exclusions(
+            result.excluded_counts, excluded_by_rule
+        ),
     )
 
 
@@ -644,6 +697,12 @@ class InstrumentReconcileState:
 
     stale: bool
     eligible: int
+    self_reviews_excluded: int = 0
+    """Pairs this instrument's self-review rule dropped in this
+    dry-run. **Evidence, not configuration**: it is above zero only
+    when the roster actually contains a self-review the rule removed,
+    so a surface can tell *the rule excluded these* from *there was
+    nothing to exclude* (19O Item 1; Codex P2 on #2386)."""
 
 
 def staleness_by_instrument(
@@ -716,6 +775,9 @@ def staleness_by_instrument(
             stale=bool(diff.existing_rows)
             and bool(diff.to_insert or diff.to_delete),
             eligible=diff.pairs_count,
+            self_reviews_excluded=diff.excluded_counts.get(
+                "self_review", 0
+            ),
         )
     return state
 

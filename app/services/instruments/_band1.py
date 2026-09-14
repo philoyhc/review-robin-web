@@ -657,6 +657,50 @@ def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
     ]
 
 
+def _preview_group_boundary(
+    instrument: Instrument, link3_boundary: list[str] | None
+) -> list[tuple[str, str]]:
+    """The FULL decoded group boundary the preview should group by —
+    reviewee tags **and** pair-context tags, in the shape
+    ``group_key_for_pair`` expects.
+
+    Distinct from ``reviewee_boundary_fields``, which is deliberately
+    reviewee-only because it drives the member-id partition. Grouping
+    for self-review exclusion has to match the generator exactly or the
+    preview shows samples Generate will not produce.
+
+    Live ``link3_boundary`` (canonical keys like ``"pair_context.tag2"``)
+    wins when the Refresh handler supplies it, falling back to the
+    persisted ``group_kind`` — the same precedence the rest of this
+    function uses.
+    """
+    from app.services.instruments._instrument_crud import decode_group_kind
+
+    if link3_boundary is None:
+        return decode_group_kind(instrument.group_kind)
+    boundary: list[tuple[str, str]] = []
+    for raw in link3_boundary:
+        if not isinstance(raw, str):
+            continue
+        source, _, slot = raw.strip().partition(".")
+        if not slot.startswith("tag"):
+            continue
+        num = slot[len("tag") :]
+        if num not in {"1", "2", "3"}:
+            continue
+        if source == "reviewee":
+            pair = ("reviewee", f"tag_{num}")
+        elif source == "pair_context":
+            # ``group_key_for_pair`` takes the bare slot number for
+            # pair-context and derives ``tag_N`` itself.
+            pair = ("pair_context", num)
+        else:
+            continue
+        if pair not in boundary:
+            boundary.append(pair)
+    return boundary
+
+
 def _preview_excludes_self_reviews(
     db: Session, instrument: Instrument
 ) -> bool:
@@ -831,30 +875,43 @@ def find_sample_in_scope_reviewee(
     # rule (author, 2026-09-14). Applied to the engine's OUTPUT, not
     # to its options: on a grouped instrument a reviewer who is one of
     # their own group's reviewees makes the whole group a self-review,
-    # so every pair in it goes, not just the ``(R, R)`` one. Same
-    # placement and same rule as ``assignments._diff_one_instrument``.
+    # so every pair in it goes, not just the ``(R, R)`` one.
     #
-    # The key is the reviewee-side boundary only, which is this
-    # function's own convention throughout (pair-context boundaries
-    # already fall back to an unconstrained partition below); with no
-    # reviewee-side boundary the instrument previews per-reviewee and
-    # the pair-level test is the whole rule.
+    # **Keyed exactly as the generator keys it** — ``group_key_for_pair``
+    # over the FULL decoded boundary, pair-context tags included. The
+    # reviewee-only ``reviewee_boundary_fields`` above is the right key
+    # for the member-id partition further down and the wrong one here:
+    # a pair-context-only boundary (``group_kind="p1"``) leaves it
+    # empty, which would drop this to a pair-level test while the
+    # generator still groups — so the preview would offer a teammate
+    # Generate is about to exclude. A mixed boundary (``"r1,p1"``) fails
+    # the other way, merging groups the generator keeps apart. Two
+    # keyings of one concept is one too many.
     if _preview_excludes_self_reviews(db, instrument):
         from app.services.assignments import is_self_review
+        from app.services.responses import group_key_for_pair
 
-        def _key(e: Any) -> tuple[str, ...]:
-            return tuple(
-                getattr(e, f, "") or "" for f in reviewee_boundary_fields
+        full_boundary = _preview_group_boundary(instrument, link3_boundary)
+
+        def _group_key(r: Any, e: Any) -> tuple[str, ...]:
+            return group_key_for_pair(
+                reviewee=e,
+                reviewer_id=r.id,
+                reviewee_id=e.id,
+                boundary=full_boundary,
+                pair_context_lookup=pair_context_lookup,
             )
 
-        if reviewee_boundary_fields:
+        if instrument.group_kind is not None:
             self_groups = {
-                (r.id, _key(e)) for r, e in pairs if is_self_review(r, e)
+                (r.id, _group_key(r, e))
+                for r, e in pairs
+                if is_self_review(r, e)
             }
             pairs = [
                 (r, e)
                 for r, e in pairs
-                if (r.id, _key(e)) not in self_groups
+                if (r.id, _group_key(r, e)) not in self_groups
             ]
         else:
             pairs = [(r, e) for r, e in pairs if not is_self_review(r, e)]

@@ -560,3 +560,40 @@ def test_excluded_by_rule_does_not_leak_across_unpinned_instruments(
     by_id = {b.instrument_id: b for b in ctx.status_blocks}
     assert by_id[inst_a.id].self_review_excluded_by_rule is True
     assert by_id[inst_b.id].self_review_excluded_by_rule is False
+
+
+def test_excluded_by_rule_needs_evidence_not_just_configuration(
+    db: Session,
+) -> None:
+    """A configured rule that excluded nothing must not claim it did.
+
+    Found by Codex on #2386 (P2). On a roster with no self-review
+    candidate at all — disjoint reviewer / reviewee rosters, or
+    anonymous reviewees — ``sr_total`` is ``0`` and the flag is set,
+    so the first version of this predicate read "Excluded by rule"
+    while the rule had excluded nothing. That recreates the ambiguity
+    the field exists to remove, one step over: it makes *nothing to
+    exclude* look like *something was excluded*.
+    """
+    user, review_session, inst_a, inst_b, alice_r, alice_e = (
+        _seed_multi_instrument(db, code="sr-excl-noev")
+    )
+    # Break the self-pair: the reviewee is no longer the reviewer.
+    alice_e.email_or_identifier = "someone-else@example.edu"
+    db.flush()
+    _pin_rule_set(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        exclude=True,
+        name="Excluding",
+    )
+    db.commit()
+
+    ctx = build_assignments_page_context(db, review_session)
+    block = {b.instrument_id: b for b in ctx.status_blocks}[inst_a.id]
+    assert block.self_review_total == 0
+    assert block.self_review_excluded_by_rule is False, (
+        "the rule is configured but excluded nothing — the cell must "
+        "show a plain 0, not claim an exclusion that never happened"
+    )

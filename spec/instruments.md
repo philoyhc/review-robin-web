@@ -637,8 +637,14 @@ live preview of one sample row inline.
 > goes, so a reviewer who is one of their own group's reviewees
 > takes that group out of the preview entirely; if no group
 > survives, the preview renders empty rather than showing a row
-> Generate would not produce. Same rule and same placement as
-> `assignments._diff_one_instrument`.
+> Generate would not produce. Same rule, same placement **and the
+> same keying** as `assignments._diff_one_instrument`: the group key
+> comes from `group_key_for_pair` over the full decoded boundary,
+> pair-context tags included. That is deliberately *not* the
+> reviewee-only field list this function uses for the member-id
+> partition — a pair-context-only boundary would leave that list
+> empty and silently drop the test to pair level while the generator
+> still grouped.
 >
 > It reads the **persisted** flag: the checkbox is not among the
 > fields the Refresh handler posts, so an unsaved tick shows after
