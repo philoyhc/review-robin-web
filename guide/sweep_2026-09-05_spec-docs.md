@@ -24,6 +24,18 @@ now. The mechanical dead-reference pass below rediscovered one of them
 (C3) from scratch, which is what carrying findings forward is meant to
 save.
 
+**The `Now` column is present tense and is kept current**, like the
+findings ledger at the foot of this file — those two are the live
+surfaces here, and the ledger wins if they ever disagree. Everything
+else, *Headline numbers* included, is frozen at 2026-09-05. Said
+explicitly because this section is where the next sweep starts reading,
+and because it had already failed once: the ledger reached *all eight
+closed* at **13:52 on 2026-09-05**, fifty-one minutes after this file was
+written, and these rows still said "still open" **eight days later**. The
+two surfaces were never in step at all — the same afternoon that closed
+the findings left §0 stating the opposite, and the next eight days
+touched only the `sweep-scope` marker.
+
 | Finding | From | Age | Now | Note |
 |---|---|---|---|---|
 | Tier 1 #4 — Email Template editor has no spec | 2026-05-11 | 117 d | **done** | `spec/email_template_editor.md`, #2101 |
@@ -34,11 +46,30 @@ save.
 | Tier 3 #9 — Edit Session page | 2026-05-11 | 117 d | **moot** | The page was retired in 18R; there is nothing left to spec |
 | Tier 3 #10–#12 — new-session form, drill-in pages, outbox | 2026-05-11 | 117 d | **declined** | Deferred on the same reasoning as when filed; `session_outbox.html` remains explicitly out of the operator taxonomy |
 | C1 — `preview_hub.md` dates the `/preview` 308 repoint anachronistically | 2026-08-18 | 18 d | **re-diagnosed** | See finding 2.1 — the note had it backwards |
-| C2 — `lifecycle.md` §1 state diagram omits `expired` | 2026-08-18 | 18 d | **still open** | See 2.2 |
-| C3 — `assignments.md` names `app/services/assignments.py` (now a package) | 2026-08-18 | 18 d | **still open** | See 2.3; independently rediscovered by the dead-reference pass |
+| C2 — `lifecycle.md` §1 state diagram omits `expired` | 2026-08-18 | 18 d | **done** | Became 2.2; closed 19C Item 7 PR 2 — all five states |
+| C3 — `assignments.md` names `app/services/assignments.py` (now a package) | 2026-08-18 | 18 d | **done** | Became 2.3; closed 19C Item 7 PR 1 — five specs renamed, `docs/status.md` left as dated history. Independently rediscovered by the dead-reference pass |
 | C4 — `visual_style_general.md` green-marker is one shade off | 2026-08-18 | 18 d | **superseded** | Worse than filed: the token is not a different shade, it no longer exists. See 2.4 |
-| C5 — `operator_ui_concept.md` user card omits the admin suffix | 2026-08-18 | 18 d | **still open** | See 2.5 |
-| C6 — `domain_assumptions.md` "1–6 Instruments" implies a cap | 2026-08-18 | 18 d | **still open** | See 2.6 |
+| C5 — `operator_ui_concept.md` user card omits the admin suffix | 2026-08-18 | 18 d | **done** | Became 2.5; closed 19C Item 7 PR 2 — the `(super admin)` / `(sys admin)` suffix |
+| C6 — `domain_assumptions.md` "1–6 Instruments" implies a cap | 2026-08-18 | 18 d | **done** | Became 2.6; closed 19C Item 7 PR 2 — restated as typical usage, not a bound |
+
+**Where the 13 rows stand today: 10 settled, 3 declined.** The four that
+moved since the sweep are C2, C3, C5 and C6, all closed by 19C Item 7.
+The three declines are not work. Two carry one stated trigger each — a
+standalone Relationships page on pilot feedback, and there has been no
+pilot; a standalone Operator Settings page if the page grows. **The Tier
+3 row does not.** It bundles three items with three different situations
+(`guide/archive/spec_sweep_11may.md` §10–§12): the new-session form
+deferred because Quick Setup already covers it, closer to a non-finding
+than a deferral; the drill-in pages deferred until pilot feedback; the
+outbox needing no spec unless promoted into Segment 16A. Two triggers and
+a non-finding, in one row.
+
+*Headline numbers* still reads **13 / 6 / 7** and stays that way. It is
+the sweep-time figure, `guide/sweep_template.md` fixes that table's shape
+so sweeps stay comparable, and a second live tally there would be a third
+surface to forget. Note it counts a **decline** as still open, where the
+ledger's "seven actioned, one declined" counts it as closed — inherited
+from 2026-09-05, and worth knowing before comparing the two.
 
 `spec_sweep_18Aug.md` §A and §B and `docs_sweep_19Aug.md`'s four buckets
 were all executed at the time; nothing carried from them beyond §C above.
@@ -163,6 +194,19 @@ claim otherwise.
 
 The next sweep should start here rather than re-running the same
 mechanical passes over the files this one already opened.
+
+**Update 2026-09-13 — the `spec/` half of that residue is gone, and the
+count above is not restated because it cannot be restated
+reproducibly.** Segment 19M read **all 39 live `spec/*.md`** files
+(`guide/archive/segment_19M_spec_history_sweep.md`), and this sweep's 38
+in-scope `spec/` files are a subset of them. What 19M did **not** touch
+it names in its own Out of scope: `docs/`, root documents and `guide/`.
+So the unread residue is now confined to the `docs/` + root half — where
+the next sweep should start. The bare "51" is left standing rather than
+replaced because this file does not tabulate its 13 read files by
+folder, so any smaller number would be a reconstruction, and a
+reconstructed count in a document read under pressure is worse than a
+stale one that says it is stale.
 
 ## Findings ledger
 
