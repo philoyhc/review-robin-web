@@ -459,7 +459,36 @@ sentences, not one with a swapped noun:
 | Group using tags | *Exclude if the reviewer is in the group being reviewed* |
 
 `Not set` takes the individual sentence because that is the `link3_mode`
-value it submits. Both spellings ride on the element as `data-copy-*`
+value it submits.
+
+**The control is hidden while any of the three Links is `Not set`** —
+rule, heading and checkbox together, since a lone divider under nothing
+reads as a rendering fault. An instrument with an unset Link has no
+settled rule to except self-reviews *from*. Visibility follows the pills
+live, from one function both pill handlers call.
+
+**Two transitions clear the stored flag**, so what is hidden or
+re-scoped is also false:
+
+| Transition | Why |
+|---|---|
+| Any Link → `Not set` | A flag left ticked would sit in the rule set, invisible on the page and live at the next Generate. |
+| Link 3 `Individual` → `Group using tags` | The two modes except different things. A tick agreed against *the individual reviewed is the reviewer* must not carry into *the reviewer is in the group being reviewed*, which drops every member row of that group. |
+
+Both are enforced **server-side on save** (`resolve_exclude_self_reviews`),
+with the client clearing the box at the same moment so the page and the
+store agree. **Session-config import is held to the first rule too**
+(`clear_unsettled_exclude_self_reviews`, run once both the rule-set rows
+and the instrument rows have landed): a bundle pairs those halves
+independently, so without it an import could store a flag the UI then
+hides — invisible and in force at once.
+
+There is no third rule for `Group using tags` → `Individual` because the
+pill cannot make that move directly: the cycle is `Not set` → `Individual`
+→ `Group using tags` → `Not set`, so the reverse passes through `Not set`,
+which hides the control and clears the box on the way. **The cycle's shape
+is therefore load-bearing** — changing it to allow the direct move requires
+a rule for it. Both spellings ride on the element as `data-copy-*`
 attributes and `newModelToggleUnitMode` swaps them as the pill cycles —
 the handler that already owns every other live consequence of the pill,
 so the control cannot describe the opposite of what the operator has

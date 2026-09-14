@@ -110,6 +110,65 @@ grep -rln "Exclude if the" app/ spec/ tests/ --include=*.py --include=*.html --i
   and wrong for the next one; both bounds now anchor on the card's opening
   `class="card" id="instrument-N"`.
 
+**Follow-up, 2026-09-14** — two behavior improvements the author asked for
+after Item 2 merged, logged here rather than as a third item: they are the
+same control and the same reasoning, and a plan per two-rule change is the
+shape the skill warns against.
+
+- **Hidden while any of the three Links is `Not set`**, and the stored flag
+  cleared in that state. An instrument with an unset Link has no settled
+  rule to except self-reviews *from*, and a flag left ticked behind a hidden
+  control is live at the next Generate while being invisible on the page.
+  Hidden as one unit — rule, heading, checkbox — because a lone divider
+  under nothing reads as a rendering fault.
+- **Cleared when Link 3 moves individual → group.** The two modes except
+  different things; a tick agreed against *the individual reviewed is the
+  reviewer* must not carry into *the reviewer is in the group being
+  reviewed*, which drops every member row of that group. Re-ticking is one
+  click; discovering a whole group went missing is not.
+
+Both enforced **server-side on save** (`resolve_exclude_self_reviews`), with
+the client clearing the box at the same moment so page and store agree — the
+visible half and the durable half, neither alone.
+
+**The reverse transition needs no rule, and the author said why**
+(2026-09-14): the Link 3 pill cycles `not_set → individual → group →
+not_set`, so it cannot reach individual *from* group without passing through
+`not_set` — which hides the control and clears the box on the way past. The
+symmetric case is already covered by the first rule, one step earlier.
+
+That makes the cycle's shape load-bearing for the clearing rules'
+completeness, so it is now pinned by a test rather than left as a fact
+someone has to remember: a cycle that ever allows the direct move needs a
+rule in `resolve_exclude_self_reviews`. *I had recorded this as an open
+question; it was a question the UI had already answered.*
+
+**The guarantee was partial until the close pass said so.** Session-config
+import writes `exclude_self_reviews` straight from the CSV, and the
+instrument rows carrying `band1_touched_links` arrive from a different part
+of the same bundle — so an import could pair a ticked flag with an unset
+Link, which the UI hides while the flag stays live at Generate. Invisible
+*and* in force is the one state the hide rule exists to prevent, so the
+first rule now runs at the end of the import apply as well
+(`clear_unsettled_exclude_self_reviews`), where both halves are finally
+visible. A whole-session clone needs no guard: it copies an existing pair
+atomically rather than combining independent values.
+
+**And one spec row Item 1 never reached.** `spec/settings_inventory.md`
+still called the column *vestigial*, with *"every row is `False`"* — untrue
+since rung 1, and directly contradicting `spec/roundtrip_coverage.md`, which
+that item *did* correct. The same miss, one file further on: the Doc impact
+enumerated the specs the behavior touches, not every spec that describes the
+column.
+
+**It broke five of Item 1's tests, and they were right to break.** Their
+payload never sent the `*_touched` flags, so those instruments read as
+`Not set` on all three Links and the flag now correctly clears. "All" and
+"Not set" differ only by that bit, so the fixture had been describing an
+unconfigured instrument while claiming to test a configured one. The helper
+now sends them, with the reason in its docstring. All three rules are
+mutation-checked.
+
 ### PR ladder
 
 One PR: heading, both sentences, the handler rewrite, and its tests.
@@ -141,6 +200,7 @@ None.
 
 - `spec/instruments.md` — § *Self-review exclusion* gains the heading and both label spellings (Item 2).
 - `spec/assignments.md` — § *Suppressing self-reviews* stops quoting the replaced wording and points at the spelling's owner (Item 2).
+- `spec/settings_inventory.md` — the `exclude_self_reviews` row stops calling the column vestigial and states the import-time clear (Item 2 follow-up).
 
 ## Item 1 — Exclude self-reviews from the Link 3 column
 
