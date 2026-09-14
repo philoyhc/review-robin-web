@@ -7866,3 +7866,101 @@ def test_both_pill_handlers_sync_the_self_review_block(
         assert "newModelSyncSelfReviewBlock(btn)" in scope, (
             f"{handler} must sync the block"
         )
+
+
+def test_link3_pill_cycle_cannot_go_group_to_individual(
+    client: TestClient, db: Session
+) -> None:
+    """The Link 3 pill wraps ``not_set → individual → group →
+    not_set``, never group → individual directly.
+
+    This is not a style point: it is why
+    ``resolve_exclude_self_reviews`` needs no rule for the reverse
+    transition (author, 2026-09-14). The move can only happen via
+    ``not_set``, which hides the control and clears the box on the way
+    past. A cycle that ever allows the direct move leaves a tick
+    agreed for the group rule applying to the individual one, with
+    nothing to catch it — so the premise is pinned here rather than
+    left to memory.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-cycle")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelToggleUnitMode =")
+    handler = body[start : body.index("btn.setAttribute('data-new-model-unit-mode'", start)]
+    # The only assignment reachable when current === 'group' is the
+    # trailing else, which must be not_set.
+    assert "if (current === 'not_set') {" in handler
+    assert "} else if (current === 'individual') {" in handler
+    tail = handler[handler.index("} else if (current === 'individual') {") :]
+    assert "next = 'group';" in tail
+    else_branch = tail[tail.index("} else {") :]
+    assert "next = 'not_set';" in else_branch
+    assert "next = 'individual';" not in else_branch, (
+        "group must cycle to not_set, never straight to individual"
+    )
+
+
+def test_import_cannot_leave_the_flag_set_behind_an_unset_link(
+    client: TestClient, db: Session
+) -> None:
+    """Session-config import writes ``exclude_self_reviews`` directly,
+    from rows independent of the instrument's Band 1 state — so a
+    bundle can pair a ticked flag with an unset Link, which the UI
+    hides while the flag stays live at Generate.
+
+    Found by the close pass on the follow-up: the save path enforced
+    the rule and the import path did not, so the guarantee was
+    partial. Invisible *and* in force is the one state the hide rule
+    exists to prevent.
+    """
+    from app.db.models import SessionRuleSet
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-import")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # What an import can produce: flag set, Band 1 not fully set.
+    new_model.band1_touched_links = ["link1", "link3"]
+    db.flush()
+
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
+        db, review_session
+    )
+    db.refresh(rule_set)
+    assert cleared == 1
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_import_guard_leaves_a_fully_configured_instrument_alone(
+    client: TestClient, db: Session
+) -> None:
+    """The guard clears only what the operator could not have seen —
+    an instrument with all three Links set keeps its flag."""
+    from app.db.models import SessionRuleSet
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-import-ok")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
+        db, review_session
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert cleared == 0
+    assert rule_set.exclude_self_reviews is True

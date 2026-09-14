@@ -131,10 +131,35 @@ Both enforced **server-side on save** (`resolve_exclude_self_reviews`), with
 the client clearing the box at the same moment so page and store agree — the
 visible half and the durable half, neither alone.
 
-**Raised, not decided:** the reverse transition (group → individual) is not
-cleared. It narrows what the flag drops rather than widening it, so carrying
-the tick cannot surprise the operator with missing rows — but it is the
-symmetric case and the author asked only for one direction.
+**The reverse transition needs no rule, and the author said why**
+(2026-09-14): the Link 3 pill cycles `not_set → individual → group →
+not_set`, so it cannot reach individual *from* group without passing through
+`not_set` — which hides the control and clears the box on the way past. The
+symmetric case is already covered by the first rule, one step earlier.
+
+That makes the cycle's shape load-bearing for the clearing rules'
+completeness, so it is now pinned by a test rather than left as a fact
+someone has to remember: a cycle that ever allows the direct move needs a
+rule in `resolve_exclude_self_reviews`. *I had recorded this as an open
+question; it was a question the UI had already answered.*
+
+**The guarantee was partial until the close pass said so.** Session-config
+import writes `exclude_self_reviews` straight from the CSV, and the
+instrument rows carrying `band1_touched_links` arrive from a different part
+of the same bundle — so an import could pair a ticked flag with an unset
+Link, which the UI hides while the flag stays live at Generate. Invisible
+*and* in force is the one state the hide rule exists to prevent, so the
+first rule now runs at the end of the import apply as well
+(`clear_unsettled_exclude_self_reviews`), where both halves are finally
+visible. A whole-session clone needs no guard: it copies an existing pair
+atomically rather than combining independent values.
+
+**And one spec row Item 1 never reached.** `spec/settings_inventory.md`
+still called the column *vestigial*, with *"every row is `False`"* — untrue
+since rung 1, and directly contradicting `spec/roundtrip_coverage.md`, which
+that item *did* correct. The same miss, one file further on: the Doc impact
+enumerated the specs the behavior touches, not every spec that describes the
+column.
 
 **It broke five of Item 1's tests, and they were right to break.** Their
 payload never sent the `*_touched` flags, so those instruments read as
@@ -175,6 +200,7 @@ None.
 
 - `spec/instruments.md` — § *Self-review exclusion* gains the heading and both label spellings (Item 2).
 - `spec/assignments.md` — § *Suppressing self-reviews* stops quoting the replaced wording and points at the spelling's owner (Item 2).
+- `spec/settings_inventory.md` — the `exclude_self_reviews` row stops calling the column vestigial and states the import-time clear (Item 2 follow-up).
 
 ## Item 1 — Exclude self-reviews from the Link 3 column
 

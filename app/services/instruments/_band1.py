@@ -262,6 +262,53 @@ def parse_exclude_self_reviews_form(form: Any) -> bool:
     return str(form.get("exclude_self_reviews") or "").strip() == "true"
 
 
+def clear_unsettled_exclude_self_reviews(
+    db: Session, review_session: Any
+) -> int:
+    """Clear ``exclude_self_reviews`` on every instrument in the
+    session whose Band 1 has an unset Link. Returns the count cleared.
+
+    The save path enforces this in
+    :func:`resolve_exclude_self_reviews`, but **session-config import
+    writes the column directly** (``_apply_rule_set``) from values
+    that arrive independently of the instrument rows
+    (``_apply_instrument``) — so a bundle can pair
+    ``exclude_self_reviews=true`` with an instrument whose
+    ``band1_touched_links`` is empty. The UI would then hide the
+    control exactly as designed while the flag stayed live at the next
+    Generate: invisible *and* in force, which is the one state the
+    hide rule exists to prevent.
+
+    Called at the end of the import apply, after both halves have
+    landed. Writes no audit event of its own: the import's own event
+    covers the apply, and this is the apply refusing to store a
+    combination the operator cannot see or have meant.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.db.models import Instrument as _Instrument
+
+    cleared = 0
+    rows = db.execute(
+        sa_select(_Instrument).where(
+            _Instrument.session_id == review_session.id
+        )
+    ).scalars()
+    for instrument in rows:
+        if instrument.rule_set_id is None:
+            continue
+        touched = set(instrument.band1_touched_links or [])
+        if {"link1", "link2", "link3"} <= touched:
+            continue
+        rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+        if rule_set is not None and rule_set.exclude_self_reviews:
+            rule_set.exclude_self_reviews = False
+            cleared += 1
+    if cleared:
+        db.flush()
+    return cleared
+
+
 def resolve_exclude_self_reviews(
     *,
     instrument: Instrument,
@@ -290,10 +337,19 @@ def resolve_exclude_self_reviews(
     ``group_kind`` are current; ``previous_group_kind`` is the value
     read before those ran.
 
-    The reverse transition (group → individual) is deliberately NOT
-    cleared: it narrows what the flag drops rather than widening it,
-    so carrying the tick cannot surprise the operator with missing
-    rows. Raised for the author rather than decided here.
+    **The reverse transition (group → individual) needs no rule**, and
+    not because it is harmless: the Link 3 pill cycles
+    ``not_set → individual → group → not_set``, so it cannot reach
+    individual from group without passing through ``not_set`` —
+    which hides the control and clears the box on the way past
+    (author, 2026-09-14). The clearing is done by the *client* at that
+    intermediate step, so a save that arrives with the move already
+    complete carries no tick to clear.
+
+    That makes the cycle's shape load-bearing for this function's
+    completeness, which is why
+    ``test_link3_pill_cycle_cannot_go_group_to_individual`` pins it. A
+    cycle that ever allows the direct move needs a rule here.
     """
     touched = set(instrument.band1_touched_links or [])
     if not {"link1", "link2", "link3"} <= touched:

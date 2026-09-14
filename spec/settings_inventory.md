@@ -446,7 +446,7 @@ the rule tree.
 | `name` | `String(255)` | Snapshot name. Unique per session via `uq_session_rule_set_session_name`. |
 | `description` | `Text` | Snapshot description. |
 | `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE` — see `app/schemas/rules.py::Combinator`. |
-| `exclude_self_reviews` | `Boolean` | Vestigial — the engine layer hardcodes `excludeSelfReviews=False` regardless (project-wide policy; see `spec/assignments.md` "Self-review policy"). Every row is `False`: `_create_band1_rule_set` writes `False` on every save. |
+| `exclude_self_reviews` | `Boolean` | Operator-settable and load-bearing since 19O Item 1 — written by the Link 3 **Self reviews** checkbox and by this CSV. The rule *engine* still hardcodes `excludeSelfReviews=False` (project-wide policy; see `spec/assignments.md` "Self-review policy"), but the generator honors a `True` after the pair fan-out, so an imported `True` changes which rows generate. On import it is cleared for any instrument whose Band 1 has an unset Link, matching the save path — the control is hidden in that state, and a flag that is invisible must not be in force. |
 | `seed` | `Integer` | Global RNG seed for any RANDOM-strategy quota rule whose own selection seed is unset. |
 | `rules_json` | `JSON` | Serialised rule tree. Schema validated against `RuleSetSchema` in `app/schemas/rules.py`. Empty list = Full Matrix. |
 
