@@ -333,6 +333,20 @@ def _diff_one_instrument(
             if is_self_review(reviewer, reviewee):
                 self_review_groups.add((reviewer.id, key))
 
+    # Per-instrument self-review exclusion (19O Item 1 rung 3). Honoured
+    # HERE, after the engine's fan-out, and deliberately not at the
+    # rule-engine desugar stage: by this point ``self_review_groups``
+    # already knows whole-group membership, so a group-scoped
+    # instrument drops the whole group rather than just the ``(R, R)``
+    # pair. The desugar stage cannot — it filters pairs before group
+    # composition, which is the recorded reason
+    # ``RuleSetOptions.excludeSelfReviews`` stays pinned ``False``
+    # (``spec/assignments.md`` "Self-review policy").
+    exclude_self = bool(
+        session_rule_set is not None
+        and session_rule_set.exclude_self_reviews
+    )
+
     # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
     # — the same tuple ``uq_assignment_unique`` enforces.
     new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
@@ -344,6 +358,14 @@ def _diff_one_instrument(
             ) in self_review_groups
         else:
             is_self = is_self_review(reviewer, reviewee)
+        if is_self and exclude_self:
+            # Omitted from ``new_pairs`` entirely, not written with
+            # ``include=False``: the operator asked for no such row.
+            # An existing row therefore falls into ``to_delete`` and
+            # takes its ``Response`` rows with it — counted by
+            # ``responses_deleted`` below and confirmed on the Prepare
+            # card before anything is written.
+            continue
         pair_include = (
             review_session.self_reviews_active if is_self else True
         )

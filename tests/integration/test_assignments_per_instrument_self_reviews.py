@@ -25,6 +25,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    SessionRuleSet,
     User,
 )
 from app.services import assignments as assignments_service
@@ -435,3 +436,127 @@ def test_self_review_pill_class_tracks_checkbox_state(
     )[0][-80:]
     assert "pill-warning" in unticked_pill
     assert "pill-info" not in unticked_pill
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 1 rung 4 — "Excluded by rule" in place of a bare 0.
+# --------------------------------------------------------------------- #
+
+
+def _pin_rule_set(
+    db: Session, *, review_session, instrument, exclude: bool, name: str
+) -> SessionRuleSet:
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name=name,
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=exclude,
+        seed=None,
+        rules_json=[],
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    return rule_set
+
+
+def test_excluded_by_rule_distinguishes_none_exist_from_none_possible(
+    db: Session,
+) -> None:
+    """Two instruments both show ``self_review_total == 0``. Only the
+    one whose rule excludes self-reviews reads *"Excluded by rule"*.
+
+    That is the whole point of the flag on this cell: *no self-pairs in
+    the roster* and *self-pairs deliberately not generated* are
+    different facts, and a bare ``0`` renders them identically.
+    """
+    user, review_session, inst_a, inst_b, alice_r, alice_e = (
+        _seed_multi_instrument(db, code="sr-excl")
+    )
+    _pin_rule_set(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        exclude=True,
+        name="Excluding",
+    )
+    _pin_rule_set(
+        db,
+        review_session=review_session,
+        instrument=inst_b,
+        exclude=False,
+        name="Permitting",
+    )
+
+    ctx = build_assignments_page_context(db, review_session)
+    by_id = {b.instrument_id: b for b in ctx.status_blocks}
+
+    assert by_id[inst_a.id].self_review_total == 0
+    assert by_id[inst_b.id].self_review_total == 0
+    assert by_id[inst_a.id].self_review_excluded_by_rule is True
+    assert by_id[inst_b.id].self_review_excluded_by_rule is False
+
+
+def test_excluded_by_rule_is_false_while_rows_still_exist(
+    db: Session,
+) -> None:
+    """Flag set but not yet regenerated: the rows are still there and
+    still toggleable, so the cell keeps its real count and its
+    checkbox rather than claiming an exclusion that has not happened.
+
+    The plan assumed the count is always ``0`` when the flag is set.
+    Between ticking the box and the next Generate it is not.
+    """
+    user, review_session, inst_a, inst_b, alice_r, alice_e = (
+        _seed_multi_instrument(db, code="sr-excl-pending")
+    )
+    _pin_rule_set(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        exclude=True,
+        name="Excluding",
+    )
+    _self_review(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        reviewer=alice_r,
+        reviewee=alice_e,
+        include=True,
+    )
+
+    ctx = build_assignments_page_context(db, review_session)
+    block = {b.instrument_id: b for b in ctx.status_blocks}[inst_a.id]
+    assert block.self_review_total == 1
+    assert block.self_review_excluded_by_rule is False
+
+
+def test_excluded_by_rule_does_not_leak_across_unpinned_instruments(
+    db: Session,
+) -> None:
+    """An instrument with no rule set must read ``False``, even when
+    the instrument before it in the loop is flagged.
+
+    The builder binds ``rule_row`` inside an ``if``; without an
+    ``else`` binding it keeps the previous iteration's value and an
+    unpinned instrument inherits the last pinned one's rule set.
+    """
+    user, review_session, inst_a, inst_b, alice_r, alice_e = (
+        _seed_multi_instrument(db, code="sr-excl-leak")
+    )
+    _pin_rule_set(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        exclude=True,
+        name="Excluding",
+    )
+    assert inst_b.rule_set_id is None
+
+    ctx = build_assignments_page_context(db, review_session)
+    by_id = {b.instrument_id: b for b in ctx.status_blocks}
+    assert by_id[inst_a.id].self_review_excluded_by_rule is True
+    assert by_id[inst_b.id].self_review_excluded_by_rule is False

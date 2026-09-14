@@ -65,6 +65,16 @@ class InstrumentStatusBlock:
       indeterminate via inline JS.
     - ``self_review_toggle_url`` — POST target for the Self
       review checkbox's bulk-flip form.
+    - ``self_review_excluded_by_rule`` — the instrument's rule set
+      carries ``exclude_self_reviews`` AND no self-review rows
+      remain, so the Self review cell reads *"Excluded by rule"*
+      rather than a bare ``0`` (19O Item 1 rung 4). *None exist*
+      and *none kept* are different facts and must not share a
+      rendering. **Both halves are required**: with the flag set
+      but rows still present — ticked, not yet regenerated — the
+      cell keeps showing the real count and its checkbox, because
+      those rows do exist and are still toggleable. The stale
+      badge is what says a regenerate would remove them.
     - ``included_count`` — generated rows on this instrument with
       ``include=True``. Drives the **Included** column pill on the
       Assignments page status table; lags ``generated_count`` when
@@ -90,6 +100,7 @@ class InstrumentStatusBlock:
     self_review_active_count: int
     self_review_checkbox_state: str
     self_review_toggle_url: str
+    self_review_excluded_by_rule: bool
     is_stale: bool
     edit_url: str
 
@@ -204,6 +215,10 @@ def build_assignments_page_context(
             rule_row = rule_set_rows.get(rule_id)
             rule_name = rule_row.name if rule_row is not None else None
         else:
+            # Bind it on this branch too: without it ``rule_row`` keeps
+            # the PREVIOUS iteration's value, and an unpinned
+            # instrument would read the last pinned one's rule set.
+            rule_row = None
             rule_name = None
         generated_count = generated_by_instrument.get(instrument.id, 0)
         included_count = included_by_instrument.get(instrument.id, 0)
@@ -240,6 +255,11 @@ def build_assignments_page_context(
                 self_review_toggle_url=(
                     f"/operator/sessions/{review_session.id}"
                     f"/assignments/{instrument.id}/self-reviews/active"
+                ),
+                self_review_excluded_by_rule=bool(
+                    sr_total == 0
+                    and rule_row is not None
+                    and rule_row.exclude_self_reviews
                 ),
                 is_stale=is_stale,
                 edit_url=(

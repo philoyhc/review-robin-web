@@ -461,9 +461,18 @@ behind. Writes emit
 session.
 
 The checkbox is inert with the rest of the Band 1 grid while the card is
-locked. **It records intent only** until the engine honors it (19O Item
-1 rung 3); see `spec/assignments.md` § *Self-review policy* for the three
-layers that currently keep the rule engine ignoring the column.
+locked.
+
+**It takes effect at the next Generate**, not on save — the generator
+honors it at the `pair_include` branch, after the engine's pair
+fan-out, so a group-scoped instrument drops the reviewer's whole group
+rather than one `(R, R)` pair. On an instrument that has already
+generated, this **deletes** the self-review rows and their saved
+responses; the reconcile dry-run counts them and the Prepare card
+confirms before anything is written. See `spec/assignments.md`
+§ *Self-review policy* for why the exclusion is honored there rather
+than at the rule engine's desugar stage, which still never drops a
+self-pair.
 
 #### Pill-driven state machine
 
