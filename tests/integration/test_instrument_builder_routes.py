@@ -7532,3 +7532,134 @@ def test_preview_sample_exclusion_keys_like_the_generator(
         "Sam and Zoe share one pair-context group and Sam is in it, so "
         "the whole group is excluded and no sample remains"
     )
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 2 — the self-review control's heading and live copy.
+# --------------------------------------------------------------------- #
+
+
+def _instrument_card(body: str, instrument_id: int) -> str:
+    """The slice of the Instruments page belonging to ONE card.
+
+    Every new-model card renders its own copy of the self-review
+    control, so an unscoped ``body.index`` finds whichever card comes
+    first — which has now produced a wrong-but-passing assertion twice
+    in this file. Scope first, assert second.
+    """
+    start = body.index(f'id="instrument-{instrument_id}"')
+    nxt = body.find('id="instrument-', start + 1)
+    return body[start:] if nxt == -1 else body[start:nxt]
+
+
+def test_self_review_control_has_a_heading(
+    client: TestClient, db: Session
+) -> None:
+    """The control carries the heading "Self reviews".
+
+    Item 1 chose the ``.col-divider`` to say *this is a second thing in
+    this column*; a heading is the other half of that sentence, and
+    without it what the divider separates is left to inference.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-heading")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _instrument_card(body, new_model.id)
+    divider = card.index('<hr class="col-divider">')
+    heading = card.index("Self reviews")
+    checkbox = card.index('name="exclude_self_reviews"')
+    assert divider < heading < checkbox, (
+        "the heading belongs between the divider and the checkbox"
+    )
+
+
+def test_self_review_copy_matches_the_persisted_unit_of_review(
+    client: TestClient, db: Session
+) -> None:
+    """On load, the sentence matches the saved Link 3 mode — and the
+    grouped one is the author's wording, not a noun swapped into the
+    individual sentence.
+
+    *The reviewer is in the group* is the actual test on a grouped
+    instrument; "the group reviewed is the reviewer" describes
+    something that cannot happen.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-copy")
+
+    def _copy() -> str:
+        """The span's TEXT, not the element source.
+
+        The element also carries both sentences as ``data-copy-*``
+        attributes for the pill handler, so asserting over the raw
+        markup would pass in either mode — which is how the first
+        version of this test passed without proving anything.
+        """
+        card = _instrument_card(
+            client.get(
+                f"/operator/sessions/{review_session.id}"
+                f"/instruments?editing={new_model.id}"
+            ).text,
+            new_model.id,
+        )
+        start = card.index("data-new-model-self-review-copy")
+        opening_end = card.index(">", start)
+        return card[opening_end + 1 : card.index("</span>", opening_end)]
+
+    assert "Exclude if the individual reviewed is the reviewer" in _copy()
+    assert "in the group being reviewed" not in _copy()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(
+            link3_mode="grouped",
+            link3_boundary="reviewee.tag1",
+            link3_touched="true",
+        ),
+        follow_redirects=False,
+    )
+    rendered = _copy()
+    assert "Exclude if the reviewer is in the group being reviewed" in rendered
+    assert "the individual reviewed" not in rendered
+
+
+def test_self_review_copy_carries_both_spellings_for_the_pill(
+    client: TestClient, db: Session
+) -> None:
+    """Both sentences ride on the element so the pill handler can swap
+    them without a save.
+
+    The bug this fixes: the pill cycles client-side and rewrites its own
+    label, the builder's dimming and the hidden ``link3_mode`` input,
+    but the copy was rendered server-side from the *persisted*
+    ``group_kind`` — so between cycling to *Group using tags* and
+    saving, the control described the opposite of what the operator
+    had just selected.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-live")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _instrument_card(body, new_model.id)
+    start = card.index("data-new-model-self-review-copy")
+    element = card[start : start + 600]
+    assert (
+        'data-copy-individual="Exclude if the individual reviewed '
+        'is the reviewer"' in element
+    )
+    assert (
+        'data-copy-group="Exclude if the reviewer is in the group '
+        'being reviewed"' in element
+    )
+    # And the handler that owns every other live consequence of the
+    # pill must be the one that swaps them — not a second listener.
+    handler = body[
+        body.index("window.newModelToggleUnitMode") :
+    ]
+    handler = handler[: handler.index("window.newModel", 40)]
+    assert "data-new-model-self-review-copy" in handler
+    assert "data-copy-group" in handler
+

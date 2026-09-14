@@ -443,12 +443,27 @@ other card names); the three Link labels below are unbold.
 #### Self-review exclusion (Link 3 column, below the rule)
 
 The Link 3 column carries one control that is **not** a unit-of-review
-setting: a checkbox reading *"Exclude if the individual / group reviewed
-is the reviewer"*, where the noun follows the Link 3 mode. It sits here
-for space alone, and a horizontal `.col-divider` rule — the sibling of
-the 1px vertical rules between the three columns — separates it from the
-unit-of-review controls above so it does not read as a third Link 3
-state.
+setting. It sits here for space alone, and says so twice: a horizontal
+`.col-divider` rule — the sibling of the 1px vertical rules between the
+three columns — separates it from the unit-of-review controls above, and
+its own heading **Self reviews** names it, so it does not read as a third
+Link 3 state. The heading takes the unbold weight of the three Link
+labels; bold belongs to the card title.
+
+**The checkbox copy follows the Link 3 pill, live.** Two whole
+sentences, not one with a swapped noun:
+
+| Link 3 mode | Label |
+|---|---|
+| Individual, or `Not set` | *Exclude if the individual reviewed is the reviewer* |
+| Group using tags | *Exclude if the reviewer is in the group being reviewed* |
+
+`Not set` takes the individual sentence because that is the `link3_mode`
+value it submits. Both spellings ride on the element as `data-copy-*`
+attributes and `newModelToggleUnitMode` swaps them as the pill cycles —
+the handler that already owns every other live consequence of the pill,
+so the control cannot describe the opposite of what the operator has
+just selected while the card is unsaved.
 
 It reads and writes `session_rule_sets.exclude_self_reviews` for the
 instrument's pinned rule set. **Default off.** An instrument whose Band 1

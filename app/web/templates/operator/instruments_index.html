@@ -1207,19 +1207,30 @@
                rest of the Band 1 grid while the card is locked — the
                ``data-lock-region`` wrapper covers it.
 
-               The label follows the Link 3 mode: "individual" or
-               "group", so the copy names what would actually be
-               dropped. No engine change until rung 3; the checkbox
-               only persists intent today. #}
+               19O Item 2 — the copy follows the Link 3 pill LIVE.
+               Both sentences ride on ``data-`` attributes and
+               ``newModelToggleUnitMode`` swaps them as it cycles, so
+               the control never describes the opposite of what the
+               operator has just selected. They are two whole
+               sentences rather than one with a swapped noun: on a
+               grouped instrument the test is that the reviewer is IN
+               the group, which the individual phrasing cannot say.
+               ``not_set`` reads as individual, matching the
+               ``link3_mode`` value that would actually be saved. #}
             <hr class="col-divider">
+            <h4 style="margin: 0 0 8px 0; font-weight: normal;">Self reviews</h4>
             <label style="display: flex; align-items: flex-start; gap: 8px;
                           font-size: 0.9rem; color: var(--text-body);">
               <input form="dfsave-{{ instrument.id }}" type="checkbox"
                      name="exclude_self_reviews" value="true"
                      style="margin-top: 2px; flex-shrink: 0;"
                      {% if _link3_state.exclude_self_reviews %}checked{% endif %}>
-              <span>Exclude if the {{ "group" if _link3_grouped else "individual" }}
-                reviewed is the reviewer</span>
+              <span data-new-model-self-review-copy
+                    data-copy-individual="Exclude if the individual reviewed is the reviewer"
+                    data-copy-group="Exclude if the reviewer is in the group being reviewed"
+                    >{{ "Exclude if the reviewer is in the group being reviewed"
+                        if (_link3_touched and _link3_grouped)
+                        else "Exclude if the individual reviewed is the reviewer" }}</span>
             </label>
           </div>
         </div>
@@ -1424,6 +1435,21 @@
             btn.classList.remove('is-unset');
             btn.classList.add('is-selected');
             if (touchedInput) { touchedInput.value = 'true'; }
+          }
+          // 19O Item 2 — the self-review exclusion copy names what
+          // would be dropped, so it follows the pill rather than the
+          // persisted mode. Rewritten here, in the handler that
+          // already owns every live consequence of the pill, rather
+          // than by a second listener on the same event. ``not_set``
+          // takes the individual sentence because that is the
+          // ``link3_mode`` value it submits.
+          var selfReviewCopy = wrap.querySelector(
+            '[data-new-model-self-review-copy]'
+          );
+          if (selfReviewCopy) {
+            selfReviewCopy.textContent = selfReviewCopy.getAttribute(
+              next === 'group' ? 'data-copy-group' : 'data-copy-individual'
+            );
           }
           // Band 2's preview depends on the unit-of-review mode —
           // refresh its pill enabled-state and rebuild the preview
