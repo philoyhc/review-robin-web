@@ -12,8 +12,8 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ## Item 4 — The Reviewers page moves to the lobby's expander idiom
 
-Pilot for `guide/roster_expander_revamp_handoff.md` (Variants A + B, Reviewers
-only) — the presentation half of `guide/new_ux_ideas.md` §1, minus consolidation.
+Pilot for `guide/roster_expander_revamp_handoff.md` — **Variant B on Reviewers**,
+the presentation half of `guide/new_ux_ideas.md` §1, minus consolidation.
 
 ### Opportunity
 
@@ -28,15 +28,20 @@ The author's target: **retire all three** into a roster-level Unlock expander.
 
 ### Decision
 
-**Variant A then B, on Reviewers only**, reusing `base.html`'s
+**Variant B on Reviewers, targeted directly** — author's call, not staged
+behind a shippable Variant A. B contains A, so the row expander still lands;
+it simply is not a milestone of its own. Reuse `base.html`'s
 `.session-expander*` / `tr.session-row-selected` rather than reinventing the
-marking. B adds a one-row roster index whose **Unlock** expander absorbs all three
+marking. The one-row roster index and its **Unlock** expander absorb all three
 cards, which are then deleted.
 
-**The expander renders each roster's own action set.** A shared helper taking
-an action list is fine; one hard-coding a list is not — Observers has a fourth
-action (`cohort-rule`) and no labels editor, so a fixed list is the "list
-someone must remember to extend" that 19N.1 inverted its test to escape.
+*The trade:* staging A would leave a shipped fallback if B's surface is wrong.
+Rung 1 answers that instead — the whole shape, inert, looked at before wiring.
+
+**The expander renders each roster's own action set** — a helper taking an
+action list, not one hard-coding it. Observers has a fourth action
+(`cohort-rule`) and no labels editor, so a fixed list is the "list someone must
+remember to extend" that 19N.1 inverted its test to escape.
 
 **The Unlock gate extends the page's existing `edit_mode`**, not a ported
 `?editing=`. `session_reviewers.html:14` already computes
@@ -69,21 +74,22 @@ pages. Observers goes second, as 19O.5.
 
 - **2026-09-14.** Reviewers only; Observers next as 19O.5, so the divergence is
   proven before the mechanical pages are touched.
+- **2026-09-14.** **No Variant-A milestone** — author's call. A shipped
+  row-expander-only step would have to be un-shipped by B's index row two
+  slices later, and the handoff's case for A standing alone assumes the cards
+  stay, which here they do not.
 - **2026-09-14.** All three cards are **deleted**, not hidden behind a flag —
   author's call, confirming what `guide/new_ux_ideas.md:67-76` already put in
   the roster row. A flag leaves two live surfaces for one action.
 - **2026-09-14.** `.session-row-selected` is promoted past "**Not a general
-  primitive**" (`spec/ui_elements.md:592`), which deliberately withheld the
-  transfer and named a Rosters index as the speculative third caller. This is
-  that caller arriving. `guide/new_ux_ideas.md:270-279` names the edge it was
-  not designed against — *the row can sit above a tall panel or scroll off* —
-  and Variant B puts `delete-all` inside exactly such a panel. Accepting the
-  transfer is this item's call; the scroll-off edge is rung 2's to answer on
-  the dev slot, not a test's.
-- **2026-09-14.** **No Download.** The handoff's Unlock panel carries one; the
-  Reviewers page has no download control (`grep -cin 'download\|export'` → 0)
-  — the roster CSV lives on Extract data (`_extracts.py:108`). Adding it here
-  would be a new capability, which this item excludes.
+  primitive**" (`spec/ui_elements.md:592`), which withheld the transfer and
+  named a Rosters index as the speculative third caller — this is that caller.
+  The edge it was not designed against (`new_ux_ideas.md:270-279`: *the row can
+  sit above a tall panel or scroll off*) is live here, since Unlock is such a
+  panel; rung 1 answers it on the dev slot, not in a test.
+- **2026-09-14.** **No Download.** The handoff's Unlock panel has one; this page
+  has none (`grep -cin 'download\|export'` → 0) — the roster CSV is on Extract
+  data (`_extracts.py:108`). Adding it would be a new capability.
 
 ### Blast radius (measured)
 
@@ -101,9 +107,9 @@ At `46688cb`:
 - `grep -c 'session-expander\|session-row-selected' base.html` → **18**;
   `#single-session-expander` (`sessions_list.html:185`) and `#bulk-expander`
   (`:243`) carry live `formaction`s — only the two `data-expander-delete`
-  buttons (`:237`, `:285`) are `disabled`, a two-stage gate. The template's own
-  comment (`:182-184`) still calls them placeholders and is **stale** since
-  `d2c8671`; that is where the handoff's error came from, and rung 1 fixes it.
+  buttons (`:237`, `:285`) are `disabled`, a two-stage gate. The template's
+  comment (`:182-184`) still calls them placeholders, **stale** since
+  `d2c8671` — the handoff's error came from there, and rung 1 fixes it.
 - `grep -rl 'reviewers/bulk-\|reviewers/delete-all\|danger-zone\|upload-csv'
   tests/ --include=*.py | wc -l` → **15**; narrowed to
   `reviewers/bulk-\|reviewers/delete-all` → **6**. The three this item moves
@@ -116,33 +122,32 @@ At `46688cb`:
 
 ### PR ladder
 
-1. **Scaffold (A).** The bracket + an injected expander rendered **inert** —
-   real actions, no wiring — beside the existing action row, which stays.
-   Also fixes `sessions_list.html:182-184`'s stale placeholder comment.
-   Must not touch `spec/`.
-2. **Wire A.** Row actions move into the expander, arity preserved, routes
-   unchanged; the action row leaves the card, which keeps the filter strip.
-   Must not touch `spec/`.
-3. **Scaffold (B).** One-row index + Unlock expander, inert, real copy. Bottom
-   cards still present. Must not touch `spec/`.
-4. **Wire B and retire the three cards.** Upload, Delete-all and the friendly
-   labels move into Unlock; `#upload-csv`, `.danger-zone` and the
+1. **Scaffold — the whole B surface, inert.** Bracket, row expander, one-row
+   index and Unlock panel, with real copy and layout and no wiring; the three
+   cards still present and still live. This is the slice that gets looked at
+   on the dev slot before anything moves. Also fixes
+   `sessions_list.html:182-184`'s stale placeholder comment. Must not touch
+   `spec/`.
+2. **Wire the row actions.** They move into the expander, arity preserved,
+   routes unchanged; the action row leaves the card, which keeps the filter
+   strip. Must not touch `spec/`.
+3. **Wire Unlock and retire the three cards.** Upload, Delete-all and the
+   friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
    Must not touch `spec/`.
-5. **The specs, last** — deliberately after the cold readers, so the pre-push
-   `spec-writer` pass is the final word. This is the ordering 19O.3's close
-   left untested. **The shared-shape problem is this rung's:**
-   `spec/setup_pages.md:47` and `:525` and `spec/operator_ui_concept.md:433`
-   state one body shape for all four pages, and this item changes one. Rung 5
-   states the new shape as the Reviewers shape and the old as the other three's,
-   naming 19O.5 as the next to move — it does **not** describe one shape.
+4. **The specs, last** — after the cold readers, so the pre-push `spec-writer`
+   pass is the final word; the ordering 19O.3's close left untested. **The
+   shared-shape problem is this rung's:** `setup_pages.md:47`, `:525` and
+   `operator_ui_concept.md:433` state one body shape for all four pages and
+   this item changes one, so rung 4 states **two** shapes — Reviewers' and the
+   other three's — naming 19O.5 as the next to move.
 
 ### Definition of done
 
 - The rendered page carries the bracket class and an expander node beneath the
-  anchor row, asserted server-side. *The suite has no JS runtime, so the tests
-  assert the mechanism — classes, markup, posted routes — not the appearance;
-  19L stated the same limit (`segment_19L_ux_refinements.md:207-209`).*
+  anchor row, asserted server-side. *No JS runtime in the suite, so tests assert
+  the mechanism — classes, markup, routes — not appearance; 19L stated the same
+  limit (`archive/segment_19L_ux_refinements.md:207-209`).*
 - `Edit` enabled at exactly one row, the other three at one or more, asserted.
 - `grep -c 'id="upload-csv"\|danger-zone\|_field_labels_editor'
   session_reviewers.html` → 0.
@@ -164,6 +169,7 @@ At `46688cb`:
 ### Out of scope
 
 - **Consolidating the four pages.** `guide/new_ux_ideas.md` §1; unchanged.
+- **A shippable Variant A.** Declined above; B contains it.
 - **The other three rosters.** Observers is 19O.5 and proves the divergence.
 - **New capabilities** — including **Download**, per the judgment call above.
 
