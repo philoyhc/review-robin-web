@@ -122,6 +122,23 @@ Two caveats belong beside that result. The reviewer's checklist was written afte
 
 **Trade-off.** The reader works when run, and "when run" is the honest qualifier. Both agents are invoked on request, not by a hook; six commit messages name `spec-writer` and five name `diff-reviewer`. A reader that is not run is a paragraph — and a reader that is run returns twelve findings on a thousand-line PR, which is a reading cost the author pays every time. Making the pass routine is the open item; making it cheap enough to *stay* routine is the constraint on how.
 
+**Annotated 2026-09-14.** "When run" was the honest qualifier and the
+honest answer turned out to be *not at all*. Measured on this date: since
+2026-09-06, **70** pull requests name `spec-writer` and **0** name
+`diff-reviewer`; across the last 180 commits, 33 non-merge commit messages
+name the first and none the second. Every pull request that has ever named
+`diff-reviewer` belongs to the 2026-09-04/05 arc that created it. So the
+reader validated retrospectively above has not read a diff since, and
+`spec-writer` — whose charter placed it **at a close** — became the de
+facto per-rung reader by default, which is what 19K.3 was really
+responding to when it moved that pass before the push. The two are now
+given separate cadences rather than one standing in for the other:
+`diff-reviewer` on every rung, `spec-writer` at the close and before a
+push only on the narrow cases in `CLAUDE.md` "Where work runs". *This
+paragraph's own open item is answered by naming the cadence, not by
+demonstrating it holds; whether the reader is now routinely run is a
+measurement for the next audit, made the same way.*
+
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
 
 **Decision.** Keep spec and code in agreement by scheduled whole-folder sweeps and dated snapshots rather than by a per-PR sync requirement. Thirteen dated codebase assessments have been written (twelve archived, 2026-05-09 → 2026-08-19, plus the current 2026-09-04 one), each auditing every functional area against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". Two whole-`spec/` sweeps (2026-05-11: 25 files, 10,224 lines touched; 2026-08-18) and a `docs/` sweep (2026-08-19) have run. Segment 19A exists to make the sweep a cadence rather than an event.

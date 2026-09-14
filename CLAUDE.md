@@ -215,6 +215,14 @@ reject it.
   (`ci.yml`) on every PR, alongside `ci-postgres.yml`, which
   round-trips the Alembic chain and runs the full suite against
   Postgres 16.
+- **Two cold readers, different cadences.** `diff-reviewer` runs on
+  every rung before the push — that is the maker ≠ checker gate
+  (`constitution.md` III) and it is not conditional. `spec-writer` runs
+  at the close (`segment-plan`, "Closing a segment" step 3), and before
+  a push only when the rung's diff touches a path the plan's `Doc
+  impact` names, touches `spec/`, or is the closing rung. Outside a
+  close `spec-writer` can only report, and a later rung can falsify
+  what an earlier pass verified.
 - End-to-end verification happens on the Azure dev slot after deploy,
   not in the agent's sandbox. When a change touches UI or anything
   the test suite can't exercise (templates, redirects, real auth),
