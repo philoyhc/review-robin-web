@@ -110,6 +110,40 @@ grep -rln "Exclude if the" app/ spec/ tests/ --include=*.py --include=*.html --i
   and wrong for the next one; both bounds now anchor on the card's opening
   `class="card" id="instrument-N"`.
 
+**Follow-up, 2026-09-14** — two behavior improvements the author asked for
+after Item 2 merged, logged here rather than as a third item: they are the
+same control and the same reasoning, and a plan per two-rule change is the
+shape the skill warns against.
+
+- **Hidden while any of the three Links is `Not set`**, and the stored flag
+  cleared in that state. An instrument with an unset Link has no settled
+  rule to except self-reviews *from*, and a flag left ticked behind a hidden
+  control is live at the next Generate while being invisible on the page.
+  Hidden as one unit — rule, heading, checkbox — because a lone divider
+  under nothing reads as a rendering fault.
+- **Cleared when Link 3 moves individual → group.** The two modes except
+  different things; a tick agreed against *the individual reviewed is the
+  reviewer* must not carry into *the reviewer is in the group being
+  reviewed*, which drops every member row of that group. Re-ticking is one
+  click; discovering a whole group went missing is not.
+
+Both enforced **server-side on save** (`resolve_exclude_self_reviews`), with
+the client clearing the box at the same moment so page and store agree — the
+visible half and the durable half, neither alone.
+
+**Raised, not decided:** the reverse transition (group → individual) is not
+cleared. It narrows what the flag drops rather than widening it, so carrying
+the tick cannot surprise the operator with missing rows — but it is the
+symmetric case and the author asked only for one direction.
+
+**It broke five of Item 1's tests, and they were right to break.** Their
+payload never sent the `*_touched` flags, so those instruments read as
+`Not set` on all three Links and the flag now correctly clears. "All" and
+"Not set" differ only by that bit, so the fixture had been describing an
+unconfigured instrument while claiming to test a configured one. The helper
+now sends them, with the reason in its docstring. All three rules are
+mutation-checked.
+
 ### PR ladder
 
 One PR: heading, both sentences, the handler rewrite, and its tests.

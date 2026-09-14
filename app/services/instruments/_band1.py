@@ -262,6 +262,50 @@ def parse_exclude_self_reviews_form(form: Any) -> bool:
     return str(form.get("exclude_self_reviews") or "").strip() == "true"
 
 
+def resolve_exclude_self_reviews(
+    *,
+    instrument: Instrument,
+    form_value: bool,
+    previous_group_kind: str | None,
+) -> bool:
+    """The value to store for the self-review exclusion, given what
+    the form carried and what the save just changed (19O Item 2
+    follow-up, author 2026-09-14).
+
+    Two cases force ``False`` regardless of the checkbox:
+
+    1. **Any of the three Links is "Not set".** The control is hidden
+       in that state, and what is hidden must also be false — a flag
+       ticked before a Link was unset would otherwise sit in storage,
+       invisible, and take effect at the next Generate. There is also
+       no settled rule to except self-reviews *from*.
+    2. **The unit of review just moved individual → group.** The two
+       modes except different things. A tick agreed against *the
+       individual reviewed is the reviewer* must not carry silently
+       into *the reviewer is in the group being reviewed*, which on a
+       grouped instrument drops every member row of that group.
+
+    Call **after** ``set_band1_assignment_rules`` and
+    ``set_unit_of_review``, so ``band1_touched_links`` and
+    ``group_kind`` are current; ``previous_group_kind`` is the value
+    read before those ran.
+
+    The reverse transition (group → individual) is deliberately NOT
+    cleared: it narrows what the flag drops rather than widening it,
+    so carrying the tick cannot surprise the operator with missing
+    rows. Raised for the author rather than decided here.
+    """
+    touched = set(instrument.band1_touched_links or [])
+    if not {"link1", "link2", "link3"} <= touched:
+        return False
+    moved_to_group = (
+        previous_group_kind is None and instrument.group_kind is not None
+    )
+    if moved_to_group:
+        return False
+    return form_value
+
+
 def get_exclude_self_reviews(db: Session, instrument: Instrument) -> bool:
     """Read the instrument's self-review exclusion flag.
 

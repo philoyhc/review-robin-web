@@ -140,6 +140,7 @@ from ._band1 import (
     parse_band1_form,
     parse_exclude_self_reviews_form,
     parse_link3_form,
+    resolve_exclude_self_reviews,
     set_band1_assignment_rules,
     set_exclude_self_reviews,
 )
@@ -188,6 +189,7 @@ __all__ = [
     "parse_band1_form",
     "parse_exclude_self_reviews_form",
     "parse_link3_form",
+    "resolve_exclude_self_reviews",
     "set_band1_assignment_rules",
     "set_exclude_self_reviews",
     "set_unit_of_review",

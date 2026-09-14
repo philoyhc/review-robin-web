@@ -7139,9 +7139,21 @@ def _new_model_for(client: TestClient, db: Session, code: str):
 
 
 def _band1_payload(**overrides) -> dict:
-    """Minimal Band 1 save payload: both links in All mode, Link 3
-    Individual. Overrides merge on top."""
+    """Minimal Band 1 save payload for a CONFIGURED instrument: both
+    links in All mode, Link 3 Individual, and all three pills clicked
+    out of "Not set". Overrides merge on top.
+
+    The ``*_touched`` flags are load-bearing, not noise. "All" and
+    "Not set" differ only by the touched bit, and since 19O Item 2's
+    follow-up an instrument with any Link unset stores
+    ``exclude_self_reviews=False`` regardless of the checkbox — so a
+    payload without them describes an unconfigured instrument and
+    cannot exercise the flag at all.
+    """
     payload = {
+        "link1_touched": "true",
+        "link2_touched": "true",
+        "link3_touched": "true",
         "link1_mode": "all",
         "link1_combinator": "AND",
         "link1_field": "",
@@ -7670,3 +7682,187 @@ def test_self_review_copy_carries_both_spellings_for_the_pill(
     assert "data-new-model-self-review-copy" in handler
     assert "data-copy-group" in handler
 
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 2 follow-up — hide + clear while any Link is "Not set", and
+# clear on an individual → group move.
+# --------------------------------------------------------------------- #
+
+
+def _self_review_block(body: str, instrument_id: int) -> str:
+    card = _instrument_card(body, instrument_id)
+    start = card.index("data-new-model-self-review-block")
+    return card[start : card.index("</div>", start)]
+
+
+def test_self_review_block_is_hidden_until_all_three_links_are_set(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument with any Link on "Not set" has no settled rule to
+    except self-reviews from, so the whole block — rule, heading and
+    checkbox — is hidden.
+
+    Hidden as one unit: a lone divider under nothing reads as a
+    rendering fault.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-hide")
+
+    def _block() -> str:
+        return _self_review_block(
+            client.get(
+                f"/operator/sessions/{review_session.id}"
+                f"/instruments?editing={new_model.id}"
+            ).text,
+            new_model.id,
+        )
+
+    # Fresh new-model instrument: all three pills are "Not set".
+    assert "display: none" in _block()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(),
+        follow_redirects=False,
+    )
+    assert "display: none" not in _block()
+
+    # Put one Link back to "Not set" — the block goes with it.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(link2_touched="false"),
+        follow_redirects=False,
+    )
+    assert "display: none" in _block()
+
+
+def test_unset_link_clears_the_stored_flag(
+    client: TestClient, db: Session
+) -> None:
+    """What is hidden is also false in storage.
+
+    Otherwise a flag ticked while the Links were set would sit in the
+    rule set after one was unset — invisible on the page and live at
+    the next Generate.
+    """
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-clear")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # Unset Link 1 while still submitting a ticked box.
+    client.post(
+        url,
+        data=_band1_payload(
+            link1_touched="false", exclude_self_reviews="true"
+        ),
+        follow_redirects=False,
+    )
+    db.refresh(rule_set)
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_moving_individual_to_group_clears_the_flag(
+    client: TestClient, db: Session
+) -> None:
+    """The two modes except different things, so the tick does not
+    carry across the move.
+
+    A tick agreed against *the individual reviewed is the reviewer*
+    would otherwise become *the reviewer is in the group being
+    reviewed*, which drops every member row of that group. Re-ticking
+    is one click; discovering a whole group went missing is not.
+    """
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-togroup")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    assert new_model.group_kind is None
+
+    client.post(
+        url,
+        data=_band1_payload(
+            link3_mode="grouped",
+            link3_boundary="reviewee.tag1",
+            exclude_self_reviews="true",
+        ),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    db.refresh(rule_set)
+    assert new_model.group_kind == "r1"
+    assert rule_set.exclude_self_reviews is False, (
+        "a tick agreed for the individual rule must not silently "
+        "become the group rule"
+    )
+
+
+def test_staying_in_group_mode_keeps_the_flag(
+    client: TestClient, db: Session
+) -> None:
+    """The clear is the individual → group *transition*, not grouped
+    mode itself — otherwise the flag could never be set on a grouped
+    instrument at all."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-stay")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    grouped = dict(link3_mode="grouped", link3_boundary="reviewee.tag1")
+    client.post(url, data=_band1_payload(**grouped), follow_redirects=False)
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true", **grouped),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+
+def test_both_pill_handlers_sync_the_self_review_block(
+    client: TestClient, db: Session
+) -> None:
+    """Visibility follows the pills live, from one shared function.
+
+    Both handlers call it: the rule is one rule, so it has one
+    implementation rather than a copy in each.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-sync")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert "window.newModelSyncSelfReviewBlock" in body
+    for handler in ("newModelToggleRuleMode", "newModelToggleUnitMode"):
+        start = body.index(f"window.{handler} =")
+        scope = body[start : body.index("};", start)]
+        assert "newModelSyncSelfReviewBlock(btn)" in scope, (
+            f"{handler} must sync the block"
+        )
