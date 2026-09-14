@@ -1197,6 +1197,30 @@
                 {% endfor %}
               </div>
             </div>
+            {# 19O Item 1 rung 2 — the self-review exclusion checkbox.
+               It lives in this column for space, NOT because it is a
+               unit-of-review setting (author, 2026-09-14); the
+               ``.col-divider`` rule above it is what says so, and is
+               the horizontal sibling of the 1px separators between
+               the three link columns. It reads / writes
+               ``SessionRuleSet.exclude_self_reviews``. Inert with the
+               rest of the Band 1 grid while the card is locked — the
+               ``data-lock-region`` wrapper covers it.
+
+               The label follows the Link 3 mode: "individual" or
+               "group", so the copy names what would actually be
+               dropped. No engine change until rung 3; the checkbox
+               only persists intent today. #}
+            <hr class="col-divider">
+            <label style="display: flex; align-items: flex-start; gap: 8px;
+                          font-size: 0.9rem; color: var(--text-body);">
+              <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                     name="exclude_self_reviews" value="true"
+                     style="margin-top: 2px; flex-shrink: 0;"
+                     {% if _link3_state.exclude_self_reviews %}checked{% endif %}>
+              <span>Exclude if the {{ "group" if _link3_grouped else "individual" }}
+                reviewed is the reviewer</span>
+            </label>
           </div>
         </div>
       </div>

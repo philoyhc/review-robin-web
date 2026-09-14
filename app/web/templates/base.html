@@ -430,6 +430,17 @@
       ul, ol, dl { margin: 0 0 6px 0; }
       li { margin-bottom: 2px; }
       .table-scroll { overflow-x: auto; }
+      /* Horizontal sibling of the 1px column separator used between
+         the Band 1 link columns. Separates a control that shares a
+         column with another for space reasons, rather than because
+         it belongs to it (19O Item 1 — the self-review exclusion
+         checkbox under Link 3). Matches the vertical rule's
+         ``--border-default`` so the two read as one system. */
+      .col-divider {
+        border: 0;
+        border-top: 1px solid var(--border-default);
+        margin: 16px 0 12px 0;
+      }
       .pill.pill-handle {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         background: var(--surface-muted);

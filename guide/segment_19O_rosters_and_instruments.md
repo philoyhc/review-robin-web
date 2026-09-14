@@ -127,6 +127,18 @@ Rejected:
 - **The checkbox writes no predicate** (2026-09-14). It is not sugar over a
   rule the operator could have written, so composing one would misdescribe
   it in the readback.
+- **Turning the flag ON materializes an empty rule set; turning it OFF with
+  no rule set is a no-op** (2026-09-14, rung 2). Band 1 only creates a
+  `SessionRuleSet` once a Link 1 / Link 2 rule exists, so an untouched
+  instrument has nowhere to store the flag. An empty rule set is
+  output-identical to the synthetic Full Matrix schema, so this costs no
+  assignment row — verified: the `revision_seed` difference is read only
+  inside the quota-rule loop, which an empty rule set never enters. Not
+  creating a row for an OFF write keeps untouched instruments clean, since
+  `False` is the default and records nothing.
+- **The checkbox label follows the Link 3 mode** (2026-09-14, rung 2):
+  "individual" or "group", so the copy names what would actually be
+  dropped.
 
 ### Blast radius (measured)
 
@@ -204,6 +216,56 @@ deferring to the item close: `spec/assignments.md` layer 2 said the column
 Narrowed to state what layer 2 actually guarantees (the engine ignores the
 column) without touching the three-layer contract itself.
 
+**Rung 2 landed 2026-09-14.** The control, the `.col-divider` class in
+`base.html`, the two save sites, and the spec section. Two things the
+ladder did not anticipate:
+
+- **Storage had a hole.** An instrument with untouched Band 1 has
+  `rule_set_id = NULL` and no row to hold the flag — and that is exactly
+  the instrument most likely to want it, since Full Matrix generates every
+  self-pair. Resolved by the judgment call above.
+- **`base.html` is a generated-tool source.** Adding the class desynced
+  `tools/theme_preview.html` and `tools/theme_customizer.html`, caught by
+  `test_generated_tools_are_current`. Regenerated with their own
+  generators, as that test's docstring requires.
+
+Also corrected here: `_generate.py`'s policy comment still said the column
+"is already backfilled / kept at `False` by the Band 1 save path", which
+rung 1 falsified, and still cited the unreachable Link-rule workaround with
+the wrong field spelling.
+
+**Two side effects the rung-2 framing missed**, found by the
+`spec-writer` pass and fixed here:
+
+- **A rule set could be created with no `session_rule_set.created`
+  event.** `_create_band1_rule_set` emits nothing itself — its other
+  caller emits the event after it returns — so the checkbox's
+  materialize path had to as well. Now does, with a test.
+- **It invalidates a validated session, and that needed saying.**
+  `session_lifecycle.invalidate_if_validated` names the
+  visibility-when-closed services as deliberate non-callers, because a
+  display flag is outside the validation snapshot. This flag is not a
+  display flag — it is an assignment-rule input whose only purpose is to
+  change which rows generate — so it invalidates from the rung that
+  ships the control rather than the rung that honors it. Otherwise a
+  session validated between rungs 2 and 3 would carry a setting its
+  snapshot never saw.
+
+**Two stale `spec/assignments.md` passages fixed.** §*Where the rule
+lives* said no `SessionRuleSet` is materialized when both Links are
+`all` — rung 2 falsifies that, since the checkbox materializes one with
+no Link rule at all. And the *Self-review policy* attribute list still
+called the column "vestigial", carrying `False` on every row — stale
+since rung 1, and contradicting a paragraph rung 1 corrected four
+sections above it in the same file.
+
+**`spec/ui_elements.md` added to *Doc impact* at build.** The plan named
+the two specs the behavior touches and missed the one the *primitive*
+touches: `.col-divider` is a new `base.html` class, and §10 is where those
+are recorded. Nothing enforces that, which is why it was missable — the
+convention lives in `CLAUDE.md` and in §10's own completeness, not in a
+check.
+
 ### PR ladder
 
 1. **Unpin the existing flag.** No migration: drop the
@@ -270,5 +332,6 @@ Rung 3 must not touch `RuleSetOptions`, `_session_rule_set_to_schema` or
 
 - `spec/assignments.md` — § *Self-review policy* gains the shortcut as a supported affordance, drops the unreachable Link-rule claim, and reconciles its "enforced in three layers" paragraph (Item 1).
 - `spec/instruments.md` — the Link 3 / *Unit of review* material gains the control and its interaction with Generate (Item 1).
+- `spec/ui_elements.md` — §10 gains the `.col-divider` primitive the control is separated by (Item 1).
 - `guide/deferred_consolidated.md` — the Part A entry is lifted into this plan and deleted (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).

@@ -7118,3 +7118,226 @@ def test_19h2_discard_reload_is_shared_by_cancel_and_lock(
     # And the two behaviours the discard must not lose.
     assert "window._newModelIntentionalNav = true;" in body
     assert "window.newModelCaptureOpenState();" in body
+
+
+def _new_model_for(client: TestClient, db: Session, code: str):
+    """Add a new-model instrument to a fresh session and return it."""
+    review_session = _make_session(client, db, code=code)
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    return review_session, new_model
+
+
+def _band1_payload(**overrides) -> dict:
+    """Minimal Band 1 save payload: both links in All mode, Link 3
+    Individual. Overrides merge on top."""
+    payload = {
+        "link1_mode": "all",
+        "link1_combinator": "AND",
+        "link1_field": "",
+        "link1_op": "",
+        "link1_operand_value": "",
+        "link1_operand_tag": "",
+        "link2_mode": "all",
+        "link2_combinator": "AND",
+        "link2_field": "",
+        "link2_op": "",
+        "link2_operand_value": "",
+        "link2_operand_tag": "",
+        "link3_mode": "individual",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_exclude_self_reviews_checkbox_round_trips(
+    client: TestClient, db: Session
+) -> None:
+    """19O Item 1 rung 2. Ticking the Link 3 self-review checkbox
+    persists to ``SessionRuleSet.exclude_self_reviews``, and clearing
+    it persists the clear — the flag is no longer force-normalized on
+    save (rung 1)."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-trip")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # Unchecked: an HTML checkbox submits nothing, so the key is absent.
+    client.post(url, data=_band1_payload(), follow_redirects=False)
+    db.refresh(rule_set)
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument with untouched Band 1 carries ``rule_set_id =
+    NULL`` and has nowhere to store the flag. Turning it ON
+    materializes an EMPTY rule set — output-identical to the synthetic
+    Full Matrix schema the engine substitutes for NULL, so this
+    changes no assignment row."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-mat")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    # Empty = Full Matrix. A rule set materialized for the checkbox
+    # must not smuggle in content rules.
+    assert rule_set.rules_json == []
+
+
+def test_exclude_self_reviews_materialisation_is_audited(
+    client: TestClient, db: Session
+) -> None:
+    """Materializing a rule set from the checkbox emits
+    ``session_rule_set.created`` as well as the flag event.
+
+    ``_create_band1_rule_set`` writes no audit event of its own — its
+    other caller emits one after it returns — so without this the
+    checkbox could bring a ``SessionRuleSet`` row into existence with
+    no creation trail, unlike every other creation path.
+    """
+    from app.db.models import AuditEvent
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-audit")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    types = [
+        row.event_type
+        for row in db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id
+            )
+        ).scalars()
+    ]
+    assert "session_rule_set.created" in types
+    assert "session_rule_set.exclude_self_reviews_set" in types
+
+
+def test_exclude_self_reviews_off_leaves_no_empty_rule_set_behind(
+    client: TestClient, db: Session
+) -> None:
+    """Saving with the box unticked on an instrument that has no rule
+    set is a no-op: ``False`` is the default, so there is nothing to
+    record and no reason to leave an empty row behind."""
+    review_session, new_model = _new_model_for(client, db, "nm-esr-noop")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is None
+
+
+def test_exclude_self_reviews_does_not_yet_change_generation(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 2 persists intent only. The engine still ignores the
+    column — ``_session_rule_set_to_schema`` hardcodes
+    ``excludeSelfReviews=False`` until rung 3 — so the schema it
+    builds from a flagged rule set still allows self-reviews."""
+    from app.db.models import SessionRuleSet
+    from app.services.assignments._generate import (
+        _session_rule_set_to_schema,
+    )
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-inert")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    schema = _session_rule_set_to_schema(rule_set)
+    assert schema.options.excludeSelfReviews is False
+
+
+def test_exclude_self_reviews_checkbox_renders_under_a_divider(
+    client: TestClient, db: Session
+) -> None:
+    """The checkbox renders in the Link 3 column, separated from the
+    unit-of-review controls by the ``.col-divider`` rule — it shares
+    the column for space, not because it is a unit-of-review setting.
+    Checked state reflects storage."""
+    review_session, new_model = _new_model_for(client, db, "nm-esr-render")
+
+    def _card(body: str) -> str:
+        """The slice of the page belonging to THIS instrument's card.
+
+        Every new-model card on the page renders its own copy of the
+        control, so an unscoped ``body.index`` finds a sibling
+        instrument's checkbox — which is how the first version of this
+        test passed against the wrong card. Anchor on the card's own
+        ``dfsave-{id}`` form id.
+        """
+        marker = f'form="dfsave-{new_model.id}" type="checkbox"'
+        start = body.index(marker)
+        return body[start : start + 400]
+
+    def _page() -> str:
+        return client.get(
+            f"/operator/sessions/{review_session.id}"
+            f"/instruments?editing={new_model.id}"
+        ).text
+
+    body = _page()
+    card = _card(body)
+    assert 'name="exclude_self_reviews"' in card
+    # The divider separates it from the unit-of-review controls above.
+    assert body.rindex('<hr class="col-divider">', 0, body.index(card)) > 0
+    assert "checked" not in card  # default off
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    assert "checked" in _card(_page())
+

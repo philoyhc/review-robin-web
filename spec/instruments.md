@@ -440,6 +440,31 @@ other card names); the three Link labels below are unbold.
 | Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee + pair-context boundary tags |
 
+#### Self-review exclusion (Link 3 column, below the rule)
+
+The Link 3 column carries one control that is **not** a unit-of-review
+setting: a checkbox reading *"Exclude if the individual / group reviewed
+is the reviewer"*, where the noun follows the Link 3 mode. It sits here
+for space alone, and a horizontal `.col-divider` rule — the sibling of
+the 1px vertical rules between the three columns — separates it from the
+unit-of-review controls above so it does not read as a third Link 3
+state.
+
+It reads and writes `session_rule_sets.exclude_self_reviews` for the
+instrument's pinned rule set. **Default off.** An instrument whose Band 1
+is untouched has no rule set row; turning the flag *on* materializes an
+empty (Full Matrix) one, which is output-identical to the synthetic
+schema the engine substitutes for a null `rule_set_id`. Turning it *off*
+with no row is a no-op — `False` is the default, so no empty row is left
+behind. Writes emit
+`session_rule_set.exclude_self_reviews_set` and invalidate a validated
+session.
+
+The checkbox is inert with the rest of the Band 1 grid while the card is
+locked. **It records intent only** until the engine honors it (19O Item
+1 rung 3); see `spec/assignments.md` § *Self-review policy* for the three
+layers that currently keep the rule engine ignoring the column.
+
 #### Pill-driven state machine
 
 Each Link has a mode-toggle pill in its heading row that cycles
