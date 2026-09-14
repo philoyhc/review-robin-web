@@ -152,9 +152,13 @@ def set_band1_assignment_rules(
     # operator-settable per-instrument setting: writable via session
     # config import today, and via the Link 3 checkbox from rung 2.
     #
-    # It stays inert until rung 3: ``_session_rule_set_to_schema``
-    # hardcodes ``excludeSelfReviews=False``, so nothing downstream
-    # reads this column yet.
+    # Inert to the assignment *engine* until rung 3:
+    # ``_session_rule_set_to_schema`` hardcodes
+    # ``excludeSelfReviews=False``, so no assignment row changes. It
+    # is NOT inert to every reader — ``by_instrument_extract`` renders
+    # the column as the "Self-review excluded" cell, so an imported
+    # ``True`` now persists there across Band 1 saves instead of
+    # self-healing to "No".
     if (rule_set.rules_json or []) == rules_json:
         return instrument
 
@@ -436,11 +440,13 @@ def _create_band1_rule_set(
         # Default off, explicitly: a new instrument generates
         # self-review pairs, and the per-instrument "Self review"
         # toggle on the Assignments page decides whether they count.
-        # The explicit ``False`` is load-bearing — both the model
-        # default and the ``session_rule_sets`` server default are
-        # ``True`` (vestigial, from the retired library tier), so
-        # dropping it here would silently invert the default for
-        # every new instrument once rung 3 makes the column live.
+        # The explicit ``False`` is load-bearing — the mapped column
+        # is ``default=True`` (``session_rule_set.py``, vestigial from
+        # the retired library tier), so dropping it here would
+        # silently invert the default for every new instrument once
+        # rung 3 makes the column live. The table itself has no
+        # server default (``e216f472ac47``), so the Python-side one
+        # is the only thing that would apply.
         exclude_self_reviews=False,
         seed=None,
         rules_json=rules_json,

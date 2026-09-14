@@ -157,15 +157,22 @@ place to overstate by double.*
 
 The ladder said to drop both the `exclude_self_reviews` re-normalization
 and the `exclude_self_reviews=False` seed. **Dropping the seed would have
-inverted the default.** The model column is `default=True`
-(`session_rule_set.py:63`) and the table carries
-`server_default=sa.text("true")` (`d8f4a92c1e6b`) — both vestigial from the
-retired library tier, and both unreachable today because all three creation
-paths write the column explicitly (`_band1.py:426`,
-`_apply_rule_set.py:82`, `session_clone.py:150`). Remove the explicit
-`False` and new instruments would start *excluding* self-reviews, against
-*Semantics*' "default off", latent until rung 3 makes the column live. The
-seed stays; only its comment changed, to say the `False` is load-bearing.
+inverted the default.** The mapped column is `default=True`
+(`session_rule_set.py:63`), vestigial from the retired library tier and
+unreachable today only because all three creation paths write the column
+explicitly (`_band1.py:426`, `_apply_rule_set.py:82`, and
+`session_clone.py:150`, which carries it through `_column_values`). Remove
+the explicit `False` and new instruments would start *excluding*
+self-reviews, against *Semantics*' "default off", latent until rung 3 makes
+the column live. The seed stays; only its comment changed.
+
+*Corrected after the `spec-writer` pass: this block first claimed the table
+also carries `server_default=sa.text("true")` from `d8f4a92c1e6b`. It does
+not. That server default is on `rule_set_revisions` — a retired table —
+inside that migration's `downgrade()`; `session_rule_sets` was created at
+`e216f472ac47:44` with no server default at all. The decision stands on the
+Python-side default alone; the reason given for it was wrong, read off a
+grep hit's neighborhood instead of its enclosing function.*
 
 **Dropping the normalization is safer than the plan knew.** Migration
 `d2e4f6a8c1b3` (2026-05-26) already backfilled every `session_rule_sets`
@@ -176,7 +183,26 @@ intent. `test_..._heals_pre_pr1452_exclude_self_reviews` inverted into
 landed so the save is not a no-op.
 
 Config import (`_apply_rule_set.py:47`) is therefore the first live writer
-of `True`, which is the round-trip the *Definition of done* asks for.
+of `True`, which is the round-trip the *Definition of done* asks for. A
+session clone propagates it too (`session_clone.py:150`).
+
+**"Inert" was too strong, and contradicted this plan's own judgment call.**
+The change is inert to the *assignment engine* — `_session_rule_set_to_schema`
+hardcodes `excludeSelfReviews=False`, so no assignment row moves. It is not
+inert to every reader: `by_instrument_extract.py:326-332` renders the column
+as the **Self-review excluded** cell, which the judgment call above already
+cited. A `True` set by import could always reach that cell; what rung 1
+changes is that it now *persists* there instead of self-healing on the next
+Band 1 save. So between rungs 1 and 3 the extract can report
+*Self-review excluded: Yes* for an instrument whose assignments are
+unaffected. Accepted as a transient of the ladder — rung 3 closes it — but
+it is a real user-visible state, not nothing.
+
+That falsified a live spec sentence, so rung 1 edits it rather than
+deferring to the item close: `spec/assignments.md` layer 2 said the column
+"stays `False` on every Band-1 materialisation anyway". It no longer does.
+Narrowed to state what layer 2 actually guarantees (the engine ignores the
+column) without touching the three-layer contract itself.
 
 ### PR ladder
 
