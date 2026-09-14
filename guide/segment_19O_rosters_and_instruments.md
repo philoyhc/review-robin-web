@@ -95,13 +95,15 @@ Intended versus done:
   individual *from* group without passing through `not_set`, which clears on
   the way. I had filed this as an open question; the UI had already answered
   it. That makes the cycle's shape load-bearing, so it is pinned by a test
-  rather than left to memory.
+  rather than left to memory: **a cycle that ever allows the direct move
+  needs a rule in `resolve_exclude_self_reviews`**, and the test says so.
 - **The guarantee was partial until the close pass said so.** Session-config
   import writes the column straight from the CSV while the instrument rows
   carrying `band1_touched_links` arrive from a different part of the bundle,
   so an import could store a flag the UI then hides — invisible *and* in
-  force. The first rule now runs at the end of the import apply too. A clone
-  needs no guard: it copies an existing pair atomically.
+  force. The first rule now runs at the end of the import apply too
+  (`clear_unsettled_exclude_self_reviews`). A clone needs no guard: it
+  copies an existing pair atomically.
 - **Two spec drifts, one made here and one inherited.**
   `spec/assignments.md` still quoted the wording this item replaced, so the
   file contradicted the one it links to; `spec/settings_inventory.md` still
@@ -120,8 +122,17 @@ both sentences as attributes; narrowed to the text, it then failed for
 reading the **first** instrument card rather than the one under test — the
 same trap as Item 1 rung 2, in the same file. One `_instrument_card` helper
 now, whose own end bound was itself wrong (it matched the card's
-`instrument-delete-N` form) until the close pass caught it. Every rule here
-is mutation-checked.
+`instrument-delete-N` form) until the close pass caught it.
+
+**Every rule here is mutation-checked — including, now, the import guard.**
+The compaction had generalized two carefully-scoped claims ("both fixes",
+"all three rules") into an unqualified "every rule", which overclaimed for
+`clear_unsettled_exclude_self_reviews`: it was added *by* a close pass and
+never mutated. Rather than narrow the sentence back, the check was run —
+under-fire and over-fire, each caught by exactly the test that should.
+*The compaction introduced the one claim in this block that was not true
+when written*, which is the item's own defect pattern arriving in the
+record of the item.
 
 ### PR ladder
 
