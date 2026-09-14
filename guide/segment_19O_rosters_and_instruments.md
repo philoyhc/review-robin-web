@@ -61,6 +61,12 @@ Rejected:
 
 ### Semantics
 
+- **It sits in the Link 3 column for space, not because it belongs to the
+  unit of review** (author, 2026-09-14). A **horizontal rule** below the
+  Link 3 controls separates them, so the checkbox reads as a second thing
+  in the same column rather than a third unit-of-review state. The rule is
+  a `base.html` class, not an inline style — the column's existing 1px
+  vertical separator (`--border-default`) is the sibling to match.
 - **Default off**, and **takes effect at Generate** — Regenerate is the only
   write site for `Assignment` rows, so ticking the box leaves existing rows
   alone until the next Generate. The card says so.
@@ -113,8 +119,9 @@ classification is the engine's most cross-cut invariant, guarded by
 1. **Storage + save path.** Column on `instruments` + Alembic migration
    (round-trips on Postgres), written by the Link 3 save path beside
    `set_unit_of_review`. Lands inert.
-2. **The control.** Checkbox at the bottom of the Link 3 column, reading and
-   writing the column. Still no engine change; the PR body says so.
+2. **The control.** Horizontal rule below the Link 3 controls, then the
+   checkbox beneath it, reading and writing the column. Still no engine
+   change; the PR body says so.
 3. **Honor it at materialization.** The `_generate.py` branch skips instead
    of writing `include=False`. Tests: individual, group, non-email
    identifier, and a regenerate flipping the flag both ways.
@@ -150,9 +157,10 @@ Rung 3 must not touch `RuleSetOptions`, `_session_rule_set_to_schema` or
 1. ~~**How the excluded rows are shown.**~~ **Answered by the author
    2026-09-14: "Excluded by rule", replacing the count pill.** See
    *Semantics*.
-2. **Whether Link 3 is the right home** for a rule that is not itself a
-   unit-of-review setting — it sits there because the individual/group noun
-   follows that mode. *Decides: the author, on the rung 2 scaffold.*
+2. ~~**Whether Link 3 is the right home**~~ **Answered by the author
+   2026-09-14: yes, purely for space.** It is not a unit-of-review setting
+   and is not presented as one — a horizontal rule separates it from the
+   Link 3 controls above. See *Semantics*.
 
 ### Out of scope
 
