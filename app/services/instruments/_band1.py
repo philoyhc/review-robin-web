@@ -143,15 +143,19 @@ def set_band1_assignment_rules(
         )
         return instrument
 
-    # Normalise ``exclude_self_reviews=False`` on every update so
-    # sessions whose SessionRuleSet was materialised before
-    # PR #1452 (which flipped the default) heal the moment the
-    # operator next saves Band 1. The per-instrument Self review
-    # toggle on the Assignments page is the sole include / exclude
-    # surface; baking exclusion in at the rule-set level would
-    # silently disable that toggle.
-    needs_self_review_fix = rule_set.exclude_self_reviews
-    if (rule_set.rules_json or []) == rules_json and not needs_self_review_fix:
+    # ``exclude_self_reviews`` is deliberately NOT normalized here
+    # (19O Item 1, rung 1). It used to be forced to ``False`` on
+    # every save, to heal rows materialized before PR #1452 flipped
+    # the default — but migration ``d2e4f6a8c1b3`` already backfilled
+    # every row to ``False``, so that job is done and the re-write
+    # only served to overwrite operator intent. The column is now an
+    # operator-settable per-instrument setting: writable via session
+    # config import today, and via the Link 3 checkbox from rung 2.
+    #
+    # It stays inert until rung 3: ``_session_rule_set_to_schema``
+    # hardcodes ``excludeSelfReviews=False``, so nothing downstream
+    # reads this column yet.
+    if (rule_set.rules_json or []) == rules_json:
         return instrument
 
     prev_count = len(rule_set.rules_json or [])
@@ -163,8 +167,6 @@ def set_band1_assignment_rules(
         reason="instrument_band1_rules_updated",
     )
     rule_set.rules_json = rules_json
-    if needs_self_review_fix:
-        rule_set.exclude_self_reviews = False
     db.flush()
     audit.write_event(
         db,
@@ -431,13 +433,14 @@ def _create_band1_rule_set(
             f"#{instrument.id}."
         ),
         combinator="ALL_OF",
-        # Align with the synthetic Full Matrix default
-        # (assignments._full_matrix_schema) so self-review pairs
-        # materialise as assignment rows on every Band 1 instrument.
-        # The per-instrument "Self review" toggle on the Assignments
-        # page is the operator's include / exclude surface; baking
-        # exclusion in at the rule-set level would silently disable
-        # that toggle.
+        # Default off, explicitly: a new instrument generates
+        # self-review pairs, and the per-instrument "Self review"
+        # toggle on the Assignments page decides whether they count.
+        # The explicit ``False`` is load-bearing — both the model
+        # default and the ``session_rule_sets`` server default are
+        # ``True`` (vestigial, from the retired library tier), so
+        # dropping it here would silently invert the default for
+        # every new instrument once rung 3 makes the column live.
         exclude_self_reviews=False,
         seed=None,
         rules_json=rules_json,

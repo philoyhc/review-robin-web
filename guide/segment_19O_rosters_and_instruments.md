@@ -151,6 +151,33 @@ and 106. The test command omitted `--include=*.py` and counted 55
 `__pycache__/*.pyc` alongside the 51 real files — a guardrail is the wrong
 place to overstate by double.*
 
+### Status
+
+**Rung 1 landed 2026-09-14 as one deletion, not two.**
+
+The ladder said to drop both the `exclude_self_reviews` re-normalization
+and the `exclude_self_reviews=False` seed. **Dropping the seed would have
+inverted the default.** The model column is `default=True`
+(`session_rule_set.py:63`) and the table carries
+`server_default=sa.text("true")` (`d8f4a92c1e6b`) — both vestigial from the
+retired library tier, and both unreachable today because all three creation
+paths write the column explicitly (`_band1.py:426`,
+`_apply_rule_set.py:82`, `session_clone.py:150`). Remove the explicit
+`False` and new instruments would start *excluding* self-reviews, against
+*Semantics*' "default off", latent until rung 3 makes the column live. The
+seed stays; only its comment changed, to say the `False` is load-bearing.
+
+**Dropping the normalization is safer than the plan knew.** Migration
+`d2e4f6a8c1b3` (2026-05-26) already backfilled every `session_rule_sets`
+row to `False`, so no pre-#1452 rows remain for the save-time re-write to
+heal — its stated job is done, and all it still did was overwrite operator
+intent. `test_..._heals_pre_pr1452_exclude_self_reviews` inverted into
+`test_..._preserves_exclude_self_reviews`, which also asserts the rules
+landed so the save is not a no-op.
+
+Config import (`_apply_rule_set.py:47`) is therefore the first live writer
+of `True`, which is the round-trip the *Definition of done* asks for.
+
 ### PR ladder
 
 1. **Unpin the existing flag.** No migration: drop the
