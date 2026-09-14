@@ -11,13 +11,12 @@ holds on the FK-enforcing Postgres CI database, not just SQLite.
 """
 from __future__ import annotations
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
     AuditEvent,
-    EmailOutbox,
     Invitation,
     Relationship,
     Response,
@@ -28,6 +27,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit
+from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 log = get_logger(__name__)
@@ -62,12 +62,8 @@ def purge_responses(
             Response.assignment_id.in_(_assignment_ids(session_id))
         )
     ).rowcount
-    # Outbox rows carry a FK onto invitations — unlink before the
-    # invitations are deleted.
-    db.execute(
-        update(EmailOutbox)
-        .where(EmailOutbox.session_id == session_id)
-        .values(invitation_id=None)
+    invitations_service.detach_outbox(
+        db, session_id=session_id, reviewers_deleted=False
     )
     invitations = db.execute(
         delete(Invitation).where(Invitation.session_id == session_id)
@@ -115,10 +111,8 @@ def purge_rosters(
             Response.assignment_id.in_(_assignment_ids(session_id))
         )
     ).rowcount
-    db.execute(
-        update(EmailOutbox)
-        .where(EmailOutbox.session_id == session_id)
-        .values(reviewer_id=None, invitation_id=None)
+    invitations_service.detach_outbox(
+        db, session_id=session_id, reviewers_deleted=True
     )
     invitations = db.execute(
         delete(Invitation).where(Invitation.session_id == session_id)

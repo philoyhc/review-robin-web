@@ -11,11 +11,11 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -30,6 +30,74 @@ from app.services import audit, email_templates
 
 
 INVITATION_KIND = "invitation"
+
+
+def detach_outbox(
+    db: Session,
+    *,
+    session_id: int,
+    reviewer_ids: Sequence[int] | None = None,
+    reviewers_deleted: bool,
+) -> None:
+    """Unlink ``email_outbox`` rows from the invitations — and, when
+    ``reviewers_deleted``, the reviewers — about to be deleted.
+
+    ``email_outbox`` carries FKs onto both ``reviewers`` and
+    ``invitations`` (`email_outbox.py`) with no ``ON DELETE`` and no
+    cascade from either parent, so a delete reaching either is rejected
+    by the database while an outbox row still points at it. Deleting a
+    reviewer cascades ``Reviewer.invitations`` (``delete-orphan``), so
+    the roster paths trip the invitation FK, not the reviewer one.
+
+    **Unlink, never delete.** The outbox is the email audit log and each
+    row is self-contained — ``to_email``, ``subject``, ``body``,
+    ``sent_at``, ``backend_message_id`` and ``delivered_at`` are
+    denormalised onto it — so nothing about a sent email depends on the
+    reviewer row surviving. ``reviewer_id IS NULL`` with ``sent_at IS
+    NOT NULL`` is what "sent, recipient since removed" looks like;
+    ``status`` is *not* overloaded to say it, because it means delivery
+    state and its vocabulary is the closed ``EMAIL_OUTBOX_STATUSES``,
+    pinned by ``tests/integration/test_email_outbox_schema.py``.
+
+    ``reviewer_ids=None`` means the whole session. The two columns are
+    cleared by separate statements so that each targets exactly the rows
+    whose parent is going, rather than nulling a live link on a row that
+    merely shares an invitation.
+
+    This is the single place that knows about the FK cycle. It used to
+    be open-coded in ``session_purge`` alone, which is why the four
+    roster-delete paths did not have it (19O.3).
+    """
+    if reviewer_ids is not None and not reviewer_ids:
+        return
+
+    scope = [EmailOutbox.session_id == session_id]
+
+    doomed_invitations = select(Invitation.id).where(
+        Invitation.session_id == session_id
+    )
+    if reviewer_ids is not None:
+        doomed_invitations = doomed_invitations.where(
+            Invitation.reviewer_id.in_(reviewer_ids)
+        )
+    db.execute(
+        update(EmailOutbox)
+        .where(*scope, EmailOutbox.invitation_id.in_(doomed_invitations))
+        .values(invitation_id=None)
+        .execution_options(synchronize_session=False)
+    )
+
+    if reviewers_deleted:
+        stmt = update(EmailOutbox).where(*scope)
+        if reviewer_ids is not None:
+            stmt = stmt.where(EmailOutbox.reviewer_id.in_(reviewer_ids))
+        else:
+            stmt = stmt.where(EmailOutbox.reviewer_id.is_not(None))
+        db.execute(
+            stmt.values(reviewer_id=None).execution_options(
+                synchronize_session=False
+            )
+        )
 
 
 def hash_token(raw: str) -> str:

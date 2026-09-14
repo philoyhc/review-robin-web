@@ -61,7 +61,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Submit-enable gate.** The Submit button starts `disabled` and enables only when **both** (1) at least one `<input type="file">` on any slot has a file selected AND (2) the card-level confirm-replace checkbox is ticked. Inline JS toggles the `disabled` attribute on both the file inputs' `change` event and the checkbox's `change` event. The checkbox renders only on the existing-session variant; on the new-session variant the create-session button drives submission and this gate doesn't apply.
 
-**Replace semantics.** Each slot replaces the entire corresponding dataset for the session. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
+**Replace semantics.** Each slot replaces the entire corresponding dataset for the session; what a replacement takes with it is `spec/setup_pages.md` § *What a delete takes with it*, which governs every reviewer-delete surface alike. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
 
 **Replacement confirmation.** A single card-level checkbox sits above the slot grid, inside the `.quick-setup-body` wrapper:
 
@@ -73,7 +73,7 @@ Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` in
 
 **Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 
-**Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments and relationships (they reference reviewer / reviewee IDs); replacing relationships or settings has no cascade beyond its own dataset. The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer / reviewee / relationships replacement. Regeneration fires from Session Home's Workflow card stepper, which is where every other lifecycle action starts; the Assignments page carries the same action for an operator already on it.
+**Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments and relationships (they reference reviewer / reviewee IDs); replacing relationships or settings has no cascade beyond its own dataset. Replacing **reviewers** also clears their invitations, and unlinks — rather than deletes — the `email_outbox` rows that reference them. The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer / reviewee / relationships replacement. Regeneration fires from Session Home's Workflow card stepper, which is where every other lifecycle action starts; the Assignments page carries the same action for an operator already on it.
 
 The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, relationships or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners are not used.
 

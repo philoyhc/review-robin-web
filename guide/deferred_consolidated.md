@@ -1449,3 +1449,18 @@ lines beat a shared module built for its second caller). That reasoning
 expires at a **third copy**, and it expires independently of the naming
 question: code extraction and spec promotion could land in either order,
 and Item 1's question 3 treated them as one thing.
+
+### The purge surface has no stated contract (19O.3)
+
+`spec/sessions_overview.md` names Purge and archive as a lobby action and
+lists `app/services/session_purge.py` under its implementation pointers,
+but specifies **no purge modes** — neither `responses` nor `rosters` has
+a stated contract anywhere. 19O.3 found this while fixing the
+`email_outbox` FK cycle: two of the four call sites it corrected are the
+purge paths, and the only spec that now describes what they do to the
+outbox is `spec/email_infra_options.md`, the column owner.
+
+*Deferred rather than written* because the gap predates the item and a
+bug fix is the wrong vehicle for a new spec section. The trigger is the
+next change to purge behaviour: whoever touches it writes the section,
+rather than adding a second undescribed mode to the first.

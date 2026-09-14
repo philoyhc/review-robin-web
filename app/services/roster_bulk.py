@@ -26,6 +26,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 
@@ -166,11 +167,13 @@ def bulk_delete(
     skipped id here means a row the operator asked to delete is still
     there and nothing said so.
 
-    The ORM cascades do the rest of the work:
+    The ORM cascades do most of the work:
     ``Reviewer``/``Reviewee`` → ``assignments`` → ``responses``, all
-    ``delete-orphan``, plus a reviewer's ``invitations``. That is
-    inherited rather than reimplemented, exactly as ``_delete_all``
-    inherits it.
+    ``delete-orphan``, plus a reviewer's ``invitations``. They are not
+    quite sufficient: ``email_outbox`` references reviewers and
+    invitations with no cascade from either, so a reviewer delete
+    needs ``invitations.detach_outbox`` first or the database rejects
+    the cascaded invitation delete (19O.3).
     """
     if not ids:
         return 0, 0, 0
@@ -202,6 +205,15 @@ def bulk_delete(
     )
 
     deleted = len(rows)
+    if model is Reviewer:
+        # ``email_outbox`` references reviewers and their invitations
+        # with no cascade; clear it before the delete (19O.3).
+        invitations_service.detach_outbox(
+            db,
+            session_id=review_session.id,
+            reviewer_ids=row_ids,
+            reviewers_deleted=True,
+        )
     for row in rows:
         db.delete(row)
     db.flush()

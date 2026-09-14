@@ -172,8 +172,8 @@ Today's `email_outbox` table is the audit log. Its shape:
 |---|---|---|
 | `id` | int | Primary key. |
 | `session_id` | FK | Which session this send belongs to. |
-| `reviewer_id` | FK | Which reviewer (nullable for system emails). |
-| `invitation_id` | FK | Which invitation row this send is for (nullable). |
+| `reviewer_id` | FK | Which reviewer. Nullable for system emails, **and** once that reviewer's roster row is deleted — see below. |
+| `invitation_id` | FK | Which invitation row this send is for. Nullable, on the same two grounds. |
 | `kind` | enum | Canonical set `EMAIL_OUTBOX_KINDS` — `invitation`, `reminder`, `responses_received`. |
 | `to_email` | text | The recipient. |
 | `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
@@ -181,6 +181,23 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `body` | text | The merged body. |
 | `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the enqueue path writes `queued` and flips it to `sent` in the same transaction, with no transport call. `sending` and `failed` exist for a dispatcher that does not yet run. |
 | `created_at` | timestamp | When the row was written. |
+
+**A row outlives its reviewer — except when the session goes.** Both FK
+columns carry no `ON DELETE`, so the roster-delete and purge paths clear
+them first (`invitations.detach_outbox`) and keep the row, because the
+log is what it is for. Deleting the **session** is the exception: the
+outbox cascades out with everything else it owns
+(`spec/sessions_overview.md`). Each surviving row is self-contained —
+`to_email`, `subject`, `body`, `sent_at`, `backend_message_id`,
+`delivered_at` — so nothing about a sent email depends on the reviewer
+row. **`reviewer_id IS NULL` with `sent_at IS NOT NULL` means: sent,
+recipient since removed.**
+
+`status` does not say so, and must not be made to. It carries delivery
+state, and its vocabulary is the closed `EMAIL_OUTBOX_STATUSES` pinned by
+`tests/integration/test_email_outbox_schema.py` — so a fifth "defunct"
+member is a schema change with a test behind it, to say what two existing
+columns already say.
 
 **Segment 11C Part 2 (truncated)** lands the audit-log columns
 the production send path will write at send time, as inert
