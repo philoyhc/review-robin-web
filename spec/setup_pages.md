@@ -594,9 +594,18 @@ convenience; these decide:
    counts theirs. Selecting a reviewer with no answers therefore
    deletes without an acknowledgement even on a session full of them.
 
-**What a delete takes with it** is inherited from the ORM cascade, not
-reimplemented: `Reviewer` / `Reviewee` → their `assignments` → those
-assignments' `responses`, plus a reviewer's `invitations`. **Observers
+**What a delete takes with it** is mostly the ORM cascade:
+`Reviewer` / `Reviewee` → their `assignments` → those assignments'
+`responses`, plus a reviewer's `invitations`. **The cascade is not
+sufficient on its own.** `email_outbox` references both `reviewers` and
+`invitations` with no `ON DELETE` and no cascade from either parent, so
+every reviewer delete first unlinks those two columns via
+`invitations.detach_outbox`; without it the database rejects the
+cascaded invitation delete. The outbox rows themselves are kept — they
+are the email audit log, and each carries its own `to_email`, `subject`,
+`body` and `sent_at`, so a sent email survives the recipient's roster
+row. A surviving row with `reviewer_id IS NULL` is exactly that: sent,
+recipient since removed. **Observers
 and Relationships cascade to nothing** — no table references them — so
 their delete can never lose a response, their gate never fires, and
 their strip never offers the acknowledgement. A page that offered it
