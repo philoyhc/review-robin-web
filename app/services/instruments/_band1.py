@@ -298,6 +298,18 @@ def set_exclude_self_reviews(
     the seed is only ever read inside the quota-rule loop, which an
     empty rule set never enters.
 
+    **This invalidates a validated session**, unlike the
+    visibility-when-closed services that
+    ``session_lifecycle.invalidate_if_validated`` names as deliberate
+    non-callers. Those skip it because
+    ``responses_visible_when_closed`` is a display flag outside the
+    validation snapshot. This one is not a display flag: it is an
+    assignment-rule input whose only purpose is to change which rows
+    generate (from rung 3 of 19O Item 1). Invalidating from the rung
+    that ships the control, rather than the rung that honors it,
+    keeps a session from being validated against a snapshot that never
+    saw the operator's setting.
+
     No-op writes skip the audit + lifecycle side effects.
     """
     current = get_exclude_self_reviews(db, instrument)
@@ -311,6 +323,33 @@ def set_exclude_self_reviews(
         )
         instrument.rule_set_id = rule_set.id
         db.flush()
+        # ``_create_band1_rule_set`` writes no audit event of its own —
+        # its other caller emits this one after it returns, so the
+        # materialize path has to as well, or a row comes into
+        # existence with no ``.created`` trail.
+        audit.write_event(
+            db,
+            event_type="session_rule_set.created",
+            summary=(
+                f"Materialized empty Band 1 RuleSet for new-model "
+                f"instrument {_instrument_label(instrument)} "
+                f"(self-review exclusion)"
+            ),
+            actor_user_id=actor.id,
+            session=instrument.session,
+            payload=audit.snapshot(
+                {
+                    "id": rule_set.id,
+                    "name": rule_set.name,
+                    "combinator": rule_set.combinator,
+                    "rule_count": 0,
+                }
+            ),
+            refs={
+                "session_rule_set_id": rule_set.id,
+                "instrument_id": instrument.id,
+            },
+        )
     else:
         rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
         if rule_set is None:

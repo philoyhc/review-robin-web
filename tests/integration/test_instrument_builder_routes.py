@@ -7219,6 +7219,40 @@ def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
     assert rule_set.rules_json == []
 
 
+def test_exclude_self_reviews_materialisation_is_audited(
+    client: TestClient, db: Session
+) -> None:
+    """Materializing a rule set from the checkbox emits
+    ``session_rule_set.created`` as well as the flag event.
+
+    ``_create_band1_rule_set`` writes no audit event of its own — its
+    other caller emits one after it returns — so without this the
+    checkbox could bring a ``SessionRuleSet`` row into existence with
+    no creation trail, unlike every other creation path.
+    """
+    from app.db.models import AuditEvent
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-audit")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    types = [
+        row.event_type
+        for row in db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id
+            )
+        ).scalars()
+    ]
+    assert "session_rule_set.created" in types
+    assert "session_rule_set.exclude_self_reviews_set" in types
+
+
 def test_exclude_self_reviews_off_leaves_no_empty_rule_set_behind(
     client: TestClient, db: Session
 ) -> None:

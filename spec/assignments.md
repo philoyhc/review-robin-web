@@ -227,9 +227,19 @@ materialised row it's typically:
 
 An untouched Link in `all` mode contributes no Composite (the
 list is empty for that slot). When both Links are `all` and no
-filter rules exist, no `SessionRuleSet` row is materialised at
-all — the instrument keeps `rule_set_id=NULL` and the engine
-substitutes the synthetic Full Matrix at evaluate time.
+filter rules exist, the Band 1 save path materializes no
+`SessionRuleSet` row — the instrument keeps `rule_set_id=NULL`
+and the engine substitutes the synthetic Full Matrix at evaluate
+time.
+
+**One control materializes a row without any Link rule**: turning
+on the Link 3 self-review exclusion checkbox
+(`spec/instruments.md` § *Self-review exclusion*), which needs
+somewhere to store its flag. The row it creates carries
+`rules_json=[]`, which the engine evaluates identically to the
+synthetic Full Matrix — same empty rules, same `ALL_OF`, and the
+seed the two differ on is read only inside the quota-rule loop an
+empty rule set never enters. So the row changes no assignment.
 
 ## Where the rule lives
 
@@ -334,12 +344,18 @@ Two attributes still drive whether self-review rows appear as
 *active*:
 
 1. **`SessionRuleSet.exclude_self_reviews`** (rule-set level).
-   Vestigial column — the engine layer hardcodes False regardless
-   of its value. Every row carries `False` (the column was
-   backfilled by Alembic `d2e4f6a8c1b3` and
-   `_create_band1_rule_set` writes `False` on every save), so the
-   column agrees with the behaviour rather than contradicting
-   it.
+   The engine layer hardcodes False regardless of its value, so
+   the column changes no assignment row today. It is **not**
+   vestigial and no longer always `False`: Alembic
+   `d2e4f6a8c1b3` backfilled every row, and
+   `_create_band1_rule_set` still seeds `False`, but the
+   save-time re-normalization that kept it there was removed in
+   19O Item 1 rung 1, and rung 2 gave the operator a control that
+   writes it (plus session-config import, which always could).
+   A `True` therefore persists, and surfaces in the
+   by-instrument extract's *Self-review excluded* cell, while the
+   engine still ignores it — until rung 3 honors it after the
+   pair fan-out.
 2. **`ReviewSession.self_reviews_active`** (session level,
    defaults True). When a self-review pair is materialised, its
    `Assignment.include` is `True if self_reviews_active else False`.

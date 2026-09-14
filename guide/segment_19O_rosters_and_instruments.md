@@ -234,6 +234,31 @@ Also corrected here: `_generate.py`'s policy comment still said the column
 rung 1 falsified, and still cited the unreachable Link-rule workaround with
 the wrong field spelling.
 
+**Two side effects the rung-2 framing missed**, found by the
+`spec-writer` pass and fixed here:
+
+- **A rule set could be created with no `session_rule_set.created`
+  event.** `_create_band1_rule_set` emits nothing itself — its other
+  caller emits the event after it returns — so the checkbox's
+  materialize path had to as well. Now does, with a test.
+- **It invalidates a validated session, and that needed saying.**
+  `session_lifecycle.invalidate_if_validated` names the
+  visibility-when-closed services as deliberate non-callers, because a
+  display flag is outside the validation snapshot. This flag is not a
+  display flag — it is an assignment-rule input whose only purpose is to
+  change which rows generate — so it invalidates from the rung that
+  ships the control rather than the rung that honors it. Otherwise a
+  session validated between rungs 2 and 3 would carry a setting its
+  snapshot never saw.
+
+**Two stale `spec/assignments.md` passages fixed.** §*Where the rule
+lives* said no `SessionRuleSet` is materialized when both Links are
+`all` — rung 2 falsifies that, since the checkbox materializes one with
+no Link rule at all. And the *Self-review policy* attribute list still
+called the column "vestigial", carrying `False` on every row — stale
+since rung 1, and contradicting a paragraph rung 1 corrected four
+sections above it in the same file.
+
 **`spec/ui_elements.md` added to *Doc impact* at build.** The plan named
 the two specs the behavior touches and missed the one the *primitive*
 touches: `.col-divider` is a new `base.html` class, and §10 is where those
