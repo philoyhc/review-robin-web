@@ -34,7 +34,12 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
-from app.services._queries import slot_has_data, tag_slot_presence
+from app.services._queries import (
+    slot_has_data,
+    slot_row_count,
+    tag_slot_counts,
+    tag_slot_presence,
+)
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, roster_bulk
@@ -718,6 +723,26 @@ async def _handle_import(
                     ),
                     prefix="tag-",
                 )
+                # 19P.1 — the roster index row renders on this path
+                # too. The comment above says why: a failed import is
+                # exactly when an operator looks hardest at which
+                # columns arrived, and an absent key would raise in
+                # the index row's count lookup rather than degrade.
+                col_counts = views.chip_slots(
+                    tag_slot_counts(
+                        db, session_id=review_session.id, model=Reviewer
+                    ),
+                    prefix="tag-",
+                ) | {
+                    "name": slot_row_count(
+                        db, session_id=review_session.id, column=Reviewer.name
+                    ),
+                    "email": slot_row_count(
+                        db,
+                        session_id=review_session.id,
+                        column=Reviewer.email,
+                    ),
+                }
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
@@ -733,6 +758,11 @@ async def _handle_import(
                         column=Reviewee.profile_link,
                     )
                 }
+                # Reviewees have no roster index row yet (19P.1 pilots
+                # on Reviewers alone). Set rather than left undefined,
+                # so the shared ``context.update`` below always carries
+                # the key.
+                col_counts = {}
             context.update(
                 {
                     "total_row_count": len(list_items),
@@ -772,6 +802,7 @@ async def _handle_import(
                         lifecycle.session_response_count(db, review_session)
                     ),
                     "col_data": col_data,
+                    "col_counts": col_counts,
                     "edit_id": None,
                     "add_mode": False,
                     "edit_values": None,

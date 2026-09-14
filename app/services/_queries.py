@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 
 
 def session_scoped(target: Any, session_id: int) -> Select[Any]:
@@ -116,6 +116,64 @@ def tag_slot_presence(
     """
     return {
         f"tag_{slot}": slot_has_data(
+            db,
+            session_id=session_id,
+            column=getattr(model, f"tag_{slot}"),
+            active_only=active_only,
+        )
+        for slot in (1, 2, 3)
+    }
+
+
+def slot_row_count(
+    db: Any,
+    *,
+    session_id: int,
+    column: Any,
+    active_only: bool = False,
+) -> int:
+    """How many rows of ``column``'s model for this session carry a
+    non-empty value in ``column`` (non-NULL and not the empty string).
+
+    The counting twin of :func:`slot_has_data`, same predicate. Kept
+    separate rather than folded into one helper because the two have
+    genuinely different costs: ``slot_has_data`` is an indexed
+    ``LIMIT 1`` and stops at the first hit, this one scans the
+    session's rows. Callers that only need "is there any" should stay
+    on the cheaper one.
+
+    Added for the roster index row (19P.1), whose "Populated columns"
+    cell shows ``Name (154)`` rather than a bare presence chip. The
+    segment plan had assumed the counts were a free re-house of the
+    presence map the page already computes; they are not, and this is
+    the query they need.
+    """
+    model = column.class_
+    q = (
+        select(func.count())
+        .select_from(model)
+        .where(model.session_id == session_id)
+        .where(column.is_not(None))
+        .where(column != "")
+    )
+    if active_only:
+        q = q.where(model.status == "active")
+    return int(db.execute(q).scalar_one())
+
+
+def tag_slot_counts(
+    db: Any,
+    *,
+    session_id: int,
+    model: Any,
+    active_only: bool = False,
+) -> dict[str, int]:
+    """``{"tag_1": int, "tag_2": int, "tag_3": int}`` for a session's
+    rows of ``model`` — :func:`tag_slot_presence` with counts instead
+    of flags, answered over the **whole roster** for the same reason.
+    """
+    return {
+        f"tag_{slot}": slot_row_count(
             db,
             session_id=session_id,
             column=getattr(model, f"tag_{slot}"),
