@@ -79,95 +79,49 @@ grep -rln "Exclude if the" app/ spec/ tests/ --include=*.py --include=*.html --i
 
 ### Status
 
-**Closed 2026-09-14**, one PR, as planned. Intended versus done:
+**Closed 2026-09-14.** One PR for the item, one for the author's follow-up.
+Intended versus done:
 
-- **Both faults were as diagnosed**, and the cause of the first was the one
-  named: the copy was server-rendered from the persisted `group_kind` while
-  the pill cycles client-side.
-- **A test of mine passed vacuously and the de-vacuuming exposed a second
-  scoping bug.** The first copy assertion read the element's raw markup —
-  which carries *both* sentences as `data-copy-*` attributes for the
-  handler — so it held in either mode. Narrowed to the span's text, it then
-  failed for an unrelated reason: it was reading the **first** instrument
-  card on the page rather than this one, the same trap that produced a
-  wrong-but-passing assertion in Item 1 rung 2. Every assertion in these
-  tests now goes through one `_instrument_card` helper, with the reason in
-  its docstring. *Scope first, assert second.*
-- **Both fixes are mutation-checked**, each failing exactly the test that
-  should catch it.
-- **This item created one drift of its own and the close pass caught it.**
-  `spec/assignments.md` § *Suppressing self-reviews* quoted the old
-  *"individual / group reviewed is the reviewer"* wording — the phrasing
-  this item replaced for describing something that cannot happen on a
-  grouped instrument. *Doc impact* named only `spec/instruments.md`, so the
-  second copy of the label went unedited. It now points at the spelling's
-  owner instead of repeating it, which is why it can't drift again.
-  **My own check for it was the wrong shape**: a single-line grep, against a
-  quote that wraps across two lines.
-- **The `_instrument_card` helper was subtly wrong** — its end bound matched
-  the card's own `id="instrument-delete-N"` form, truncating the slice
-  partway through the card it returns. Harmless for these three assertions
-  and wrong for the next one; both bounds now anchor on the card's opening
-  `class="card" id="instrument-N"`.
+- **Both faults were as diagnosed**, and the first had the cause the
+  screenshot implied: the copy was server-rendered from the persisted
+  `group_kind` while the pill cycles client-side.
+- **The follow-up added two clearing rules** the item had not anticipated,
+  on the author's ruling: the control hides *and* clears while any Link is
+  `Not set`, and clears when Link 3 moves individual → group. Both enforced
+  server-side on save with the client clearing at the same moment — the
+  visible half and the durable half, neither alone.
+- **The reverse transition needed no rule, and the author said why**: the
+  pill cycles `not_set → individual → group → not_set`, so it cannot reach
+  individual *from* group without passing through `not_set`, which clears on
+  the way. I had filed this as an open question; the UI had already answered
+  it. That makes the cycle's shape load-bearing, so it is pinned by a test
+  rather than left to memory.
+- **The guarantee was partial until the close pass said so.** Session-config
+  import writes the column straight from the CSV while the instrument rows
+  carrying `band1_touched_links` arrive from a different part of the bundle,
+  so an import could store a flag the UI then hides — invisible *and* in
+  force. The first rule now runs at the end of the import apply too. A clone
+  needs no guard: it copies an existing pair atomically.
+- **Two spec drifts, one made here and one inherited.**
+  `spec/assignments.md` still quoted the wording this item replaced, so the
+  file contradicted the one it links to; `spec/settings_inventory.md` still
+  called the column *vestigial* — untrue since Item 1 rung 1, and
+  contradicting `spec/roundtrip_coverage.md`, which that item *did* fix.
+  Both are the same miss: *Doc impact* enumerating the specs the behavior
+  touches rather than every spec that describes the thing.
+- **Verified on the dev slot** (author, 2026-09-14). The one gap every PR
+  body in this item declared — no browser harness exists here, so the live
+  copy swap and the hide-on-unset were argued from structure plus
+  server-render assertions — is closed by having looked.
 
-**Follow-up, 2026-09-14** — two behavior improvements the author asked for
-after Item 2 merged, logged here rather than as a third item: they are the
-same control and the same reasoning, and a plan per two-rule change is the
-shape the skill warns against.
-
-- **Hidden while any of the three Links is `Not set`**, and the stored flag
-  cleared in that state. An instrument with an unset Link has no settled
-  rule to except self-reviews *from*, and a flag left ticked behind a hidden
-  control is live at the next Generate while being invisible on the page.
-  Hidden as one unit — rule, heading, checkbox — because a lone divider
-  under nothing reads as a rendering fault.
-- **Cleared when Link 3 moves individual → group.** The two modes except
-  different things; a tick agreed against *the individual reviewed is the
-  reviewer* must not carry into *the reviewer is in the group being
-  reviewed*, which drops every member row of that group. Re-ticking is one
-  click; discovering a whole group went missing is not.
-
-Both enforced **server-side on save** (`resolve_exclude_self_reviews`), with
-the client clearing the box at the same moment so page and store agree — the
-visible half and the durable half, neither alone.
-
-**The reverse transition needs no rule, and the author said why**
-(2026-09-14): the Link 3 pill cycles `not_set → individual → group →
-not_set`, so it cannot reach individual *from* group without passing through
-`not_set` — which hides the control and clears the box on the way past. The
-symmetric case is already covered by the first rule, one step earlier.
-
-That makes the cycle's shape load-bearing for the clearing rules'
-completeness, so it is now pinned by a test rather than left as a fact
-someone has to remember: a cycle that ever allows the direct move needs a
-rule in `resolve_exclude_self_reviews`. *I had recorded this as an open
-question; it was a question the UI had already answered.*
-
-**The guarantee was partial until the close pass said so.** Session-config
-import writes `exclude_self_reviews` straight from the CSV, and the
-instrument rows carrying `band1_touched_links` arrive from a different part
-of the same bundle — so an import could pair a ticked flag with an unset
-Link, which the UI hides while the flag stays live at Generate. Invisible
-*and* in force is the one state the hide rule exists to prevent, so the
-first rule now runs at the end of the import apply as well
-(`clear_unsettled_exclude_self_reviews`), where both halves are finally
-visible. A whole-session clone needs no guard: it copies an existing pair
-atomically rather than combining independent values.
-
-**And one spec row Item 1 never reached.** `spec/settings_inventory.md`
-still called the column *vestigial*, with *"every row is `False`"* — untrue
-since rung 1, and directly contradicting `spec/roundtrip_coverage.md`, which
-that item *did* correct. The same miss, one file further on: the Doc impact
-enumerated the specs the behavior touches, not every spec that describes the
-column.
-
-**It broke five of Item 1's tests, and they were right to break.** Their
-payload never sent the `*_touched` flags, so those instruments read as
-`Not set` on all three Links and the flag now correctly clears. "All" and
-"Not set" differ only by that bit, so the fixture had been describing an
-unconfigured instrument while claiming to test a configured one. The helper
-now sends them, with the reason in its docstring. All three rules are
-mutation-checked.
+**The lesson this item kept teaching, at both rounds:** *scope first, assert
+second.* A copy assertion passed vacuously by reading markup that carries
+both sentences as attributes; narrowed to the text, it then failed for
+reading the **first** instrument card rather than the one under test — the
+same trap as Item 1 rung 2, in the same file. One `_instrument_card` helper
+now, whose own end bound was itself wrong (it matched the card's
+`instrument-delete-N` form) until the close pass caught it. Every rule here
+is mutation-checked.
 
 ### PR ladder
 
