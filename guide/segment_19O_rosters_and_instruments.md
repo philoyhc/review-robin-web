@@ -195,7 +195,20 @@ place to overstate by double.*
   flagged-but-not-yet-regenerated instrument keeps its real count and its
   toggle, which are still true and still actionable.
 - **`spec/ui_elements.md` added to *Doc impact* at build.** The plan named the
-  specs the behavior touches and missed the one the *primitive* touches.
+  specs the behavior touches and missed the one the *primitive* touches. At
+  close, `spec/roundtrip_coverage.md` joined it for the same reason — the
+  column was described there as "vestigial", true until rung 3 made it govern
+  generation.
+- **The Band 2 preview does not honor the flag, and is left that way
+  deliberately.** `find_sample_in_scope_reviewee` builds its schema from the
+  live Link 1 / Link 2 form fields and never reads the column, so an
+  instrument with the checkbox set can still preview a sample in which the
+  reviewer reviews themselves. Generation honors the flag *after* the pair
+  fan-out; the preview has no fan-out to honor it after, so closing the gap
+  means deciding what the preview is for — and rung 3's own scope rule
+  forbids touching that function. Stated in `spec/instruments.md` § *Preview
+  review instrument* as a known divergence rather than tolerated silently.
+  **Open for the author.**
 
 **The defect pattern, stated because it repeated at every rung:** every error
 was in prose *about* the code, never in reading what the code does. A
@@ -274,5 +287,6 @@ Rung 3 must not touch `RuleSetOptions`, `_session_rule_set_to_schema` or
 - `spec/assignments.md` — § *Self-review policy* gains the shortcut as a supported affordance, drops the unreachable Link-rule claim, and reconciles its "enforced in three layers" paragraph (Item 1).
 - `spec/instruments.md` — the Link 3 / *Unit of review* material gains the control and its interaction with Generate (Item 1).
 - `spec/ui_elements.md` — §10 gains the `.col-divider` primitive the control is separated by (Item 1).
+- `spec/roundtrip_coverage.md` — the `exclude_self_reviews` row stops calling the column vestigial (Item 1).
 - `guide/deferred_consolidated.md` — the Part A entry is lifted into this plan and deleted (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).

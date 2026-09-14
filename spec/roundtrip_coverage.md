@@ -89,7 +89,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `description`, `combinator`, `exclude_self_reviews`, `seed`, `rules_json` | ✅ | ✅ | `exclude_self_reviews` is vestigial (engine hardcodes `False`) |
+| `name`, `description`, `combinator`, `exclude_self_reviews`, `seed`, `rules_json` | ✅ | ✅ | `exclude_self_reviews` is operator-settable and load-bearing since 19O Item 1: the rule *engine* still hardcodes `False`, but the generator honors the column after the pair fan-out, so a round-tripped `True` changes which rows generate |
 
 ### Field labels (`session_field_labels`)
 

@@ -624,13 +624,27 @@ alongside each row of their answer surface, and renders a
 live preview of one sample row inline.
 
 > **Self-review policy.** The preview's sample-picker engine runs
-> with `excludeSelfReviews=False` — same project-wide rule as
-> assignments generation. The preview shows the team's actual
-> composition; if the sample reviewer is themselves a team member,
-> they appear in their own group. See `spec/assignments.md`
-> "Self-review policy" for the rationale and the supported ways to
-> suppress self-reviews (Link rule, or the Self-review toggle on
-> the Assignments page).
+> with `excludeSelfReviews=False`, the same desugar-stage rule
+> assignments generation follows. The preview shows the team's
+> actual composition; if the sample reviewer is themselves a team
+> member, they appear in their own group.
+>
+> **Known divergence (19O Item 1).** The preview does **not** read
+> `SessionRuleSet.exclude_self_reviews`
+> (`_band1.find_sample_in_scope_reviewee` builds its schema from the
+> live Link 1 / Link 2 form fields alone). Generation honors that
+> flag after the pair fan-out; the preview has no fan-out to honor
+> it after. So on an instrument with the Link 3 checkbox set, the
+> preview can still show a sample in which the reviewer reviews
+> themselves, while Generate will produce no such row. The preview
+> is a shape-of-the-row illustration, not a count, so this misleads
+> only about membership — but it is a real divergence and is
+> recorded rather than quietly tolerated. Closing it is a decision
+> about what the preview is *for*, not a bug fix, and belongs to
+> whoever makes that call.
+>
+> See `spec/assignments.md` § *Self-review policy* for the two
+> supported ways to suppress self-reviews.
 
 #### Intro card (left of the preview row)
 

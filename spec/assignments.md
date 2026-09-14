@@ -551,12 +551,13 @@ Steps:
 2. **Run the rule list.** Each rule in `rule_set_schema.rules`
    contributes a per-pair predicate; the top-level `combinator`
    wraps them.
-3. **No self-review exclusion.** Project-wide policy is
-   `excludeSelfReviews=False` everywhere, so the engine never
-   drops `(R, R)` pairs at the desugar stage. See the
-   "Self-review policy" section above for why, and for the two
-   supported suppression paths (Link rule + per-instrument
-   Self-review toggle).
+3. **No self-review exclusion *at this stage*.** Project-wide
+   policy is `excludeSelfReviews=False` everywhere, so the engine
+   never drops `(R, R)` pairs at the desugar stage. Exclusion, when
+   an operator asks for it, happens **after** this pipeline — see
+   the "Self-review policy" section above for why, and for the two
+   supported suppression paths (the Link 3 checkbox + the
+   per-instrument Self-review toggle).
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**
    - Individual: one row per surviving pair.
