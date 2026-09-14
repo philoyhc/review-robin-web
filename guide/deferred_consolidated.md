@@ -700,15 +700,40 @@ posts an unmodified Band 1 form, and asserts
 > carrying a lift trigger.
 
 **The two paths, and why this is the second one.** Self-review rows
-are **always materialised** (`spec/assignments.md` § *Self-review
+are **always materialized** (`spec/assignments.md` § *Self-review
 policy*), so the whole Assignments-page surface operates on rows that
 already exist — the per-instrument **Self review** toggle, and the
 per-row Include checkbox with its bulk select and
 `bulk-inactivate` / `bulk-activate` routes, all shipped
 (19I Item 9, 2026-09-09). The other path is to never generate the
-rows: an operator can already write a Link rule that excludes the
-pair, but has to reach for the logic builder and compose it by hand.
-**This item is only about making that second path one click.**
+rows at all.
+
+**That second path is not one click away — it is zero clicks away,
+because it does not exist.** `spec/assignments.md` names it as a
+supported affordance (*"Add a Link 2 (or Link 1) rule like
+`reviewee.email IS DIFFERENT FROM reviewer.email`"*), and
+`_band1.py`'s policy comment repeats it, but **no operator can reach
+it**: the inline Link builder's field list comes from
+`views/_instruments.py::new_model_usable_tags`, which returns
+`tag1`/`tag2`/`tag3` for `reviewer` / `reviewee` / `pair_context` and
+**no email slot**, and the general Rule Builder that once offered the
+full grammar is retired — no route, no template. The engine accepts
+`reviewer.email` and `reviewee.email` (`ALLOWED_PREDICATE_FIELDS`);
+nothing in the UI can author them.
+
+**So this item is not sugar over an existing path. It would be the
+first operator-facing way to exclude self-pairs before generation**,
+and it has to carry the field as well as the checkbox. Scoped as
+sugar it would be ~an afternoon; scoped honestly it is a small
+feature.
+
+> **Spec drift, reported not fixed** (2026-09-14). Two things
+> `spec/assignments.md` § *Self-review policy* says are wrong: the
+> Link-rule affordance is unreachable, per the paragraph above; and
+> where the field is spelled `reviewee.email_or_identifier` (there,
+> and in `_band1.py`'s comment) the engine would reject it —
+> `ALLOWED_PREDICATE_FIELDS` has `reviewee.email`. The spec is the
+> contract, so this is recorded rather than rewritten.
 
 **Ships.**
 
@@ -747,7 +772,7 @@ predicate expresses the group exclusion today**.
 `classify_self_review` identifies a self-review group **by finding
 the `(R, R)` row in it** (`_self_review.py`, `self_group_key`). Drop
 that row with a pair predicate and the group is never marked as a
-self-review at all: the remaining members materialise as an ordinary
+self-review at all: the remaining members materialize as an ordinary
 review, invisible to the Self review column and to every downstream
 reader of `Assignment.is_self_review`. Someone has to choose: a
 group-aware predicate, a desugar step that is visible and inspectable
@@ -768,8 +793,8 @@ beside it.
 **Wire-up.** `app/web/templates/operator/instruments_index.html`
 Link 3 block (the `_link3_*` locals) for the control;
 `app/services/instruments/_instrument_crud.py::set_unit_of_review`
-is the neighbouring Link 3 writer; the rule it composes lands in
-`rules_json` through the Band 1 materialisation path. Spec impact:
+is the neighboring Link 3 writer; the rule it composes lands in
+`rules_json` through the Band 1 materialization path. Spec impact:
 `spec/assignments.md` § *Self-review policy* gains the shortcut as a
 third supported affordance, and `spec/instruments.md`'s Link 3 row
 (§ *Unit of review*) gains the control.
