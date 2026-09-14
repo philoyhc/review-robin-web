@@ -231,7 +231,12 @@ and its labels are *pair-context*, so its `Edit` acts on a pair, not a person.
 
 ## Item 4 — Invitations and Responses — a different move, not the same recipe
 
-**Not yet planned, and not the same work.** Measured on `session_invitations.html`
+**Not yet planned, and its container is undecided.** It sits here to be
+sequenced, not to claim the segment: whether it becomes 19P Item 4 or **19Q**
+is settled after the four rosters land, when there is evidence about how well
+the idiom travels. Author's call, 2026-09-14.
+
+**It is also not the same work.** Measured on `session_invitations.html`
 (298 lines) and `session_responses.html` (221): **zero** `operator-actions`
 cards, **zero** `formaction`s, **zero** `setBtn(` lines, **zero** selection
 checkboxes. Their `<thead>` buttons are column sorts, and each row carries a
@@ -246,5 +251,6 @@ where none exists and make two detail pages redundant or secondary.
 That may well be right, and it is the same principle (put the thing beside the
 row it belongs to). But it is a **new capability**, so it needs its own
 Opportunity and its own decision about the two detail pages, and it should not
-inherit the roster items' "re-houses, adds nothing" justification. Sequenced
-last, contingent on the idiom proving out on the four rosters.
+inherit the roster items' "re-houses, adds nothing" justification — which is
+also the argument for letting it become its own segment if the rosters show the
+idiom does not carry.
