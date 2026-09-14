@@ -1455,12 +1455,19 @@ and Item 1's question 3 treated them as one thing.
 `spec/sessions_overview.md` names Purge and archive as a lobby action and
 lists `app/services/session_purge.py` under its implementation pointers,
 but specifies **no purge modes** — neither `responses` nor `rosters` has
-a stated contract anywhere. 19O.3 found this while fixing the
-`email_outbox` FK cycle: two of the four call sites it corrected are the
-purge paths, and the only spec that now describes what they do to the
-outbox is `spec/email_infra_options.md`, the column owner.
+a stated contract for what it deletes and retains. 19O.3 found this while
+fixing the `email_outbox` FK cycle: two of the four call sites it
+corrected are the purge paths.
 
-*Deferred rather than written* because the gap predates the item and a
-bug fix is the wrong vehicle for a new spec section. The trigger is the
-next change to purge behaviour: whoever touches it writes the section,
-rather than adding a second undescribed mode to the first.
+**Narrowed 2026-09-14.** The half that 19O.3 made untrue is now stated:
+`spec/sessions_overview.md` says both modes unlink the outbox before
+deleting, and points at the two owners. What remains unwritten is the
+rest — which rows each mode deletes and which it retains, a reader today
+learns only from `session_purge.py`'s docstrings.
+
+*Still deferred* because the trigger has not fired. 19O.3 did not change
+purge behaviour; it fixed an FK bug that happened to touch two purge
+functions. Writing the full contract now means transcribing ship-state
+from the code and calling it a spec — the shape `spec/` exists not to be.
+The trigger is unchanged: the next change to purge behaviour writes the
+section.

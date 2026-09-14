@@ -108,47 +108,37 @@ Commands run at `9866b28`:
 
 ### Status
 
-**2026-09-14 — built.** The ladder held: rung 1 the helper, its call sites and
-the tests; rung 2 the specs. Two things it named wrongly, left as written and
-corrected here rather than in the ladder: the helper shipped as `detach_outbox`,
-not `detach_outbox_for_reviewers`, and the bulk-delete call landed in
-`roster_bulk.bulk_delete` rather than `reviewers_service.delete_selected` —
-`bulk_delete` is the shared implementation, so reviewees, observers and
-relationships pass through the same gate.
+**Closed 2026-09-14.** The ladder held — helper and call sites, then the
+specs — but named two artefacts wrongly, left as written and corrected here:
+the helper shipped as `detach_outbox`, and the bulk-delete call landed in
+`roster_bulk.bulk_delete`, the shared implementation, not
+`reviewers_service.delete_selected`.
 
-**Decisions confirmed at build:**
+**The plan's reason for not overloading `status` was false, and a later reader
+will re-derive it.** The plan, the spec and the helper docstring all said a
+`"defunct"` member would silently move the Setup page's invite summary. It would
+not: `views/_setup.py` filters `reviewer_id.is_not(None)` alongside
+`status == "sent"`, so the rows that would carry it are already excluded. The
+plan contradicted itself — its own Semantics bullet noting both consumers filter
+for NULL is the refutation. The decision survives on the closed
+`EMAIL_OUTBOX_STATUSES` alone, which is the argument that should have led.
 
-- `status` stays untouched, but *not* for the reason the plan gave. The plan
-  said a `"defunct"` member would silently move the Setup page's invite
-  summary; it would not, because `views/_setup.py:203-204` filters
-  `reviewer_id.is_not(None)` alongside `status == "sent"`, so the rows that
-  would carry it are already excluded. **The plan contradicted itself** — the
-  Semantics bullet recording that both consumers already filter for NULL is the
-  refutation of the bullet three above it. The decision survives on the
-  closed-vocabulary ground alone. Found by `diff-reviewer`.
-- The same false rationale had reached `spec/email_infra_options.md` and the
-  helper's own docstring before it was caught. Both corrected.
-- **`roster_bulk.bulk_delete`'s docstring carried the same claim as the spec** —
-  the delete is "inherited rather than reimplemented" — so the belief that
-  produced this bug was written in three places, only one of them a `spec/`
-  file. 19O.1/.2's Doc-impact finding generalises past `spec/`.
-- **`session_purge` had no outbox coverage at all**, which is how the fifth call
-  site — the one this item pulled in as the root cause — shipped its behaviour
-  change untested. Two tests added; three mutations, each caught.
-- **`spec/email_infra_options.md` overclaimed** that every reviewer delete
-  unlinks. Deleting the *session* does not: the outbox cascades out with it
-  (`review_session.py:196`). Scoped to the roster-delete and purge paths, with
-  the exception named.
-- **The delete contract was nested under bulk-delete** in `spec/setup_pages.md`
-  while governing all three surfaces, so the two siblings now point at it. A
-  sentence in `quick_setup_card_spec.md` had asserted that organisation before
-  it was true.
+**The belief that caused the bug sat in three places, only one a spec** —
+`roster_bulk.bulk_delete`'s docstring used the same "inherited rather than
+reimplemented" words `spec/setup_pages.md` did. 19O.1/.2's Doc-impact finding
+generalises past `spec/`.
 
-**Declined:** `spec/sessions_overview.md` says nothing about the unlink, so a
-reader of the purge surface does not learn it there. It has no purge-modes
-section at all — a gap predating this item, and writing one is not a bug fix's
-job. Recorded in `guide/deferred_consolidated.md`; the contract is stated by the
-column owner, which now names the purge paths.
+**`session_purge` had no outbox coverage**, so the root-cause call site shipped
+untested. Two tests; three mutations, each caught by one.
+
+**Declined:** `spec/sessions_overview.md` specifies no purge modes, so the
+unlink is unstated there — a gap predating this item, recorded in
+`guide/deferred_consolidated.md` with its trigger.
+
+**Readers.** `diff-reviewer` 5 findings, 4 upheld. `spec-writer` pre-push, fired
+on the `spec/` trigger, 5 findings, 3 upheld. **Close pass: 0 new findings, 0
+edits** — everything reached the close already caught. First item under the
+19O.3 cadence.
 
 ### PR ladder
 
