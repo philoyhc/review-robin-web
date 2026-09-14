@@ -514,6 +514,9 @@ async def instrument_bulk_save_fields(
     link3_mode, link3_pairs, link3_touched = (
         instruments_service.parse_link3_form(form)
     )
+    # Read before the Link 3 write: the self-review flag clears on an
+    # individual → group move (19O Item 2 follow-up).
+    previous_group_kind = instrument.group_kind
     instruments_service.set_band1_assignment_rules(
         db, instrument=instrument, actor=user, **band1
     )
@@ -524,6 +527,18 @@ async def instrument_bulk_save_fields(
         boundary_pairs=link3_pairs,
         actor=user,
         touched=link3_touched,
+    )
+    instruments_service.set_exclude_self_reviews(
+        db,
+        instrument=instrument,
+        value=instruments_service.resolve_exclude_self_reviews(
+            instrument=instrument,
+            form_value=instruments_service.parse_exclude_self_reviews_form(
+                form
+            ),
+            previous_group_kind=previous_group_kind,
+        ),
+        actor=user,
     )
     # Column-widths race fix: the drag-resize handler POSTs to
     # /column-widths asynchronously. A fast Save click can win
@@ -733,6 +748,9 @@ async def instrument_consolidated_save(
     link3_mode, link3_pairs, link3_touched = (
         instruments_service.parse_link3_form(form)
     )
+    # Read before the Link 3 write: the self-review flag clears on an
+    # individual → group move (19O Item 2 follow-up).
+    previous_group_kind = instrument.group_kind
     instruments_service.set_band1_assignment_rules(
         db, instrument=instrument, actor=user, **band1
     )
@@ -743,6 +761,18 @@ async def instrument_consolidated_save(
         boundary_pairs=link3_pairs,
         actor=user,
         touched=link3_touched,
+    )
+    instruments_service.set_exclude_self_reviews(
+        db,
+        instrument=instrument,
+        value=instruments_service.resolve_exclude_self_reviews(
+            instrument=instrument,
+            form_value=instruments_service.parse_exclude_self_reviews_form(
+                form
+            ),
+            previous_group_kind=previous_group_kind,
+        ),
+        actor=user,
     )
 
     # Column widths (mirrored into the form snapshot on every drag).

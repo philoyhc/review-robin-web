@@ -134,6 +134,17 @@ def _apply_plan(
     db.flush()
     inst_counts = _apply_instruments(db, review_session, plan)
     counts.update(inst_counts)
+    # 19O Item 2 follow-up — the rule sets landed above and the
+    # instruments just now, from independent rows. A bundle can
+    # therefore pair ``exclude_self_reviews=true`` with an instrument
+    # whose Band 1 has an unset Link, which the UI hides while the
+    # flag stays live at Generate. Refuse that combination here,
+    # where both halves are finally visible.
+    from app.services.instruments import (
+        clear_unsettled_exclude_self_reviews,
+    )
+
+    clear_unsettled_exclude_self_reviews(db, review_session)
     # Segment 19C Item 1 — friendly labels no longer import from the
     # Settings CSV; the roster CSV headers carry them. Stale
     # ``field_labels.*`` rows in old bundles fall through to the

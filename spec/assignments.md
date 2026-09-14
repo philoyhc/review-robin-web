@@ -227,9 +227,19 @@ materialised row it's typically:
 
 An untouched Link in `all` mode contributes no Composite (the
 list is empty for that slot). When both Links are `all` and no
-filter rules exist, no `SessionRuleSet` row is materialised at
-all — the instrument keeps `rule_set_id=NULL` and the engine
-substitutes the synthetic Full Matrix at evaluate time.
+filter rules exist, the Band 1 save path materializes no
+`SessionRuleSet` row — the instrument keeps `rule_set_id=NULL`
+and the engine substitutes the synthetic Full Matrix at evaluate
+time.
+
+**One control materializes a row without any Link rule**: turning
+on the Link 3 self-review exclusion checkbox
+(`spec/instruments.md` § *Self-review exclusion*), which needs
+somewhere to store its flag. The row it creates carries
+`rules_json=[]`, which the engine evaluates identically to the
+synthetic Full Matrix — same empty rules, same `ALL_OF`, and the
+seed the two differ on is read only inside the quota-rule loop an
+empty rule set never enters. So the row changes no assignment.
 
 ## Where the rule lives
 
@@ -288,54 +298,112 @@ indistinguishable from the generator's point of view.
 ## Self-review policy
 
 **`excludeSelfReviews` is ALWAYS `False`.** The rule engine never
-drops self-review pairs at the desugar stage — neither during
+drops self-review pairs at the **desugar stage** — neither during
 assignments generation nor during the Band 2 instrument-preview
 sample pick. This is project-wide policy and is enforced in three
-layers so it can't be silently re-enabled:
+layers so it can't be silently re-enabled.
+
+**The desugar stage, not self-review exclusion as such.** Since
+19O Item 1, an operator *can* exclude self-reviews per instrument,
+and the generator honors it — but **after** the engine's pair
+fan-out, never inside it. The distinction is the whole policy: by
+the time the fan-out is done, `_diff_one_instrument` already knows
+whole-group membership, so a group-scoped instrument drops the
+entire group rather than one `(R, R)` pair. The desugar stage
+cannot know that, because it filters pairs before group
+composition is computed.
+
+The three layers below therefore still hold exactly as written;
+they are what keeps the exclusion out of the desugar stage.
 
 1. The `RuleSetOptions.excludeSelfReviews` Pydantic default is
    `False`.
 2. `assignments._session_rule_set_to_schema` hard-codes
    `excludeSelfReviews=False` when wrapping a `SessionRuleSet`
    row into a schema — the row's `exclude_self_reviews` column is
-   ignored (it stays `False` on every Band-1 materialisation
-   anyway, but the hardcode is defence-in-depth).
+   ignored, and this hardcode is what makes the engine ignore it.
+   The column itself is operator-settable (config import today;
+   the Link 3 checkbox from 19O.1 rung 2) and is no longer reset
+   on each Band-1 save, so a `True` can persist in the row and in
+   the by-instrument extract's *Self-review excluded* cell while
+   the engine still ignores it.
 3. `instruments._band1.find_sample_in_scope_reviewee` (the
    `/preview-sample` workhorse) constructs its schema with
-   `excludeSelfReviews=False`.
+   `excludeSelfReviews=False`. It honors the instrument's own
+   `exclude_self_reviews` flag the same way the generator does —
+   by filtering the engine's **output**, whole group at a time —
+   so the Band 2 preview never shows a sample that Generate
+   would not produce (`spec/instruments.md` § *Preview review
+   instrument*).
 
-If an operator wants to **suppress** self-reviews, the two
-supported affordances are:
+### Suppressing self-reviews
 
-- **Link rules.** Add a Link 2 (or Link 1) rule like `reviewee.email
-  IS DIFFERENT FROM reviewer.email`. The engine evaluates these as
-  ordinary filter logic, so the (R, R) pair never reaches
-  materialisation. (Other tag-pair predicates also work — anything
-  the operator wants to control.)
+Two supported affordances, answering different questions —
+*don't generate them* and *don't count the ones generated*.
+
+- **Exclude at the rule (Link 3 checkbox).** The **Self reviews**
+  control in the Link 3 column, whose label follows the unit of
+  review — see `spec/instruments.md` § *Self-review exclusion* for
+  both spellings, which are stated there and deliberately not
+  repeated here. It writes
+  `SessionRuleSet.exclude_self_reviews`. Honored at
+  the `pair_include` branch of `_diff_one_instrument`, **after**
+  the fan-out: the pair is omitted from `new_pairs` entirely
+  rather than written with `include=False`. On a group-scoped
+  instrument this drops **every member row of the reviewer's
+  group**, which is the behavior the desugar stage could not
+  give. **Group membership is read from the roster, not from the
+  surviving pairs** — a Link rule can filter the `(R, R)` pair out
+  of the fan-out while leaving the reviewer's group-mates in it,
+  and the group is still the reviewer's own. Takes effect **at the
+  next Generate**, not on save.
+  **Destructive on an already-generated instrument**: the dropped
+  pair falls into `to_delete` and its saved `Response` rows go
+  with it, counted by the reconcile dry-run's `responses_deleted`
+  and confirmed on the Prepare card before anything is written.
+  A reviewee whose identifier is not an email is never a
+  self-review, so the flag cannot drop an anonymous reviewee's
+  row.
 - **Per-instrument Self-review toggle.** Self-review pairs *are*
   materialised; flip the toggle on the Assignments page to set
   `Assignment.include=False` on every `(R, R)` row in that
   instrument. The session-level `ReviewSession.self_reviews_active`
-  (default True) seeds this on first generation.
+  (default True) seeds this on first generation. Reversible
+  without a re-Generate, and it destroys nothing.
 
-Reasoning: silently dropping self-pairs at the desugar stage
-(a) is invisible to the operator — the row doesn't show up to be
-inspected or toggled, and (b) under-counted group composition by
-one whenever the sample reviewer was themselves a member of the
-group (symmetric reviewer/reviewee sessions). The toggle path is
-explicit, reversible without re-Generate, and inspectable on the
-Assignments page.
+**Prefer the toggle when in doubt**: it is reversible in place and
+keeps the rows inspectable. The rule is for the case where the
+operator never wanted the rows at all.
+
+**Formerly listed here and removed:** *"add a Link 2 rule like
+`reviewee.email IS DIFFERENT FROM reviewer.email`"*. No operator
+can author it — the Band 1 field picker offers only
+`tag1`/`tag2`/`tag3`, and the general Rule Builder was retired with
+the library tier. It was also pair-level, so on a group-scoped
+instrument it would drop `(R, R)` and leave the rest of the group
+mis-classified as an ordinary review. The Link 3 checkbox replaces
+it.
+
+Reasoning for keeping exclusion out of the desugar stage: dropping
+self-pairs there (a) is invisible to the operator — the row doesn't
+show up to be inspected or toggled, and (b) under-counted group
+composition by one whenever the sample reviewer was themselves a
+member of the group (symmetric reviewer/reviewee sessions). Both
+are answered by honoring the flag after the fan-out instead: the
+group is whole, and the Assignments page reads **"Excluded by
+rule"** in the *Self review* cell rather than a bare `0` — *none
+exist* and *none kept* being different facts.
 
 Two attributes still drive whether self-review rows appear as
 *active*:
 
 1. **`SessionRuleSet.exclude_self_reviews`** (rule-set level).
-   Vestigial column — the engine layer hardcodes False regardless
-   of its value. Every row carries `False` (the column was
-   backfilled by Alembic `d2e4f6a8c1b3` and
-   `_create_band1_rule_set` writes `False` on every save), so the
-   column agrees with the behaviour rather than contradicting
-   it.
+   Operator-settable, default `False`: written by the Link 3
+   checkbox, by session-config import, and carried by a session
+   clone. The *engine* ignores it (layer 2 above), but the
+   generator honors it after the fan-out, so a `True` means the
+   instrument generates no self-review row at all. Also surfaces
+   in the by-instrument extract's *Self-review excluded* cell.
 2. **`ReviewSession.self_reviews_active`** (session level,
    defaults True). When a self-review pair is materialised, its
    `Assignment.include` is `True if self_reviews_active else False`.
@@ -494,12 +562,13 @@ Steps:
 2. **Run the rule list.** Each rule in `rule_set_schema.rules`
    contributes a per-pair predicate; the top-level `combinator`
    wraps them.
-3. **No self-review exclusion.** Project-wide policy is
-   `excludeSelfReviews=False` everywhere, so the engine never
-   drops `(R, R)` pairs at the desugar stage. See the
-   "Self-review policy" section above for why, and for the two
-   supported suppression paths (Link rule + per-instrument
-   Self-review toggle).
+3. **No self-review exclusion *at this stage*.** Project-wide
+   policy is `excludeSelfReviews=False` everywhere, so the engine
+   never drops `(R, R)` pairs at the desugar stage. Exclusion, when
+   an operator asks for it, happens **after** this pipeline — see
+   the "Self-review policy" section above for why, and for the two
+   supported suppression paths (the Link 3 checkbox + the
+   per-instrument Self-review toggle).
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**
    - Individual: one row per surviving pair.

@@ -143,15 +143,23 @@ def set_band1_assignment_rules(
         )
         return instrument
 
-    # Normalise ``exclude_self_reviews=False`` on every update so
-    # sessions whose SessionRuleSet was materialised before
-    # PR #1452 (which flipped the default) heal the moment the
-    # operator next saves Band 1. The per-instrument Self review
-    # toggle on the Assignments page is the sole include / exclude
-    # surface; baking exclusion in at the rule-set level would
-    # silently disable that toggle.
-    needs_self_review_fix = rule_set.exclude_self_reviews
-    if (rule_set.rules_json or []) == rules_json and not needs_self_review_fix:
+    # ``exclude_self_reviews`` is deliberately NOT normalized here
+    # (19O Item 1, rung 1). It used to be forced to ``False`` on
+    # every save, to heal rows materialized before PR #1452 flipped
+    # the default — but migration ``d2e4f6a8c1b3`` already backfilled
+    # every row to ``False``, so that job is done and the re-write
+    # only served to overwrite operator intent. The column is now an
+    # operator-settable per-instrument setting: writable via session
+    # config import today, and via the Link 3 checkbox from rung 2.
+    #
+    # Inert to the assignment *engine* until rung 3:
+    # ``_session_rule_set_to_schema`` hardcodes
+    # ``excludeSelfReviews=False``, so no assignment row changes. It
+    # is NOT inert to every reader — ``by_instrument_extract`` renders
+    # the column as the "Self-review excluded" cell, so an imported
+    # ``True`` now persists there across Band 1 saves instead of
+    # self-healing to "No".
+    if (rule_set.rules_json or []) == rules_json:
         return instrument
 
     prev_count = len(rule_set.rules_json or [])
@@ -163,8 +171,6 @@ def set_band1_assignment_rules(
         reason="instrument_band1_rules_updated",
     )
     rule_set.rules_json = rules_json
-    if needs_self_review_fix:
-        rule_set.exclude_self_reviews = False
     db.flush()
     audit.write_event(
         db,
@@ -244,6 +250,235 @@ def parse_band1_form(form: Any) -> dict[str, Any]:
         "link2_rules": _form_rules(form, "link2"),
         "touched_links": _form_touched_links(form, ("link1", "link2")),
     }
+
+
+def parse_exclude_self_reviews_form(form: Any) -> bool:
+    """Parse the Link 3 self-review exclusion checkbox (19O Item 1).
+
+    An unchecked HTML checkbox submits nothing, so absence is
+    ``False`` — the same convention the Response-fields help-text
+    visibility checkboxes use on this page.
+    """
+    return str(form.get("exclude_self_reviews") or "").strip() == "true"
+
+
+def clear_unsettled_exclude_self_reviews(
+    db: Session, review_session: Any
+) -> int:
+    """Clear ``exclude_self_reviews`` on every instrument in the
+    session whose Band 1 has an unset Link. Returns the count cleared.
+
+    The save path enforces this in
+    :func:`resolve_exclude_self_reviews`, but **session-config import
+    writes the column directly** (``_apply_rule_set``) from values
+    that arrive independently of the instrument rows
+    (``_apply_instrument``) — so a bundle can pair
+    ``exclude_self_reviews=true`` with an instrument whose
+    ``band1_touched_links`` is empty. The UI would then hide the
+    control exactly as designed while the flag stayed live at the next
+    Generate: invisible *and* in force, which is the one state the
+    hide rule exists to prevent.
+
+    Called at the end of the import apply, after both halves have
+    landed. Writes no audit event of its own: the import's own event
+    covers the apply, and this is the apply refusing to store a
+    combination the operator cannot see or have meant.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.db.models import Instrument as _Instrument
+
+    cleared = 0
+    rows = db.execute(
+        sa_select(_Instrument).where(
+            _Instrument.session_id == review_session.id
+        )
+    ).scalars()
+    for instrument in rows:
+        if instrument.rule_set_id is None:
+            continue
+        touched = set(instrument.band1_touched_links or [])
+        if {"link1", "link2", "link3"} <= touched:
+            continue
+        rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+        if rule_set is not None and rule_set.exclude_self_reviews:
+            rule_set.exclude_self_reviews = False
+            cleared += 1
+    if cleared:
+        db.flush()
+    return cleared
+
+
+def resolve_exclude_self_reviews(
+    *,
+    instrument: Instrument,
+    form_value: bool,
+    previous_group_kind: str | None,
+) -> bool:
+    """The value to store for the self-review exclusion, given what
+    the form carried and what the save just changed (19O Item 2
+    follow-up, author 2026-09-14).
+
+    Two cases force ``False`` regardless of the checkbox:
+
+    1. **Any of the three Links is "Not set".** The control is hidden
+       in that state, and what is hidden must also be false — a flag
+       ticked before a Link was unset would otherwise sit in storage,
+       invisible, and take effect at the next Generate. There is also
+       no settled rule to except self-reviews *from*.
+    2. **The unit of review just moved individual → group.** The two
+       modes except different things. A tick agreed against *the
+       individual reviewed is the reviewer* must not carry silently
+       into *the reviewer is in the group being reviewed*, which on a
+       grouped instrument drops every member row of that group.
+
+    Call **after** ``set_band1_assignment_rules`` and
+    ``set_unit_of_review``, so ``band1_touched_links`` and
+    ``group_kind`` are current; ``previous_group_kind`` is the value
+    read before those ran.
+
+    **The reverse transition (group → individual) needs no rule**, and
+    not because it is harmless: the Link 3 pill cycles
+    ``not_set → individual → group → not_set``, so it cannot reach
+    individual from group without passing through ``not_set`` —
+    which hides the control and clears the box on the way past
+    (author, 2026-09-14). The clearing is done by the *client* at that
+    intermediate step, so a save that arrives with the move already
+    complete carries no tick to clear.
+
+    That makes the cycle's shape load-bearing for this function's
+    completeness, which is why
+    ``test_link3_pill_cycle_cannot_go_group_to_individual`` pins it. A
+    cycle that ever allows the direct move needs a rule here.
+    """
+    touched = set(instrument.band1_touched_links or [])
+    if not {"link1", "link2", "link3"} <= touched:
+        return False
+    moved_to_group = (
+        previous_group_kind is None and instrument.group_kind is not None
+    )
+    if moved_to_group:
+        return False
+    return form_value
+
+
+def get_exclude_self_reviews(db: Session, instrument: Instrument) -> bool:
+    """Read the instrument's self-review exclusion flag.
+
+    Stored on the instrument's ``SessionRuleSet`` row. An instrument
+    with untouched Band 1 has ``rule_set_id = NULL`` and no row, which
+    reads as ``False`` — the default-off state.
+    """
+    if instrument.rule_set_id is None:
+        return False
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    return bool(rule_set is not None and rule_set.exclude_self_reviews)
+
+
+def set_exclude_self_reviews(
+    db: Session,
+    *,
+    instrument: Instrument,
+    value: bool,
+    actor: User,
+) -> Instrument:
+    """Write the instrument's self-review exclusion flag.
+
+    Materializes an empty (Full Matrix) ``SessionRuleSet`` when the
+    operator turns the flag ON and the instrument has none — Band 1
+    only creates a row once a Link 1 / Link 2 rule exists, and the
+    flag needs somewhere to live before then. Setting it OFF with no
+    row is a no-op: ``False`` is the default, so there is nothing to
+    record and no reason to leave an empty row behind.
+
+    An empty rule set is output-identical to the synthetic Full
+    Matrix schema the engine substitutes for ``rule_set_id = NULL``
+    (``assignments._full_matrix_schema``): same empty rules, same
+    ``ALL_OF``, and the ``revision_seed`` difference is inert because
+    the seed is only ever read inside the quota-rule loop, which an
+    empty rule set never enters.
+
+    **This invalidates a validated session**, unlike the
+    visibility-when-closed services that
+    ``session_lifecycle.invalidate_if_validated`` names as deliberate
+    non-callers. Those skip it because
+    ``responses_visible_when_closed`` is a display flag outside the
+    validation snapshot. This one is not a display flag: it is an
+    assignment-rule input whose only purpose is to change which rows
+    generate (from rung 3 of 19O Item 1). Invalidating from the rung
+    that ships the control, rather than the rung that honors it,
+    keeps a session from being validated against a snapshot that never
+    saw the operator's setting.
+
+    No-op writes skip the audit + lifecycle side effects.
+    """
+    current = get_exclude_self_reviews(db, instrument)
+    if current == value:
+        return instrument
+    if instrument.rule_set_id is None:
+        if not value:
+            return instrument
+        rule_set = _create_band1_rule_set(
+            db, instrument=instrument, rules_json=[]
+        )
+        instrument.rule_set_id = rule_set.id
+        db.flush()
+        # ``_create_band1_rule_set`` writes no audit event of its own —
+        # its other caller emits this one after it returns, so the
+        # materialize path has to as well, or a row comes into
+        # existence with no ``.created`` trail.
+        audit.write_event(
+            db,
+            event_type="session_rule_set.created",
+            summary=(
+                f"Materialized empty Band 1 RuleSet for new-model "
+                f"instrument {_instrument_label(instrument)} "
+                f"(self-review exclusion)"
+            ),
+            actor_user_id=actor.id,
+            session=instrument.session,
+            payload=audit.snapshot(
+                {
+                    "id": rule_set.id,
+                    "name": rule_set.name,
+                    "combinator": rule_set.combinator,
+                    "rule_count": 0,
+                }
+            ),
+            refs={
+                "session_rule_set_id": rule_set.id,
+                "instrument_id": instrument.id,
+            },
+        )
+    else:
+        rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+        if rule_set is None:
+            return instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_exclude_self_reviews_updated",
+    )
+    rule_set.exclude_self_reviews = value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session_rule_set.exclude_self_reviews_set",
+        summary=(
+            f"Self-review exclusion "
+            f"{'enabled' if value else 'disabled'} on new-model "
+            f"instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id,
+        session=instrument.session,
+        payload=audit.changes({"exclude_self_reviews": [current, value]}),
+        refs={
+            "session_rule_set_id": rule_set.id,
+            "instrument_id": instrument.id,
+        },
+    )
+    return instrument
 
 
 def parse_link3_form(
@@ -431,13 +666,16 @@ def _create_band1_rule_set(
             f"#{instrument.id}."
         ),
         combinator="ALL_OF",
-        # Align with the synthetic Full Matrix default
-        # (assignments._full_matrix_schema) so self-review pairs
-        # materialise as assignment rows on every Band 1 instrument.
-        # The per-instrument "Self review" toggle on the Assignments
-        # page is the operator's include / exclude surface; baking
-        # exclusion in at the rule-set level would silently disable
-        # that toggle.
+        # Default off, explicitly: a new instrument generates
+        # self-review pairs, and the per-instrument "Self review"
+        # toggle on the Assignments page decides whether they count.
+        # The explicit ``False`` is load-bearing — the mapped column
+        # is ``default=True`` (``session_rule_set.py``, vestigial from
+        # the retired library tier), so dropping it here would
+        # silently invert the default for every new instrument once
+        # rung 3 makes the column live. The table itself has no
+        # server default (``e216f472ac47``), so the Python-side one
+        # is the only thing that would apply.
         exclude_self_reviews=False,
         seed=None,
         rules_json=rules_json,
@@ -517,6 +755,69 @@ def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
         }
         for i in range(n)
     ]
+
+
+def _preview_group_boundary(
+    instrument: Instrument, link3_boundary: list[str] | None
+) -> list[tuple[str, str]]:
+    """The FULL decoded group boundary the preview should group by —
+    reviewee tags **and** pair-context tags, in the shape
+    ``group_key_for_pair`` expects.
+
+    Distinct from ``reviewee_boundary_fields``, which is deliberately
+    reviewee-only because it drives the member-id partition. Grouping
+    for self-review exclusion has to match the generator exactly or the
+    preview shows samples Generate will not produce.
+
+    Live ``link3_boundary`` (canonical keys like ``"pair_context.tag2"``)
+    wins when the Refresh handler supplies it, falling back to the
+    persisted ``group_kind`` — the same precedence the rest of this
+    function uses.
+    """
+    from app.services.instruments._instrument_crud import decode_group_kind
+
+    if link3_boundary is None:
+        return decode_group_kind(instrument.group_kind)
+    boundary: list[tuple[str, str]] = []
+    for raw in link3_boundary:
+        if not isinstance(raw, str):
+            continue
+        source, _, slot = raw.strip().partition(".")
+        if not slot.startswith("tag"):
+            continue
+        num = slot[len("tag") :]
+        if num not in {"1", "2", "3"}:
+            continue
+        if source == "reviewee":
+            pair = ("reviewee", f"tag_{num}")
+        elif source == "pair_context":
+            # ``group_key_for_pair`` takes the bare slot number for
+            # pair-context and derives ``tag_N`` itself.
+            pair = ("pair_context", num)
+        else:
+            continue
+        if pair not in boundary:
+            boundary.append(pair)
+    return boundary
+
+
+def _preview_excludes_self_reviews(
+    db: Session, instrument: Instrument
+) -> bool:
+    """Whether the Band 2 preview should drop self-reviews for this
+    instrument — i.e. whether its pinned rule set carries
+    ``exclude_self_reviews`` (19O Item 1).
+
+    Reads the PERSISTED flag rather than a form field: the Link 3
+    checkbox is not among the inputs the Refresh handler posts, so an
+    unsaved tick is not reflected until the card is saved. The preview
+    already blends live Link 1 / Link 2 edits with persisted Link 3
+    state, so this matches what is around it.
+    """
+    if instrument.rule_set_id is None:
+        return False
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    return bool(rule_set is not None and rule_set.exclude_self_reviews)
 
 
 def find_sample_in_scope_reviewee(
@@ -615,15 +916,16 @@ def find_sample_in_scope_reviewee(
         combinator=Combinator.ALL_OF,
         rules=rules,
         # Project-wide policy: ``excludeSelfReviews`` is ALWAYS
-        # ``False`` for assignments generation AND for the
-        # Band 2 instrument preview. If the operator wants to
-        # suppress self-reviews they should either add a Link 2
-        # rule (e.g. ``reviewee.email_or_identifier IS DIFFERENT
-        # FROM reviewer.email``) or mark the (R, R) row
-        # ``inactive`` on the Assignments page. Excluding them
-        # automatically here used to silently undercount the
-        # team's composition by 1 on every symmetric session —
-        # see ``spec/assignments.md`` "Self-review policy".
+        # ``False`` at the DESUGAR stage — here as in assignments
+        # generation. Excluding at this stage drops pairs before
+        # group composition is known, which silently undercounts a
+        # team by one on every symmetric session
+        # (``spec/assignments.md`` "Self-review policy").
+        #
+        # The instrument's own ``exclude_self_reviews`` flag is
+        # honored below instead, AFTER the fan-out, where whole
+        # groups can be recognized — the same placement the
+        # generator uses (19O Item 1).
         options=RuleSetOptions(excludeSelfReviews=False),
     )
     try:
@@ -637,20 +939,16 @@ def find_sample_in_scope_reviewee(
         return None
     if not result.pairs:
         return None
-    sample_reviewer, reviewee = result.pairs[0]
-    # Gap 10: compute rule-surviving group member IDs for the
-    # sample's reviewee-side boundary key. Skipped when there's no
-    # reviewee-side boundary (per-reviewee mode or grouped-by-
-    # pair-context-only) — render falls back to its existing
-    # unconstrained partition. Iterates result.pairs the engine
-    # already produced; no second engine call.
-    #
-    # ``link3_boundary`` is the live Band 1 boundary list (canonical
-    # keys like ``"reviewee.tag3"``) — the operator's in-progress
-    # edit, posted by the Refresh handler. Falls back to the
-    # persisted ``instrument.group_kind`` when None so callers that
-    # don't supply it (older / non-Refresh paths) keep their old
-    # behaviour.
+
+    # ``pairs`` rather than ``result.pairs`` from here down: the
+    # self-review filter below narrows it, and everything after must
+    # see the narrowed set (the sample pick AND the member-id scan).
+    pairs = list(result.pairs)
+
+    # The boundary fields are needed BEFORE the sample is picked now,
+    # because self-review exclusion is whole-group and the group key
+    # is built from them. (They are also used further down, for the
+    # sample's member ids.)
     from app.services.instruments._instrument_crud import decode_group_kind
 
     if link3_boundary is not None:
@@ -672,6 +970,68 @@ def find_sample_in_scope_reviewee(
             for (src, field) in decode_group_kind(instrument.group_kind)
             if src == "reviewee"
         ]
+
+    # 19O Item 1 — the preview follows the instrument's self-review
+    # rule (author, 2026-09-14). Applied to the engine's OUTPUT, not
+    # to its options: on a grouped instrument a reviewer who is one of
+    # their own group's reviewees makes the whole group a self-review,
+    # so every pair in it goes, not just the ``(R, R)`` one.
+    #
+    # **Keyed exactly as the generator keys it** — ``group_key_for_pair``
+    # over the FULL decoded boundary, pair-context tags included. The
+    # reviewee-only ``reviewee_boundary_fields`` above is the right key
+    # for the member-id partition further down and the wrong one here:
+    # a pair-context-only boundary (``group_kind="p1"``) leaves it
+    # empty, which would drop this to a pair-level test while the
+    # generator still groups — so the preview would offer a teammate
+    # Generate is about to exclude. A mixed boundary (``"r1,p1"``) fails
+    # the other way, merging groups the generator keeps apart. Two
+    # keyings of one concept is one too many.
+    if _preview_excludes_self_reviews(db, instrument):
+        from app.services.assignments import is_self_review
+        from app.services.responses import group_key_for_pair
+
+        full_boundary = _preview_group_boundary(instrument, link3_boundary)
+
+        def _group_key(r: Any, e: Any) -> tuple[str, ...]:
+            return group_key_for_pair(
+                reviewee=e,
+                reviewer_id=r.id,
+                reviewee_id=e.id,
+                boundary=full_boundary,
+                pair_context_lookup=pair_context_lookup,
+            )
+
+        if instrument.group_kind is not None:
+            self_groups = {
+                (r.id, _group_key(r, e))
+                for r, e in pairs
+                if is_self_review(r, e)
+            }
+            pairs = [
+                (r, e)
+                for r, e in pairs
+                if (r.id, _group_key(r, e)) not in self_groups
+            ]
+        else:
+            pairs = [(r, e) for r, e in pairs if not is_self_review(r, e)]
+        if not pairs:
+            return None
+
+    sample_reviewer, reviewee = pairs[0]
+    # Gap 10: compute rule-surviving group member IDs for the
+    # sample's reviewee-side boundary key. Skipped when there's no
+    # reviewee-side boundary (per-reviewee mode or grouped-by-
+    # pair-context-only) — render falls back to its existing
+    # unconstrained partition. Iterates the pairs the engine already
+    # produced; no second engine call.
+    #
+    # ``link3_boundary`` is the live Band 1 boundary list (canonical
+    # keys like ``"reviewee.tag3"``) — the operator's in-progress
+    # edit, posted by the Refresh handler. Falls back to the
+    # persisted ``instrument.group_kind`` when None so callers that
+    # don't supply it (older / non-Refresh paths) keep their old
+    # behaviour.
     if not reviewee_boundary_fields:
         return reviewee, None
     sample_key = tuple(
@@ -689,10 +1049,13 @@ def find_sample_in_scope_reviewee(
     # The rule engine runs with ``excludeSelfReviews=False`` (the
     # project-wide policy — see ``spec/assignments.md`` "Self-
     # review policy"), so the sample reviewer's reviewee-side twin
-    # (when one exists, matched by email) lands in ``result.pairs``
-    # naturally as ``(sample_reviewer, twin)`` and is counted here.
+    # (when one exists, matched by email) lands in the fan-out
+    # naturally as ``(sample_reviewer, twin)`` and is counted here —
+    # unless the instrument's own rule excluded it above, in which
+    # case the whole group went with it and this sample is from a
+    # different group.
     member_ids: set[int] = set()
-    for r, e in result.pairs:
+    for r, e in pairs:
         if r.id != sample_reviewer.id:
             continue
         if (

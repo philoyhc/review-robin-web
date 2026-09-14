@@ -188,24 +188,45 @@ def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
         scope=RuleSetScope.personal,
         combinator=Combinator(row.combinator),
         rules=[rule_adapter.validate_python(payload) for payload in row.rules_json],
-        # Project-wide policy: assignments generation NEVER excludes
-        # self-reviews at the rule-engine layer. The
-        # ``session_rule_sets.exclude_self_reviews`` column is
-        # already backfilled / kept at ``False`` by the Band 1
-        # save path (see migration ``d2e4f6a8c1b3`` +
-        # ``_create_band1_rule_set``); hardcoding here is
-        # defence-in-depth so an out-of-band row tweak can't
-        # silently re-enable the desugar. Operators who want
-        # self-reviews suppressed should either add a Link 2 rule
-        # (e.g. ``reviewee.email_or_identifier IS DIFFERENT FROM
-        # reviewer.email``) or mark the ``(R, R)`` row inactive on
-        # the Assignments page. Spec: ``spec/assignments.md``
-        # "Self-review policy".
+        # Assignments generation never excludes self-reviews at the
+        # rule-engine DESUGAR layer — that stage drops pairs before
+        # group composition, which under-counts a group by one and
+        # is invisible to the operator. This hardcode is what makes
+        # the engine ignore ``session_rule_sets.exclude_self_reviews``.
+        #
+        # The column is no longer pinned ``False`` (19O Item 1 rung 1
+        # removed the save-time normalization) and the operator can
+        # now set it from the Link 3 checkbox (rung 2). Honoring it
+        # is rung 3's job, and belongs AFTER the fan-out, at the
+        # ``pair_include`` branch in ``_diff_one_instrument`` where
+        # whole-group ``is_self`` is already known — not here.
+        # Until then the only way to suppress a self-review is to
+        # mark the ``(R, R)`` row inactive on the Assignments page.
+        # Spec: ``spec/assignments.md`` "Self-review policy".
         options=RuleSetOptions(
             excludeSelfReviews=False,
             seed=row.seed,
         ),
     )
+
+
+def _with_self_review_exclusions(
+    engine_counts: dict[str, int], excluded_by_rule: int
+) -> dict[str, int]:
+    """Fold the post-fan-out self-review exclusions into the engine's
+    own ``excluded_counts``.
+
+    Under the engine's ``self_review`` key — the key its desugar stage
+    would have used had the exclusion happened there. The operator
+    asked one question ("don't generate self-reviews") and should get
+    one number back, whichever stage answered it; and in practice the
+    desugar count is always ``0`` here, since layer 2 pins
+    ``excludeSelfReviews=False``.
+    """
+    counts = dict(engine_counts)
+    if excluded_by_rule:
+        counts["self_review"] = counts.get("self_review", 0) + excluded_by_rule
+    return counts
 
 
 def _full_matrix_schema() -> Any:
@@ -310,6 +331,18 @@ def _diff_one_instrument(
     # out the whole group the reviewer is a member of — not just
     # the ``(R, R)`` pair (Segment 13C). Mark each group whose
     # reviewer appears as one of its own reviewees.
+    #
+    # **Detected over the full reviewee roster, not over
+    # ``result.pairs``.** A Link rule can filter the ``(R, R)`` pair
+    # out of the fan-out while leaving the reviewer's group-mates in
+    # it — e.g. a Link 2 predicate on ``reviewee.tag2`` that the
+    # reviewer's own reviewee row fails and a teammate passes. Keying
+    # off the survivors alone, the group would then carry no
+    # self-review marker at all and every remaining row would read as
+    # an ordinary review: the reviewer would keep reviewing their own
+    # group under both the session toggle and the per-instrument
+    # exclusion. The roster is what decides whether a reviewer is a
+    # member of a group; the rules decide only which rows survive.
     pair_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
     self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
     if instrument.group_kind is not None:
@@ -319,21 +352,47 @@ def _diff_one_instrument(
         boundary = instruments_service.decode_group_kind(
             instrument.group_kind
         )
-        for reviewer, reviewee in result.pairs:
-            key = group_key_for_pair(
+
+        def _key(reviewer_id: int, reviewee: Any) -> tuple[str, ...]:
+            return group_key_for_pair(
                 reviewee=reviewee,
-                reviewer_id=reviewer.id,
+                reviewer_id=reviewer_id,
                 reviewee_id=reviewee.id,
                 boundary=boundary,
                 pair_context_lookup=pair_context_lookup,
             )
-            pair_group_key[(reviewer.id, reviewee.id)] = key
-            if is_self_review(reviewer, reviewee):
-                self_review_groups.add((reviewer.id, key))
+
+        # Membership, from the roster.
+        for reviewer in reviewers:
+            for reviewee in reviewees:
+                if is_self_review(reviewer, reviewee):
+                    self_review_groups.add(
+                        (reviewer.id, _key(reviewer.id, reviewee))
+                    )
+        # Keys for the pairs that actually survived.
+        for reviewer, reviewee in result.pairs:
+            pair_group_key[(reviewer.id, reviewee.id)] = _key(
+                reviewer.id, reviewee
+            )
+
+    # Per-instrument self-review exclusion (19O Item 1 rung 3). Honored
+    # HERE, after the engine's fan-out, and deliberately not at the
+    # rule-engine desugar stage: by this point ``self_review_groups``
+    # already knows whole-group membership, so a group-scoped
+    # instrument drops the whole group rather than just the ``(R, R)``
+    # pair. The desugar stage cannot — it filters pairs before group
+    # composition, which is the recorded reason
+    # ``RuleSetOptions.excludeSelfReviews`` stays pinned ``False``
+    # (``spec/assignments.md`` "Self-review policy").
+    exclude_self = bool(
+        session_rule_set is not None
+        and session_rule_set.exclude_self_reviews
+    )
 
     # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
     # — the same tuple ``uq_assignment_unique`` enforces.
     new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
+    excluded_by_rule = 0
     for reviewer, reviewee in result.pairs:
         if instrument.group_kind is not None:
             is_self = (
@@ -342,6 +401,22 @@ def _diff_one_instrument(
             ) in self_review_groups
         else:
             is_self = is_self_review(reviewer, reviewee)
+        if is_self and exclude_self:
+            # Omitted from ``new_pairs`` entirely, not written with
+            # ``include=False``: the operator asked for no such row.
+            # An existing row therefore falls into ``to_delete`` and
+            # takes its ``Response`` rows with it — counted by
+            # ``responses_deleted`` below and confirmed on the Prepare
+            # card before anything is written.
+            #
+            # Counted under the engine's own ``self_review`` key, the
+            # one its desugar stage would have used. The dry-run's
+            # *eligible* figure and the audit event's pair count are
+            # taken from ``new_pairs`` below rather than from
+            # ``result.pairs``, so neither advertises a row Generate
+            # will never create.
+            excluded_by_rule += 1
+            continue
         pair_include = (
             review_session.self_reviews_active if is_self else True
         )
@@ -384,8 +459,10 @@ def _diff_one_instrument(
         to_delete=to_delete,
         to_keep=to_keep,
         responses_deleted=responses_deleted,
-        pairs_count=len(result.pairs),
-        excluded_counts=dict(result.excluded_counts),
+        pairs_count=len(new_pairs),
+        excluded_counts=_with_self_review_exclusions(
+            result.excluded_counts, excluded_by_rule
+        ),
     )
 
 
@@ -620,6 +697,12 @@ class InstrumentReconcileState:
 
     stale: bool
     eligible: int
+    self_reviews_excluded: int = 0
+    """Pairs this instrument's self-review rule dropped in this
+    dry-run. **Evidence, not configuration**: it is above zero only
+    when the roster actually contains a self-review the rule removed,
+    so a surface can tell *the rule excluded these* from *there was
+    nothing to exclude* (19O Item 1; Codex P2 on #2386)."""
 
 
 def staleness_by_instrument(
@@ -692,6 +775,9 @@ def staleness_by_instrument(
             stale=bool(diff.existing_rows)
             and bool(diff.to_insert or diff.to_delete),
             eligible=diff.pairs_count,
+            self_reviews_excluded=diff.excluded_counts.get(
+                "self_review", 0
+            ),
         )
     return state
 

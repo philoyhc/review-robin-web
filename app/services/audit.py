@@ -564,6 +564,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session_rule_set.deleted": EventSchema(
         _IDENTITY | {"snapshot", "refs"}
     ),
+    "session_rule_set.exclude_self_reviews_set": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),

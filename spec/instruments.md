@@ -440,6 +440,84 @@ other card names); the three Link labels below are unbold.
 | Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee + pair-context boundary tags |
 
+#### Self-review exclusion (Link 3 column, below the rule)
+
+The Link 3 column carries one control that is **not** a unit-of-review
+setting. It sits here for space alone, and says so twice: a horizontal
+`.col-divider` rule — the sibling of the 1px vertical rules between the
+three columns — separates it from the unit-of-review controls above, and
+its own heading **Self reviews** names it, so it does not read as a third
+Link 3 state. The heading takes the unbold weight of the three Link
+labels; bold belongs to the card title.
+
+**The checkbox copy follows the Link 3 pill, live.** Two whole
+sentences, not one with a swapped noun:
+
+| Link 3 mode | Label |
+|---|---|
+| Individual, or `Not set` | *Exclude if the individual reviewed is the reviewer* |
+| Group using tags | *Exclude if the reviewer is in the group being reviewed* |
+
+`Not set` takes the individual sentence because that is the `link3_mode`
+value it submits.
+
+**The control is hidden while any of the three Links is `Not set`** —
+rule, heading and checkbox together, since a lone divider under nothing
+reads as a rendering fault. An instrument with an unset Link has no
+settled rule to except self-reviews *from*. Visibility follows the pills
+live, from one function both pill handlers call.
+
+**Two transitions clear the stored flag**, so what is hidden or
+re-scoped is also false:
+
+| Transition | Why |
+|---|---|
+| Any Link → `Not set` | A flag left ticked would sit in the rule set, invisible on the page and live at the next Generate. |
+| Link 3 `Individual` → `Group using tags` | The two modes except different things. A tick agreed against *the individual reviewed is the reviewer* must not carry into *the reviewer is in the group being reviewed*, which drops every member row of that group. |
+
+Both are enforced **server-side on save** (`resolve_exclude_self_reviews`),
+with the client clearing the box at the same moment so the page and the
+store agree. **Session-config import is held to the first rule too**
+(`clear_unsettled_exclude_self_reviews`, run once both the rule-set rows
+and the instrument rows have landed): a bundle pairs those halves
+independently, so without it an import could store a flag the UI then
+hides — invisible and in force at once.
+
+There is no third rule for `Group using tags` → `Individual` because the
+pill cannot make that move directly: the cycle is `Not set` → `Individual`
+→ `Group using tags` → `Not set`, so the reverse passes through `Not set`,
+which hides the control and clears the box on the way. **The cycle's shape
+is therefore load-bearing** — changing it to allow the direct move requires
+a rule for it. Both spellings ride on the element as `data-copy-*`
+attributes and `newModelToggleUnitMode` swaps them as the pill cycles —
+the handler that already owns every other live consequence of the pill,
+so the control cannot describe the opposite of what the operator has
+just selected while the card is unsaved.
+
+It reads and writes `session_rule_sets.exclude_self_reviews` for the
+instrument's pinned rule set. **Default off.** An instrument whose Band 1
+is untouched has no rule set row; turning the flag *on* materializes an
+empty (Full Matrix) one, which is output-identical to the synthetic
+schema the engine substitutes for a null `rule_set_id`. Turning it *off*
+with no row is a no-op — `False` is the default, so no empty row is left
+behind. Writes emit
+`session_rule_set.exclude_self_reviews_set` and invalidate a validated
+session.
+
+The checkbox is inert with the rest of the Band 1 grid while the card is
+locked.
+
+**It takes effect at the next Generate**, not on save — the generator
+honors it at the `pair_include` branch, after the engine's pair
+fan-out, so a group-scoped instrument drops the reviewer's whole group
+rather than one `(R, R)` pair. On an instrument that has already
+generated, this **deletes** the self-review rows and their saved
+responses; the reconcile dry-run counts them and the Prepare card
+confirms before anything is written. See `spec/assignments.md`
+§ *Self-review policy* for why the exclusion is honored there rather
+than at the rule engine's desugar stage, which still never drops a
+self-pair.
+
 #### Pill-driven state machine
 
 Each Link has a mode-toggle pill in its heading row that cycles
@@ -590,13 +668,35 @@ alongside each row of their answer surface, and renders a
 live preview of one sample row inline.
 
 > **Self-review policy.** The preview's sample-picker engine runs
-> with `excludeSelfReviews=False` — same project-wide rule as
-> assignments generation. The preview shows the team's actual
-> composition; if the sample reviewer is themselves a team member,
-> they appear in their own group. See `spec/assignments.md`
-> "Self-review policy" for the rationale and the supported ways to
-> suppress self-reviews (Link rule, or the Self-review toggle on
-> the Assignments page).
+> with `excludeSelfReviews=False`, the same desugar-stage rule
+> assignments generation follows. The preview shows the team's
+> actual composition; if the sample reviewer is themselves a team
+> member, they appear in their own group.
+>
+> **The preview follows the instrument's self-review rule.** When
+> the Link 3 checkbox is set, the picker drops self-reviews from the
+> engine's **output** before choosing a sample — never by flipping
+> `excludeSelfReviews`, which would drop pairs before group
+> composition is known. On a grouped instrument the whole group
+> goes, so a reviewer who is one of their own group's reviewees
+> takes that group out of the preview entirely; if no group
+> survives, the preview renders empty rather than showing a row
+> Generate would not produce. Same rule, same placement **and the
+> same keying** as `assignments._diff_one_instrument`: the group key
+> comes from `group_key_for_pair` over the full decoded boundary,
+> pair-context tags included. That is deliberately *not* the
+> reviewee-only field list this function uses for the member-id
+> partition — a pair-context-only boundary would leave that list
+> empty and silently drop the test to pair level while the generator
+> still grouped.
+>
+> It reads the **persisted** flag: the checkbox is not among the
+> fields the Refresh handler posts, so an unsaved tick shows after
+> the card is saved. The preview already blends live Link 1 / Link 2
+> edits with persisted Link 3 state.
+>
+> See `spec/assignments.md` § *Self-review policy* for the two
+> supported ways to suppress self-reviews.
 
 #### Intro card (left of the preview row)
 

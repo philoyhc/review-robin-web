@@ -611,3 +611,288 @@ def test_delete_all_scoped_keeps_other_instruments(db: Session) -> None:
         )
         == 4
     )
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 1 rung 3 — per-instrument self-review exclusion, honored
+# after the engine's fan-out.
+# --------------------------------------------------------------------- #
+
+
+def _self_review_rows(db: Session, instrument_id: int) -> list[Assignment]:
+    return list(
+        db.execute(
+            select(Assignment)
+            .where(Assignment.instrument_id == instrument_id)
+            .where(Assignment.is_self_review.is_(True))
+        ).scalars()
+    )
+
+
+def test_exclude_self_reviews_writes_no_row_individual(
+    db: Session,
+) -> None:
+    """With the flag set, the ``(R, R)`` pair is omitted from the fan-out
+    entirely — no row at all, not a row with ``include=False``."""
+    user, review_session, instrument = _seed_self_review_session(db)
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set.exclude_self_reviews = True
+    db.flush()
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    assert _self_review_rows(db, instrument.id) == []
+    # The non-self pairs still generate: this excludes, it does not empty.
+    assert (
+        db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id == instrument.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+def test_exclude_self_reviews_off_still_writes_the_row(
+    db: Session,
+) -> None:
+    """The control case for the test above — without the flag the same
+    roster materialises the self-review row, so the assertion there is
+    about the flag and not about the fixture."""
+    user, review_session, instrument = _seed_self_review_session(db)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    assert len(_self_review_rows(db, instrument.id)) == 1
+
+
+def test_exclude_self_reviews_drops_the_whole_group(db: Session) -> None:
+    """On a group-scoped instrument, excluding self-reviews drops every
+    member row of the reviewer's group — not just the ``(R, R)`` pair.
+
+    This is the property the rule-engine desugar stage cannot express,
+    and the reason the flag is honored after the fan-out instead
+    (``spec/assignments.md`` § *Self-review policy*).
+    """
+    user, review_session, instrument = _seed_self_review_session(db)
+    # Group every reviewee under one boundary so Sam's self-review and
+    # the rest of the group share a key.
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Ann",
+            email_or_identifier="ann@example.edu",
+            tag_1="TeamA",
+        )
+    )
+    sam = db.execute(
+        select(Reviewee).where(
+            Reviewee.email_or_identifier == "sam@example.edu"
+        )
+    ).scalar_one()
+    sam.tag_1 = "TeamA"
+    instrument.group_kind = "r1"
+    db.flush()
+
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set.exclude_self_reviews = False
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    baseline = len(_self_review_rows(db, instrument.id))
+    assert baseline > 1, (
+        "fixture must produce a multi-row self-review GROUP, or this "
+        "test cannot tell whole-group exclusion from pair exclusion"
+    )
+
+    rule_set.exclude_self_reviews = True
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c2"
+    )
+    assert _self_review_rows(db, instrument.id) == []
+
+
+def test_exclude_self_reviews_ignores_non_email_identifiers(
+    db: Session,
+) -> None:
+    """A reviewee whose identifier is not an email is never a
+    self-review, so the flag cannot drop an anonymous reviewee's row."""
+    user, review_session, instrument = _seed_self_review_session(db)
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Anon",
+            email_or_identifier="anon-001",
+        )
+    )
+    db.flush()
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set.exclude_self_reviews = True
+    db.flush()
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    anon_rows = [
+        row
+        for row in db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id == instrument.id
+            )
+        ).scalars()
+        if db.get(Reviewee, row.reviewee_id).email_or_identifier
+        == "anon-001"
+    ]
+    assert anon_rows, "the anonymous reviewee's rows must survive"
+
+
+def test_exclude_self_reviews_round_trips_both_ways(db: Session) -> None:
+    """Flipping the flag on drops the row; flipping it back off
+    regenerates it. The exclusion is not a one-way door."""
+    user, review_session, instrument = _seed_self_review_session(db)
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    assert len(_self_review_rows(db, instrument.id)) == 1
+
+    rule_set.exclude_self_reviews = True
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c2"
+    )
+    assert _self_review_rows(db, instrument.id) == []
+
+    rule_set.exclude_self_reviews = False
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c3"
+    )
+    assert len(_self_review_rows(db, instrument.id)) == 1
+
+
+def test_exclude_self_reviews_deletes_saved_responses(db: Session) -> None:
+    """Ticking the box after responses exist DELETES them.
+
+    The dropped pair lands in ``to_delete``, whose responses go first
+    for the FK. This is destructive and the operator must be told: the
+    dry-run's ``responses_deleted`` is what the Prepare card confirms
+    against, so it has to count this case.
+    """
+    user, review_session, instrument = _seed_self_review_session(db)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    self_row = _self_review_rows(db, instrument.id)[0]
+    resp_id = _attach_response(
+        db, instrument_id=instrument.id, assignment=self_row, key="selfrev"
+    )
+
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set.exclude_self_reviews = True
+    db.flush()
+
+    impact = assignments.reconcile_impact(db, review_session=review_session)
+    assert impact.responses_deleted >= 1, (
+        "the Prepare card confirms against this count; if it misses the "
+        "excluded rows the operator loses responses with no warning"
+    )
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c2"
+    )
+    assert db.get(Response, resp_id) is None
+
+
+
+def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(
+    db: Session,
+) -> None:
+    """A Link rule can filter the ``(R, R)`` pair out of the fan-out
+    while leaving the reviewer's group-mates in it. The exclusion must
+    still drop the whole group.
+
+    Found by Codex on #2386 (P1). Self-review groups were detected over
+    ``result.pairs`` — the survivors — so with the ``(R, R)`` row
+    filtered away the group carried no self-review marker at all, every
+    remaining row read as an ordinary review, and the reviewer went on
+    reviewing their own group with the checkbox set. Membership is a
+    fact about the roster; the rules decide only which rows survive.
+    """
+    user, review_session, instrument = _seed_self_review_session(db)
+    sam_e = db.execute(
+        select(Reviewee).where(
+            Reviewee.email_or_identifier == "sam@example.edu"
+        )
+    ).scalar_one()
+    sam_e.tag_1 = "TeamA"
+    sam_e.tag_2 = "SELF"
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Zoe",
+            email_or_identifier="zoe@example.edu",
+            tag_1="TeamA",
+            tag_2="OTHER",
+        )
+    )
+    instrument.group_kind = "r1"
+    db.flush()
+
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    # Link 2 keeps only tag_2 == OTHER, so Sam's own reviewee row never
+    # reaches the fan-out while his group-mate Zoe does.
+    rule_set.rules_json = [
+        {
+            "id": "link2",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "link2-r0",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewee.tag2",
+                        "operator": "equals",
+                        "operand": "OTHER",
+                        "case_sensitive": False,
+                    },
+                }
+            ],
+        }
+    ]
+    rule_set.exclude_self_reviews = True
+    db.flush()
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="p1"
+    )
+
+    sam_r_id = db.execute(
+        select(Reviewer).where(Reviewer.email == "sam@example.edu")
+    ).scalar_one().id
+    zoe_id = db.execute(
+        select(Reviewee).where(
+            Reviewee.email_or_identifier == "zoe@example.edu"
+        )
+    ).scalar_one().id
+    leaked = [
+        row
+        for row in db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id == instrument.id
+            )
+        ).scalars()
+        if row.reviewer_id == sam_r_id and row.reviewee_id == zoe_id
+    ]
+    assert leaked == [], (
+        "Sam reviews his own group through Zoe: the (R, R) pair was "
+        "filtered by the Link rule, so the group was never marked"
+    )

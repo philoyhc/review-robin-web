@@ -831,6 +831,14 @@ def build_instruments_context(
                     instrument.group_kind
                 ),
                 "touched": "link3" in (instrument.band1_touched_links or []),
+                # 19O Item 1 — the self-review exclusion checkbox
+                # shares this column for space, not because it is a
+                # unit-of-review setting.
+                "exclude_self_reviews": (
+                    instruments_service.get_exclude_self_reviews(
+                        db, instrument
+                    )
+                ),
             }
             for instrument in instruments
         },

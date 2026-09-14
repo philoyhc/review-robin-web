@@ -81,8 +81,22 @@
               {% endif %}
             </td>
             <td>
+              {# 19O Item 1 rung 4 — an instrument whose rule excludes
+                 self-reviews generates no such row, so a bare ``0``
+                 here would be indistinguishable from a roster that
+                 simply has no self-pairs. *None exist* and *none kept*
+                 are different facts. The checkbox needs no separate
+                 suppression: its ``> 0`` guard already hides it, and
+                 the flag only reads "Excluded by rule" once the count
+                 is actually 0 — a flagged-but-not-yet-regenerated
+                 instrument keeps its real count and its toggle. #}
+              {% if block.self_review_excluded_by_rule %}
+                <span class="muted"
+                      data-self-review-excluded="{{ block.instrument_id }}">Excluded by rule</span>
+              {% else %}
               <span class="pill {{ sr_pill_class }}"
                     data-self-review-count="{{ block.instrument_id }}">{{ block.self_review_total }}</span>
+              {% endif %}
               {% if block.self_review_total > 0 %}
                 <form method="post"
                       action="{{ block.self_review_toggle_url }}"

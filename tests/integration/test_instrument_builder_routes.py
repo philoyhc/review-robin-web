@@ -7118,3 +7118,849 @@ def test_19h2_discard_reload_is_shared_by_cancel_and_lock(
     # And the two behaviours the discard must not lose.
     assert "window._newModelIntentionalNav = true;" in body
     assert "window.newModelCaptureOpenState();" in body
+
+
+def _new_model_for(client: TestClient, db: Session, code: str):
+    """Add a new-model instrument to a fresh session and return it."""
+    review_session = _make_session(client, db, code=code)
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    return review_session, new_model
+
+
+def _band1_payload(**overrides) -> dict:
+    """Minimal Band 1 save payload for a CONFIGURED instrument: both
+    links in All mode, Link 3 Individual, and all three pills clicked
+    out of "Not set". Overrides merge on top.
+
+    The ``*_touched`` flags are load-bearing, not noise. "All" and
+    "Not set" differ only by the touched bit, and since 19O Item 2's
+    follow-up an instrument with any Link unset stores
+    ``exclude_self_reviews=False`` regardless of the checkbox — so a
+    payload without them describes an unconfigured instrument and
+    cannot exercise the flag at all.
+    """
+    payload = {
+        "link1_touched": "true",
+        "link2_touched": "true",
+        "link3_touched": "true",
+        "link1_mode": "all",
+        "link1_combinator": "AND",
+        "link1_field": "",
+        "link1_op": "",
+        "link1_operand_value": "",
+        "link1_operand_tag": "",
+        "link2_mode": "all",
+        "link2_combinator": "AND",
+        "link2_field": "",
+        "link2_op": "",
+        "link2_operand_value": "",
+        "link2_operand_tag": "",
+        "link3_mode": "individual",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_exclude_self_reviews_checkbox_round_trips(
+    client: TestClient, db: Session
+) -> None:
+    """19O Item 1 rung 2. Ticking the Link 3 self-review checkbox
+    persists to ``SessionRuleSet.exclude_self_reviews``, and clearing
+    it persists the clear — the flag is no longer force-normalized on
+    save (rung 1)."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-trip")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # Unchecked: an HTML checkbox submits nothing, so the key is absent.
+    client.post(url, data=_band1_payload(), follow_redirects=False)
+    db.refresh(rule_set)
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument with untouched Band 1 carries ``rule_set_id =
+    NULL`` and has nowhere to store the flag. Turning it ON
+    materializes an EMPTY rule set — output-identical to the synthetic
+    Full Matrix schema the engine substitutes for NULL, so this
+    changes no assignment row."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-mat")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    # Empty = Full Matrix. A rule set materialized for the checkbox
+    # must not smuggle in content rules.
+    assert rule_set.rules_json == []
+
+
+def test_exclude_self_reviews_materialisation_is_audited(
+    client: TestClient, db: Session
+) -> None:
+    """Materializing a rule set from the checkbox emits
+    ``session_rule_set.created`` as well as the flag event.
+
+    ``_create_band1_rule_set`` writes no audit event of its own — its
+    other caller emits one after it returns — so without this the
+    checkbox could bring a ``SessionRuleSet`` row into existence with
+    no creation trail, unlike every other creation path.
+    """
+    from app.db.models import AuditEvent
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-audit")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    types = [
+        row.event_type
+        for row in db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id
+            )
+        ).scalars()
+    ]
+    assert "session_rule_set.created" in types
+    assert "session_rule_set.exclude_self_reviews_set" in types
+
+
+def test_exclude_self_reviews_off_leaves_no_empty_rule_set_behind(
+    client: TestClient, db: Session
+) -> None:
+    """Saving with the box unticked on an instrument that has no rule
+    set is a no-op: ``False`` is the default, so there is nothing to
+    record and no reason to leave an empty row behind."""
+    review_session, new_model = _new_model_for(client, db, "nm-esr-noop")
+    assert new_model.rule_set_id is None
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.rule_set_id is None
+
+
+def test_exclude_self_reviews_does_not_yet_change_generation(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 2 persists intent only. The engine still ignores the
+    column — ``_session_rule_set_to_schema`` hardcodes
+    ``excludeSelfReviews=False`` until rung 3 — so the schema it
+    builds from a flagged rule set still allows self-reviews."""
+    from app.db.models import SessionRuleSet
+    from app.services.assignments._generate import (
+        _session_rule_set_to_schema,
+    )
+
+    review_session, new_model = _new_model_for(client, db, "nm-esr-inert")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    schema = _session_rule_set_to_schema(rule_set)
+    assert schema.options.excludeSelfReviews is False
+
+
+def test_exclude_self_reviews_checkbox_renders_under_a_divider(
+    client: TestClient, db: Session
+) -> None:
+    """The checkbox renders in the Link 3 column, separated from the
+    unit-of-review controls by the ``.col-divider`` rule — it shares
+    the column for space, not because it is a unit-of-review setting.
+    Checked state reflects storage."""
+    review_session, new_model = _new_model_for(client, db, "nm-esr-render")
+
+    def _card(body: str) -> str:
+        """The slice of the page belonging to THIS instrument's card.
+
+        Every new-model card on the page renders its own copy of the
+        control, so an unscoped ``body.index`` finds a sibling
+        instrument's checkbox — which is how the first version of this
+        test passed against the wrong card. Anchor on the card's own
+        ``dfsave-{id}`` form id.
+        """
+        marker = f'form="dfsave-{new_model.id}" type="checkbox"'
+        start = body.index(marker)
+        return body[start : start + 400]
+
+    def _page() -> str:
+        return client.get(
+            f"/operator/sessions/{review_session.id}"
+            f"/instruments?editing={new_model.id}"
+        ).text
+
+    body = _page()
+    card = _card(body)
+    assert 'name="exclude_self_reviews"' in card
+    # The divider separates it from the unit-of-review controls above.
+    assert body.rindex('<hr class="col-divider">', 0, body.index(card)) > 0
+    assert "checked" not in card  # default off
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    assert "checked" in _card(_page())
+
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 1 — the Band 2 preview follows the instrument's self-review
+# rule (author ruling, 2026-09-14).
+# --------------------------------------------------------------------- #
+
+
+def _preview_session_with_self_pair(client: TestClient, db: Session, code: str):
+    """A session whose roster contains a self-review pair: reviewer Sam
+    and reviewee Sam share an email. Returns (session, instrument)."""
+    from app.db.models import SessionRuleSet
+
+    review_session = _make_session(client, db, code=code)
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Sam",
+                email="sam@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Sam",
+                email_or_identifier="sam@example.edu",
+                tag_1="Team A",
+            ),
+            # Sorts AFTER Sam: reviewees are ordered by name, so the
+            # self-pair must be the natural first sample or the
+            # exclusion assertion would pass without the flag doing
+            # anything. The control test below pins that.
+            Reviewee(
+                session_id=review_session.id,
+                name="Zoe",
+                email_or_identifier="zoe@example.edu",
+                tag_1="Team A",
+            ),
+        ]
+    )
+    db.commit()
+    instrument = _instrument(db, review_session.id)
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Preview RS",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
+    db.commit()
+    return review_session, instrument, rule_set
+
+
+def _sample(db: Session, instrument):
+    from app.services import instruments as instruments_service
+
+    return instruments_service.find_sample_in_scope_reviewee(
+        db,
+        instrument=instrument,
+        link1_mode="all",
+        link1_combinator="AND",
+        link1_rules=[],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+    )
+
+
+def test_preview_sample_excludes_self_review_when_rule_says_so(
+    client: TestClient, db: Session
+) -> None:
+    """With the instrument's rule excluding self-reviews, the Band 2
+    preview must not offer a sample in which the reviewer reviews
+    themselves — the preview follows the rule (author, 2026-09-14)."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-on"
+    )
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    out = _sample(db, instrument)
+    assert out is not None
+    reviewee, _members = out
+    assert reviewee.email_or_identifier != "sam@example.edu"
+
+
+def test_preview_sample_keeps_self_review_when_rule_permits(
+    client: TestClient, db: Session
+) -> None:
+    """Control for the test above: without the flag, the same roster
+    can sample the self-pair, so that assertion is about the flag and
+    not about the fixture's ordering."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-off"
+    )
+    out = _sample(db, instrument)
+    assert out is not None
+    reviewee, _members = out
+    assert reviewee.email_or_identifier == "sam@example.edu"
+
+
+def test_preview_sample_exclusion_drops_the_whole_group(
+    client: TestClient, db: Session
+) -> None:
+    """On a grouped instrument the exclusion is whole-group: a reviewer
+    who is one of their own group's reviewees takes the entire group
+    out of the preview, not just the ``(R, R)`` pair.
+
+    Sam and Zoe share ``tag_1``; with Sam's self-pair excluded, Zoe
+    must not be offered as a sample either — she is in the group Sam
+    would be reviewing himself within.
+    """
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-group"
+    )
+    instrument.group_kind = "r1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    assert _sample(db, instrument) is None, (
+        "the only group is Sam's own, so excluding it leaves no sample"
+    )
+
+
+def test_preview_sample_exclusion_is_not_the_desugar_stage(
+    client: TestClient, db: Session
+) -> None:
+    """The engine's ``excludeSelfReviews`` stays ``False`` — the flag is
+    honored on the engine's OUTPUT, never in its options.
+
+    Flipping it in the schema would drop pairs before group
+    composition is known, which is the recorded hazard that pinned the
+    option (``spec/assignments.md`` § *Self-review policy*).
+    """
+    import inspect
+
+    from app.services.instruments import _band1
+
+    src = inspect.getsource(_band1.find_sample_in_scope_reviewee)
+    assert "excludeSelfReviews=False" in src
+    assert "excludeSelfReviews=True" not in src
+
+
+def test_preview_sample_exclusion_keys_like_the_generator(
+    client: TestClient, db: Session
+) -> None:
+    """A pair-context-only boundary groups in the preview exactly as it
+    does in generation.
+
+    Found by the close pass on #2386. The filter first keyed off
+    ``reviewee_boundary_fields``, which is reviewee-only by design (it
+    drives the member-id partition). With ``group_kind="p1"`` that list
+    is empty, so the filter silently dropped to a pair-level test while
+    the generator still grouped — and the preview offered a teammate
+    Generate was about to exclude. Now both call ``group_key_for_pair``
+    over the full decoded boundary.
+    """
+    from app.db.models import Relationship
+
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-paircontext"
+    )
+    sam_r = db.execute(
+        select(Reviewer).where(Reviewer.email == "sam@example.edu")
+    ).scalar_one()
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars():
+        db.add(
+            Relationship(
+                session_id=review_session.id,
+                reviewer_id=sam_r.id,
+                reviewee_id=reviewee.id,
+                status="active",
+                tag_1="SquadA",
+            )
+        )
+    # Group by the pair-context tag alone — no reviewee-side boundary.
+    instrument.group_kind = "p1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    assert _sample(db, instrument) is None, (
+        "Sam and Zoe share one pair-context group and Sam is in it, so "
+        "the whole group is excluded and no sample remains"
+    )
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 2 — the self-review control's heading and live copy.
+# --------------------------------------------------------------------- #
+
+
+def _instrument_card(body: str, instrument_id: int) -> str:
+    """The slice of the Instruments page belonging to ONE card.
+
+    Every new-model card renders its own copy of the self-review
+    control, so an unscoped ``body.index`` finds whichever card comes
+    first — which has now produced a wrong-but-passing assertion twice
+    in this file. Scope first, assert second.
+
+    Both bounds anchor on the card's opening ``class="card"
+    id="instrument-N"``, **not** on the bare ``id="instrument-``
+    prefix: that prefix also matches the card's own
+    ``id="instrument-delete-N"`` form, which would truncate the slice
+    partway through the card it is meant to return.
+    """
+    opening = 'class="card" id="instrument-'
+    start = body.index(f'{opening}{instrument_id}"')
+    nxt = body.find(opening, start + 1)
+    return body[start:] if nxt == -1 else body[start:nxt]
+
+
+def test_self_review_control_has_a_heading(
+    client: TestClient, db: Session
+) -> None:
+    """The control carries the heading "Self reviews".
+
+    Item 1 chose the ``.col-divider`` to say *this is a second thing in
+    this column*; a heading is the other half of that sentence, and
+    without it what the divider separates is left to inference.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-heading")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _instrument_card(body, new_model.id)
+    divider = card.index('<hr class="col-divider">')
+    heading = card.index("Self reviews")
+    checkbox = card.index('name="exclude_self_reviews"')
+    assert divider < heading < checkbox, (
+        "the heading belongs between the divider and the checkbox"
+    )
+
+
+def test_self_review_copy_matches_the_persisted_unit_of_review(
+    client: TestClient, db: Session
+) -> None:
+    """On load, the sentence matches the saved Link 3 mode — and the
+    grouped one is the author's wording, not a noun swapped into the
+    individual sentence.
+
+    *The reviewer is in the group* is the actual test on a grouped
+    instrument; "the group reviewed is the reviewer" describes
+    something that cannot happen.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-copy")
+
+    def _copy() -> str:
+        """The span's TEXT, not the element source.
+
+        The element also carries both sentences as ``data-copy-*``
+        attributes for the pill handler, so asserting over the raw
+        markup would pass in either mode — which is how the first
+        version of this test passed without proving anything.
+        """
+        card = _instrument_card(
+            client.get(
+                f"/operator/sessions/{review_session.id}"
+                f"/instruments?editing={new_model.id}"
+            ).text,
+            new_model.id,
+        )
+        start = card.index("data-new-model-self-review-copy")
+        opening_end = card.index(">", start)
+        return card[opening_end + 1 : card.index("</span>", opening_end)]
+
+    assert "Exclude if the individual reviewed is the reviewer" in _copy()
+    assert "in the group being reviewed" not in _copy()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(
+            link3_mode="grouped",
+            link3_boundary="reviewee.tag1",
+            link3_touched="true",
+        ),
+        follow_redirects=False,
+    )
+    rendered = _copy()
+    assert "Exclude if the reviewer is in the group being reviewed" in rendered
+    assert "the individual reviewed" not in rendered
+
+
+def test_self_review_copy_carries_both_spellings_for_the_pill(
+    client: TestClient, db: Session
+) -> None:
+    """Both sentences ride on the element so the pill handler can swap
+    them without a save.
+
+    The bug this fixes: the pill cycles client-side and rewrites its own
+    label, the builder's dimming and the hidden ``link3_mode`` input,
+    but the copy was rendered server-side from the *persisted*
+    ``group_kind`` — so between cycling to *Group using tags* and
+    saving, the control described the opposite of what the operator
+    had just selected.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-live")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _instrument_card(body, new_model.id)
+    start = card.index("data-new-model-self-review-copy")
+    element = card[start : start + 600]
+    assert (
+        'data-copy-individual="Exclude if the individual reviewed '
+        'is the reviewer"' in element
+    )
+    assert (
+        'data-copy-group="Exclude if the reviewer is in the group '
+        'being reviewed"' in element
+    )
+    # And the handler that owns every other live consequence of the
+    # pill must be the one that swaps them — not a second listener.
+    handler = body[
+        body.index("window.newModelToggleUnitMode") :
+    ]
+    handler = handler[: handler.index("window.newModel", 40)]
+    assert "data-new-model-self-review-copy" in handler
+    assert "data-copy-group" in handler
+
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 2 follow-up — hide + clear while any Link is "Not set", and
+# clear on an individual → group move.
+# --------------------------------------------------------------------- #
+
+
+def _self_review_block(body: str, instrument_id: int) -> str:
+    card = _instrument_card(body, instrument_id)
+    start = card.index("data-new-model-self-review-block")
+    return card[start : card.index("</div>", start)]
+
+
+def test_self_review_block_is_hidden_until_all_three_links_are_set(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument with any Link on "Not set" has no settled rule to
+    except self-reviews from, so the whole block — rule, heading and
+    checkbox — is hidden.
+
+    Hidden as one unit: a lone divider under nothing reads as a
+    rendering fault.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-hide")
+
+    def _block() -> str:
+        return _self_review_block(
+            client.get(
+                f"/operator/sessions/{review_session.id}"
+                f"/instruments?editing={new_model.id}"
+            ).text,
+            new_model.id,
+        )
+
+    # Fresh new-model instrument: all three pills are "Not set".
+    assert "display: none" in _block()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(),
+        follow_redirects=False,
+    )
+    assert "display: none" not in _block()
+
+    # Put one Link back to "Not set" — the block goes with it.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(link2_touched="false"),
+        follow_redirects=False,
+    )
+    assert "display: none" in _block()
+
+
+def test_unset_link_clears_the_stored_flag(
+    client: TestClient, db: Session
+) -> None:
+    """What is hidden is also false in storage.
+
+    Otherwise a flag ticked while the Links were set would sit in the
+    rule set after one was unset — invisible on the page and live at
+    the next Generate.
+    """
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-clear")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # Unset Link 1 while still submitting a ticked box.
+    client.post(
+        url,
+        data=_band1_payload(
+            link1_touched="false", exclude_self_reviews="true"
+        ),
+        follow_redirects=False,
+    )
+    db.refresh(rule_set)
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_moving_individual_to_group_clears_the_flag(
+    client: TestClient, db: Session
+) -> None:
+    """The two modes except different things, so the tick does not
+    carry across the move.
+
+    A tick agreed against *the individual reviewed is the reviewer*
+    would otherwise become *the reviewer is in the group being
+    reviewed*, which drops every member row of that group. Re-ticking
+    is one click; discovering a whole group went missing is not.
+    """
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-togroup")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+    assert new_model.group_kind is None
+
+    client.post(
+        url,
+        data=_band1_payload(
+            link3_mode="grouped",
+            link3_boundary="reviewee.tag1",
+            exclude_self_reviews="true",
+        ),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    db.refresh(rule_set)
+    assert new_model.group_kind == "r1"
+    assert rule_set.exclude_self_reviews is False, (
+        "a tick agreed for the individual rule must not silently "
+        "become the group rule"
+    )
+
+
+def test_staying_in_group_mode_keeps_the_flag(
+    client: TestClient, db: Session
+) -> None:
+    """The clear is the individual → group *transition*, not grouped
+    mode itself — otherwise the flag could never be set on a grouped
+    instrument at all."""
+    from app.db.models import SessionRuleSet
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-stay")
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save"
+    )
+    grouped = dict(link3_mode="grouped", link3_boundary="reviewee.tag1")
+    client.post(url, data=_band1_payload(**grouped), follow_redirects=False)
+    client.post(
+        url,
+        data=_band1_payload(exclude_self_reviews="true", **grouped),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+
+def test_both_pill_handlers_sync_the_self_review_block(
+    client: TestClient, db: Session
+) -> None:
+    """Visibility follows the pills live, from one shared function.
+
+    Both handlers call it: the rule is one rule, so it has one
+    implementation rather than a copy in each.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-sr-sync")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert "window.newModelSyncSelfReviewBlock" in body
+    for handler in ("newModelToggleRuleMode", "newModelToggleUnitMode"):
+        start = body.index(f"window.{handler} =")
+        scope = body[start : body.index("};", start)]
+        assert "newModelSyncSelfReviewBlock(btn)" in scope, (
+            f"{handler} must sync the block"
+        )
+
+
+def test_link3_pill_cycle_cannot_go_group_to_individual(
+    client: TestClient, db: Session
+) -> None:
+    """The Link 3 pill wraps ``not_set → individual → group →
+    not_set``, never group → individual directly.
+
+    This is not a style point: it is why
+    ``resolve_exclude_self_reviews`` needs no rule for the reverse
+    transition (author, 2026-09-14). The move can only happen via
+    ``not_set``, which hides the control and clears the box on the way
+    past. A cycle that ever allows the direct move leaves a tick
+    agreed for the group rule applying to the individual one, with
+    nothing to catch it — so the premise is pinned here rather than
+    left to memory.
+    """
+    review_session, new_model = _new_model_for(client, db, "nm-cycle")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelToggleUnitMode =")
+    handler = body[start : body.index("btn.setAttribute('data-new-model-unit-mode'", start)]
+    # The only assignment reachable when current === 'group' is the
+    # trailing else, which must be not_set.
+    assert "if (current === 'not_set') {" in handler
+    assert "} else if (current === 'individual') {" in handler
+    tail = handler[handler.index("} else if (current === 'individual') {") :]
+    assert "next = 'group';" in tail
+    else_branch = tail[tail.index("} else {") :]
+    assert "next = 'not_set';" in else_branch
+    assert "next = 'individual';" not in else_branch, (
+        "group must cycle to not_set, never straight to individual"
+    )
+
+
+def test_import_cannot_leave_the_flag_set_behind_an_unset_link(
+    client: TestClient, db: Session
+) -> None:
+    """Session-config import writes ``exclude_self_reviews`` directly,
+    from rows independent of the instrument's Band 1 state — so a
+    bundle can pair a ticked flag with an unset Link, which the UI
+    hides while the flag stays live at Generate.
+
+    Found by the close pass on the follow-up: the save path enforced
+    the rule and the import path did not, so the guarantee was
+    partial. Invisible *and* in force is the one state the hide rule
+    exists to prevent.
+    """
+    from app.db.models import SessionRuleSet
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-import")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set.exclude_self_reviews is True
+
+    # What an import can produce: flag set, Band 1 not fully set.
+    new_model.band1_touched_links = ["link1", "link3"]
+    db.flush()
+
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
+        db, review_session
+    )
+    db.refresh(rule_set)
+    assert cleared == 1
+    assert rule_set.exclude_self_reviews is False
+
+
+def test_import_guard_leaves_a_fully_configured_instrument_alone(
+    client: TestClient, db: Session
+) -> None:
+    """The guard clears only what the operator could not have seen —
+    an instrument with all three Links set keeps its flag."""
+    from app.db.models import SessionRuleSet
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _new_model_for(client, db, "nm-sr-import-ok")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
+    )
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
+        db, review_session
+    )
+    db.refresh(new_model)
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert cleared == 0
+    assert rule_set.exclude_self_reviews is True
