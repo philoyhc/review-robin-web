@@ -7546,9 +7546,16 @@ def _instrument_card(body: str, instrument_id: int) -> str:
     control, so an unscoped ``body.index`` finds whichever card comes
     first — which has now produced a wrong-but-passing assertion twice
     in this file. Scope first, assert second.
+
+    Both bounds anchor on the card's opening ``class="card"
+    id="instrument-N"``, **not** on the bare ``id="instrument-``
+    prefix: that prefix also matches the card's own
+    ``id="instrument-delete-N"`` form, which would truncate the slice
+    partway through the card it is meant to return.
     """
-    start = body.index(f'id="instrument-{instrument_id}"')
-    nxt = body.find('id="instrument-', start + 1)
+    opening = 'class="card" id="instrument-'
+    start = body.index(f'{opening}{instrument_id}"')
+    nxt = body.find(opening, start + 1)
     return body[start:] if nxt == -1 else body[start:nxt]
 
 

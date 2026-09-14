@@ -95,6 +95,20 @@ grep -rln "Exclude if the" app/ spec/ tests/ --include=*.py --include=*.html --i
   its docstring. *Scope first, assert second.*
 - **Both fixes are mutation-checked**, each failing exactly the test that
   should catch it.
+- **This item created one drift of its own and the close pass caught it.**
+  `spec/assignments.md` § *Suppressing self-reviews* quoted the old
+  *"individual / group reviewed is the reviewer"* wording — the phrasing
+  this item replaced for describing something that cannot happen on a
+  grouped instrument. *Doc impact* named only `spec/instruments.md`, so the
+  second copy of the label went unedited. It now points at the spelling's
+  owner instead of repeating it, which is why it can't drift again.
+  **My own check for it was the wrong shape**: a single-line grep, against a
+  quote that wraps across two lines.
+- **The `_instrument_card` helper was subtly wrong** — its end bound matched
+  the card's own `id="instrument-delete-N"` form, truncating the slice
+  partway through the card it returns. Harmless for these three assertions
+  and wrong for the next one; both bounds now anchor on the card's opening
+  `class="card" id="instrument-N"`.
 
 ### PR ladder
 
@@ -126,6 +140,7 @@ None.
 ### Doc impact
 
 - `spec/instruments.md` — § *Self-review exclusion* gains the heading and both label spellings (Item 2).
+- `spec/assignments.md` — § *Suppressing self-reviews* stops quoting the replaced wording and points at the spelling's owner (Item 2).
 
 ## Item 1 — Exclude self-reviews from the Link 3 column
 

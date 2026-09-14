@@ -341,10 +341,12 @@ they are what keeps the exclusion out of the desugar stage.
 Two supported affordances, answering different questions —
 *don't generate them* and *don't count the ones generated*.
 
-- **Exclude at the rule (Link 3 checkbox).** *"Exclude if the
-  individual / group reviewed is the reviewer"*, which writes
-  `SessionRuleSet.exclude_self_reviews`
-  (`spec/instruments.md` § *Self-review exclusion*). Honored at
+- **Exclude at the rule (Link 3 checkbox).** The **Self reviews**
+  control in the Link 3 column, whose label follows the unit of
+  review — see `spec/instruments.md` § *Self-review exclusion* for
+  both spellings, which are stated there and deliberately not
+  repeated here. It writes
+  `SessionRuleSet.exclude_self_reviews`. Honored at
   the `pair_include` branch of `_diff_one_instrument`, **after**
   the fan-out: the pair is omitted from `new_pairs` entirely
   rather than written with `include=False`. On a group-scoped
