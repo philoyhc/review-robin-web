@@ -689,6 +689,118 @@ posts an unmodified Band 1 form, and asserts
 
 ---
 
+### Assignment rule authoring
+
+#### Self-review exclusion as a Link 3 shortcut (~100 LOC + a design call)
+
+> Author's proposal, 2026-09-14 — **not carved from a segment**,
+> unlike every other entry in Part A. Recorded here rather than in a
+> segment plan because the group-scoped half is a design question,
+> not a build. Part A's shape otherwise fits: scoped, paused, and
+> carrying a lift trigger.
+
+**The two paths, and why this is the second one.** Self-review rows
+are **always materialized** (`spec/assignments.md` § *Self-review
+policy*), so the whole Assignments-page surface operates on rows that
+already exist — the per-instrument **Self review** toggle, and the
+per-row Include checkbox with its bulk select and
+`bulk-inactivate` / `bulk-activate` routes, all shipped
+(19I Item 9, 2026-09-09). The other path is to never generate the
+rows at all.
+
+**That second path is not one click away — it is zero clicks away,
+because it does not exist.** `spec/assignments.md` names it as a
+supported affordance (*"Add a Link 2 (or Link 1) rule like
+`reviewee.email IS DIFFERENT FROM reviewer.email`"*), and
+`_band1.py`'s policy comment repeats it, but **no operator can reach
+it**: the inline Link builder's field list comes from
+`views/_instruments.py::new_model_usable_tags`, which returns
+`tag1`/`tag2`/`tag3` for `reviewer` / `reviewee` / `pair_context` and
+**no email slot**, and the general Rule Builder that once offered the
+full grammar is retired — no route, no template. The engine accepts
+`reviewer.email` and `reviewee.email` (`ALLOWED_PREDICATE_FIELDS`);
+nothing in the UI can author them.
+
+**So this item is not sugar over an existing path. It would be the
+first operator-facing way to exclude self-pairs before generation**,
+and it has to carry the field as well as the checkbox. Scoped as
+sugar it would be ~an afternoon; scoped honestly it is a small
+feature.
+
+> **Spec drift, reported not fixed** (2026-09-14). Two things
+> `spec/assignments.md` § *Self-review policy* says are wrong: the
+> Link-rule affordance is unreachable, per the paragraph above; and
+> where the field is spelled `reviewee.email_or_identifier` (there,
+> and in `_band1.py`'s comment) the engine would reject it —
+> `ALLOWED_PREDICATE_FIELDS` has `reviewee.email`. The spec is the
+> contract, so this is recorded rather than rewritten.
+
+**Ships.**
+
+- A checkbox at the **bottom of the Link 3 column** (*Unit of
+  review*, the rightmost of the three) on the instrument rule card,
+  reading **"Exclude if the individual/group reviewed is the
+  reviewer"** — *individual* or *group* following Link 3's own mode.
+- Ticking it writes the exclusion into the ruleset. **No
+  pre-computation** of whether such pairs would exist: it sets up the
+  exclusion, it does not report on it.
+
+**The trap, stated because the name invites it.** This must be sugar
+over the **Link-rule** path, *never* `RuleSetOptions.excludeSelfReviews`.
+That flag is pinned `False` in three layers on purpose
+(`spec/assignments.md` § *Self-review policy*), and the reasoning is
+the same reasoning that makes a checkbox attractive: a desugar-stage
+drop is **invisible to the operator** — the row never appears to be
+inspected or toggled — and it under-counted group composition by one
+whenever the sample reviewer was a member of the group. A shortcut
+that silently revives it would be the defect the three layers exist
+to prevent, wearing a friendlier label.
+
+**The design call, which is the real work.** The spec's suggested
+rule is pair-level — `reviewee.email IS DIFFERENT FROM
+reviewer.email` — and that is correct on an **individual**-scoped
+instrument. On a **group**-scoped one it is wrong: the whole-group
+rule says a review counts as a self-review iff the reviewer is a
+member of the group, and excluding it must drop **the whole group**,
+not the `(R, R)` cell. A pair predicate would leave the group review
+standing with one member missing, which is exactly hazard (b) above.
+`ALLOWED_PREDICATE_FIELDS` (`app/schemas/rules.py`) is pair-level
+only — `reviewer.*`, `reviewee.*`, `pair_context.*` — so **no
+predicate expresses the group exclusion today**.
+
+*And the failure is quieter than "one member short."*
+`classify_self_review` identifies a self-review group **by finding
+the `(R, R)` row in it** (`_self_review.py`, `self_group_key`). Drop
+that row with a pair predicate and the group is never marked as a
+self-review at all: the remaining members materialize as an ordinary
+review, invisible to the Self review column and to every downstream
+reader of `Assignment.is_self_review`. Someone has to choose: a
+group-aware predicate, a desugar step that is visible and inspectable
+rather than silent, or the checkbox disabled in Group mode with the
+reason on its tooltip.
+
+**Why deferred.** The individual-scoped half is a genuine
+convenience and nearly free; the group-scoped half needs a decision
+that touches the rule schema or the engine. Shipping only the easy
+half would put a checkbox on a card whose Link 3 pill can be cycled
+to Group, which is worse than no checkbox.
+
+**Lift trigger.** An operator finds composing the Link rule by hand
+fiddly enough to say so, or the Assignments per-row / bulk status
+work lands and the author wants the never-generate path to sit
+beside it.
+
+**Wire-up.** `app/web/templates/operator/instruments_index.html`
+Link 3 block (the `_link3_*` locals) for the control;
+`app/services/instruments/_instrument_crud.py::set_unit_of_review`
+is the neighboring Link 3 writer; the rule it composes lands in
+`rules_json` through the Band 1 materialization path. Spec impact:
+`spec/assignments.md` § *Self-review policy* gains the shortcut as a
+third supported affordance, and `spec/instruments.md`'s Link 3 row
+(§ *Unit of review*) gains the control.
+
+---
+
 ### Data integrity & template maintainability
 
 #### Codex Slice D — Storage-level uniqueness guard on email-bearing identities (~100 LOC + migration)
