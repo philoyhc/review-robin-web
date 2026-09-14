@@ -7341,3 +7341,149 @@ def test_exclude_self_reviews_checkbox_renders_under_a_divider(
     )
     assert "checked" in _card(_page())
 
+
+
+# --------------------------------------------------------------------- #
+# 19O Item 1 — the Band 2 preview follows the instrument's self-review
+# rule (author ruling, 2026-09-14).
+# --------------------------------------------------------------------- #
+
+
+def _preview_session_with_self_pair(client: TestClient, db: Session, code: str):
+    """A session whose roster contains a self-review pair: reviewer Sam
+    and reviewee Sam share an email. Returns (session, instrument)."""
+    from app.db.models import SessionRuleSet
+
+    review_session = _make_session(client, db, code=code)
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Sam",
+                email="sam@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Sam",
+                email_or_identifier="sam@example.edu",
+                tag_1="Team A",
+            ),
+            # Sorts AFTER Sam: reviewees are ordered by name, so the
+            # self-pair must be the natural first sample or the
+            # exclusion assertion would pass without the flag doing
+            # anything. The control test below pins that.
+            Reviewee(
+                session_id=review_session.id,
+                name="Zoe",
+                email_or_identifier="zoe@example.edu",
+                tag_1="Team A",
+            ),
+        ]
+    )
+    db.commit()
+    instrument = _instrument(db, review_session.id)
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Preview RS",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
+    db.commit()
+    return review_session, instrument, rule_set
+
+
+def _sample(db: Session, instrument):
+    from app.services import instruments as instruments_service
+
+    return instruments_service.find_sample_in_scope_reviewee(
+        db,
+        instrument=instrument,
+        link1_mode="all",
+        link1_combinator="AND",
+        link1_rules=[],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+    )
+
+
+def test_preview_sample_excludes_self_review_when_rule_says_so(
+    client: TestClient, db: Session
+) -> None:
+    """With the instrument's rule excluding self-reviews, the Band 2
+    preview must not offer a sample in which the reviewer reviews
+    themselves — the preview follows the rule (author, 2026-09-14)."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-on"
+    )
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    out = _sample(db, instrument)
+    assert out is not None
+    reviewee, _members = out
+    assert reviewee.email_or_identifier != "sam@example.edu"
+
+
+def test_preview_sample_keeps_self_review_when_rule_permits(
+    client: TestClient, db: Session
+) -> None:
+    """Control for the test above: without the flag, the same roster
+    can sample the self-pair, so that assertion is about the flag and
+    not about the fixture's ordering."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-off"
+    )
+    out = _sample(db, instrument)
+    assert out is not None
+    reviewee, _members = out
+    assert reviewee.email_or_identifier == "sam@example.edu"
+
+
+def test_preview_sample_exclusion_drops_the_whole_group(
+    client: TestClient, db: Session
+) -> None:
+    """On a grouped instrument the exclusion is whole-group: a reviewer
+    who is one of their own group's reviewees takes the entire group
+    out of the preview, not just the ``(R, R)`` pair.
+
+    Sam and Zoe share ``tag_1``; with Sam's self-pair excluded, Zoe
+    must not be offered as a sample either — she is in the group Sam
+    would be reviewing himself within.
+    """
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-group"
+    )
+    instrument.group_kind = "r1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    assert _sample(db, instrument) is None, (
+        "the only group is Sam's own, so excluding it leaves no sample"
+    )
+
+
+def test_preview_sample_exclusion_is_not_the_desugar_stage(
+    client: TestClient, db: Session
+) -> None:
+    """The engine's ``excludeSelfReviews`` stays ``False`` — the flag is
+    honored on the engine's OUTPUT, never in its options.
+
+    Flipping it in the schema would drop pairs before group
+    composition is known, which is the recorded hazard that pinned the
+    option (``spec/assignments.md`` § *Self-review policy*).
+    """
+    import inspect
+
+    from app.services.instruments import _band1
+
+    src = inspect.getsource(_band1.find_sample_in_scope_reviewee)
+    assert "excludeSelfReviews=False" in src
+    assert "excludeSelfReviews=True" not in src

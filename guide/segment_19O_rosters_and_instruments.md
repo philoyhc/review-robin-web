@@ -199,16 +199,19 @@ place to overstate by double.*
   close, `spec/roundtrip_coverage.md` joined it for the same reason — the
   column was described there as "vestigial", true until rung 3 made it govern
   generation.
-- **The Band 2 preview does not honor the flag, and is left that way
-  deliberately.** `find_sample_in_scope_reviewee` builds its schema from the
-  live Link 1 / Link 2 form fields and never reads the column, so an
-  instrument with the checkbox set can still preview a sample in which the
-  reviewer reviews themselves. Generation honors the flag *after* the pair
-  fan-out; the preview has no fan-out to honor it after, so closing the gap
-  means deciding what the preview is for — and rung 3's own scope rule
-  forbids touching that function. Stated in `spec/instruments.md` § *Preview
-  review instrument* as a known divergence rather than tolerated silently.
-  **Open for the author.**
+- **The Band 2 preview diverged, was reported, and the author closed it.**
+  `find_sample_in_scope_reviewee` built its schema from the live Link 1 /
+  Link 2 fields and never read the column, so an instrument with the checkbox
+  set could still preview a sample in which the reviewer reviews themselves.
+  Found by the close pass and raised rather than fixed, since rung 3's scope
+  rule forbids touching that function and closing the gap means deciding what
+  the preview is *for*. **Author's ruling 2026-09-14: "the preview should
+  follow the rule too."** Implemented the same way the generator does it — by
+  filtering the engine's *output*, whole group at a time, never by flipping
+  `excludeSelfReviews`, which would drop pairs before group composition is
+  known and reintroduce the exact hazard the three layers exist to prevent.
+  A grouped instrument whose only group is the reviewer's own now previews
+  empty rather than showing a row Generate would not produce.
 
 **The defect pattern, stated because it repeated at every rung:** every error
 was in prose *about* the code, never in reading what the code does. A

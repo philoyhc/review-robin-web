@@ -629,19 +629,21 @@ live preview of one sample row inline.
 > actual composition; if the sample reviewer is themselves a team
 > member, they appear in their own group.
 >
-> **Known divergence (19O Item 1).** The preview does **not** read
-> `SessionRuleSet.exclude_self_reviews`
-> (`_band1.find_sample_in_scope_reviewee` builds its schema from the
-> live Link 1 / Link 2 form fields alone). Generation honors that
-> flag after the pair fan-out; the preview has no fan-out to honor
-> it after. So on an instrument with the Link 3 checkbox set, the
-> preview can still show a sample in which the reviewer reviews
-> themselves, while Generate will produce no such row. The preview
-> is a shape-of-the-row illustration, not a count, so this misleads
-> only about membership — but it is a real divergence and is
-> recorded rather than quietly tolerated. Closing it is a decision
-> about what the preview is *for*, not a bug fix, and belongs to
-> whoever makes that call.
+> **The preview follows the instrument's self-review rule.** When
+> the Link 3 checkbox is set, the picker drops self-reviews from the
+> engine's **output** before choosing a sample — never by flipping
+> `excludeSelfReviews`, which would drop pairs before group
+> composition is known. On a grouped instrument the whole group
+> goes, so a reviewer who is one of their own group's reviewees
+> takes that group out of the preview entirely; if no group
+> survives, the preview renders empty rather than showing a row
+> Generate would not produce. Same rule and same placement as
+> `assignments._diff_one_instrument`.
+>
+> It reads the **persisted** flag: the checkbox is not among the
+> fields the Refresh handler posts, so an unsaved tick shows after
+> the card is saved. The preview already blends live Link 1 / Link 2
+> edits with persisted Link 3 state.
 >
 > See `spec/assignments.md` § *Self-review policy* for the two
 > supported ways to suppress self-reviews.

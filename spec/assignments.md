@@ -329,7 +329,12 @@ they are what keeps the exclusion out of the desugar stage.
    the engine still ignores it.
 3. `instruments._band1.find_sample_in_scope_reviewee` (the
    `/preview-sample` workhorse) constructs its schema with
-   `excludeSelfReviews=False`.
+   `excludeSelfReviews=False`. It honors the instrument's own
+   `exclude_self_reviews` flag the same way the generator does —
+   by filtering the engine's **output**, whole group at a time —
+   so the Band 2 preview never shows a sample that Generate
+   would not produce (`spec/instruments.md` § *Preview review
+   instrument*).
 
 ### Suppressing self-reviews
 
