@@ -56,8 +56,8 @@ def detach_outbox(
     reviewer row surviving. ``reviewer_id IS NULL`` with ``sent_at IS
     NOT NULL`` is what "sent, recipient since removed" looks like;
     ``status`` is *not* overloaded to say it, because it means delivery
-    state and ``views/_setup.py`` filters on ``status == "sent"`` to
-    compute the Setup page's invite summary.
+    state and its vocabulary is the closed ``EMAIL_OUTBOX_STATUSES``,
+    pinned by ``tests/integration/test_email_outbox_schema.py``.
 
     ``reviewer_ids=None`` means the whole session. The two columns are
     cleared by separate statements so that each targets exactly the rows

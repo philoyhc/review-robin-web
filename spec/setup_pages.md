@@ -604,8 +604,9 @@ every reviewer delete first unlinks those two columns via
 cascaded invitation delete. The outbox rows themselves are kept — they
 are the email audit log, and each carries its own `to_email`, `subject`,
 `body` and `sent_at`, so a sent email survives the recipient's roster
-row. A surviving row with `reviewer_id IS NULL` is exactly that: sent,
-recipient since removed. **Observers
+row. A surviving row with `reviewer_id IS NULL` **and** `sent_at` set is
+exactly that: sent, recipient since removed — `spec/email_infra_options.md`
+"Audit log" owns the column-level detail. **Observers
 and Relationships cascade to nothing** — no table references them — so
 their delete can never lose a response, their gate never fires, and
 their strip never offers the acknowledgement. A page that offered it
@@ -678,7 +679,10 @@ own denominator for the pairing to read.
 ### The Danger Zone's `delete-all`
 
 `POST /operator/sessions/{id}/{roster}/delete-all` deletes the whole
-roster. It carries the **same two gates and the same three-state rule** as
+roster. **What a delete takes with it** — the cascade, and the
+`email_outbox` unlink a reviewer delete needs on top of it — is stated
+once under *Deleting the selected rows* above and governs this surface
+identically. It carries the **same two gates and the same three-state rule** as
 the selected-rows delete — the wording differs, since this one names
 counts ("the existing 12 reviewers and their associated…") where the
 strip says "these" — and the same single tick: `confirm` plus, where
@@ -711,7 +715,9 @@ branches.
 ### The Upload card's replace
 
 `POST /operator/sessions/{id}/{roster}/import` replaces the whole
-roster from a CSV. Where a roster already exists it carries the **same
+roster from a CSV. Replacing deletes the outgoing rows, so **what a
+delete takes with it** — stated under *Deleting the selected rows*
+above — governs this surface too. Where a roster already exists it carries the **same
 two gates** as the two deletes above — `confirm_replace` must be
 `"true"`, and on Reviewers and Reviewees an
 `acknowledge_response_loss` where the session carries responses — and

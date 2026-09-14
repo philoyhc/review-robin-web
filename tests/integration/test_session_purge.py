@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     AuditEvent,
+    EmailOutbox,
     Instrument,
     Invitation,
     Reviewee,
@@ -146,6 +147,93 @@ def test_purge_responses_and_archive(
     assert _count(db, Invitation, review_session.id) == 0
     assert _count(db, Assignment, review_session.id) >= 1
     assert _count(db, Reviewer, review_session.id) == 1
+
+
+def _sent_invitation(db: Session, review_session: ReviewSession) -> Reviewer:
+    """A reviewer with an invitation that was sent — i.e. an outbox row
+    carrying FKs onto both (19O.3)."""
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    invitation = Invitation(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        token_hash=f"sent-{review_session.id}",
+    )
+    db.add(invitation)
+    db.flush()
+    db.add(EmailOutbox(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        invitation_id=invitation.id,
+        kind="invitation",
+        to_email=reviewer.email or "",
+        subject="Invitation",
+        body="Body",
+        status="sent",
+    ))
+    db.commit()
+    return reviewer
+
+
+def test_purge_responses_keeps_the_outbox_and_its_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """purge=responses deletes invitations while reviewers survive, so
+    the outbox loses only ``invitation_id`` (19O.3).
+
+    Without the unlink the invitation delete is rejected by the FK from
+    ``email_outbox.invitation_id``; nulling ``reviewer_id`` too would
+    drop a link whose reviewer is still there.
+    """
+    review_session = _draft_session_with_rosters(client, db, "purge-out-r")
+    reviewer = _sent_invitation(db, review_session)
+
+    response = client.post(
+        "/operator/sessions/bulk-archive",
+        data={"session_ids": [review_session.id], "purge": ["responses"]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db.expire_all()
+    assert _count(db, Invitation, review_session.id) == 0
+    row = db.execute(
+        select(EmailOutbox).where(
+            EmailOutbox.session_id == review_session.id
+        )
+    ).scalars().one()
+    assert row.invitation_id is None
+    assert row.reviewer_id == reviewer.id, "the reviewer survives the purge"
+    assert row.status == "sent"
+
+
+def test_purge_rosters_keeps_the_outbox_and_nulls_both_links(
+    client: TestClient, db: Session
+) -> None:
+    """purge=rosters deletes the reviewers too, so both FKs clear and
+    the email audit log still survives (19O.3)."""
+    review_session = _draft_session_with_rosters(client, db, "purge-out-p")
+    _sent_invitation(db, review_session)
+
+    response = client.post(
+        "/operator/sessions/bulk-archive",
+        data={"session_ids": [review_session.id], "purge": ["rosters"]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db.expire_all()
+    assert _count(db, Reviewer, review_session.id) == 0
+    row = db.execute(
+        select(EmailOutbox).where(
+            EmailOutbox.session_id == review_session.id
+        )
+    ).scalars().one()
+    assert row.reviewer_id is None
+    assert row.invitation_id is None
+    assert row.status == "sent"
+    assert row.to_email
 
 
 def test_can_archive_gates_on_non_activated(
