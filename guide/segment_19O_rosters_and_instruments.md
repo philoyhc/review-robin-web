@@ -10,6 +10,137 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 3 — A sent invitation makes the roster un-replaceable
+
+### Opportunity
+
+Re-uploading a reviewer roster over one whose invitations have been **sent**
+raises `sqlalchemy.exc.IntegrityError: FOREIGN KEY constraint failed` on
+`DELETE FROM invitations`, reaching the operator as an unhandled 500.
+Reported from use; reproduced on `main` at `9866b28`.
+
+`email_outbox` carries FKs to `reviewers.id` and `invitations.id`
+(`email_outbox.py:50`, `:53`), neither with `ON DELETE` nor cleared first. Deleting
+a `Reviewer` cascades `Reviewer.invitations` (`delete-orphan`), emitting
+`DELETE FROM invitations` while outbox rows still reference them.
+
+Four paths, measured — every one that deletes a reviewer:
+
+| path | no invites sent | invites sent |
+|---|---|---|
+| `POST /reviewers/import` (replace) | 303 | **IntegrityError** |
+| `POST /quick-setup/reviewers` | 303 | **IntegrityError** |
+| `POST /reviewers/delete-all` | 303 | **IntegrityError** |
+| `POST /reviewers/bulk-delete` | 303 | **IntegrityError** |
+| `POST /reviewees/import` (control) | 303 | 303 |
+
+Reviewees are unaffected: `email_outbox` has no `reviewee_id`. **No data is
+lost** — the transaction rolls back whole, roster and assignments intact.
+
+*Why it reads as "only when assignments exist":* `generate_invitations` targets
+only reviewers that have assignments (`invitations.py:63`), and outbox rows are
+written when an invitation is **sent** (`:287`, `:540`). No assignments → no
+invitations → no outbox → the upload works.
+
+**Not a dialect gap** — `app/db/session.py` enables `PRAGMA foreign_keys` and the
+test engine imports it, so SQLite and Postgres fail alike. The suite is green at
+3,948 because no test builds an outbox row then deletes a reviewer.
+
+### Decision
+
+One helper in `app/services/invitations.py` — the only module that writes
+`EmailOutbox` rows — nulling both FKs for the reviewers about to be deleted.
+Called from all four delete paths **and** from `session_purge`, which already
+does the same unlink inline (`session_purge.py:65-71`) with a comment naming
+the hazard.
+
+*That inline copy is why this bug exists*: the knowledge lived in one path and
+did not travel. Switching it to the helper is in scope for that reason — one
+place knows, so a fifth path cannot repeat it.
+
+**Rejected: `ON DELETE SET NULL` on the two FK columns plus `passive_deletes`.**
+More robust — a new call site could not forget it — but it needs an Alembic
+migration altering two FK constraints, surviving `downgrade base + upgrade head`
+on Postgres, and `CLAUDE.md` names index/FK name mismatches between upgrade and
+downgrade as a trap that has already bitten this project. Wrong risk for a bug
+fix. Recorded as the permanent answer if a fifth path appears.
+
+### Semantics
+
+- **Orphaned outbox rows survive.** The row is already self-contained: `to_email`,
+  `subject`, `body`, `sent_at`, `backend_message_id` and `delivered_at` are
+  denormalised onto it, so no sent email depends on the reviewer row.
+- **`reviewer_id IS NULL` is the defunct marker**, with `sent_at IS NOT NULL`
+  separating a real send from a queue entry that never went. No new column.
+- **`status` is not overloaded.** It means delivery state (`queued` → `sent`).
+  `views/_setup.py:204` filters `status == "sent"` to compute the Setup page's
+  invite summary; writing `"defunct"` over `"sent"` would silently change that
+  summary.
+- **Queued rows are unlinked too, not deleted.** Nothing dispatches them —
+  `email_send.py` says so in its own docstring and no worker selects
+  `status == "queued"` — so an unlinked queue entry is inert. One rule, no
+  sent-vs-queued branch.
+- Both FK columns are already `nullable=True`, and both live consumers
+  (`views/_invitations.py:91`, `views/_setup.py:204`) already filter
+  `reviewer_id.is_not(None)`. The null state was designed for.
+
+### Judgment calls — decided
+
+- **2026-09-14.** `session_purge` switches to the helper rather than keeping its
+  working inline copy — author's call. It is beyond the defect but it is the
+  root cause of the defect's shape.
+- **2026-09-14.** The three spec corrections ride this item rather than a
+  follow-up — author's call. One of them is wrong today, independent of the fix.
+- **2026-09-14.** Unlink uniformly rather than branching on `sent_at`. The
+  branch would buy nothing while no dispatcher exists, and would be a second
+  rule to keep in step.
+
+### Blast radius (measured)
+
+Commands run at `9866b28`:
+
+- Reviewer-deleting call sites: `grep -rn "db.delete(row)" app/services/csv_imports.py` → **2** (`_save:851`, `_delete_all:979`); plus `reviewers_service.delete_selected`.
+- FKs onto the roster tables: `grep -rn 'ForeignKey("reviewers.id")\|ForeignKey("reviewees.id")' app/db/models/` → **4** (`assignment.py` ×2, `invitation.py`, `email_outbox.py`).
+- Existing unlink precedent: `grep -rn "invitation_id=None" app/services/` → **1** (`session_purge.py:69`).
+- Specs describing what a roster delete reaches: `grep -rn -i "cascad" spec/*.md` → 3 that make a claim (below).
+- Tests building an outbox row then deleting a reviewer: **0**. That is the whole explanation for a green suite.
+
+### PR ladder
+
+1. **The helper + the four call sites + regression tests.** `detach_outbox_for_reviewers` in `invitations.py`; called from `csv_imports._save`, `csv_imports._delete_all`, `reviewers_service.delete_selected`, and `session_purge` in place of its inline unlink. One regression test per broken path, each with a **sent** invitation in the fixture. Must not touch `spec/`.
+2. **The three specs, on the way out.** Must not touch `app/`.
+
+### Definition of done
+
+- Each of the four paths returns 303 with a sent invitation present, asserted per path.
+- The orphaned outbox rows survive the delete with `reviewer_id IS NULL` and their `sent_at` unchanged.
+- `session_purge` has no inline `invitation_id=None`; `grep -rn "invitation_id=None" app/services/` returns the helper only.
+- `spec/setup_pages.md` no longer says a roster delete is inherited from the ORM cascade and not reimplemented.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19O.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None. Both were put to the author on 2026-09-14 and answered: `session_purge`
+switches; the specs ride this item.
+
+### Out of scope
+
+- **The DB-level `ON DELETE SET NULL`.** Rejected above; recorded in
+  `guide/deferred_consolidated.md` if a fifth path appears.
+- **A visible "recipient removed" marker on any page.** Derivable from
+  `reviewer_id IS NULL`; nothing asks for it yet.
+- **`email_outbox.reviewee_id`.** Does not exist, and reviewees are unaffected.
+
+### Doc impact
+
+- `spec/setup_pages.md` — § *What a delete takes with it* stops presenting the ORM cascade as sufficient, and names the outbox unlink (Item 3).
+- `spec/quick_setup_card_spec.md` — § *Cascading effects* adds invitations and outbox rows to what a reviewer replacement reaches (Item 3).
+- `spec/email_infra_options.md` — the outbox column table stops giving "system emails" as the only reason `reviewer_id` is nullable, and states the defunct semantics (Item 3).
+
 ## Item 2 — The self-review control's heading and live copy
 
 ### Opportunity

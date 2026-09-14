@@ -21,6 +21,7 @@ from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, field_label_csv
+from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import EMAIL_RE, normalize_email
 
@@ -847,6 +848,7 @@ def _save(
         db.execute(select(model).where(model.session_id == session.id)).scalars()
     )
     replaced = len(existing_rows)
+    _detach_outbox_if_reviewers(db, model=model, session_id=session.id, rows=existing_rows)
     for row in existing_rows:
         db.delete(row)
     db.flush()
@@ -883,6 +885,27 @@ def _save(
         },
     )
     return replaced, len(rows)
+
+
+def _detach_outbox_if_reviewers(
+    db: Session, *, model: Any, session_id: int, rows: list[Any]
+) -> None:
+    """Clear the outbox FKs before a reviewer delete (19O.3).
+
+    ``_save`` and ``_delete_all`` are generic over ``Reviewer`` /
+    ``Reviewee`` / ``Observer``; only reviewers are referenced by
+    ``email_outbox``, so only they need the unlink. Gated on the model
+    rather than on the ids, because reviewer and reviewee ids overlap
+    and an unguarded id list would unlink another table's rows.
+    """
+    if model is not Reviewer or not rows:
+        return
+    invitations_service.detach_outbox(
+        db,
+        session_id=session_id,
+        reviewer_ids=[row.id for row in rows],
+        reviewers_deleted=True,
+    )
 
 
 def _count_assignments(db: Session, session_id: int) -> int:
@@ -975,6 +998,9 @@ def _delete_all(
         ).scalars()
     )
     deleted = len(rows)
+    _detach_outbox_if_reviewers(
+        db, model=model, session_id=review_session.id, rows=rows
+    )
     for row in rows:
         db.delete(row)
     db.flush()
