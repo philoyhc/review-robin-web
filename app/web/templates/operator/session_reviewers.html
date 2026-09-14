@@ -45,6 +45,114 @@
      two row grids): it is full width, and a full-width card inside a
      two-column stack would have to span, which `.card-columns` does
      not do. Its notice reads at the top of the page anyway. #}
+  {# ------------------------------------------------------------------
+     19P.1 rung 1 — SCAFFOLD, inert. The roster-level index row and its
+     Unlock panel, rendered with real copy and layout and NOTHING wired:
+     every control below carries ``disabled``. The three cards this will
+     eventually absorb — the friendly-labels editor, ``#upload-csv`` and
+     ``.danger-zone`` — are still present and still live below. Rung 3
+     wires this panel and deletes them.
+
+     What this slice is for: agreeing the surface on the dev slot before
+     any behaviour moves, and answering the one edge `new_ux_ideas.md`
+     flagged — the bracket was designed for one wide row in a tall table
+     of like things, and this panel is tall enough to push its own row
+     off-screen.
+     ------------------------------------------------------------------ #}
+  <div class="card" id="roster-index-scaffold">
+    <h2>Reviewers</h2>
+    <p class="muted" style="font-size:13px;">
+      Scaffold preview — the roster's labels, CSV import/export and
+      delete-all will live behind <strong>Unlock</strong>. Nothing here is
+      wired yet; the live controls are still in the cards below.
+    </p>
+    <table class="roster-index-table">
+      <thead>
+        <tr>
+          <th>Roster</th>
+          <th>Populated columns</th>
+          <th>Status</th>
+          <th class="row-select-cell">Edit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="roster-index-row">
+          <td><strong>Reviewers</strong></td>
+          <td>
+            {# Presence, not counts. ``col_data`` is a boolean presence map
+               (``views.chip_slots``), so the per-column filled-row counts the
+               plan called a "free re-house" are NOT available here — they
+               would need their own query. Recorded as a rung-1 finding. #}
+            <span class="pop-col">Name</span>
+            <span class="pop-col">Email</span>
+            {% if col_data["tag-1"] %}<span class="pop-col">Tag 1</span>{% endif %}
+            {% if col_data["tag-2"] %}<span class="pop-col">Tag 2</span>{% endif %}
+            {% if col_data["tag-3"] %}<span class="pop-col">Tag 3</span>{% endif %}
+          </td>
+          <td>
+            <span class="pill pill-count">{{ total_row_count }}
+              reviewer{% if total_row_count != 1 %}s{% endif %}</span>
+          </td>
+          <td class="row-select-cell">
+            {# Suppressed, not disabled, when the session is not editable —
+               `test_field_labels_editor_routes` asserts that a locked page
+               carries no "Save labels" anywhere, and the Unlock panel holds
+               one. The index row itself is informational and stays. #}
+            {% if is_editable %}
+              <button type="button" class="btn secondary" id="roster-unlock-btn"
+                      aria-expanded="false" aria-controls="roster-unlock-panel">
+                Unlock
+              </button>
+            {% else %}
+              <span class="muted" style="font-size:12px;">locked</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% if is_editable %}
+        <tr class="session-expander session-expander-bracketed"
+            id="roster-unlock-panel" hidden>
+          <td colspan="4">
+            <div class="session-expander-body">
+              <p class="session-expander-title">
+                <strong>Editing Reviewers</strong>
+                <span class="muted">— scaffold only, nothing is wired</span>
+              </p>
+              <div class="unlock-cols">
+                <div class="unlock-col">
+                  <h3>Upload Reviewers</h3>
+                  <p class="muted" style="font-size:12px;">
+                    CSV in UTF-8. Required columns <code>ReviewerName</code>,
+                    <code>ReviewerEmail</code>; optional
+                    <code>ReviewerTag1</code>–<code>ReviewerTag3</code> and
+                    <code>Status</code>. Other columns are ignored.
+                  </p>
+                  <input type="file" accept=".csv" disabled
+                         aria-label="CSV file (scaffold, disabled)">
+                  <button type="button" class="btn secondary" disabled>Upload</button>
+                </div>
+                <div class="unlock-col">
+                  <h3>Friendly labels</h3>
+                  <div class="session-expander-fields">
+                    <label>Tag 1<input type="text" disabled></label>
+                    <label>Tag 2<input type="text" disabled></label>
+                    <label>Tag 3<input type="text" disabled></label>
+                  </div>
+                  <button type="button" class="btn" disabled>Save labels</button>
+                  <hr>
+                  <h3>Danger zone</h3>
+                  <button type="button" class="btn destructive" disabled>
+                    Delete all reviewers
+                  </button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
@@ -494,6 +602,136 @@
     <div class="card">
       <p class="muted">No reviewers match the current filter.</p>
     </div>
+  {% endif %}
+
+  {# 19P.1 rung 1 — SCAFFOLD. Row-expander template + the presentation
+     script that marks selected rows and injects it. Every action button
+     inside carries ``disabled``: the live controls are still the Operator
+     actions card's button row above. Rung 2 wires these and empties that
+     row. Modelled on ``sessions_list.html``'s ``#single-session-expander``
+     and its ``insertAdjacentElement("afterend", …)`` anchor. #}
+  {% if reviewers and not edit_mode and selectable %}
+    <template id="reviewer-row-expander">
+      <tr class="session-expander session-expander-bracketed">
+        <td>
+          <div class="session-expander-body">
+            <p class="session-expander-title">
+              <strong data-exp-count>0</strong> <span data-exp-noun>reviewers</span> selected
+              <span class="muted">— scaffold only, nothing is wired</span>
+            </p>
+            <div class="session-expander-actions">
+              <button type="button" class="btn secondary" disabled>Edit</button>
+              <button type="button" class="btn secondary" disabled>Inactivate</button>
+              <button type="button" class="btn secondary" disabled>Activate</button>
+              <button type="button" class="btn destructive" disabled>Delete</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </template>
+    <style>
+      .roster-index-table { border-collapse: collapse; width: 100%; }
+      .roster-index-table th, .roster-index-table td {
+        border: 1px solid var(--border-default);
+        padding: var(--space-2) var(--space-3);
+        text-align: left;
+      }
+      .roster-index-table th { background: var(--surface-muted); }
+      .pop-col {
+        display: inline-block;
+        font-size: 12px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border-subtle);
+        border-radius: 5px;
+        padding: 1px 7px;
+        margin: 0 3px 3px 0;
+      }
+      .unlock-cols { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+      .unlock-col { flex: 1 1 280px; min-width: 0; }
+      .unlock-col h3 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--text-subtle);
+        margin: 0 0 var(--space-2);
+      }
+    </style>
+    <script>
+      (function () {
+        "use strict";
+        // Unlock toggle — presentation only. Rung 3 replaces this with the
+        // server-rendered ``edit_mode`` gate the page already computes.
+        var unlockBtn = document.getElementById("roster-unlock-btn");
+        var panel = document.getElementById("roster-unlock-panel");
+        if (unlockBtn && panel) {
+          unlockBtn.addEventListener("click", function () {
+            var open = !panel.hidden;
+            panel.hidden = open;
+            unlockBtn.setAttribute("aria-expanded", open ? "false" : "true");
+            unlockBtn.textContent = open ? "Unlock" : "Lock";
+          });
+        }
+
+        // Row bracket + injected expander. Marks rows and anchors the panel
+        // after the most recently ticked row still selected, with DOM order
+        // as fallback — the rule ``sessions_list.html:585`` settled.
+        var tpl = document.getElementById("reviewer-row-expander");
+        var table = document.querySelector(".table-pager-anchored table");
+        if (!tpl || !table) return;
+        var anchorId = null;
+
+        function boxes() {
+          return Array.prototype.slice.call(
+            document.querySelectorAll(".reviewer-select")
+          );
+        }
+        function colCount() {
+          var head = table.querySelector("thead tr");
+          return head ? head.children.length : 1;
+        }
+        function render() {
+          var existing = document.getElementById("reviewer-expander-row");
+          if (existing) existing.remove();
+          var selected = [];
+          boxes().forEach(function (b) {
+            var row = b.closest("tr");
+            if (!row) return;
+            if (b.checked) {
+              row.classList.add("session-row-selected");
+              selected.push(row);
+            } else {
+              row.classList.remove("session-row-selected");
+            }
+          });
+          if (!selected.length) return;
+          var anchor = null;
+          if (anchorId) {
+            anchor = selected.filter(function (r) { return r.id === anchorId; })[0];
+          }
+          if (!anchor) anchor = selected[selected.length - 1];
+          var node = tpl.content.firstElementChild.cloneNode(true);
+          node.id = "reviewer-expander-row";
+          node.querySelector("td").setAttribute("colspan", colCount());
+          node.querySelector("[data-exp-count]").textContent = selected.length;
+          node.querySelector("[data-exp-noun]").textContent =
+            selected.length === 1 ? "reviewer" : "reviewers";
+          anchor.insertAdjacentElement("afterend", node);
+        }
+
+        document.addEventListener("change", function (e) {
+          var t = e.target;
+          if (t && t.classList && t.classList.contains("reviewer-select")) {
+            var row = t.closest("tr");
+            anchorId = t.checked && row ? row.id : null;
+            render();
+          } else if (t && t.id === "reviewers-select-all") {
+            anchorId = null;
+            render();
+          }
+        });
+        render();
+      })();
+    </script>
   {% endif %}
 
   {% if reviewers and not edit_mode %}
