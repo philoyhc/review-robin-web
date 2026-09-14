@@ -12,116 +12,144 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ## Item 4 — The Reviewers page moves to the lobby's expander idiom
 
-Pilot for the roster-page revamp (Variants A + B, Reviewers only) — the
-presentation half of `guide/new_ux_ideas.md` §1, minus consolidation.
+Pilot for `guide/roster_expander_revamp_handoff.md` (Variants A + B, Reviewers
+only) — the presentation half of `guide/new_ux_ideas.md` §1, minus consolidation.
 
 ### Opportunity
 
-The *"Operator actions"* card does two jobs — a filter strip **and** an
-action row whose buttons act on rows selected below, with nothing marking
-which rows those are. 19L solved this for the lobby (bracket + expander
-beneath the selection); the roster pages never got it.
+The *"Operator actions"* card does two jobs — a filter strip **and** an action
+row whose buttons act on rows selected below, with nothing marking which rows
+those are. 19L solved this for the lobby; the roster pages never got it.
 
-Separately, two **bottom cards** — `#upload-csv` and `.danger-zone` — hold
-whole-roster actions far from the roster. The author's target: **retire
-both** into a roster-level Unlock expander.
+Separately, **three cards** hold whole-roster affordances away from the roster
+they act on: `#upload-csv` and `.danger-zone` at the bottom, and the
+`_field_labels_editor` card at the top, in the left column of `card-columns`.
+The author's target: **retire all three** into a roster-level Unlock expander.
 
 ### Decision
 
-**Variant A then B, on Reviewers only.** A: row actions move into a
-bracketed expander beneath the selection, reusing `base.html`'s
+**Variant A then B, on Reviewers only**, reusing `base.html`'s
 `.session-expander*` / `tr.session-row-selected` rather than reinventing the
-marking. B: a one-row roster index whose **Unlock** expander absorbs the two
-bottom cards, which are then deleted.
+marking. B adds a one-row roster index whose **Unlock** expander absorbs all three
+cards, which are then deleted.
 
 **The expander renders each roster's own action set.** A shared helper taking
-an action list is fine; a shared component hard-coding one list is not —
-Observers has a fourth action (`cohort-rule`) and no labels editor, so a
-hard-coded list is the "list someone must remember to extend" that 19N.1
-inverted its test to escape.
+an action list is fine; one hard-coding a list is not — Observers has a fourth
+action (`cohort-rule`) and no labels editor, so a fixed list is the "list
+someone must remember to extend" that 19N.1 inverted its test to escape.
 
 **The Unlock gate extends the page's existing `edit_mode`**, not a ported
-`?editing=` from Instruments. `session_reviewers.html:14` already computes
-`edit_mode = (edit_id is not none) or add_mode`, and it already locks the
-actions card (`is-locked`) and disables row selection
-(`selectable = not edit_mode and is_editable`). Unlock is a second mode of
-the same shape; the handoff proposed porting Instruments' pattern before
-noticing this page has its own.
+`?editing=`. `session_reviewers.html:14` already computes
+`edit_mode = (edit_id is not none) or add_mode`; `:102` locks the actions card
+and `:276` sets `selectable = not edit_mode and is_editable`. Unlock is a
+second mode of the same shape.
 
-**Rejected: Observers last** (the handoff's order). The first three pages
-are *identical* in action set, so they cannot falsify the render's shape —
-finding on page four that it cannot express Observers means reworking three
-shipped pages. Observers goes second, as 19O.5.
+**Rejected: Observers last** (the handoff's order). The first three pages are
+*identical* in action set, so they cannot falsify the render's shape — finding
+on page four that it cannot express Observers means reworking three shipped
+pages. Observers goes second, as 19O.5.
 
 ### Semantics
 
 - **Arity is preserved verbatim.** `Edit` at exactly one row;
-  `Inactivate / Activate / Delete` at one or more. Same predicates, moved
-  into the expander's render.
-- **`Add` stays page-level.** It is not selection-driven.
+  `Inactivate / Activate / Delete` at one or more.
+- **`Add` stays page-level**, and keeps its own `is_ready` gate
+  (`session_reviewers.html:160`) — which this item does not touch.
 - **Routes are unchanged** — the three bulk routes, the upload POST and
-  `delete-all` keep their URLs and hidden-form wiring. This re-houses
-  controls; it does not re-plumb them.
-- **Non-editable and `is_ready` sessions get no expander**, matching the
-  gate that hides the action row today.
-- **Non-contiguous selection** puts the expander beneath the *last* selected
-  row, as the mockup does. 19L flagged this as a live edge.
+  `delete-all` keep their URLs and hidden-form wiring.
+- **No expander when the session is not editable.** One gate, `is_editable`
+  (`:146`), matching what hides the action row today.
+- **The expander anchors after the most recently ticked row still selected**,
+  with DOM order only as fallback — `sessions_list.html:585`
+  (`currentAnchor() || selected[selected.length - 1]`). 19L **settled** this
+  rather than leaving it open; do not restate it as "the last selected row".
 - **Unlock and row-selection are mutually exclusive** — that is the gate.
 
 ### Judgment calls — decided
 
-- **2026-09-14.** Scope is Reviewers only. The other three follow as separate
-  items, Observers next, so the divergence is proven before the mechanical
-  pages are touched.
-- **2026-09-14.** The two bottom cards are **deleted**, not hidden behind a
-  flag. A flag would leave two live surfaces for one action.
+- **2026-09-14.** Reviewers only; Observers next as 19O.5, so the divergence is
+  proven before the mechanical pages are touched.
+- **2026-09-14.** All three cards are **deleted**, not hidden behind a flag —
+  author's call, confirming what `guide/new_ux_ideas.md:67-76` already put in
+  the roster row. A flag leaves two live surfaces for one action.
+- **2026-09-14.** `.session-row-selected` is promoted past "**Not a general
+  primitive**" (`spec/ui_elements.md:592`), which deliberately withheld the
+  transfer and named a Rosters index as the speculative third caller. This is
+  that caller arriving. `guide/new_ux_ideas.md:270-279` names the edge it was
+  not designed against — *the row can sit above a tall panel or scroll off* —
+  and Variant B puts `delete-all` inside exactly such a panel. Accepting the
+  transfer is this item's call; the scroll-off edge is rung 2's to answer on
+  the dev slot, not a test's.
+- **2026-09-14.** **No Download.** The handoff's Unlock panel carries one; the
+  Reviewers page has no download control (`grep -cin 'download\|export'` → 0)
+  — the roster CSV lives on Extract data (`_extracts.py:108`). Adding it here
+  would be a new capability, which this item excludes.
 
 ### Blast radius (measured)
 
 At `46688cb`:
 
-- Page: `wc -l app/web/templates/operator/session_reviewers.html` → **728**;
+- `wc -l app/web/templates/operator/session_reviewers.html` → **728**;
   `grep -c operator-actions` → **5**; `grep -c edit_mode` → **19**.
-- Cards retired: `#upload-csv` (line 624) and `.danger-zone` (line 690).
-  The labels editor is **not** one of them — it is a top card inside
-  `card-columns`, beside Operator actions, not a bottom card.
-- Action sets: `grep -oE 'formaction="[^"]*"' | sort -u` → **3** on
-  Reviewers / Reviewees / Relationships, **4** on Observers; `grep -c 'setBtn('`
-  → 4 / 4 / 4 / **5**.
-- Lobby primitives to reuse: `grep -c 'session-expander\|session-row-selected'
-  app/web/templates/base.html` → **18**; templates `#single-session-expander`
-  (`sessions_list.html:185`) and `#bulk-expander` (`:243`), both fully wired
-  with live `formaction`s — *not* the placeholders the handoff describes.
-- Tests naming the selection or these routes: **10 files**, of which
-  `test_reviewers_page_mutate.py`, `test_setup_danger_zone_delete_all.py` and
-  `test_setup_selection_lifecycle.py` are the ones this item moves.
-- Specs describing the retired cards, by `grep -ci` on *danger zone* /
-  *upload card* / *operator actions*: `setup_pages.md` **12/8/16** (the
-  owner), `operator_button_audit.md` **12/0/28**, `operator_ui_concept.md`
-  7/3/3, `ui_elements.md` 1/0/2, `rrw_functional_spec.md` 4/1/0.
+- Cards retired: `#upload-csv` (`:624`), `.danger-zone` (`:690`) and the
+  `_field_labels_editor` card (`:91`, 111 lines) — the last sits inside
+  `card-columns` (`:48`), so retiring it also empties that container's left
+  column, which `spec/setup_pages.md:94` describes by name.
+- `grep -oE 'formaction="[^"]*"' | sort -u | wc -l` → **3 / 3 / 3 / 4** and
+  `grep -c 'setBtn('` → **4 / 4 / 4 / 5** across
+  reviewers / reviewees / relationships / observers.
+- `grep -c 'session-expander\|session-row-selected' base.html` → **18**;
+  `#single-session-expander` (`sessions_list.html:185`) and `#bulk-expander`
+  (`:243`) carry live `formaction`s — only the two `data-expander-delete`
+  buttons (`:237`, `:285`) are `disabled`, a two-stage gate. The template's own
+  comment (`:182-184`) still calls them placeholders and is **stale** since
+  `d2c8671`; that is where the handoff's error came from, and rung 1 fixes it.
+- `grep -rl 'reviewers/bulk-\|reviewers/delete-all\|danger-zone\|upload-csv'
+  tests/ --include=*.py | wc -l` → **15**; narrowed to
+  `reviewers/bulk-\|reviewers/delete-all` → **6**. The three this item moves
+  are `test_reviewers_page_mutate.py`, `test_setup_danger_zone_delete_all.py`,
+  `test_setup_selection_lifecycle.py`.
+- Specs, by `grep -ci` on *danger zone* / *upload card* / *operator actions*:
+  `setup_pages.md` **12/8/16** (the owner), `operator_button_audit.md`
+  **12/0/28**, `operator_ui_concept.md` **7/2/3**, `ui_elements.md` 1/0/2,
+  `rrw_functional_spec.md` 4/1/0 — all five are in the manifest.
 
 ### PR ladder
 
-1. **Scaffold (A).** Bracket + injected expander on Reviewers with the row
-   actions moved in, arity preserved, routes unchanged. Actions card keeps
-   the filter strip only. Must not touch the bottom cards or `spec/`.
-2. **Scaffold (B).** The one-row index + Unlock expander, rendered but
-   **inert** — real copy, no wiring. Bottom cards still present. Must not
-   touch `spec/`.
-3. **Wire B and retire the two cards.** Upload/Download/Delete-all move into
-   Unlock; `#upload-csv` and `.danger-zone` are deleted; the gate extends
-   `edit_mode`. Must not touch `spec/`.
-4. **The specs, last** — deliberately after the cold readers, so the
-   pre-push `spec-writer` pass is the final word on these files. This is the
-   ordering 19O.3's close left untested.
+1. **Scaffold (A).** The bracket + an injected expander rendered **inert** —
+   real actions, no wiring — beside the existing action row, which stays.
+   Also fixes `sessions_list.html:182-184`'s stale placeholder comment.
+   Must not touch `spec/`.
+2. **Wire A.** Row actions move into the expander, arity preserved, routes
+   unchanged; the action row leaves the card, which keeps the filter strip.
+   Must not touch `spec/`.
+3. **Scaffold (B).** One-row index + Unlock expander, inert, real copy. Bottom
+   cards still present. Must not touch `spec/`.
+4. **Wire B and retire the three cards.** Upload, Delete-all and the friendly
+   labels move into Unlock; `#upload-csv`, `.danger-zone` and the
+   `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
+   Must not touch `spec/`.
+5. **The specs, last** — deliberately after the cold readers, so the pre-push
+   `spec-writer` pass is the final word. This is the ordering 19O.3's close
+   left untested. **The shared-shape problem is this rung's:**
+   `spec/setup_pages.md:47` and `:525` and `spec/operator_ui_concept.md:433`
+   state one body shape for all four pages, and this item changes one. Rung 5
+   states the new shape as the Reviewers shape and the old as the other three's,
+   naming 19O.5 as the next to move — it does **not** describe one shape.
 
 ### Definition of done
 
-- Selecting rows brackets them and renders the expander beneath the last.
+- The rendered page carries the bracket class and an expander node beneath the
+  anchor row, asserted server-side. *The suite has no JS runtime, so the tests
+  assert the mechanism — classes, markup, posted routes — not the appearance;
+  19L stated the same limit (`segment_19L_ux_refinements.md:207-209`).*
 - `Edit` enabled at exactly one row, the other three at one or more, asserted.
-- `grep -c 'id="upload-csv"\|danger-zone' session_reviewers.html` → 0.
-- Upload, delete-all and download each fire from inside Unlock, asserted.
-- Opening Unlock makes the preview non-selectable; closing it restores.
+- `grep -c 'id="upload-csv"\|danger-zone\|_field_labels_editor'
+  session_reviewers.html` → 0.
+- Upload, delete-all and the label save each fire from inside Unlock,
+  asserted by route.
+- `edit_mode`-style locking: with Unlock open the preview renders
+  non-selectable, asserted server-side.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19O.4` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -130,25 +158,26 @@ At `46688cb`:
 
 ### Open questions
 
-1. **Does the friendly-labels editor fold into Unlock too?** The author named
-   two cards; the handoff names three. Measured: it is a *top* card in
-   `card-columns`, not a bottom one, so "retire the bottom cards" does not
-   reach it. Decided by the author before rung 2.
-2. **Does the filter card shrink** once it holds no actions? Leaving it full
-   width is acceptable for this item.
+1. **Does the filter card shrink** once it holds no actions? Full width is fine
+   for this item.
 
 ### Out of scope
 
 - **Consolidating the four pages.** `guide/new_ux_ideas.md` §1; unchanged.
 - **The other three rosters.** Observers is 19O.5 and proves the divergence.
-- **New capabilities.** Every control already exists; this re-houses them.
+- **New capabilities** — including **Download**, per the judgment call above.
 
 ### Doc impact
 
-- `spec/setup_pages.md` — § *Operator actions card*, § *The Danger Zone's `delete-all`* and § *The Upload card's replace* re-describe the expander and the Unlock panel; the two card sections retire (Item 4).
-- `spec/operator_button_audit.md` — the Reviewers rows move from the actions strip to the expander, and the Danger Zone rows retire (Item 4).
-- `spec/operator_ui_concept.md` — the Setup page body shape gains the roster index row (Item 4).
-- `spec/ui_elements.md` — the lobby's `.session-expander*` primitives stop being lobby-only (Item 4).
+- `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed (Item 4).
+- `spec/operator_button_audit.md` — the Reviewers rows move from the actions strip to the expander; the Danger Zone rows retire; the `.btn.destructive` "outside a danger zone" sentence (§6 sibling at `ui_elements.md:368`) is restated for the expander (Item 4).
+- `spec/operator_ui_concept.md` — the shared Setup shape's items 3, 5 and 6 change, and it gains the roster index row (Item 4).
+- `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`" (Item 4).
+- `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 4).
+- `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 4).
+
+*Not in the manifest, deliberately:* `spec/csv_contracts.md` (13 mentions) and `spec/settings_inventory.md` (10) describe the friendly-label **header grammar** and the **persisted setting**. Moving the editor changes neither — only where the control renders.
+
 
 ## Item 3 — A sent invitation makes the roster un-replaceable
 
