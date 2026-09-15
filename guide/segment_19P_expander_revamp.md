@@ -204,11 +204,82 @@ any further code. The ladder below is unchanged in sequence; rung 1's
   (`spec/setup_pages.md:52-54`); rung 1 shipped it link-coloured. Conformance,
   not a new decision.
 
-**On the reader cadence** (the experiment 19O.3 opened): `diff-reviewer`
-returned on `#2394` *after* that PR was merged, so it gated nothing and its
-findings are recorded here instead. First time in this segment the reader's
-timing cost a cycle — an argument for the pre-ready gate independent of which
-reader runs.
+**2026-09-15 — rung 2 splits in two.** Author's call, after asking when
+the search box moves. As written, rung 2 carried three independent
+changes: the row-action wiring, the `Operator actions` retirement, and
+point 3's guidance move. They split on a clean seam — **layout above the
+table** versus **behavior in the table** — and the layout half is what
+the search box rides on. So:
+
+- **2a, the toolbar move.** Guidance to the top, full width. The filter
+  strip moves into a toolbar inside the preview-table card — right pane
+  the status / search controls and `Add new` / `Search`, left pane
+  `Show columns:` and `Showing N of M`. **The card is not retired
+  here**, only slimmed: it keeps the row-action row and the Add / Edit
+  block. No row action is wired.
+- **2b, the row actions and the retirement.** They move into the
+  expander, and the card — by then holding nothing else — is deleted.
+
+**The card cannot retire in 2a**, which the split's first draft had it
+doing. It holds the **only live** `Edit` / `Inactivate` / `Activate` /
+`Delete` controls and their `formaction`s; rung 1's expander copies are
+all `disabled` until 2b. Retiring it first would remove four working
+actions for a slice, and carrying them into the toolbar meanwhile would
+reproduce the crowded strip this segment exists to undo, then move them
+again. Slimming it costs one intermediate state and moves each control
+exactly once.
+
+Two things the ladder never named, found when the seam was cut:
+
+- **The `Operator actions` card also holds the Add / Edit block** — a
+  divider, a heading, the help line and Save / Cancel, rendered only in
+  `edit_mode` (`session_reviewers.html`, `.operator-actions-divider`).
+  It stays with the card through 2a and is rehomed when 2b deletes it:
+  its own card in the same position, still `edit_mode`-only, because
+  folding an editing form into a filter toolbar mixes two jobs in one
+  strip.
+- **`.card-columns` is left holding the tag-labels editor alone**, half
+  width in the left column, from 2a until the Unlock rung deletes it.
+  A known intermediate look (`spec/ui_elements.md` names the lone-card
+  case for `.bottom-grid`), and the alternative is pulling the Unlock
+  rung's deletion forward into a layout slice. In 2a it shares the
+  container with the slimmed `Operator actions` card, so the lone-card
+  state does not begin until 2b.
+
+**What 2a's cold read caught, before ready** (the pre-ready gate working,
+after `#2394`'s read landed post-merge):
+
+- **A shared primitive redefined for one page.** `.table-card-toolbar` is
+  used by **seven** templates; only Reviewers has panes. Turning the
+  shared rule into a two-column grid made the other six templates' direct
+  children grid items — Observers' toolbar holds the pager alone, which
+  would right-align inside the *left half* instead of across the card.
+  The grid now rides an `is-split` modifier. **The lesson generalizes to
+  2b:** check the user count before editing a `base.html` class.
+- **A gate that reached further than it looked.** `Add new` moved into
+  the preview-table card, which is gated on the roster having rows — so a
+  brand-new session had no way to add its first reviewer at all. Before
+  the move `Add` sat in the always-rendered `Operator actions` card. Every
+  gate on that card is now a gate on the filter and on `Add new`, which is
+  the same trap as the zero-match `Clear`, one state over.
+- **A lock that stopped reaching its target.** The filter greys out during
+  an edit (15F PR 3) via `.operator-actions-card .operator-actions-main
+  .is-locked`; the moved form is inside neither. The class shipped as
+  decoration until a rule was addressed to its new home.
+- **Two tests that could not fail** — one pinning a literal nothing emits,
+  one reading a pane that renders empty on its own fixture. Both were the
+  same root cause as `#2393`'s: asserting against a render not built to
+  produce the thing asserted. The fixture now paginates, and `_markup()`
+  strips the inline `<style>` block that satisfies any bare class-name
+  `in html`.
+- **Rejected:** the read called the `is_editable` wrapper on `Add` a new
+  behavior change. It is pre-existing — `9ba9500:340` already wrapped it,
+  and the unreachable `is_ready` branch inside it with it.
+
+Also found: the slice's own comment and commit message claimed two-column
+guidance prose that was never ported from the mockup. Implemented as a
+macro opt-in (`guidance(full_width=true)`), since the other six placements
+are half-width where two columns would be two ~30-character ribbons.
 
 ### PR ladder
 
@@ -222,6 +293,9 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 2. **Wire the row actions.** They move into the expander, arity preserved,
    routes unchanged; the action row leaves the card, which keeps the filter
    strip. Must not touch `spec/`.
+   *Split 2026-09-15 into **2a** (the toolbar move) and **2b** (the row
+   actions); the "keeps the filter strip" clause is superseded — the card
+   goes. See `### Status`.*
 3. **Wire Unlock and retire the three cards.** Upload, Delete-all and the
    friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
@@ -273,6 +347,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
+- `spec/operator_button_audit.md` — **added 2026-09-15 by rung 2a's cold read:** row **125** (`:227`) states the Reviewers `Add` label *and* the reason it is short — *"`Add` and `Delete` must both fit this row"*. Rung 2a renames the shipped label to `Add new` and dissolves that constraint (Delete leaves for the expander, so the two are no longer on one row), so the cell and its rationale sentence are both stale. `spec/setup_pages.md` says the same thing twice more — `:241` and `:536` list `Add` in the Operator-actions control set, and `:543` repeats the one-row rationale. A **rename**, which the bullet above covers only as a move (Item 1).
 - `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 1).
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
 - `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).

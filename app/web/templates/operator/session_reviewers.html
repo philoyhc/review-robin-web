@@ -45,6 +45,39 @@
      two row grids): it is full width, and a full-width card inside a
      two-column stack would have to span, which `.card-columns` does
      not do. Its notice reads at the top of the page anyway. #}
+  {# 19P.1 rung 2a — page guidance leads the page, full width. Its prose
+     runs in two columns when open: at full width one measure is ~150
+     characters, well past what stays readable. #}
+  {% call page_guidance.guidance(full_width=true) %}
+  <p>
+    Reviewers are the people who fill in the form. They may be the same
+    people as the reviewees, as in a peer review. A session must have at
+    least one reviewer to proceed. Validation will block you.
+  </p>
+  <p>
+    The <strong>email address is mandatory</strong> for the app to
+    identify the person. It should also be tied to their institutional
+    MS365 account, as they will need it to log into the app.
+  </p>
+  <p>
+    The three tag columns are what <strong>assignment rules</strong>
+    filter on, so put the attributes that decide who reviews whom there
+    (e.g., tutor, tutorial group).
+  </p>
+  <p>
+    Uploading a CSV <strong>replaces the whole roster</strong> and clears
+    any assignments already generated. To take someone out of a running
+    session without losing their rows, mark them
+    <strong>inactive</strong> instead of deleting. You can also add
+    individual reviewers on this page.
+  </p>
+  <p>
+    See
+    <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+    and set up a session</a> in the Guide.
+  </p>
+  {% endcall %}
+
   {# ------------------------------------------------------------------
      19P.1 rung 1 — the Reviewers roster card, INERT.
 
@@ -241,35 +274,6 @@
 
   <div class="card-columns">
     <div>
-      {% call page_guidance.guidance() %}
-      <p>
-        Reviewers are the people who fill in the form. They may be the same
-        people as the reviewees, as in a peer review. A session must have at
-        least one reviewer to proceed. Validation will block you.
-      </p>
-      <p>
-        The <strong>email address is mandatory</strong> for the app to
-        identify the person. It should also be tied to their institutional
-        MS365 account, as they will need it to log into the app.
-      </p>
-      <p>
-        The three tag columns are what <strong>assignment rules</strong>
-        filter on, so put the attributes that decide who reviews whom there
-        (e.g., tutor, tutorial group).
-      </p>
-      <p>
-        Uploading a CSV <strong>replaces the whole roster</strong> and clears
-        any assignments already generated. To take someone out of a running
-        session without losing their rows, mark them
-        <strong>inactive</strong> instead of deleting. You can also add
-        individual reviewers on this page.
-      </p>
-      <p>
-        See
-        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
-        and set up a session</a> in the Guide.
-      </p>
-      {% endcall %}
 
     {% set field_labels_form_action =
           "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
@@ -284,7 +288,6 @@
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
 
-    
     </div>
 
     <div>
@@ -294,45 +297,14 @@
          row is being edited / added; the Add / Edit form below the
          divider stays interactive. #}
       <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        <form method="get"
-              action="{{ reviewers_base_url }}"
+        {# 19P.1 rung 2a — the filter strip and `Add` have moved into the
+           preview table's toolbar. What is left is the selection-driven
+           action row, which stays live until rung 2b wires the expander
+           and deletes this card: it holds the only working `Edit` /
+           `Inactivate` / `Activate` / `Delete` on the page. #}
+        <form method="get" action="{{ reviewers_base_url }}"
               class="operator-actions-filter">
-          <div class="filter-row">
-            <label class="filter-status">
-              Status:
-              <select name="status">
-                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-                {% for value, label in filter_status_options %}
-                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-search">
-              Search:
-              <input type="text"
-                     name="q"
-                     list="reviewers-search-options"
-                     value="{{ filter_search }}"
-                     autocomplete="off"
-                     placeholder="Reviewer name, email or tag">
-              <datalist id="reviewers-search-options">
-                {% for label in filter_search_options %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-            </label>
-          </div>
-          {# One action row: the filter count / Clear, the
-             selection-driven action buttons, then the Search
-             submit last. The bulk buttons submit
-             ``reviewers-bulk-form`` via ``form=`` + ``formaction``,
-             so they post the bulk form even though they sit inside
-             the GET filter form; Edit is JS-driven. #}
           <div class="filter-actions">
-            {% if filter_status != "all" or filter_search %}
-              <a class="btn secondary"
-                 href="{{ reviewers_base_url }}">Clear</a>
-            {% endif %}
             {# Segment 19I Item 3 — the mutating controls render
                only where they can act. Clear, Search and the
                "Showing N of M" hint stay: reading a finished
@@ -351,12 +323,6 @@
                     form="reviewers-bulk-form"
                     formaction="{{ reviewers_base_url }}/bulk-reactivate"
                     disabled aria-disabled="true">Activate</button>
-            {% if is_ready or edit_mode %}
-              <a class="btn secondary disabled" aria-disabled="true">Add</a>
-            {% else %}
-              <a class="btn secondary"
-                 href="{{ reviewers_base_url }}?add=1">Add</a>
-            {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
                like Inactivate / Activate beside it. Enabled by
@@ -370,7 +336,6 @@
                     data-delete-btn="reviewers-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
             {% endif %}
-            <button class="btn secondary" type="submit">Search</button>
           </div>
           {# Second action row (Segment 19I Item 2): what the
              page is showing, what is selected, and the delete
@@ -466,7 +431,20 @@
     </form>
   {% endif %}
 
-  {% if reviewers or add_mode %}
+  {# 19P.1 rung 2a — the filter strip and `Add new` now live in this
+     card, so every gate on it is a gate on them.
+
+     `or total_row_count > 0`: gating on the FILTERED list would hide the
+     only control that clears a search matching nothing.
+
+     `or is_editable`: gating on the roster having rows would hide the
+     only `Add new` on the page from the one operator who most needs it —
+     a session whose roster is still empty. Before the strip moved, `Add`
+     lived in the always-rendered `Operator actions` card, so this gate
+     did not reach it.
+
+     The table itself is still gated below. #}
+  {% if reviewers or add_mode or total_row_count > 0 or is_editable %}
     {% set selectable = not edit_mode and is_editable %}
     {# 19I Item 12 rung 3 — a slot with no data anywhere in the roster
        renders neither chip nor column. ``edit_mode`` overrides: an
@@ -487,28 +465,95 @@
        column chips and the page links are both on screen with the
        new rows beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-      <div class="table-card-toolbar">
-      {# Column show/hide chips (19I Item 12 rung 1). They sit in the
-         table card, directly above the rows they govern, the way
-         Invitations and Responses have had them since Item 11 —
-         rather than in the "Fields with data" card a grid away —
-         which rung 4 then retired outright. #}
-      {# A chip row with no chips in it is a label and nothing else,
-         so the row goes too when every slot is empty (19I Item 12
-         rung 3). #}
-      {% if reviewers and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"]) %}
-        <p class="col-chip-row" data-col-toggles-for="reviewers-table" style="margin: 0 0 12px 0;">
-          <span>Show columns:</span>
-          {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
-            <span class="pill pill-count tag-chip is-selected"
-                  data-col-toggle="tag-{{ slot }}"
-                  role="button" tabindex="0" aria-pressed="true">{{ field_label_header(session, "reviewer", "tag_" ~ slot) }}</span>
-          {% endfor %}
-        </p>
-      {% endif %}
-      {% include "operator/partials/_pager_cluster.html" %}
-      </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_count_line.html" %}
+      {# 19P.1 rung 2a — two half-width panes. Left: what the table is
+         showing. Right: the filter that decides it, moved out of the
+         `Operator actions` card so the controls sit with the rows they
+         act on rather than a grid away. #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left">
+          {# A chip row with no chips in it is a label and nothing else,
+             so the row goes too when every slot is empty (19I Item 12
+             rung 3). #}
+          {% if reviewers and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"]) %}
+            <p class="col-chip-row" data-col-toggles-for="reviewers-table">
+              <span>Show columns:</span>
+              {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
+                <span class="pill pill-count tag-chip is-selected"
+                      data-col-toggle="tag-{{ slot }}"
+                      role="button" tabindex="0" aria-pressed="true">{{ field_label_header(session, "reviewer", "tag_" ~ slot) }}</span>
+              {% endfor %}
+            </p>
+          {% endif %}
+          {# Pager before the count line, as the other three rosters have
+             it — 19I Item 10 sited the sentence and the cluster together,
+             and `tests/unit/test_pager.py` pins the order so the two
+             cannot drift into different places on one page. #}
+          {% include "operator/partials/_pager_cluster.html" %}
+          {% include "operator/partials/_preview_count_line.html" %}
+        </div>
+
+        <div class="toolbar-pane toolbar-right">
+          <form method="get" action="{{ reviewers_base_url }}"
+                class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
+            <div class="filter-row">
+              <label class="filter-status">
+                Status:
+                <select name="status">
+                  <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                  {% for value, label in filter_status_options %}
+                    <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-search">
+                Search:
+                <input type="text"
+                       name="q"
+                       list="reviewers-search-options"
+                       value="{{ filter_search }}"
+                       autocomplete="off"
+                       placeholder="Reviewer name, email or tag">
+                <datalist id="reviewers-search-options">
+                  {% for label in filter_search_options %}
+                    <option value="{{ label }}"></option>
+                  {% endfor %}
+                </datalist>
+              </label>
+            </div>
+            <div class="filter-actions">
+              {% if filter_status != "all" or filter_search %}
+                <a class="btn secondary" href="{{ reviewers_base_url }}">Clear</a>
+              {% endif %}
+              {# `Add` is page-level and keeps its own `is_ready` gate; it
+                 renders as `Add new` here, beside the control it reads
+                 next to. #}
+              {% if is_editable %}
+                {% if is_ready or edit_mode %}
+                  <a class="btn secondary disabled" aria-disabled="true">Add new</a>
+                {% else %}
+                  <a class="btn secondary" href="{{ reviewers_base_url }}?add=1">Add new</a>
+                {% endif %}
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% if not (reviewers or add_mode) %}
+        {# No rows to show, for one of two reasons, and they need
+           different sentences: a filter that matched nothing is the
+           operator's own doing and clearable, an empty roster is a
+           starting point. Said where the rows would be, with the filter
+           still above it — this was a separate card below this one,
+           which after the strip moved in here would have left the
+           operator reading "no matches" with no way to clear them. #}
+        {% if total_row_count > 0 %}
+          <p class="muted">No reviewers match the current filter.</p>
+        {% else %}
+          <p class="muted">No reviewers yet. Upload a CSV or add a row to
+            get started.</p>
+        {% endif %}
+      {% else %}
       <table id="reviewers-table"
              data-rrw-col-toggles="rrw-reviewer-tag-visibility"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}"{% endif %}>
@@ -682,12 +727,7 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
-    </div>
-  {% elif total_row_count > 0 %}
-    {# Filter matched nothing — preserve the total-row context so
-       the operator knows the data isn't gone, just filtered out. #}
-    <div class="card">
-      <p class="muted">No reviewers match the current filter.</p>
+      {% endif %}
     </div>
   {% endif %}
 
