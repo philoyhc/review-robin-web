@@ -493,7 +493,19 @@
         </div>
 
         <div class="toolbar-pane toolbar-right">
-          <form method="get" action="{{ reviewers_base_url }}"
+          {# Every control here reloads the page, and without a fragment
+             the reload lands at the very top — the operator is thrown
+             away from the rows they were filtering. The pager already
+             solved this (19J.8): `#{{ pager_anchor }}` sits on the
+             table card, which carries `scroll-margin-top`, so the turn
+             arrives just above the card's top edge. These take the same
+             anchor, so a search and a page turn land identically.
+
+             A `GET` form keeps the fragment of its `action` — the
+             submission algorithm replaces the query and leaves the
+             fragment alone. Verified in Chromium rather than assumed. #}
+          <form method="get"
+                action="{{ reviewers_base_url }}#{{ pager_anchor }}"
                 class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
             <div class="filter-row">
               <label class="filter-status">
@@ -522,7 +534,8 @@
             </div>
             <div class="filter-actions">
               {% if filter_status != "all" or filter_search %}
-                <a class="btn secondary" href="{{ reviewers_base_url }}">Clear</a>
+                <a class="btn secondary"
+                   href="{{ reviewers_base_url }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               {# `Add` is page-level and keeps its own `is_ready` gate; it
                  renders as `Add new` here, beside the control it reads
@@ -531,7 +544,8 @@
                 {% if is_ready or edit_mode %}
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
-                  <a class="btn secondary" href="{{ reviewers_base_url }}?add=1">Add new</a>
+                  <a class="btn secondary"
+                     href="{{ reviewers_base_url }}?add=1#{{ pager_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>

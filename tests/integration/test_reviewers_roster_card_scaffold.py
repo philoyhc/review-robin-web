@@ -830,3 +830,47 @@ def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
     assert re.search(r"gap:\s*var\(--space-2\)", scoped.group(1)), (
         "the half-width pane lost its tighter button gap"
     )
+
+
+def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
+    client, db
+):
+    """Reported from the dev slot: using `Clear`, `Add new` or `Search`
+    threw the operator to the very top of the page, away from the rows
+    they were filtering.
+
+    Each control reloads the page, and a reload with no fragment lands
+    at the top. The pager solved this at 19J.8 — `#reviewers-table-card`
+    sits on the table card, which carries `scroll-margin-top` — so these
+    take the SAME anchor, and a search lands exactly where a page turn
+    does rather than somewhere of its own.
+
+    A `GET` form keeps the fragment of its `action`: the submission
+    algorithm replaces the query and leaves the fragment alone. Verified
+    in Chromium, where landing puts the card's top edge 16px below the
+    viewport top.
+    """
+    rs = _with_reviewers(client, db, "rc35")
+    html = _markup(client.get(
+        f"/operator/sessions/{rs.id}/reviewers?q=R1"
+    ).text)
+    anchor = "#reviewers-table-card"
+
+    # Vacuity guard: `Clear` renders only while a filter is active, so
+    # without this the loop below could pass by finding nothing.
+    assert ">Clear</a>" in html, "the filter is not active on this render"
+
+    right = html.split('class="toolbar-pane toolbar-right"')[1]
+    form = re.search(r'<form[^>]*method="get"[^>]*>', right, re.S)
+    assert form, "the toolbar's filter form is missing"
+    assert anchor in form.group(0), (
+        f"`Search` submits without {anchor}, so it lands at the top of "
+        f"the page: {form.group(0)!r}"
+    )
+
+    for label in ("Clear", "Add new"):
+        link = re.search(rf'<a[^>]*>\s*{re.escape(label)}</a>', right, re.S)
+        assert link, f"`{label}` is not in the toolbar"
+        assert anchor in link.group(0), (
+            f"`{label}` lands at the top of the page: {link.group(0)!r}"
+        )
