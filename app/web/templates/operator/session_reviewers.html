@@ -469,6 +469,13 @@
                   aria-expanded="true" aria-controls="roster-unlock-panel">
             Lock
           </button>
+          {# Without JS the button above is inert, so the same state
+             change is offered as a plain navigation. See the Unlock
+             twin below for the full reasoning. #}
+          <noscript>
+            <a class="btn secondary"
+               href="{{ reviewers_base_url }}#roster-card">Lock</a>
+          </noscript>
         </div>
         {% endif %}
         </div>
@@ -487,6 +494,37 @@
                 aria-expanded="false" aria-controls="roster-unlock-panel">
           Unlock
         </button>
+        {# 19P.1 rung 3c — the no-JS path back, raised independently by
+           this slice's cold read and by Codex (P2).
+
+           Rung 3 moved all three mutating cards into a panel that ships
+           `hidden` and is opened only by the button above, so with JS
+           off the page lost the CSV import, the delete-all and the
+           labels editor in one step. `?unlocked=1` already renders the
+           panel open server-side — it exists for the redirects the three
+           controls answer with — so the fallback is a link to the state
+           the server already supports, not new machinery.
+
+           SCOPE, measured rather than assumed. This restores exactly
+           what rung 3 took and no more. The Upload and Delete-all
+           buttons ship `disabled` and are enabled by `base.html`'s
+           confirm-pairing script, which is unchanged here and predates
+           this segment — identical at `3f7d5b6`, the commit before the
+           revamp began. So with JS off and a roster that already has
+           rows, Upload was ALREADY unreachable before rung 3, and still
+           is. What this brings back is the empty-roster import — the
+           initial bulk create, where the button renders enabled — plus
+           the ability to see and read all three cards at all.
+
+           Codex's report put it more broadly ("removes the no-JS path
+           for a core setup operation"); that is true of the create path
+           and of visibility, and not true of the replace path, which no
+           slice in this segment changed. The residual gap is real but
+           it is `base.html`'s confirm gate, not this panel's. #}
+        <noscript>
+          <a class="btn secondary"
+             href="{{ reviewers_base_url }}?unlocked=1#roster-card">Unlock</a>
+        </noscript>
       </div>
       {% endif %}
 

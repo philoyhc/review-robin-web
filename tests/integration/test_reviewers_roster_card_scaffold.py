@@ -419,6 +419,50 @@ def test_a_pill_confirm_keeps_its_sentence_in_one_piece(client, db):
         )
 
 
+def test_the_panel_is_reachable_without_javascript(client, db):
+    """Rung 3 put all three mutating cards behind a `hidden` panel whose
+    only opener is an inline click handler, so with JS off the page lost
+    the CSV import, the delete-all and the labels editor in one step.
+    Raised by this slice's cold read and independently by Codex (P2).
+
+    `?unlocked=1` already renders the panel open server-side — it is what
+    the three controls redirect with — so the fallback links to a state
+    the server supports rather than adding machinery.
+
+    Both directions are pinned, because a one-way fallback strands a
+    no-JS operator in the open state with an inert Lock button.
+
+    Scope note, so this test is not read as more than it is: the Upload
+    and Delete-all buttons are still `disabled` until `base.html`'s
+    confirm-pairing script runs. That gate is unchanged by this segment
+    and identical at `3f7d5b6`, the commit before the revamp — so the
+    no-JS replace path was already closed and still is. What is restored
+    is the empty-roster import, where the button ships enabled, and the
+    ability to see the cards at all.
+    """
+    rs = _with_reviewers(client, db, "rc-nojs")
+    base = f"/operator/sessions/{rs.id}/reviewers"
+
+    closed = _markup(_page(client, rs))
+    assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
+        "the panel is not hidden here, so no fallback is needed and this "
+        "test asserts nothing"
+    )
+    opener = re.search(r"<noscript>.*?</noscript>", closed, re.S)
+    assert opener, "no no-JS fallback on the collapsed page"
+    assert f"{base}?unlocked=1" in opener.group(0), (
+        "the fallback does not link to the server-rendered open state"
+    )
+
+    opened = _markup(client.get(f"{base}?unlocked=1").text)
+    assert not re.search(r'id="roster-unlock-panel"[^>]*\bhidden', opened)
+    closer = re.search(r"<noscript>.*?</noscript>", opened, re.S)
+    assert closer, "no way back to the locked state without JS"
+    assert "unlocked=1" not in closer.group(0), (
+        "the way back re-opens the panel it is meant to close"
+    )
+
+
 def test_a_failed_import_arrives_with_the_panel_open(client, db):
     """The reason 3c went last, and the one thing here the suite can
     only half-see.

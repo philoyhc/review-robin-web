@@ -732,19 +732,39 @@ Re-run against the body block alone: 1.
 **Two things left undecided, recorded so rung 4 inherits them rather
 than rediscovers them:**
 
-- **No-JS reachability, which rung 3 changed without discussing.**
-  Before rung 3 an editable Reviewers page rendered Upload, delete-all
-  and the labels editor below the table unconditionally, so all three
-  worked with JS off. All three are now inside `#roster-unlock-panel`,
-  which ships `hidden` and is opened only by an inline click handler on
-  a `<button type="button">`. With JS disabled the page has no path to
-  bulk import. `?unlocked=1` is a working server-side escape hatch and
-  nothing on the page links to it. `CLAUDE.md` calls these scripts
-  "targeted progressive-enhancement"; `archive/segment_09_4C.md:15`
-  recorded the old anchored card as deliberately "**No JS toggle**, no
-  `<details>`, no query-param branch". The segment has never discussed
-  it — this is a rung-3 property, not a 3c one, and 3c is the last
-  cheap moment to write the decision down.
+- ~~**No-JS reachability, which rung 3 changed without discussing.**~~
+  **FIXED at 3c, not deferred** — raised by this slice's cold read and,
+  an hour later, independently by Codex as a P2, which is enough
+  agreement to treat it as this PR's work rather than rung 4's.
+
+  Rung 3 put Upload, delete-all and the labels editor inside
+  `#roster-unlock-panel`, which ships `hidden` and is opened only by an
+  inline handler on a `<button type="button">`, so with JS off the page
+  lost all three at once. The fix is a `<noscript>` link to
+  `?unlocked=1` — a state the server already renders, because it is what
+  the three controls redirect with — plus its twin back to the locked
+  state, so a no-JS operator is not stranded open against an inert Lock.
+
+  **Scope, measured rather than assumed, and narrower than the report.**
+  Codex said this "removes the no-JS path for a core setup operation".
+  True of the create path and of visibility; not true of replace. The
+  Upload and Delete-all buttons ship `disabled` and are enabled by
+  `base.html`'s confirm-pairing script, which this segment never touched
+  and which is byte-identical at `3f7d5b6`, the commit before the revamp
+  began — so with JS off and a roster that already has rows, Upload was
+  ALREADY unreachable, and still is. What came back is the empty-roster
+  import (button ships enabled) and the ability to read all three cards.
+
+  **Verified end to end in Chromium with `java_script_enabled=False`:**
+  panel hidden at rest, one `<noscript>` link, click it, panel and form
+  visible, button enabled, CSV submitted, one roster row landed.
+
+  **Found while doing it, and worth its own line:** the session-create
+  page's own submit button is JS-gated the same way, so with JS off you
+  cannot create a session at all. No-JS operation is not an established
+  property of this app, which is context for how far rung 4 should take
+  this — the fix here restores parity with what Reviewers did before,
+  and claims nothing more.
 - **The panel's redirect contract now has three spellings.**
   `?unlocked=1#roster-card` is built inline in `_setup_reviewers.py`
   twice and in `_shared.py` once behind `kind == "reviewers"`. Not a
