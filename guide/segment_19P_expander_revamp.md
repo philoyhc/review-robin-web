@@ -287,11 +287,35 @@ gains rung **2a′**, below.
   and `.field-labels-actions` each restated the same six declarations,
   which is why moving the strip out of one card dropped two rules in
   two separate slices (`is-locked`, then `filter-actions`'
-  `margin-top`). Now one unscoped base; the three scopes narrow **6
-  declarations between them, down from 49**.
+  `margin-top`). **Three of the four** are now one unscoped base
+  narrowing **6 declarations between them, down from 49**.
+  `.field-labels-*` **stayed out**, deliberately: different class
+  names, a 3-up grid rather than a filter row, and only the
+  `margin-top` value in common. Folding it in would be a second
+  refactor wearing the first one's justification. It remains a private
+  copy; if a third move ever loses a rule there, this is the note that
+  predicted it.
 - **`.operator-actions-card .operator-actions-buttons` is dead** — no
   template uses it, repo-wide. Pre-existing; still retires with the
   card in 2b.
+
+**2a′'s cold read landed after the merge** (`#2403` merged on green
+before it returned). Nothing defective shipped — the refactor is
+behaviour-preserving, now proven over 7 pages / 44 elements rather than
+6 / 37 — but two findings were real and are follow-up rather than
+pre-merge:
+
+- **Two of the base's five rules were inert.** `body.ui-v2 select` /
+  `input[type="text"]` is (0,1,2)/(0,2,2) and outranked the unprefixed
+  `.filter-row select` (0,1,1). It sets the *same* `width` and
+  `box-sizing`, so nothing rendered differently — which is precisely
+  why neither the parity check nor a reading caught it. Latent, not
+  live: the day that global rule changes, all seven strips follow it.
+  Prefixed, and `width` / `box-sizing` added to the guard.
+- **The guard covered two of the three scopes** and could not see a
+  *fourth* scope appearing, which is the only direction the four-copy
+  shape ever grew from. Now enumerates every rule selecting the shape
+  and requires each to be the base or a known scope.
 
 **Decided at build, 2a′:** the base is unscoped *except* its generic
 `> label` rule, which takes a `body.ui-v2` prefix to outrank the global

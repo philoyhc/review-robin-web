@@ -10,6 +10,7 @@ but aren't part of the app or its test suite.
 | `theme_preview.gen.py` → `theme_preview.html` | Theme-preview harness (read-only) — lifts `app/web/templates/base.html`'s real `<style>` and renders a component gallery + token swatch grid. **Open the HTML in a browser**, no server; the toolbar flips Light / Dark. Regenerate after any `base.html` style change. | `python3 tools/theme_preview.gen.py` |
 | `theme_customizer.gen.py` → `theme_customizer.html` | Theme customizer — the same gallery with every colour token editable, live repaint, and the palette's WCAG audit. [Detail](#theme_customizergenpy) | `python3 tools/theme_customizer.gen.py` |
 | `theme_variants.gen.py` | Border-contrast report, plus the machinery for a theme variant when one is needed. [Detail](#theme_variantsgenpy) | `python3 tools/theme_variants.gen.py` |
+| `css_parity_check.py` | CSS-refactor parity check (read-only) — renders every page carrying a shared CSS shape, reads the computed styles Chromium resolves, and diffs two snapshots. Proves a refactor changed nothing, which the suite cannot: it has no layout engine, so which rule *wins* is invisible to it. **Needs `node` + `playwright` + a Chromium binary, none of them repo dependencies**; set `RRW_NODE_ROOT` and `RRW_CHROMIUM`. Not in CI. | `python3 tools/css_parity_check.py --out /tmp/before` |
 | `_harness_common.py` | Shared helpers for the two generators — the `base.html` `<style>` lift, the `:root` / `:root[data-theme="dark"]` token parse, the harness CSS, the gallery markup. Not a generator; imported by both. | — |
 
 ---
