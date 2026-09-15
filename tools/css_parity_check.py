@@ -119,7 +119,9 @@ def _render_pages(into: Path) -> list[str]:
     )
     if proc.returncode != 0:
         print(proc.stdout[-3000:], file=sys.stderr)
-        raise SystemExit("page render failed; sample would be incomplete")
+        # Exit 2, not 1: `close_check.py`'s convention, which this file
+        # follows — 0 pass, 1 differences found, 2 could not check.
+        raise SystemExit(2)
     return sorted(p.stem for p in into.glob("*.html"))
 
 
@@ -139,7 +141,7 @@ def record(out: Path) -> int:
     out.mkdir(parents=True, exist_ok=True)
     script = node_root / ".rrw_css_parity_extract.mjs"
     with tempfile.TemporaryDirectory() as tmp:
-        pages = _render_pages(Path(tmp))
+        _render_pages(Path(tmp))  # raises SystemExit(2) if any page missed
         script.write_text(_EXTRACT_JS, encoding="utf-8")
         env = dict(os.environ)
         env.setdefault("RRW_CHROMIUM", "/opt/pw-browsers/chromium")
@@ -155,17 +157,62 @@ def record(out: Path) -> int:
             print(proc.stderr.strip()[:2000], file=sys.stderr)
             return 2
     data = json.loads((out / "styles.json").read_text())
-    n = sum(len(v) for v in data.values())
-    print(f"recorded {n} elements across {len(pages)} pages -> {out}")
+    per_page = {k: len(v) for k, v in sorted(data.items())}
+    n = sum(per_page.values())
+
+    # F3: without these the tool prints "0 differences" over nothing and
+    # exits 0 — the exact "reported success having checked nothing" its
+    # own docstring promises not to do.
+    if not per_page:
+        print("no pages rendered; nothing was sampled", file=sys.stderr)
+        return 2
+    if n == 0:
+        print("every page sampled zero elements; the selectors match "
+              "nothing, so a diff would be meaningless", file=sys.stderr)
+        return 2
+
+    # F5: HTTP 200 does not mean the shape was on the page. Assignments
+    # renders fine and contributes zero filter-strip elements, because
+    # its strip is state-gated. A page that samples nothing is not an
+    # error, but it must not be counted as covered.
+    empty = [k for k, v in per_page.items() if v == 0]
+    for page, count in per_page.items():
+        print(f"  {page:24s} {count:3d}")
+    if empty:
+        print(f"  ! {len(empty)} page(s) sampled NOTHING and are not "
+              f"covered by any comparison: {', '.join(empty)}",
+              file=sys.stderr)
+
+    # The snapshot records what it sampled, so `diff` can refuse to
+    # compare two runs that asked different questions.
+    (out / "manifest.json").write_text(json.dumps(
+        {"selectors": SELECTORS, "properties": PROPERTIES}, indent=1))
+    print(f"recorded {n} elements across {len(per_page) - len(empty)} "
+          f"covered page(s) of {len(per_page)} rendered -> {out}")
     return 0
 
 
 def diff(before: Path, after: Path) -> int:
     a = json.loads((before / "styles.json").read_text())
     b = json.loads((after / "styles.json").read_text())
+
+    # F14: two runs that sampled different selectors or properties are
+    # not comparable, and `for k in r1` would silently skip whatever the
+    # older side never recorded. The docstring warned a human about
+    # this; enforcing it is better than warning.
+    manifests = []
+    for side in (before, after):
+        path = side / "manifest.json"
+        manifests.append(json.loads(path.read_text()) if path.exists() else None)
+    if manifests[0] != manifests[1]:
+        print("the two snapshots sampled different selectors or "
+              "properties, so they are not comparable; re-record BOTH "
+              "sides", file=sys.stderr)
+        return 2
+
     if a.keys() != b.keys():
         print(f"page sets differ: {sorted(a)} vs {sorted(b)}", file=sys.stderr)
-        return 1
+        return 2
     total = diffs = 0
     for page in a:
         if len(a[page]) != len(b[page]):
@@ -180,9 +227,13 @@ def diff(before: Path, after: Path) -> int:
                     diffs += 1
                     print(f"DIFF {page} {r1['sel']}[{r1['i']}] "
                           f"cls={r1['cls']!r} {k}: {r1[k]!r} -> {r2[k]!r}")
-    props = len(PROPERTIES) + 4
-    print(f"\n{total} elements x ~{props} properties across {len(a)} pages "
-          f"-> {diffs} difference(s)")
+    # F3 again, on the reading side.
+    if total == 0:
+        print("compared 0 elements; the snapshots are empty, so this is "
+              "not evidence of anything", file=sys.stderr)
+        return 2
+    print(f"\n{total} elements x {len(PROPERTIES)} properties across "
+          f"{len(a)} pages -> {diffs} difference(s)")
     return 1 if diffs else 0
 
 

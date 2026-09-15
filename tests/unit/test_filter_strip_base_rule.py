@@ -1,6 +1,9 @@
 """The filter-strip shape is declared once, unscoped.
 
-Eight instances across seven Setup pages. It used to be re-declared
+Seven instances, one per template carrying a `.filter-row` — which
+is NOT the set of Setup pages: `spec/setup_pages.md` says in bold
+that Assignments is not one, and Invitations and Responses are
+Operations surfaces too. It used to be re-declared
 inside every card that held it, which meant moving the markup from one
 card to another silently dropped whatever only that card supplied.
 19P.1 did it twice — `is-locked` (a half-typed row could be thrown away
@@ -68,6 +71,51 @@ def _rule(css: str, selector: str) -> str:
     m = re.search(re.escape(selector) + r"\s*\{(.*?)\}", css, re.S)
     assert m, f"no rule for {selector!r}"
     return m.group(1)
+
+
+def _rules(css: str) -> list[tuple[str, str]]:
+    """Every `(selector-list, declarations)` pair in the stylesheet.
+
+    A regex anchored with `[^{}\\n]*` cannot do this: it forces the
+    selector onto the same line as its brace, so a comma list split
+    across lines is only ever half-seen. Not hypothetical — this
+    file's own subject is such a list (`body.ui-v2 .filter-row
+    select,` / `… input[type="text"] {`), and the first version of the
+    enumeration below could see only the `input` half, and could not
+    see a rogue scope hidden in the `select` position at all. So scan
+    brace to brace and keep whatever preceded it.
+
+    `@media` preludes are skipped; the rules inside them come back like
+    any other, which is what we want — a narrowing inside a media query
+    is still a narrowing.
+    """
+    out: list[tuple[str, str]] = []
+    depth = start = 0
+    for i, ch in enumerate(css):
+        if ch == "{":
+            selector = css[start:i].strip()
+            if depth == 0 and not selector.startswith("@"):
+                close = css.find("}", i)
+                out.append(
+                    (selector, css[i + 1:close if close > 0 else len(css)])
+                )
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            start = i + 1
+    return out
+
+
+def _shape_rules(css: str) -> list[tuple[str, str]]:
+    """Rules whose selector list mentions the shape."""
+    return [(sel, body) for sel, body in _rules(css)
+            if re.search(r"\.filter-(?:row|actions)\b", sel)]
+
+
+def _scope_blocks(css: str, scope: str) -> list[str]:
+    """Declaration blocks in which `scope` narrows the shape."""
+    return [body for sel, body in _shape_rules(css)
+            if any(scope in part for part in sel.split(","))]
 
 
 def _filter_rows(markup: str) -> list[str]:
@@ -151,7 +199,7 @@ def test_the_control_rules_outrank_the_global_control_rules(
     simply inert, and the base does not own what it claims to. The day
     that global rule changes, every strip follows it.
     """
-    for control in ("select", 'input\[type="text"\]'):
+    for control in ("select", r'input\[type="text"\]'):
         assert re.search(rf"body\.ui-v2 \.filter-row {control}", css), (
             f"the base `.filter-row {control}` rule has no `body.ui-v2` "
             "prefix, so the app-wide control rule outranks it and the "
@@ -163,11 +211,14 @@ def test_the_control_rules_outrank_the_global_control_rules(
 def test_no_scope_redeclares_what_the_base_owns(css: str, scope: str) -> None:
     """The trap, stated as a test. A scope re-stating a base property is
     how the four-copy shape grew in the first place."""
-    pattern = re.escape(scope) + r"[^{\n]*\.filter-(?:row|actions)[^{]*\{(.*?)\}"
-    for m in re.finditer(pattern, css, re.S):
-        block = m.group(1)
+    for block in _scope_blocks(css, scope):
         for prop in BASE_OWNED:
-            assert not re.search(rf"\b{re.escape(prop)}\s*:", block), (
+            # `(?<![-a-z])`, not `\b`: a word boundary sits between `-`
+            # and `w`, so `\bwidth` also matches `max-width` and
+            # `min-width` and would report them as re-declaring `width`.
+            assert not re.search(
+                rf"(?<![-a-z]){re.escape(prop)}\s*:", block
+            ), (
                 f"{scope} re-declares `{prop}`, which the base owns. "
                 f"Either it is redundant, or it is an undocumented "
                 f"divergence. Block: {block!r}"
@@ -179,11 +230,24 @@ def test_every_scope_narrowing_is_one_the_list_accounts_for(
 ) -> None:
     """A narrowing nobody wrote down is the start of the next drift."""
     for scope, allowed in ALLOWED_NARROWINGS.items():
-        pattern = (
-            re.escape(scope) + r"[^{\n]*\.filter-(?:row|actions)[^{]*\{(.*?)\}"
-        )
-        for m in re.finditer(pattern, css, re.S):
-            block = m.group(1)
+        blocks = _scope_blocks(css, scope)
+        # An empty allowance is a claim in both directions, and the
+        # second half is the one that was missing: `.filter-card` is
+        # recorded as narrowing nothing, so it must actually HAVE no
+        # rule selecting the shape. Without this the entry was inert —
+        # it iterated zero blocks and could never fail, while being
+        # presented as closing a gap.
+        if allowed:
+            assert blocks, (
+                f"{scope} is allowed to narrow {sorted(allowed)} but has "
+                "no rule selecting the shape; the allowance is stale"
+            )
+        else:
+            assert not blocks, (
+                f"{scope} is recorded as narrowing nothing, but "
+                f"{len(blocks)} rule(s) under it select the shape"
+            )
+        for block in blocks:
             props = {
                 p.strip() for p in re.findall(r"([a-z-]+)\s*:", block)
             }
@@ -205,22 +269,36 @@ def test_no_fourth_scope_has_grown_its_own_copy(css: str) -> None:
     stylesheet that selects the shape and asserts each one is either
     the base or a scope this file knows about.
     """
-    seen: set[str] = set()
-    for m in re.finditer(r"(?m)^\s*([^{}\n]*?\.filter-(?:row|actions)[^{}\n]*?)\s*\{", css):
-        selector = m.group(1).strip()
-        # The base rules themselves: they start with the class, or with
-        # the `body.ui-v2` prefix the specificity note above explains.
-        stripped = selector.replace("body.ui-v2 ", "", 1).strip()
-        if stripped.startswith(".filter-row") or stripped.startswith(".filter-actions"):
-            continue
-        owner = next((s for s in KNOWN_SCOPES if s in selector), None)
-        assert owner, (
-            f"a rule outside every known scope selects the filter strip: "
-            f"{selector!r}. Either fold it into the base, or add its scope "
-            f"to KNOWN_SCOPES and ALLOWED_NARROWINGS with a reason."
-        )
-        seen.add(owner)
-    assert seen <= KNOWN_SCOPES
+    shape = _shape_rules(css)
+    # Vacuity guard. Without it, renaming or reformatting the shape
+    # makes this pass by matching nothing — which is precisely the
+    # failure mode a test guarding an enumeration must not have. The
+    # first version had none, and an `assert seen <= KNOWN_SCOPES`
+    # that could not fail, since `seen` was built FROM that set.
+    assert len(shape) >= 8, (
+        f"only {len(shape)} rules select the filter strip; the "
+        "enumeration is seeing less than the stylesheet contains"
+    )
+
+    base_selectors = 0
+    for selector, _ in shape:
+        # Every selector in the list, not just the one that happens to
+        # share a line with the brace.
+        for one in (part.strip() for part in selector.split(",")):
+            bare = one.replace("body.ui-v2 ", "", 1).strip()
+            if bare.startswith((".filter-row", ".filter-actions")):
+                base_selectors += 1
+                continue
+            assert any(scope in one for scope in KNOWN_SCOPES), (
+                f"a rule outside every known scope selects the filter "
+                f"strip: {one!r}. Either fold it into the base, or add "
+                f"its scope to KNOWN_SCOPES and ALLOWED_NARROWINGS with "
+                f"a reason."
+            )
+    assert base_selectors >= 6, (
+        f"only {base_selectors} unscoped selectors carry the shape; the "
+        "base is supposed to own it, so the scopes have taken it back"
+    )
 
 
 def test_every_filter_row_label_is_classed() -> None:

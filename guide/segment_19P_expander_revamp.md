@@ -317,6 +317,19 @@ pre-merge:
   shape ever grew from. Now enumerates every rule selecting the shape
   and requires each to be the base or a known scope.
 
+**And its own cold read found the guard still weaker than claimed.**
+The enumeration was a line-anchored regex, so it saw only the last
+selector of a comma list split across lines — including, exactly, the
+rule the same slice had just added. It had no vacuity guard, so
+renaming the shape made it pass by matching nothing, and its closing
+assertion was built from the set it compared against and could not
+fail. Rewritten on a brace-to-brace parser with floors at both ends.
+The parity tool had the same shape of hole: empty snapshots printed
+"0 differences" and exited 0. Both now fail loudly, and the tool
+reports **covered** pages rather than rendered ones — `assignments`
+renders and carries no strip, so the honest figure was always 6 of 7,
+never 7.
+
 **Decided at build, 2a′:** the base is unscoped *except* its generic
 `> label` rule, which takes a `body.ui-v2` prefix to outrank the global
 `body.ui-v2 label` (0,1,2) — without it every label reverts to
