@@ -286,9 +286,19 @@ def test_the_selection_actions_left_the_operator_actions_card(
     # stylesheet.
     markup = re.sub(r"<script\b.*?</script>", "", body, flags=re.S)
 
-    # The card holds only the Add / Edit editor now, so it renders only
-    # in edit mode. On a plain load it is absent — otherwise the page
-    # carried a bordered box titled "Operator actions" offering none.
+    # 19P.1 rung 2b step 3: the card is gone from this page in EVERY
+    # mode, not just at rest — the editor that was its last tenant took
+    # its own card. Four other roster pages still use the class, so the
+    # `base.html` rule stays; what this pins is that Reviewers does not
+    # reach for it.
+    #
+    # Until step 3 this assertion doubled as the only guard on the
+    # editor's `edit_mode` gate, by accident: the editor carried this
+    # class, so a leak onto a plain load tripped it here. Renaming the
+    # card moved the editor out from under it, and the gate went
+    # unguarded for a slice. The replacement is deliberate and named:
+    # `test_reviewers_roster_card_scaffold.py`
+    # (`..._is_absent_outside_edit_mode`).
     assert 'class="card operator-actions-card"' not in markup, (
         "an empty `Operator actions` card is rendering again"
     )

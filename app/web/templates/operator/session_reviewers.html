@@ -312,9 +312,12 @@
      never named").
 
      The right-aligned Save / Cancel row keeps its inline style. It is
-     not this slice's to extract: a right-aligning inline `style=` runs
-     15 times across 9 templates, so a primitive for it is a page-wide
-     change, not a rider on a rehoming. #}
+     not this slice's to extract: a `style=` attribute containing
+     `justify-content: flex-end` appears 16 times across 9 templates
+     under `app/web/templates/`, so a primitive for it is a page-wide
+     change, not a rider on a rehoming. (Stated with its predicate
+     because a line-anchored grep gets 15 — one of the sixteen spans
+     two lines.) #}
   {% if edit_mode %}
     {# Still anchored, and for the same reason as before: the editor is
        SPLIT — the row you type into is in the table below, the heading

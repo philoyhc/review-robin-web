@@ -112,8 +112,13 @@ def test_edit_id_renders_target_row_as_inputs(
     # not throw away a half-typed row; the filter moved to the toolbar
     # at rung 2a and the action buttons to the expander at 2b, and the
     # editor itself must stay interactive. Step 3 gave the editor its
-    # own card, so it renders only in edit mode — which this assertion
-    # pins, in place of a lock with nothing to lock.
+    # own card, which this assertion pins the PRESENCE of, in place of a
+    # lock with nothing to lock. It does NOT pin that the card renders
+    # only in edit mode — an earlier version of this comment claimed it
+    # did, and a cold read disproved that by deleting the gate and
+    # watching all 4,014 tests pass. The absence half lives in
+    # `test_reviewers_roster_card_scaffold.py`
+    # (`..._is_absent_outside_edit_mode`).
     assert 'class="card row-editor-anchored"' in body, (
         "the editor's card is not rendered in edit mode"
     )

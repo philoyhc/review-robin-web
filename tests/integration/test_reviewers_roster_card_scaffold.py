@@ -1157,6 +1157,10 @@ def _count_cards(block: str) -> int:
     `\bcard\b` counts `card-columns` too — `-` is a word boundary — so
     the container scored itself and the first version of the caller
     below failed against correct markup.
+
+    Matches double-quoted `class="…"` only. Every template in this repo
+    quotes attributes that way, and Jinja renders them that way; a
+    single-quoted class would be invisible here.
     """
     return sum(
         1
@@ -1200,9 +1204,15 @@ def test_the_editor_card_sits_immediately_above_the_table_card(client, db):
 
     The editor is still SPLIT — heading and Save / Cancel in this card,
     the row you type into in the table below — so the anchor survived
-    step 3. It only works while nothing renders between the two cards;
-    a card slipped in there would push the table off-screen again and
-    no substring assertion would notice.
+    step 3. It only works while the two cards stay adjacent: a card
+    slipped between them would push the table off-screen again, and no
+    substring assertion would notice.
+
+    Scope, stated exactly: this checks for a CARD in the gap, not for
+    any markup at all. A bare banner or wrapper between the two would
+    pass here. That is the shape the gap is at risk from — every
+    tenant of this region is a card — and a "nothing at all" assertion
+    would break on whitespace.
     """
     html = _add_page(client, _with_reviewers(client, db, "rc-s3-order"))
     editor = _div_block(
@@ -1231,3 +1241,37 @@ def test_no_empty_script_element_is_left_behind(client, db):
     ):
         empty = re.findall(r"<script\b[^>]*>\s*</script>", html)
         assert not empty, f"{len(empty)} empty <script> element(s) shipped"
+
+
+def test_the_editor_card_is_absent_outside_edit_mode(client, db):
+    """The `edit_mode` gate itself.
+
+    Stated four times — template comment, commit message, plan, and the
+    comment over `test_edit_id_renders_target_row_as_inputs` claiming
+    *that* assertion pins it — and guarded nowhere until a cold read
+    replaced the gate with `{% if true %}` and watched all 4,014 tests
+    pass.
+
+    Before step 3 the "only" was pinned by accident, through the card's
+    OLD class: `test_reviewers_page_filter.py` asserts
+    `'class="card operator-actions-card"' not in markup` on a plain
+    load. Renaming the class moved the editor out from under it. And
+    moving the card out of `.card-columns` is exactly what stopped
+    `..._labels_editor_alone` from noticing a leak: it counts cards
+    INSIDE the container, and a leaked editor is now outside it.
+    """
+    html = _markup(_page(client, _with_reviewers(client, db, "rc-s3-gate")))
+    # Not vacuous: the page rendered, and rendered the card the editor
+    # sits above, so "absent" means absent rather than "never built".
+    assert 'id="reviewers-table-card"' in html, "the page did not render"
+
+    assert 'class="card row-editor-anchored"' not in html, (
+        "the editor's card renders outside edit mode"
+    )
+    # The heading and the Save button independently, because the card
+    # could be renamed and the contents still leak.
+    assert ">Add new reviewer</h2>" not in html
+    assert ">Edit reviewer</h2>" not in html
+    assert 'form="reviewer-edit-form">Save</button>' not in html, (
+        "the editor's Save renders with no row to save"
+    )

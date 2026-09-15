@@ -365,8 +365,11 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
 
     Three cards since 19I Item 12 rung 4 retired the "Fields with
     data" card that used to head the right stack: guidance and the
-    tag-label editor on the left, Operator actions alone on the
-    right.
+    tag-label editor on the left, Operator actions alone on the right.
+    Reviewers is down to the tag-label editor alone since 19P.1 rung 2b
+    — guidance went full width above the container at 2a and the
+    `Operator actions` card retired at 2b — so it exercises the
+    one-tenant case the other pages do not.
 
     Two containers would look identical when everything is closed and
     still fail the point of the change: growth in the upper one pushes
@@ -386,16 +389,22 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
         # Left column in full, then right column in full — the source
         # order only a single container of two column stacks produces.
         #
-        # Reviewers' right-hand card is conditional since 19P.1 rung
-        # 2b: the `Operator actions` row moved into the row expander,
-        # so the card holds only the Add / Edit editor and renders only
-        # in edit mode. On a plain load its column is empty, which the
-        # order check simply has one fewer member for — the claim about
-        # source order is unchanged for the cards that ARE there.
+        # Reviewers has no right-hand card at all since 19P.1 rung 2b
+        # step 3 — not "conditional", as this read between steps 2 and
+        # 3: the `Operator actions` row moved into the row expander and
+        # the Add / Edit editor took a card of its own outside the
+        # container. So the `else` branch below is PERMANENT for that
+        # page, in every mode, and the order check simply has one fewer
+        # member — the claim about source order is unchanged for the
+        # cards that ARE there.
         order = [body.index(CARD), body.index("field-labels-form")]
         card = 'class="card operator-actions-card"'
         if card in body:
             order.append(body.index(card))
+            assert page != "reviewers", (
+                "Reviewers rendered an `Operator actions` card; rung 2b "
+                "retired it there"
+            )
         else:
             assert page == "reviewers", (
                 f"{page} lost its operator-actions card unexpectedly"
