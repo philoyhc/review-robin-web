@@ -67,8 +67,19 @@ pages. Observers goes second, as 19P.2.
 
 - **Arity is preserved verbatim.** `Edit` at exactly one row;
   `Inactivate / Activate / Delete` at one or more.
+- **`Activate` / `Inactivate` render only where they are actionable**
+  (2026-09-15, mockup). All-active selection offers `Inactivate`; all-inactive
+  offers `Activate`; a **mixed** selection offers both. A control that would
+  no-op on every selected row is not rendered — the arity rule above says *how
+  many* rows an action takes, this says *which* actions that selection admits.
+  Driven by each row's `status`, which the render already has.
+- **The roster card's control toggles `Unlock` ↔ `Lock`.** Not `Done`: the
+  panel is a lock state, and the label should name the state it moves to.
 - **`Add` stays page-level**, and keeps its own `is_ready` gate
-  (`session_reviewers.html:160`) — which this item does not touch.
+  (`session_reviewers.html:160`) — which this item does not touch. It renders
+  as **`Add new`** in the table toolbar (2026-09-15). Tried in the expander and
+  withdrawn: the expander exists only under a selection, so `Add` was reachable
+  only after selecting a row it does not act on.
 - **Routes are unchanged** — the three bulk routes, the upload POST and
   `delete-all` keep their URLs and hidden-form wiring.
 - **No expander when the session is not editable.** One gate, `is_editable`
@@ -96,6 +107,22 @@ pages. Observers goes second, as 19P.2.
   The edge it was not designed against (`new_ux_ideas.md:270-279`: *the row can
   sit above a tall panel or scroll off*) is live here, since Unlock is such a
   panel; rung 1 answers it on the dev slot, not in a test.
+- **2026-09-15.** **Mockup before code**, after the revert: an HTML mockup on
+  the app's own `base.html` tokens, iterated to seven versions with the author
+  before a line of template was written. The four shape decisions below all
+  came out of it, and each contradicts something rung 1 had already shipped.
+- **2026-09-15.** **The roster index is a row of readouts, not a one-row
+  table.** A `<table>` for a single row spends header chrome on nothing — and
+  the cold read on the reverted build found the concrete cost: index row and
+  expander in one table share `:first-child` / `:last-child` padding rules, so
+  the two could not be spaced independently.
+- **2026-09-15.** **Page guidance moves to the top, full width**, above the
+  roster card, its prose in **two columns** when open. At full page width one
+  measure runs ~150 characters. This takes it out of `.card-columns`, which is
+  then empty on this page — reversing the blast-radius note below.
+- **2026-09-15.** **The `Operator actions` card retires whole**, rather than
+  keeping a filter strip. Its contents become a two-pane toolbar inside the
+  preview-table card. Answers open question 1.
 - **2026-09-14.** **No Download.** The handoff's Unlock panel has one; this page
   has none (`grep -cin 'download\|export'` → 0) — the roster CSV is on Extract
   data (`_extracts.py:108`). Adding it would be a new capability.
@@ -133,7 +160,60 @@ At `46688cb`:
   **12/0/28**, `operator_ui_concept.md` **7/2/3**, `ui_elements.md` 1/0/2,
   `rrw_functional_spec.md` 4/1/0 — all five are in the manifest.
 
+### Status
+
+**2026-09-15 — rung 1 shipped, was wrong, and was reverted.**
+
+`#2393` and `#2394` landed the scaffold; `#2395` reverted both. `main` is
+byte-identical to the pre-scaffold base (`3f7d5b6`), suite back to 3,955.
+Nothing else had landed between, so the revert is clean.
+
+**The Decision stands; its *surface* did not.** Variant B, the reuse of
+`.session-expander*`, the three retired cards, the `edit_mode` gate and the
+anchor rule are all unchanged. What the dev slot rejected was the shape the
+plan had sketched around them, so the shape was re-agreed by **mockup** before
+any further code. The ladder below is unchanged in sequence; rung 1's
+*content* is now the mockup, and these five points are the diff:
+
+1. **Roster index**: a row of readouts inside the card — `Reviewers roster:`
+   + count, `Populated columns:` + one pill per column — with `Unlock` bottom
+   right. Not the one-row table the ladder implied.
+2. **Unlock panel**: two columns — upload left, tag labels over Danger Zone
+   right.
+3. **Page guidance**: top of the page, full width, two-column prose when open.
+4. **`Operator actions`**: retired whole; its filter strip and `Add new` /
+   `Search` become the right pane of a toolbar **inside the preview-table
+   card**, with `Show columns:` and `Showing N of M` as the left pane.
+5. **Status-aware `Activate` / `Inactivate`**, and `Unlock` ↔ `Lock`.
+
+**Decisions confirmed at build:**
+
+- **`Populated columns` counts are not free.** The Decision called them a
+  re-house of the `col_data` the preview already computes; `views.chip_slots`
+  returns a boolean **presence** map, so `Name (154)` needs its own query.
+  `slot_row_count` / `tag_slot_counts` — counting twins of `slot_has_data` /
+  `tag_slot_presence` — are rung 1's, and presence must derive from the counts
+  rather than being a second query answering the same predicate.
+- **The two confirms must agree.** The reverted build's replace confirm read
+  *"replace the existing 0 reviewers and discard the existing 0 reviewer
+  responses"* on an empty roster and dropped the assignments clause the live
+  card names, while the Danger Zone confirm three elements away still named it.
+  One panel, two accounts of the same destruction. Both confirms name the same
+  losses and suppress a clause at zero, as the live cards already do.
+- **The guidance summary is already specced as card-header type**
+  (`spec/setup_pages.md:52-54`); rung 1 shipped it link-coloured. Conformance,
+  not a new decision.
+
+**On the reader cadence** (the experiment 19O.3 opened): `diff-reviewer`
+returned on `#2394` *after* that PR was merged, so it gated nothing and its
+findings are recorded here instead. First time in this segment the reader's
+timing cost a cycle — an argument for the pre-ready gate independent of which
+reader runs.
+
 ### PR ladder
+
+*Sequence unchanged; rung 1's content is superseded by `### Status` above, and
+rung 2 no longer leaves a filter strip behind — there is no card to leave it in.*
 
 1. **Scaffold — the whole B surface, inert.** Bracket, row expander, one-row
    index and Unlock panel, with real copy and layout and no wiring; the three
@@ -176,8 +256,9 @@ At `46688cb`:
 
 ### Open questions
 
-1. **Does the filter card shrink** once it holds no actions? Full width is fine
-   for this item.
+1. ~~**Does the filter card shrink** once it holds no actions?~~ **Answered
+   2026-09-15 by mockup:** it does not shrink, it goes. The filter strip becomes
+   the right pane of a toolbar inside the preview-table card.
 
 ### Out of scope
 
@@ -188,16 +269,17 @@ At `46688cb`:
 
 ### Doc impact
 
-- `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed (Item 1).
+- `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed. **Added 2026-09-15 by the mockup:** item 0 calls the guidance card *"a **half-width card**"* (`:52`) and the page's row of the `.card-columns` table (`:94`) sites *every* card above the preview table in that container — on Reviewers the guidance becomes **full width above the container** and `.card-columns` then has no tenant, so that row states the container is absent on this page. The § *Operator actions card* section retires rather than shrinking, and the preview-table section gains the two-pane toolbar that replaces it (Item 1).
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
-- `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row (Item 1).
-- `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`" (Item 1).
+- `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
+- `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
 - `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 1).
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
+- `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).
 
 - `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page (Item 1).
 
-*Not in the manifest, deliberately:* `spec/csv_contracts.md` — its one editor mention (`:77`) is non-positional, and the friendly-label **header grammar** it owns is untouched by where the control renders.
+- `spec/csv_contracts.md` — its one editor mention (`:77`) is non-positional, and the friendly-label **header grammar** it owns is untouched by where the control renders (Item 1). <!-- doc-impact-waived: deliberate exclusion — the mention is non-positional and the header grammar is untouched by where the control renders -->
 
 ---
 
