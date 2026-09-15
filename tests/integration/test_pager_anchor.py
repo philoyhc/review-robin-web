@@ -207,9 +207,13 @@ def test_the_anchored_card_keeps_a_landing_margin(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
 
-    # Matched within a selector list: the landing margin is now shared
-    # with `.row-editor-anchored`, and what this pins is that the class
-    # still carries the rule, not that it is alone on the line.
+    # Matched within a selector list rather than as the whole selector.
+    # The margin was shared with `.row-editor-anchored` until that class
+    # lost its only user — the editor card, retired at 19P.1 — so the
+    # list is one name long today. What this pins is that the class
+    # still carries the rule, not that it is alone on the line; a
+    # whole-selector match would break again the next time something
+    # joins it.
     rule = re.search(
         r"\.table-pager-anchored[^{}]*\{([^}]*)\}", body
     )

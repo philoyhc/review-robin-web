@@ -58,6 +58,21 @@
     <tr class="session-expander session-expander-bracketed row-editor-bar">
       <td colspan="{{ col_count }}">
         <div class="row-expander-body">
+          {# The mode, for assistive tech only. The card that went
+             carried an `<h2>` — "Add new reviewer" / "Edit reviewer" —
+             and that heading was the only accessible name for the
+             state the page is in. What replaces the card visually is a
+             highlighted row, and a highlight reaches nobody using a
+             screen reader. Visually hidden rather than restored on
+             screen: the card was removed for being visual clutter, and
+             the three sibling roster pages still render the heading, so
+             this keeps the announcement without bringing the box back.
+
+             `aria-live` so it is read when a failed save re-renders the
+             page into edit mode under the operator. #}
+          <span class="visually-hidden" aria-live="polite">
+            {{ "Add new reviewer" if add_mode else "Edit reviewer" }}
+          </span>
           {# The save error, which lived in the editor card until that
              card was removed for holding nothing else. It belongs with
              the row anyway: the message is about the values in the row

@@ -1298,6 +1298,26 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
         "the add row has no landing margin"
     )
 
+    # The mode is still ANNOUNCED. The card's `<h2>` was the only
+    # accessible name for "you are adding" versus "you are editing";
+    # what replaced it visually is a highlighted row, which reaches
+    # nobody using a screen reader. Removing the card lost this
+    # silently, so it is pinned rather than trusted.
+    bar = re.search(
+        r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>', html, re.S
+    )
+    assert bar, "no editor bar"
+    label = re.search(
+        r'<span class="visually-hidden"[^>]*>\s*([^<]+?)\s*</span>',
+        bar.group(0),
+    )
+    assert label, "the edit mode has no accessible name"
+    assert label.group(1) == "Add new reviewer", label.group(1)
+    assert 'aria-live' in bar.group(0), (
+        "the mode is not announced when a failed save re-renders the "
+        "page into it under the operator"
+    )
+
 
 @pytest.mark.parametrize(
     "state,adding,panel_expected",
