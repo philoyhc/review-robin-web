@@ -1495,6 +1495,13 @@
       tr.row-action-target {
         scroll-margin-top: 88px;
       }
+      /* The roster card is a landing too since 19P.1: a labels save
+         comes back to `#roster-card` so the Unlock panel it lives in
+         stays open. Without this it arrived flush against the viewport
+         edge — the same crop the comment above describes. */
+      .roster-card {
+        scroll-margin-top: var(--space-4);
+      }
       /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
          `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
          rung 2. It could only reach two pages per click whatever the

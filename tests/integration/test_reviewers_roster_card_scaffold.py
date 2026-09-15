@@ -1469,9 +1469,16 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     assert 'id="roster-unlock-btn"' not in _panel(closed), (
         "the control starts inside the panel while closed"
     )
-    assert 'id="roster-unlock-btn"' in _panel(opened), (
-        "arriving open, the control is not in the panel the toggle "
-        "would move it out of"
+    # Inside `.unlock-right` specifically, not merely somewhere in the
+    # panel. The toggle reopens into `panel.querySelector(".unlock-right")`,
+    # so a server render anywhere else puts the control in one place on
+    # arrival and another after a Lock/Unlock round trip — and the panel's
+    # foot is exactly where a sibling test measures it as 125px adrift
+    # from the card it belongs under.
+    right = _div_block(opened, '<div class="unlock-stack unlock-right">')
+    assert 'id="roster-unlock-btn"' in right, (
+        "arriving open, the control is not in the right-hand stack the "
+        "toggle would move it back into"
     )
     assert opened.count('id="roster-unlock-btn"') == 1, "two Lock controls"
     # The label is on its own line inside the button, so match the

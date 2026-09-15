@@ -349,7 +349,6 @@ def reviewers_list(
     )
 
 
-
 def _row_action_anchor(reviewer_ids: list[int]) -> str:
     """Where a row action lands: the first row it acted on.
 
@@ -359,11 +358,19 @@ def _row_action_anchor(reviewer_ids: list[int]) -> str:
     case and not the common one.
 
     With no row to land on, the table card. `bulk-delete` passes `[]` by
-    design, since the rows it acted on no longer exist. The rows that
-    survive but drop out of a filtered view are the other case the
-    fragment cannot resolve, and the page's fallback script catches
-    both: a hash naming a row that is not in the document scrolls to the
-    card rather than leaving the browser at the top.
+    design, since the rows it acted on no longer exist.
+
+    Two more cases leave the fragment unresolvable, and neither is
+    decided here: a row that survives but drops out of a filtered view
+    (`Inactivate` under `status=active`), and a row that moves to
+    another page under the operator's cookie sort — the bulk status
+    routes write `updated_at` as well as `status`, so a sort on either
+    reorders the row out from under a held `offset`. Both would need the
+    filter and the sort re-run to predict, which is a multi-row
+    computation and belongs outside a route handler. The page's fallback
+    script catches all three instead: a hash naming a row that is not in
+    the document scrolls to the card rather than leaving the browser at
+    the top.
     """
     if reviewer_ids:
         return f"reviewer-row-{reviewer_ids[0]}"
@@ -398,13 +405,16 @@ def reviewers_create(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
-        reviewers_service.create_reviewer(
+        created = reviewers_service.create_reviewer(
             db,
             review_session=review_session,
             name=name,
@@ -436,9 +446,18 @@ def reviewers_create(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    # Add lands on the row it just created. The edit form has always
+    # posted `filter_status` / `filter_q` and now `filter_offset` too,
+    # and this route declared none of them — so the three fields were
+    # sent and discarded, and the redirect was bare: after adding a
+    # reviewer the page went back to the top of the document with the
+    # filter dropped.
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewers",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([created.id]),
     )
 
 

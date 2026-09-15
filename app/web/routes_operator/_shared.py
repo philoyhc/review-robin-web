@@ -600,8 +600,9 @@ def _redirect_keeping_selection(
     of jump from a mid-table action. Callers that have no row to land on
     (a delete removes them) pass the table card instead. A fragment that
     does not resolve is silently ignored by the browser and lands at the
-    top again, so pages using this also ship the fallback script that
-    catches a missing target."""
+    top again, so a caller passing ``anchor`` must also ship the
+    fallback script that catches a missing target. Only Reviewers does
+    today; the other three pages pass no anchor and are unaffected."""
     params: list[tuple[str, object]] = []
     if filter_params:
         params.extend((key, value) for key, value in filter_params if value)
@@ -713,6 +714,21 @@ async def _handle_import(
             # operator is reading hardest: a failed import.
             "pager_anchor": f"{kind}-table-card",
             "row_editor_anchor": f"{kind}-row-editor",
+            # Same reason as the two above, and the same failure mode:
+            # this path re-renders the page template, so it owes every
+            # key that template reads. Without these, Reviewers rendered
+            # `<input name="filter_offset" value="">` on a failed import
+            # — harmless today only because an empty form value reads as
+            # absent for an `int` field with a default, and because this
+            # path renders unpaged so 0 is the right answer anyway.
+            #
+            # `panel_open` is False here deliberately: the import card is
+            # still in the bottom grid, not the Unlock panel. Rung 3c
+            # moves it, and when it does THIS is the line that has to
+            # become True — the `?unlocked=1` query param cannot reach an
+            # in-place re-render.
+            "current_offset": 0,
+            "panel_open": False,
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),

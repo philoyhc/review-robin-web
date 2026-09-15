@@ -58,13 +58,19 @@
     <tr class="session-expander session-expander-bracketed row-editor-bar">
       <td colspan="{{ col_count }}">
         <div class="row-expander-body">
+          {# Save then Cancel, which is what the card this replaced
+             rendered and what Reviewees, Observers and Relationships
+             still render. The first draft of this macro flipped them
+             without meaning to; the order is user-visible and the three
+             sibling pages will copy whatever ends up here, so it stays
+             as it was until someone decides otherwise on purpose. #}
           <div class="row-expander-actions">
+            <button class="btn secondary" type="submit"
+                    form="reviewer-edit-form">Save</button>
             {# Cancel leaves the editor for the list, so it lands where
                the list is — the same anchor `Clear` and `Search` take. #}
             <a class="btn secondary"
                href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
-            <button class="btn secondary" type="submit"
-                    form="reviewer-edit-form">Save</button>
           </div>
         </div>
       </td>
@@ -410,21 +416,26 @@
      (`guide/segment_19P_expander_revamp.md`, "Two things the ladder
      never named").
 
-     The right-aligned Save / Cancel row keeps its inline style. It is
-     not this slice's to extract: a `style=` attribute containing
-     `justify-content: flex-end` appears 16 times across 9 templates
-     under `app/web/templates/`, so a primitive for it is a page-wide
-     change, not a rider on a rehoming. (Stated with its predicate
-     because a line-anchored grep gets 15 — one of the sixteen spans
-     two lines.) #}
+     The card's own right-aligned Save / Cancel row is GONE: those two
+     controls moved into the edit row's expander bar, which right-aligns
+     with `.row-expander-actions`' `margin-left: auto` rather than an
+     inline style. (15 inline `justify-content: flex-end` attributes
+     remain across 8 templates; extracting a primitive for them is
+     still a page-wide change and still not this slice's.) #}
   {% if edit_mode %}
-    {# Still anchored, and for the same reason as before: the editor is
-       SPLIT — the row you type into is in the table below, the heading
-       and Save / Cancel are here. Rehoming narrowed that gap but did
-       not close it, so landing on the table card would still put Save
-       above the viewport. This card sits immediately above that one,
-       so landing HERE shows the heading, Save / Cancel and the top of
-       the table together. Measured in Chromium, not assumed. #}
+    {# Still anchored, but NOT for the reason recorded here before.
+       That reason was "Save is in this card and the row is in the
+       table, so landing on the table card puts Save above the
+       viewport" — and Save is no longer in this card. What is left
+       here is the heading, the error banner and the help line: the
+       mode label, which wants to be on screen when the operator
+       arrives and which the table card's own anchor would put above
+       the fold. The card sits immediately above the table, so landing
+       here shows the label and the row together.
+
+       Whether this card should exist at all now that it holds no
+       controls is a question for the dev slot, not an assertion to
+       make here. #}
     <div class="card row-editor-anchored" id="{{ row_editor_anchor }}">
       <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
       {% if edit_error %}
@@ -1102,9 +1113,10 @@
         // before the header's own inline handler: take the panel out
         // first, put it back against its anchor after.
         // `Edit` is a client-side GET, not a form post, so it carries
-        // the editor's landing anchor itself — the editor is split
-        // across two cards and `#reviewers-table-card` would put Save
-        // above the viewport (19P.1, `#2405`).
+        // the editor's landing anchor itself. The reason recorded here
+        // was "Save would be above the viewport"; Save moved into the
+        // row's own expander bar, so what the anchor now keeps on
+        // screen is the mode label above the table (19P.1, `#2405`).
         table.addEventListener("click", function (event) {
           var edit = event.target.closest
             ? event.target.closest(".exp-edit[data-edit-id]") : null;
