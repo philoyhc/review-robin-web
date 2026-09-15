@@ -4882,24 +4882,47 @@
            load works with no registration — the row expander (19P.1
            rung 2b) builds its confirm and its Delete in JS, and a
            listener bound at load could never reach them: the button
-           would ship `disabled` and stay that way forever. Verified in
-           Chromium against the previous, load-bound version. Same
-           reason and same shape as the column-chip toggles above. */
+           would ship `disabled` and stay that way forever.
+
+           BOUND IN THE CAPTURE PHASE, and that is load-bearing rather
+           than stylistic. Four roster pages re-run this gate by hand
+           when the row selection changes —
+           `deleteConfirm.dispatchEvent(new Event("change"))` — and
+           `new Event` does NOT bubble by default. A bubble-phase
+           delegated listener never sees those, so the tick would clear
+           while `Delete` stayed enabled: a destructive control whose
+           disabled state lies. Capture traverses root-to-target and
+           fires for a non-bubbling event too. Measured in Chromium for
+           all three cases — non-bubbling dispatch, bubbling dispatch,
+           real user tick.
+
+           Fixing the primitive rather than the four callers is
+           deliberate: the two lobby dispatches already pass
+           `{ bubbles: true }`, so both idioms are in the tree and a
+           listener handling only one is a trap for the fifth caller. */
         document.addEventListener("change", function (event) {
           var cb = event.target;
           if (!cb || !cb.getAttribute) return;
           if (!cb.hasAttribute("data-delete-confirm")) return;
           sync(cb);
-        });
+        }, true);
 
         /* The initial pass stays, and is NOT redundant with the
            delegation: it sets each button's starting state. Most ship
            `disabled` in markup, but `reviewer/results.html`'s
            Acknowledge does not and is disabled only by this pass — it
            gates a reviewer confirming they have read their results, so
-           dropping it would ship that gate open. An injected pair must
-           therefore ship its button `disabled`, since nothing syncs it
-           until the first tick. */
+           dropping it would ship that gate open. It also re-syncs a
+           checkbox the browser restored on reload or a bfcache
+           restore, which no dispatch accompanies.
+
+           Two limits on an injected pair, both from `sync` resolving
+           its button with `querySelector` — FIRST match in the
+           document: the key must be unique page-wide
+           (`spec/ui_elements.md` records this as why the lobby
+           expanders carry their own per-node script), and the button
+           must ship `disabled`, because nothing syncs it until the
+           first tick. */
         Array.prototype.forEach.call(
           document.querySelectorAll("[data-delete-confirm]"), sync
         );
