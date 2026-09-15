@@ -128,9 +128,14 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
                 (path.name, var, "bubbles" in opts)
             )
 
-    assert len(dispatches) >= 4, (
-        f"vacuity: found only {dispatches}; the four roster pages each "
-        "re-run this gate and should be here"
+    # Three, not four: Reviewers gave its `Operator actions` selection
+    # script up at 19P.1 rung 2b, and the expander rebuilds the panel
+    # wholesale on every selection change rather than re-running a
+    # gate on a surviving one. The floor moves with the fact; it is
+    # here so that the enumeration cannot pass by finding nothing.
+    assert len(dispatches) >= 3, (
+        f"vacuity: found only {dispatches}; the unmigrated roster pages "
+        "each re-run this gate and should be here"
     )
     unreachable = [d for d in dispatches if not d[2] and not capture_bound]
     assert not unreachable, (

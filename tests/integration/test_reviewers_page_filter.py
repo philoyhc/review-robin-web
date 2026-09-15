@@ -9,6 +9,8 @@ the inert button placeholders that lock in the layout.
 """
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -258,37 +260,61 @@ def test_capped_and_filtered_counts_against_the_matching_set(
 # --------------------------------------------------------------------------- #
 
 
-def test_operator_actions_card_renders_inert_buttons(
+def test_the_selection_actions_left_the_operator_actions_card(
     db: Session, client: TestClient
 ) -> None:
-    """The four action buttons render as inert placeholders this PR;
-    PR 3 lights them up with selection-driven enable/disable."""
+    """19P.1 rung 2b moved `Edit` / `Inactivate` / `Activate` / `Delete`
+    into the row expander, where the rows they act on are.
+
+    This test used to assert the four render here as inert placeholders.
+    Same subject, opposite claim: they must NOT be here, and nothing
+    replaced them — a second copy would be a second thing to keep in
+    sync, and the selection reaches the POST through the row checkboxes'
+    own `form=` regardless of where the button lives.
+    """
     review_session = _make_session(client, db, code="rev-layout-buttons")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
-    assert 'class="card operator-actions-card"' in body
-    # The four SELECTION-driven affordances stay in this card until 19P.1
-    # rung 2b wires the row expander; `Add` needs no selection, so rung 2a
-    # moved it into the table's toolbar and renamed it `Add new`.
+    # Absence has to be asserted against MARKUP, not the whole response:
+    # the expander's builder is a JS string that contains the very
+    # labels this test says are gone, so a bare `not in body` would
+    # read the builder and report the buttons as still present. That is
+    # the inverse of the trap where a class name is found in the inline
+    # stylesheet.
+    markup = re.sub(r"<script\b.*?</script>", "", body, flags=re.S)
+
+    # The card holds only the Add / Edit editor now, so it renders only
+    # in edit mode. On a plain load it is absent — otherwise the page
+    # carried a bordered box titled "Operator actions" offering none.
+    assert 'class="card operator-actions-card"' not in markup, (
+        "an empty `Operator actions` card is rendering again"
+    )
+
     for label in (
         ">Edit</button>",
         ">Inactivate</button>",
         ">Activate</button>",
         ">Delete</button>",
     ):
-        assert label in body
-    assert ">Add new</a>" in body, "Add moved to the table toolbar (19P.1 2a)"
-    assert ">Add</a>" not in body, "the old un-renamed Add should be gone"
-    # The three buttons (Edit / Inactivate / Reactivate) start
-    # disabled — JS enables them on selection. They now sit inline
-    # in the filter-actions row, before the Search submit.
-    buttons_section = body[
-        body.find('class="filter-actions"') :
-    ][:2000]
-    assert buttons_section.count("disabled") >= 3
+        assert label not in markup, f"{label} is still rendered server-side"
+    for dead in ("reviewers-edit-btn", "reviewers-inactivate-btn",
+                 "reviewers-reactivate-btn", "reviewers-delete-btn",
+                 "reviewers-selected-count", "reviewers-delete-confirm"):
+        assert dead not in markup, f"{dead} outlived the card's action row"
+
+    # `Add` needs no selection, so rung 2a moved it to the table's
+    # toolbar and renamed it. It is unaffected by this rung.
+    assert ">Add new</a>" in markup, "Add moved to the toolbar (19P.1 2a)"
+    assert ">Add</a>" not in markup, "the old un-renamed Add should be gone"
+
+    # Vacuity guard: the four labels are absent because they MOVED, not
+    # because the page stopped offering them. The builder that now
+    # emits them ships on this same response.
+    assert 'tr.id = "reviewers-row-expander"' in body
+    assert '">Edit</button>"' in body, "the expander no longer builds Edit"
 
 
 def test_search_filter_form_renders_status_options_and_datalist(

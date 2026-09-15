@@ -103,8 +103,19 @@ def _table_card(body: str, page: str) -> str:
 
 
 def _strip(body: str) -> str:
-    """The operator-actions card, up to the end of its filter form."""
-    start = body.index('class="card operator-actions-card"')
+    """The operator-actions card, up to the end of its filter form.
+
+    Returns `""` when the card is absent. Reviewers stopped rendering
+    it outside edit mode at 19P.1 rung 2b — the action row moved into
+    the row expander and the card holds only the Add / Edit editor —
+    so "the hint is not in the strip" is trivially true there. The
+    tests below say so rather than pretending to slice a card that is
+    not on the page.
+    """
+    marker = 'class="card operator-actions-card"'
+    if marker not in body:
+        return ""
+    start = body.index(marker)
     return body[start : body.index("</form>", start)]
 
 
@@ -189,5 +200,19 @@ def test_the_pill_ships_the_two_number_format(
     _seed(db, s, n=4)
 
     body = client.get(f"/operator/sessions/{s.id}/{page}").text
+
+    if page == "reviewers":
+        # 19P.1 rung 2b removed the placeholder: the row expander
+        # writes the count and nothing else does, so the drift this
+        # test guards — two sources disagreeing about the format —
+        # cannot happen here. Pinned as ONE source rather than two
+        # that agree, which is the stronger version of the same claim.
+        assert f'id="{page}-selected-count"' not in body, (
+            "the placeholder is back; there are two sources again"
+        )
+        assert '"</strong> of " + rows().length + " selected' in body, (
+            "the expander no longer writes the two-number format"
+        )
+        return
 
     assert f'id="{page}-selected-count" hidden>0 of 0 selected</span>' in body

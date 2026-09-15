@@ -64,10 +64,18 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
     # Per-row select checkboxes + select-all.
     assert 'class="reviewer-select"' in body
     assert 'id="reviewers-select-all"' in body
-    # Four action buttons; Edit/Inactivate/Reactivate start disabled.
-    assert 'id="reviewers-edit-btn"' in body
-    assert 'id="reviewers-inactivate-btn"' in body
-    assert 'id="reviewers-reactivate-btn"' in body
+    # The four action buttons moved into the row expander at 19P.1
+    # rung 2b, so what is checkable in a response with nothing selected
+    # is the builder that emits them and the routes they post to. Their
+    # arity, status-awareness and delete gate are pinned against a real
+    # DOM in `test_reviewers_roster_card_scaffold.py`.
+    # Sliced to the builder: `/bulk-inactivate` is also the bulk form
+    # shell's own `action`, so asserting it against the whole response
+    # passes with the expander's status-action loop deleted outright.
+    start = body.index('tr.id = "reviewers-row-expander"')
+    build = body[start:body.index("td.innerHTML = html;", start)]
+    for route in ("/bulk-inactivate", "/bulk-reactivate", "/bulk-delete"):
+        assert route in build, f"the expander cannot reach {route}"
     assert "?add=1" in body  # Add new row link
     # No per-row Actions column.
     assert "reviewer-edit-row" not in body
@@ -97,10 +105,19 @@ def test_edit_id_renders_target_row_as_inputs(
     # The edited row's name prefilled into an input.
     assert 'name="name"' in body
     assert 'value="Alice"' in body
-    # The operator-actions card's filter + buttons grey out; the
-    # Add / Edit form sits below the divider in the same card.
-    assert "operator-actions-main is-locked" in body
-    assert 'class="operator-actions-divider"' in body
+    # 19P.1 rung 2b: there is nothing left to gray out. `is-locked`
+    # existed so a stray click on the filter or an action button could
+    # not throw away a half-typed row; the filter moved to the toolbar
+    # at rung 2a and the action buttons to the expander at 2b, and the
+    # editor itself must stay interactive. The card now holds only the
+    # editor, so it renders only in edit mode — which this assertion
+    # pins, in place of a lock with nothing to lock.
+    assert 'class="card operator-actions-card"' in body, (
+        "the editor's card is not rendered in edit mode"
+    )
+    assert "operator-actions-main is-locked" not in body, (
+        "a lock is back, over an editor that must stay usable"
+    )
 
 
 def test_edit_post_updates_row_and_redirects(

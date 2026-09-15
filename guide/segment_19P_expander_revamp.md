@@ -345,6 +345,47 @@ guidance prose that was never ported from the mockup. Implemented as a
 macro opt-in (`guidance(full_width=true)`), since the other six placements
 are half-width where two columns would be two ~30-character ribbons.
 
+**2026-09-15 — rung 2b, in two steps.** Step 1 (`#2406`) delegated the
+Delete-confirm pairing, because the expander builds its gate in JS and a
+load-bound listener could never reach it; bound in the CAPTURE phase,
+because four roster pages re-run that gate with a non-bubbling
+`dispatchEvent`. Step 2 is the wiring **and** the action row's
+retirement in one slice, not the two the earlier note suggested: keeping
+both live would have meant two `Delete` buttons needing two confirm keys,
+then churn to remove one. Each control moves exactly once.
+
+**Found when the seam was cut:** the card's selection script and the
+expander's were complementary, not duplicated — the card's ticked the
+boxes and kept select-all honest, the expander's tracked anchor order.
+Retiring the card's controls therefore meant merging them, and the
+expander script is now the single owner of selection state. Also: the
+delete gate's hidden `acknowledge_response_loss` field is required by
+the route, so it rides with the expander's confirm exactly as it did in
+the card.
+
+**A consequence worth stating for rung 3.** Markup moved into a JS
+builder is harder to assert on server-side, in two different ways: the
+two `tojson`-interpolated fragments arrive escaped (`id="x"` as
+`id=\"x\"`), while hand-written JS literals arrive verbatim — so a
+needle may need either form, and an *absence* check must strip
+`<script>` or it reads the builder's own literals as rendered markup.
+Eleven tests across six files asserted the card's shape; each was
+re-aimed rather than deleted.
+
+**The Decision's "action list" is superseded on this page, deliberately.**
+Item 1's `### Decision` calls for *"a helper taking an action list, not
+one hard-coding it"*, because Observers has a fourth action. Rung 2b
+hardcodes three emissions instead. Rung 1's list construct
+(`["Edit"].concat(statusActions(sel))`) had gone unused and was
+removed; the generalization belongs with the second page that needs it,
+where its shape will be known rather than guessed. **19P.2 owes the
+helper**, and this note is the record that it is owed rather than
+forgotten.
+
+**Net-new, not moved:** select-all gained an `indeterminate` state. The
+retired script only ever set `.checked`. Small and desirable, but the
+record should not call it a relocation.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and
