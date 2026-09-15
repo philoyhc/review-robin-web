@@ -2789,23 +2789,46 @@
         justify-content: flex-end;
         gap: var(--space-2);
       }
+      /* Open, the control sits under the upload card rather than under
+         the whole panel: the left column is the taller one, so the
+         panel's foot is far below the card the button acts on. It joins
+         the right column's stack, so it flows directly beneath it. */
+      body.ui-v2 .unlock-right > .roster-card-actions { margin-top: 0; }
       /* Two equal columns: upload left, tag labels over Danger Zone
          right. `minmax(0, …)` on both tracks, since the default `auto`
          minimum lets a long label push a track past its share. Stacks
          narrow, where half the width is less than the file input. */
+      /* `hidden` is a UA `display: none` and ANY author `display` beats it,
+         so the grid below silently defeated the attribute: the panel
+         rendered open on load and the toggle only changed the button's
+         label. Restored the way `base.html` already does it for
+         `.btn[hidden]` (`:713`). The suite has no layout engine, so the
+         markup assertion that `hidden` is present passed throughout. */
+      body.ui-v2 .unlock-panel[hidden] { display: none; }
       body.ui-v2 .unlock-panel {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-4);
+        /* 20px, not `--space-4`: this tracks `.card-columns`'s gap and
+           the base `.card` margin, both raw 20px, so the panel's cards
+           sit at the same rhythm as the page's cards outside it. The
+           token scale has no 20. */
+        gap: 20px;
         align-items: start;
       }
+      /* The base `.card` carries `margin-bottom: 20px` (`:543`), which
+         `body.ui-v2 .card` deliberately does not override — so inside a
+         gapped container it COMPOUNDS, and the two stacked cards sat 36px
+         apart against the page's 20px. Zeroed here exactly as
+         `.page-grid`, `.bottom-grid` and `.subcard-row` already do, so
+         the gap is the only thing spacing them. */
+      body.ui-v2 .unlock-panel .card { margin-bottom: 0; }
       /* The left column's two stacked cards, at the same gap the panel's
          two columns use, so the grid reads as one rhythm either way you
          scan it. */
       body.ui-v2 .unlock-stack {
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
+        gap: 20px;
       }
       body.ui-v2 .unlock-col-actions {
         display: flex;

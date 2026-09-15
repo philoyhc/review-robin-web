@@ -160,10 +160,18 @@ def test_an_unpopulated_column_gets_no_chip(client, db):
 def test_every_unlock_control_is_inert(client, db):
     """Scaffold-first means inert controls, not merely greyed ones."""
     html = _page(client, _with_reviewers(client, db, "rc7"))
+    # Bounded by the Lock control that now follows the panel, not by the
+    # <script> that follows that — the old lookahead swept the control
+    # into the panel's scope the moment it moved there, and the control
+    # is deliberately live. Guarded below rather than trusted.
     panel = re.search(
-        r'id="roster-unlock-panel".*?(?=<script>)', html, re.S
+        r'id="roster-unlock-panel".*?(?=<div class="roster-card-actions")',
+        html, re.S
     )
     assert panel, "Unlock panel not found"
+    assert 'id="roster-unlock-btn"' not in panel.group(0), (
+        "the scope swept in the Lock control, which is live by design"
+    )
     controls = re.findall(r"<(?:button|input)\b[^>]*>", panel.group(0))
     assert controls, "no controls found in the Unlock panel"
     # Match the ATTRIBUTE, not the substring: an `aria-label="… (scaffold)"`
@@ -441,4 +449,92 @@ def test_the_replace_confirm_is_set_apart_from_the_file_input(client, db):
     rule = re.search(r"\.confirm-label \{([^}]*)\}", html)
     assert rule, ".confirm-label rule not found"
     assert "margin: var(--space-4) 0 0" in rule.group(1), rule.group(1)
+
+
+def test_the_panel_does_not_compound_the_base_card_margin(client, db):
+    """The base `.card` carries `margin-bottom: 20px`, which
+    `body.ui-v2 .card` deliberately does not override. Inside a gapped
+    container that margin COMPOUNDS with the gap — the two stacked cards
+    sat 36px apart against the page's 20px until this was zeroed, exactly
+    as `.page-grid`, `.bottom-grid` and `.subcard-row` already do.
+
+    Geometry, so this asserts the rules rather than their effect; the
+    measured result is confirmed in a browser.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc21"))
+    assert re.search(
+        r"\.unlock-panel \.card \{[^}]*margin-bottom:\s*0", html
+    ), "the base card margin is not zeroed inside the panel"
+    # And the gap the page uses between cards, not the token scale's 16.
+    for selector in (r"\.unlock-panel \{", r"\.unlock-stack \{"):
+        rule = re.search(selector + r"([^}]*)\}", html)
+        assert rule, selector
+        assert "gap: 20px" in rule.group(1), rule.group(1)
+
+
+def test_the_hidden_unlock_panel_is_actually_hidden(client, db):
+    """`hidden` is a UA `display: none`, and ANY author `display` beats
+    it — so `.unlock-panel { display: grid }` silently defeated the
+    attribute and the panel rendered open on load, with the toggle only
+    changing the button's label.
+
+    The markup assertion that `hidden` is present passed throughout,
+    because the suite has no layout engine and the attribute was always
+    there. So this asserts the guard `base.html` already applies to
+    `.btn[hidden]` (`:713`); the collapse itself is confirmed in a
+    browser.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc22"))
+    assert re.search(
+        r"\.unlock-panel\[hidden\] \{[^}]*display:\s*none", html
+    ), "an author display rule would defeat the hidden attribute"
+    # And the attribute is on the element, which is the half that always held.
+    assert re.search(
+        r'id="roster-unlock-panel"[^>]*hidden', html
+    ), "the panel does not carry the hidden attribute"
+
+
+def test_the_lock_control_ships_as_the_cards_last_child(client, db):
+    """Collapsed is the served state, so the markup puts the control at
+    the card's foot. Open, the script moves it into the right column —
+    see the test below."""
+    html = _page(client, _with_reviewers(client, db, "rc23"))
+    card = re.search(r'id="roster-card".*?(?=<!-- |\n  <div class="card-columns")',
+                     html, re.S)
+    assert card, "roster card not found"
+    body = card.group(0)
+    panel = body.index('id="roster-unlock-panel"')
+    actions = body.index('class="roster-card-actions"')
+    assert panel < actions, (
+        "the control must follow the panel, so it is the card's foot "
+        "when the panel is hidden"
+    )
+
+
+def test_the_upload_card_sits_in_its_own_right_column_stack(client, db):
+    """A stack, not a second grid row. A grid row begins below the TALLER
+    column, which would drop the Lock control to the panel's foot —
+    measured at 125px under the upload card before this — rather than
+    directly beneath the card it acts on."""
+    html = _page(client, _with_reviewers(client, db, "rc24"))
+    right = re.search(
+        r'<div class="unlock-stack unlock-right">.*?id="scaffold-upload-h"',
+        html, re.S
+    )
+    assert right, "upload card is not inside a right-column stack"
+
+
+def test_the_lock_control_moves_between_its_two_homes(client, db):
+    """One element, two homes. The panel is `display: none` when closed,
+    so a control living inside it would vanish with it; rendering a
+    second copy outside is how two copies of one control drift apart.
+    The toggle moves the node instead."""
+    html = _page(client, _with_reviewers(client, db, "rc25"))
+    handler = re.search(
+        r'btn\.addEventListener\("click".*?\}\);', html, re.S
+    )
+    assert handler, "toggle handler not found"
+    body = handler.group(0)
+    assert "card.appendChild(actions)" in body, body
+    assert '.unlock-right").appendChild(actions)' in body, body
 
