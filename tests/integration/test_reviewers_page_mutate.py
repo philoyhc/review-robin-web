@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -529,3 +531,240 @@ def test_send_invitation_to_inactive_reviewer_is_409(
         follow_redirects=False,
     )
     assert response.status_code == 409
+
+
+# ── Row actions land on the row they acted on (19P.1) ────────────────────
+#
+# A bare 303 lands at the top of the document: measured at 821px of jump
+# from a mid-table action. Two things carry the operator's place through
+# the POST — the pager offset, and a fragment naming the acted-on row.
+
+
+# Every row action, not the two that happened to get written first. A
+# cold read deleted `offset=` and `anchor=` from `reviewers_update`
+# alone — the commonest action on the page — and the whole suite stayed
+# green, because all three redirect tests exercised the bulk routes.
+_ROW_ACTIONS = [
+    ("update", "{base}/{rid}/update", {
+        "name": "Alice", "email": "alice@example.edu",
+        "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+    }),
+    ("bulk-inactivate", "{base}/bulk-inactivate", {"reviewer_ids": ["{rid}"]}),
+    ("bulk-reactivate", "{base}/bulk-reactivate", {"reviewer_ids": ["{rid}"]}),
+]
+
+
+def _post_row_action(client, base, rid, template, data, **extra):
+    payload = {k: ([rid] if v == ["{rid}"] else v) for k, v in data.items()}
+    payload.update(extra)
+    return client.post(
+        template.format(base=base, rid=rid), data=payload,
+        follow_redirects=False,
+    )
+
+
+@pytest.mark.parametrize("name,template,data", _ROW_ACTIONS)
+def test_every_row_action_lands_on_the_row_it_acted_on(
+    db: Session, client: TestClient, name: str, template: str, data: dict
+) -> None:
+    review_session = _make_session(client, db, code=f"rev-anch-{name[:6]}")
+    rows = _seed(db, review_session.id, ["Alice"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    response = _post_row_action(client, base, rows[0].id, template, data)
+    assert response.status_code == 303, name
+    assert response.headers["location"].endswith(
+        f"#reviewer-row-{rows[0].id}"
+    ), f"{name}: {response.headers['location']}"
+
+
+@pytest.mark.parametrize("name,template,data", _ROW_ACTIONS)
+def test_every_row_action_carries_the_pager_offset(
+    db: Session, client: TestClient, name: str, template: str, data: dict
+) -> None:
+    """Without it the 303 answered with page 1 whatever page the action
+    was taken from — so the operator lost their place AND the row the
+    anchor names was not in the response to be found."""
+    review_session = _make_session(client, db, code=f"rev-off-{name[:6]}")
+    rows = _seed(db, review_session.id, ["Alice"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    loc = _post_row_action(
+        client, base, rows[0].id, template, data, filter_offset=200
+    ).headers["location"]
+    assert "offset=200" in loc, f"{name}: {loc}"
+
+    plain = _post_row_action(
+        client, base, rows[0].id, template, data
+    ).headers["location"]
+    assert "offset=" not in plain, f"{name}: {plain}"
+
+
+def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
+    db: Session, client: TestClient
+) -> None:
+    """The render half, which the route-level tests above cannot see.
+
+    They POST `filter_offset` themselves, so they prove the route READS
+    the field and never that the page SENDS one. A cold read deleted
+    both hidden inputs — killing the feature in every browser — and all
+    4,038 tests passed.
+
+    Seeded past the 200-row page cap so the value is a real non-zero
+    offset: a field rendering `0` on every page would satisfy a presence
+    check while carrying nothing.
+    """
+    review_session = _make_session(client, db, code="rev-sends-offset")
+    _seed(db, review_session.id, [f"R{n}" for n in range(1, 231)])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    bulk = re.search(
+        r'<form[^>]*id="reviewers-bulk-form".*?</form>',
+        client.get(f"{base}?offset=200").text, re.S,
+    )
+    assert bulk, "bulk form not rendered on page 2"
+    assert 'name="filter_offset" value="200"' in bulk.group(0), (
+        "the bulk form does not carry the page it was rendered on"
+    )
+
+    rid = db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()[210]
+    edit = re.search(
+        r'<form[^>]*id="reviewer-edit-form".*?</form>',
+        client.get(f"{base}?edit_id={rid}").text, re.S,
+    )
+    assert edit, "edit form not rendered"
+    assert 'name="filter_offset" value="200"' in edit.group(0), (
+        "the edit form does not carry the page the edited row is on"
+    )
+
+
+def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-delanchor")
+    rows = _seed(db, review_session.id, ["Alice"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-delete",
+        data={
+            "reviewer_ids": [rows[0].id],
+            "confirm": "true",
+            "acknowledge_response_loss": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    loc = response.headers["location"]
+    assert loc.endswith("#reviewers-table-card"), loc
+    assert "#reviewer-row-" not in loc, (
+        "delete anchored a row it had just removed"
+    )
+
+
+def test_rows_and_the_fallback_are_both_present_for_the_landing(
+    db: Session, client: TestClient
+) -> None:
+    """The two halves the anchor needs, and that they refer to each other.
+
+    Whether the browser actually scrolls is checked in Chromium — the
+    suite has no layout engine. What is pinned here is that a row the
+    redirect can name carries the class that gives it its landing
+    margin, and that the fallback script exists for the case the
+    fragment cannot resolve (a status change that drops the row out of a
+    filtered view).
+    """
+    review_session = _make_session(client, db, code="rev-landing")
+    rows = _seed(db, review_session.id, ["Alice"])
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+
+    row = re.search(
+        rf'<tr\b[^>]*id="reviewer-row-{rows[0].id}"[^>]*>', body
+    )
+    assert row, "the row the redirect names is not rendered"
+    assert "row-action-target" in row.group(0), (
+        "the row carries no landing margin"
+    )
+    assert "tr.row-action-target" in body, "no rule gives it that margin"
+
+    # Read the fallback's OWN text. `'"reviewers-table-card"' in body`
+    # was satisfied by the table card's `id=` attribute, which renders
+    # regardless — so deleting the two operative lines of the script
+    # left that assertion green.
+    script = re.search(
+        r"<script>(?:(?!</script>).)*?#reviewer-row-.*?</script>", body, re.S
+    )
+    assert script, "the fallback script is gone"
+    for needle in ("getElementById", "reviewers-table-card", "scrollIntoView"):
+        assert needle in script.group(0), f"the fallback lost {needle}"
+
+
+def test_add_new_carries_the_active_filter_into_add_mode(
+    db: Session, client: TestClient
+) -> None:
+    """The filter was lost at the NAVIGATION, not at the POST.
+
+    `Add new` linked to a bare `?add=1`, so the add page rendered
+    unfiltered and its hidden `filter_*` fields held defaults — which
+    the create route then faithfully honoured all the way back to an
+    unfiltered list.
+    """
+    review_session = _make_session(client, db, code="rev-addfilter")
+    _seed(db, review_session.id, ["Alice", "Bob"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    body = client.get(f"{base}?status=inactive&q=ali").text
+    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
+    assert link, "no Add new link"
+    assert "status=inactive" in link.group(0), link.group(0)
+    assert "q=ali" in link.group(0), link.group(0)
+
+    # An unfiltered view carries neither — `status=all` is the default
+    # and an empty search is nothing, so spelling them out would be
+    # noise in the URL.
+    plain = re.search(
+        r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
+    ).group(0)
+    assert "status=" not in plain and "q=" not in plain, plain
+
+
+def test_creating_a_row_pages_to_where_the_new_row_actually_is(
+    db: Session, client: TestClient
+) -> None:
+    """Rows list by id, so a create appends past the end.
+
+    On a roster over one page the new row is not on the page the add
+    form was submitted from, so the redirect's `#reviewer-row-<id>`
+    named a row the response did not render and the landing fell back
+    to the table card. `focus` moves the window to the row instead.
+    """
+    review_session = _make_session(client, db, code="rev-createpage")
+    _seed(db, review_session.id, [f"R{n}" for n in range(1, 231)])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    response = client.post(
+        f"{base}/create",
+        data={
+            "name": "Zed", "email": "zed@example.edu",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "filter_offset": 0,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    loc = response.headers["location"]
+    created = db.execute(
+        select(Reviewer).where(Reviewer.email == "zed@example.edu")
+    ).scalar_one()
+    assert f"focus={created.id}" in loc, loc
+    assert loc.endswith(f"#reviewer-row-{created.id}"), loc
+
+    # The row the fragment names is actually in the response it lands on.
+    landed = client.get(loc.split("#")[0]).text
+    assert f'id="reviewer-row-{created.id}"' in landed, (
+        "the redirect lands on a page that does not render the new row"
+    )
+    assert ">Zed<" in landed

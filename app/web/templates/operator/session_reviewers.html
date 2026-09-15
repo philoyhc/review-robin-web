@@ -44,6 +44,39 @@
         [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
   ] %}
 
+  {# The edit row's own action bar, on the analogy of a selected row:
+     the row being edited reads as selected (`session-row-selected`) and
+     its controls hang beneath it in a bracketed expander, exactly as the
+     selection panel does. Save and Cancel belong with the row they act
+     on, not in a card above the table.
+
+     One macro, two call sites (the Add row and the Edit row), because
+     the alternative is the same markup written twice — which on this
+     page has already drifted once, in the tag-label editor's
+     parameters. #}
+  {% macro row_editor_bar(col_count) %}
+    <tr class="session-expander session-expander-bracketed row-editor-bar">
+      <td colspan="{{ col_count }}">
+        <div class="row-expander-body">
+          {# Save then Cancel, which is what the card this replaced
+             rendered and what Reviewees, Observers and Relationships
+             still render. The first draft of this macro flipped them
+             without meaning to; the order is user-visible and the three
+             sibling pages will copy whatever ends up here, so it stays
+             as it was until someone decides otherwise on purpose. #}
+          <div class="row-expander-actions">
+            <button class="btn secondary" type="submit"
+                    form="reviewer-edit-form">Save</button>
+            {# Cancel leaves the editor for the list, so it lands where
+               the list is — the same anchor `Clear` and `Search` take. #}
+            <a class="btn secondary"
+               href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endmacro %}
+
   <div class="session-nav-card">
     {% with current_page = "Reviewers" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -177,7 +210,12 @@
        "Save labels" anywhere, and the Unlock panel holds one. The
        readouts above stay — they are informational. #}
     {% if unlock_available %}
-      <div class="unlock-panel" id="roster-unlock-panel" hidden>
+      {# `panel_open` is server state, not a second source of truth for
+         the JS toggle below: the toggle still owns every click, this
+         only decides what the page ARRIVES as. Saving a label POSTs and
+         303s, and a panel that always shipped collapsed would shut
+         itself on every save — the Lock control is what closes it. #}
+      <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the two cards an operator edits, stacked. #}
         <div class="unlock-stack">
           {# 19P.1 rung 3a — WIRED. The scaffold hand-copied this card's
@@ -269,16 +307,32 @@
             <button type="button" class="btn secondary" disabled>Upload</button>
           </div>
         </section>
+        {% if panel_open %}
+        <div class="roster-card-actions">
+          <button type="button" class="btn secondary" id="roster-unlock-btn"
+                  aria-expanded="true" aria-controls="roster-unlock-panel">
+            Lock
+          </button>
+        </div>
+        {% endif %}
         </div>
       </div>
 
 
+      {# Collapsed this sits here, as the card's last child; open it
+         belongs under the upload card, inside the panel. The toggle
+         MOVES the one element between those two homes rather than
+         rendering two copies, so arriving open has to start it in the
+         panel — otherwise the first Lock click would move it out of a
+         place it was never in. #}
+      {% if not panel_open %}
       <div class="roster-card-actions">
         <button type="button" class="btn secondary" id="roster-unlock-btn"
                 aria-expanded="false" aria-controls="roster-unlock-panel">
           Unlock
         </button>
       </div>
+      {% endif %}
 
       <script>
         (function () {
@@ -362,21 +416,26 @@
      (`guide/segment_19P_expander_revamp.md`, "Two things the ladder
      never named").
 
-     The right-aligned Save / Cancel row keeps its inline style. It is
-     not this slice's to extract: a `style=` attribute containing
-     `justify-content: flex-end` appears 16 times across 9 templates
-     under `app/web/templates/`, so a primitive for it is a page-wide
-     change, not a rider on a rehoming. (Stated with its predicate
-     because a line-anchored grep gets 15 — one of the sixteen spans
-     two lines.) #}
+     The card's own right-aligned Save / Cancel row is GONE: those two
+     controls moved into the edit row's expander bar, which right-aligns
+     with `.row-expander-actions`' `margin-left: auto` rather than an
+     inline style. (15 inline `justify-content: flex-end` attributes
+     remain across 8 templates; extracting a primitive for them is
+     still a page-wide change and still not this slice's.) #}
   {% if edit_mode %}
-    {# Still anchored, and for the same reason as before: the editor is
-       SPLIT — the row you type into is in the table below, the heading
-       and Save / Cancel are here. Rehoming narrowed that gap but did
-       not close it, so landing on the table card would still put Save
-       above the viewport. This card sits immediately above that one,
-       so landing HERE shows the heading, Save / Cancel and the top of
-       the table together. Measured in Chromium, not assumed. #}
+    {# Still anchored, but NOT for the reason recorded here before.
+       That reason was "Save is in this card and the row is in the
+       table, so landing on the table card puts Save above the
+       viewport" — and Save is no longer in this card. What is left
+       here is the heading, the error banner and the help line: the
+       mode label, which wants to be on screen when the operator
+       arrives and which the table card's own anchor would put above
+       the fold. The card sits immediately above the table, so landing
+       here shows the label and the row together.
+
+       Whether this card should exist at all now that it holds no
+       controls is a question for the dev slot, not an assertion to
+       make here. #}
     <div class="card row-editor-anchored" id="{{ row_editor_anchor }}">
       <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
       {% if edit_error %}
@@ -389,15 +448,11 @@
           Edit the highlighted row below, then Save.
         {% endif %}
       </p>
-      <div style="display: flex; justify-content: flex-end;
-                  gap: 12px; margin-top: var(--space-3);">
-        <button class="btn secondary" type="submit"
-                form="reviewer-edit-form">Save</button>
-        {# Cancel leaves the editor for the list, so it lands where
-           the list is — the same anchor `Clear` and `Search` take. #}
-        <a class="btn secondary"
-           href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
-      </div>
+      {# Save / Cancel moved to the row's own expander bar below the
+         edit row. Not duplicated here: two live submit buttons on one
+         `reviewer-edit-form` is the shape 2b step 2 was sliced to
+         avoid, and the card is the wrong place for them anyway — they
+         act on the row, and the row is in the table. #}
     </div>
   {% endif %}
 
@@ -408,19 +463,28 @@
      checkboxes / edit-row inputs / card buttons attach to these. #}
   {# ``filter_*`` hidden inputs carry the active search / status
      filter through Edit / bulk actions so the operator lands back
-     on the same filtered view (Segment 15F). #}
+     on the same filtered view (Segment 15F).
+
+     ``filter_offset`` joined them at 19P.1: without it a row action
+     taken on page 2 answered with page 1, so the operator lost their
+     place and the acted-on row was not in the response for the landing
+     anchor to find. Named `filter_*` to match its neighbours — it is
+     the same job, carrying the view the operator was looking at through
+     the POST. #}
   {% if edit_mode %}
     {% set edit_action = reviewers_base_url ~ "/create" if add_mode
           else reviewers_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="reviewer-edit-form" method="post" action="{{ edit_action }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% elif is_editable %}
     <form id="reviewers-bulk-form" method="post"
           action="{{ reviewers_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
 
@@ -538,7 +602,13 @@
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
                   <a class="btn secondary"
-                     href="{{ reviewers_base_url }}?add=1#{{ row_editor_anchor }}">Add new</a>
+                     {# Carries the active filter into add mode. Without
+                        it, `Add new` from a filtered view rendered an
+                        unfiltered add page, so the edit form's hidden
+                        `filter_*` fields held defaults and the create
+                        redirect came back unfiltered — the filter was
+                        lost at the navigation, not at the POST. #}
+                     href="{{ reviewers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
@@ -614,11 +684,33 @@
         </tr>
         </thead>
         <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
+        {# The editor bar spans the row above it, so it has to know how
+           wide that row is. Derived from the same flags the `<thead>`
+           branches on rather than counted by hand: select + Name +
+           Email, then the optional columns, then Status + Updated. In
+           `edit_mode` every optional one is forced on, so this is 9
+           today — computed anyway, because a hand-written 9 stops being
+           true the first time a column is gated differently. #}
+        {% set edit_col_count = 3
+              + (1 if show_profile_link else 0)
+              + (1 if show_tag[1] else 0)
+              + (1 if show_tag[2] else 0)
+              + (1 if show_tag[3] else 0)
+              + 2 %}
         {% if add_mode %}
           {# Fresh blank edit row at the top of the table. #}
-          <tr class="reviewer-edit-row">
+          <tr class="reviewer-edit-row session-row-selected">
             <td class="row-select-cell"></td>
+            {# The caret starts here — see the script below the table.
+               Not `autofocus`: `Add new` navigates to a URL carrying a
+               fragment, and a fragment navigation moves focus to its
+               target, which beats the attribute. Measured both ways in
+               Chromium: with `#reviewers-row-editor` the active element
+               is BODY, without it the attribute takes. The fragment is
+               deliberate (it is what stops the page landing at the top),
+               so the caret is set in script instead. #}
             <td><input type="text" name="name" form="reviewer-edit-form"
+                       class="row-editor-first-field"
                        value="{{ edit_values.name }}" maxlength="255"
                        placeholder="Name" required></td>
             <td><input type="email" name="email" form="reviewer-edit-form"
@@ -653,10 +745,12 @@
             </td>
             <td class="muted">—</td>
           </tr>
+          {{ row_editor_bar(edit_col_count) }}
         {% endif %}
         {% for reviewer in reviewers %}
           {% if edit_id is not none and reviewer.id == edit_id %}
-            <tr class="reviewer-edit-row" id="reviewer-row-{{ reviewer.id }}">
+            <tr class="reviewer-edit-row session-row-selected"
+                id="reviewer-row-{{ reviewer.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewer-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
@@ -695,8 +789,10 @@
                 {{ reviewer.updated_at | format_datetime }}
               </td>
             </tr>
+            {{ row_editor_bar(edit_col_count) }}
           {% else %}
             <tr id="reviewer-row-{{ reviewer.id }}"
+                class="row-action-target"
                 data-status="{{ reviewer.status }}">
               <td class="row-select-cell">
                 {% if selectable %}
@@ -736,6 +832,61 @@
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
       {% endif %}
     </div>
+  {% endif %}
+
+  {% if add_mode %}
+    <script>
+      (function () {
+        "use strict";
+        var field = document.querySelector(".row-editor-first-field");
+        if (!field || !field.focus) return;
+        function caret() {
+          // `preventScroll`: the landing anchor owns the scroll
+          // position (19P.1 / #2405 — without it the page jumps to the
+          // top). This sets the caret and nothing else. The field is
+          // already on screen where the anchor lands, measured at 368px
+          // down a 900px viewport, so there is nothing to scroll to.
+          try {
+            field.focus({ preventScroll: true });
+          } catch (e) {
+            field.focus();
+          }
+        }
+        // On `load`, not inline. `Add new` navigates to a URL carrying
+        // a fragment, and the fragment's own focus handling runs AFTER
+        // the document parses — so focusing during parse is undone a
+        // moment later. Measured: inline leaves `activeElement` at
+        // BODY, which is also why the `autofocus` attribute does
+        // nothing here.
+        if (document.readyState === "complete") caret();
+        else window.addEventListener("load", caret);
+      })();
+    </script>
+  {% endif %}
+
+  {% if not edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        // A row action lands on the row it acted on. Two cases leave
+        // that fragment unresolvable, and an unresolvable fragment is
+        // silently ignored — which puts the operator back at the top of
+        // the document, the exact thing the anchor exists to prevent:
+        //
+        //   1. a delete: the row is gone, so the route sends the table
+        //      card instead and this never fires;
+        //   2. a status change that drops the row out of a filtered
+        //      view — `Inactivate` while the filter reads `active`.
+        //      The route cannot know that without re-running the filter,
+        //      which is a multi-row computation and does not belong in
+        //      a route handler, so it is caught here instead.
+        var hash = window.location.hash;
+        if (!hash || hash.indexOf("#reviewer-row-") !== 0) return;
+        if (document.getElementById(hash.slice(1))) return;
+        var card = document.getElementById({{ pager_anchor | tojson }});
+        if (card && card.scrollIntoView) card.scrollIntoView();
+      })();
+    </script>
   {% endif %}
 
   {% if reviewers and not edit_mode %}
@@ -968,9 +1119,10 @@
         // before the header's own inline handler: take the panel out
         // first, put it back against its anchor after.
         // `Edit` is a client-side GET, not a form post, so it carries
-        // the editor's landing anchor itself — the editor is split
-        // across two cards and `#reviewers-table-card` would put Save
-        // above the viewport (19P.1, `#2405`).
+        // the editor's landing anchor itself. The reason recorded here
+        // was "Save would be above the viewport"; Save moved into the
+        // row's own expander bar, so what the anchor now keeps on
+        // screen is the mode label above the table (19P.1, `#2405`).
         table.addEventListener("click", function (event) {
           var edit = event.target.closest
             ? event.target.closest(".exp-edit[data-edit-id]") : null;

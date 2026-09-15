@@ -71,8 +71,14 @@ def test_reviewers_save_upserts_three_slots(
         follow_redirects=False,
     )
     assert response.status_code == 303
+    # `?unlocked=1` is load-bearing, not decoration: on Reviewers the
+    # editor lives inside the Unlock panel, which ships collapsed, so a
+    # bare redirect would shut the panel on every save. The fragment
+    # keeps the landing on the card. Asserted whole rather than with
+    # `in`, so dropping either part fails here.
     assert response.headers["location"] == (
         f"/operator/sessions/{review_session.id}/reviewers"
+        "?unlocked=1#roster-card"
     )
     rows = _rows(db, review_session.id)
     assert [(r.source_type, r.source_field, r.label) for r in rows] == [

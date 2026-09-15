@@ -100,6 +100,8 @@ def _render_reviewers_page(
     offset: int = 0,
     edit_id: int | None = None,
     add_mode: bool = False,
+    panel_open: bool = False,
+    focus_id: int | None = None,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
@@ -155,6 +157,7 @@ def _render_reviewers_page(
         is_filtered=is_filtered,
         offset=offset,
         edit_id=edit_id,
+        locate_id=focus_id,
     )
     reviewers = window.rows
     offset = window.offset
@@ -236,6 +239,10 @@ def _render_reviewers_page(
             # ``is_filtered``, so the two affordances can never
             # disagree about which mode the page is in.
             "pager": window.pager,
+            # 19P.1 — the pager position, for the hidden field the row
+            # actions POST back. Without it the 303 answered with page 1
+            # whatever page the operator acted from.
+            "current_offset": offset,
             # Only ever rendered on an unfiltered view, so the link
             # carries no filter state to preserve — and deliberately
             # not ``selected``: selection is page-local, and carrying
@@ -297,6 +304,14 @@ def _render_reviewers_page(
             "col_readouts": column_state.readouts,
             "edit_id": edit_id,
             "add_mode": add_mode,
+            # 19P.1 — the Unlock panel's open state, server-rendered.
+            # It has to survive a round trip: `Save labels` POSTs and
+            # 303s, and a panel that always ships collapsed would shut
+            # itself every time an operator saved one. The Lock control
+            # is what closes it. (Rung 3c needs the same flag for a
+            # different reason: a failed CSV import re-renders the page
+            # with its issue list inside the panel.)
+            "panel_open": panel_open,
             "edit_values": edit_values,
             "edit_error": edit_error,
             "breadcrumbs": breadcrumbs.operator_session_child(
@@ -315,6 +330,8 @@ def reviewers_list(
     offset: int = 0,
     edit_id: int | None = None,
     add: int = 0,
+    unlocked: int = 0,
+    focus: int | None = None,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -330,8 +347,38 @@ def reviewers_list(
         offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
+        panel_open=bool(unlocked),
+        focus_id=focus,
         selected_ids=set(selected),
     )
+
+
+def _row_action_anchor(reviewer_ids: list[int]) -> str:
+    """Where a row action lands: the first row it acted on.
+
+    A bare 303 lands at the top of the document — measured at 821px of
+    jump from a mid-table action (19P.1). Anchoring the table card
+    instead only helps when the row is near its top, which is the Add
+    case and not the common one.
+
+    With no row to land on, the table card. `bulk-delete` passes `[]` by
+    design, since the rows it acted on no longer exist.
+
+    Two more cases leave the fragment unresolvable, and neither is
+    decided here: a row that survives but drops out of a filtered view
+    (`Inactivate` under `status=active`), and a row that moves to
+    another page under the operator's cookie sort — the bulk status
+    routes write `updated_at` as well as `status`, so a sort on either
+    reorders the row out from under a held `offset`. Both would need the
+    filter and the sort re-run to predict, which is a multi-row
+    computation and belongs outside a route handler. The page's fallback
+    script catches all three instead: a hash naming a row that is not in
+    the document scrolls to the card rather than leaving the browser at
+    the top.
+    """
+    if reviewer_ids:
+        return f"reviewer-row-{reviewer_ids[0]}"
+    return "reviewers-table-card"
 
 
 def _require_reviewer_in_session(
@@ -362,13 +409,16 @@ def reviewers_create(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
-        reviewers_service.create_reviewer(
+        created = reviewers_service.create_reviewer(
             db,
             review_session=review_session,
             name=name,
@@ -400,9 +450,24 @@ def reviewers_create(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    # Add lands on the row it just created. The edit form has always
+    # posted `filter_status` / `filter_q` and now `filter_offset` too,
+    # and this route declared none of them — so the three fields were
+    # sent and discarded, and the redirect was bare: after adding a
+    # reviewer the page went back to the top of the document with the
+    # filter dropped.
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewers",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        # `focus` rather than the add form's own offset: rows list by
+        # id, so a create appends past the end, and on anything over one
+        # page the new row is not on the page the form was submitted
+        # from. Without it the anchor named a row the response did not
+        # render and the fallback scrolled to the card instead.
+        extra_params=[("focus", created.id)],
+        anchor=_row_action_anchor([created.id]),
     )
 
 
@@ -423,6 +488,7 @@ def reviewers_update(
     status_value: str = Form(default="active", alias="status"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -466,6 +532,8 @@ def reviewers_update(
         f"/operator/sessions/{review_session.id}/reviewers",
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([reviewer_id]),
     )
 
 
@@ -474,6 +542,7 @@ def reviewers_bulk_inactivate(
     reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -495,6 +564,8 @@ def reviewers_bulk_inactivate(
         f"/operator/sessions/{review_session.id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewer_ids),
     )
 
 
@@ -503,6 +574,7 @@ def reviewers_bulk_reactivate(
     reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -524,6 +596,8 @@ def reviewers_bulk_reactivate(
         f"/operator/sessions/{review_session.id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewer_ids),
     )
 
 
@@ -588,8 +662,14 @@ async def reviewers_save_field_labels(
         submitted=submitted,
         correlation_id=request_correlation_id(),
     )
+    # `?unlocked=1`: saving a label must not close the panel the label
+    # editor lives in — the Lock control is what closes it. The fragment
+    # lands on the card rather than the top of the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewers"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -601,6 +681,7 @@ def reviewers_bulk_delete(
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -637,4 +718,6 @@ def reviewers_bulk_delete(
         f"/operator/sessions/{review_session.id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([]),
     )

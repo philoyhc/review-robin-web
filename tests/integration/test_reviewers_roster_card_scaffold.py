@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Reviewer, ReviewSession
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
@@ -173,15 +173,14 @@ def test_every_unwired_unlock_control_is_inert(client, db):
     # <script> that follows that — the old lookahead swept the control
     # into the panel's scope the moment it moved there, and the control
     # is deliberately live. Guarded below rather than trusted.
-    panel = re.search(
-        r'id="roster-unlock-panel".*?(?=<div class="roster-card-actions")',
-        html, re.S
-    )
-    assert panel, "Unlock panel not found"
-    assert 'id="roster-unlock-btn"' not in panel.group(0), (
+    # Div-balanced, not bounded by a lookahead on `.roster-card-actions`.
+    # That control has two homes — after the panel when closed, INSIDE it
+    # when open — so the lookahead stopped describing a boundary the
+    # moment the panel could arrive open.
+    scope = _panel(html)
+    assert 'id="roster-unlock-btn"' not in scope, (
         "the scope swept in the Lock control, which is live by design"
     )
-    scope = panel.group(0)
     labels_card = _div_block(scope, '<div class="card field-labels-editor">')
     # Not vacuous in either direction: the editor is really in the panel,
     # and removing it really leaves controls behind to check.
@@ -317,9 +316,13 @@ def test_rows_carry_their_status_for_the_panel_to_read(client, db):
     row's state, not its rendered pill markup."""
     rs = _with_reviewers(client, db, "rc13")
     html = _page(client, rs)
-    assert re.search(
-        r'id="reviewer-row-\d+"\s+data-status="active"', html
-    ), "rows carry no data-status"
+    # Both attributes on one row tag, in any order. The first version
+    # required them ADJACENT, which was incidental — adding a class
+    # between them broke a test whose claim is only that the row carries
+    # its status.
+    row = re.search(r"<tr\b[^>]*id=\"reviewer-row-\d+\"[^>]*>", html)
+    assert row, "no reviewer rows rendered"
+    assert 'data-status="active"' in row.group(0), "rows carry no data-status"
 
 
 def test_the_panel_counts_against_the_rendered_window(client, db):
@@ -445,9 +448,7 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     # lookahead truncated the scope after the FIRST card and the two
     # order assertions below raised rather than failing. A boundary that
     # moves when the contents change is not a boundary.
-    body = _div_block(
-        html, '<div class="unlock-panel" id="roster-unlock-panel" hidden>'
-    )
+    body = _panel(html)
 
     # `scaffold-labels-h` went with the hand-copied markup at rung 3a;
     # the partial renders a plain <h2> under its own card class.
@@ -1183,6 +1184,19 @@ def _card_columns(html: str) -> str:
     return _div_block(html, '<div class="card-columns">')
 
 
+def _panel(html: str) -> str:
+    """The Unlock panel, found by its id rather than by a literal tag.
+
+    The opening tag's attributes are not fixed: `hidden` is there only
+    while the panel is closed, so a marker with `hidden` baked into it
+    silently stops matching the moment a page arrives open — which is
+    what `?unlocked=1` does after a labels save.
+    """
+    m = re.search(r'<div\b[^>]*id="roster-unlock-panel"[^>]*>', html)
+    assert m, "Unlock panel not found"
+    return _div_block(html, m.group(0))
+
+
 def _count_cards(block: str) -> int:
     """Elements whose class list carries the `card` token.
 
@@ -1304,9 +1318,7 @@ def test_the_labels_editor_renders_exactly_once_in_every_state(
     in_panel = 'id="roster-unlock-panel"' in html
     assert in_panel is panel_expected, where
     if panel_expected:
-        panel = _div_block(
-            html, '<div class="unlock-panel" id="roster-unlock-panel" hidden>'
-        )
+        panel = _panel(html)
         assert "field-labels-editor" in panel, f"{where}: editor outside panel"
         assert 'class="card-columns"' not in html, where
     else:
@@ -1421,3 +1433,172 @@ def test_the_roster_note_claims_nothing_the_page_does_not_show(
     cards = 'class="bottom-grid"' in html
     assert note == unlock, f"{where}: note {note}, Unlock control {unlock}"
     assert note == cards, f"{where}: note {note}, cards below {cards}"
+
+
+# ---------------------------------------------------------------- UI pass
+# Three adjustments asked for after 3a: the panel surviving a labels
+# save, the caret landing in the new row, and the edit row's controls
+# moving into an expander bar beneath it.
+
+
+def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
+    """`Save labels` 303s back with `?unlocked=1`.
+
+    Without it the panel ships collapsed and shuts itself on every save,
+    which is the bug this fixes. `hidden` is asserted as an attribute of
+    the panel's own tag, not as a substring of the page — several other
+    elements on this page carry it.
+    """
+    rs = _with_reviewers(client, db, "rc-open")
+    closed = _markup(_page(client, rs))
+    opened = _markup(
+        client.get(f"/operator/sessions/{rs.id}/reviewers?unlocked=1").text
+    )
+
+    assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
+        "the panel does not ship collapsed by default"
+    )
+    assert not re.search(r'id="roster-unlock-panel"[^>]*\bhidden', opened), (
+        "`?unlocked=1` did not open the panel"
+    )
+
+    # The Lock control has two homes and the toggle MOVES the one
+    # element between them, so arriving open has to start it inside the
+    # panel — otherwise the first Lock click moves it out of a place it
+    # was never in.
+    assert 'id="roster-unlock-btn"' not in _panel(closed), (
+        "the control starts inside the panel while closed"
+    )
+    # Inside `.unlock-right` specifically, not merely somewhere in the
+    # panel. The toggle reopens into `panel.querySelector(".unlock-right")`,
+    # so a server render anywhere else puts the control in one place on
+    # arrival and another after a Lock/Unlock round trip — and the panel's
+    # foot is exactly where a sibling test measures it as 125px adrift
+    # from the card it belongs under.
+    right = _div_block(opened, '<div class="unlock-stack unlock-right">')
+    assert 'id="roster-unlock-btn"' in right, (
+        "arriving open, the control is not in the right-hand stack the "
+        "toggle would move it back into"
+    )
+    assert opened.count('id="roster-unlock-btn"') == 1, "two Lock controls"
+    # The label is on its own line inside the button, so match the
+    # element and read its text rather than needling `>Lock<`.
+    btn = re.search(
+        r'<button[^>]*id="roster-unlock-btn".*?</button>', _panel(opened), re.S
+    )
+    assert btn, "no Lock control in the open panel"
+    assert "Lock" in btn.group(0) and "Unlock" not in btn.group(0), (
+        "the open panel offers Unlock, not Lock"
+    )
+    assert 'aria-expanded="true"' in btn.group(0), (
+        "an open panel reports itself collapsed to assistive tech"
+    )
+
+
+def test_add_mode_puts_the_caret_in_the_new_rows_name_field(client, db):
+    """Markup-level: the field is marked and a script targets it.
+
+    Whether focus actually lands is a browser question — the suite has
+    no JS runtime — and it is checked in Chromium. What is pinned here
+    is that the two halves still refer to each other, and that the
+    marked field is the one in the ADD row rather than any other input.
+    """
+    html = _add_page(client, _with_reviewers(client, db, "rc-caret"))
+    assert html.count('class="row-editor-first-field"') == 1, (
+        "the caret target is missing or ambiguous"
+    )
+    assert ".row-editor-first-field" in html, "nothing focuses the field"
+
+    # It is the Name box of the edit row, not some other input.
+    edit_row = re.search(
+        r'<tr class="reviewer-edit-row[^"]*"[^>]*>.*?</tr>', html, re.S
+    )
+    assert edit_row, "no edit row"
+    assert 'class="row-editor-first-field"' in edit_row.group(0), (
+        "the caret target is outside the edit row"
+    )
+    assert 'name="name"' in edit_row.group(0)
+
+    # `autofocus` does NOT work here — a fragment navigation beats it —
+    # so its absence is deliberate and pinned, or someone re-adds it and
+    # believes it works.
+    #
+    # Matched as an ATTRIBUTE, with scripts stripped first: the script
+    # below the table carries a comment naming `autofocus` to say why it
+    # is not used, and a bare substring reads that comment as markup.
+    # Same trap `_markup()` exists for one storey down.
+    no_js = re.sub(r"<script\b.*?</script>", "", html, flags=re.S)
+    assert not re.search(r"<[a-z][^>]*\bautofocus\b", no_js), (
+        "`autofocus` is back; it is a no-op behind a fragment navigation"
+    )
+
+
+@pytest.mark.parametrize("url_suffix", ["?add=1", "?edit_id={rid}"])
+def test_the_edit_row_carries_an_expander_bar_beneath_it(
+    client, db, url_suffix
+):
+    """Both editors: the Add row and the Edit row.
+
+    The bar is the row's own controls, on the analogy of a selected row,
+    so the row reads as selected and the bar hangs off it. Parametrized
+    because the two are separate blocks in the template and a macro used
+    once is a macro that can silently stop being used twice.
+    """
+    rs = _with_reviewers(client, db, f"rc-bar-{len(url_suffix)}")
+    rid = db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == rs.id)
+    ).scalars().first()
+    html = _markup(
+        client.get(
+            f"/operator/sessions/{rs.id}/reviewers"
+            + url_suffix.format(rid=rid)
+        ).text
+    )
+
+    assert html.count('class="session-expander session-expander-bracketed '
+                      'row-editor-bar"') == 1, "no editor bar, or two"
+
+    # It follows the edit row IMMEDIATELY: a bar separated from its row
+    # by another row is not the selected-row analogy.
+    m = re.search(
+        r'<tr class="reviewer-edit-row session-row-selected"[^>]*>.*?</tr>\s*'
+        r'<tr class="session-expander session-expander-bracketed '
+        r'row-editor-bar">',
+        html, re.S,
+    )
+    assert m, "the bar does not directly follow the row it belongs to"
+
+    # Exactly one Save on the page — the card's pair moved, it was not
+    # copied. Two submits on one form is the shape 2b step 2 avoided.
+    assert html.count('form="reviewer-edit-form">Save</button>') == 1, (
+        "two Save buttons on one edit form"
+    )
+    bar = re.search(
+        r'<tr class="session-expander session-expander-bracketed '
+        r'row-editor-bar">.*?</tr>', html, re.S,
+    ).group(0)
+    assert ">Save</button>" in bar and ">Cancel</a>" in bar, (
+        "the bar is missing a control"
+    )
+
+
+def test_the_editor_bar_spans_the_row_it_hangs_from(client, db):
+    """A colspan that does not match leaves the bar short or overflowing.
+
+    Counted from the rendered header rather than trusted: the template
+    derives it from the same flags `<thead>` branches on, and this is
+    what proves the derivation right.
+    """
+    html = _add_page(client, _with_reviewers(client, db, "rc-span"))
+    header = re.search(r"<thead>.*?</thead>", html, re.S)
+    assert header, "no header"
+    columns = len(re.findall(r"<th\b", header.group(0)))
+    assert columns > 3, f"only {columns} columns found; the count is wrong"
+
+    span = re.search(
+        r'row-editor-bar">\s*<td colspan="(\d+)"', html
+    )
+    assert span, "the bar's cell has no colspan"
+    assert int(span.group(1)) == columns, (
+        f"bar spans {span.group(1)} of {columns} columns"
+    )
