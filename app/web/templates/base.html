@@ -1341,57 +1341,81 @@
          Item 10 moved it to the top-left of the table it describes,
          where the four roster pages already put theirs. Actions stay
          here; the count sits with its rows. */
-      .filter-card form { margin: 0; }
-      .filter-card .filter-row {
+      /* ================= The filter-strip shape =================
+         A status dropdown and a search box on one row, then the
+         buttons that act on them flush right below. Eight instances
+         across seven Setup pages.
+
+         UNSCOPED, and that is the point. This shape used to be
+         declared separately inside each card that held it, which meant
+         moving the markup from one card to another silently dropped
+         whatever only that card supplied. 19P.1 did exactly that twice:
+         rung 2a moved the strip into the Reviewers table toolbar and
+         lost `.is-locked` (a half-typed row could be thrown away by a
+         stray click) and then `margin-top` (the buttons sat flush
+         against the search box). Both were found on the dev slot or by
+         a cold read, not by the suite — CSS reach is invisible to it.
+
+         Declared once here, a move carries the shape with it. The three
+         scopes below now narrow ONLY what genuinely differs, and each
+         difference says why.
+
+         Status dropdown takes 1/3 of the row, search 2/3, so the
+         typeahead's "Name (email)" labels stay readable while the
+         dropdown collapses to its short option list. */
+      .filter-row {
         display: flex;
-        gap: 16px;
+        gap: var(--space-4);
       }
-      .filter-card .filter-row > label {
-        flex: 1;
+      /* `body.ui-v2` on THIS rule alone, and not for scoping. The
+         global `body.ui-v2 label` further down is (0,1,2) and would
+         otherwise beat a bare `.filter-row > label` (0,1,1), turning
+         the label back into a block and un-stacking it from its input
+         — which also blockifies the select, since it is only
+         `display: block` by virtue of being a flex item. Measured: it
+         does exactly that. Same trick and same reason as the rule
+         above that documents beating `body.ui-v2 label`.
+
+         The prefix stays OFF the rest of this block deliberately: at
+         (0,3,2) a prefixed `.filter-row > label.filter-search` would
+         outrank `.operator-actions-card .filter-row > label
+         .filter-search` (0,3,1) and silently undo that scope's one
+         narrowing. */
+      body.ui-v2 .filter-row > label {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: var(--space-1);
       }
-      /* Status dropdown takes 1/3 of the row, Search input takes 2/3,
-         so the typeahead's "Name (email)" labels stay readable while
-         the dropdown collapses to its short option list. */
-      .filter-card .filter-row > label.filter-status { flex: 1; }
-      .filter-card .filter-row > label.filter-search { flex: 2; }
-      .filter-card .filter-row select,
-      .filter-card .filter-row input[type="text"] {
+      .filter-row > label.filter-status { flex: 1; }
+      .filter-row > label.filter-search { flex: 2; }
+      .filter-row select,
+      .filter-row input[type="text"] {
         width: 100%;
         box-sizing: border-box;
       }
-      .filter-card .filter-actions {
+      .filter-actions {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 12px;
-        margin-top: 12px;
+        gap: var(--space-3);
+        margin-top: var(--space-3);
         flex-wrap: wrap;
       }
-      /* Operator-actions card (Segment 15F) — Reviewers / Reviewees /
-         Relationships Setup pages. Same filter-strip shape as
-         `.filter-card` but the status dropdown is squeezed to ~1/5 of
-         the row (4/5 to Search) since the status option list is tiny
-         and the typeahead's "Name (email)" labels want the room. */
+      /* ---- Scope 1: `.filter-card` — Invitations / Responses.
+         Narrows nothing: it was the base all along. */
+      .filter-card form { margin: 0; }
+      /* ---- Scope 2: `.operator-actions-card` (Segment 15F) —
+         Reviewees / Relationships / Observers / Assignments (and
+         Reviewers until 19P.1 rung 2b retires the card).
+
+         ONE narrowing: the status dropdown is squeezed to ~1/5 of the
+         row (4/5 to Search) rather than the base's 1/3, since the
+         status option list is tiny and the typeahead's "Name (email)"
+         labels want the room. A full-width card can afford that; the
+         half-width toolbar pane below cannot, which is why it keeps
+         the base ratio. */
       .operator-actions-card form { margin: 0; }
-      .operator-actions-card .filter-row {
-        display: flex;
-        gap: 16px;
-      }
-      .operator-actions-card .filter-row > label {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .operator-actions-card .filter-row > label.filter-status { flex: 1; }
       .operator-actions-card .filter-row > label.filter-search { flex: 4; }
-      .operator-actions-card .filter-row select,
-      .operator-actions-card .filter-row input[type="text"] {
-        width: 100%;
-        box-sizing: border-box;
-      }
       /* While a row is being edited / added the filter + action
          buttons grey out; the Add / Edit form below the divider
          in the same card stays interactive (Segment 15F PR 3). */
@@ -1413,14 +1437,6 @@
         margin: var(--space-4) 0 var(--space-3) 0;
         border: 0;
         border-top: 1px solid var(--border-default);
-      }
-      .operator-actions-card .filter-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 12px;
-        margin-top: 12px;
-        flex-wrap: wrap;
       }
       /* The "Showing N of M" hint at the top-left of a preview-table
          card (Segment 19I Item 4). Moved here from the
@@ -1680,53 +1696,29 @@
         flex-direction: column;
         gap: var(--space-2);
       }
-      body.ui-v2 .toolbar-right .filter-row { display: flex; gap: var(--space-3); }
+      /* ---- Scope 3: `.toolbar-right` — the Reviewers table toolbar's
+         right pane (19P.1 rung 2a). THREE narrowings, all of them
+         consequences of being half the width of a card:
+
+         - the row gap tightens to 12px, because two controls at ~550px
+           have less room to spend between them than at ~1100px;
+         - the labels shrink and go subtle, because in a toolbar they
+           annotate controls rather than heading a card's form;
+         - the button gap tightens to 8px, matching
+           `.field-labels-actions`, the other half-width instance. The
+           mockup this pane was agreed from used 8px.
+
+         Everything else — including the `margin-top` and `align-items`
+         that two separate bugs were spent rediscovering — now comes
+         from the base and cannot be lost by moving the markup again.
+         Note what is NOT here any more: `margin-top`. Re-declaring it
+         would hide the base rule doing its job. */
+      body.ui-v2 .toolbar-right .filter-row { gap: var(--space-3); }
       body.ui-v2 .toolbar-right .filter-row > label {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
         font-size: var(--fs-small);
         color: var(--text-subtle);
       }
-      body.ui-v2 .toolbar-right .filter-row > label.filter-status { flex: 1; }
-      body.ui-v2 .toolbar-right .filter-row > label.filter-search { flex: 2; }
-      body.ui-v2 .toolbar-right .filter-row select,
-      body.ui-v2 .toolbar-right .filter-row input[type="text"] {
-        width: 100%;
-        box-sizing: border-box;
-      }
-      /* `.toolbar-right` cannot supply this as a flex `gap`: its only
-         child is the `<form>`, so the row and the buttons are the
-         form's children and a gap on the pane has nothing to sit
-         between. It has to be a margin here.
-
-         `margin-top` and `align-items` are NOT decoration carried over
-         for tidiness — they are what `.operator-actions-card
-         .filter-actions` gave this strip before 19P.1 rung 2a moved it
-         out of that card, and neither followed it. Without the margin
-         the buttons sat flush against the search box at 0px. 12px is
-         what all THREE instances of this shape use: that rule,
-         `.filter-card .filter-actions` (Invitations / Responses /
-         Validate), and `.field-labels-actions`.
-
-         `gap` stays at 8px deliberately, unlike the margin. The two
-         card rules use 12px between the buttons, but this is a
-         half-width pane and `.field-labels-actions` — the other rule
-         that lives inside a half-width card — uses 8px too. The mockup
-         this pane was agreed from used 8px.
-
-         Second instance of the same root cause as the `is-locked` bug
-         two blocks up: a rule scoped to the card the form no longer
-         lives in. Check the whole `.operator-actions-card` block, not
-         one declaration, when anything else moves out of it. */
-      body.ui-v2 .toolbar-right .filter-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: var(--space-2);
-        margin-top: var(--space-3);
-        flex-wrap: wrap;
-      }
+      body.ui-v2 .toolbar-right .filter-actions { gap: var(--space-2); }
       /* Parity with the four other scopes that hold a form in this
          shape (`.btn-pair > form`, `.filter-card form`,
          `.card-action-row form`, `.field-labels-editor form`). The

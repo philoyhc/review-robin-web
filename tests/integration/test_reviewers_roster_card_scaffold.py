@@ -776,20 +776,17 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
 def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
     client, db
 ):
-    """The second rule the strip lost by leaving `.operator-actions-card`.
+    """The gap now comes from the unscoped base, not from this scope.
 
-    `.operator-actions-card .filter-actions` gave it `margin-top: 12px`
-    — the gap between a filter row and its right-flushed buttons in all
-    three places this shape appears: that rule, `.filter-card
-    .filter-actions` (Invitations / Responses / Validate), and
-    `.field-labels-actions`.
-    `.toolbar-right` cannot supply it as a flex `gap`: its only child is
-    the `<form>`, so that gap has nothing to sit between. Without the
-    margin the buttons sat flush against the search box at 0px.
+    It was lost twice by moving the markup — `.operator-actions-card
+    .filter-actions` supplied `margin-top: 12px` and nothing followed
+    the strip into the toolbar. The base rule exists so a third move
+    cannot repeat that, so what this pins has moved with it: the BASE
+    carries the margin, and `.toolbar-right` must not re-declare it.
 
-    Same root cause as `is-locked` one block up, which is why this
-    asserts the rule is addressed to the form's NEW home rather than
-    merely that some `.filter-actions` rule exists.
+    Re-declaring would pass a naive "is the margin there" check while
+    hiding the base rule doing its job — and would be back to a
+    per-scope copy, which is the bug.
     """
     rs = _with_reviewers(client, db, "rc34")
     html = _page(client, rs)
@@ -808,18 +805,28 @@ def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
     )
     assert moved, "the filter's button row is not in the toolbar"
 
-    rule = re.search(
+    # The base carries the two declarations two bugs were spent
+    # rediscovering. Matched on the bare selector at line start so the
+    # scoped rules below cannot satisfy it.
+    base = re.search(r"\n\s*\.filter-actions \{(.*?)\}", html, re.S)
+    assert base, "no unscoped `.filter-actions` base rule"
+    assert re.search(r"margin-top:\s*var\(--space-3\)", base.group(1)), (
+        f"the base lost its 12px gap: {base.group(1)!r}"
+    )
+    assert re.search(r"align-items:\s*center", base.group(1)), (
+        f"the base lost its cross-axis alignment: {base.group(1)!r}"
+    )
+
+    # ...and this scope narrows the button gap only. A `margin-top`
+    # here would mean the per-scope copy is back.
+    scoped = re.search(
         r"body\.ui-v2 \.toolbar-right \.filter-actions \{(.*?)\}", html, re.S
     )
-    assert rule, "no rule for the moved filter's button row"
-    body = rule.group(1)
-    # The value, not merely the property: `margin-top: 0` is the bug.
-    assert re.search(r"margin-top:\s*var\(--space-3\)", body), (
-        f"the moved buttons have no 12px gap from the search box: {body!r}"
+    assert scoped, "no rule narrowing the moved filter's button row"
+    assert "margin-top" not in scoped.group(1), (
+        "`.toolbar-right` re-declares `margin-top`, hiding the base rule: "
+        f"{scoped.group(1)!r}"
     )
-    # The second declaration that left the card with it. Measured in
-    # Chromium: both anchors and the button are 37px here, so this is
-    # parity rather than a visual change — but it is parity the card had.
-    assert re.search(r"align-items:\s*center", body), (
-        "the moved button row lost its cross-axis alignment"
+    assert re.search(r"gap:\s*var\(--space-2\)", scoped.group(1)), (
+        "the half-width pane lost its tighter button gap"
     )
