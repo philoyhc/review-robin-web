@@ -89,10 +89,25 @@ def test_the_selection_surface_renders_while_editable(
     body = _render(client, s, page)
 
     assert f'class="{SELECT_CLASS[page]}"' in body, "row checkboxes"
+    assert f'id="{page}-bulk-form"' in body, "the form they post to"
+
+    if page == "reviewers":
+        # 19P.1 rung 2b moved the controls into the row expander, which
+        # is BUILT IN JS against the selected rows — so they are not in
+        # the response as markup at all, and a substring assertion on
+        # their attributes now reads the builder's own escaped string
+        # literals rather than rendered HTML. What is still checkable
+        # here is that the builder ships and is reachable; the controls
+        # themselves are pinned against a real DOM in
+        # `test_reviewers_roster_card_scaffold.py`.
+        assert 'tr.id = "reviewers-row-expander"' in body, "the builder"
+        assert "/bulk-delete" in body, "Delete's route"
+        assert "data-delete-confirm" in body, "the delete gate"
+        return
+
     assert f'id="{page}-delete-btn"' in body, "Delete"
     assert f'id="{page}-edit-btn"' in body, "Edit"
     assert f'id="{page}-delete-confirm"' in body, "the delete gate"
-    assert f'id="{page}-bulk-form"' in body, "the form they post to"
 
 
 @pytest.mark.parametrize("page", CHECKBOX_PAGES)

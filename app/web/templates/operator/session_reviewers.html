@@ -309,33 +309,12 @@
                only where they can act. Clear, Search and the
                "Showing N of M" hint stay: reading a finished
                session's roster is legitimate. #}
-            {% if is_editable %}
-            <button class="btn secondary" type="button"
-                    id="reviewers-edit-btn"
-                    disabled aria-disabled="true">Edit</button>
-            <button class="btn secondary" type="submit"
-                    id="reviewers-inactivate-btn"
-                    form="reviewers-bulk-form"
-                    formaction="{{ reviewers_base_url }}/bulk-inactivate"
-                    disabled aria-disabled="true">Inactivate</button>
-            <button class="btn secondary" type="submit"
-                    id="reviewers-reactivate-btn"
-                    form="reviewers-bulk-form"
-                    formaction="{{ reviewers_base_url }}/bulk-reactivate"
-                    disabled aria-disabled="true">Activate</button>
-            {# Segment 19I Item 2 — posts the bulk form to
-               ``/bulk-delete`` via ``form=`` + ``formaction``,
-               like Inactivate / Activate beside it. Enabled by
-               the confirmation checkbox below through
-               base.html's ``data-delete-confirm`` pairing; the
-               server re-checks both gates regardless. #}
-            <button class="btn destructive" type="submit"
-                    id="reviewers-delete-btn"
-                    form="reviewers-bulk-form"
-                    formaction="{{ reviewers_base_url }}/bulk-delete"
-                    data-delete-btn="reviewers-bulk-delete"
-                    disabled aria-disabled="true">Delete</button>
-            {% endif %}
+            {# 19P.1 rung 2b — Edit / Inactivate / Activate / Delete
+               moved into the row expander, where the rows they act on
+               are. Nothing replaces them here: a second copy would be a
+               second thing to keep in sync, and the selection reaches
+               the POST through the row checkboxes' own `form=`
+               regardless of where the button lives. #}
           </div>
           {# Second action row (Segment 19I Item 2): what the
              page is showing, what is selected, and the delete
@@ -343,43 +322,9 @@
              leaving the row above to the controls. The gate
              sits with the count because it is about the
              count. #}
-          <div class="filter-confirm">
-            {% if is_editable %}
-            <span class="pill pill-count"
-                  id="reviewers-selected-count" hidden>0 of 0 selected</span>
-            <label class="delete-confirm-label">
-              <input type="checkbox"
-                     id="reviewers-delete-confirm"
-                     name="confirm" value="true"
-                     form="reviewers-bulk-form"
-                     data-delete-confirm="reviewers-bulk-delete"
-                     disabled>
-              {# The sentence names what goes, modelled on the
-                 Instruments page's "…and its associated assignments
-                 and reviewer responses." (Segment 19I Item 3). One
-                 checkbox, not two: the strip's confirmed shape has a
-                 single gate, so the acknowledgement rides with the
-                 tick as a hidden field and the label says what is
-                 being agreed to. The route still requires both
-                 fields, and refuses without the tick that carries
-                 them. #}
-              <span>
-                {%- if delete_discards_responses -%}
-                  Yes, delete these and their associated assignments and reviewer responses
-                {%- elif delete_discards_assignments -%}
-                  Yes, delete these and their associated assignments
-                {%- else -%}
-                  Yes, delete these
-                {%- endif -%}
-              </span>
-              {% if delete_discards_responses %}
-                <input type="hidden" form="reviewers-bulk-form"
-                       id="reviewers-delete-ack"
-                       name="acknowledge_response_loss" value="true">
-              {% endif %}
-            </label>
-            {% endif %}
-          </div>
+          {# The count and the delete gate went with the buttons: the
+             gate is about the selection, and the selection is marked in
+             the table now. The expander carries both. #}
         </form>
       </div>
       {# Focused Add / Edit form — same card, below a divider. #}
@@ -817,6 +762,8 @@
         // is all one status has exactly one actionable button; rendering
         // the other offers a control that would no-op on every row.
         // Orthogonal to arity, which says how many rows each action takes.
+        var BULK_BASE = {{ reviewers_base_url | tojson }};
+
         function statusActions(sel) {
           var out = [];
           var hasActive = false;
@@ -841,7 +788,6 @@
           tr.id = "reviewers-row-expander";
           var td = document.createElement("td");
           td.colSpan = visibleColumnCount();
-          var actions = ["Edit"].concat(statusActions(sel));
           var html =
             '<div class="row-expander-body">' +
               {# `spec/ui_elements.md` .session-row-selected: "**The panel
@@ -855,7 +801,9 @@
               '<span class="row-expander-count"><strong>' + sel.length +
               "</strong> of " + rows().length + " selected</span>" +
               '<label class="confirm-label exp-confirm-label">' +
-                '<input type="checkbox" disabled> ' +
+                '<input type="checkbox" name="confirm" value="true"' +
+                ' form="reviewers-bulk-form"' +
+                ' data-delete-confirm="reviewers-bulk-delete"> ' +
                 {{ (
                      "Yes, delete these and their associated assignments and reviewer responses"
                      if delete_discards_responses else
@@ -863,21 +811,49 @@
                      if delete_discards_assignments else
                      "Yes, delete these"
                    ) | tojson }} +
+                {# The route requires BOTH fields and 400s without the
+                   acknowledgement, so it rides with the tick exactly as
+                   it did in the card it came from. #}
+                {{ ('<input type="hidden" form="reviewers-bulk-form"'
+                    ' id="reviewers-delete-ack"'
+                    ' name="acknowledge_response_loss" value="true">'
+                    if delete_discards_responses else "") | tojson }} +
               "</label>" +
               '<span class="row-expander-actions">';
-          actions.forEach(function (label) {
-            html += '<button type="button" class="btn secondary" disabled ' +
-                    'aria-disabled="true">' + label + "</button>";
+          // `Edit` acts on exactly one row — the arity rung 1 left
+          // unexpressed, because every control was `disabled` then and a
+          // gate would have been indistinguishable from the scaffold.
+          var editable = sel.length === 1;
+          var editId = editable
+            ? sel[0].querySelector(".reviewer-select").value : "";
+          html += '<button type="button" class="btn secondary exp-edit"' +
+                  (editable
+                    ? ' data-edit-id="' + editId + '"'
+                    : ' disabled aria-disabled="true"') +
+                  ">Edit</button>";
+          // The selection reaches the POST through the row checkboxes'
+          // own `form=` + `name="reviewer_ids"`, so these need only say
+          // where to send it. Same routes, same `formaction`s, as the
+          // card they came from.
+          statusActions(sel).forEach(function (label) {
+            html += '<button type="submit" class="btn secondary"' +
+                    ' form="reviewers-bulk-form" formaction="' +
+                    BULK_BASE +
+                    (label === "Inactivate"
+                      ? "/bulk-inactivate" : "/bulk-reactivate") +
+                    '">' + label + "</button>";
           });
-          html += '<button type="button" class="btn destructive" disabled ' +
-                  'aria-disabled="true">Delete</button>' +
+          // Ships `disabled`: nothing syncs an injected pair until its
+          // first tick, so a live-by-default Delete would be a
+          // destructive control with its gate open (19P.1 rung 2b
+          // step 1).
+          html += '<button type="submit" class="btn destructive"' +
+                  ' form="reviewers-bulk-form" formaction="' +
+                  BULK_BASE + '/bulk-delete"' +
+                  ' data-delete-btn="reviewers-bulk-delete"' +
+                  ' disabled aria-disabled="true">Delete</button>' +
                   "</span></div>";
           td.innerHTML = html;
-          // NB: arity is not expressed here. `Edit` acts on exactly one
-          // row, but every control in this rung is `disabled` already, so
-          // a gate would be indistinguishable from the scaffold state and
-          // untestable. Rung 2 adds it with the wiring. Deliberately not
-          // a no-op branch pretending otherwise.
           tr.appendChild(td);
           return tr;
         }
@@ -888,6 +864,9 @@
             row.classList.remove("session-row-selected");
           });
           var sel = selectedRows();
+          // Before the early return: select-all's own state has to be
+          // right when the last box is unticked too.
+          syncSelectAll();
           if (!sel.length) return;
           sel.forEach(function (row) {
             row.classList.add("session-row-selected");
@@ -896,6 +875,7 @@
           (currentAnchor() || sel[sel.length - 1])
             .insertAdjacentElement("afterend", panel);
         }
+
 
         // Prune on untick as well as push on tick, and rebuild wholesale
         // on select-all — the lobby does both (`sessions_list.html:596-614`)
@@ -914,7 +894,24 @@
         // Deferred: the existing select-all handler assigns `.checked`
         // programmatically, which fires no change event, so an immediate
         // render reads the state from before the click.
+        // Ticking every box, and keeping select-all's own indeterminate
+        // state honest, used to live in the `Operator actions` script.
+        // That script existed to drive the card's four buttons; rung 2b
+        // moved them into the panel, so this half moved here rather than
+        // being left in a script with nothing else to do.
+        function setAllBoxes(checked) {
+          var all = document.querySelectorAll(".reviewer-select");
+          for (var i = 0; i < all.length; i++) all[i].checked = checked;
+        }
+        function syncSelectAll() {
+          var all = document.querySelectorAll(".reviewer-select");
+          var n = 0;
+          for (var i = 0; i < all.length; i++) if (all[i].checked) n++;
+          selectAll.checked = (n > 0 && n === all.length);
+          selectAll.indeterminate = (n > 0 && n < all.length);
+        }
         selectAll.addEventListener("change", function () {
+          setAllBoxes(selectAll.checked);
           tickOrder = selectAll.checked
             ? rows().map(function (row) { return row.id; })
             : [];
@@ -928,6 +925,19 @@
         // the unsorted restore order too. Capture phase, so this runs
         // before the header's own inline handler: take the panel out
         // first, put it back against its anchor after.
+        // `Edit` is a client-side GET, not a form post, so it carries
+        // the editor's landing anchor itself — the editor is split
+        // across two cards and `#reviewers-table-card` would put Save
+        // above the viewport (19P.1, `#2405`).
+        table.addEventListener("click", function (event) {
+          var edit = event.target.closest
+            ? event.target.closest(".exp-edit[data-edit-id]") : null;
+          if (!edit) return;
+          window.location = BULK_BASE + "?edit_id=" +
+            encodeURIComponent(edit.getAttribute("data-edit-id")) +
+            "#" + {{ row_editor_anchor | tojson }};
+        });
+
         table.addEventListener("click", function (event) {
           if (!event.target.closest(".rrw-sort-btn")) return;
           if (panel) { panel.remove(); panel = null; }
@@ -953,104 +963,11 @@
      Only runs in the interactive non-edit / non-ready state. #}
   {% if not edit_mode and is_editable %}
     <script>
-      (function () {
-        var editBtn = document.getElementById("reviewers-edit-btn");
-        var inactivateBtn = document.getElementById("reviewers-inactivate-btn");
-        var reactivateBtn = document.getElementById("reviewers-reactivate-btn");
-        var countPill = document.getElementById("reviewers-selected-count");
-        var deleteConfirm = document.getElementById("reviewers-delete-confirm");
-        var selectAll = document.getElementById("reviewers-select-all");
-        if (!editBtn) return;
-        function boxes() {
-          return document.querySelectorAll(".reviewer-select");
-        }
-        function countChecked() {
-          var all = boxes();
-          var n = 0;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) n++;
-          }
-          return n;
-        }
-        function setBtn(btn, disabled) {
-          // Sync ``aria-disabled`` with ``disabled`` — base.html
-          // greys + ``pointer-events: none`` any ``.btn`` carrying
-          // ``aria-disabled="true"``, so clearing only ``disabled``
-          // would leave the button dead.
-          btn.disabled = disabled;
-          if (disabled) {
-            btn.setAttribute("aria-disabled", "true");
-          } else {
-            btn.removeAttribute("aria-disabled");
-          }
-        }
-        function refresh() {
-          var all = boxes();
-          var n = countChecked();
-          setBtn(editBtn, n !== 1);
-          setBtn(inactivateBtn, n === 0);
-          setBtn(reactivateBtn, n === 0);
-          // "N of M selected" (Segment 19I Item 4). M is the
-          // *rendered* window — the rows select-all can reach —
-          // not the whole roster, which is the number that makes
-          // the cap-versus-match gap visible next to the
-          // "Showing N of M" hint above the table.
-          countPill.textContent = n + " of " + all.length + " selected";
-          countPill.hidden = (n === 0);
-          // Delete gate, stage 1 (Segment 19I Item 2). A
-          // selection enables the checkbox; base.html's
-          // ``data-delete-confirm`` pairing then drives the
-          // button off the checkbox, so one script owns the
-          // button's ``disabled`` rather than two.
-          if (deleteConfirm) {
-            deleteConfirm.disabled = (n === 0);
-            if (deleteConfirm.checked) {
-              // The tick clears on *any* change of selection:
-              // "Yes, delete these" names the selection as it
-              // stood when it was ticked. A programmatic
-              // uncheck fires no ``change`` of its own, so the
-              // gate is re-run by hand or the button would
-              // stay enabled.
-              deleteConfirm.checked = false;
-              deleteConfirm.dispatchEvent(new Event("change"));
-            }
-          }
-          if (selectAll) {
-            selectAll.checked = (n > 0 && n === all.length);
-          }
-        }
-        // Event delegation — one ``change`` listener catches every
-        // checkbox toggle (check AND uncheck; ``change`` bubbles) so
-        // the count can't drift out of sync.
-        document.addEventListener("change", function (e) {
-          var t = e.target;
-          if (!t) return;
-          if (t === selectAll) {
-            var all = boxes();
-            for (var i = 0; i < all.length; i++) {
-              all[i].checked = selectAll.checked;
-            }
-            refresh();
-          } else if (t.classList &&
-                     t.classList.contains("reviewer-select")) {
-            refresh();
-          }
-        });
-        editBtn.addEventListener("click", function () {
-          var all = boxes();
-          var picked = null;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) {
-              if (picked !== null) return;  // more than one
-              picked = all[i];
-            }
-          }
-          if (picked === null) return;
-          window.location =
-            {{ reviewers_base_url | tojson }} + "?edit_id=" + picked.value;
-        });
-        refresh();
-      })();
+      {# The `Operator actions` selection script retired with the
+         controls it drove (19P.1 rung 2b). Ticking every box and
+         keeping select-all honest moved into the row-expander script,
+         which is now the single owner of selection state — one script
+         reading the checkboxes rather than two agreeing about them. #}
     </script>
   {% endif %}
 

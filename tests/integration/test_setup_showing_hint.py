@@ -190,4 +190,18 @@ def test_the_pill_ships_the_two_number_format(
 
     body = client.get(f"/operator/sessions/{s.id}/{page}").text
 
+    if page == "reviewers":
+        # 19P.1 rung 2b removed the placeholder: the row expander
+        # writes the count and nothing else does, so the drift this
+        # test guards — two sources disagreeing about the format —
+        # cannot happen here. Pinned as ONE source rather than two
+        # that agree, which is the stronger version of the same claim.
+        assert f'id="{page}-selected-count"' not in body, (
+            "the placeholder is back; there are two sources again"
+        )
+        assert '"</strong> of " + rows().length + " selected' in body, (
+            "the expander no longer writes the two-number format"
+        )
+        return
+
     assert f'id="{page}-selected-count" hidden>0 of 0 selected</span>' in body

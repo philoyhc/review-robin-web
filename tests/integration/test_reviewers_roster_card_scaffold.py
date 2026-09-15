@@ -982,3 +982,97 @@ def test_the_busy_indicator_skips_a_same_url_form_submit(client, db):
     assert re.search(
         r"if \(target\.href === window\.location\.href\) return;", body
     ), "the same-URL guard does not actually skip arming"
+
+
+# --- 19P.1 rung 2b: the expander's controls are live -----------------
+
+def _builder(html: str) -> str:
+    """The expander's build function, which is where its markup lives
+    now — as JS string literals, not as rendered HTML."""
+    start = html.index('tr.id = "reviewers-row-expander"')
+    return html[start:html.index("td.innerHTML = html;", start)]
+
+
+def test_the_expander_posts_to_the_same_routes_the_card_did(client, db):
+    """The controls moved; the routes did not. Each button carries
+    `form="reviewers-bulk-form"` and a `formaction`, exactly as it did
+    in the card — the selection reaches the POST through the row
+    checkboxes' own `form=`, so a button needs only to say where.
+    """
+    rs = _with_reviewers(client, db, "rc39")
+    build = _builder(_page(client, rs))
+
+    assert 'form="reviewers-bulk-form"' in build
+    for route in ("/bulk-inactivate", "/bulk-reactivate", "/bulk-delete"):
+        assert route in build, f"the expander cannot reach {route}"
+    # Vacuity guard: `formaction` is what makes a route reachable from a
+    # button that lives outside its form.
+    assert "formaction=" in build
+
+
+def test_the_expanders_delete_ships_disabled_and_is_paired(client, db):
+    """Step 1's constraint, stated as a test: nothing syncs an injected
+    pair until its first tick, so a live-by-default Delete would be a
+    destructive control with its gate open."""
+    rs = _with_reviewers(client, db, "rc40")
+    build = _builder(_page(client, rs))
+
+    assert 'data-delete-btn=\\"reviewers-bulk-delete\\"' in build or (
+        'data-delete-btn="reviewers-bulk-delete"' in build
+    ), "Delete is not paired to a confirm"
+    assert 'data-delete-confirm' in build, "no confirm checkbox"
+    # The button ships disabled; the checkbox does not.
+    delete_at = build.index("btn destructive")
+    assert "disabled" in build[delete_at:delete_at + 400], (
+        "the expander's Delete does not ship `disabled`"
+    )
+    # The confirm has to post with the selection, or the route 400s.
+    assert 'name=\\"confirm\\" value=\\"true\\"' in build or (
+        'name="confirm" value="true"' in build
+    )
+
+
+def test_edit_is_offered_for_exactly_one_row(client, db):
+    """Arity, which rung 1 deliberately left unexpressed because every
+    control was `disabled` then and a gate would have been
+    indistinguishable from the scaffold.
+
+    Verified against a real DOM in Chromium: one row offers Edit
+    enabled with the row's id, two rows offer it disabled.
+    """
+    rs = _with_reviewers(client, db, "rc41")
+    build = _builder(_page(client, rs))
+    assert "sel.length === 1" in build, "no arity gate on Edit"
+    assert "data-edit-id" in build, "Edit carries no row to edit"
+
+
+def test_edit_lands_on_the_editor_not_the_table(client, db):
+    """`Edit` enters edit mode, so it takes the editor's anchor for the
+    same reason `Add new` does (#2405): the editor is split across two
+    cards and the table anchor puts Save above the viewport."""
+    html = _page(client, _with_reviewers(client, db, "rc42"))
+    handler = re.search(
+        r'\.exp-edit\[data-edit-id\].*?window\.location =.*?;', html, re.S
+    )
+    assert handler, "no Edit click handler"
+    assert "reviewers-row-editor" in handler.group(0), (
+        "Edit lands somewhere other than the editor"
+    )
+    assert "edit_id=" in handler.group(0)
+
+
+def test_the_status_actions_are_offered_only_where_they_act(client, db):
+    """One status in the selection offers one action; a mixed selection
+    offers both. Measured in Chromium across all four cases."""
+    html = _page(client, _with_reviewers(client, db, "rc43"))
+    # `statusActions` is defined above `build`, so this reads the whole
+    # script rather than the builder slice.
+    assert 'row.dataset.status === "active"' in html, (
+        "the expander no longer reads row status"
+    )
+    assert "statusActions(sel)" in _builder(html), (
+        "the buttons are no longer status-aware"
+    )
+    # ...and the mapping from label to route, which is what makes the
+    # offered button the one that acts.
+    assert '"/bulk-inactivate" : "/bulk-reactivate"' in _builder(html)

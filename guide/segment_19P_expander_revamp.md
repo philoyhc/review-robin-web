@@ -345,6 +345,31 @@ guidance prose that was never ported from the mockup. Implemented as a
 macro opt-in (`guidance(full_width=true)`), since the other six placements
 are half-width where two columns would be two ~30-character ribbons.
 
+**2026-09-15 — rung 2b, in two steps.** Step 1 (`#2406`) delegated the
+Delete-confirm pairing, because the expander builds its gate in JS and a
+load-bound listener could never reach it; bound in the CAPTURE phase,
+because four roster pages re-run that gate with a non-bubbling
+`dispatchEvent`. Step 2 is the wiring **and** the action row's
+retirement in one slice, not the two the earlier note suggested: keeping
+both live would have meant two `Delete` buttons needing two confirm keys,
+then churn to remove one. Each control moves exactly once.
+
+**Found when the seam was cut:** the card's selection script and the
+expander's were complementary, not duplicated — the card's ticked the
+boxes and kept select-all honest, the expander's tracked anchor order.
+Retiring the card's controls therefore meant merging them, and the
+expander script is now the single owner of selection state. Also: the
+delete gate's hidden `acknowledge_response_loss` field is required by
+the route, so it rides with the expander's confirm exactly as it did in
+the card.
+
+**A consequence worth stating for rung 3.** Markup moved into a JS
+builder is invisible to server-side substring tests — `tojson` escapes
+its quotes, so `id="x"` reaches the response as `id=\"x\"`. Eleven
+tests across six files asserted the card's shape; each was re-aimed
+rather than deleted, at the builder where the contract now lives or at
+the three roster pages that still have a card.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and

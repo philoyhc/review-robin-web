@@ -375,8 +375,18 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     s = _make_session(client, db, code=f"bdr-ackbox-{page}")
     _rows(db, s, page, 1)
 
+    # 19P.1 rung 2b built the Reviewers gate in JS, so its markup
+    # reaches the response as an escaped string literal inside the
+    # expander builder rather than as HTML. The claim is the same —
+    # the field appears only when there is a loss to acknowledge — so
+    # the needle is escaped to match, rather than the test being
+    # scoped away from the page it is about.
+    def needle(p: str) -> str:
+        raw = f'id="{p}-delete-ack"'
+        return raw.replace('"', '\\"') if p == "reviewers" else raw
+
     without = client.get(f"/operator/sessions/{s.id}/{page}").text
-    assert f'id="{page}-delete-ack"' not in without
+    assert needle(page) not in without
 
     reviewer = Reviewer(session_id=s.id, name="Z", email="z@example.edu")
     reviewee = Reviewee(
@@ -387,7 +397,7 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=1)
 
     with_loss = client.get(f"/operator/sessions/{s.id}/{page}").text
-    assert f'id="{page}-delete-ack"' in with_loss
+    assert needle(page) in with_loss
     assert (
         "delete these and their associated assignments and reviewer responses"
         in with_loss

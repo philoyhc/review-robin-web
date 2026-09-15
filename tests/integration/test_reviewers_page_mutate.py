@@ -64,10 +64,14 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
     # Per-row select checkboxes + select-all.
     assert 'class="reviewer-select"' in body
     assert 'id="reviewers-select-all"' in body
-    # Four action buttons; Edit/Inactivate/Reactivate start disabled.
-    assert 'id="reviewers-edit-btn"' in body
-    assert 'id="reviewers-inactivate-btn"' in body
-    assert 'id="reviewers-reactivate-btn"' in body
+    # The four action buttons moved into the row expander at 19P.1
+    # rung 2b, so what is checkable in a response with nothing selected
+    # is the builder that emits them and the routes they post to. Their
+    # arity, status-awareness and delete gate are pinned against a real
+    # DOM in `test_reviewers_roster_card_scaffold.py`.
+    assert 'tr.id = "reviewers-row-expander"' in body
+    for route in ("/bulk-inactivate", "/bulk-reactivate", "/bulk-delete"):
+        assert route in body, f"the expander cannot reach {route}"
     assert "?add=1" in body  # Add new row link
     # No per-row Actions column.
     assert "reviewer-edit-row" not in body
