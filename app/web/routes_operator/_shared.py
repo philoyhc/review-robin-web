@@ -508,6 +508,7 @@ def _setup_row_window(
     is_filtered: bool,
     offset: int = 0,
     edit_id: int | None = None,
+    locate_id: int | None = None,
 ) -> SetupWindow:
     """Cut the page the operator asked for out of a sorted, filtered
     roster — shared by the four Setup roster slices.
@@ -541,6 +542,31 @@ def _setup_row_window(
         pager = views.build_pager(
             total=len(filtered), offset=offset, page_size=_SETUP_DEFAULT_CAP
         )
+
+    # A row to land on that is not being edited: a create appends past
+    # the end of an unfiltered roster, so on anything over one page the
+    # new row is not in this window and the redirect's `#<noun>-row-<id>`
+    # would name a row the response does not render (19P.1). Same page
+    # arithmetic as the edit relocation below, deliberately narrower: it
+    # only moves the unfiltered window, and never prepends a row a
+    # filter excludes.
+    if (
+        edit_id is None
+        and locate_id is not None
+        and not is_filtered
+        and locate_id not in {r.id for r in rows}
+    ):
+        index = next(
+            (i for i, r in enumerate(filtered) if r.id == locate_id), None
+        )
+        if index is not None:
+            offset = (index // _SETUP_DEFAULT_CAP) * _SETUP_DEFAULT_CAP
+            rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
+            pager = views.build_pager(
+                total=len(filtered),
+                offset=offset,
+                page_size=_SETUP_DEFAULT_CAP,
+            )
 
     if edit_id is None or edit_id in {r.id for r in rows}:
         return SetupWindow(rows=rows, offset=offset, pager=pager, edit_id=edit_id)
@@ -580,6 +606,7 @@ def _redirect_keeping_selection(
     filter_params: list[tuple[str, str]] | None = None,
     offset: int = 0,
     anchor: str | None = None,
+    extra_params: list[tuple[str, object]] | None = None,
 ) -> RedirectResponse:
     """303 back to a Setup page, carrying the acted-on row ids as
     ``?selected=`` params. The page re-checks those checkboxes so
@@ -595,6 +622,11 @@ def _redirect_keeping_selection(
     response, so the operator lost their place entirely and no anchor
     could have found the row (19P.1).
 
+    ``extra_params`` carries anything that is not a filter — today only
+    ``focus``, which tells the next render to page to a row the caller
+    just created rather than answering with page 1 and an anchor naming
+    a row that is not there.
+
     ``anchor`` is the fragment to land on, normally the first acted-on
     row. A bare 303 lands at the top of the document: measured at 821px
     of jump from a mid-table action. Callers that have no row to land on
@@ -606,6 +638,8 @@ def _redirect_keeping_selection(
     params: list[tuple[str, object]] = []
     if filter_params:
         params.extend((key, value) for key, value in filter_params if value)
+    if extra_params:
+        params.extend(extra_params)
     if offset:
         params.append(("offset", offset))
     params.extend(("selected", i) for i in selected_ids)

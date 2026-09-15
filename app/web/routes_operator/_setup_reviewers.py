@@ -101,6 +101,7 @@ def _render_reviewers_page(
     edit_id: int | None = None,
     add_mode: bool = False,
     panel_open: bool = False,
+    focus_id: int | None = None,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
@@ -156,6 +157,7 @@ def _render_reviewers_page(
         is_filtered=is_filtered,
         offset=offset,
         edit_id=edit_id,
+        locate_id=focus_id,
     )
     reviewers = window.rows
     offset = window.offset
@@ -329,6 +331,7 @@ def reviewers_list(
     edit_id: int | None = None,
     add: int = 0,
     unlocked: int = 0,
+    focus: int | None = None,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -345,6 +348,7 @@ def reviewers_list(
         edit_id=edit_id,
         add_mode=bool(add),
         panel_open=bool(unlocked),
+        focus_id=focus,
         selected_ids=set(selected),
     )
 
@@ -457,6 +461,12 @@ def reviewers_create(
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
+        # `focus` rather than the add form's own offset: rows list by
+        # id, so a create appends past the end, and on anything over one
+        # page the new row is not on the page the form was submitted
+        # from. Without it the anchor named a row the response did not
+        # render and the fallback scrolled to the card instead.
+        extra_params=[("focus", created.id)],
         anchor=_row_action_anchor([created.id]),
     )
 

@@ -602,7 +602,13 @@
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
                   <a class="btn secondary"
-                     href="{{ reviewers_base_url }}?add=1#{{ row_editor_anchor }}">Add new</a>
+                     {# Carries the active filter into add mode. Without
+                        it, `Add new` from a filtered view rendered an
+                        unfiltered add page, so the edit form's hidden
+                        `filter_*` fields held defaults and the create
+                        redirect came back unfiltered — the filter was
+                        lost at the navigation, not at the POST. #}
+                     href="{{ reviewers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>

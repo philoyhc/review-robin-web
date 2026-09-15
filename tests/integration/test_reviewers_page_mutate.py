@@ -700,3 +700,71 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     assert script, "the fallback script is gone"
     for needle in ("getElementById", "reviewers-table-card", "scrollIntoView"):
         assert needle in script.group(0), f"the fallback lost {needle}"
+
+
+def test_add_new_carries_the_active_filter_into_add_mode(
+    db: Session, client: TestClient
+) -> None:
+    """The filter was lost at the NAVIGATION, not at the POST.
+
+    `Add new` linked to a bare `?add=1`, so the add page rendered
+    unfiltered and its hidden `filter_*` fields held defaults — which
+    the create route then faithfully honoured all the way back to an
+    unfiltered list.
+    """
+    review_session = _make_session(client, db, code="rev-addfilter")
+    _seed(db, review_session.id, ["Alice", "Bob"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    body = client.get(f"{base}?status=inactive&q=ali").text
+    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
+    assert link, "no Add new link"
+    assert "status=inactive" in link.group(0), link.group(0)
+    assert "q=ali" in link.group(0), link.group(0)
+
+    # An unfiltered view carries neither — `status=all` is the default
+    # and an empty search is nothing, so spelling them out would be
+    # noise in the URL.
+    plain = re.search(
+        r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
+    ).group(0)
+    assert "status=" not in plain and "q=" not in plain, plain
+
+
+def test_creating_a_row_pages_to_where_the_new_row_actually_is(
+    db: Session, client: TestClient
+) -> None:
+    """Rows list by id, so a create appends past the end.
+
+    On a roster over one page the new row is not on the page the add
+    form was submitted from, so the redirect's `#reviewer-row-<id>`
+    named a row the response did not render and the landing fell back
+    to the table card. `focus` moves the window to the row instead.
+    """
+    review_session = _make_session(client, db, code="rev-createpage")
+    _seed(db, review_session.id, [f"R{n}" for n in range(1, 231)])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    response = client.post(
+        f"{base}/create",
+        data={
+            "name": "Zed", "email": "zed@example.edu",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "filter_offset": 0,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    loc = response.headers["location"]
+    created = db.execute(
+        select(Reviewer).where(Reviewer.email == "zed@example.edu")
+    ).scalar_one()
+    assert f"focus={created.id}" in loc, loc
+    assert loc.endswith(f"#reviewer-row-{created.id}"), loc
+
+    # The row the fragment names is actually in the response it lands on.
+    landed = client.get(loc.split("#")[0]).text
+    assert f'id="reviewer-row-{created.id}"' in landed, (
+        "the redirect lands on a page that does not render the new row"
+    )
+    assert ">Zed<" in landed
