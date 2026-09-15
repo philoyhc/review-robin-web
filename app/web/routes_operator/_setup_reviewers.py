@@ -237,6 +237,10 @@ def _render_reviewers_page(
             # ``is_filtered``, so the two affordances can never
             # disagree about which mode the page is in.
             "pager": window.pager,
+            # 19P.1 — the pager position, for the hidden field the row
+            # actions POST back. Without it the 303 answered with page 1
+            # whatever page the operator acted from.
+            "current_offset": offset,
             # Only ever rendered on an unfiltered view, so the link
             # carries no filter state to preserve — and deliberately
             # not ``selected``: selection is page-local, and carrying
@@ -345,6 +349,27 @@ def reviewers_list(
     )
 
 
+
+def _row_action_anchor(reviewer_ids: list[int]) -> str:
+    """Where a row action lands: the first row it acted on.
+
+    A bare 303 lands at the top of the document — measured at 821px of
+    jump from a mid-table action (19P.1). Anchoring the table card
+    instead only helps when the row is near its top, which is the Add
+    case and not the common one.
+
+    With no row to land on, the table card. `bulk-delete` passes `[]` by
+    design, since the rows it acted on no longer exist. The rows that
+    survive but drop out of a filtered view are the other case the
+    fragment cannot resolve, and the page's fallback script catches
+    both: a hash naming a row that is not in the document scrolls to the
+    card rather than leaving the browser at the top.
+    """
+    if reviewer_ids:
+        return f"reviewer-row-{reviewer_ids[0]}"
+    return "reviewers-table-card"
+
+
 def _require_reviewer_in_session(
     db: Session, review_session: ReviewSession, reviewer_id: int
 ) -> Reviewer:
@@ -434,6 +459,7 @@ def reviewers_update(
     status_value: str = Form(default="active", alias="status"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -477,6 +503,8 @@ def reviewers_update(
         f"/operator/sessions/{review_session.id}/reviewers",
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([reviewer_id]),
     )
 
 
@@ -485,6 +513,7 @@ def reviewers_bulk_inactivate(
     reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -506,6 +535,8 @@ def reviewers_bulk_inactivate(
         f"/operator/sessions/{review_session.id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewer_ids),
     )
 
 
@@ -514,6 +545,7 @@ def reviewers_bulk_reactivate(
     reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -535,6 +567,8 @@ def reviewers_bulk_reactivate(
         f"/operator/sessions/{review_session.id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewer_ids),
     )
 
 
@@ -618,6 +652,7 @@ def reviewers_bulk_delete(
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -654,4 +689,6 @@ def reviewers_bulk_delete(
         f"/operator/sessions/{review_session.id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([]),
     )

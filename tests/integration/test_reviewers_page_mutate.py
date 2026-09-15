@@ -529,3 +529,110 @@ def test_send_invitation_to_inactive_reviewer_is_409(
         follow_redirects=False,
     )
     assert response.status_code == 409
+
+
+# ── Row actions land on the row they acted on (19P.1) ────────────────────
+#
+# A bare 303 lands at the top of the document: measured at 821px of jump
+# from a mid-table action. Two things carry the operator's place through
+# the POST — the pager offset, and a fragment naming the acted-on row.
+
+
+def test_a_row_action_lands_on_the_row_it_acted_on(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-anchor")
+    rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [rows[1].id, rows[2].id]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    # The FIRST acted-on row, not the last and not the table card.
+    assert response.headers["location"].endswith(
+        f"#reviewer-row-{rows[1].id}"
+    ), response.headers["location"]
+
+
+def test_a_row_action_carries_the_pager_offset(
+    db: Session, client: TestClient
+) -> None:
+    """Without it the 303 answered with page 1 whatever page the action
+    was taken from — so the operator lost their place AND the row the
+    anchor names was not in the response to be found."""
+    review_session = _make_session(client, db, code="rev-offset")
+    rows = _seed(db, review_session.id, ["Alice"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [rows[0].id], "filter_offset": 200},
+        follow_redirects=False,
+    )
+    loc = response.headers["location"]
+    assert "offset=200" in loc, loc
+
+    # Zero is dropped rather than spelled out, like the other filters.
+    plain = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [rows[0].id]},
+        follow_redirects=False,
+    )
+    assert "offset=" not in plain.headers["location"]
+
+
+def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-delanchor")
+    rows = _seed(db, review_session.id, ["Alice"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-delete",
+        data={
+            "reviewer_ids": [rows[0].id],
+            "confirm": "true",
+            "acknowledge_response_loss": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    loc = response.headers["location"]
+    assert loc.endswith("#reviewers-table-card"), loc
+    assert "#reviewer-row-" not in loc, (
+        "delete anchored a row it had just removed"
+    )
+
+
+def test_rows_and_the_fallback_are_both_present_for_the_landing(
+    db: Session, client: TestClient
+) -> None:
+    """The two halves the anchor needs, and that they refer to each other.
+
+    Whether the browser actually scrolls is checked in Chromium — the
+    suite has no layout engine. What is pinned here is that a row the
+    redirect can name carries the class that gives it its landing
+    margin, and that the fallback script exists for the case the
+    fragment cannot resolve (a status change that drops the row out of a
+    filtered view).
+    """
+    review_session = _make_session(client, db, code="rev-landing")
+    rows = _seed(db, review_session.id, ["Alice"])
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+
+    row = re.search(
+        rf'<tr\b[^>]*id="reviewer-row-{rows[0].id}"[^>]*>', body
+    )
+    assert row, "the row the redirect names is not rendered"
+    assert "row-action-target" in row.group(0), (
+        "the row carries no landing margin"
+    )
+    markup = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
+    assert "tr.row-action-target" in body, "no rule gives it that margin"
+    assert "#reviewer-row-" in markup, "the fallback does not test the hash"
+    assert '"reviewers-table-card"' in markup, (
+        "the fallback has nowhere to fall back to"
+    )

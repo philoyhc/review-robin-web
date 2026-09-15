@@ -578,6 +578,8 @@ def _redirect_keeping_selection(
     selected_ids: list[int],
     *,
     filter_params: list[tuple[str, str]] | None = None,
+    offset: int = 0,
+    anchor: str | None = None,
 ) -> RedirectResponse:
     """303 back to a Setup page, carrying the acted-on row ids as
     ``?selected=`` params. The page re-checks those checkboxes so
@@ -586,12 +588,29 @@ def _redirect_keeping_selection(
 
     ``filter_params`` carries the active search / status filter
     (empty values dropped) through the action so the operator
-    lands back on the same filtered view."""
+    lands back on the same filtered view.
+
+    ``offset`` carries the pager position. Without it a row action on
+    page 2 answered with page 1 — the acted-on row was not even in the
+    response, so the operator lost their place entirely and no anchor
+    could have found the row (19P.1).
+
+    ``anchor`` is the fragment to land on, normally the first acted-on
+    row. A bare 303 lands at the top of the document: measured at 821px
+    of jump from a mid-table action. Callers that have no row to land on
+    (a delete removes them) pass the table card instead. A fragment that
+    does not resolve is silently ignored by the browser and lands at the
+    top again, so pages using this also ship the fallback script that
+    catches a missing target."""
     params: list[tuple[str, object]] = []
     if filter_params:
         params.extend((key, value) for key, value in filter_params if value)
+    if offset:
+        params.append(("offset", offset))
     params.extend(("selected", i) for i in selected_ids)
     url = base_url if not params else base_url + "?" + urlencode(params)
+    if anchor:
+        url += "#" + anchor
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 

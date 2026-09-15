@@ -452,19 +452,28 @@
      checkboxes / edit-row inputs / card buttons attach to these. #}
   {# ``filter_*`` hidden inputs carry the active search / status
      filter through Edit / bulk actions so the operator lands back
-     on the same filtered view (Segment 15F). #}
+     on the same filtered view (Segment 15F).
+
+     ``filter_offset`` joined them at 19P.1: without it a row action
+     taken on page 2 answered with page 1, so the operator lost their
+     place and the acted-on row was not in the response for the landing
+     anchor to find. Named `filter_*` to match its neighbours — it is
+     the same job, carrying the view the operator was looking at through
+     the POST. #}
   {% if edit_mode %}
     {% set edit_action = reviewers_base_url ~ "/create" if add_mode
           else reviewers_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="reviewer-edit-form" method="post" action="{{ edit_action }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% elif is_editable %}
     <form id="reviewers-bulk-form" method="post"
           action="{{ reviewers_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
 
@@ -766,6 +775,7 @@
             {{ row_editor_bar(edit_col_count) }}
           {% else %}
             <tr id="reviewer-row-{{ reviewer.id }}"
+                class="row-action-target"
                 data-status="{{ reviewer.status }}">
               <td class="row-select-cell">
                 {% if selectable %}
@@ -833,6 +843,31 @@
         // nothing here.
         if (document.readyState === "complete") caret();
         else window.addEventListener("load", caret);
+      })();
+    </script>
+  {% endif %}
+
+  {% if not edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        // A row action lands on the row it acted on. Two cases leave
+        // that fragment unresolvable, and an unresolvable fragment is
+        // silently ignored — which puts the operator back at the top of
+        // the document, the exact thing the anchor exists to prevent:
+        //
+        //   1. a delete: the row is gone, so the route sends the table
+        //      card instead and this never fires;
+        //   2. a status change that drops the row out of a filtered
+        //      view — `Inactivate` while the filter reads `active`.
+        //      The route cannot know that without re-running the filter,
+        //      which is a multi-row computation and does not belong in
+        //      a route handler, so it is caught here instead.
+        var hash = window.location.hash;
+        if (!hash || hash.indexOf("#reviewer-row-") !== 0) return;
+        if (document.getElementById(hash.slice(1))) return;
+        var card = document.getElementById({{ pager_anchor | tojson }});
+        if (card && card.scrollIntoView) card.scrollIntoView();
       })();
     </script>
   {% endif %}

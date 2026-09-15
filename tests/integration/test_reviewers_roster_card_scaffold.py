@@ -316,9 +316,13 @@ def test_rows_carry_their_status_for_the_panel_to_read(client, db):
     row's state, not its rendered pill markup."""
     rs = _with_reviewers(client, db, "rc13")
     html = _page(client, rs)
-    assert re.search(
-        r'id="reviewer-row-\d+"\s+data-status="active"', html
-    ), "rows carry no data-status"
+    # Both attributes on one row tag, in any order. The first version
+    # required them ADJACENT, which was incidental — adding a class
+    # between them broke a test whose claim is only that the row carries
+    # its status.
+    row = re.search(r"<tr\b[^>]*id=\"reviewer-row-\d+\"[^>]*>", html)
+    assert row, "no reviewer rows rendered"
+    assert 'data-status="active"' in row.group(0), "rows carry no data-status"
 
 
 def test_the_panel_counts_against_the_rendered_window(client, db):

@@ -556,6 +556,49 @@ tag labels "through the Reviewers, Reviewees and Relationships pages",
 which on Reviewers now means clicking Unlock first, and says nothing
 about it.
 
+**2026-09-15 — a UI pass between 3a and 3b.** Author's list off the dev
+slot, landed together so the whole set can be looked at at once.
+
+Three were small: a labels save no longer closes the Unlock panel (the
+panel's open state is server-rendered now — the same flag 3c owes for
+import errors, so 3c inherits it); `Add new` puts the caret in the new
+row's Name box; and the edit row's Cancel / Save moved into a bracketed
+expander bar beneath it, on the analogy of a selected row, reusing the
+selection panel's classes unchanged.
+
+**The fourth was a defect the segment had been walking past.** A row
+action 303s with no fragment, so it lands at the top of the document —
+**measured at 821px of jump** from a mid-table action. Anchoring the
+table card (the fix 19J.8 used for the pager) only helps when the row is
+near the card's top, which is the Add case and not the common one, so
+the redirect names the acted-on row instead and `scroll-margin-top`
+leaves it 88px down with its neighbour visible.
+
+**Found while building it, and worse than the jump:** `offset` was
+carried by **none** of the 17 `_redirect_keeping_selection` call sites —
+only `status` and `q`. A row action taken on page 2 answered with page
+1, so the operator lost their place entirely and the acted-on row was
+not in the response for any anchor to find. Fixed in the same slice
+because the anchor is dead past page 1 without it.
+
+**Two cases the fragment cannot resolve**, both caught by a fallback
+script rather than by the route: a delete (the rows are gone — the route
+sends the table card by construction, since `bulk-delete` passes `[]`),
+and a status change that drops the row out of a filtered view. Deciding
+the second server-side means re-running the filter to ask whether a row
+survives it, which is a multi-row computation and `spec/architecture.md`
+puts that outside a route handler.
+
+**Scope:** Reviewers only. The helper's new parameters default to
+today's behaviour, so Reviewees, Observers and Relationships are
+untouched and unbroken — but they have the same defect, and 19P.2 should
+carry the fix to Observers when it gets there.
+
+**Not fixed, and worth saying:** this removes the *jump*, not the
+*reload*. The page still round-trips, so there is still a flash, and the
+landing is the row rather than the exact scroll offset the operator had.
+Only intercepting the submit removes either, which is its own item.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and

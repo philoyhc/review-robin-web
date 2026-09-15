@@ -1497,6 +1497,21 @@
       .row-editor-anchored {
         scroll-margin-top: var(--space-4);
       }
+      /* 19P.1 — a row action lands on the row it acted on, not on the
+         top of the document (measured: 821px of jump from a mid-table
+         action). The margin is deliberately larger than the cards'
+         16px: a row flush against the viewport edge reads as the first
+         row of the table rather than as one row among others, and the
+         row's own expander renders BELOW it, so the landing has to
+         leave room for both. 88px clears one 68px row plus the card's
+         own 16px, which puts the acted-on row second from the top with
+         its neighbour visible for context.
+
+         Nothing on this page is `position: sticky`, so there is no
+         fixed chrome for the row to land underneath. */
+      tr.row-action-target {
+        scroll-margin-top: 88px;
+      }
       /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
          `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
          rung 2. It could only reach two pages per click whatever the
