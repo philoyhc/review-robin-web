@@ -2793,6 +2793,13 @@
          right. `minmax(0, …)` on both tracks, since the default `auto`
          minimum lets a long label push a track past its share. Stacks
          narrow, where half the width is less than the file input. */
+      /* `hidden` is a UA `display: none` and ANY author `display` beats it,
+         so the grid below silently defeated the attribute: the panel
+         rendered open on load and the toggle only changed the button's
+         label. Restored the way `base.html` already does it for
+         `.btn[hidden]` (`:713`). The suite has no layout engine, so the
+         markup assertion that `hidden` is present passed throughout. */
+      body.ui-v2 .unlock-panel[hidden] { display: none; }
       body.ui-v2 .unlock-panel {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));

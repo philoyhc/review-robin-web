@@ -463,3 +463,25 @@ def test_the_panel_does_not_compound_the_base_card_margin(client, db):
         assert rule, selector
         assert "gap: 20px" in rule.group(1), rule.group(1)
 
+
+def test_the_hidden_unlock_panel_is_actually_hidden(client, db):
+    """`hidden` is a UA `display: none`, and ANY author `display` beats
+    it — so `.unlock-panel { display: grid }` silently defeated the
+    attribute and the panel rendered open on load, with the toggle only
+    changing the button's label.
+
+    The markup assertion that `hidden` is present passed throughout,
+    because the suite has no layout engine and the attribute was always
+    there. So this asserts the guard `base.html` already applies to
+    `.btn[hidden]` (`:713`); the collapse itself is confirmed in a
+    browser.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc22"))
+    assert re.search(
+        r"\.unlock-panel\[hidden\] \{[^}]*display:\s*none", html
+    ), "an author display rule would defeat the hidden attribute"
+    # And the attribute is on the element, which is the half that always held.
+    assert re.search(
+        r'id="roster-unlock-panel"[^>]*hidden', html
+    ), "the panel does not carry the hidden attribute"
+
