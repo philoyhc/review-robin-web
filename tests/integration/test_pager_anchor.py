@@ -207,7 +207,12 @@ def test_the_anchored_card_keeps_a_landing_margin(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
 
-    rule = re.search(r"\.table-pager-anchored\s*\{([^}]*)\}", body)
+    # Matched within a selector list: the landing margin is now shared
+    # with `.row-editor-anchored`, and what this pins is that the class
+    # still carries the rule, not that it is alone on the line.
+    rule = re.search(
+        r"\.table-pager-anchored[^{}]*\{([^}]*)\}", body
+    )
     assert rule is not None, "the landing-margin rule is gone"
     assert "scroll-margin-top" in rule.group(1)
 

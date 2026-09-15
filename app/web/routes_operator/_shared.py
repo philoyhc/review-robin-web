@@ -685,6 +685,15 @@ async def _handle_import(
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
         context: dict[str, object] = {
+            # These two are the ids the page's own controls point at.
+            # They were missing here, and Jinja's `Undefined` is falsy
+            # rather than loud — so this re-render emitted `id=""` on
+            # the table card and a bare `#` on every control that
+            # targets it, which means "top of document". The landing
+            # anchors silently did nothing on exactly the page where an
+            # operator is reading hardest: a failed import.
+            "pager_anchor": f"{kind}-table-card",
+            "row_editor_anchor": f"{kind}-row-editor",
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),

@@ -385,6 +385,13 @@
       {# Focused Add / Edit form — same card, below a divider. #}
       {% if edit_mode %}
         <hr class="operator-actions-divider">
+        {# Anchored, because the editor is SPLIT across two cards: the
+           row you type into is in the table below, the heading and
+           Save / Cancel are here. Landing on the table card shows the
+           blank row with Save 84px above the viewport — a row to fill
+           in and no visible way to save it. Landing here puts both on
+           screen. Rung 2b rehomes this block and can revisit. #}
+        <div class="row-editor-anchored" id="{{ row_editor_anchor }}">
         <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
         {% if edit_error %}
           <p class="banner banner-error">{{ edit_error }}</p>
@@ -400,8 +407,11 @@
                     gap: 12px; margin-top: var(--space-3);">
           <button class="btn secondary" type="submit"
                   form="reviewer-edit-form">Save</button>
+          {# Cancel leaves the editor for the list, so it lands where
+             the list is — the same anchor `Clear` and `Search` take. #}
           <a class="btn secondary"
-             href="{{ reviewers_base_url }}">Cancel</a>
+             href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
+        </div>
         </div>
       {% endif %}
     </div>
@@ -545,7 +555,7 @@
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
                   <a class="btn secondary"
-                     href="{{ reviewers_base_url }}?add=1#{{ pager_anchor }}">Add new</a>
+                     href="{{ reviewers_base_url }}?add=1#{{ row_editor_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>

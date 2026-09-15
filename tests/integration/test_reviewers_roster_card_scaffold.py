@@ -832,45 +832,153 @@ def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
     )
 
 
+def _toolbar_right(html: str) -> str:
+    """The right pane's markup, div-balanced.
+
+    `split(...)[1]` returns the rest of the DOCUMENT, so an assertion
+    reading "in the toolbar" would actually mean "at or after it" —
+    first-match semantics hide that until something moves.
+    """
+    marker = '<div class="toolbar-pane toolbar-right">'
+    start = html.index(marker)
+    depth, i = 1, start + len(marker)
+    for tag in re.finditer(r"<div\b|</div>", html[i:]):
+        depth += 1 if tag.group(0) != "</div>" else -1
+        if depth == 0:
+            return html[start:i + tag.end()]
+    raise AssertionError("the right pane never closes")
+
+
 def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
     client, db
 ):
-    """Reported from the dev slot: using `Clear`, `Add new` or `Search`
-    threw the operator to the very top of the page, away from the rows
-    they were filtering.
+    """Reported from the dev slot: `Clear`, `Add new` and `Search` threw
+    the operator to the very top of the page, away from the rows they
+    were filtering.
 
-    Each control reloads the page, and a reload with no fragment lands
-    at the top. The pager solved this at 19J.8 — `#reviewers-table-card`
-    sits on the table card, which carries `scroll-margin-top` — so these
-    take the SAME anchor, and a search lands exactly where a page turn
-    does rather than somewhere of its own.
+    Each reloads the page, and a reload with no fragment lands at the
+    top. The pager solved this at 19J.8 — `#reviewers-table-card` sits
+    on the table card, which carries `scroll-margin-top` — so `Clear`
+    and `Search` take the SAME anchor and land where a page turn does.
 
-    A `GET` form keeps the fragment of its `action`: the submission
-    algorithm replaces the query and leaves the fragment alone. Verified
-    in Chromium, where landing puts the card's top edge 16px below the
-    viewport top.
+    `Add new` does NOT: see the test below.
     """
     rs = _with_reviewers(client, db, "rc35")
     html = _markup(client.get(
         f"/operator/sessions/{rs.id}/reviewers?q=R1"
     ).text)
-    anchor = "#reviewers-table-card"
 
-    # Vacuity guard: `Clear` renders only while a filter is active, so
-    # without this the loop below could pass by finding nothing.
+    # Vacuity guard: `Clear` renders only while a filter is active.
     assert ">Clear</a>" in html, "the filter is not active on this render"
+    right = _toolbar_right(html)
 
-    right = html.split('class="toolbar-pane toolbar-right"')[1]
     form = re.search(r'<form[^>]*method="get"[^>]*>', right, re.S)
     assert form, "the toolbar's filter form is missing"
-    assert anchor in form.group(0), (
-        f"`Search` submits without {anchor}, so it lands at the top of "
-        f"the page: {form.group(0)!r}"
+    assert 'action="/operator/sessions/' in form.group(0)
+    assert re.search(r'action="[^"]*#reviewers-table-card"', form.group(0)), (
+        f"`Search` submits without the anchor: {form.group(0)!r}"
     )
 
-    for label in ("Clear", "Add new"):
-        link = re.search(rf'<a[^>]*>\s*{re.escape(label)}</a>', right, re.S)
-        assert link, f"`{label}` is not in the toolbar"
-        assert anchor in link.group(0), (
-            f"`{label}` lands at the top of the page: {link.group(0)!r}"
-        )
+    clear = re.search(r'<a[^>]*>\s*Clear</a>', right, re.S)
+    assert clear, "`Clear` is not in the toolbar"
+    assert re.search(r'href="[^"]*#reviewers-table-card"', clear.group(0)), (
+        f"`Clear` lands at the top of the page: {clear.group(0)!r}"
+    )
+
+
+def test_add_new_lands_on_the_editor_not_the_table(client, db):
+    """`Add new` enters edit mode, and the editor is SPLIT across two
+    cards: the blank row is in the table, the heading and Save / Cancel
+    are in the card above it.
+
+    Landing on the table card therefore showed the row to fill in with
+    Save 84px ABOVE the viewport — measured in Chromium at both 800px
+    and 1000px tall. A row to type into and no visible way to save it is
+    worse than the jump this segment set out to fix, so this one control
+    takes the editor's anchor instead. Rung 2b rehomes the block and can
+    revisit.
+    """
+    rs = _with_reviewers(client, db, "rc36")
+    html = _markup(client.get(f"/operator/sessions/{rs.id}/reviewers").text)
+    right = _toolbar_right(html)
+
+    add = re.search(r'<a[^>]*>\s*Add new</a>', right, re.S)
+    assert add, "`Add new` is not in the toolbar"
+    assert 'href="' in add.group(0), "vacuity: the disabled variant has no href"
+    assert re.search(r'href="[^"]*#reviewers-row-editor"', add.group(0)), (
+        f"`Add new` lands somewhere other than the editor: {add.group(0)!r}"
+    )
+
+    # ...and the anchor it names exists once edit mode is on, or it is a
+    # fragment pointing at nothing.
+    editing = _markup(
+        client.get(f"/operator/sessions/{rs.id}/reviewers?add=1").text
+    )
+    assert 'id="reviewers-row-editor"' in editing, (
+        "`Add new` points at an id the add-mode render does not have"
+    )
+    assert ">Save<" in editing, "vacuity: not actually in add mode"
+    # Cancel returns to the list, so it lands where the list is.
+    cancel = re.search(r'<a[^>]*>\s*Cancel</a>', editing, re.S)
+    assert cancel and "#reviewers-table-card" in cancel.group(0), (
+        f"`Cancel` lands at the top of the page: {cancel and cancel.group(0)!r}"
+    )
+
+
+def test_a_failed_import_still_renders_real_anchors(client, db):
+    """The re-render that the fix silently did nothing on.
+
+    `_shared.py`'s import-error path builds its own context and did not
+    set `pager_anchor` / `row_editor_anchor`. Jinja's `Undefined` is
+    falsy rather than loud, so the card emitted `id=""` and every
+    control targeting it emitted a bare `#` — which means "top of
+    document". The landing anchors were inert on exactly the page an
+    operator reads hardest.
+    """
+    rs = _with_reviewers(client, db, "rc37")
+    response = client.post(
+        f"/operator/sessions/{rs.id}/reviewers/import",
+        files={"file": ("bad.csv", b"NotAColumn,Nope\nx,y\n", "text/csv")},
+        follow_redirects=False,
+    )
+    # Vacuity guard: this must be the error re-render, not a redirect.
+    assert response.status_code == 400, response.status_code
+    html = _markup(response.text)
+    assert 'id=""' not in html, "an element on the error page has an empty id"
+    assert 'id="reviewers-table-card"' in html
+    assert not re.search(r'(?:href|action)="[^"]*#"', html), (
+        "a control on the error page points at a bare `#`, which means "
+        "the top of the document"
+    )
+
+
+def test_the_busy_indicator_skips_a_same_url_form_submit(client, db):
+    """Giving the filter form a fragment created a second problem.
+
+    Sending it again unchanged now produces a URL identical to the
+    current one — path, query AND fragment — which the navigate
+    algorithm treats as a same-document fragment navigation: no fetch,
+    so no `pageshow`, so the busy indicator arms and never clears until
+    the 60s give-up timer. The click handler has guarded this case for
+    links all along; the submit handler had no counterpart.
+
+    Verified in Chromium that `pageshow` really does not fire on such a
+    submit. This pins the MECHANISM only — the suite has no JS runtime,
+    so it cannot observe the indicator itself.
+    """
+    rs = _with_reviewers(client, db, "rc38")
+    html = _page(client, rs)
+
+    submit_handler = re.search(
+        r'addEventListener\("submit".*?\n\s*\}\);', html, re.S
+    )
+    assert submit_handler, "the submit listener is gone"
+    body = submit_handler.group(0)
+    assert "target.href === window.location.href" in body, (
+        "the submit listener has no same-URL guard, so a filter strip "
+        "sent again unchanged leaves the busy indicator armed"
+    )
+    # ...and it must return rather than fall through to arming.
+    assert re.search(
+        r"if \(target\.href === window\.location\.href\) return;", body
+    ), "the same-URL guard does not actually skip arming"
