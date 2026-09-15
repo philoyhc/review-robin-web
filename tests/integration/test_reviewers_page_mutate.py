@@ -105,7 +105,7 @@ def test_edit_id_renders_target_row_as_inputs(
     # The edited row's name prefilled into an input.
     assert 'name="name"' in body
     assert 'value="Alice"' in body
-    # 19P.1 rung 2b: there is nothing left to grey out. `is-locked`
+    # 19P.1 rung 2b: there is nothing left to gray out. `is-locked`
     # existed so a stray click on the filter or an action button could
     # not throw away a half-typed row; the filter moved to the toolbar
     # at rung 2a and the action buttons to the expander at 2b, and the

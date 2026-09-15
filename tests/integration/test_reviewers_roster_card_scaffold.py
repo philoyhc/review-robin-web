@@ -1049,7 +1049,7 @@ def test_edit_is_offered_for_exactly_one_row(client, db):
     # inverting the ternary — Edit dead at one row, live with an empty
     # id at two. Source-level either way: the suite has no JS runtime,
     # so what a test can reach here is the expression, and the rendered
-    # behaviour is checked in Chromium (one row enabled and carrying
+    # behavior is checked in Chromium (one row enabled and carrying
     # the id, two rows disabled).
     assert re.search(
         r"var editable = sel\.length === 1;", build
