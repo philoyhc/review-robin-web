@@ -289,55 +289,66 @@
     {% include "operator/partials/_field_labels_editor.html" %}
 
     </div>
-
-    <div>
-      {# 19P.1 rung 2b — this card held two things: the selection-driven
-         action row, and the Add / Edit editor below a divider. The
-         action row moved into the row expander, so the card holds only
-         the editor, and renders only when there is one.
-
-         Gated rather than left standing: what was left otherwise was a
-         bordered box titled "Operator actions" offering no operator
-         actions, with an empty `<form>` and an empty `.filter-actions`
-         inside it, on every non-edit load. Step 3 takes the editor out
-         of `.card-columns` entirely and this shell goes with it; the
-         divider goes then too, since there is nothing above it to
-         divide from. #}
-      {% if edit_mode %}
-      <div class="card operator-actions-card">
-      <h2>Operator actions</h2>
-        {# Anchored, because the editor is SPLIT across two cards: the
-           row you type into is in the table below, the heading and
-           Save / Cancel are here. Landing on the table card shows the
-           blank row with Save 84px above the viewport — a row to fill
-           in and no visible way to save it. Landing here puts both on
-           screen. Rung 2b rehomes this block and can revisit. #}
-        <div class="row-editor-anchored" id="{{ row_editor_anchor }}">
-        <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
-        {% if edit_error %}
-          <p class="banner banner-error">{{ edit_error }}</p>
-        {% endif %}
-        <p class="form-help">
-          {% if add_mode %}
-            Fill in the new row below, then Save.
-          {% else %}
-            Edit the highlighted row below, then Save.
-          {% endif %}
-        </p>
-        <div style="display: flex; justify-content: flex-end;
-                    gap: 12px; margin-top: var(--space-3);">
-          <button class="btn secondary" type="submit"
-                  form="reviewer-edit-form">Save</button>
-          {# Cancel leaves the editor for the list, so it lands where
-             the list is — the same anchor `Clear` and `Search` take. #}
-          <a class="btn secondary"
-             href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
-        </div>
-        </div>
-      </div>{# .operator-actions-card #}
-      {% endif %}
-    </div>
   </div>
+
+  {# 19P.1 rung 2b step 3 — the Add / Edit editor gets its own card,
+     full width directly above the preview table, still rendered only
+     in `edit_mode`.
+
+     It was the `Operator actions` card's second tenant, below a
+     divider. Step 2 moved the action row into the row expander and
+     left the shell holding this alone; the shell goes now, and the
+     divider with it, since there is nothing above the editor left to
+     divide it from. `.operator-actions-card` STAYS in `base.html` —
+     Reviewees, Observers, Relationships and Assignments still use it.
+
+     Full width rather than back inside `.card-columns`: the
+     container's only other tenant is the tag-labels editor, and a card
+     that appears only in `edit_mode` would make that column jump
+     between half and full width on every Add. Not folded into the
+     table card's toolbar either — an editing form and a filter strip
+     are two jobs, and the plan rules against mixing them in one strip
+     (`guide/segment_19P_expander_revamp.md`, "Two things the ladder
+     never named").
+
+     The right-aligned Save / Cancel row keeps its inline style. It is
+     not this slice's to extract: a `style=` attribute containing
+     `justify-content: flex-end` appears 16 times across 9 templates
+     under `app/web/templates/`, so a primitive for it is a page-wide
+     change, not a rider on a rehoming. (Stated with its predicate
+     because a line-anchored grep gets 15 — one of the sixteen spans
+     two lines.) #}
+  {% if edit_mode %}
+    {# Still anchored, and for the same reason as before: the editor is
+       SPLIT — the row you type into is in the table below, the heading
+       and Save / Cancel are here. Rehoming narrowed that gap but did
+       not close it, so landing on the table card would still put Save
+       above the viewport. This card sits immediately above that one,
+       so landing HERE shows the heading, Save / Cancel and the top of
+       the table together. Measured in Chromium, not assumed. #}
+    <div class="card row-editor-anchored" id="{{ row_editor_anchor }}">
+      <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
+      {% if edit_error %}
+        <p class="banner banner-error">{{ edit_error }}</p>
+      {% endif %}
+      <p class="form-help">
+        {% if add_mode %}
+          Fill in the new row below, then Save.
+        {% else %}
+          Edit the highlighted row below, then Save.
+        {% endif %}
+      </p>
+      <div style="display: flex; justify-content: flex-end;
+                  gap: 12px; margin-top: var(--space-3);">
+        <button class="btn secondary" type="submit"
+                form="reviewer-edit-form">Save</button>
+        {# Cancel leaves the editor for the list, so it lands where
+           the list is — the same anchor `Clear` and `Search` take. #}
+        <a class="btn secondary"
+           href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
+      </div>
+    </div>
+  {% endif %}
 
 
 
@@ -684,8 +695,6 @@
         display: none;
       }
     </style>
-    <script>
-    </script>
   {% endif %}
 
   {# ------------------------------------------------------------------
@@ -939,18 +948,6 @@
         });
         render();
       })();
-    </script>
-  {% endif %}
-
-  {# Selection → action-button state binding (Segment 15F PR 3).
-     Only runs in the interactive non-edit / non-ready state. #}
-  {% if not edit_mode and is_editable %}
-    <script>
-      {# The `Operator actions` selection script retired with the
-         controls it drove (19P.1 rung 2b). Ticking every box and
-         keeping select-all honest moved into the row-expander script,
-         which is now the single owner of selection state — one script
-         reading the checkboxes rather than two agreeing about them. #}
     </script>
   {% endif %}
 

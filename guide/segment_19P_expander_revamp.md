@@ -235,9 +235,12 @@ Two things the ladder never named, found when the seam was cut:
   divider, a heading, the help line and Save / Cancel, rendered only in
   `edit_mode` (`session_reviewers.html`, `.operator-actions-divider`).
   It stays with the card through 2a and is rehomed when 2b deletes it:
-  its own card in the same position, still `edit_mode`-only, because
-  folding an editing form into a filter toolbar mixes two jobs in one
-  strip.
+  its own card, still `edit_mode`-only, because folding an editing form
+  into a filter toolbar mixes two jobs in one strip. (This said *"in
+  the same position"* until step 3 shipped it **full width above the
+  preview table** instead. Reason in `### Status`, 2026-09-15 step 3 —
+  a card that appears only in `edit_mode` would make the container's
+  other column jump between half and full width on every Add.)
 - **`.card-columns` is left holding the tag-labels editor alone**, half
   width in the left column, from 2a until the Unlock rung deletes it.
   A known intermediate look (`spec/ui_elements.md` names the lone-card
@@ -386,6 +389,48 @@ forgotten.
 retired script only ever set `.checked`. Small and desirable, but the
 record should not call it a relocation.
 
+**2026-09-15 — rung 2b step 3: the editor's own card.** The Add / Edit
+block left `.card-columns` for a full-width `edit_mode`-only card
+directly above the preview table, and the `Operator actions` shell went
+with it. `.operator-actions-card` stays in `base.html` — Reviewees,
+Observers, Relationships and Assignments still use it.
+
+Full width rather than back in the container: its only other tenant is
+the tag-labels editor, and a card appearing only in `edit_mode` would
+make that column jump between half and full width on every Add. The
+container is now the lone half-width card this plan already signs off,
+until the Unlock rung deletes it.
+
+**`row_editor_anchor` does NOT collapse — measured, not assumed.** The
+build note said step 3 would retire it, on the reasoning that it existed
+only because the editor was split across two cards. The editor is still
+split: heading and Save / Cancel in this card, the row you type into in
+the table. Landing on `#reviewers-table-card` in add mode puts Save at
+**-59px**, off-screen above, exactly as before. Rehoming narrowed the
+gap to 20px; it did not close it. Both anchors stay, and rung 4 states
+the pair in `spec/ui_elements.md` §10 as already planned.
+
+**Also cleared:** two `<script></script>` pairs step 2 left behind when
+the code inside them moved, one carrying a comment that duplicated the
+expander script's own.
+
+**What step 3's cold read caught: a guard that lapsed when its subject
+was renamed.** *"Renders only in `edit_mode`"* was stated four times —
+template comment, commit message, plan, and a test comment claiming
+another assertion pinned it — and guarded nowhere. Replacing the gate
+with `{% if true %}` passed all 4,014 tests.
+
+It had been guarded by accident: the editor carried
+`.operator-actions-card`, and `test_reviewers_page_filter.py` asserts
+that class is absent on a plain load. Renaming the card moved the
+editor out from under that assertion, and moving it out of
+`.card-columns` stopped the container's own card count from seeing the
+leak — the two halves of this slice each removed one incidental guard.
+**The generalization for rungs 3 and 4:** when a slice renames or
+rehomes an element, the assertions that watched it by its old class or
+its old parent stop watching, silently and without failing. The guard
+is now explicit and named at both ends.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and
@@ -460,6 +505,8 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed. **Added 2026-09-15 by the mockup:** item 0 calls the guidance card *"a **half-width card**"* (`:52`) and the page's row of the `.card-columns` table (`:94`) sites *every* card above the preview table in that container — on Reviewers the guidance becomes **full width above the container** and `.card-columns` then has no tenant, so that row states the container is absent on this page. The § *Operator actions card* section retires rather than shrinking, and the preview-table section gains the two-pane toolbar that replaces it (Item 1).
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
+- `spec/visual_style_rrw.md` — **added 2026-09-15 by rung 2b step 3's cold read, and NOT found by the blast-radius grep** (which read five files; this was not one). § *Width discipline* (`:79`) names *"Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair"* as the canonical half-width pairing. Step 3 makes that false for Reviewers, which now has one tenant in the container. The lesson is the grep's, not the sentence's: a manifest measured by grepping a chosen file list misses the files not chosen (Item 1).
+- `spec/operator_button_audit.md` — **added 2026-09-15 by the same read:** rows **128 / 129** (`:231-232`, Reviewers Save / Cancel) say the pair is *"shown below the divider in Edit/Add mode"*. There is no divider on Reviewers after step 3 and the pair is in a card of its own, so the *"move to the expander"* bullet above does not cover these two — they moved somewhere else. Also, `:231` gives that `Save` the **Primary** role while the template renders `btn secondary`, identically on all four roster pages: pre-existing and not this item's to fix, but rung 4 is re-reading these exact rows (Item 1).
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by rung 2a's cold read:** row **125** (`:227`) states the Reviewers `Add` label *and* the reason it is short — *"`Add` and `Delete` must both fit this row"*. Rung 2a renames the shipped label to `Add new` and dissolves that constraint (Delete leaves for the expander, so the two are no longer on one row), so the cell and its rationale sentence are both stale. `spec/setup_pages.md` says the same thing twice more — `:241` and `:536` list `Add` in the Operator-actions control set, and `:543` repeats the one-row rationale. A **rename**, which the bullet above covers only as a move (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15 by rung 2a′:** §10's layout-primitive table gains the filter strip. It was three private per-card copies and is now one unscoped base (`.filter-row`, `.filter-row > label`, `.filter-actions`) with three named narrowings, which is what §10 exists to record. Names the `body.ui-v2` prefix on the generic label rule as load-bearing specificity, not scoping (Item 1).
