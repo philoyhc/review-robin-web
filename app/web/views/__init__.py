@@ -100,6 +100,7 @@ from ._setup import (
     SetupRow,
     build_setup_rows,
     chip_slots,
+    reviewer_column_state,
     session_status_pills,
 )
 
@@ -271,6 +272,7 @@ __all__ = [
     "build_scheduled_activation_caption",
     "build_workflow_card_context",
     "chip_slots",
+    "reviewer_column_state",
     "parse_super_failure",
     "constraint_summary_for_field",
     "new_model_usable_tags",

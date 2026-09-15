@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 
 
 def session_scoped(target: Any, session_id: int) -> Select[Any]:
@@ -116,6 +116,66 @@ def tag_slot_presence(
     """
     return {
         f"tag_{slot}": slot_has_data(
+            db,
+            session_id=session_id,
+            column=getattr(model, f"tag_{slot}"),
+            active_only=active_only,
+        )
+        for slot in (1, 2, 3)
+    }
+
+
+def slot_row_count(
+    db: Any,
+    *,
+    session_id: int,
+    column: Any,
+    active_only: bool = False,
+) -> int:
+    """How many rows of ``column``'s model for this session carry a
+    non-empty value in ``column`` (non-NULL and not the empty string).
+
+    The counting twin of :func:`slot_has_data`, same predicate — and, as
+    there, the two filters are not symmetric: ``column != ''`` is the
+    whole predicate on its own, because SQL's ``NULL != ''`` is NULL and
+    so already excludes NULLs, while ``is_not(None)`` alone would let the
+    empty string through. The NULL filter is the redundant one; it is
+    kept because the pair reads as the stated intent and matches the
+    twin line for line.
+
+    Kept separate from ``slot_has_data`` rather than folded into one
+    helper because the costs differ: that one is an indexed ``LIMIT 1``
+    which stops at the first hit, this one counts the session's rows.
+    A caller that only needs "is there any" should stay on the cheaper
+    one. A caller that needs both takes the count and derives presence
+    from it (19P.1) rather than asking the same question twice.
+    """
+    model = column.class_
+    q = (
+        select(func.count())
+        .select_from(model)
+        .where(model.session_id == session_id)
+        .where(column.is_not(None))
+        .where(column != "")
+    )
+    if active_only:
+        q = q.where(model.status == "active")
+    return int(db.execute(q).scalar_one())
+
+
+def tag_slot_counts(
+    db: Any,
+    *,
+    session_id: int,
+    model: Any,
+    active_only: bool = False,
+) -> dict[str, int]:
+    """``{"tag_1": int, "tag_2": int, "tag_3": int}`` — :func:`tag_slot_presence`
+    with counts instead of flags, answered over the **whole roster** for
+    the same reason that one is.
+    """
+    return {
+        f"tag_{slot}": slot_row_count(
             db,
             session_id=session_id,
             column=getattr(model, f"tag_{slot}"),

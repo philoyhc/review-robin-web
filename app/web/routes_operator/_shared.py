@@ -28,7 +28,6 @@ from app.config import settings
 from app.db.models import (
     Instrument,
     Reviewee,
-    Reviewer,
     ReviewSession,
     User,
 )
@@ -712,12 +711,14 @@ async def _handle_import(
                 # them here would render every chip as "no data" on a
                 # failed import, which is exactly when an operator is
                 # looking hardest at which columns arrived.
-                col_data = views.chip_slots(
-                    tag_slot_presence(
-                        db, session_id=review_session.id, model=Reviewer
-                    ),
-                    prefix="tag-",
-                )
+                # 19P.1 — this path re-renders the same template, so it
+                # owes it the same keys. The comment above says why that
+                # matters; ``col_readouts`` is now one of them, and an
+                # absent key would raise in the index row rather than
+                # degrade quietly.
+                column_state = views.reviewer_column_state(db, review_session)
+                col_data = column_state.col_data
+                col_readouts = column_state.readouts
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
@@ -733,6 +734,10 @@ async def _handle_import(
                         column=Reviewee.profile_link,
                     )
                 }
+                # Reviewees have no roster index row yet — 19P.1 pilots on
+                # Reviewers alone. Set rather than left undefined, so the
+                # shared ``context.update`` below always carries the key.
+                col_readouts = []
             context.update(
                 {
                     "total_row_count": len(list_items),
@@ -772,6 +777,7 @@ async def _handle_import(
                         lifecycle.session_response_count(db, review_session)
                     ),
                     "col_data": col_data,
+                    "col_readouts": col_readouts,
                     "edit_id": None,
                     "add_mode": False,
                     "edit_values": None,

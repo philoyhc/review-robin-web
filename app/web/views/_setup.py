@@ -29,8 +29,11 @@ from app.db.models import (
     Invitation,
     Response,
     ReviewSession,
+    Reviewer,
 )
 from app.services import assignments, csv_imports
+from app.services import field_labels as field_labels_service
+from app.services._queries import slot_row_count, tag_slot_counts
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services.text import pluralize
@@ -289,3 +292,78 @@ def chip_slots(
         f"{prefix}{key.removeprefix('tag_')}": value
         for key, value in presence.items()
     }
+
+
+@dataclass(frozen=True)
+class ColumnReadout:
+    """One `Populated columns` chip: the column's operator-facing name and
+    how many rows of the roster carry a value in it."""
+
+    slot: str
+    label: str
+    count: int
+
+
+@dataclass(frozen=True)
+class RosterColumnState:
+    """The roster index row's chips **and** the preview table's
+    column-visibility flags, from one set of queries.
+
+    They answer the same predicate — ``col_data["tag-n"]`` is exactly
+    ``counts["tag_n"] > 0`` — so asking twice would be two round trips
+    for one fact, and would leave a window where a concurrent delete
+    renders a chip reading ``Tag 1 (0)`` (19P.1).
+    """
+
+    readouts: list[ColumnReadout]
+    col_data: dict[str, bool]
+
+
+def reviewer_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Reviewers roster.
+
+    Identity columns (`Name`, `Email`) are always listed — they are
+    required by the CSV contract, so a zero there is itself worth
+    seeing. Tag slots appear only when populated, which is the gate the
+    column chips already used.
+
+    Labels come from ``field_labels.resolve_pair``, the same resolver the
+    preview table's own column headers read, so the index cannot disagree
+    with the table beneath it.
+
+    Reviewers-shaped on purpose: 19P.2 (Observers) is the slice that
+    learns what actually generalizes, and a shape guessed before its
+    second caller exists is a shape guessed wrong.
+    """
+    sid = review_session.id
+    counts = tag_slot_counts(db, session_id=sid, model=Reviewer)
+    readouts = [
+        ColumnReadout(
+            slot="name",
+            label="Name",
+            count=slot_row_count(db, session_id=sid, column=Reviewer.name),
+        ),
+        ColumnReadout(
+            slot="email",
+            label="Email",
+            count=slot_row_count(db, session_id=sid, column=Reviewer.email),
+        ),
+    ]
+    for n in (1, 2, 3):
+        if counts[f"tag_{n}"] == 0:
+            continue
+        readouts.append(
+            ColumnReadout(
+                slot=f"tag-{n}",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewer", f"tag_{n}"
+                ).friendly,
+                count=counts[f"tag_{n}"],
+            )
+        )
+    return RosterColumnState(
+        readouts=readouts,
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
+    )

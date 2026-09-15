@@ -25,7 +25,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
-from app.services._queries import tag_slot_presence
 from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewers import ReviewerOperationError
@@ -190,6 +189,8 @@ def _render_reviewers_page(
             "status": "active",
         }
 
+    column_state = views.reviewer_column_state(db, review_session)
+
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewers.html",
@@ -283,12 +284,12 @@ def _render_reviewers_page(
             # whichever rows this render produced. Keyed by the page's
             # own chip slot names, so the template reads a flag instead
             # of computing one.
-            "col_data": views.chip_slots(
-                tag_slot_presence(
-                    db, session_id=review_session.id, model=Reviewer
-                ),
-                prefix="tag-",
-            ),
+            # 19P.1 — one helper answers the chips' has-data flags and
+            # the roster index row's populated-column counts together.
+            # They are the same predicate, so asking twice would be two
+            # round trips for one fact.
+            "col_data": column_state.col_data,
+            "col_readouts": column_state.readouts,
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,

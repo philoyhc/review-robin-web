@@ -45,6 +45,182 @@
      two row grids): it is full width, and a full-width card inside a
      two-column stack would have to span, which `.card-columns` does
      not do. Its notice reads at the top of the page anyway. #}
+  {# ------------------------------------------------------------------
+     19P.1 rung 1 — the Reviewers roster card, INERT.
+
+     The roster-level surface the three cards below will eventually be
+     absorbed into: the index readouts, and an Unlock panel holding
+     upload / tag labels / danger zone. Every control INSIDE the panel
+     is `disabled`, and nothing here posts to a route. The `Unlock`
+     toggle itself is live — it only flips `hidden`, and the panel has
+     to open for the dev-slot look this slice exists for. The live
+     cards are still present and still live.
+     Rung 2 wires the row actions, rung 3 wires Unlock and deletes them.
+
+     Shape agreed by mockup before any code, after the first attempt
+     was reverted (#2395) — see `guide/segment_19P_expander_revamp.md`
+     Item 1 `### Status`. Notably NOT a one-row table: a table for one
+     row spends header chrome on nothing, and put the index row and the
+     expander in one table, where `:first-child` / `:last-child` rules
+     would couple their padding.
+
+     What the dev slot is being asked: whether the bracket survives
+     sitting above a panel tall enough to push its own row off-screen
+     (`guide/new_ux_ideas.md:270-279`). That needs the panel at its
+     REAL height, so all three confirm affordances render here.
+     ------------------------------------------------------------------ #}
+  <div class="card roster-card" id="roster-card">
+    <p class="form-help roster-card-note">
+      Scaffold preview — the roster's labels, CSV import and delete-all
+      will live behind <strong>Unlock</strong>. Nothing here is wired yet;
+      the live controls are still in the cards below.
+    </p>
+
+    <div class="roster-readouts">
+      <div class="roster-readout">
+        <span class="roster-readout-label">Reviewers roster:</span>
+        <span class="pill pill-count">{{ total_row_count }}
+          reviewer{% if total_row_count != 1 %}s{% endif %}</span>
+      </div>
+      <div class="roster-readout">
+        <span class="roster-readout-label">Populated columns:</span>
+        <span class="roster-readout-values">
+          {# Label and count both come from the server: the label from the
+             same `field_labels.resolve_pair` the preview's own column
+             headers read, so the index cannot disagree with the table
+             below it; the count from `slot_row_count`, because `col_data`
+             is a presence map and never held counts. #}
+          {% for col in col_readouts %}
+            <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
+          {% else %}
+            <span class="roster-readout-empty">none yet</span>
+          {% endfor %}
+        </span>
+      </div>
+    </div>
+
+    {# Suppressed, not disabled, when the session is not editable:
+       `test_field_labels_editor_routes` asserts a locked page carries no
+       "Save labels" anywhere, and the Unlock panel holds one. The
+       readouts above stay — they are informational. #}
+    {% if is_editable and not edit_mode %}
+      <div class="roster-card-actions">
+        <button type="button" class="btn secondary" id="roster-unlock-btn"
+                aria-expanded="false" aria-controls="roster-unlock-panel">
+          Unlock
+        </button>
+      </div>
+
+      <div class="unlock-panel" id="roster-unlock-panel" hidden>
+        <section class="card" aria-labelledby="scaffold-upload-h">
+          <h2 id="scaffold-upload-h">Upload Reviewers</h2>
+          {# Verbatim from the live card, INCLUDING the `Status` value
+             domain and the friendly-label header grammar. Rung 3 rehomes
+             this copy, and the plan waives `spec/csv_contracts.md` from
+             Doc impact on the ground that the grammar is untouched by
+             where the control renders — which stops being true if the
+             move quietly drops the only place an operator is shown it. #}
+          <p class="form-help">
+            CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+            <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional
+            columns: <code>ReviewerTag1</code>, <code>ReviewerTag2</code>,
+            <code>ReviewerTag3</code>, <code>Status</code>
+            (<code>active</code> / <code>inactive</code>; defaults to
+            <code>active</code>).
+            (Friendly tag labels can be keyed into the header after a period,
+            e.g., <code>ReviewerTag1.Tutor</code>.)
+            Other columns are ignored.
+          </p>
+          <input type="file" accept=".csv,text/csv" disabled
+                 aria-label="CSV file (scaffold)">
+          {# ONE tick naming every loss, and each clause suppressed at
+             zero — matching the live card verbatim. The reverted build
+             split this in two and read "0 reviewers and 0 reviewer
+             responses" on an empty roster, while the danger-zone confirm
+             three elements away still named the assignments it drops.
+             One panel must not give two accounts of one destruction. #}
+          {% if total_row_count > 0 %}
+            <label class="confirm-label">
+              <input type="checkbox" disabled>
+              Yes, replace the existing
+              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and delete the
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+              and
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
+            </label>
+          {% endif %}
+          <div class="unlock-col-actions">
+            <button type="button" class="btn secondary" disabled>Upload</button>
+          </div>
+        </section>
+
+        <div class="unlock-right">
+          {# Title and help copy lifted verbatim from the live card this
+             will absorb, so rung 3's move is a rehome and not a rewrite. #}
+          <section class="card" aria-labelledby="scaffold-labels-h">
+            <h2 id="scaffold-labels-h">Reviewer tag labels</h2>
+            <p class="form-help">
+              Rename the three reviewer tag columns for this session. Friendly
+              labels flow through every operator preview surface; leave a cell
+              blank to fall back to the default.
+            </p>
+            <div class="field-labels-row">
+              {% for slot in [1, 2, 3] %}
+                {% set lp = field_label_pair(session, "reviewer", "tag_" ~ slot) %}
+                <label>
+                  <span class="muted">{{ lp.canonical }}</span>
+                  <input type="text" disabled
+                         value="{{ lp.friendly if lp.has_override else '' }}"
+                         placeholder="{{ lp.canonical }}">
+                </label>
+              {% endfor %}
+            </div>
+            <div class="unlock-col-actions">
+              <button type="button" class="btn secondary" disabled>Cancel</button>
+              <button type="button" class="btn secondary" disabled>Save labels</button>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="scaffold-danger-h">
+            <h2 id="scaffold-danger-h">Danger Zone</h2>
+            <label class="confirm-label">
+              <input type="checkbox" disabled>
+              Yes, delete the existing
+              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and their associated
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+              and
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
+            </label>
+            <div class="unlock-col-actions">
+              <button type="button" class="btn destructive" disabled>
+                Delete all reviewers
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          "use strict";
+          var btn = document.getElementById("roster-unlock-btn");
+          var panel = document.getElementById("roster-unlock-panel");
+          if (!btn || !panel) return;
+          btn.addEventListener("click", function () {
+            var open = !panel.hidden;
+            panel.hidden = open;
+            // The label names the state the control moves to, not "Done":
+            // the panel is a lock state, not a form being finished.
+            btn.textContent = open ? "Unlock" : "Lock";
+            btn.setAttribute("aria-expanded", String(!open));
+          });
+        })();
+      </script>
+    {% endif %}
+  </div>
+
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
@@ -450,7 +626,8 @@
               </td>
             </tr>
           {% else %}
-            <tr id="reviewer-row-{{ reviewer.id }}">
+            <tr id="reviewer-row-{{ reviewer.id }}"
+                data-status="{{ reviewer.status }}">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="reviewer-select"
@@ -505,6 +682,188 @@
       }
     </style>
     <script>
+    </script>
+  {% endif %}
+
+  {# ------------------------------------------------------------------
+     19P.1 rung 1 — the row-selection bracket and its action panel, INERT.
+
+     Reuses `base.html`'s `.session-expander` / `.session-expander-bracketed`
+     / `tr.session-row-selected` unchanged. The panel's *interior* uses its
+     own `.row-expander-*` classes rather than the lobby's
+     `.session-expander-body` / `-actions`, because the two layouts differ
+     — a decision to revisit before rung 2 hardens it. The live action row
+     in the Operator actions card is untouched and still does the work;
+     rung 2 moves it here.
+     ------------------------------------------------------------------ #}
+  {% if selectable %}
+    <script>
+      (function () {
+        "use strict";
+        var table = document.getElementById("reviewers-table");
+        var selectAll = document.getElementById("reviewers-select-all");
+        if (!table || !selectAll) return;
+        var body = table.querySelector("tbody");
+        var tickOrder = [];
+        var panel = null;
+
+        function rows() {
+          return Array.prototype.slice.call(
+            body.querySelectorAll("tr[data-status]"));
+        }
+        function selectedRows() {
+          return rows().filter(function (row) {
+            var box = row.querySelector(".reviewer-select");
+            return box && box.checked;
+          });
+        }
+        // Anchors after the most recently ticked row STILL selected, DOM
+        // order as fallback — the rule `sessions_list.html:585` settled.
+        // A single remembered id is not enough: it clears on any untick
+        // and the panel jumps back up the table.
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            var row = document.getElementById(tickOrder[i]);
+            if (!row) continue;
+            var box = row.querySelector(".reviewer-select");
+            if (box && box.checked) return row;
+          }
+          return null;
+        }
+        // Which status actions the selection admits. Inactivate acts on
+        // active rows and Activate on inactive ones, so a selection that
+        // is all one status has exactly one actionable button; rendering
+        // the other offers a control that would no-op on every row.
+        // Orthogonal to arity, which says how many rows each action takes.
+        function statusActions(sel) {
+          var out = [];
+          var hasActive = false;
+          var hasInactive = false;
+          sel.forEach(function (row) {
+            if (row.dataset.status === "active") hasActive = true;
+            else hasInactive = true;
+          });
+          if (hasActive) out.push("Inactivate");
+          if (hasInactive) out.push("Activate");
+          return out;
+        }
+        function visibleColumnCount() {
+          return Array.prototype.filter.call(
+            table.querySelectorAll("thead th"),
+            function (th) { return th.offsetParent !== null; }).length;
+        }
+
+        function build(sel) {
+          var tr = document.createElement("tr");
+          tr.className = "session-expander session-expander-bracketed";
+          tr.id = "reviewers-row-expander";
+          var td = document.createElement("td");
+          td.colSpan = visibleColumnCount();
+          var actions = ["Edit"].concat(statusActions(sel));
+          var html =
+            '<div class="row-expander-body">' +
+              {# `spec/ui_elements.md` .session-row-selected: "**The panel
+                 is a pill-free zone**: its fill resolves to
+                 `--status-info-bg`'s primitive, so a `.pill-count`
+                 rendered inside it reopens the collision one storey
+                 down." Both tokens are `--blue-pale` light and
+                 `--blue-abyss` dark, so a pill here is invisible. The
+                 lobby renders the same fact as bare text
+                 (`sessions_list.html:252-254`); so does this. #}
+              '<span class="row-expander-count"><strong>' + sel.length +
+              "</strong> of " + rows().length + " selected</span>" +
+              '<label class="confirm-label exp-confirm-label">' +
+                '<input type="checkbox" disabled> ' +
+                {{ (
+                     "Yes, delete these and their associated assignments and reviewer responses"
+                     if delete_discards_responses else
+                     "Yes, delete these and their associated assignments"
+                     if delete_discards_assignments else
+                     "Yes, delete these"
+                   ) | tojson }} +
+              "</label>" +
+              '<span class="row-expander-actions">';
+          actions.forEach(function (label) {
+            html += '<button type="button" class="btn secondary" disabled ' +
+                    'aria-disabled="true">' + label + "</button>";
+          });
+          html += '<button type="button" class="btn destructive" disabled ' +
+                  'aria-disabled="true">Delete</button>' +
+                  "</span></div>";
+          td.innerHTML = html;
+          // NB: arity is not expressed here. `Edit` acts on exactly one
+          // row, but every control in this rung is `disabled` already, so
+          // a gate would be indistinguishable from the scaffold state and
+          // untestable. Rung 2 adds it with the wiring. Deliberately not
+          // a no-op branch pretending otherwise.
+          tr.appendChild(td);
+          return tr;
+        }
+
+        function render() {
+          if (panel) { panel.remove(); panel = null; }
+          rows().forEach(function (row) {
+            row.classList.remove("session-row-selected");
+          });
+          var sel = selectedRows();
+          if (!sel.length) return;
+          sel.forEach(function (row) {
+            row.classList.add("session-row-selected");
+          });
+          panel = build(sel);
+          (currentAnchor() || sel[sel.length - 1])
+            .insertAdjacentElement("afterend", panel);
+        }
+
+        // Prune on untick as well as push on tick, and rebuild wholesale
+        // on select-all — the lobby does both (`sessions_list.html:596-614`)
+        // and the anchor is a function of the order, so diverging here
+        // diverges from the rule the plan says 19L settled. A stale entry
+        // for a row that was unticked and re-ticked would anchor the panel
+        // at that row instead of the last one.
+        body.addEventListener("change", function (event) {
+          if (!event.target.classList.contains("reviewer-select")) return;
+          var row = event.target.closest("tr");
+          if (!row) return;
+          tickOrder = tickOrder.filter(function (id) { return id !== row.id; });
+          if (event.target.checked) tickOrder.push(row.id);
+          render();
+        });
+        // Deferred: the existing select-all handler assigns `.checked`
+        // programmatically, which fires no change event, so an immediate
+        // render reads the state from before the click.
+        selectAll.addEventListener("change", function () {
+          tickOrder = selectAll.checked
+            ? rows().map(function (row) { return row.id; })
+            : [];
+          setTimeout(render, 0);
+        });
+
+        // Sorting reorders `tbody`'s children. The panel carries no sort
+        // cells, so it compares null and strands at the bottom, away from
+        // the row it belongs to — and being present when base.html stamps
+        // `rrwOriginalIndex` would shift every index after it, corrupting
+        // the unsorted restore order too. Capture phase, so this runs
+        // before the header's own inline handler: take the panel out
+        // first, put it back against its anchor after.
+        table.addEventListener("click", function (event) {
+          if (!event.target.closest(".rrw-sort-btn")) return;
+          if (panel) { panel.remove(); panel = null; }
+          setTimeout(render, 0);
+        }, true);
+
+        // A selection can arrive already made: the bulk routes redirect
+        // through `_redirect_keeping_selection`, which carries the acted-on
+        // ids as `?selected=` and the server re-checks those boxes. Without
+        // this the restored rows would have neither rails nor a panel until
+        // the operator toggled something. The sibling selection script
+        // calls its own `refresh()` here for the same reason.
+        rows().forEach(function (row) {
+          var box = row.querySelector(".reviewer-select");
+          if (box && box.checked) tickOrder.push(row.id);
+        });
+        render();
+      })();
     </script>
   {% endif %}
 
