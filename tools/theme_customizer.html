@@ -1678,13 +1678,25 @@
         width: 100%;
         box-sizing: border-box;
       }
-      /* `margin-top` and `align-items` are NOT decoration carried over
+      /* `.toolbar-right` cannot supply this as a flex `gap`: its only
+         child is the `<form>`, so the row and the buttons are the
+         form's children and a gap on the pane has nothing to sit
+         between. It has to be a margin here.
+
+         `margin-top` and `align-items` are NOT decoration carried over
          for tidiness — they are what `.operator-actions-card
          .filter-actions` gave this strip before 19P.1 rung 2a moved it
-         out of that card, and neither followed it. The gap between a
-         filter row and its right-flushed buttons is 12px wherever this
-         shape appears (that rule, and `.field-labels-actions`); without
-         it the buttons sat flush against the search box at 0px.
+         out of that card, and neither followed it. Without the margin
+         the buttons sat flush against the search box at 0px. 12px is
+         what all THREE instances of this shape use: that rule,
+         `.filter-card .filter-actions` (Invitations / Responses /
+         Validate), and `.field-labels-actions`.
+
+         `gap` stays at 8px deliberately, unlike the margin. The two
+         card rules use 12px between the buttons, but this is a
+         half-width pane and `.field-labels-actions` — the other rule
+         that lives inside a half-width card — uses 8px too. The mockup
+         this pane was agreed from used 8px.
 
          Second instance of the same root cause as the `is-locked` bug
          two blocks up: a rule scoped to the card the form no longer
@@ -1698,6 +1710,14 @@
         margin-top: var(--space-3);
         flex-wrap: wrap;
       }
+      /* Parity with the four other scopes that hold a form in this
+         shape (`.btn-pair > form`, `.filter-card form`,
+         `.card-action-row form`, `.field-labels-editor form`). The
+         moved form measures 0 on all four sides without it — the UA
+         `form` margin is quirks-mode only — so this buys no pixels;
+         it stops the next reader wondering why this one scope relies
+         on the default when none of its siblings do. */
+      body.ui-v2 .toolbar-right form { margin: 0; }
       @media (max-width: 860px) {
         body.ui-v2 .table-card-toolbar.is-split {
           grid-template-columns: minmax(0, 1fr);
