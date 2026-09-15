@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -157,8 +159,15 @@ def test_an_unpopulated_column_gets_no_chip(client, db):
     assert "Tag 2" not in card, card
 
 
-def test_every_unlock_control_is_inert(client, db):
-    """Scaffold-first means inert controls, not merely greyed ones."""
+def test_every_unwired_unlock_control_is_inert(client, db):
+    """Scaffold-first means inert controls, not merely greyed ones.
+
+    Narrowed at 19P.1 rung 3a, which wired the tag-labels editor: the
+    panel is no longer uniformly inert, so this covers what 3b and 3c
+    have yet to wire. The labels editor is excised by its own card
+    rather than by control name — a name list would silently stop
+    covering anything the partial renames.
+    """
     html = _page(client, _with_reviewers(client, db, "rc7"))
     # Bounded by the Lock control that now follows the panel, not by the
     # <script> that follows that — the old lookahead swept the control
@@ -172,8 +181,19 @@ def test_every_unlock_control_is_inert(client, db):
     assert 'id="roster-unlock-btn"' not in panel.group(0), (
         "the scope swept in the Lock control, which is live by design"
     )
-    controls = re.findall(r"<(?:button|input)\b[^>]*>", panel.group(0))
-    assert controls, "no controls found in the Unlock panel"
+    scope = panel.group(0)
+    labels_card = _div_block(scope, '<div class="card field-labels-editor">')
+    # Not vacuous in either direction: the editor is really in the panel,
+    # and removing it really leaves controls behind to check.
+    assert labels_card, "the wired labels editor is not in the panel"
+    scope = scope.replace(labels_card, "")
+    assert "field-labels-editor" not in scope, "the excision missed a copy"
+
+    controls = re.findall(r"<(?:button|input)\b[^>]*>", scope)
+    assert len(controls) >= 4, (
+        f"only {len(controls)} unwired controls left to check; this test "
+        "passes trivially if the excision took too much"
+    )
     # Match the ATTRIBUTE, not the substring: an `aria-label="… (scaffold)"`
     # must not be able to satisfy this, which is how an earlier version of
     # this assertion passed against an un-disabled control.
@@ -420,11 +440,18 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     rule, not an effect.
     """
     html = _page(client, _with_reviewers(client, db, "rc19"))
-    panel = re.search(r'id="roster-unlock-panel".*?(?=<script>)', html, re.S)
-    assert panel, "Unlock panel not found"
-    body = panel.group(0)
+    # Div-balanced, not `.*?(?=<script>)`. Rung 3a put a real partial in
+    # the panel and the partial ships its own dirty-check script, so the
+    # lookahead truncated the scope after the FIRST card and the two
+    # order assertions below raised rather than failing. A boundary that
+    # moves when the contents change is not a boundary.
+    body = _div_block(
+        html, '<div class="unlock-panel" id="roster-unlock-panel" hidden>'
+    )
 
-    labels = body.index('id="scaffold-labels-h"')
+    # `scaffold-labels-h` went with the hand-copied markup at rung 3a;
+    # the partial renders a plain <h2> under its own card class.
+    labels = body.index('class="card field-labels-editor"')
     danger = body.index('id="scaffold-danger-h"')
     upload = body.index('id="scaffold-upload-h"')
     assert labels < danger < upload, (
@@ -432,11 +459,16 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     )
 
     # The first two share the stack; upload is the grid's second child.
-    stack = re.search(r'<div class="unlock-stack">.*?\n        </div>', body, re.S)
-    assert stack, "left-column stack not found"
-    assert 'id="scaffold-labels-h"' in stack.group(0)
-    assert 'id="scaffold-danger-h"' in stack.group(0)
-    assert 'id="scaffold-upload-h"' not in stack.group(0), (
+    # Div-balanced like the panel scope above it. This was
+    # `.*?\n        </div>` — a boundary anchored on eight spaces of
+    # indentation, which resolved correctly only because nothing in the
+    # stack happened to close at that depth. The panel boundary two
+    # lines up had already broken that way once.
+    stack_html = _div_block(body, '<div class="unlock-stack">')
+    assert stack_html, "left-column stack not found"
+    assert 'class="card field-labels-editor"' in stack_html
+    assert 'id="scaffold-danger-h"' in stack_html
+    assert 'id="scaffold-upload-h"' not in stack_html, (
         "upload belongs in the right column, not the stack"
     )
 
@@ -1179,24 +1211,106 @@ def test_the_editor_card_renders_outside_card_columns(client, db):
     )
 
 
-def test_card_columns_is_left_holding_the_labels_editor_alone(client, db):
-    """In edit mode as well as out of it.
+def test_card_columns_renders_only_where_the_unlock_panel_cannot(client, db):
+    """Rung 3a's complement, from the outside.
 
-    The container used to hold two cards and now holds one, which is the
-    known intermediate look the plan signs off until the Unlock rung
-    deletes the container. Pinned in BOTH modes because the editor was
-    the tenant that appeared only in `edit_mode` — checking the resting
-    page alone would not notice it coming back.
+    The tag-labels editor has two homes and one include: the Unlock
+    panel when the panel can render, `.card-columns` when it cannot. The
+    container therefore appears on exactly the pages the panel does not,
+    and holds that one card when it does appear.
+
+    Was `..._is_left_holding_the_labels_editor_alone`, which asserted the
+    container is always present — true between 2b and 3a, false after.
     """
     rs = _with_reviewers(client, db, "rc-s3-alone")
-    for html in (_markup(_page(client, rs)), _add_page(client, rs)):
-        block = _card_columns(html)
-        assert "Reviewer tag labels" in block, (
-            "the tag-labels editor left the container too"
+
+    # Draft, not editing: the panel renders, so the container must not.
+    resting = _markup(_page(client, rs))
+    assert 'id="roster-unlock-panel"' in resting, "no panel on a draft page"
+    assert 'class="card-columns"' not in resting, (
+        "the container renders alongside the panel — two homes at once"
+    )
+
+    # Add mode: the panel stands down, so the container takes over.
+    adding = _add_page(client, rs)
+    assert 'id="roster-unlock-panel"' not in adding, (
+        "the panel renders during an edit"
+    )
+    block = _card_columns(adding)
+    assert "Reviewer tag labels" in block, (
+        "the editor has no home at all while editing"
+    )
+    assert _count_cards(block) == 1, (
+        "`.card-columns` holds more than the tag-labels editor"
+    )
+
+
+@pytest.mark.parametrize(
+    "state,adding,panel_expected",
+    [("draft", False, True), ("draft", True, False),
+     ("validated", False, True), ("validated", True, False),
+     ("ready", False, False), ("ready", True, False),
+     ("expired", False, False), ("expired", True, False),
+     ("archived", False, False), ("archived", True, False)],
+)
+def test_the_labels_editor_renders_exactly_once_in_every_state(
+    client, db, state, adding, panel_expected
+):
+    """The invariant rung 3a's `unlock_available` exists to hold.
+
+    One include, two positions. Two renders would put two
+    `#field-labels-form-reviewer` ids on one page — and the partial's own
+    script resolves its inputs by `getElementById`, so the dirty-check
+    would drive the wrong copy. Zero renders loses the labels entirely,
+    which on a locked session is the only place they are shown in full
+    (the roster readouts pill only the columns that HOLD data, so a
+    friendly label on an empty tag column appears nowhere else).
+
+    Parametrized over BOTH axes of `unlock_available`, not just the
+    lifecycle: `edit_mode` is the other half, and on an editable session
+    it is the half that decides which home renders. A first version
+    covered the five states at rest only — five of the ten that matter —
+    so a third include gated on `edit_mode` would have rendered the
+    editor twice in add mode with nothing counting it.
+    """
+    rs = _with_reviewers(client, db, f"rc-3a-{state[:5]}-{int(adding)}")
+    review_session = db.get(ReviewSession, rs.id)
+    review_session.status = state
+    db.flush()
+    url = f"/operator/sessions/{review_session.id}/reviewers"
+    if adding:
+        url += "?add=1"
+    response = client.get(url)
+    assert response.status_code == 200
+    html = _markup(response.text)
+    where = f"{state}, add={adding}"
+
+    assert html.count('id="field-labels-form-reviewer"') == 1, where
+    assert html.count("Reviewer tag labels") == 1, where
+
+    # The form's TARGET, in whichever home it landed. Unguarded until a
+    # cold read pointed the fallback copy at `/reviewees/field-labels`
+    # and watched the whole suite pass — a live Save, during an edit,
+    # writing this page's labels onto another roster's and 303ing.
+    assert html.count(
+        f'action="/operator/sessions/{review_session.id}'
+        f'/reviewers/field-labels"'
+    ) == 1, where
+    # ...and all three slots, which the fallback copy also did not pin:
+    # it could be cut to one and nothing failed.
+    for slot in ("tag_1", "tag_2", "tag_3"):
+        assert f'name="{slot}"' in html, f"{where}: {slot} missing"
+
+    in_panel = 'id="roster-unlock-panel"' in html
+    assert in_panel is panel_expected, where
+    if panel_expected:
+        panel = _div_block(
+            html, '<div class="unlock-panel" id="roster-unlock-panel" hidden>'
         )
-        assert _count_cards(block) == 1, (
-            "`.card-columns` holds more than the tag-labels editor"
-        )
+        assert "field-labels-editor" in panel, f"{where}: editor outside panel"
+        assert 'class="card-columns"' not in html, where
+    else:
+        assert "field-labels-editor" in _card_columns(html), where
 
 
 def test_the_editor_card_sits_immediately_above_the_table_card(client, db):
@@ -1275,3 +1389,35 @@ def test_the_editor_card_is_absent_outside_edit_mode(client, db):
     assert 'form="reviewer-edit-form">Save</button>' not in html, (
         "the editor's Save renders with no row to save"
     )
+
+
+@pytest.mark.parametrize(
+    "state,adding",
+    [("draft", False), ("draft", True), ("ready", False), ("archived", False)],
+)
+def test_the_roster_note_claims_nothing_the_page_does_not_show(
+    client, db, state, adding
+):
+    """It names two things: an Unlock control, and live cards below.
+
+    Both are gated; the note was not, so on a locked session it read
+    "the roster's tag labels live behind Unlock" with no Unlock on the
+    page, and "those two are still live in the cards below" with no
+    cards below. Asserted as a biconditional rather than as absence, so
+    it fails whichever side stops matching.
+    """
+    rs = _with_reviewers(client, db, f"rc-note-{state[:4]}-{int(adding)}")
+    review_session = db.get(ReviewSession, rs.id)
+    review_session.status = state
+    db.flush()
+    url = f"/operator/sessions/{review_session.id}/reviewers"
+    if adding:
+        url += "?add=1"
+    html = _markup(client.get(url).text)
+    where = f"{state}, add={adding}"
+
+    note = "live behind" in html
+    unlock = 'id="roster-unlock-btn"' in html
+    cards = 'class="bottom-grid"' in html
+    assert note == unlock, f"{where}: note {note}, Unlock control {unlock}"
+    assert note == cards, f"{where}: note {note}, cards below {cards}"

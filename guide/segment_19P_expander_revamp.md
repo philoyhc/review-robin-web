@@ -431,6 +431,131 @@ rehomes an element, the assertions that watched it by its old class or
 its old parent stop watching, silently and without failing. The guard
 is now explicit and named at both ends.
 
+**2026-09-15 — rung 3, sliced into three. Cut on the response shape of
+each card's own route, measured before cutting.**
+
+| slice | card | its route answers | why here |
+|---|---|---|---|
+| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home until 3c (see the 3a entry below) |
+| **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence |
+| **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last |
+
+**What the cut is made on.** `delete-all` and `field-labels` both 303 back
+to the page (`_setup_reviewers.py:551`, `:590`). The import does not: on a
+parse, confirm or ack failure `_handle_import` **re-renders the Setup page**
+with `issues` (`_shared.py:658`, `:703`), and `validation_results.html` —
+which Reviewers includes *inside* `#upload-csv` — renders them there. Move
+that card into a panel that ships `hidden` and a failed import shows the
+operator a collapsed panel and no errors at all.
+
+**The suite cannot see it.** No JS runtime, so `hidden` is an inert
+attribute: the issues are in the markup and every assertion on them still
+passes. This is the `.is-locked` / `.filter-actions` shape a third time —
+both found on the dev slot, not by the suite. So 3c owes a server-rendered
+**start-open** state, and Chromium is what proves it.
+
+**Why each slice wires AND deletes its own card.** 2b step 1 established
+that `sync` resolves a confirm's button with a first-match
+`querySelector`, so keys are unique page-wide. Wiring before deleting puts
+two `replace-roster` / `delete-all` keys on one page and resolves the
+wrong button. Each control moves exactly once, as at 2b.
+
+**Decided while measuring, so the slices do not re-litigate it:**
+
+- **The labels editor is a shared partial** (`_field_labels_editor.html`,
+  three templates) and the panel currently hand-duplicates its markup. 3a
+  picks one — parameterize the partial or keep the panel's copy and drop
+  the include — but not both: two copies of one editor is the drift the
+  scaffold's own Unlock-button comment refuses for the button.
+- **A gate divergence 3b settles:** the live Danger Zone is
+  `{% if total_row_count and total_row_count > 0 %}` (`:1027`); the panel's
+  scaffold copy renders unconditionally.
+- **No deep links to lose.** `#upload-csv` appears in the other three
+  roster templates and nowhere else — no cross-page fragment targets it.
+- **Three sibling forms in the panel are legal**: the panel is inside no
+  `<form>`, which matters because the import's is `multipart/form-data`
+  and cannot share one with the other two.
+- **The lock interaction is already handled**, not new work:
+  `test_field_labels_editor_routes` asserts a locked page carries no
+  "Save labels" anywhere, which is why the whole panel is suppressed —
+  not disabled — when the session is not editable.
+
+**Intermediate look, accepted:** between 3a and 3c the bottom grid holds
+fewer cards while the panel fills up. Same class as the lone half-width
+`.card-columns` this plan already signs off.
+
+**2026-09-15 — 3a shipped, and acquired a second render the slicing did
+not name.** The Unlock panel is suppressed — not disabled — when the
+session is not editable, because a locked page must carry no
+"Save labels" anywhere; it also stands down in `edit_mode`. But a locked
+page must still *show* the labels
+(`..._renders_editor_disabled_in_every_locked_state`: "the page must not
+offer a control its route will refuse" is about the control, not the
+information), and the roster readouts do not cover it — they pill only
+the columns that HOLD data, so a friendly label on an empty tag column
+would appear nowhere.
+
+**Author's call:** one include, two positions — the panel when it can
+render, `.card-columns` on the exact complement. Not a copy: both read a
+single `{% set unlock_available %}`, and the partial already disables its
+own inputs and drops its buttons when the session is not editable, which
+is what lets one include serve both. Rejected: a read-only labels display
+in the roster card (net-new UI, wants the dev slot first), and dropping
+the locked view (would have meant rewriting a test that encodes a
+deliberate rule).
+
+**So `.card-columns` survives 3a after all** — it is the fallback home
+until 3c. The slicing said it would go here; it goes when the last card
+moves.
+
+**The partial replaced the scaffold's hand-copy, not the reverse.**
+`_field_labels_editor.html` serves three roster templates and already
+took every parameter needed. Its `.field-labels-actions` and the
+scaffold's `.unlock-col-actions` are computed-identical in Chromium
+(`flex` / `flex-end` / 8px / 12px, same 536×37 box), so no rule followed
+the markup. The partial also brought the dirty-check the copy lacked.
+
+**Mutation-tested, the invariant being "exactly once":** both homes
+rendering → 4 fail; the FALLBACK home never rendering → 9, including the
+locked-state rule; and the gate re-spelled as `not is_editable` — the
+drift `unlock_available` exists to prevent, which loses the editor
+mid-edit → 2. (3a's commit called the second of those "neither", which is
+a different mutation with a different count. Removing both includes gives
+13.)
+
+**What 3a's cold read caught, and it was the same mistake twice over.**
+The anti-drift argument above was applied to the gate and NOT to the six
+parameters the partial takes, which 3a spelled out once per home — and
+which had already drifted: the panel built the action from
+`reviewers_base_url`, the fallback hand-built it from `session.id`.
+Pointing the fallback at `/reviewees/field-labels` passed the entire
+suite. That copy renders with `is_editable` true during an edit, so its
+Save was live: the page would have written reviewer labels onto the
+reviewee set and 303'd. The parameters are one hoisted block now, and
+the action and all three slots are asserted in all ten states.
+
+**And "exactly once" was counted in five of ten.** The parametrization
+covered the lifecycle at rest only, dropping `edit_mode` — the axis that
+decides which home renders on an editable session, and half of
+`unlock_available`. Both axes now.
+
+**Also 3a's, also ungated:** the roster card's note ("the tag labels live
+behind Unlock... those two are still live in the cards below") replaced a
+future-tense scaffold string with a present-tense claim and kept its lack
+of a gate, so it was false in three lifecycle states and in edit mode —
+no Unlock control on the page, no cards below. Gated on
+`unlock_available`, as is the bottom grid it refers to, so the note and
+the thing it describes cannot part company.
+
+**Left for rung 4, not 3a's to take:** the partial renders `<div class=
+"card">` with a bare `<h2>` while the panel's other two tenants are
+`<section aria-labelledby>`, so one of three regions is unlabelled —
+closing that means editing a partial three templates share.
+`app/web/templates/guide.html:174-177` tells operators they edit friendly
+tag labels "through the Reviewers, Reviewees and Relationships pages",
+which on Reviewers now means clicking Unlock first, and says nothing
+about it.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and
@@ -459,6 +584,15 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
    friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
    Must not touch `spec/`.
+   *3a amended the middle clause: the `_field_labels_editor` card is **not**
+   deleted. It has two homes — the panel, and its old one on the
+   complement of the panel's condition — because a locked page must still
+   show the labels while carrying no "Save labels". See `### Status`.*
+   *Sliced 2026-09-15 into **3a** (labels), **3b** (Delete-all) and **3c**
+   (Upload), cut on each route's response shape — see `### Status`. Each
+   slice wires its control and deletes its old card together; 3c also
+   owes the panel a server-rendered start-open state, which the ladder
+   never named.*
 4. **The specs, last** — after the cold readers, so the pre-push `spec-writer`
    pass is the final word; the ordering 19O.3's close left untested. **The
    shared-shape problem is this rung's:** `setup_pages.md:47` and `:525` state
@@ -505,6 +639,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed. **Added 2026-09-15 by the mockup:** item 0 calls the guidance card *"a **half-width card**"* (`:52`) and the page's row of the `.card-columns` table (`:94`) sites *every* card above the preview table in that container — on Reviewers the guidance becomes **full width above the container** and `.card-columns` then has no tenant, so that row states the container is absent on this page. The § *Operator actions card* section retires rather than shrinking, and the preview-table section gains the two-pane toolbar that replaces it (Item 1).
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
+- `spec/setup_pages.md` — **added 2026-09-15 by rung 3's slicing:** the Unlock panel needs a stated **start-open** contract, because the CSV import re-renders the page in place on a parse / confirm / ack failure and its issue list renders inside the card the panel absorbs. A panel that always ships collapsed hides the errors. Named here rather than left to 3c, so the behavior is a contract and not an implementation detail of one slice (Item 1).
 - `spec/visual_style_rrw.md` — **added 2026-09-15 by rung 2b step 3's cold read, and NOT found by the blast-radius grep** (which read five files; this was not one). § *Width discipline* (`:79`) names *"Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair"* as the canonical half-width pairing. Step 3 makes that false for Reviewers, which now has one tenant in the container. The lesson is the grep's, not the sentence's: a manifest measured by grepping a chosen file list misses the files not chosen (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by the same read:** rows **128 / 129** (`:231-232`, Reviewers Save / Cancel) say the pair is *"shown below the divider in Edit/Add mode"*. There is no divider on Reviewers after step 3 and the pair is in a card of its own, so the *"move to the expander"* bullet above does not cover these two — they moved somewhere else. Also, `:231` gives that `Save` the **Primary** role while the template renders `btn secondary`, identically on all four roster pages: pre-existing and not this item's to fix, but rung 4 is re-reading these exact rows (Item 1).
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
@@ -515,7 +650,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
 - `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).
 
-- `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page (Item 1).
+- `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page. **Amended 2026-09-15 by 3a:** on Reviewers it is now TWO positions, not one — inside the Unlock panel where the panel can render, in its old home where it cannot (locked, or mid-edit) — so the line states the condition, not just a place (Item 1).
 
 - `spec/csv_contracts.md` — its one editor mention (`:77`) is non-positional, and the friendly-label **header grammar** it owns is untouched by where the control renders (Item 1). <!-- doc-impact-waived: deliberate exclusion — the mention is non-positional and the header grammar is untouched by where the control renders -->
 
