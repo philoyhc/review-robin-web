@@ -135,9 +135,13 @@ def slot_row_count(
     """How many rows of ``column``'s model for this session carry a
     non-empty value in ``column`` (non-NULL and not the empty string).
 
-    The counting twin of :func:`slot_has_data`, same predicate — and the
-    two filters are redundant by design, as they are there: SQL's
-    ``NULL != ''`` is NULL, so either alone already excludes NULLs.
+    The counting twin of :func:`slot_has_data`, same predicate — and, as
+    there, the two filters are not symmetric: ``column != ''`` is the
+    whole predicate on its own, because SQL's ``NULL != ''`` is NULL and
+    so already excludes NULLs, while ``is_not(None)`` alone would let the
+    empty string through. The NULL filter is the redundant one; it is
+    kept because the pair reads as the stated intent and matches the
+    twin line for line.
 
     Kept separate from ``slot_has_data`` rather than folded into one
     helper because the costs differ: that one is an indexed ``LIMIT 1``

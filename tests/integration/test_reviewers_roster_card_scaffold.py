@@ -3,7 +3,7 @@
 Scaffold-first (`CLAUDE.md`): the roster card, its Unlock panel and the
 row-selection expander land with real copy and layout and **nothing
 wired**, so the shape can be looked at on the dev slot before any
-behaviour moves. The three cards they will eventually absorb are still
+behavior moves. The three cards they will eventually absorb are still
 present and still live.
 
 The suite has no JS runtime, so these assert the **mechanism** — markup,
@@ -45,6 +45,29 @@ def _with_reviewers(
         follow_redirects=False,
     )
     return rs
+
+
+def _give_it_assignments(
+    client: TestClient, db: Session, rs: ReviewSession
+) -> None:
+    """A reviewee roster plus generated assignments, so the confirm's
+    optional clauses are reachable."""
+    client.post(
+        f"/operator/sessions/{rs.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nE1,e1@example.com\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{rs.id}/assignments/generate",
+        data={"mode": "all_to_all"},
+        follow_redirects=False,
+    )
 
 
 def _page(client: TestClient, rs: ReviewSession) -> str:
@@ -156,14 +179,31 @@ def test_every_unlock_control_is_inert(client, db):
 def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
     """One panel must not give two accounts of one destruction. The
     reverted build split this in two and dropped the assignments clause
-    the Danger Zone confirm three elements away still named."""
-    html = _page(client, _with_reviewers(client, db, "rc8"))
+    the Danger Zone confirm three elements away still named.
+
+    The roster must actually HAVE assignments for this to test the
+    naming: on a bare roster every optional clause is suppressed, so the
+    label under test is the shortest branch and the regression this test
+    is named for would pass it unchanged.
+    """
+    rs = _with_reviewers(client, db, "rc8")
+    _give_it_assignments(client, db, rs)
+    html = _page(client, rs)
     upload = re.search(
         r'id="scaffold-upload-h".*?(?=id="scaffold-labels-h")', html, re.S
     )
-    assert upload, "upload column not found"
+    danger = re.search(r'id="scaffold-danger-h".*?</section>', html, re.S)
+    assert upload and danger, "scaffold panel columns not found"
     ticks = re.findall(r'<input[^>]*type="checkbox"[^>]*>', upload.group(0))
     assert len(ticks) == 1, f"expected one replace confirm, got {len(ticks)}"
+    # Vacuity guard: prove the clause is reachable at all before asserting
+    # the two confirms agree about it.
+    assert "assignment" in danger.group(0), (
+        "fixture produced no assignments, so this asserts nothing"
+    )
+    assert "assignment" in upload.group(0), (
+        "the replace confirm drops a loss the Danger Zone confirm names"
+    )
 
 
 def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
@@ -185,7 +225,12 @@ def test_the_three_cards_it_will_absorb_are_still_live(client, db):
     rs = _with_reviewers(client, db, "rc10")
     html = _page(client, rs)
     assert 'id="upload-csv"' in html
-    assert "danger-zone" in html
+    # NOT the bare substring `danger-zone`: base.html's stylesheet ships on
+    # every response and mentions it eight times, so that assertion is true
+    # of every page in the app with or without the card. Match the card's
+    # own class attribute instead. (`test_reserved_shade.py` warns about
+    # exactly this trap; 19J.5 hit it three times.)
+    assert 'class="card danger-zone"' in html
     # The live editor's own route, not a string the scaffold prints —
     # deleting the include outright must fail this.
     assert f"/operator/sessions/{rs.id}/reviewers/field-labels" in html
@@ -226,7 +271,7 @@ def test_the_row_expander_script_is_gated_on_selectable(client, db):
     editing = client.get(
         f"/operator/sessions/{rs.id}/reviewers?edit_id={edit_id}"
     ).text
-    # Vacuity guard: the param is `edit_id`, and an unrecognised name is
+    # Vacuity guard: the param is `edit_id`, and an unrecognized name is
     # ignored silently rather than erroring — so a typo here would leave
     # the page in its normal state and the assertions below would pass
     # against the wrong render. Prove edit mode is actually on first.
@@ -245,3 +290,111 @@ def test_rows_carry_their_status_for_the_panel_to_read(client, db):
     assert re.search(
         r'id="reviewer-row-\d+"\s+data-status="active"', html
     ), "rows carry no data-status"
+
+
+def test_the_panel_counts_against_the_rendered_window(client, db):
+    """`N of M selected`, where M is the rows select-all can reach — not
+    the whole roster.
+
+    19I Item 4 settled this for the existing selection pill, whose own
+    comment says why: the rendered window is what makes the
+    cap-versus-match gap legible beside the "Showing N of M" hint. A
+    panel using `total_row_count` would contradict the pill sitting on
+    the same page under a filter.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc14"))
+    assert "rows().length +" in html, "panel counts against the wrong pool"
+    assert "{{ total_row_count }} + \" selected" not in html
+
+
+def test_the_panel_survives_a_sort(client, db):
+    """`_rrwApplySort` reorders every child of `tbody.rrw-rows`. The panel
+    has no sort cells, so it compares null and strands at the bottom —
+    and its presence when `rrwOriginalIndex` is first stamped would shift
+    every index after it. It is removed before the sort and re-anchored
+    after, on the capture phase so it runs first."""
+    html = _page(client, _with_reviewers(client, db, "rc15"))
+    assert '.rrw-sort-btn' in html, "no sort hook"
+    match = re.search(
+        r'table\.addEventListener\("click".*?\}, true\);', html, re.S
+    )
+    assert match, "sort handler is not on the capture phase"
+    assert "panel.remove()" in match.group(0), match.group(0)
+
+
+def test_a_server_restored_selection_renders_its_panel(client, db):
+    """The bulk routes redirect through `_redirect_keeping_selection`,
+    which carries the acted-on ids as `?selected=`; the server re-checks
+    those boxes. Without an init render they would have neither rails nor
+    a panel until the operator toggled something."""
+    rs = _with_reviewers(client, db, "rc16")
+    html = _page(client, rs)
+    row_id = re.search(r'id="reviewer-row-(\d+)"', html).group(1)
+    restored = client.get(
+        f"/operator/sessions/{rs.id}/reviewers?selected={row_id}"
+    ).text
+    # Vacuity guard: prove the server actually restored the tick, or the
+    # assertion below would pass against an unselected page.
+    assert re.search(
+        r'value="%s"[^>]*checked' % row_id, restored
+    ), "server did not restore the selection"
+    # The script seeds tick order from the restored boxes and renders once.
+    assert 'if (box && box.checked) tickOrder.push(row.id);' in restored
+    assert re.search(r'render\(\);\s*\}\)\(\);', restored), \
+        "no init render"
+
+
+def test_the_panel_renders_no_pill(client, db):
+    """`spec/ui_elements.md` .session-row-selected: "**The panel is a
+    pill-free zone**: its fill resolves to `--status-info-bg`'s primitive,
+    so a `.pill-count` rendered inside it reopens the collision one storey
+    down."
+
+    Both tokens resolve to `--blue-pale` light and `--blue-abyss` dark, so
+    a pill in there is not merely off-convention — it is invisible. The
+    lobby renders the same count as bare text.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc17"))
+    builder = re.search(
+        r'function build\(sel\).*?return tr;', html, re.S
+    )
+    assert builder, "panel builder not found"
+    assert "pill-count" not in builder.group(0), builder.group(0)
+    assert "pill" not in builder.group(0), builder.group(0)
+    assert "row-expander-count" in builder.group(0)
+
+
+def test_tick_order_prunes_on_untick_and_rebuilds_on_select_all(client, db):
+    """The anchor is a function of the tick order, and 19L settled the
+    rule — so the maintenance has to match the lobby's
+    (`sessions_list.html:596-614`), which splices on untick and rebuilds
+    wholesale on select-all. A stale entry for a row that was unticked and
+    re-ticked anchors the panel at that row instead of the last one.
+
+    No JS runtime in the suite, so this asserts the mechanism in the
+    shipped source — the same limit the geometry tests state.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc18"))
+    # Anchored on the handler's own `render();` — a bare `});` stops at
+    # the inner filter callback's close and captures half the body.
+    handler = re.search(
+        r'body\.addEventListener\("change".*?render\(\);\s*\}\);', html, re.S
+    )
+    assert handler, "row change handler not found"
+    # The filter runs unconditionally; only the push is gated on checked.
+    body = handler.group(0)
+    filter_at = body.index("tickOrder = tickOrder.filter")
+    push_at = body.index("tickOrder.push")
+    gate_at = body.index("if (event.target.checked)")
+    assert filter_at < gate_at < push_at, (
+        "untick does not prune the tick order"
+    )
+    select_all = re.search(
+        r'selectAll\.addEventListener\("change".*?render, 0\);\s*\}\);',
+        html, re.S
+    )
+    assert select_all, "select-all handler not found"
+    assert "rows().map" in select_all.group(0), (
+        "select-all does not rebuild the tick order"
+    )
+

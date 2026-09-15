@@ -2811,6 +2811,18 @@
         margin-left: auto;
       }
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
+      /* Bare text, not a pill: `spec/ui_elements.md` .session-row-selected
+         makes the panel a pill-free zone, because --selection-panel-bg and
+         --status-info-bg resolve to the same primitive in both themes. The
+         lobby renders its own count the same way. */
+      body.ui-v2 .row-expander-count { font-size: var(--fs-small); }
+      /* The roster card is a flex column with its own gap, so the note
+         inside it drops .form-help's margins rather than stacking them. */
+      body.ui-v2 .roster-card-note { margin: 0; }
+      body.ui-v2 .roster-readout-empty {
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
       /* A destructive-confirm tick and its sentence, per
          `spec/ui_elements.md` "Delete-confirm standard": the checkbox
          stays on the first line of a sentence that wraps. Normal weight
