@@ -191,7 +191,7 @@ def test_every_unwired_unlock_control_is_inert(client, db):
     assert "field-labels-editor" not in scope, "the excision missed a copy"
 
     danger = re.search(
-        r'<section class="card" aria-labelledby="reviewers-danger-h">'
+        r'<section[^>]*aria-labelledby="reviewers-danger-h"[^>]*>'
         r'.*?</section>', scope, re.S,
     )
     assert danger, "the wired Danger Zone is not in the panel"
@@ -268,7 +268,7 @@ def test_only_the_upload_card_is_left_to_absorb(client, db):
     Was `..._three_cards_it_will_absorb_are_still_live`.
     """
     rs = _with_reviewers(client, db, "rc10")
-    html = _page(client, rs)
+    html = _markup(_page(client, rs))
 
     # Still below the table, still to move at 3c.
     assert 'id="upload-csv"' in html
@@ -279,10 +279,18 @@ def test_only_the_upload_card_is_left_to_absorb(client, db):
     # card. Match the card's own class attribute instead.
     # (`test_reserved_shade.py` warns about exactly this trap; 19J.5 hit
     # it three times, and 19P.1 three more.)
-    assert 'class="card danger-zone"' not in html, (
+    panel = _panel(html)
+    # Scoped two ways, because a bare `"danger-zone" not in ...` fails
+    # both: the card kept that class when it moved (it is the only reach
+    # for the amber warning framing), and `base.html`'s inline
+    # stylesheet mentions `.danger-zone` in a COMMENT, so the word is on
+    # every page in the app. `_markup()` strips the stylesheet; removing
+    # the panel leaves what is below the table; and the needle is the
+    # class ATTRIBUTE, not the word.
+    below = _markup(html).replace(panel, "")
+    assert 'class="card danger-zone"' not in below, (
         "the retired Danger Zone card is back below the table"
     )
-    panel = _panel(html)
     assert 'aria-labelledby="reviewers-danger-h"' in panel, (
         "the Danger Zone is neither below the table nor in the panel"
     )
@@ -1669,9 +1677,16 @@ def test_the_editor_bar_spans_the_row_it_hangs_from(client, db):
 
 
 def _danger(html: str) -> str:
+    """The Danger Zone card in the panel, found by its heading id.
+
+    Not by an exact class string: these regexes pinned
+    `class="card" aria-labelledby=…` and broke the moment the card got
+    its `danger-zone` class back, which is the attribute most likely to
+    change on a card.
+    """
     m = re.search(
-        r'<section class="card" aria-labelledby="reviewers-danger-h">'
-        r".*?</section>", _panel(html), re.S,
+        r'<section[^>]*aria-labelledby="reviewers-danger-h"[^>]*>.*?</section>',
+        _panel(html), re.S,
     )
     return m.group(0) if m else ""
 
@@ -1693,8 +1708,31 @@ def test_the_danger_zone_is_wired_in_the_panel(client, db):
     assert 'name="confirm" value="true"' in card, "no confirm to tick"
     assert 'data-delete-confirm="delete-all"' in card
     assert 'data-delete-btn="delete-all"' in card
-    assert "disabled" in card, "the destructive button starts enabled"
+    # The ATTRIBUTE, not the substring. `aria-disabled="true"` contains
+    # "disabled", so the bare needle is true of this card whether or not
+    # the button ships disabled — proved by dropping only `disabled` and
+    # watching this pass. The correct form is twenty lines up in this
+    # same file, with a comment explaining exactly why the substring
+    # will not do; this test did not reuse it.
+    button = re.search(r"<button[^>]*data-delete-btn[^>]*>", card)
+    assert button, "no destructive button in the card"
+    assert re.search(r"(?:^|\s)disabled(?:[=\s>]|$)", button.group(0)), (
+        "the destructive button starts enabled"
+    )
     assert "btn destructive" in card, "not the destructive role"
+
+    # The card's identity, which nothing else held: the heading text
+    # (`spec/setup_pages.md` names this card "Danger Zone"), the class
+    # that reaches `base.html`'s amber warning framing, and the
+    # `.confirm-label` this slice kept the scaffold's markup FOR. All
+    # three could be changed with the suite green.
+    assert ">Danger Zone</h2>" in card, "the card lost its name"
+    assert "danger-zone" in card, (
+        "the card lost the class that frames it as destructive"
+    )
+    assert 'class="confirm-label"' in card, (
+        "the confirm lost the class kept over the live card's inline style"
+    )
 
     # One pair on the page. `sync` resolves a confirm's button with a
     # first-match `querySelector`, so a second pair keyed the same way
@@ -1730,21 +1768,16 @@ def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
     assert _danger(_markup(_page(client, _with_reviewers(client, db, "rc-3b-full"))))
 
 
-def test_the_delete_all_confirm_carries_the_response_acknowledgement(
-    client, db
-):
-    """Without the hidden field the route's `_require_response_loss_ack`
-    400s, so Delete-all is unreachable on any session that has collected
-    an answer — which is exactly when an operator wants it.
-
-    Asserted as a biconditional against the label's own response clause,
-    so the field and the thing it acknowledges cannot part company.
-    """
-    rs = _with_reviewers(client, db, "rc-3b-ack")
-    card = _danger(_markup(_page(client, rs)))
-    names_responses = "reviewer response" in card
-    has_ack = 'name="acknowledge_response_loss"' in card
-    assert names_responses == has_ack, (
-        f"label names responses: {names_responses}, "
-        f"acknowledgement sent: {has_ack}"
-    )
+# The response acknowledgement is NOT tested here. A test lived at this
+# point that asserted `("reviewer response" in card) == (ack in card)`
+# against `_with_reviewers` — a fixture with no responses — so both
+# sides were False and it asserted nothing. Deleting the hidden field
+# from the template left it green.
+#
+# `test_setup_danger_zone_delete_all.py` already covers the contract
+# properly and better: it builds an instrument, an assignment and saved
+# responses, is parametrized across all four roster pages, and finds
+# the form by its action URL, so it followed Reviewers' form into the
+# panel without being re-aimed. Three of its tests fail when the field
+# goes. Duplicating that fixture here to re-assert the same thing would
+# be a second, weaker copy of a guard that works.

@@ -611,14 +611,56 @@ the wrong button.
 
 **The gate divergence, settled the live card's way.** The scaffold copy
 rendered unconditionally; the live card was `{% if total_row_count > 0 %}`.
-An empty roster offering "delete the existing 0 reviewers" is a
-destructive control with nothing to destroy, and the route refuses it
-anyway.
+
+**Corrected by the cold read: the route does NOT refuse an empty
+delete-all.** POSTed on a roster of zero it answers 303 and writes an
+audit row reading "Deleted all 0 reviewers". The gate is still right,
+and for a worse reason than the one first recorded: `_delete_all` opens
+with `lifecycle.invalidate_if_validated(...)` before it counts anything,
+so an ungated Delete-all knocks a `validated` session back to `draft`
+while deleting nothing. The wrong reason had shipped in the template
+comment and in this entry — a `guide/` record is what the next reader
+trusts, so the correction matters more than the original claim did.
 
 **Kept the scaffold's markup, not the live card's**, where they differed:
 `.confirm-label` carries the `font-weight: normal` the live card set
 inline, plus the checkbox alignment, and `CLAUDE.md` asks for a class
 over an inline style.
+
+**What else the read caught, all of it mine.** Two of the four guards
+this slice added did not guard: `"disabled" in card` is satisfied by
+`aria-disabled="true"`, and the acknowledgement test ran against a
+fixture with no responses, so it asserted `False == False`. The first is
+the **fourth** instance of this segment's own trap — a needle matching
+something the page renders anyway — and it was committed inside the test
+whose docstring is about scoping assertions so page-wide substrings
+cannot satisfy them. The correct matcher was twenty lines up in the same
+file. The acknowledgement contract turned out to be covered properly and
+better by `test_setup_danger_zone_delete_all.py`, which builds real
+responses and is parametrized across all four pages, so the weak copy is
+retired rather than repaired.
+
+**And the class the move dropped silently:** `card danger-zone` is the
+only reach for `base.html`'s amber warning framing, which
+`spec/ui_elements.md` says exists so the category is recognisable. The
+first draft rewrote the element instead of moving it and recorded no
+decision either way; the class is back, and whether amber reads well
+inside the panel's own frame is a dev-slot question rather than a silent
+one.
+
+**Also corrected:** the commit claimed six tests pinned the old card and
+"five re-aimed, one renamed" — it was five tests, four re-aimed plus one
+renamed; two hunks in one test were counted twice. And "the destructive
+button shipped enabled -> 3 fails" was 1, from a pre-existing repo-wide
+source check, not from anything this slice added.
+
+**`?unlocked=1` on delete-all.** The plan's cut table justified 3b as
+"redirect-only" because this route answers 303 like 3a's. It matched the
+status code, not the contract: moving a control into the panel means its
+redirect has to keep the panel open, which 3a's labels save needed and
+3b shipped without. Fixed, and the lesson for 3c is that "redirect-only"
+was the wrong axis — what matters is whether the control ends up inside
+the panel, which is true of all three.
 
 **Found while guarding it:** the roster card's note promised delete-all
 behind Unlock on a roster where the Danger Zone does not render. The
@@ -709,6 +751,8 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed. **Added 2026-09-15 by the mockup:** item 0 calls the guidance card *"a **half-width card**"* (`:52`) and the page's row of the `.card-columns` table (`:94`) sites *every* card above the preview table in that container — on Reviewers the guidance becomes **full width above the container** and `.card-columns` then has no tenant, so that row states the container is absent on this page. The § *Operator actions card* section retires rather than shrinking, and the preview-table section gains the two-pane toolbar that replaces it (Item 1).
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
+- `spec/lifecycle.md` — **added 2026-09-15 by rung 3b's cold read, and this file is on NO existing bullet.** `:347` and `:401` both say "the mutating-card grid (Upload, Danger Zone) is hidden" when a session freezes. The gate behaviour is unchanged, but the card's stated home is not — the Danger Zone is in the Unlock panel now, and §5 is where `operator_ui_concept.md:267` points for this card (Item 1).
+- `spec/visual_style_rrw.md` — **added 2026-09-15 by the same read:** `:262` sites the Danger Zone "at the bottom-right of the page (or in the bottom row of a `.bottom-grid`)", which rung 3b falsifies. The only existing bullet for this file names `:79`, and that bullet says in as many words that the blast-radius grep missed the file once already — so it missed a second line in it. Also price at rung 4: if the amber framing is ever dropped inside the panel, `:241` and `spec/ui_elements.md:188-195` become false of Reviewers as a matter of pixels, not placement (Item 1).
 - `spec/setup_pages.md` — **added 2026-09-15 by the UI pass's cold read:** `:861-865` states the row-action redirect contract for all four pages — it "preserves the row selection (`?selected=`) and the active search / status filter". On Reviewers it now also carries `offset=` and a `#reviewer-row-<id>` fragment, and `:644`'s delete redirect carries `offset=` and `#reviewers-table-card`. Stated per page, since the other three are unchanged (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15 by the same read:** §10 states the landing contract as `#<noun>-table-card` with `scroll-margin-top` on the card. There are now three targets and **none of them is a card**: `#<noun>-table-card` (the pager and the filter strip), `#<noun>-row-editor` on the add `<tr>`, and `#<noun>-row-<id>` on any row, both at 88px. Corrected 2026-09-15 — an earlier version of this bullet named the editor card, which has since been retired. `tr.row-action-target` and `.roster-card`'s own `scroll-margin-top` are new `base.html` primitives and §10 is where those are recorded. Supersedes the earlier bullet's "state the landing contract once, for both" — it is for three (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15:** `:592` says `.session-row-selected` is "not a general primitive" and "deliberately not promoted". The UI pass applies it to a server-rendered EDIT row on a Setup page — a row that is not selected at all. The existing bullet covers the page transfer (lobby → Setup); this is the **semantic** one, selection → edit state, and §6/§10 should say which meanings the class now carries (Item 1).

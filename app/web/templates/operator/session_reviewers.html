@@ -274,9 +274,16 @@
 
              The scaffold rendered this unconditionally while the live
              card it replaces was `{% if total_row_count > 0 %}`. The
-             gate wins: "delete the existing 0 reviewers" offers an
-             operator a destructive control with nothing to destroy, and
-             the route would refuse it anyway.
+             gate wins, and the reason recorded here first was wrong:
+             the route does NOT refuse an empty delete-all. POSTed on a
+             roster of zero it answers 303 and writes an audit row
+             reading "Deleted all 0 reviewers".
+
+             The real reason is worse than a no-op. `_delete_all` opens
+             with `lifecycle.invalidate_if_validated(...)` before it
+             counts anything, so an ungated Delete-all knocks a
+             `validated` session back to `draft` while deleting nothing
+             at all.
 
              The scaffold's `.confirm-label` is kept over the live
              card's `<label style="font-weight: normal;">` — the class
@@ -292,7 +299,18 @@
              `_require_response_loss_ack` 400s and Delete-all is
              unreachable on any session that has collected an answer. #}
           {% if total_row_count and total_row_count > 0 %}
-          <section class="card" aria-labelledby="reviewers-danger-h">
+          {# `danger-zone` kept, not dropped. It is the only reach for
+             `base.html`'s amber framing, which `spec/ui_elements.md`
+             §.card.danger-zone says exists "so the operator's eye
+             recognises the category" — and the other three roster pages
+             still carry it, so dropping it here would make one
+             destructive control plain and three amber. The first draft
+             of this slice lost the class by rewriting the element
+             instead of moving it, and recorded no decision either way.
+             Whether amber reads well INSIDE the panel's own frame is a
+             dev-slot question; losing it silently was not. #}
+          <section class="card danger-zone"
+                   aria-labelledby="reviewers-danger-h">
             <h2 id="reviewers-danger-h">Danger Zone</h2>
             <form method="post"
                   action="{{ reviewers_base_url }}/delete-all">
@@ -1199,7 +1217,8 @@
     </script>
   {% endif %}
 
-  {# Upload + Danger Zone (Segment 19I Item 3). Was
+  {# Upload (Segment 19I Item 3; the Danger Zone this note used to name
+     alongside it moved into the Unlock panel at 19P.1 rung 3b). Was
      ``not is_ready``, which left both rendering on ``expired``
      and ``archived`` where the import and the delete-all both
      409. The author's rule for rows — draft and validated edit,

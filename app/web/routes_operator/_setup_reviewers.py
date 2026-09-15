@@ -623,8 +623,22 @@ def reviewers_delete_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
+    # `?unlocked=1`, for the reason the labels save needed it at rung
+    # 3a: this control lives INSIDE the Unlock panel now, and a bare
+    # redirect closes the panel the operator was working in. The Danger
+    # Zone itself is gone from the response — the roster is empty, and
+    # the card is gated on rows — but the panel's other two tenants are
+    # not, and uploading a replacement roster is the likely next move.
+    #
+    # The plan's cut table justified 3b as "redirect-only" because this
+    # route answers 303 like 3a's. It matched the status code; it did
+    # not match the contract, which is what moving a control into the
+    # panel actually costs.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewers"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
