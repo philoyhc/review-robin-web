@@ -385,11 +385,21 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
 
         # Left column in full, then right column in full — the source
         # order only a single container of two column stacks produces.
-        order = [
-            body.index(CARD),
-            body.index("field-labels-form"),
-            body.index('class="card operator-actions-card"'),
-        ]
+        #
+        # Reviewers' right-hand card is conditional since 19P.1 rung
+        # 2b: the `Operator actions` row moved into the row expander,
+        # so the card holds only the Add / Edit editor and renders only
+        # in edit mode. On a plain load its column is empty, which the
+        # order check simply has one fewer member for — the claim about
+        # source order is unchanged for the cards that ARE there.
+        order = [body.index(CARD), body.index("field-labels-form")]
+        card = 'class="card operator-actions-card"'
+        if card in body:
+            order.append(body.index(card))
+        else:
+            assert page == "reviewers", (
+                f"{page} lost its operator-actions card unexpectedly"
+            )
         assert order == sorted(order), (page, order)
 
         # No row grid above those three. The Upload / Danger Zone pair

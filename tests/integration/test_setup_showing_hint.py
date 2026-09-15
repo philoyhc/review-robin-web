@@ -103,8 +103,19 @@ def _table_card(body: str, page: str) -> str:
 
 
 def _strip(body: str) -> str:
-    """The operator-actions card, up to the end of its filter form."""
-    start = body.index('class="card operator-actions-card"')
+    """The operator-actions card, up to the end of its filter form.
+
+    Returns `""` when the card is absent. Reviewers stopped rendering
+    it outside edit mode at 19P.1 rung 2b — the action row moved into
+    the row expander and the card holds only the Add / Edit editor —
+    so "the hint is not in the strip" is trivially true there. The
+    tests below say so rather than pretending to slice a card that is
+    not on the page.
+    """
+    marker = 'class="card operator-actions-card"'
+    if marker not in body:
+        return ""
+    start = body.index(marker)
     return body[start : body.index("</form>", start)]
 
 

@@ -125,10 +125,25 @@ def test_the_selection_surface_is_gone_once_the_session_is_frozen(
     body = _render(client, s, page)
 
     assert f'class="{SELECT_CLASS[page]}"' not in body, "no row checkboxes"
+    assert f'id="{page}-bulk-form"' not in body, "no bulk form"
+
+    if page == "reviewers":
+        # The ids below stopped existing in EVERY state at 19P.1 rung
+        # 2b, so asserting their absence here can no longer fail — a
+        # cold read caught that three of this test's five assertions had
+        # gone permanently vacuous. What still has to be absent when the
+        # session is frozen is the expander that replaced them.
+        # Needles are the expander's OWN — the roster lock card also
+        # carries a `data-delete-confirm`, and it renders when frozen,
+        # so a bare attribute check would fail on an unrelated gate.
+        assert 'tr.id = "reviewers-row-expander"' not in body, "no builder"
+        assert "reviewers-bulk-delete" not in body, "no delete gate"
+        assert "/bulk-delete" not in body, "no route to delete with"
+        return
+
     assert f'id="{page}-delete-btn"' not in body, "no Delete"
     assert f'id="{page}-edit-btn"' not in body, "no Edit"
     assert f'id="{page}-delete-confirm"' not in body, "no delete gate"
-    assert f'id="{page}-bulk-form"' not in body, "no bulk form"
 
 
 @pytest.mark.parametrize("page", CHECKBOX_PAGES)

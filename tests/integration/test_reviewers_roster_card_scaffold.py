@@ -1042,8 +1042,24 @@ def test_edit_is_offered_for_exactly_one_row(client, db):
     """
     rs = _with_reviewers(client, db, "rc41")
     build = _builder(_page(client, rs))
-    assert "sel.length === 1" in build, "no arity gate on Edit"
-    assert "data-edit-id" in build, "Edit carries no row to edit"
+
+    # Pins the DIRECTION, not just the presence of a gate. The first
+    # version asserted `"sel.length === 1" in build` and
+    # `"data-edit-id" in build`, and a cold read showed both survive
+    # inverting the ternary — Edit dead at one row, live with an empty
+    # id at two. Source-level either way: the suite has no JS runtime,
+    # so what a test can reach here is the expression, and the rendered
+    # behaviour is checked in Chromium (one row enabled and carrying
+    # the id, two rows disabled).
+    assert re.search(
+        r"var editable = sel\.length === 1;", build
+    ), "no arity gate on Edit"
+    assert re.search(
+        r"""\(editable\s*\?\s*' data-edit-id="'""", build
+    ), (
+        "the arity gate is inverted or restructured: Edit must carry the "
+        "row id when `editable`, not when it is not"
+    )
 
 
 def test_edit_lands_on_the_editor_not_the_table(client, db):
@@ -1065,14 +1081,33 @@ def test_the_status_actions_are_offered_only_where_they_act(client, db):
     """One status in the selection offers one action; a mixed selection
     offers both. Measured in Chromium across all four cases."""
     html = _page(client, _with_reviewers(client, db, "rc43"))
-    # `statusActions` is defined above `build`, so this reads the whole
-    # script rather than the builder slice.
+
+    # Pins the MAPPING, both halves of it. The first version asserted
+    # that the status check and `statusActions(sel)` merely appeared,
+    # and a cold read showed that swapping the two labels — offering
+    # `Activate` for active rows, a no-op on every one of them — left
+    # every test in the file passing.
+    #
+    # Active rows are the ones Inactivate can act on, and vice versa;
+    # an action offered for the status it cannot change is a control
+    # that does nothing. `statusActions` is defined above `build`, so
+    # this reads the whole script.
+    assert re.search(
+        r'if \(hasActive\) out\.push\("Inactivate"\);', html
+    ), "active rows are not offered `Inactivate`"
+    assert re.search(
+        r'if \(hasInactive\) out\.push\("Activate"\);', html
+    ), "inactive rows are not offered `Activate`"
     assert 'row.dataset.status === "active"' in html, (
         "the expander no longer reads row status"
     )
-    assert "statusActions(sel)" in _builder(html), (
-        "the buttons are no longer status-aware"
-    )
-    # ...and the mapping from label to route, which is what makes the
-    # offered button the one that acts.
-    assert '"/bulk-inactivate" : "/bulk-reactivate"' in _builder(html)
+
+    # ...and the label -> route mapping, which is the second place the
+    # same swap could hide.
+    build = _builder(html)
+    assert "statusActions(sel)" in build, "the buttons are not status-aware"
+    assert re.search(
+        r'label === "Inactivate"\s*\?\s*"/bulk-inactivate"\s*:\s*'
+        r'"/bulk-reactivate"',
+        build,
+    ), "the label no longer maps to the route that performs it"

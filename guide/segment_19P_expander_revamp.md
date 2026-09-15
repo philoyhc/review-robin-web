@@ -364,11 +364,27 @@ the route, so it rides with the expander's confirm exactly as it did in
 the card.
 
 **A consequence worth stating for rung 3.** Markup moved into a JS
-builder is invisible to server-side substring tests — `tojson` escapes
-its quotes, so `id="x"` reaches the response as `id=\"x\"`. Eleven
-tests across six files asserted the card's shape; each was re-aimed
-rather than deleted, at the builder where the contract now lives or at
-the three roster pages that still have a card.
+builder is harder to assert on server-side, in two different ways: the
+two `tojson`-interpolated fragments arrive escaped (`id="x"` as
+`id=\"x\"`), while hand-written JS literals arrive verbatim — so a
+needle may need either form, and an *absence* check must strip
+`<script>` or it reads the builder's own literals as rendered markup.
+Eleven tests across six files asserted the card's shape; each was
+re-aimed rather than deleted.
+
+**The Decision's "action list" is superseded on this page, deliberately.**
+Item 1's `### Decision` calls for *"a helper taking an action list, not
+one hard-coding it"*, because Observers has a fourth action. Rung 2b
+hardcodes three emissions instead. Rung 1's list construct
+(`["Edit"].concat(statusActions(sel))`) had gone unused and was
+removed; the generalization belongs with the second page that needs it,
+where its shape will be known rather than guessed. **19P.2 owes the
+helper**, and this note is the record that it is owed rather than
+forgotten.
+
+**Net-new, not moved:** select-all gained an `indeterminate` state. The
+retired script only ever set `.checked`. Small and desirable, but the
+record should not call it a relocation.
 
 ### PR ladder
 

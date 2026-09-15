@@ -291,45 +291,21 @@
     </div>
 
     <div>
+      {# 19P.1 rung 2b — this card held two things: the selection-driven
+         action row, and the Add / Edit editor below a divider. The
+         action row moved into the row expander, so the card holds only
+         the editor, and renders only when there is one.
+
+         Gated rather than left standing: what was left otherwise was a
+         bordered box titled "Operator actions" offering no operator
+         actions, with an empty `<form>` and an empty `.filter-actions`
+         inside it, on every non-edit load. Step 3 takes the editor out
+         of `.card-columns` entirely and this shell goes with it; the
+         divider goes then too, since there is nothing above it to
+         divide from. #}
+      {% if edit_mode %}
       <div class="card operator-actions-card">
       <h2>Operator actions</h2>
-      {# Filter + action buttons grey out (``is-locked``) while a
-         row is being edited / added; the Add / Edit form below the
-         divider stays interactive. #}
-      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        {# 19P.1 rung 2a — the filter strip and `Add` have moved into the
-           preview table's toolbar. What is left is the selection-driven
-           action row, which stays live until rung 2b wires the expander
-           and deletes this card: it holds the only working `Edit` /
-           `Inactivate` / `Activate` / `Delete` on the page. #}
-        <form method="get" action="{{ reviewers_base_url }}"
-              class="operator-actions-filter">
-          <div class="filter-actions">
-            {# Segment 19I Item 3 — the mutating controls render
-               only where they can act. Clear, Search and the
-               "Showing N of M" hint stay: reading a finished
-               session's roster is legitimate. #}
-            {# 19P.1 rung 2b — Edit / Inactivate / Activate / Delete
-               moved into the row expander, where the rows they act on
-               are. Nothing replaces them here: a second copy would be a
-               second thing to keep in sync, and the selection reaches
-               the POST through the row checkboxes' own `form=`
-               regardless of where the button lives. #}
-          </div>
-          {# Second action row (Segment 19I Item 2): what the
-             page is showing, what is selected, and the delete
-             gate — one kind of thing, inline and flush right,
-             leaving the row above to the controls. The gate
-             sits with the count because it is about the
-             count. #}
-          {# The count and the delete gate went with the buttons: the
-             gate is about the selection, and the selection is marked in
-             the table now. The expander carries both. #}
-        </form>
-      </div>
-      {# Focused Add / Edit form — same card, below a divider. #}
-      {% if edit_mode %}
-        <hr class="operator-actions-divider">
         {# Anchored, because the editor is SPLIT across two cards: the
            row you type into is in the table below, the heading and
            Save / Cancel are here. Landing on the table card shows the
@@ -358,8 +334,8 @@
              href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
         </div>
         </div>
+      </div>{# .operator-actions-card #}
       {% endif %}
-    </div>
     </div>
   </div>
 
@@ -713,15 +689,18 @@
   {% endif %}
 
   {# ------------------------------------------------------------------
-     19P.1 rung 1 — the row-selection bracket and its action panel, INERT.
+     19P.1 — the row-selection bracket and its action panel. WIRED at
+     rung 2b: these are the page's only `Edit` / `Inactivate` /
+     `Activate` / `Delete`, and the `Operator actions` row they came
+     from is gone.
 
      Reuses `base.html`'s `.session-expander` / `.session-expander-bracketed`
      / `tr.session-row-selected` unchanged. The panel's *interior* uses its
      own `.row-expander-*` classes rather than the lobby's
-     `.session-expander-body` / `-actions`, because the two layouts differ
-     — a decision to revisit before rung 2 hardens it. The live action row
-     in the Operator actions card is untouched and still does the work;
-     rung 2 moves it here.
+     `.session-expander-body` / `-actions`, because the two layouts differ.
+     Rung 1 flagged that as "a decision to revisit before rung 2 hardens
+     it"; rung 2b hardened it without revisiting, deliberately — the two
+     layouts still differ, and nothing since has argued they should not.
      ------------------------------------------------------------------ #}
   {% if selectable %}
     <script>
@@ -891,9 +870,12 @@
           if (event.target.checked) tickOrder.push(row.id);
           render();
         });
-        // Deferred: the existing select-all handler assigns `.checked`
-        // programmatically, which fires no change event, so an immediate
-        // render reads the state from before the click.
+        // Deferred. The reason was a SIBLING script that assigned
+        // `.checked` programmatically and fired no change event; rung 2b
+        // deleted that script, and `setAllBoxes` below runs
+        // synchronously, so a direct call would now read the right
+        // state. Kept because the deferral also lets the browser paint
+        // the checkboxes before the panel is rebuilt against them.
         // Ticking every box, and keeping select-all's own indeterminate
         // state honest, used to live in the `Operator actions` script.
         // That script existed to drive the card's four buttons; rung 2b
@@ -948,8 +930,9 @@
         // through `_redirect_keeping_selection`, which carries the acted-on
         // ids as `?selected=` and the server re-checks those boxes. Without
         // this the restored rows would have neither rails nor a panel until
-        // the operator toggled something. The sibling selection script
-        // calls its own `refresh()` here for the same reason.
+        // the operator toggled something. (Rung 2b: the sibling script
+        // that used to call its own `refresh()` here is gone — this
+        // script owns selection state now.)
         rows().forEach(function (row) {
           var box = row.querySelector(".reviewer-select");
           if (box && box.checked) tickOrder.push(row.id);

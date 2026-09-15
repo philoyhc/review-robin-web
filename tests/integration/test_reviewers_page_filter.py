@@ -286,9 +286,12 @@ def test_the_selection_actions_left_the_operator_actions_card(
     # stylesheet.
     markup = re.sub(r"<script\b.*?</script>", "", body, flags=re.S)
 
-    # The card shell stays until rung 2b's rehome of the Add / Edit
-    # block, so its absence is not what this pins.
-    assert 'class="card operator-actions-card"' in markup
+    # The card holds only the Add / Edit editor now, so it renders only
+    # in edit mode. On a plain load it is absent — otherwise the page
+    # carried a bordered box titled "Operator actions" offering none.
+    assert 'class="card operator-actions-card"' not in markup, (
+        "an empty `Operator actions` card is rendering again"
+    )
 
     for label in (
         ">Edit</button>",
