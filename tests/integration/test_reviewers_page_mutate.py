@@ -103,7 +103,12 @@ def test_edit_id_renders_target_row_as_inputs(
     assert "reviewer-edit-row" in body
     assert 'id="reviewer-edit-form"' in body
     # Focused Edit card with Save + Cancel.
-    assert ">Edit reviewer</h2>" in body
+    # No editor card: the row is the editor, and its controls hang in
+    # the bar directly beneath it.
+    assert 'class="card row-editor-anchored"' not in body, (
+        "the editor card is back"
+    )
+    assert "row-editor-bar" in body
     assert ">Save</button>" in body
     assert ">Cancel</a>" in body
     # The edited row's name prefilled into an input.
@@ -121,9 +126,7 @@ def test_edit_id_renders_target_row_as_inputs(
     # watching all 4,014 tests pass. The absence half lives in
     # `test_reviewers_roster_card_scaffold.py`
     # (`..._is_absent_outside_edit_mode`).
-    assert 'class="card row-editor-anchored"' in body, (
-        "the editor's card is not rendered in edit mode"
-    )
+
     # The `Operator actions` shell it used to live in is gone from this
     # page. Four other roster pages still use the class, so the rule
     # stays in `base.html`; what is pinned here is that Reviewers no
@@ -252,7 +255,10 @@ def test_add_renders_blank_edit_row(
         f"/operator/sessions/{review_session.id}/reviewers?add=1"
     ).text
     assert "reviewer-edit-row" in body
-    assert ">Add new reviewer</h2>" in body
+    # The blank row IS the editor: its heading card went when Save and
+    # Cancel moved into the row's own bar, so what marks add mode is
+    # the row carrying the landing anchor.
+    assert 'id="reviewers-row-editor"' in body
     assert ">Save</button>" in body
 
 
@@ -312,7 +318,7 @@ def test_add_post_validation_error_rerenders_in_add_mode(
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert ">Add new reviewer</h2>" in response.text
+    assert 'id="reviewers-row-editor"' in response.text
     assert "banner-error" in response.text
     # The bad value is preserved for correction.
     assert 'value="not-an-email"' in response.text
@@ -768,3 +774,80 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
         "the redirect lands on a page that does not render the new row"
     )
     assert ">Zed<" in landed
+
+
+def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
+    db: Session, client: TestClient
+) -> None:
+    """The message moved out of the editor card when that card went.
+
+    Two halves. The message has to render WITH the row it is about —
+    the card put it a table's height away — and the operator has to be
+    able to see it: a failed save is not a navigation, it re-renders in
+    place with a 400 and no fragment, so the page arrives at the top
+    with the row below the fold. Measured before the fix: the message
+    rendered at y=995 in a 900px viewport.
+
+    The scroll itself is a browser behaviour the suite cannot run. What
+    is pinned here is that the message is in the bar, and that the
+    script which lands on the row is served on this render at all — it
+    was gated on `add_mode` and a failed EDIT reaches the same state.
+    """
+    review_session = _make_session(client, db, code="rev-errhome")
+    _seed(db, review_session.id, ["Alice"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    response = client.post(
+        f"{base}/create",
+        data={
+            "name": "Dup", "email": "alice@example.edu",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+
+    bar = re.search(
+        r'<tr class="session-expander session-expander-bracketed '
+        r'row-editor-bar">.*?</tr>', body, re.S,
+    )
+    assert bar, "no editor bar on the error render"
+    assert "row-editor-error" in bar.group(0), (
+        "the save error is not in the bar with the row it is about"
+    )
+    assert "already uses" in bar.group(0), "the message itself is missing"
+
+    assert "reviewer-edit-row" in body
+
+    # The EDIT error path, which is the one the script's gate decides.
+    # A failed create is still add mode, so a script gated on `add_mode`
+    # renders here and this assertion passed against the bug — checked
+    # by mutation, which is how the first version of this test was found
+    # to be testing the wrong half.
+    rows = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()
+    _seed(db, review_session.id, ["Bob"])
+    bob = db.execute(
+        select(Reviewer).where(Reviewer.email == "bob@example.edu")
+    ).scalar_one()
+    edit_err = client.post(
+        f"{base}/{bob.id}/update",
+        data={
+            "name": "Bob", "email": rows[0].email,
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert edit_err.status_code == 400
+    edit_body = edit_err.text
+    assert "row-editor-error" in edit_body, "no error on a failed edit"
+    assert "scrollIntoView" in edit_body, (
+        "nothing brings the row on screen on an edit error, which "
+        "re-renders with no fragment"
+    )
+    # ...and it only scrolls when no fragment decided the position.
+    assert "window.location.hash" in edit_body, (
+        "the script scrolls unconditionally, fighting the landing anchor"
+    )

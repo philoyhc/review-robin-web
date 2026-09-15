@@ -1095,19 +1095,27 @@ def test_edit_is_offered_for_exactly_one_row(client, db):
     )
 
 
-def test_edit_lands_on_the_editor_not_the_table(client, db):
-    """`Edit` enters edit mode, so it takes the editor's anchor for the
-    same reason `Add new` does (#2405): the editor is split across two
-    cards and the table anchor puts Save above the viewport."""
+def test_edit_lands_on_the_row_it_is_about_to_edit(client, db):
+    """`Edit` enters edit mode, so it lands on the editor (#2405).
+
+    The editor used to be a card above the table and the anchor named
+    that card; with the card gone the editor IS the row, so the anchor
+    is the row's own id. Landing on the table card instead would put
+    the row — and the bar under it — below the fold on any roster long
+    enough to scroll.
+    """
     html = _page(client, _with_reviewers(client, db, "rc42"))
     handler = re.search(
         r'\.exp-edit\[data-edit-id\].*?window\.location =.*?;', html, re.S
     )
     assert handler, "no Edit click handler"
-    assert "reviewers-row-editor" in handler.group(0), (
-        "Edit lands somewhere other than the editor"
-    )
     assert "edit_id=" in handler.group(0)
+    assert '"#reviewer-row-"' in handler.group(0), (
+        "Edit lands somewhere other than the row it edits"
+    )
+    assert "reviewers-row-editor" not in handler.group(0), (
+        "Edit still names the retired editor card"
+    )
 
 
 def test_the_status_actions_are_offered_only_where_they_act(client, db):
@@ -1160,7 +1168,12 @@ def _add_page(client: TestClient, rs: ReviewSession) -> str:
     assert response.status_code == 200
     # The fixture must actually BE in edit mode, or every absence
     # assertion below passes against a page with no editor at all.
-    assert ">Add new reviewer</h2>" in response.text, "not in add mode"
+    # Keyed on the blank row rather than a heading: the editor card and
+    # its "Add new reviewer" title were removed once Save and Cancel
+    # moved to the row's own bar, and a guard keyed to chrome fails the
+    # moment the chrome changes.
+    assert 'id="reviewers-row-editor"' in response.text, "not in add mode"
+    assert 'name="name"' in response.text, "the add row has no fields"
     return _markup(response.text)
 
 
@@ -1215,16 +1228,6 @@ def _count_cards(block: str) -> int:
     )
 
 
-def test_the_editor_card_renders_outside_card_columns(client, db):
-    html = _add_page(client, _with_reviewers(client, db, "rc-s3-out"))
-    assert 'class="card row-editor-anchored"' in html, (
-        "the editor's own card is not rendered in add mode"
-    )
-    assert "row-editor-anchored" not in _card_columns(html), (
-        "the editor is back inside `.card-columns` — step 3 is undone"
-    )
-
-
 def test_card_columns_renders_only_where_the_unlock_panel_cannot(client, db):
     """Rung 3a's complement, from the outside.
 
@@ -1256,6 +1259,43 @@ def test_card_columns_renders_only_where_the_unlock_panel_cannot(client, db):
     )
     assert _count_cards(block) == 1, (
         "`.card-columns` holds more than the tag-labels editor"
+    )
+
+
+def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
+    """Replaces two tests that pinned the editor CARD's position.
+
+    That card was retired once Save and Cancel moved into the row's own
+    bar: what was left of it described where the controls had gone. So
+    the contract is no longer "the card sits outside `.card-columns`,
+    immediately above the table" but "there is no card, and the anchor
+    the navigations carry names the row you type into".
+    """
+    html = _add_page(client, _with_reviewers(client, db, "rc-iseditor"))
+
+    assert 'class="card row-editor-anchored"' not in html, (
+        "the editor card is back"
+    )
+    assert ">Add new reviewer</h2>" not in html, (
+        "the retired card's heading is back"
+    )
+
+    # The anchor is on the add row itself, and that row is in the table.
+    row = re.search(
+        r'<tr[^>]*id="reviewers-row-editor"[^>]*>', html
+    )
+    assert row, "nothing carries the editor anchor"
+    assert "reviewer-edit-row" in row.group(0), (
+        "the anchor is on something other than the edit row"
+    )
+    table = _div_block(html, '<div class="card table-pager-anchored"')
+    assert 'id="reviewers-row-editor"' in table, (
+        "the editor anchor is outside the table card"
+    )
+
+    # ...and it carries the landing margin, or it arrives flush.
+    assert "row-action-target" in row.group(0), (
+        "the add row has no landing margin"
     )
 
 
@@ -1323,37 +1363,6 @@ def test_the_labels_editor_renders_exactly_once_in_every_state(
         assert 'class="card-columns"' not in html, where
     else:
         assert "field-labels-editor" in _card_columns(html), where
-
-
-def test_the_editor_card_sits_immediately_above_the_table_card(client, db):
-    """Which is what lets `#reviewers-row-editor` land on both.
-
-    The editor is still SPLIT — heading and Save / Cancel in this card,
-    the row you type into in the table below — so the anchor survived
-    step 3. It only works while the two cards stay adjacent: a card
-    slipped between them would push the table off-screen again, and no
-    substring assertion would notice.
-
-    Scope, stated exactly: this checks for a CARD in the gap, not for
-    any markup at all. A bare banner or wrapper between the two would
-    pass here. That is the shape the gap is at risk from — every
-    tenant of this region is a card — and a "nothing at all" assertion
-    would break on whitespace.
-    """
-    html = _add_page(client, _with_reviewers(client, db, "rc-s3-order"))
-    editor = _div_block(
-        html, '<div class="card row-editor-anchored" id="reviewers-row-editor">'
-    )
-    end = html.index(editor) + len(editor)
-    table = html.index('<div class="card table-pager-anchored"')
-    assert end <= table, "the editor card renders below the table card"
-    # From the editor's CLOSING tag to the table card's OPENING one.
-    # Slicing to the table card's `id=` instead puts that card's own
-    # `class="card"` inside the gap, which is how the first version of
-    # this failed against correct markup.
-    assert _count_cards(html[end:table]) == 0, (
-        "a card renders between the editor and the table it edits"
-    )
 
 
 def test_no_empty_script_element_is_left_behind(client, db):
@@ -1560,8 +1569,12 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
 
     # It follows the edit row IMMEDIATELY: a bar separated from its row
     # by another row is not the selected-row analogy.
+    # Class list matched loosely: the row carries `reviewer-edit-row`,
+    # `session-row-selected` and `row-action-target`, and pinning the
+    # exact string broke the moment a fourth was added for the landing
+    # margin. What this asserts is adjacency, not the attribute.
     m = re.search(
-        r'<tr class="reviewer-edit-row session-row-selected"[^>]*>.*?</tr>\s*'
+        r'<tr class="[^"]*\breviewer-edit-row\b[^"]*"[^>]*>.*?</tr>\s*'
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">',
         html, re.S,

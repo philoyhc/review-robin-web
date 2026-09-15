@@ -1721,7 +1721,13 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        gap: var(--space-2);
+        /* 16px, not the right pane's 8px. This gap only ever separates
+           the chip row from ONE thing — the pager and the count line
+           are alternatives, per the note above — and at 8px the pills
+           sat close enough to the pager's box to read as one control.
+           The right pane keeps 8px: its two rows are a field and the
+           buttons that act on it, which belong together. */
+        gap: var(--space-4);
       }
       body.ui-v2 .toolbar-left > * { margin: 0; }
       /* Right pane: the filter row, then its buttons, both flush right. */
