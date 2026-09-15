@@ -104,13 +104,6 @@
        "Save labels" anywhere, and the Unlock panel holds one. The
        readouts above stay — they are informational. #}
     {% if is_editable and not edit_mode %}
-      <div class="roster-card-actions">
-        <button type="button" class="btn secondary" id="roster-unlock-btn"
-                aria-expanded="false" aria-controls="roster-unlock-panel">
-          Unlock
-        </button>
-      </div>
-
       <div class="unlock-panel" id="roster-unlock-panel" hidden>
         {# Left column: the two cards an operator edits, stacked. #}
         <div class="unlock-stack">
@@ -159,6 +152,11 @@
           </section>
         </div>
 
+        {# Right column: the upload card, and — while open — the Lock
+           control beneath it. A stack, not a second grid row: a grid row
+           starts below the TALLER column, which would drop the button to
+           the panel's foot, far from the card it sits under. #}
+        <div class="unlock-stack unlock-right">
         <section class="card" aria-labelledby="scaffold-upload-h">
           <h2 id="scaffold-upload-h">Upload Reviewers</h2>
           {# Verbatim from the live card, INCLUDING the `Status` value
@@ -201,8 +199,16 @@
             <button type="button" class="btn secondary" disabled>Upload</button>
           </div>
         </section>
+        </div>
       </div>
 
+
+      <div class="roster-card-actions">
+        <button type="button" class="btn secondary" id="roster-unlock-btn"
+                aria-expanded="false" aria-controls="roster-unlock-panel">
+          Unlock
+        </button>
+      </div>
 
       <script>
         (function () {
@@ -210,8 +216,18 @@
           var btn = document.getElementById("roster-unlock-btn");
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
+          // The control has two homes, and one element. Collapsed it is
+          // the card's last child; open it belongs under the upload card,
+          // in the panel's right column — which means inside the panel,
+          // and the panel is `display: none` when closed. So it moves,
+          // rather than being rendered twice: two copies of one control
+          // is how they drift apart.
+          var actions = document.querySelector(".roster-card-actions");
+          var card = document.getElementById("roster-card");
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
+            if (open) card.appendChild(actions);
+            else panel.querySelector(".unlock-right").appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves to, not "Done":
             // the panel is a lock state, not a form being finished.
