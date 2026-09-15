@@ -771,3 +771,55 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
         other_markup = _markup(other.text)
         assert "page-guidance" in other_markup, "vacuity: no guidance card"
         assert "page-guidance-wide" not in other_markup
+
+
+def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
+    client, db
+):
+    """The second rule the strip lost by leaving `.operator-actions-card`.
+
+    `.operator-actions-card .filter-actions` gave it `margin-top: 12px`
+    — the gap between a filter row and its right-flushed buttons in all
+    three places this shape appears: that rule, `.filter-card
+    .filter-actions` (Invitations / Responses / Validate), and
+    `.field-labels-actions`.
+    `.toolbar-right` cannot supply it as a flex `gap`: its only child is
+    the `<form>`, so that gap has nothing to sit between. Without the
+    margin the buttons sat flush against the search box at 0px.
+
+    Same root cause as `is-locked` one block up, which is why this
+    asserts the rule is addressed to the form's NEW home rather than
+    merely that some `.filter-actions` rule exists.
+    """
+    rs = _with_reviewers(client, db, "rc34")
+    html = _page(client, rs)
+
+    # Vacuity guard. The page renders TWO `<div class="filter-actions">`
+    # — the actions card still has one, and it comes first in source — so
+    # `'<div class="filter-actions">' in html` is satisfied by the card's
+    # and would pass with the toolbar's deleted outright (verified by
+    # mutation). Find the one inside the right pane, as
+    # `test_the_moved_filter_locks_while_a_row_is_being_edited` does.
+    moved = re.search(
+        r'<div class="toolbar-pane toolbar-right">.*?'
+        r'<div class="(filter-actions)"',
+        _markup(html),
+        re.S,
+    )
+    assert moved, "the filter's button row is not in the toolbar"
+
+    rule = re.search(
+        r"body\.ui-v2 \.toolbar-right \.filter-actions \{(.*?)\}", html, re.S
+    )
+    assert rule, "no rule for the moved filter's button row"
+    body = rule.group(1)
+    # The value, not merely the property: `margin-top: 0` is the bug.
+    assert re.search(r"margin-top:\s*var\(--space-3\)", body), (
+        f"the moved buttons have no 12px gap from the search box: {body!r}"
+    )
+    # The second declaration that left the card with it. Measured in
+    # Chromium: both anchors and the button are 37px here, so this is
+    # parity rather than a visual change — but it is parity the card had.
+    assert re.search(r"align-items:\s*center", body), (
+        "the moved button row lost its cross-axis alignment"
+    )

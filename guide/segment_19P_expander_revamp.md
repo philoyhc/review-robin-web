@@ -276,6 +276,21 @@ after `#2394`'s read landed post-merge):
   behavior change. It is pre-existing — `9ba9500:340` already wrapped it,
   and the unreachable `is_ready` branch inside it with it.
 
+**Two for the close, not for a slice** (rung 2a's second dev-slot fix,
+`#2402`):
+
+- **The filter-strip shape is defined in four scopes with no unscoped
+  base** — `.filter-card`, `.operator-actions-card`, `.toolbar-right`
+  and `.field-labels-actions` each redeclare the same six declarations.
+  That is why moving the strip out of one card dropped two rules in two
+  separate slices (`is-locked`, then `filter-actions`' `margin-top`).
+  A third move loses them again. The mitigation shipped is a comment
+  telling the next reader to audit the whole block; the fix is a base
+  rule the four scopes narrow, which is a change of its own and wants
+  the close, not a layout slice.
+- **`.operator-actions-card .operator-actions-buttons` is dead** — no
+  template uses it, repo-wide. Pre-existing; retire it with the card.
+
 Also found: the slice's own comment and commit message claimed two-column
 guidance prose that was never ported from the mockup. Implemented as a
 macro opt-in (`guidance(full_width=true)`), since the other six placements
