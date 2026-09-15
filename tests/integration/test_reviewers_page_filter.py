@@ -270,16 +270,18 @@ def test_operator_actions_card_renders_inert_buttons(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     assert 'class="card operator-actions-card"' in body
-    # All five action affordances present. ``Add new row`` shortened
-    # to ``Add`` in 19I Item 2 to make room for ``Delete``.
+    # The four SELECTION-driven affordances stay in this card until 19P.1
+    # rung 2b wires the row expander; `Add` needs no selection, so rung 2a
+    # moved it into the table's toolbar and renamed it `Add new`.
     for label in (
         ">Edit</button>",
         ">Inactivate</button>",
         ">Activate</button>",
-        ">Add</a>",
         ">Delete</button>",
     ):
         assert label in body
+    assert ">Add new</a>" in body, "Add moved to the table toolbar (19P.1 2a)"
+    assert ">Add</a>" not in body, "the old un-renamed Add should be gone"
     # The three buttons (Edit / Inactivate / Reactivate) start
     # disabled — JS enables them on selection. They now sit inline
     # in the filter-actions row, before the Search submit.

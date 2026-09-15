@@ -538,3 +538,64 @@ def test_the_lock_control_moves_between_its_two_homes(client, db):
     assert "card.appendChild(actions)" in body, body
     assert '.unlock-right").appendChild(actions)' in body, body
 
+
+
+def test_a_zero_match_filter_still_offers_the_control_that_clears_it(client, db):
+    """19P.1 rung 2a moved the filter strip INSIDE the preview-table card,
+    which was gated on the FILTERED row list. A search matching nothing
+    therefore removed the card — and with it the `Clear` link and the
+    search box — leaving the operator reading "No reviewers match" with
+    no way out but the URL bar.
+
+    The card is now gated on the roster having rows at all; only the
+    table is gated on the filtered list.
+    """
+    rs = _with_reviewers(client, db, "rc26")
+    html = client.get(
+        f"/operator/sessions/{rs.id}/reviewers?q=nothingmatchesthis"
+    ).text
+    # Vacuity guard: prove the filter really did match nothing.
+    assert "No reviewers match the current filter." in html
+    assert 'id="reviewers-table"' not in html
+    # ...and the way out is still on screen.
+    assert ">Clear</a>" in html, "a zero-match filter hid its own Clear"
+    assert 'name="q"' in html, "a zero-match filter hid the search box"
+
+
+def test_the_filter_strip_sits_in_the_tables_toolbar(client, db):
+    """Right pane the filter, left pane what the table is showing —
+    `Show columns:`, the count line and the pager."""
+    html = _page(client, _with_reviewers(client, db, "rc27"))
+    toolbar = re.search(
+        r'<div class="table-card-toolbar">.*?id="reviewers-table"', html, re.S
+    )
+    assert toolbar, "table-card toolbar not found"
+    body = toolbar.group(0)
+    assert 'class="toolbar-pane toolbar-left"' in body
+    assert 'class="toolbar-pane toolbar-right"' in body
+    assert body.index("toolbar-left") < body.index("toolbar-right")
+    assert 'name="q"' in body, "the search box is not in the toolbar"
+
+    # The count line is `None` when the table shows everything — the
+    # partial says a caption saying so is noise — so its placement has to
+    # be checked on a render that actually produces one.
+    filtered = client.get(
+        f"/operator/sessions/{_with_reviewers(client, db, 'rc27b').id}"
+        f"/reviewers?q=R1"
+    ).text
+    pane = re.search(
+        r'<div class="toolbar-pane toolbar-left">.*?</div>', filtered, re.S
+    )
+    assert pane, "left pane not found on the filtered render"
+    assert "table-showing-hint" in pane.group(0), (
+        "the count line is not in the toolbar's left pane"
+    )
+
+
+def test_the_toolbar_panes_are_not_cards(client, db):
+    """They spend none of a card's signals, and naming them `card` both
+    misleads a reader and breaks the shared `_table_card` probe, which
+    finds the enclosing card by scanning back for `<div class="card`."""
+    html = _page(client, _with_reviewers(client, db, "rc28"))
+    assert '<div class="card card-bare' not in html
+    assert re.search(r"\.toolbar-pane \{", html), "no .toolbar-pane rule"

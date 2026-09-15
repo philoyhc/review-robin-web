@@ -133,8 +133,18 @@ def test_delete_renders_destructive_and_wired(
     assert f"/{page}/bulk-delete" in element
     assert "disabled" in element, "ships disabled; the gate enables it"
 
-    # Ordering: after Add, before Search.
-    assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
+    # Ordering: after Add, before Search — on the three pages that still
+    # carry all three in one strip. 19P.1 rung 2a moved Reviewers' `Add`
+    # and `Search` into the table's toolbar, so its strip holds only the
+    # selection-driven four and there is nothing left to order against.
+    # `spec/ui_elements.md` §6 sites the roster Delete "between `Add` and
+    # `Search`"; the plan's Doc impact names that sentence for rung 4.
+    if page == "reviewers":
+        assert ">Add</a>" not in buttons and ">Search</button>" not in buttons, (
+            "Reviewers' strip should no longer carry Add or Search"
+        )
+    else:
+        assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)

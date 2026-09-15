@@ -204,6 +204,48 @@ any further code. The ladder below is unchanged in sequence; rung 1's
   (`spec/setup_pages.md:52-54`); rung 1 shipped it link-coloured. Conformance,
   not a new decision.
 
+**2026-09-15 — rung 2 splits in two.** Author's call, after asking when
+the search box moves. As written, rung 2 carried three independent
+changes: the row-action wiring, the `Operator actions` retirement, and
+point 3's guidance move. They split on a clean seam — **layout above the
+table** versus **behavior in the table** — and the layout half is what
+the search box rides on. So:
+
+- **2a, the toolbar move.** Guidance to the top, full width. The filter
+  strip moves into a toolbar inside the preview-table card — right pane
+  the status / search controls and `Add new` / `Search`, left pane
+  `Show columns:` and `Showing N of M`. **The card is not retired
+  here**, only slimmed: it keeps the row-action row and the Add / Edit
+  block. No row action is wired.
+- **2b, the row actions and the retirement.** They move into the
+  expander, and the card — by then holding nothing else — is deleted.
+
+**The card cannot retire in 2a**, which the split's first draft had it
+doing. It holds the **only live** `Edit` / `Inactivate` / `Activate` /
+`Delete` controls and their `formaction`s; rung 1's expander copies are
+all `disabled` until 2b. Retiring it first would remove four working
+actions for a slice, and carrying them into the toolbar meanwhile would
+reproduce the crowded strip this segment exists to undo, then move them
+again. Slimming it costs one intermediate state and moves each control
+exactly once.
+
+Two things the ladder never named, found when the seam was cut:
+
+- **The `Operator actions` card also holds the Add / Edit block** — a
+  divider, a heading, the help line and Save / Cancel, rendered only in
+  `edit_mode` (`session_reviewers.html`, `.operator-actions-divider`).
+  It stays with the card through 2a and is rehomed when 2b deletes it:
+  its own card in the same position, still `edit_mode`-only, because
+  folding an editing form into a filter toolbar mixes two jobs in one
+  strip.
+- **`.card-columns` is left holding the tag-labels editor alone**, half
+  width in the left column, from 2a until the Unlock rung deletes it.
+  A known intermediate look (`spec/ui_elements.md` names the lone-card
+  case for `.bottom-grid`), and the alternative is pulling the Unlock
+  rung's deletion forward into a layout slice. In 2a it shares the
+  container with the slimmed `Operator actions` card, so the lone-card
+  state does not begin until 2b.
+
 **On the reader cadence** (the experiment 19O.3 opened): `diff-reviewer`
 returned on `#2394` *after* that PR was merged, so it gated nothing and its
 findings are recorded here instead. First time in this segment the reader's
@@ -222,6 +264,9 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 2. **Wire the row actions.** They move into the expander, arity preserved,
    routes unchanged; the action row leaves the card, which keeps the filter
    strip. Must not touch `spec/`.
+   *Split 2026-09-15 into **2a** (the toolbar move) and **2b** (the row
+   actions); the "keeps the filter strip" clause is superseded — the card
+   goes. See `### Status`.*
 3. **Wire Unlock and retire the three cards.** Upload, Delete-all and the
    friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.

@@ -1614,11 +1614,64 @@
 
          No margin of its own: both children carry the 12px, so an
          empty row (no chips, no cluster) costs nothing. */
+      /* 19P.1 rung 2a — the table card's toolbar becomes two half-width
+         panes: the table's own readouts on the left, the filter on the
+         right. `.card-bare` keeps a card's geometry, so the halves sit on
+         the same grid as every other pair on the page, while spending
+         none of a card's signals — border and fill say "separate
+         object", and these are two halves of one strip. */
       body.ui-v2 .table-card-toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+        align-items: end;
+        margin-bottom: var(--space-4);
+      }
+      /* NOT `.card`: these spend none of a card's signals — no border,
+         no fill, no padding — and naming them `card` both misleads a
+         reader and breaks probes that look for the enclosing card by
+         scanning back for `<div class="card`. They are two halves of one
+         strip, so they get their own name. */
+      body.ui-v2 .toolbar-pane { min-width: 0; }
+      /* Left pane sits on the table's top edge: chips, then the count
+         line, then the pager. */
+      body.ui-v2 .toolbar-left {
         display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .toolbar-left > * { margin: 0; }
+      /* Right pane: the filter row, then its buttons, both flush right. */
+      body.ui-v2 .toolbar-right {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .toolbar-right .filter-row { display: flex; gap: var(--space-3); }
+      body.ui-v2 .toolbar-right .filter-row > label {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
+      body.ui-v2 .toolbar-right .filter-row > label.filter-status { flex: 1; }
+      body.ui-v2 .toolbar-right .filter-row > label.filter-search { flex: 2; }
+      body.ui-v2 .toolbar-right .filter-row select,
+      body.ui-v2 .toolbar-right .filter-row input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      body.ui-v2 .toolbar-right .filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
         flex-wrap: wrap;
-        align-items: center;
-        gap: 0 var(--space-4);
+      }
+      @media (max-width: 860px) {
+        body.ui-v2 .table-card-toolbar { grid-template-columns: minmax(0, 1fr); }
+        body.ui-v2 .toolbar-right .filter-row { flex-direction: column; }
       }
       body.ui-v2 .table-card-toolbar > .table-pager-cluster {
         margin: 0 0 12px auto;
