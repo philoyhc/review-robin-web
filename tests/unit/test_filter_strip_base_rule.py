@@ -85,24 +85,34 @@ def _rules(css: str) -> list[tuple[str, str]]:
     see a rogue scope hidden in the `select` position at all. So scan
     brace to brace and keep whatever preceded it.
 
-    `@media` preludes are skipped; the rules inside them come back like
-    any other, which is what we want — a narrowing inside a media query
-    is still a narrowing.
+    An at-rule prelude is not a rule, so it is skipped — but the parser
+    DESCENDS into its body, because a narrowing inside a media query is
+    still a narrowing. The first version of this function gated on
+    `depth == 0` and so skipped the whole at-rule body: it could not see
+    `.toolbar-right .filter-row { flex-direction: column }` in the
+    <=860px block, which is the one rule `ALLOWED_NARROWINGS` lists
+    `flex-direction` for. The line-anchored regex this replaced DID see
+    it, so the rewrite silently lost coverage while claiming to add it.
     """
     out: list[tuple[str, str]] = []
-    depth = start = 0
-    for i, ch in enumerate(css):
+    start = i = 0
+    while i < len(css):
+        ch = css[i]
         if ch == "{":
             selector = css[start:i].strip()
-            if depth == 0 and not selector.startswith("@"):
-                close = css.find("}", i)
-                out.append(
-                    (selector, css[i + 1:close if close > 0 else len(css)])
-                )
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            start = i + 1
+            if selector.startswith("@"):
+                start = i + 1          # descend into the at-rule body
+                i += 1
+                continue
+            close = css.find("}", i)
+            if close < 0:
+                break
+            out.append((selector, css[i + 1:close]))
+            i = start = close + 1
+            continue
+        if ch == "}":
+            start = i + 1              # leaving an at-rule body
+        i += 1
     return out
 
 

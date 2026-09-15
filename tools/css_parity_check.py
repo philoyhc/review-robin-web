@@ -62,6 +62,13 @@ SELECTORS = [
     ".toolbar-right form",
 ]
 
+#: Viewports to sample. More than one, because a rule inside a media
+#: query is invisible at a width where that query is inactive: the
+#: shape's `@media (max-width: 860px)` rule stacks the filter row, so
+#: at a single 1280px sample you could delete it and still read "0
+#: differences". 700 sits below that breakpoint, 1280 above it.
+VIEWPORTS = (1280, 700)
+
 #: Every property the sampled rules declare, plus the geometry that
 #: would move if one of them stopped applying.
 PROPERTIES = [
@@ -74,15 +81,17 @@ PROPERTIES = [
 _EXTRACT_JS = """
 import { chromium } from 'playwright';
 import { readdirSync, writeFileSync } from 'fs';
-const [dir, outFile, selJson, propJson] = process.argv.slice(2);
+const [dir, outFile, selJson, propJson, viewJson] = process.argv.slice(2);
 const SELECTORS = JSON.parse(selJson), PROPS = JSON.parse(propJson);
+const VIEWPORTS = JSON.parse(viewJson);
 const browser = await chromium.launch({
   executablePath: process.env.RRW_CHROMIUM || undefined });
-const page = await browser.newPage({ viewport: { width: 1280, height: 1600 } });
 const out = {};
+for (const width of VIEWPORTS) {
+const page = await browser.newPage({ viewport: { width, height: 1600 } });
 for (const f of readdirSync(dir).filter(f => f.endsWith('.html')).sort()) {
   await page.goto('file://' + dir + '/' + f);
-  out[f] = await page.evaluate(([SELECTORS, PROPS]) => {
+  out[f + '@' + width] = await page.evaluate(([SELECTORS, PROPS]) => {
     const rows = [];
     for (const sel of SELECTORS) {
       document.querySelectorAll(sel).forEach((el, i) => {
@@ -96,6 +105,8 @@ for (const f of readdirSync(dir).filter(f => f.endsWith('.html')).sort()) {
     }
     return rows;
   }, [SELECTORS, PROPS]);
+}
+await page.close();
 }
 writeFileSync(outFile, JSON.stringify(out, null, 1));
 await browser.close();
@@ -148,7 +159,8 @@ def record(out: Path) -> int:
         try:
             proc = subprocess.run(
                 ["node", str(script), tmp, str(out / "styles.json"),
-                 json.dumps(SELECTORS), json.dumps(PROPERTIES)],
+                 json.dumps(SELECTORS), json.dumps(PROPERTIES),
+                 json.dumps(list(VIEWPORTS))],
                 cwd=node_root, env=env, capture_output=True, text=True,
             )
         finally:
@@ -176,6 +188,7 @@ def record(out: Path) -> int:
     # its strip is state-gated. A page that samples nothing is not an
     # error, but it must not be counted as covered.
     empty = [k for k, v in per_page.items() if v == 0]
+    n_pages = len({k.rsplit("@", 1)[0] for k in per_page})
     for page, count in per_page.items():
         print(f"  {page:24s} {count:3d}")
     if empty:
@@ -186,9 +199,11 @@ def record(out: Path) -> int:
     # The snapshot records what it sampled, so `diff` can refuse to
     # compare two runs that asked different questions.
     (out / "manifest.json").write_text(json.dumps(
-        {"selectors": SELECTORS, "properties": PROPERTIES}, indent=1))
-    print(f"recorded {n} elements across {len(per_page) - len(empty)} "
-          f"covered page(s) of {len(per_page)} rendered -> {out}")
+        {"selectors": SELECTORS, "properties": PROPERTIES,
+         "viewports": list(VIEWPORTS)}, indent=1))
+    print(f"recorded {n} elements over {len(VIEWPORTS)} viewport(s) "
+          f"across {len(per_page) - len(empty)} covered sample(s) of "
+          f"{len(per_page)} ({n_pages} pages) -> {out}")
     return 0
 
 
@@ -232,8 +247,10 @@ def diff(before: Path, after: Path) -> int:
         print("compared 0 elements; the snapshots are empty, so this is "
               "not evidence of anything", file=sys.stderr)
         return 2
+    n_pages = len({k.rsplit("@", 1)[0] for k in a})
+    views = len({k.rsplit("@", 1)[1] for k in a if "@" in k}) or 1
     print(f"\n{total} elements x {len(PROPERTIES)} properties across "
-          f"{len(a)} pages -> {diffs} difference(s)")
+          f"{n_pages} pages x {views} viewport(s) -> {diffs} difference(s)")
     return 1 if diffs else 0
 
 
