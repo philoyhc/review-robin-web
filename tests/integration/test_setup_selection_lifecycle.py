@@ -250,7 +250,20 @@ def test_the_upload_and_danger_zone_cards_render_while_editable(
 
     body = _render(client, s, page)
 
-    assert 'class="card danger-zone"' in body
+    # Reviewers moved its Danger Zone into the Unlock panel at 19P.1
+    # rung 3b, so it has no `.danger-zone` card. Asserted by its own
+    # marker rather than skipped: what this test is about is that the
+    # control is OFFERED while the session is editable, and that claim
+    # holds on all four pages — only its home differs.
+    if page == "reviewers":
+        assert 'aria-labelledby="reviewers-danger-h"' in body, (
+            "Reviewers offers no delete-all while editable"
+        )
+        assert 'class="card danger-zone"' not in body, (
+            "Reviewers' retired Danger Zone card is back"
+        )
+    else:
+        assert 'class="card danger-zone"' in body
     assert f"/{page}/delete-all" in body
 
 

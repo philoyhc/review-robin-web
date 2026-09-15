@@ -201,9 +201,13 @@
        stay: they are informational in every state. #}
     {% if unlock_available %}
       <p class="form-help roster-card-note">
-        The roster's tag labels live behind <strong>Unlock</strong>. CSV
-        import and delete-all follow; until they do, those two are still
-        live in the cards below.
+        {# The delete-all clause is conditional because the control is:
+           the Danger Zone is gated on the roster having rows, so on an
+           empty one this would promise something the panel does not
+           offer. #}
+        The roster's tag labels{% if total_row_count and total_row_count > 0 %}
+        and delete-all{% endif %} live behind <strong>Unlock</strong>. CSV
+        import follows; until it does, it is still live in the card below.
       </p>
     {% endif %}
 
@@ -266,23 +270,58 @@
              `unlock_available` — see there. #}
           {% include "operator/partials/_field_labels_editor.html" %}
 
-          <section class="card" aria-labelledby="scaffold-danger-h">
-            <h2 id="scaffold-danger-h">Danger Zone</h2>
-            <label class="confirm-label">
-              <input type="checkbox" disabled>
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and their associated
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-            <div class="unlock-col-actions">
-              <button type="button" class="btn destructive" disabled>
-                Delete all reviewers
-              </button>
-            </div>
+          {# 19P.1 rung 3b — WIRED, and gated.
+
+             The scaffold rendered this unconditionally while the live
+             card it replaces was `{% if total_row_count > 0 %}`. The
+             gate wins: "delete the existing 0 reviewers" offers an
+             operator a destructive control with nothing to destroy, and
+             the route would refuse it anyway.
+
+             The scaffold's `.confirm-label` is kept over the live
+             card's `<label style="font-weight: normal;">` — the class
+             carries that weight plus the checkbox alignment, and
+             `CLAUDE.md` asks for a class rather than an inline style.
+
+             Everything the route needs travels verbatim: the confirm's
+             `data-delete-confirm` key and the button's `data-delete-btn`
+             (one pair on the page, because the old card goes in this
+             same slice — two identical keys and `sync`'s first-match
+             `querySelector` resolves the wrong button), and the hidden
+             `acknowledge_response_loss`, without which
+             `_require_response_loss_ack` 400s and Delete-all is
+             unreachable on any session that has collected an answer. #}
+          {% if total_row_count and total_row_count > 0 %}
+          <section class="card" aria-labelledby="reviewers-danger-h">
+            <h2 id="reviewers-danger-h">Danger Zone</h2>
+            <form method="post"
+                  action="{{ reviewers_base_url }}/delete-all">
+              {# Names what goes, modelled on the Instruments page
+                 (Segment 19I Item 3). The response clause is what the
+                 label was missing: `delete-all` destroys every saved
+                 answer under this roster and said nothing. #}
+              <label class="confirm-label">
+                <input type="checkbox" name="confirm" value="true" required
+                       data-delete-confirm="delete-all">
+                Yes, delete the existing
+                <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+                and their associated
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+                and
+                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
+              </label>
+              {% if roster_response_count > 0 %}
+                <input type="hidden" id="reviewers-delete-all-ack"
+                       name="acknowledge_response_loss" value="true">
+              {% endif %}
+              <div class="unlock-col-actions">
+                <button class="btn destructive" type="submit"
+                        data-delete-btn="delete-all"
+                        disabled aria-disabled="true">Delete all reviewers</button>
+              </div>
+            </form>
           </section>
+          {% endif %}
         </div>
 
         {# Right column: the upload card, and — while open — the Lock
@@ -1233,43 +1272,6 @@
       </form>
     </section>
 
-    {% if total_row_count and total_row_count > 0 %}
-      <div class="card danger-zone">
-        <h2>Danger Zone</h2>
-        <form method="post" action="/operator/sessions/{{ session.id }}/reviewers/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required
-                     data-delete-confirm="delete-all">
-              {# Names what goes, modelled on the Instruments page
-                 (Segment 19I Item 3). The response clause is what
-                 the label was missing: `delete-all` destroys every
-                 saved answer under this roster and said nothing. #}
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and their associated
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-            {# The acknowledgement rides with this tick, as it does
-               on the selected-rows gate. Without it the route's
-               `_require_response_loss_ack` returned 400 and no
-               roster template sent the field — so Delete-all was
-               unreachable on any session with a response. #}
-            {% if roster_response_count > 0 %}
-              <input type="hidden" id="reviewers-delete-all-ack"
-                     name="acknowledge_response_loss" value="true">
-            {% endif %}
-          </p>
-          <p>
-            <button class="btn destructive" type="submit"
-                    data-delete-btn="delete-all"
-                    disabled aria-disabled="true">Delete all reviewers</button>
-          </p>
-        </form>
-      </div>
-    {% endif %}
   </div>
   {% endif %}
 {% endblock %}

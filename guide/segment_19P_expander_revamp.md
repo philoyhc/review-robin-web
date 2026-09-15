@@ -437,7 +437,7 @@ each card's own route, measured before cutting.**
 | slice | card | its route answers | why here |
 |---|---|---|---|
 | **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home until 3c (see the 3a entry below) |
-| **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence |
+| **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence — **shipped 2026-09-15** |
 | **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last |
 
 **What the cut is made on.** `delete-all` and `field-labels` both 303 back
@@ -602,6 +602,29 @@ carry the fix to Observers when it gets there.
 *reload*. The page still round-trips, so there is still a flash, and the
 landing is the row rather than the exact scroll offset the operator had.
 Only intercepting the submit removes either, which is its own item.
+
+**2026-09-15 — 3b shipped.** The Danger Zone moved into the Unlock
+panel and the live card below the table went in the same slice, for the
+reason the slicing gave: `sync` resolves a confirm's button with a
+first-match `querySelector`, so two `delete-all` keys on one page gate
+the wrong button.
+
+**The gate divergence, settled the live card's way.** The scaffold copy
+rendered unconditionally; the live card was `{% if total_row_count > 0 %}`.
+An empty roster offering "delete the existing 0 reviewers" is a
+destructive control with nothing to destroy, and the route refuses it
+anyway.
+
+**Kept the scaffold's markup, not the live card's**, where they differed:
+`.confirm-label` carries the `font-weight: normal` the live card set
+inline, plus the checkbox alignment, and `CLAUDE.md` asks for a class
+over an inline style.
+
+**Found while guarding it:** the roster card's note promised delete-all
+behind Unlock on a roster where the Danger Zone does not render. The
+clause is conditional now — the same ungated-copy mistake the UI pass
+made, one slice later, which is a sign the note wants retiring rather
+than more conditions when 3c empties the bottom grid.
 
 ### PR ladder
 

@@ -181,15 +181,25 @@ def test_every_unwired_unlock_control_is_inert(client, db):
     assert 'id="roster-unlock-btn"' not in scope, (
         "the scope swept in the Lock control, which is live by design"
     )
+    # Each rung wires one card, so each rung adds one excision here. The
+    # cards are removed by their own markers rather than by naming the
+    # controls inside them: a control list stops covering anything the
+    # moment a card renames one.
     labels_card = _div_block(scope, '<div class="card field-labels-editor">')
-    # Not vacuous in either direction: the editor is really in the panel,
-    # and removing it really leaves controls behind to check.
     assert labels_card, "the wired labels editor is not in the panel"
     scope = scope.replace(labels_card, "")
     assert "field-labels-editor" not in scope, "the excision missed a copy"
 
+    danger = re.search(
+        r'<section class="card" aria-labelledby="reviewers-danger-h">'
+        r'.*?</section>', scope, re.S,
+    )
+    assert danger, "the wired Danger Zone is not in the panel"
+    scope = scope.replace(danger.group(0), "")
+    assert "reviewers-danger-h" not in scope, "the excision missed a copy"
+
     controls = re.findall(r"<(?:button|input)\b[^>]*>", scope)
-    assert len(controls) >= 4, (
+    assert len(controls) >= 2, (
         f"only {len(controls)} unwired controls left to check; this test "
         "passes trivially if the excision took too much"
     )
@@ -220,7 +230,7 @@ def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
     # happens to follow it — the panel's column order is a layout choice
     # and a test should not pin it by accident.
     upload = re.search(r'id="scaffold-upload-h".*?</section>', html, re.S)
-    danger = re.search(r'id="scaffold-danger-h".*?</section>', html, re.S)
+    danger = re.search(r'id="reviewers-danger-h".*?</section>', html, re.S)
     assert upload and danger, "scaffold panel columns not found"
     ticks = re.findall(r'<input[^>]*type="checkbox"[^>]*>', upload.group(0))
     assert len(ticks) == 1, f"expected one replace confirm, got {len(ticks)}"
@@ -249,20 +259,36 @@ def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
     assert 'id="roster-card"' in html
 
 
-def test_the_three_cards_it_will_absorb_are_still_live(client, db):
-    """Rung 1 adds a surface; it retires nothing. Rung 3 does that."""
+def test_only_the_upload_card_is_left_to_absorb(client, db):
+    """Rung 1 added a surface and retired nothing; rung 3 retires them
+    one at a time. Two of the three are in the panel now — the tag
+    labels at 3a, the Danger Zone at 3b — so this counts down rather
+    than pinning a fixed three.
+
+    Was `..._three_cards_it_will_absorb_are_still_live`.
+    """
     rs = _with_reviewers(client, db, "rc10")
     html = _page(client, rs)
+
+    # Still below the table, still to move at 3c.
     assert 'id="upload-csv"' in html
-    # NOT the bare substring `danger-zone`: base.html's stylesheet ships on
-    # every response and mentions it eight times, so that assertion is true
-    # of every page in the app with or without the card. Match the card's
-    # own class attribute instead. (`test_reserved_shade.py` warns about
-    # exactly this trap; 19J.5 hit it three times.)
-    assert 'class="card danger-zone"' in html
+
+    # Already moved. NOT the bare substring `danger-zone`: `base.html`'s
+    # stylesheet ships on every response and mentions it eight times, so
+    # that needle is true of every page in the app with or without the
+    # card. Match the card's own class attribute instead.
+    # (`test_reserved_shade.py` warns about exactly this trap; 19J.5 hit
+    # it three times, and 19P.1 three more.)
+    assert 'class="card danger-zone"' not in html, (
+        "the retired Danger Zone card is back below the table"
+    )
+    panel = _panel(html)
+    assert 'aria-labelledby="reviewers-danger-h"' in panel, (
+        "the Danger Zone is neither below the table nor in the panel"
+    )
     # The live editor's own route, not a string the scaffold prints —
     # deleting the include outright must fail this.
-    assert f"/operator/sessions/{rs.id}/reviewers/field-labels" in html
+    assert f"/operator/sessions/{rs.id}/reviewers/field-labels" in panel
 
 
 def test_unlock_is_suppressed_not_disabled_when_locked(client, db):
@@ -453,7 +479,7 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     # `scaffold-labels-h` went with the hand-copied markup at rung 3a;
     # the partial renders a plain <h2> under its own card class.
     labels = body.index('class="card field-labels-editor"')
-    danger = body.index('id="scaffold-danger-h"')
+    danger = body.index('id="reviewers-danger-h"')
     upload = body.index('id="scaffold-upload-h"')
     assert labels < danger < upload, (
         "expected labels, then danger zone, then upload"
@@ -468,7 +494,7 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     stack_html = _div_block(body, '<div class="unlock-stack">')
     assert stack_html, "left-column stack not found"
     assert 'class="card field-labels-editor"' in stack_html
-    assert 'id="scaffold-danger-h"' in stack_html
+    assert 'id="reviewers-danger-h"' in stack_html
     assert 'id="scaffold-upload-h"' not in stack_html, (
         "upload belongs in the right column, not the stack"
     )
@@ -1634,4 +1660,91 @@ def test_the_editor_bar_spans_the_row_it_hangs_from(client, db):
     assert span, "the bar's cell has no colspan"
     assert int(span.group(1)) == columns, (
         f"bar spans {span.group(1)} of {columns} columns"
+    )
+
+
+# ------------------------------------------------------------- rung 3b
+# The Danger Zone moves into the Unlock panel, wired, and gated on the
+# roster having rows — which the scaffold copy was not.
+
+
+def _danger(html: str) -> str:
+    m = re.search(
+        r'<section class="card" aria-labelledby="reviewers-danger-h">'
+        r".*?</section>", _panel(html), re.S,
+    )
+    return m.group(0) if m else ""
+
+
+def test_the_danger_zone_is_wired_in_the_panel(client, db):
+    """Everything the route refuses without, asserted where it renders.
+
+    The scaffold's copy was inert; this pins that the real one carries a
+    form to the right action, the confirm the route requires, and the
+    pairing keys that gate the button — each read inside the card, so a
+    control that drifts out of it fails here rather than passing on a
+    page-wide substring.
+    """
+    rs = _with_reviewers(client, db, "rc-3b-wired")
+    card = _danger(_markup(_page(client, rs)))
+    assert card, "no Danger Zone in the panel"
+
+    assert f'action="/operator/sessions/{rs.id}/reviewers/delete-all"' in card
+    assert 'name="confirm" value="true"' in card, "no confirm to tick"
+    assert 'data-delete-confirm="delete-all"' in card
+    assert 'data-delete-btn="delete-all"' in card
+    assert "disabled" in card, "the destructive button starts enabled"
+    assert "btn destructive" in card, "not the destructive role"
+
+    # One pair on the page. `sync` resolves a confirm's button with a
+    # first-match `querySelector`, so a second pair keyed the same way
+    # gates the wrong button — which is why the old card had to go in
+    # this same slice rather than a later one.
+    html = _markup(_page(client, rs))
+    assert html.count('data-delete-confirm="delete-all"') == 1
+    assert html.count('data-delete-btn="delete-all"') == 1
+
+
+def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
+    """The divergence 3b settles.
+
+    The live card was `{% if total_row_count > 0 %}`; the scaffold copy
+    it replaced rendered unconditionally, so an empty roster offered
+    "delete the existing 0 reviewers" — a destructive control with
+    nothing to destroy, which the route refuses anyway.
+    """
+    empty = _session(client, db, "rc-3b-empty")
+    html = _markup(_page(client, empty))
+    assert 'id="roster-unlock-panel"' in html, "no panel to look in"
+    assert not _danger(html), (
+        "an empty roster offers Delete all reviewers"
+    )
+    # The ROUTE, not the bare word: the roster card's own note says
+    # "delete-all lives behind Unlock", so the substring matches the
+    # page's prose. Third instance of that trap in this segment.
+    assert f"/operator/sessions/{empty.id}/reviewers/delete-all" not in html, (
+        "the route is still reachable on an empty roster"
+    )
+
+    # ...and the fixture is not vacuous: with rows, it renders.
+    assert _danger(_markup(_page(client, _with_reviewers(client, db, "rc-3b-full"))))
+
+
+def test_the_delete_all_confirm_carries_the_response_acknowledgement(
+    client, db
+):
+    """Without the hidden field the route's `_require_response_loss_ack`
+    400s, so Delete-all is unreachable on any session that has collected
+    an answer — which is exactly when an operator wants it.
+
+    Asserted as a biconditional against the label's own response clause,
+    so the field and the thing it acknowledges cannot part company.
+    """
+    rs = _with_reviewers(client, db, "rc-3b-ack")
+    card = _danger(_markup(_page(client, rs)))
+    names_responses = "reviewer response" in card
+    has_ack = 'name="acknowledge_response_loss"' in card
+    assert names_responses == has_ack, (
+        f"label names responses: {names_responses}, "
+        f"acknowledgement sent: {has_ack}"
     )
