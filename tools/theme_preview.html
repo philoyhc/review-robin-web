@@ -2728,6 +2728,107 @@
         box-shadow: inset 6px 0 0 var(--selected-bg),
                     inset -6px 0 0 var(--selected-bg);
       }
+      /* ===== 19P.1 — the roster card and its Unlock panel =====
+         Page-agnostic primitives, so they live here rather than as a
+         template <style> block, and `body.ui-v2`-scoped like every rule
+         around them (`CLAUDE.md` — Templating conventions). */
+      body.ui-v2 .roster-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        margin-bottom: var(--space-4);
+      }
+      /* One row of readouts, not a table: a table for a single row
+         spends header chrome on nothing, and would couple the index
+         row's padding to the expander's through `:first-child` /
+         `:last-child`. Each readout wraps as a unit so a label never
+         separates from its own values. */
+      body.ui-v2 .roster-readouts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3) var(--space-6);
+        align-items: baseline;
+      }
+      body.ui-v2 .roster-readout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        align-items: baseline;
+        min-width: 0;
+      }
+      body.ui-v2 .roster-readout-label {
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+        white-space: nowrap;
+      }
+      body.ui-v2 .roster-readout-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        min-width: 0;
+      }
+      body.ui-v2 .roster-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+      }
+      /* Two equal columns: upload left, tag labels over Danger Zone
+         right. `minmax(0, …)` on both tracks, since the default `auto`
+         minimum lets a long label push a track past its share. Stacks
+         narrow, where half the width is less than the file input. */
+      body.ui-v2 .unlock-panel {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+        align-items: start;
+      }
+      body.ui-v2 .unlock-right {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      body.ui-v2 .unlock-col-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .unlock-panel { grid-template-columns: minmax(0, 1fr); }
+      }
+      /* The injected row-action panel's interior. The confirm takes the
+         slack so the buttons stay flush right. */
+      body.ui-v2 .row-expander-body {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      body.ui-v2 .row-expander-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-left: auto;
+      }
+      body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
+      /* A destructive-confirm tick and its sentence, per
+         `spec/ui_elements.md` "Delete-confirm standard": the checkbox
+         stays on the first line of a sentence that wraps. Normal weight
+         — the global `body.ui-v2 label` rule bolds labels, which would
+         make every confirm shout. */
+      body.ui-v2 .confirm-label {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-2);
+        font-size: var(--fs-small);
+        font-weight: normal;
+        margin: 0;
+      }
+      body.ui-v2 .confirm-label input[type="checkbox"] {
+        margin-top: 3px;
+        flex: none;
+      }
+
       body.ui-v2 .session-expander-body {
         display: flex;
         flex-direction: column;
