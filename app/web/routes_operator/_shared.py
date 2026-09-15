@@ -756,13 +756,27 @@ async def _handle_import(
             # absent for an `int` field with a default, and because this
             # path renders unpaged so 0 is the right answer anyway.
             #
-            # `panel_open` is False here deliberately: the import card is
-            # still in the bottom grid, not the Unlock panel. Rung 3c
-            # moves it, and when it does THIS is the line that has to
-            # become True — the `?unlocked=1` query param cannot reach an
-            # in-place re-render.
+            # 19P.1 rung 3c moved the import card INTO the Unlock
+            # panel, so this line flipped, as the rung-3 slicing said it
+            # would have to. The panel ships `hidden` unless the server
+            # says otherwise, and `?unlocked=1` cannot reach an in-place
+            # re-render — this path returns 400 with the page, it does
+            # not redirect. Left False, a failed import would answer
+            # with a collapsed panel and the operator would see no
+            # errors at all: `validation_results.html` renders the issue
+            # list inside that card.
+            #
+            # The suite cannot catch a regression here. With no JS
+            # runtime `hidden` is an inert attribute, so the issues are
+            # in the markup and every assertion on them passes either
+            # way; Chromium is what proves it. Third time this shape has
+            # bitten this segment (`.is-locked`, `.filter-actions`).
+            #
+            # Reviewers-only because the panel is: `session_reviewees.html`
+            # never reads this key, and saying so here beats sending it a
+            # flag that means nothing on that page.
             "current_offset": 0,
-            "panel_open": False,
+            "panel_open": kind == "reviewers",
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
@@ -885,8 +899,17 @@ async def _handle_import(
         correlation_id=request_correlation_id(),
         field_labels_captured=result.field_labels,
     )
+    # 19P.1 rung 3c — a successful reviewers import lands back with the
+    # panel still open, matching the two controls that moved before it
+    # (3a's labels save, 3b's delete-all). The author's rule from the UI
+    # pass generalises to all three: a Save does not close the Reviewers
+    # card, the Lock button does. `#roster-card` lands on the card
+    # instead of the top of the document.
+    #
+    # Reviewees is left exactly as it was — no panel, so no flag.
+    suffix = "?unlocked=1#roster-card" if kind == "reviewers" else ""
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/{kind}",
+        url=f"/operator/sessions/{review_session.id}/{kind}{suffix}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

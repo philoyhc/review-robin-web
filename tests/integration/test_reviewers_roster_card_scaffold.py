@@ -159,16 +159,28 @@ def test_an_unpopulated_column_gets_no_chip(client, db):
     assert "Tag 2" not in card, card
 
 
-def test_every_unwired_unlock_control_is_inert(client, db):
-    """Scaffold-first means inert controls, not merely greyed ones.
+def test_the_panel_holds_three_wired_cards_and_nothing_else(client, db):
+    """The terminal form of `..._every_unwired_unlock_control_is_inert`.
 
-    Narrowed at 19P.1 rung 3a, which wired the tag-labels editor: the
-    panel is no longer uniformly inert, so this covers what 3b and 3c
-    have yet to wire. The labels editor is excised by its own card
-    rather than by control name — a name list would silently stop
-    covering anything the partial renames.
+    That test counted down: rung 1 built the panel with every control
+    inert, and each rung of 3 wired one card and excised it here. Rung
+    3c wired the last one, so there is nothing left for the old
+    assertion to check and it would pass on an empty set.
+
+    Inverted instead of retired. What the panel must now contain is
+    exactly three cards, each reached by a marker only a WIRED card
+    renders — the labels editor's own route, the Danger Zone's heading
+    id, the import form's action — and nothing else. That catches the
+    regression the old test could not: a fourth card, or a scaffold copy
+    left behind beside the real one.
+
+    It deliberately does NOT assert that no control in the panel is
+    `disabled`. All three cards ship disabled controls by design: the
+    labels editor's Save/Cancel until an input changes, and both
+    destructive buttons until their confirm is ticked.
     """
-    html = _page(client, _with_reviewers(client, db, "rc7"))
+    rs = _with_reviewers(client, db, "rc7")
+    html = _page(client, rs)
     # Bounded by the Lock control that now follows the panel, not by the
     # <script> that follows that — the old lookahead swept the control
     # into the panel's scope the moment it moved there, and the control
@@ -185,8 +197,15 @@ def test_every_unwired_unlock_control_is_inert(client, db):
     # cards are removed by their own markers rather than by naming the
     # controls inside them: a control list stops covering anything the
     # moment a card renames one.
+    rs_id = rs.id
+
+    # Each card is excised by a marker its WIRED form renders, not by a
+    # class the scaffold also had: the labels editor by its own POST
+    # target, the Danger Zone by its heading id, the import by its form
+    # action. Deleting any of the three includes must fail here.
     labels_card = _div_block(scope, '<div class="card field-labels-editor">')
     assert labels_card, "the wired labels editor is not in the panel"
+    assert f"/operator/sessions/{rs_id}/reviewers/field-labels" in labels_card
     scope = scope.replace(labels_card, "")
     assert "field-labels-editor" not in scope, "the excision missed a copy"
 
@@ -195,22 +214,31 @@ def test_every_unwired_unlock_control_is_inert(client, db):
         r'.*?</section>', scope, re.S,
     )
     assert danger, "the wired Danger Zone is not in the panel"
+    assert f"/operator/sessions/{rs_id}/reviewers/delete-all" in danger.group(0)
     scope = scope.replace(danger.group(0), "")
     assert "reviewers-danger-h" not in scope, "the excision missed a copy"
 
-    controls = re.findall(r"<(?:button|input)\b[^>]*>", scope)
-    assert len(controls) >= 2, (
-        f"only {len(controls)} unwired controls left to check; this test "
-        "passes trivially if the excision took too much"
+    upload = re.search(
+        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>', scope, re.S,
     )
-    # Match the ATTRIBUTE, not the substring: an `aria-label="… (scaffold)"`
-    # must not be able to satisfy this, which is how an earlier version of
-    # this assertion passed against an un-disabled control.
-    undisabled = [
-        c for c in controls
-        if not re.search(r"(?:^|\s)disabled(?:[=\s>]|$)", c)
-    ]
-    assert not undisabled, f"wired controls in a scaffold panel: {undisabled}"
+    assert upload, "the wired upload card is not in the panel"
+    assert f"/operator/sessions/{rs_id}/reviewers/import" in upload.group(0), (
+        "the upload card in the panel is not wired to the import route"
+    )
+    scope = scope.replace(upload.group(0), "")
+    assert "upload-csv" not in scope, "the excision missed a copy"
+
+    # The excision removed three cards, not the panel: if it had taken
+    # everything, "nothing left over" below would be trivially true.
+    assert "unlock-right" in scope, "the excision took the panel with it"
+
+    # Nothing else in the panel carries a control. A fourth card, or a
+    # scaffold copy left beside a real one, lands here.
+    leftovers = re.findall(r"<(?:button|input|textarea|select)\b[^>]*>", scope)
+    assert not leftovers, f"unaccounted controls in the panel: {leftovers}"
+    assert "<section" not in scope and 'class="card' not in scope, (
+        "a fourth card is in the panel"
+    )
 
 
 def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
@@ -229,7 +257,7 @@ def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
     # Scoped to the upload card's own <section>, not to whatever card
     # happens to follow it — the panel's column order is a layout choice
     # and a test should not pin it by accident.
-    upload = re.search(r'id="scaffold-upload-h".*?</section>', html, re.S)
+    upload = re.search(r'id="reviewers-upload-h".*?</section>', html, re.S)
     danger = re.search(r'id="reviewers-danger-h".*?</section>', html, re.S)
     assert upload and danger, "scaffold panel columns not found"
     ticks = re.findall(r'<input[^>]*type="checkbox"[^>]*>', upload.group(0))
@@ -251,7 +279,7 @@ def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
     # Scoped to the upload card's own <section>, not to whatever card
     # happens to follow it — the panel's column order is a layout choice
     # and a test should not pin it by accident.
-    upload = re.search(r'id="scaffold-upload-h".*?</section>', html, re.S)
+    upload = re.search(r'id="reviewers-upload-h".*?</section>', html, re.S)
     assert upload, "upload column not found"
     assert "replace the existing" not in upload.group(0), upload.group(0)
     # The card itself still renders: it is informational, and every state
@@ -259,19 +287,34 @@ def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
     assert 'id="roster-card"' in html
 
 
-def test_only_the_upload_card_is_left_to_absorb(client, db):
-    """Rung 1 added a surface and retired nothing; rung 3 retires them
-    one at a time. Two of the three are in the panel now — the tag
-    labels at 3a, the Danger Zone at 3b — so this counts down rather
-    than pinning a fixed three.
+def test_nothing_is_left_below_the_table(client, db):
+    """The countdown's last step. Rung 1 added the panel and retired
+    nothing; 3a, 3b and 3c each moved one card into it, and this test
+    shrank by one assertion per rung.
 
-    Was `..._three_cards_it_will_absorb_are_still_live`.
+    Was `..._only_the_upload_card_is_left_to_absorb`, before that
+    `..._three_cards_it_will_absorb_are_still_live`. With the import
+    card moved there is nothing below the table at all, so the claim
+    inverts: the bottom grid is gone, and all three cards are in the
+    panel.
+
+    `_markup()` strips `<style>` before any of this. Measured on a real
+    response, `bottom-grid` appears 16 times raw and 0 times stripped —
+    every one of them in `base.html`'s inlined stylesheet, which ships
+    on every page in the app. Unstripped, the assertion below would be
+    satisfied by the CSS whether or not the grid renders.
     """
     rs = _with_reviewers(client, db, "rc10")
     html = _markup(_page(client, rs))
 
-    # Still below the table, still to move at 3c.
-    assert 'id="upload-csv"' in html
+    # Moved at 3c, along with the grid that held it.
+    assert "bottom-grid" not in html, (
+        "the bottom grid is back below the table"
+    )
+    assert 'id="upload-csv"' in html, "the upload card vanished entirely"
+    assert 'id="upload-csv"' in _panel(html), (
+        "the upload card is not below the table, but not in the panel either"
+    )
 
     # Already moved. NOT the bare substring `danger-zone`: `base.html`'s
     # stylesheet ships on every response and mentions it eight times, so
@@ -297,6 +340,167 @@ def test_only_the_upload_card_is_left_to_absorb(client, db):
     # The live editor's own route, not a string the scaffold prints —
     # deleting the include outright must fail this.
     assert f"/operator/sessions/{rs.id}/reviewers/field-labels" in panel
+
+
+def test_the_replace_roster_key_appears_exactly_once(client, db):
+    """Why each rung wires AND deletes its own card in one slice.
+
+    `base.html`'s confirm-gate script resolves a tick's button with a
+    first-match `querySelector` on `[data-delete-btn="<key>"]`, so the
+    keys have to be unique page-wide. Wiring the panel's upload card in
+    one slice and deleting the one below the table in the next would
+    put two `replace-roster` pairs on the page between them, and the
+    gate would enable the wrong button — the one in the collapsed panel,
+    leaving the visible Upload dead.
+
+    Counted rather than asserted present: `in` passes on two.
+    """
+    rs = _with_reviewers(client, db, "rc-keys")
+    html = _markup(_page(client, rs))
+
+    assert html.count('data-delete-confirm="replace-roster"') == 1, (
+        "a second replace-roster tick is on the page"
+    )
+    assert html.count('data-delete-btn="replace-roster"') == 1, (
+        "a second replace-roster button is on the page; `sync` resolves "
+        "the first and would gate the wrong one"
+    )
+    # The pair must be in the same card, or the gate resolves across
+    # cards and ties a tick to a button the operator cannot see.
+    upload = re.search(
+        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>', html, re.S,
+    )
+    assert upload, "the upload card is not on the page"
+    assert 'data-delete-confirm="replace-roster"' in upload.group(0)
+    assert 'data-delete-btn="replace-roster"' in upload.group(0)
+
+
+def test_a_pill_confirm_keeps_its_sentence_in_one_piece(client, db):
+    """`.confirm-label` is `display: flex` with an 8px `gap`, and a bare
+    text node in a flex container becomes its own flex item. The two
+    confirms in the panel interleave pills with text, so "…the existing
+    <pill>8 reviewers</pill>." rendered as three items and the closing
+    "." floated 12px off the pill. Measured in Chromium: 12px before the
+    sentence was wrapped, 4px after — and that 4px is the pill
+    primitive's own margin, which every pill-in-a-sentence in the app
+    has.
+
+    3c is where this became a regression rather than an inherited quirk:
+    below the table the upload confirm was a plain
+    `<label style="font-weight: normal;">`, so its sentence flowed
+    inline. Moving it onto `.confirm-label` — a class rather than an
+    inline style, as `CLAUDE.md` asks — brought flex with it.
+
+    Pinned as the shape that breaks, not as the shape that works: a pill
+    whose next sibling is the label's closing text.
+    """
+    rs = _with_reviewers(client, db, "rc-confirm")
+    html = _markup(_page(client, rs))
+
+    labels = re.findall(r'<label class="confirm-label">.*?</label>', html, re.S)
+    assert len(labels) == 2, (
+        f"expected the Danger Zone's and the upload's confirms, got "
+        f"{len(labels)}"
+    )
+    for label in labels:
+        assert 'class="pill' in label, (
+            "a confirm with no pill is not what this test is about; the "
+            "fixture stopped producing counts"
+        )
+        # The broken shape: the pill's closing tag, then the sentence's
+        # final text, then the label ends — i.e. that text is a flex item
+        # of its own rather than part of a wrapped sentence.
+        assert not re.search(r"</span>\s*\.\s*</label>", label), (
+            "the confirm's closing text is a flex item of its own, so it "
+            f"renders detached from the pill before it: {label[-120:]}"
+        )
+        assert re.search(r"\.</span>\s*</label>", label), (
+            "the confirm's sentence is not wrapped in a single element"
+        )
+
+
+def test_the_panel_is_reachable_without_javascript(client, db):
+    """Rung 3 put all three mutating cards behind a `hidden` panel whose
+    only opener is an inline click handler, so with JS off the page lost
+    the CSV import, the delete-all and the labels editor in one step.
+    Raised by this slice's cold read and independently by Codex (P2).
+
+    `?unlocked=1` already renders the panel open server-side — it is what
+    the three controls redirect with — so the fallback links to a state
+    the server supports rather than adding machinery.
+
+    Both directions are pinned, because a one-way fallback strands a
+    no-JS operator in the open state with an inert Lock button.
+
+    Scope note, so this test is not read as more than it is: the Upload
+    and Delete-all buttons are still `disabled` until `base.html`'s
+    confirm-pairing script runs. That gate is unchanged by this segment
+    and identical at `3f7d5b6`, the commit before the revamp — so the
+    no-JS replace path was already closed and still is. What is restored
+    is the empty-roster import, where the button ships enabled, and the
+    ability to see the cards at all.
+    """
+    rs = _with_reviewers(client, db, "rc-nojs")
+    base = f"/operator/sessions/{rs.id}/reviewers"
+
+    closed = _markup(_page(client, rs))
+    assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
+        "the panel is not hidden here, so no fallback is needed and this "
+        "test asserts nothing"
+    )
+    opener = re.search(r"<noscript>.*?</noscript>", closed, re.S)
+    assert opener, "no no-JS fallback on the collapsed page"
+    assert f"{base}?unlocked=1" in opener.group(0), (
+        "the fallback does not link to the server-rendered open state"
+    )
+
+    opened = _markup(client.get(f"{base}?unlocked=1").text)
+    assert not re.search(r'id="roster-unlock-panel"[^>]*\bhidden', opened)
+    closer = re.search(r"<noscript>.*?</noscript>", opened, re.S)
+    assert closer, "no way back to the locked state without JS"
+    assert "unlocked=1" not in closer.group(0), (
+        "the way back re-opens the panel it is meant to close"
+    )
+
+
+def test_a_failed_import_arrives_with_the_panel_open(client, db):
+    """The reason 3c went last, and the one thing here the suite can
+    only half-see.
+
+    The import does not redirect on a bad CSV — it re-renders the page
+    with a 400 and the issue list, and `validation_results.html` renders
+    that list INSIDE the upload card. Now that the card is in the Unlock
+    panel, a page that ships collapsed would answer a failed import with
+    a shut panel and no visible errors. `?unlocked=1` cannot fix it:
+    there is no redirect to hang a query param on, so `_handle_import`
+    sets `panel_open` directly.
+
+    What this test CANNOT see: with no JS runtime in the suite, `hidden`
+    is an inert attribute. The issues are in the markup and readable
+    either way, so the assertion below is about the attribute, not about
+    anything an operator would experience. Chromium is what proves the
+    errors are on screen; this only stops the flag regressing silently.
+    """
+    rs = _with_reviewers(client, db, "rc-badcsv")
+    response = client.post(
+        f"/operator/sessions/{rs.id}/reviewers/import",
+        files={"file": ("bad.csv", b"ReviewerName\nAlice\n", "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    html = _markup(response.text)
+
+    # The panel's own opening tag, not a substring of the page: several
+    # other elements on this page carry `hidden`.
+    assert not re.search(r'id="roster-unlock-panel"[^>]*\bhidden', html), (
+        "a failed import ships a collapsed panel, hiding its own errors"
+    )
+    # And the errors really are inside the panel — which is what makes
+    # the flag above load-bearing rather than cosmetic.
+    panel = _panel(html)
+    assert "Missing required column" in panel, (
+        "the issue list is not inside the panel, so the flag guards nothing"
+    )
 
 
 def test_unlock_is_suppressed_not_disabled_when_locked(client, db):
@@ -488,7 +692,7 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     # the partial renders a plain <h2> under its own card class.
     labels = body.index('class="card field-labels-editor"')
     danger = body.index('id="reviewers-danger-h"')
-    upload = body.index('id="scaffold-upload-h"')
+    upload = body.index('id="reviewers-upload-h"')
     assert labels < danger < upload, (
         "expected labels, then danger zone, then upload"
     )
@@ -503,7 +707,7 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     assert stack_html, "left-column stack not found"
     assert 'class="card field-labels-editor"' in stack_html
     assert 'id="reviewers-danger-h"' in stack_html
-    assert 'id="scaffold-upload-h"' not in stack_html, (
+    assert 'id="reviewers-upload-h"' not in stack_html, (
         "upload belongs in the right column, not the stack"
     )
 
@@ -585,7 +789,7 @@ def test_the_upload_card_sits_in_its_own_right_column_stack(client, db):
     directly beneath the card it acts on."""
     html = _page(client, _with_reviewers(client, db, "rc24"))
     right = re.search(
-        r'<div class="unlock-stack unlock-right">.*?id="scaffold-upload-h"',
+        r'<div class="unlock-stack unlock-right">.*?id="reviewers-upload-h"',
         html, re.S
     )
     assert right, "upload card is not inside a right-column stack"
@@ -1466,36 +1670,42 @@ def test_the_editor_card_is_absent_outside_edit_mode(client, db):
     )
 
 
-@pytest.mark.parametrize(
-    "state,adding",
-    [("draft", False), ("draft", True), ("ready", False), ("archived", False)],
-)
-def test_the_roster_note_claims_nothing_the_page_does_not_show(
-    client, db, state, adding
-):
-    """It names two things: an Unlock control, and live cards below.
+def test_the_retired_roster_note_stays_retired(client, db):
+    """Rung 3c retired the roster card's note, so this replaces
+    `..._the_roster_note_claims_nothing_the_page_does_not_show`.
 
-    Both are gated; the note was not, so on a locked session it read
-    "the roster's tag labels live behind Unlock" with no Unlock on the
-    page, and "those two are still live in the cards below" with no
-    cards below. Asserted as a biconditional rather than as absence, so
-    it fails whichever side stops matching.
+    That test was a biconditional: the note named an Unlock control and
+    live cards below the table, both gated, and it asserted the note
+    rendered exactly when they did. With no card below the table left,
+    the second half can never hold again — the note cannot be made true
+    by another condition, which is why it went rather than gaining one.
+
+    What is pinned now is that it does not come back, and the reason it
+    is worth pinning: this sentence acquired a new gate at every rung of
+    3, and a fourth would have been the path of least resistance here
+    too.
+
+    The needle is the note's own class, and `_markup()` strips
+    `<style>` first — `base.html` inlines the whole app's CSS on every
+    response, so a bare class name is true of every page in the app
+    whether or not the element renders. (The rule itself went with the
+    note; this asserts against the markup regardless, so it holds if a
+    future slice re-adds the rule.)
     """
-    rs = _with_reviewers(client, db, f"rc-note-{state[:4]}-{int(adding)}")
-    review_session = db.get(ReviewSession, rs.id)
-    review_session.status = state
-    db.flush()
-    url = f"/operator/sessions/{review_session.id}/reviewers"
-    if adding:
-        url += "?add=1"
-    html = _markup(client.get(url).text)
-    where = f"{state}, add={adding}"
+    rs = _with_reviewers(client, db, "rc-note-gone")
+    html = _markup(_page(client, rs))
 
-    note = "live behind" in html
-    unlock = 'id="roster-unlock-btn"' in html
-    cards = 'class="bottom-grid"' in html
-    assert note == unlock, f"{where}: note {note}, Unlock control {unlock}"
-    assert note == cards, f"{where}: note {note}, cards below {cards}"
+    assert 'class="form-help roster-card-note"' not in html, (
+        "the retired roster-card note is back"
+    )
+    assert "live behind" not in html, (
+        "something is promising controls live behind Unlock again"
+    )
+    # The card it used to sit in still renders, and so does the Unlock
+    # control the note used to point at — without which this asserts
+    # only that the page failed to render.
+    assert 'id="roster-card"' in html
+    assert 'id="roster-unlock-btn"' in html
 
 
 # ---------------------------------------------------------------- UI pass
@@ -1744,12 +1954,26 @@ def test_the_danger_zone_is_wired_in_the_panel(client, db):
 
 
 def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
-    """The divergence 3b settles.
+    """The divergence 3b settles, and the sole home of the empty-roster
+    half after 3c retired a weaker duplicate in
+    `test_reviewers_page_mutate.py`.
 
     The live card was `{% if total_row_count > 0 %}`; the scaffold copy
     it replaced rendered unconditionally, so an empty roster offered
     "delete the existing 0 reviewers" — a destructive control with
-    nothing to destroy, which the route refuses anyway.
+    nothing to destroy.
+
+    **Corrected 2026-09-15 (3c):** this docstring used to end "which the
+    route refuses anyway". It does not. POSTed on a roster of zero the
+    route answers 303 and writes an audit row reading "Deleted all 0
+    reviewers". 3b's cold read caught that claim in the template comment
+    and in the guide and both were fixed; this third copy was missed,
+    which is why a false sentence outlives its correction.
+
+    The real reason the gate matters is worse than a no-op: `_delete_all`
+    opens with `lifecycle.invalidate_if_validated(...)` before it counts
+    anything, so an ungated Delete-all knocks a `validated` session back
+    to `draft` while deleting nothing at all.
     """
     empty = _session(client, db, "rc-3b-empty")
     html = _markup(_page(client, empty))
