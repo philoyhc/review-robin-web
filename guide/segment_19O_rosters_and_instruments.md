@@ -10,6 +10,150 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 4 — A client-side sort strands the injected selection panel
+
+### Opportunity
+
+`_rrwApplySort` (`base.html:4363`) re-sorts **every child** of
+`tbody.rrw-rows`:
+
+```js
+var rows = Array.prototype.slice.call(tbody.children);
+```
+
+An injected selection panel is one of those children. It carries a single
+`colspan` cell and no `data-sort-value`, so `_rrwCellValue` returns `null` for
+every sort column and the function's null-last rule parks it at the **bottom of
+the table**, detached from the row it belongs to, until the selection changes.
+
+A second effect is quieter and worse. The same pass stamps
+`rrwOriginalIndex` once per row, which is what `state.length === 0` restores
+when the operator clears the sort. A panel present at stamping time occupies an
+index, so **every row after it is stamped one too high** and "unsorted" no
+longer restores the server's order.
+
+Found by `diff-reviewer` and by Codex independently on 19P.1 rung 1
+(`#2397`). **Not introduced there** — it is a property of the two primitives
+meeting, and the Session Lobby has had it since 19L.
+
+### Decision
+
+**Fix it once in `_rrwApplySort`**: drop `.session-expander` rows from the
+tbody before the stamp-and-sort pass, then dispatch a `rrw:sorted` event so
+whichever script owns the panel re-anchors it. The owners already know how to
+place a panel — `refreshExpander()` on the lobby, `render()` on Reviewers — so
+the fix is a removal plus a signal, not a second placement rule.
+
+*Rejected: leave each page to defend itself.* 19P.1 already shipped that — a
+capture-phase click handler on `.rrw-sort-btn` (`session_reviewers.html:850`)
+that removes the panel before the inline sort handler runs. It works, and it is
+deliberately local so the slice would not change lobby behavior. But 19P.2–3
+bring Reviewees, Relationships and Observers, so the same workaround would be
+copied **five** times against one function, and the lobby's copy of the bug
+would still be live.
+
+*Rejected: give the panel sort cells.* It has one `colspan` cell by
+construction — the bracket depends on that cell being both first and last child
+(`spec/ui_elements.md`, `.session-row-selected`).
+
+### Semantics
+
+- **Removal, not hiding.** A hidden row still occupies a `rrwOriginalIndex`.
+- **The event fires on every sort pass**, including the clear-to-unsorted one,
+  because that pass reorders rows too.
+- **A page with no panel is unaffected** — the querySelectorAll finds nothing
+  and the event has no listener. The seven sortable tables that never inject
+  one keep their current behavior exactly.
+- **The panel is rebuilt, not re-inserted.** Its content depends on the
+  selection, not on row order; re-running the owner's existing render is
+  simpler than moving a node and is what both owners already do.
+- **`rrwOriginalIndex` is stamped after removal**, so the restore order is the
+  server's again.
+
+### Judgment calls — decided
+
+- **2026-09-15.** Fixed in `base.html` rather than per page, because the defect
+  is in the shared function and the per-page workaround does not scale to the
+  five tables 19P will leave behind.
+- **2026-09-15.** 19P.1's local workaround is **removed** by this item rather
+  than left as belt-and-braces: two mechanisms for one bug is how one of them
+  rots unnoticed.
+- **2026-09-15.** Landed in 19O rather than inside a 19P rung — 19P re-houses
+  controls and this fixes a bug older than it, and bundling them would put an
+  unrelated fix in a feature PR (`CLAUDE.md`, Working approach).
+
+### Blast radius (measured)
+
+At `820d5d6`:
+
+- `grep -n "tbody.children" app/web/templates/base.html` → **1** (`:4363`), the
+  only place rows are collected for sorting.
+- `grep -rln "data-rrw-sortable" app/web/templates` → **10** files; `grep -rln
+  "session-expander" app/web/templates` → **4**. The intersection is **three**
+  pages that both sort and inject: `sessions_list.html`,
+  `sessions_archived.html`, `session_reviewers.html`. Each carries exactly one
+  `rrw-rows` tbody. The other seven sortable tables inject nothing and are
+  unaffected.
+- `grep -c "rrw:sorted" sessions_list.html sessions_archived.html` → **0 / 0**:
+  neither lobby page re-anchors after a sort today, which is the live bug.
+- `grep -n 'closest(".rrw-sort-btn")' session_reviewers.html` → **1**
+  (`:850`), the local workaround this item deletes.
+- Tests: `grep -c "def test" tests/unit/test_lobby_row_selection.py` → **14**,
+  `tests/integration/test_setup_tables_sort.py` → **13**. Neither exercises
+  sort-with-a-selection — the combination is exactly what nothing covers.
+
+### PR ladder
+
+One slice. The fix is one function plus one listener per owner, and splitting
+it would leave a dispatched event with nothing listening.
+
+1. **`_rrwApplySort` drops and signals; the three owners re-anchor.** Removes
+   19P.1's local workaround in the same slice, since it becomes a second
+   mechanism for a fixed bug. Must not change the sort order itself, and must
+   not touch the seven tables that inject nothing.
+
+### Definition of done
+
+- `_rrwApplySort` removes `.session-expander` children before stamping
+  `rrwOriginalIndex`, asserted on the shipped source.
+- A sort with rows selected leaves the panel anchored to the same row it was
+  anchored to before, on the lobby **and** on Reviewers. *No JS runtime in the
+  suite, so this is asserted as mechanism — the removal, the dispatch, the
+  listeners — and confirmed in a browser against the rendered page, as 19P.1
+  rung 1 did for its anchor rule.*
+- Clearing a sort restores the server's row order with a panel open, which is
+  the `rrwOriginalIndex` half.
+- `grep -c 'closest(".rrw-sort-btn")' app/web/templates/operator/session_reviewers.html` → 0.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19O.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does `sessions_archived.html` need the listener too?** It injects
+   (`grep -c insertAdjacentElement` → 2) and sorts, so on the measurement it
+   does. Confirm its script's entry point is shaped like the lobby's before
+   assuming one line covers it.
+
+### Out of scope
+
+- **The seven sortable tables that inject no panel.** Unaffected by
+  measurement; touching them would widen a bug fix into a sweep.
+- **Server-side sorting.** A different design, and not what is broken.
+- **19P's re-housing.** This fixes the primitive underneath it; the rungs
+  proceed unchanged either way.
+
+### Doc impact
+
+- `spec/ui_elements.md` — the `.session-row-selected` entry describes the injected panel's placement ("**The panel closes the bracket**") without stating what a client-side sort does to it; add the rule that a sort drops and re-anchors it, beside the `[data-rrw-sortable]` entry that owns the sort primitive (Item 4).
+- `docs/status.md` — row when the item lands (Item 4).
+
+- `spec/sessions_overview.md` — its panel description is behavioral ("the panel renders no pills") and does not state a sort interaction, so nothing there goes stale (Item 4). <!-- doc-impact-waived: deliberate exclusion — the entry describes panel behavior, not sort interaction, so nothing stated there becomes wrong -->
+
+---
+
 ## Item 3 — A sent invitation makes the roster un-replaceable
 
 ### Opportunity
