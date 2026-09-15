@@ -1326,8 +1326,15 @@
          here; the count sits with its rows. */
       /* ================= The filter-strip shape =================
          A status dropdown and a search box on one row, then the
-         buttons that act on them flush right below. Eight instances
-         across seven Setup pages.
+         buttons that act on them flush right below. Seven instances,
+         one per template that carries a `.filter-row` — the same
+         "seven templates" this file already names further down, NOT
+         "seven Setup pages": `spec/setup_pages.md` says in bold, under the
+         section listing which pages those are, that Assignments is not
+         one, and Invitations and Responses are Operations surfaces too. (`.filter-actions` counts eight, but
+         the eighth is the orphan action row rung 2a left inside
+         `.operator-actions-card` with no filter row above it; rung 2b
+         takes it.)
 
          UNSCOPED, and that is the point. This shape used to be
          declared separately inside each card that held it, which meant
@@ -1371,8 +1378,19 @@
       }
       .filter-row > label.filter-status { flex: 1; }
       .filter-row > label.filter-search { flex: 2; }
-      .filter-row select,
-      .filter-row input[type="text"] {
+      /* Prefixed for the same reason as the label rule above, and it
+         was missed on the first cut: the app-wide
+         `body.ui-v2 input[type="text"], … , body.ui-v2 select` rule is
+         (0,1,2) / (0,2,2) and outranks a bare `.filter-row select`
+         (0,1,1) / `input[type="text"]` (0,2,1). It happens to set the
+         same `width` and `box-sizing`, so nothing renders differently
+         either way — which is exactly why this was invisible. Left
+         unprefixed these two rules are inert, and the day that global
+         rule changes, all seven strips follow it silently. That is the
+         failure this whole base exists to stop, so the base has to
+         actually win. */
+      body.ui-v2 .filter-row select,
+      body.ui-v2 .filter-row input[type="text"] {
         width: 100%;
         box-sizing: border-box;
       }
@@ -1385,7 +1403,14 @@
         flex-wrap: wrap;
       }
       /* ---- Scope 1: `.filter-card` — Invitations / Responses.
-         Narrows nothing: it was the base all along. */
+         Narrows nothing. It carried one declaration the base does not,
+         `flex: 1` on the generic label, and that was dead: every
+         `<label>` in a `.filter-row` across all seven templates carries
+         `.filter-status` or `.filter-search`, so the generic rule was
+         always overridden. Pinned by
+         `tests/unit/test_filter_strip_base_rule.py`, because an
+         unclassed label added later would go from `flex: 1 1 0` to
+         `flex: 0 1 auto` with nothing to catch it. */
       .filter-card form { margin: 0; }
       /* ---- Scope 2: `.operator-actions-card` (Segment 15F) —
          Reviewees / Relationships / Observers / Assignments (and
