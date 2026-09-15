@@ -436,7 +436,7 @@ each card's own route, measured before cutting.**
 
 | slice | card | its route answers | why here |
 |---|---|---|---|
-| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and takes `.card-columns` with it |
+| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home until 3c (see the 3a entry below) |
 | **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence |
 | **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last |
 
@@ -516,9 +516,45 @@ scaffold's `.unlock-col-actions` are computed-identical in Chromium
 the markup. The partial also brought the dirty-check the copy lacked.
 
 **Mutation-tested, the invariant being "exactly once":** both homes
-rendering → 4 fail; neither → 9, including the locked-state rule; and the
-gate re-spelled as `not is_editable` — the drift `unlock_available` exists
-to prevent, which loses the editor mid-edit → 2.
+rendering → 4 fail; the FALLBACK home never rendering → 9, including the
+locked-state rule; and the gate re-spelled as `not is_editable` — the
+drift `unlock_available` exists to prevent, which loses the editor
+mid-edit → 2. (3a's commit called the second of those "neither", which is
+a different mutation with a different count. Removing both includes gives
+13.)
+
+**What 3a's cold read caught, and it was the same mistake twice over.**
+The anti-drift argument above was applied to the gate and NOT to the six
+parameters the partial takes, which 3a spelled out once per home — and
+which had already drifted: the panel built the action from
+`reviewers_base_url`, the fallback hand-built it from `session.id`.
+Pointing the fallback at `/reviewees/field-labels` passed the entire
+suite. That copy renders with `is_editable` true during an edit, so its
+Save was live: the page would have written reviewer labels onto the
+reviewee set and 303'd. The parameters are one hoisted block now, and
+the action and all three slots are asserted in all ten states.
+
+**And "exactly once" was counted in five of ten.** The parametrization
+covered the lifecycle at rest only, dropping `edit_mode` — the axis that
+decides which home renders on an editable session, and half of
+`unlock_available`. Both axes now.
+
+**Also 3a's, also ungated:** the roster card's note ("the tag labels live
+behind Unlock... those two are still live in the cards below") replaced a
+future-tense scaffold string with a present-tense claim and kept its lack
+of a gate, so it was false in three lifecycle states and in edit mode —
+no Unlock control on the page, no cards below. Gated on
+`unlock_available`, as is the bottom grid it refers to, so the note and
+the thing it describes cannot part company.
+
+**Left for rung 4, not 3a's to take:** the partial renders `<div class=
+"card">` with a bare `<h2>` while the panel's other two tenants are
+`<section aria-labelledby>`, so one of three regions is unlabelled —
+closing that means editing a partial three templates share.
+`app/web/templates/guide.html:174-177` tells operators they edit friendly
+tag labels "through the Reviewers, Reviewees and Relationships pages",
+which on Reviewers now means clicking Unlock first, and says nothing
+about it.
 
 ### PR ladder
 
@@ -548,6 +584,10 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
    friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
    Must not touch `spec/`.
+   *3a amended the middle clause: the `_field_labels_editor` card is **not**
+   deleted. It has two homes — the panel, and its old one on the
+   complement of the panel's condition — because a locked page must still
+   show the labels while carrying no "Save labels". See `### Status`.*
    *Sliced 2026-09-15 into **3a** (labels), **3b** (Delete-all) and **3c**
    (Upload), cut on each route's response shape — see `### Status`. Each
    slice wires its control and deletes its old card together; 3c also

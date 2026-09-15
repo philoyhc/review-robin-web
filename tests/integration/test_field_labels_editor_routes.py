@@ -172,6 +172,14 @@ def test_reviewers_save_still_works_while_editable(
 def test_reviewers_page_renders_editor_when_not_ready(
     client: TestClient, db: Session
 ) -> None:
+    """Markup presence, which since 19P.1 rung 3a is no longer the same
+    as visibility on this page: on an editable session the editor
+    renders inside the Unlock panel, and that panel ships `hidden`. So
+    what follows says the editor and its controls are SERVED, not that
+    an operator can see them without clicking Unlock first. The suite
+    has no JS runtime and cannot tell the two apart; the panel's own
+    open / close behavior is checked in Chromium.
+    """
     review_session = _make_session(client, db, "fle-rev-render")
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"

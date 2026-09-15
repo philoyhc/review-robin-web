@@ -21,6 +21,28 @@
   {% set unlock_available = is_editable and not edit_mode %}
   {% set reviewers_base_url =
         "/operator/sessions/" ~ session.id ~ "/reviewers" %}
+  {# ...and the editor's parameters, for the same reason, one level up
+     from both includes.
+
+     3a shipped these spelled out twice, once per home, while the comment
+     beside them argued that two spellings of one thing drift. They had
+     already drifted: the panel built the action from
+     `reviewers_base_url`, the fallback hand-built the same string from
+     `session.id`. A cold read changed the fallback's to `/reviewees/`
+     and the whole suite passed — and because that copy renders with
+     `is_editable` true during an edit, its Save was live, so the page
+     would have written reviewer labels onto the reviewee set and 303'd
+     as if nothing were wrong. One block, no second spelling to drift. #}
+  {% set field_labels_form_action = reviewers_base_url ~ "/field-labels" %}
+  {% set field_labels_source_type = "reviewer" %}
+  {% set field_labels_card_title = "Reviewer tag labels" %}
+  {% set field_labels_help =
+        "Rename the three reviewer tag columns for this session. " ~
+        "Friendly labels flow through every operator preview surface; " ~
+        "leave a cell blank to fall back to the default." %}
+  {% set field_labels_rows = [
+        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
+  ] %}
 
   <div class="session-nav-card">
     {% with current_page = "Reviewers" %}
@@ -110,11 +132,22 @@
      REAL height, so all three confirm affordances render here.
      ------------------------------------------------------------------ #}
   <div class="card roster-card" id="roster-card">
-    <p class="form-help roster-card-note">
-      The roster's tag labels live behind <strong>Unlock</strong>. CSV
-      import and delete-all follow; until they do, those two are still
-      live in the cards below.
-    </p>
+    {# Gated on `unlock_available`, because both of its claims are only
+       true there. It shipped ungated at 3a and the scaffold string it
+       replaced was future-tense ("*will* live behind Unlock"), which
+       survived being ungated; turning it into a present-tense statement
+       of fact did not. On a locked session there is no Unlock control
+       on the page to live behind, and no cards below either — the
+       bottom grid takes the same gate — so the note was false in three
+       of five lifecycle states and in edit mode. The readouts below
+       stay: they are informational in every state. #}
+    {% if unlock_available %}
+      <p class="form-help roster-card-note">
+        The roster's tag labels live behind <strong>Unlock</strong>. CSV
+        import and delete-all follow; until they do, those two are still
+        live in the cards below.
+      </p>
+    {% endif %}
 
     <div class="roster-readouts">
       <div class="roster-readout">
@@ -164,18 +197,10 @@
 
              The partial also brings the dirty-check script the scaffold
              copy had no reason to carry — Save and Cancel enable only
-             once an input actually changes. #}
-          {% set field_labels_form_action =
-                reviewers_base_url ~ "/field-labels" %}
-          {% set field_labels_source_type = "reviewer" %}
-          {% set field_labels_card_title = "Reviewer tag labels" %}
-          {% set field_labels_help =
-                "Rename the three reviewer tag columns for this session. " ~
-                "Friendly labels flow through every operator preview surface; " ~
-                "leave a cell blank to fall back to the default." %}
-          {% set field_labels_rows = [
-                [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-          ] %}
+             once an input actually changes.
+
+             Its parameters are set once at the top of the page, with
+             `unlock_available` — see there. #}
           {% include "operator/partials/_field_labels_editor.html" %}
 
           <section class="card" aria-labelledby="scaffold-danger-h">
@@ -309,17 +334,8 @@
   <div class="card-columns">
     <div>
 
-    {% set field_labels_form_action =
-          "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
-    {% set field_labels_source_type = "reviewer" %}
-    {% set field_labels_card_title = "Reviewer tag labels" %}
-    {% set field_labels_help =
-          "Rename the three reviewer tag columns for this session. " ~
-          "Friendly labels flow through every operator preview surface; " ~
-          "leave a cell blank to fall back to the default." %}
-    {% set field_labels_rows = [
-          [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-    ] %}
+    {# Same parameters as the panel's copy, because they ARE the same —
+       set once at the top of the page with `unlock_available`. #}
     {% include "operator/partials/_field_labels_editor.html" %}
 
     </div>
@@ -992,7 +1008,7 @@
      409. The author's rule for rows — draft and validated edit,
      the rest do not, because "the thing is over" — is a rule
      about editing, and these are edits. #}
-  {% if is_editable and not edit_mode %}
+  {% if unlock_available %}
   <div class="bottom-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Reviewers</h2>

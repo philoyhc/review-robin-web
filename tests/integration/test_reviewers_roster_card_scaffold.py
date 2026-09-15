@@ -459,11 +459,16 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     )
 
     # The first two share the stack; upload is the grid's second child.
-    stack = re.search(r'<div class="unlock-stack">.*?\n        </div>', body, re.S)
-    assert stack, "left-column stack not found"
-    assert 'class="card field-labels-editor"' in stack.group(0)
-    assert 'id="scaffold-danger-h"' in stack.group(0)
-    assert 'id="scaffold-upload-h"' not in stack.group(0), (
+    # Div-balanced like the panel scope above it. This was
+    # `.*?\n        </div>` — a boundary anchored on eight spaces of
+    # indentation, which resolved correctly only because nothing in the
+    # stack happened to close at that depth. The panel boundary two
+    # lines up had already broken that way once.
+    stack_html = _div_block(body, '<div class="unlock-stack">')
+    assert stack_html, "left-column stack not found"
+    assert 'class="card field-labels-editor"' in stack_html
+    assert 'id="scaffold-danger-h"' in stack_html
+    assert 'id="scaffold-upload-h"' not in stack_html, (
         "upload belongs in the right column, not the stack"
     )
 
@@ -1241,12 +1246,15 @@ def test_card_columns_renders_only_where_the_unlock_panel_cannot(client, db):
 
 
 @pytest.mark.parametrize(
-    "state,panel_expected",
-    [("draft", True), ("validated", True),
-     ("ready", False), ("expired", False), ("archived", False)],
+    "state,adding,panel_expected",
+    [("draft", False, True), ("draft", True, False),
+     ("validated", False, True), ("validated", True, False),
+     ("ready", False, False), ("ready", True, False),
+     ("expired", False, False), ("expired", True, False),
+     ("archived", False, False), ("archived", True, False)],
 )
 def test_the_labels_editor_renders_exactly_once_in_every_state(
-    client, db, state, panel_expected
+    client, db, state, adding, panel_expected
 ):
     """The invariant rung 3a's `unlock_available` exists to hold.
 
@@ -1258,28 +1266,51 @@ def test_the_labels_editor_renders_exactly_once_in_every_state(
     (the roster readouts pill only the columns that HOLD data, so a
     friendly label on an empty tag column appears nowhere else).
 
-    Parametrized over the lifecycle rather than the two branches,
-    because the branches are what could be wrong.
+    Parametrized over BOTH axes of `unlock_available`, not just the
+    lifecycle: `edit_mode` is the other half, and on an editable session
+    it is the half that decides which home renders. A first version
+    covered the five states at rest only — five of the ten that matter —
+    so a third include gated on `edit_mode` would have rendered the
+    editor twice in add mode with nothing counting it.
     """
-    rs = _with_reviewers(client, db, f"rc-3a-{state[:5]}")
+    rs = _with_reviewers(client, db, f"rc-3a-{state[:5]}-{int(adding)}")
     review_session = db.get(ReviewSession, rs.id)
     review_session.status = state
     db.flush()
-    html = _markup(_page(client, review_session))
+    url = f"/operator/sessions/{review_session.id}/reviewers"
+    if adding:
+        url += "?add=1"
+    response = client.get(url)
+    assert response.status_code == 200
+    html = _markup(response.text)
+    where = f"{state}, add={adding}"
 
-    assert html.count('id="field-labels-form-reviewer"') == 1, state
-    assert html.count("Reviewer tag labels") == 1, state
+    assert html.count('id="field-labels-form-reviewer"') == 1, where
+    assert html.count("Reviewer tag labels") == 1, where
+
+    # The form's TARGET, in whichever home it landed. Unguarded until a
+    # cold read pointed the fallback copy at `/reviewees/field-labels`
+    # and watched the whole suite pass — a live Save, during an edit,
+    # writing this page's labels onto another roster's and 303ing.
+    assert html.count(
+        f'action="/operator/sessions/{review_session.id}'
+        f'/reviewers/field-labels"'
+    ) == 1, where
+    # ...and all three slots, which the fallback copy also did not pin:
+    # it could be cut to one and nothing failed.
+    for slot in ("tag_1", "tag_2", "tag_3"):
+        assert f'name="{slot}"' in html, f"{where}: {slot} missing"
 
     in_panel = 'id="roster-unlock-panel"' in html
-    assert in_panel is panel_expected, state
+    assert in_panel is panel_expected, where
     if panel_expected:
         panel = _div_block(
             html, '<div class="unlock-panel" id="roster-unlock-panel" hidden>'
         )
-        assert "field-labels-editor" in panel, f"{state}: editor outside panel"
-        assert 'class="card-columns"' not in html, state
+        assert "field-labels-editor" in panel, f"{where}: editor outside panel"
+        assert 'class="card-columns"' not in html, where
     else:
-        assert "field-labels-editor" in _card_columns(html), state
+        assert "field-labels-editor" in _card_columns(html), where
 
 
 def test_the_editor_card_sits_immediately_above_the_table_card(client, db):
@@ -1358,3 +1389,35 @@ def test_the_editor_card_is_absent_outside_edit_mode(client, db):
     assert 'form="reviewer-edit-form">Save</button>' not in html, (
         "the editor's Save renders with no row to save"
     )
+
+
+@pytest.mark.parametrize(
+    "state,adding",
+    [("draft", False), ("draft", True), ("ready", False), ("archived", False)],
+)
+def test_the_roster_note_claims_nothing_the_page_does_not_show(
+    client, db, state, adding
+):
+    """It names two things: an Unlock control, and live cards below.
+
+    Both are gated; the note was not, so on a locked session it read
+    "the roster's tag labels live behind Unlock" with no Unlock on the
+    page, and "those two are still live in the cards below" with no
+    cards below. Asserted as a biconditional rather than as absence, so
+    it fails whichever side stops matching.
+    """
+    rs = _with_reviewers(client, db, f"rc-note-{state[:4]}-{int(adding)}")
+    review_session = db.get(ReviewSession, rs.id)
+    review_session.status = state
+    db.flush()
+    url = f"/operator/sessions/{review_session.id}/reviewers"
+    if adding:
+        url += "?add=1"
+    html = _markup(client.get(url).text)
+    where = f"{state}, add={adding}"
+
+    note = "live behind" in html
+    unlock = 'id="roster-unlock-btn"' in html
+    cards = 'class="bottom-grid"' in html
+    assert note == unlock, f"{where}: note {note}, Unlock control {unlock}"
+    assert note == cards, f"{where}: note {note}, cards below {cards}"
