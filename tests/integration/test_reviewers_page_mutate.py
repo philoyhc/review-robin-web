@@ -894,3 +894,61 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
         "the row is brought on screen without being centred, so a long "
         "row can still land with its bar below the fold"
     )
+
+
+def test_delete_all_comes_back_with_the_panel_open(
+    db: Session, client: TestClient
+) -> None:
+    """The control lives inside the Unlock panel now, so a bare redirect
+    closes the panel the operator was working in.
+
+    The Danger Zone itself is gone from that response — the roster is
+    empty and the card is gated on rows — but the labels editor and the
+    upload card are not, and uploading a replacement is the likely next
+    move. Rung 3a's labels save needed the same flag for the same
+    reason; 3b shipped without it because the plan read "redirect-only"
+    off the status code rather than the contract.
+    """
+    review_session = _make_session(client, db, code="rev-da-open")
+    _seed(db, review_session.id, ["Alice"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/delete-all",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/reviewers"
+        "?unlocked=1#roster-card"
+    ), response.headers["location"]
+
+
+def test_the_roster_note_promises_delete_all_only_when_it_renders(
+    db: Session, client: TestClient
+) -> None:
+    """The Danger Zone is gated on the roster having rows; the note that
+    names it was not, so an empty roster read "tag labels and delete-all
+    live behind Unlock" with no delete-all behind Unlock.
+
+    A biconditional against the card's own heading id, so the two cannot
+    part company again — the same shape of claim as the note about the
+    cards below the table.
+    """
+    review_session = _make_session(client, db, code="rev-note-da")
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    empty = client.get(base).text
+    assert "and delete-all" not in empty, (
+        "an empty roster promises a delete-all the panel does not offer"
+    )
+    assert 'aria-labelledby="reviewers-danger-h"' not in empty, (
+        "fixture is not actually empty, so this asserts nothing"
+    )
+
+    _seed(db, review_session.id, ["Alice"])
+    filled = client.get(base).text
+    assert "and delete-all" in filled, (
+        "a roster with rows does not mention the delete-all it offers"
+    )
+    assert 'aria-labelledby="reviewers-danger-h"' in filled

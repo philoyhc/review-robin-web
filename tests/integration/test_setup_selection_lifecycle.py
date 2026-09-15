@@ -250,7 +250,24 @@ def test_the_upload_and_danger_zone_cards_render_while_editable(
 
     body = _render(client, s, page)
 
-    assert 'class="card danger-zone"' in body
+    # Reviewers moved its Danger Zone into the Unlock panel at 19P.1
+    # rung 3b, so it has no `.danger-zone` card. Asserted by its own
+    # marker rather than skipped: what this test is about is that the
+    # control is OFFERED while the session is editable, and that claim
+    # holds on all four pages — only its home differs.
+    if page == "reviewers":
+        # The card kept its `danger-zone` class when it moved into the
+        # panel — that class is the only reach for the amber warning
+        # framing — so what distinguishes the new home is the heading
+        # id, not the class. WHERE it renders is pinned, with the
+        # panel-scoping that needs, in
+        # `test_reviewers_roster_card_scaffold.py`; what this test
+        # claims is only that the control is offered while editable.
+        assert 'aria-labelledby="reviewers-danger-h"' in body, (
+            "Reviewers offers no delete-all while editable"
+        )
+    else:
+        assert 'class="card danger-zone"' in body
     assert f"/{page}/delete-all" in body
 
 
