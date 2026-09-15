@@ -442,3 +442,24 @@ def test_the_replace_confirm_is_set_apart_from_the_file_input(client, db):
     assert rule, ".confirm-label rule not found"
     assert "margin: var(--space-4) 0 0" in rule.group(1), rule.group(1)
 
+
+def test_the_panel_does_not_compound_the_base_card_margin(client, db):
+    """The base `.card` carries `margin-bottom: 20px`, which
+    `body.ui-v2 .card` deliberately does not override. Inside a gapped
+    container that margin COMPOUNDS with the gap — the two stacked cards
+    sat 36px apart against the page's 20px until this was zeroed, exactly
+    as `.page-grid`, `.bottom-grid` and `.subcard-row` already do.
+
+    Geometry, so this asserts the rules rather than their effect; the
+    measured result is confirmed in a browser.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc21"))
+    assert re.search(
+        r"\.unlock-panel \.card \{[^}]*margin-bottom:\s*0", html
+    ), "the base card margin is not zeroed inside the panel"
+    # And the gap the page uses between cards, not the token scale's 16.
+    for selector in (r"\.unlock-panel \{", r"\.unlock-stack \{"):
+        rule = re.search(selector + r"([^}]*)\}", html)
+        assert rule, selector
+        assert "gap: 20px" in rule.group(1), rule.group(1)
+

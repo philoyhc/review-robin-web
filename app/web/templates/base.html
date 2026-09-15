@@ -2796,16 +2796,27 @@
       body.ui-v2 .unlock-panel {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-4);
+        /* 20px, not `--space-4`: this tracks `.card-columns`'s gap and
+           the base `.card` margin, both raw 20px, so the panel's cards
+           sit at the same rhythm as the page's cards outside it. The
+           token scale has no 20. */
+        gap: 20px;
         align-items: start;
       }
+      /* The base `.card` carries `margin-bottom: 20px` (`:543`), which
+         `body.ui-v2 .card` deliberately does not override — so inside a
+         gapped container it COMPOUNDS, and the two stacked cards sat 36px
+         apart against the page's 20px. Zeroed here exactly as
+         `.page-grid`, `.bottom-grid` and `.subcard-row` already do, so
+         the gap is the only thing spacing them. */
+      body.ui-v2 .unlock-panel .card { margin-bottom: 0; }
       /* The left column's two stacked cards, at the same gap the panel's
          two columns use, so the grid reads as one rhythm either way you
          scan it. */
       body.ui-v2 .unlock-stack {
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
+        gap: 20px;
       }
       body.ui-v2 .unlock-col-actions {
         display: flex;
