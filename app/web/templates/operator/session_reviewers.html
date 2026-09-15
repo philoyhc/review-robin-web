@@ -58,6 +58,31 @@
     <tr class="session-expander session-expander-bracketed row-editor-bar">
       <td colspan="{{ col_count }}">
         <div class="row-expander-body">
+          {# The mode, for assistive tech only. The card that went
+             carried an `<h2>` — "Add new reviewer" / "Edit reviewer" —
+             and that heading was the only accessible name for the
+             state the page is in. What replaces the card visually is a
+             highlighted row, and a highlight reaches nobody using a
+             screen reader. Visually hidden rather than restored on
+             screen: the card was removed for being visual clutter, and
+             the three sibling roster pages still render the heading, so
+             this keeps the announcement without bringing the box back.
+
+             `aria-live` so it is read when a failed save re-renders the
+             page into edit mode under the operator. #}
+          <span class="visually-hidden" aria-live="polite">
+            {{ "Add new reviewer" if add_mode else "Edit reviewer" }}
+          </span>
+          {# The save error, which lived in the editor card until that
+             card was removed for holding nothing else. It belongs with
+             the row anyway: the message is about the values in the row
+             above, and the card put it a table's height away from
+             them. Nothing else from the card survived — the heading
+             and "fill in the row below, then Save" both described a
+             layout where the controls were somewhere else. #}
+          {% if edit_error %}
+            <span class="row-editor-error">{{ edit_error }}</span>
+          {% endif %}
           {# Save then Cancel, which is what the card this replaced
              rendered and what Reviewees, Observers and Relationships
              still render. The first draft of this macro flipped them
@@ -396,65 +421,22 @@
   </div>
   {% endif %}
 
-  {# 19P.1 rung 2b step 3 — the Add / Edit editor gets its own card,
-     full width directly above the preview table, still rendered only
-     in `edit_mode`.
+  {# 19P.1 — there is no Add / Edit editor card.
 
-     It was the `Operator actions` card's second tenant, below a
-     divider. Step 2 moved the action row into the row expander and
-     left the shell holding this alone; the shell goes now, and the
-     divider with it, since there is nothing above the editor left to
-     divide it from. `.operator-actions-card` STAYS in `base.html` —
-     Reviewees, Observers, Relationships and Assignments still use it.
+     Rung 2b step 3 gave the editor one, full width above the table,
+     after the `Operator actions` shell it had lived in retired. A later
+     pass moved Save and Cancel into the edit row's own expander bar, on
+     the analogy of a selected row, and the error message went with
+     them — which left the card holding a heading and a line of help
+     text describing where the controls now were. A card whose whole
+     content explains that the controls are elsewhere is a card that
+     stopped earning its place, so it went.
 
-     Full width rather than back inside `.card-columns`: the
-     container's only other tenant is the tag-labels editor, and a card
-     that appears only in `edit_mode` would make that column jump
-     between half and full width on every Add. Not folded into the
-     table card's toolbar either — an editing form and a filter strip
-     are two jobs, and the plan rules against mixing them in one strip
-     (`guide/segment_19P_expander_revamp.md`, "Two things the ladder
-     never named").
-
-     The card's own right-aligned Save / Cancel row is GONE: those two
-     controls moved into the edit row's expander bar, which right-aligns
-     with `.row-expander-actions`' `margin-left: auto` rather than an
-     inline style. (15 inline `justify-content: flex-end` attributes
-     remain across 8 templates; extracting a primitive for them is
-     still a page-wide change and still not this slice's.) #}
-  {% if edit_mode %}
-    {# Still anchored, but NOT for the reason recorded here before.
-       That reason was "Save is in this card and the row is in the
-       table, so landing on the table card puts Save above the
-       viewport" — and Save is no longer in this card. What is left
-       here is the heading, the error banner and the help line: the
-       mode label, which wants to be on screen when the operator
-       arrives and which the table card's own anchor would put above
-       the fold. The card sits immediately above the table, so landing
-       here shows the label and the row together.
-
-       Whether this card should exist at all now that it holds no
-       controls is a question for the dev slot, not an assertion to
-       make here. #}
-    <div class="card row-editor-anchored" id="{{ row_editor_anchor }}">
-      <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
-      {% if edit_error %}
-        <p class="banner banner-error">{{ edit_error }}</p>
-      {% endif %}
-      <p class="form-help">
-        {% if add_mode %}
-          Fill in the new row below, then Save.
-        {% else %}
-          Edit the highlighted row below, then Save.
-        {% endif %}
-      </p>
-      {# Save / Cancel moved to the row's own expander bar below the
-         edit row. Not duplicated here: two live submit buttons on one
-         `reviewer-edit-form` is the shape 2b step 2 was sliced to
-         avoid, and the card is the wrong place for them anyway — they
-         act on the row, and the row is in the table. #}
-    </div>
-  {% endif %}
+     Its landing anchor moved onto the edit row, which is what the
+     anchor had been reaching for all along: the editor is no longer
+     split across a card and a table, so `#reviewers-row-editor` names
+     the row you type into. `Edit` navigates to `#reviewer-row-<id>`
+     directly, since it knows the id. #}
 
 
 
@@ -698,8 +680,10 @@
               + (1 if show_tag[3] else 0)
               + 2 %}
         {% if add_mode %}
-          {# Fresh blank edit row at the top of the table. #}
-          <tr class="reviewer-edit-row session-row-selected">
+          {# Fresh blank edit row at the top of the table, and the
+             target `Add new` lands on: the row IS the editor now. #}
+          <tr class="reviewer-edit-row session-row-selected row-action-target"
+              id="{{ row_editor_anchor }}">
             <td class="row-select-cell"></td>
             {# The caret starts here — see the script below the table.
                Not `autofocus`: `Add new` navigates to a URL carrying a
@@ -749,7 +733,7 @@
         {% endif %}
         {% for reviewer in reviewers %}
           {% if edit_id is not none and reviewer.id == edit_id %}
-            <tr class="reviewer-edit-row session-row-selected"
+            <tr class="reviewer-edit-row session-row-selected row-action-target"
                 id="reviewer-row-{{ reviewer.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewer-edit-form"
@@ -834,32 +818,50 @@
     </div>
   {% endif %}
 
-  {% if add_mode %}
+  {% if edit_mode %}
     <script>
       (function () {
         "use strict";
+        var row = document.querySelector(".reviewer-edit-row");
+        if (!row) return;
         var field = document.querySelector(".row-editor-first-field");
-        if (!field || !field.focus) return;
-        function caret() {
-          // `preventScroll`: the landing anchor owns the scroll
-          // position (19P.1 / #2405 — without it the page jumps to the
-          // top). This sets the caret and nothing else. The field is
-          // already on screen where the anchor lands, measured at 368px
-          // down a 900px viewport, so there is nothing to scroll to.
-          try {
-            field.focus({ preventScroll: true });
-          } catch (e) {
-            field.focus();
+
+        function land() {
+          // Who owns the scroll depends on how the page was reached.
+          //
+          // `Add new` and `Edit` navigate with a fragment naming this
+          // row, and the fragment plus its `scroll-margin-top` place it
+          // — so the caret is set with `preventScroll` and nothing
+          // moves. But a FAILED save is not a navigation: the route
+          // re-renders in place with a 400 and no fragment at all, so
+          // the page arrives at the top with the row, its error and its
+          // Save button all below the fold. Measured before this
+          // existed: the message rendered at y=995 in a 900px viewport,
+          // which is an error an operator never sees.
+          var hash = window.location.hash;
+          var anchored = hash && document.getElementById(hash.slice(1));
+          if (!anchored && row.scrollIntoView) {
+            row.scrollIntoView({ block: "center" });
+          }
+          // Add only. An Edit arrives with the row already filled, and
+          // stealing focus there fights an operator heading for a
+          // different cell.
+          if (field && field.focus) {
+            try {
+              field.focus({ preventScroll: true });
+            } catch (e) {
+              field.focus();
+            }
           }
         }
-        // On `load`, not inline. `Add new` navigates to a URL carrying
-        // a fragment, and the fragment's own focus handling runs AFTER
-        // the document parses — so focusing during parse is undone a
-        // moment later. Measured: inline leaves `activeElement` at
+
+        // On `load`, not inline: a fragment navigation's own focus
+        // handling runs after the document parses and beats anything
+        // set during it. Measured — inline leaves `activeElement` at
         // BODY, which is also why the `autofocus` attribute does
         // nothing here.
-        if (document.readyState === "complete") caret();
-        else window.addEventListener("load", caret);
+        if (document.readyState === "complete") land();
+        else window.addEventListener("load", land);
       })();
     </script>
   {% endif %}
@@ -1127,9 +1129,13 @@
           var edit = event.target.closest
             ? event.target.closest(".exp-edit[data-edit-id]") : null;
           if (!edit) return;
+          var editId = edit.getAttribute("data-edit-id");
+          // `#reviewer-row-<id>`, not the editor anchor: the edit row
+          // keeps its own id, and with the editor card gone there is
+          // nothing else for the anchor to name.
           window.location = BULK_BASE + "?edit_id=" +
-            encodeURIComponent(edit.getAttribute("data-edit-id")) +
-            "#" + {{ row_editor_anchor | tojson }};
+            encodeURIComponent(editId) +
+            "#reviewer-row-" + encodeURIComponent(editId);
         });
 
         table.addEventListener("click", function (event) {

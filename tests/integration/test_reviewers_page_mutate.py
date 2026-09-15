@@ -51,6 +51,23 @@ def _seed(db: Session, session_id: int, names: list[str]) -> list[Reviewer]:
     return rows
 
 
+def _landing_script(body: str) -> str:
+    """The edit-row landing script, isolated from the rest of the page.
+
+    Everything it does — `scrollIntoView`, `focus`, reading the hash —
+    also appears somewhere in `base.html`, which inlines the whole app's
+    JS and CSS on every page. An assertion against the whole response
+    therefore says nothing about THIS template.
+    """
+    m = re.search(
+        r"<script>(?:(?!</script>).)*?"
+        r'querySelector\(".reviewer-edit-row"\).*?</script>',
+        body, re.S,
+    )
+    assert m, "the edit-row landing script is not served"
+    return m.group(0)
+
+
 # --------------------------------------------------------------------------- #
 # Non-edit render — checkbox column + inert-by-default buttons.
 # --------------------------------------------------------------------------- #
@@ -103,7 +120,12 @@ def test_edit_id_renders_target_row_as_inputs(
     assert "reviewer-edit-row" in body
     assert 'id="reviewer-edit-form"' in body
     # Focused Edit card with Save + Cancel.
-    assert ">Edit reviewer</h2>" in body
+    # No editor card: the row is the editor, and its controls hang in
+    # the bar directly beneath it.
+    assert 'class="card row-editor-anchored"' not in body, (
+        "the editor card is back"
+    )
+    assert "row-editor-bar" in body
     assert ">Save</button>" in body
     assert ">Cancel</a>" in body
     # The edited row's name prefilled into an input.
@@ -121,9 +143,7 @@ def test_edit_id_renders_target_row_as_inputs(
     # watching all 4,014 tests pass. The absence half lives in
     # `test_reviewers_roster_card_scaffold.py`
     # (`..._is_absent_outside_edit_mode`).
-    assert 'class="card row-editor-anchored"' in body, (
-        "the editor's card is not rendered in edit mode"
-    )
+
     # The `Operator actions` shell it used to live in is gone from this
     # page. Four other roster pages still use the class, so the rule
     # stays in `base.html`; what is pinned here is that Reviewers no
@@ -195,7 +215,15 @@ def test_edit_post_validation_error_rerenders_with_values(
     assert response.status_code == 400
     # Re-rendered in edit mode with the error + the submitted email.
     assert "reviewer-edit-row" in response.text
-    assert "banner-error" in response.text
+    # Matched as the ELEMENT, not the class name. `banner-error` used
+    # to be the needle and survived only in `base.html`'s inline
+    # stylesheet, so it matched every page in the app, error or not —
+    # and `row-editor-error` acquired its own rule in that same
+    # stylesheet the moment the message was styled, which would have
+    # reproduced the vacuity exactly. Same trap `_markup()` exists for.
+    assert '<span class="row-editor-error">' in response.text, (
+        "no save error rendered"
+    )
     assert 'value="alice@example.edu"' in response.text
     # The DB row is untouched.
     db.expire_all()
@@ -252,7 +280,10 @@ def test_add_renders_blank_edit_row(
         f"/operator/sessions/{review_session.id}/reviewers?add=1"
     ).text
     assert "reviewer-edit-row" in body
-    assert ">Add new reviewer</h2>" in body
+    # The blank row IS the editor: its heading card went when Save and
+    # Cancel moved into the row's own bar, so what marks add mode is
+    # the row carrying the landing anchor.
+    assert 'id="reviewers-row-editor"' in body
     assert ">Save</button>" in body
 
 
@@ -312,8 +343,16 @@ def test_add_post_validation_error_rerenders_in_add_mode(
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert ">Add new reviewer</h2>" in response.text
-    assert "banner-error" in response.text
+    assert 'id="reviewers-row-editor"' in response.text
+    # Matched as the ELEMENT, not the class name. `banner-error` used
+    # to be the needle and survived only in `base.html`'s inline
+    # stylesheet, so it matched every page in the app, error or not —
+    # and `row-editor-error` acquired its own rule in that same
+    # stylesheet the moment the message was styled, which would have
+    # reproduced the vacuity exactly. Same trap `_markup()` exists for.
+    assert '<span class="row-editor-error">' in response.text, (
+        "no save error rendered"
+    )
     # The bad value is preserved for correction.
     assert 'value="not-an-email"' in response.text
     # Nothing was persisted.
@@ -768,3 +807,90 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
         "the redirect lands on a page that does not render the new row"
     )
     assert ">Zed<" in landed
+
+
+def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
+    db: Session, client: TestClient
+) -> None:
+    """The message moved out of the editor card when that card went.
+
+    Two halves. The message has to render WITH the row it is about —
+    the card put it a table's height away — and the operator has to be
+    able to see it: a failed save is not a navigation, it re-renders in
+    place with a 400 and no fragment, so the page arrives at the top
+    with the row below the fold. Measured before the fix: the message
+    rendered at y=995 in a 900px viewport.
+
+    The scroll itself is a browser behavior the suite cannot run. What
+    is pinned here is that the message is in the bar, and that the
+    script which lands on the row is served on this render at all — it
+    was gated on `add_mode` and a failed EDIT reaches the same state.
+    """
+    review_session = _make_session(client, db, code="rev-errhome")
+    _seed(db, review_session.id, ["Alice"])
+    base = f"/operator/sessions/{review_session.id}/reviewers"
+
+    response = client.post(
+        f"{base}/create",
+        data={
+            "name": "Dup", "email": "alice@example.edu",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+
+    bar = re.search(
+        r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>', body, re.S,
+    )
+    assert bar, "no editor bar on the error render"
+    assert '<span class="row-editor-error">' in bar.group(0), (
+        "the save error is not in the bar with the row it is about"
+    )
+    assert "already uses" in bar.group(0), "the message itself is missing"
+
+    assert "reviewer-edit-row" in body
+
+    # The EDIT error path, which is the one the script's gate decides.
+    # A failed create is still add mode, so a script gated on `add_mode`
+    # renders here and this assertion passed against the bug — checked
+    # by mutation, which is how the first version of this test was found
+    # to be testing the wrong half.
+    _seed(db, review_session.id, ["Bob"])
+    bob = db.execute(
+        select(Reviewer).where(Reviewer.email == "bob@example.edu")
+    ).scalar_one()
+    edit_err = client.post(
+        f"{base}/{bob.id}/update",
+        data={
+            "name": "Bob", "email": "alice@example.edu",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert edit_err.status_code == 400
+    edit_body = edit_err.text
+    assert '<span class="row-editor-error">' in edit_body, (
+        "no error on a failed edit"
+    )
+
+    # Scoped to the landing script itself. `"scrollIntoView" in body`
+    # is satisfied by `base.html`'s banner-scroll script, which ships on
+    # every ui-v2 page — so that assertion passed with this commit's
+    # entire fix replaced by a no-op, which a cold read demonstrated
+    # against the full suite. Same trap, and the same fix, as the
+    # fallback-script assertion 140 lines up in this file.
+    script = _landing_script(edit_body)
+    assert "scrollIntoView" in script, (
+        "nothing brings the row on screen on an edit error, which "
+        "re-renders with no fragment"
+    )
+    # ...and it only scrolls when no fragment decided the position.
+    assert "window.location.hash" in script, (
+        "the script scrolls unconditionally, fighting the landing anchor"
+    )
+    assert "block: \"center\"" in script, (
+        "the row is brought on screen without being centred, so a long "
+        "row can still land with its bar below the fold"
+    )

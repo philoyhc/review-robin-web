@@ -1493,8 +1493,7 @@
 
          The margin keeps the card's top border off the viewport's edge,
          which is what makes it read as a boundary rather than a crop. */
-      .table-pager-anchored,
-      .row-editor-anchored {
+      .table-pager-anchored {
         scroll-margin-top: var(--space-4);
       }
       /* 19P.1 — a row action lands on the row it acted on, not on the
@@ -1738,7 +1737,13 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        gap: var(--space-2);
+        /* 16px, not the right pane's 8px. This gap only ever separates
+           the chip row from ONE thing — the pager and the count line
+           are alternatives, per the note above — and at 8px the pills
+           sat close enough to the pager's box to read as one control.
+           The right pane keeps 8px: its two rows are a field and the
+           buttons that act on it, which belong together. */
+        gap: var(--space-4);
       }
       body.ui-v2 .toolbar-left > * { margin: 0; }
       /* Right pane: the filter row, then its buttons, both flush right. */
@@ -3038,6 +3043,19 @@
         margin-left: auto;
       }
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
+      /* The save error, in the edit row's own bar. It used to be a
+         `.banner.banner-error` in the editor card; that card went, and
+         the message came down to the row it is about. A banner's box
+         would be wrong here — the bar is a single flex line beside
+         Save / Cancel — so it keeps the banner's colours and drops its
+         border and fill, which is what marks it as an error now that
+         nothing else does. Both tokens are theme-aware. */
+      body.ui-v2 .row-editor-error {
+        color: var(--status-error-fg);
+        font-size: var(--fs-small);
+        font-weight: 600;
+        min-width: 0;
+      }
       /* Bare text, not a pill: `spec/ui_elements.md` .session-row-selected
          makes the panel a pill-free zone, because --selection-panel-bg and
          --status-info-bg resolve to the same primitive in both themes. The
