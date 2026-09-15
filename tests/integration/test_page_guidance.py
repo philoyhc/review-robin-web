@@ -366,10 +366,13 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
     Three cards since 19I Item 12 rung 4 retired the "Fields with
     data" card that used to head the right stack: guidance and the
     tag-label editor on the left, Operator actions alone on the right.
-    Reviewers is down to the tag-label editor alone since 19P.1 rung 2b
-    — guidance went full width above the container at 2a and the
-    `Operator actions` card retired at 2b — so it exercises the
-    one-tenant case the other pages do not.
+
+    Reviewers has left this shape entirely over 19P.1: guidance went
+    full width above the container at 2a, the `Operator actions` card
+    retired at 2b, and 3a moved the last tenant into the Unlock panel,
+    so on a draft page there is no container at all. It is checked for
+    that instead, in the loop below — the claim here is the other three
+    pages'.
 
     Two containers would look identical when everything is closed and
     still fail the point of the change: growth in the upper one pushes
@@ -384,31 +387,33 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
 
     for page in ROSTER_PAGES:
         body = client.get(f"/operator/sessions/{session_id}/{page}").text
+
+        # Reviewers has NO container on a draft page since 19P.1 rung 3a:
+        # its last tenant, the tag-labels editor, renders inside the
+        # Unlock panel whenever that panel can render, and falls back to
+        # the container only where it cannot (locked, or mid-edit). The
+        # order claim below is about the container's tenants, so a page
+        # without one has nothing here to order.
+        if page == "reviewers":
+            assert body.count('class="card-columns"') == 0, (
+                "Reviewers rendered a container beside the Unlock panel"
+            )
+            assert 'id="roster-unlock-panel"' in body, (
+                "Reviewers has neither a container nor a panel"
+            )
+            continue
+
         assert body.count('class="card-columns"') == 1, page
 
         # Left column in full, then right column in full — the source
         # order only a single container of two column stacks produces.
         #
-        # Reviewers has no right-hand card at all since 19P.1 rung 2b
-        # step 3 — not "conditional", as this read between steps 2 and
-        # 3: the `Operator actions` row moved into the row expander and
-        # the Add / Edit editor took a card of its own outside the
-        # container. So the `else` branch below is PERMANENT for that
-        # page, in every mode, and the order check simply has one fewer
-        # member — the claim about source order is unchanged for the
-        # cards that ARE there.
+        # Reviewers no longer reaches here at all — see the `continue`
+        # above. The three pages that do still carry both cards.
         order = [body.index(CARD), body.index("field-labels-form")]
         card = 'class="card operator-actions-card"'
-        if card in body:
-            order.append(body.index(card))
-            assert page != "reviewers", (
-                "Reviewers rendered an `Operator actions` card; rung 2b "
-                "retired it there"
-            )
-        else:
-            assert page == "reviewers", (
-                f"{page} lost its operator-actions card unexpectedly"
-            )
+        assert card in body, f"{page} lost its operator-actions card"
+        order.append(body.index(card))
         assert order == sorted(order), (page, order)
 
         # No row grid above those three. The Upload / Danger Zone pair

@@ -484,6 +484,42 @@ wrong button. Each control moves exactly once, as at 2b.
 fewer cards while the panel fills up. Same class as the lone half-width
 `.card-columns` this plan already signs off.
 
+**2026-09-15 — 3a shipped, and acquired a second render the slicing did
+not name.** The Unlock panel is suppressed — not disabled — when the
+session is not editable, because a locked page must carry no
+"Save labels" anywhere; it also stands down in `edit_mode`. But a locked
+page must still *show* the labels
+(`..._renders_editor_disabled_in_every_locked_state`: "the page must not
+offer a control its route will refuse" is about the control, not the
+information), and the roster readouts do not cover it — they pill only
+the columns that HOLD data, so a friendly label on an empty tag column
+would appear nowhere.
+
+**Author's call:** one include, two positions — the panel when it can
+render, `.card-columns` on the exact complement. Not a copy: both read a
+single `{% set unlock_available %}`, and the partial already disables its
+own inputs and drops its buttons when the session is not editable, which
+is what lets one include serve both. Rejected: a read-only labels display
+in the roster card (net-new UI, wants the dev slot first), and dropping
+the locked view (would have meant rewriting a test that encodes a
+deliberate rule).
+
+**So `.card-columns` survives 3a after all** — it is the fallback home
+until 3c. The slicing said it would go here; it goes when the last card
+moves.
+
+**The partial replaced the scaffold's hand-copy, not the reverse.**
+`_field_labels_editor.html` serves three roster templates and already
+took every parameter needed. Its `.field-labels-actions` and the
+scaffold's `.unlock-col-actions` are computed-identical in Chromium
+(`flex` / `flex-end` / 8px / 12px, same 536×37 box), so no rule followed
+the markup. The partial also brought the dirty-check the copy lacked.
+
+**Mutation-tested, the invariant being "exactly once":** both homes
+rendering → 4 fail; neither → 9, including the locked-state rule; and the
+gate re-spelled as `not is_editable` — the drift `unlock_available` exists
+to prevent, which loses the editor mid-edit → 2.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and
@@ -574,7 +610,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
 - `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).
 
-- `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page (Item 1).
+- `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page. **Amended 2026-09-15 by 3a:** on Reviewers it is now TWO positions, not one — inside the Unlock panel where the panel can render, in its old home where it cannot (locked, or mid-edit) — so the line states the condition, not just a place (Item 1).
 
 - `spec/csv_contracts.md` — its one editor mention (`:77`) is non-positional, and the friendly-label **header grammar** it owns is untouched by where the control renders (Item 1). <!-- doc-impact-waived: deliberate exclusion — the mention is non-positional and the header grammar is untouched by where the control renders -->
 
