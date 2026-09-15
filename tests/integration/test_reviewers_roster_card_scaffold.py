@@ -1111,3 +1111,123 @@ def test_the_status_actions_are_offered_only_where_they_act(client, db):
         r'"/bulk-reactivate"',
         build,
     ), "the label no longer maps to the route that performs it"
+
+
+# ---------------------------------------------------------------- rung 2b
+# step 3: the Add / Edit editor leaves `.card-columns` for its own card.
+#
+# Every assertion below is structural — WHERE the editor renders, not
+# whether it renders. A flat `'row-editor-anchored' in html` passes
+# with the editor still nested in the container, which is the entire
+# change, so the substring form would have guarded nothing.
+
+
+def _add_page(client: TestClient, rs: ReviewSession) -> str:
+    response = client.get(f"/operator/sessions/{rs.id}/reviewers?add=1")
+    assert response.status_code == 200
+    # The fixture must actually BE in edit mode, or every absence
+    # assertion below passes against a page with no editor at all.
+    assert ">Add new reviewer</h2>" in response.text, "not in add mode"
+    return _markup(response.text)
+
+
+def _div_block(html: str, marker: str) -> str:
+    """The element opened by `marker`, div-balanced.
+
+    Same reason as `_left_pane`: `.*?</div>` stops at the first close
+    tag, which here is the left column's — so a truncated block would
+    report the editor "outside" the container whatever its real nesting.
+    """
+    start = html.index(marker)
+    depth, i = 1, start + len(marker)
+    for tag in re.finditer(r"<div\b|</div>", html[i:]):
+        depth += 1 if tag.group(0) != "</div>" else -1
+        if depth == 0:
+            return html[start:i + tag.end()]
+    raise AssertionError(f"{marker} never closes")
+
+
+def _card_columns(html: str) -> str:
+    return _div_block(html, '<div class="card-columns">')
+
+
+def _count_cards(block: str) -> int:
+    """Elements whose class list carries the `card` token.
+
+    `\bcard\b` counts `card-columns` too — `-` is a word boundary — so
+    the container scored itself and the first version of the caller
+    below failed against correct markup.
+    """
+    return sum(
+        1
+        for m in re.finditer(r'class="([^"]*)"', block)
+        if "card" in m.group(1).split()
+    )
+
+
+def test_the_editor_card_renders_outside_card_columns(client, db):
+    html = _add_page(client, _with_reviewers(client, db, "rc-s3-out"))
+    assert 'class="card row-editor-anchored"' in html, (
+        "the editor's own card is not rendered in add mode"
+    )
+    assert "row-editor-anchored" not in _card_columns(html), (
+        "the editor is back inside `.card-columns` — step 3 is undone"
+    )
+
+
+def test_card_columns_is_left_holding_the_labels_editor_alone(client, db):
+    """In edit mode as well as out of it.
+
+    The container used to hold two cards and now holds one, which is the
+    known intermediate look the plan signs off until the Unlock rung
+    deletes the container. Pinned in BOTH modes because the editor was
+    the tenant that appeared only in `edit_mode` — checking the resting
+    page alone would not notice it coming back.
+    """
+    rs = _with_reviewers(client, db, "rc-s3-alone")
+    for html in (_markup(_page(client, rs)), _add_page(client, rs)):
+        block = _card_columns(html)
+        assert "Reviewer tag labels" in block, (
+            "the tag-labels editor left the container too"
+        )
+        assert _count_cards(block) == 1, (
+            "`.card-columns` holds more than the tag-labels editor"
+        )
+
+
+def test_the_editor_card_sits_immediately_above_the_table_card(client, db):
+    """Which is what lets `#reviewers-row-editor` land on both.
+
+    The editor is still SPLIT — heading and Save / Cancel in this card,
+    the row you type into in the table below — so the anchor survived
+    step 3. It only works while nothing renders between the two cards;
+    a card slipped in there would push the table off-screen again and
+    no substring assertion would notice.
+    """
+    html = _add_page(client, _with_reviewers(client, db, "rc-s3-order"))
+    editor = _div_block(
+        html, '<div class="card row-editor-anchored" id="reviewers-row-editor">'
+    )
+    end = html.index(editor) + len(editor)
+    table = html.index('<div class="card table-pager-anchored"')
+    assert end <= table, "the editor card renders below the table card"
+    # From the editor's CLOSING tag to the table card's OPENING one.
+    # Slicing to the table card's `id=` instead puts that card's own
+    # `class="card"` inside the gap, which is how the first version of
+    # this failed against correct markup.
+    assert _count_cards(html[end:table]) == 0, (
+        "a card renders between the editor and the table it edits"
+    )
+
+
+def test_no_empty_script_element_is_left_behind(client, db):
+    """Step 2 left two `<script></script>` pairs on the page after the
+    code inside them moved. Harmless, and exactly the kind of residue a
+    substring test never sees, so it gets its own assertion.
+    """
+    for html in (
+        _page(client, _with_reviewers(client, db, "rc-s3-js1")),
+        _add_page(client, _with_reviewers(client, db, "rc-s3-js2")),
+    ):
+        empty = re.findall(r"<script\b[^>]*>\s*</script>", html)
+        assert not empty, f"{len(empty)} empty <script> element(s) shipped"

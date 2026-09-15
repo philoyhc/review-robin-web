@@ -386,6 +386,31 @@ forgotten.
 retired script only ever set `.checked`. Small and desirable, but the
 record should not call it a relocation.
 
+**2026-09-15 — rung 2b step 3: the editor's own card.** The Add / Edit
+block left `.card-columns` for a full-width `edit_mode`-only card
+directly above the preview table, and the `Operator actions` shell went
+with it. `.operator-actions-card` stays in `base.html` — Reviewees,
+Observers, Relationships and Assignments still use it.
+
+Full width rather than back in the container: its only other tenant is
+the tag-labels editor, and a card appearing only in `edit_mode` would
+make that column jump between half and full width on every Add. The
+container is now the lone half-width card this plan already signs off,
+until the Unlock rung deletes it.
+
+**`row_editor_anchor` does NOT collapse — measured, not assumed.** The
+build note said step 3 would retire it, on the reasoning that it existed
+only because the editor was split across two cards. The editor is still
+split: heading and Save / Cancel in this card, the row you type into in
+the table. Landing on `#reviewers-table-card` in add mode puts Save at
+**-59px**, off-screen above, exactly as before. Rehoming narrowed the
+gap to 20px; it did not close it. Both anchors stay, and rung 4 states
+the pair in `spec/ui_elements.md` §10 as already planned.
+
+**Also cleared:** two `<script></script>` pairs step 2 left behind when
+the code inside them moved, one carrying a comment that duplicated the
+expander script's own.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and

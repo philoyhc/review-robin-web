@@ -8,6 +8,8 @@ guard folded in from PR 6.
 """
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -109,11 +111,27 @@ def test_edit_id_renders_target_row_as_inputs(
     # existed so a stray click on the filter or an action button could
     # not throw away a half-typed row; the filter moved to the toolbar
     # at rung 2a and the action buttons to the expander at 2b, and the
-    # editor itself must stay interactive. The card now holds only the
-    # editor, so it renders only in edit mode — which this assertion
+    # editor itself must stay interactive. Step 3 gave the editor its
+    # own card, so it renders only in edit mode — which this assertion
     # pins, in place of a lock with nothing to lock.
-    assert 'class="card operator-actions-card"' in body, (
+    assert 'class="card row-editor-anchored"' in body, (
         "the editor's card is not rendered in edit mode"
+    )
+    # The `Operator actions` shell it used to live in is gone from this
+    # page. Four other roster pages still use the class, so the rule
+    # stays in `base.html`; what is pinned here is that Reviewers no
+    # longer reaches for it. WHERE the new card sits — outside
+    # `.card-columns`, which is the whole of step 3 — is structural and
+    # a flat substring cannot see it; that is pinned by
+    # `test_reviewers_roster_card_scaffold.py`.
+    #
+    # `<style>` is stripped first: `base.html` inlines the whole app's
+    # CSS, and both the rule and a comment naming it live there, so the
+    # bare substring is true of every page in the app. The first version
+    # of this assertion did not strip, and could not pass.
+    markup = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
+    assert "operator-actions-card" not in markup, (
+        "the retired `Operator actions` shell is back on Reviewers"
     )
     assert "operator-actions-main is-locked" not in body, (
         "a lock is back, over an editor that must stay usable"
