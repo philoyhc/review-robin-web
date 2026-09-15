@@ -137,8 +137,11 @@ def test_the_cluster_renders_twice_on_a_table_that_pages(
     assert "table-pager-cluster-bottom" in clusters[1]
     assert "table-pager-cluster-bottom" not in clusters[0]
 
-    # The top one sits in the row it owns, above the strip.
-    toolbar = body.index('<div class="table-card-toolbar">')
+    # The top one sits in the row it owns, above the strip. Matched on
+    # the class rather than the whole attribute: Reviewers adds an
+    # `is-split` modifier (19P.1 rung 2a) and the position is what this
+    # pins, not the modifier list.
+    toolbar = body.index('<div class="table-card-toolbar')
     assert toolbar < body.index('<div class="table-pager-cluster')
     # …and above the table it pages, where 19I Item 10 put the count
     # sentence the strip used to sit beside.
@@ -365,14 +368,14 @@ def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
         assert "_preview_pager.html" not in markup, (
             f"{name} still includes the retired range strip"
         )
-        assert markup.count('<div class="table-card-toolbar">') == 1, name
+        assert markup.count('<div class="table-card-toolbar') == 1, name
         assert (
             'cluster_extra_class = "table-pager-cluster-bottom"' in markup
         ), name
         # The toolbar opens inside the anchored card, so a page turn
         # lands showing the cluster (19J.8).
         assert markup.index('id="{{ pager_anchor }}"') < markup.index(
-            '<div class="table-card-toolbar">'
+            '<div class="table-card-toolbar'
         ), name
 
 

@@ -562,40 +562,212 @@ def test_a_zero_match_filter_still_offers_the_control_that_clears_it(client, db)
     assert 'name="q"' in html, "a zero-match filter hid the search box"
 
 
+# `base.html` ships the whole stylesheet inline on every response, so a
+# bare `"some-class" in html` is satisfied by the CSS that DEFINES the
+# class on every page in the app. Anything asserting about markup strips
+# the style block first.
+def _markup(html: str) -> str:
+    return re.sub(r"<style\b.*?</style>", "", html, flags=re.S)
+
+
+# A roster with a tag column and more rows than one page holds, so the
+# left pane actually HAS its three tenants to find. The two-row `R_CSV`
+# fixture renders that pane empty — no chip row (no tags), no pager (one
+# page), no count line (nothing withheld) — which is how the first
+# version of this test passed while proving nothing about placement.
+_PAGE_SIZE = 200
+R_CSV_TAGGED = b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n" + b"".join(
+    f"R{n},r{n}@example.com,T{n % 3}\n".encode()
+    for n in range(1, _PAGE_SIZE + 61)
+)
+
+
+def _left_pane(html: str) -> str:
+    """The left pane's markup, balanced.
+
+    `.*?</div>` would stop at the first close tag, which is inside the
+    pager cluster's own nested divs — so it truncates before the count
+    line exactly when the pane is full enough to be worth checking.
+    """
+    start = html.index('<div class="toolbar-pane toolbar-left">')
+    depth = 0
+    for m in re.finditer(r"<div\b|</div>", html[start:]):
+        depth += 1 if m.group(0) != "</div>" else -1
+        if depth == 0:
+            return html[start:start + m.end()]
+    raise AssertionError("left pane never closes")
+
+
 def test_the_filter_strip_sits_in_the_tables_toolbar(client, db):
     """Right pane the filter, left pane what the table is showing —
-    `Show columns:`, the count line and the pager."""
-    html = _page(client, _with_reviewers(client, db, "rc27"))
+    `Show columns:`, the pager and the count line, in the order
+    `tests/unit/test_pager.py` pins."""
+    rs = _with_reviewers(client, db, "rc27", csv=R_CSV_TAGGED)
+    html = _markup(client.get(f"/operator/sessions/{rs.id}/reviewers").text)
+
     toolbar = re.search(
-        r'<div class="table-card-toolbar">.*?id="reviewers-table"', html, re.S
+        r'<div class="table-card-toolbar is-split">.*?id="reviewers-table"',
+        html,
+        re.S,
     )
     assert toolbar, "table-card toolbar not found"
     body = toolbar.group(0)
-    assert 'class="toolbar-pane toolbar-left"' in body
-    assert 'class="toolbar-pane toolbar-right"' in body
     assert body.index("toolbar-left") < body.index("toolbar-right")
     assert 'name="q"' in body, "the search box is not in the toolbar"
+    assert ">Add new</a>" in body, "`Add new` is not in the toolbar"
 
-    # The count line is `None` when the table shows everything — the
-    # partial says a caption saying so is noise — so its placement has to
-    # be checked on a render that actually produces one.
-    filtered = client.get(
-        f"/operator/sessions/{_with_reviewers(client, db, 'rc27b').id}"
-        f"/reviewers?q=R1"
-    ).text
-    pane = re.search(
-        r'<div class="toolbar-pane toolbar-left">.*?</div>', filtered, re.S
+    # Unfiltered: the chip row and the pager. The count line is `None`
+    # here by design — `views.preview_count_line` returns nothing unless
+    # a filter is on, and that same flag sets `pager = None` in
+    # `_shared.setup_window`. So the pager and the count line NEVER
+    # render together; the left pane's three tenants are really two
+    # plus an alternative, and each has to be checked where it appears.
+    left = _left_pane(html)
+    assert left.strip() != (
+        '<div class="toolbar-pane toolbar-left"></div>'
+    ), "left pane is empty — this fixture proves nothing"
+    assert "col-chip-row" in left, "the column chips are not in the left pane"
+    assert "table-pager" in left, "the pager is not in the left pane"
+    assert "table-showing-hint" not in left, (
+        "vacuity: an unfiltered view should have no count line"
     )
-    assert pane, "left pane not found on the filtered render"
-    assert "table-showing-hint" in pane.group(0), (
+
+    # Filtered: the chip row and the count line, and no pager.
+    filtered = _markup(
+        client.get(f"/operator/sessions/{rs.id}/reviewers?q=r1").text
+    )
+    fleft = _left_pane(filtered)
+    assert "table-showing-hint" in fleft, (
         "the count line is not in the toolbar's left pane"
     )
+    assert "col-chip-row" in fleft
+    assert "table-pager" not in fleft, "a filtered view should have no pager"
+
+    # ...and the count line did not leak into the right pane.
+    assert "table-showing-hint" not in filtered.split("toolbar-right")[1]
 
 
 def test_the_toolbar_panes_are_not_cards(client, db):
     """They spend none of a card's signals, and naming them `card` both
     misleads a reader and breaks the shared `_table_card` probe, which
     finds the enclosing card by scanning back for `<div class="card`."""
-    html = _page(client, _with_reviewers(client, db, "rc28"))
-    assert '<div class="card card-bare' not in html
-    assert re.search(r"\.toolbar-pane \{", html), "no .toolbar-pane rule"
+    html = _markup(_page(client, _with_reviewers(client, db, "rc28")))
+    panes = re.findall(r'<div class="([^"]*\btoolbar-pane\b[^"]*)"', html)
+    assert len(panes) == 2, f"expected two panes, found {panes}"
+    for classes in panes:
+        assert "card" not in classes.split(), (
+            f"a toolbar pane is styled as a card: {classes!r}"
+        )
+
+
+def test_an_empty_roster_still_offers_add_new(client, db):
+    """`Add new` moved into the preview-table card, which was gated on
+    the roster having rows. A brand-new session therefore had no way to
+    type in its first reviewer at all — CSV upload or the URL bar.
+
+    Before the move `Add` lived in the always-rendered `Operator
+    actions` card, so the gate did not reach it. The three sibling
+    rosters still render theirs unconditionally.
+    """
+    rs = _session(client, db, "rc29")
+    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    # Vacuity guard: prove the roster really is empty.
+    assert "No reviewers yet." in html
+    assert 'id="reviewers-table"' not in html
+    assert "?add=1" in html, "an empty roster hid its only `Add new`"
+    assert ">Add new</a>" in html
+
+
+def test_an_empty_roster_is_not_told_it_filtered_them_out(client, db):
+    """Two different causes, two different sentences: a filter that
+    matched nothing is the operator's own doing and clearable, an empty
+    roster is a starting point."""
+    rs = _session(client, db, "rc30")
+    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    assert "No reviewers match the current filter." not in html
+    assert "No reviewers yet." in html
+
+
+def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
+    """15F PR 3: the filter greys out (`is-locked`) during an edit so a
+    stray click on `Search` or `Clear` cannot GET the half-typed row
+    away. The strip moved out of `.operator-actions-card`, where the
+    only rule for that class lives, so the class needs a rule that
+    reaches its new home or the lock is decorative.
+    """
+    rs = _with_reviewers(client, db, "rc31")
+    listing = _page(client, rs)
+    rid = re.search(r'id="reviewer-row-(\d+)"', listing).group(1)
+    html = client.get(f"/operator/sessions/{rs.id}/reviewers?edit_id={rid}").text
+    # Vacuity guard: `edit_id` typo'd is ignored silently, leaving the
+    # page in its normal state — prove edit mode actually engaged.
+    assert 'name="name"' in html, "edit mode did not engage"
+
+    # The actions card still has a form of the same class (it keeps the
+    # selection-driven buttons until rung 2b), and it comes first in
+    # source — so find the one in the toolbar, not merely the first.
+    moved = re.search(
+        r'<div class="toolbar-pane toolbar-right">\s*'
+        r'<form[^>]*class="(operator-actions-filter[^"]*)"',
+        _markup(html),
+    )
+    assert moved, "moved filter form not found in the toolbar"
+    assert "is-locked" in moved.group(1), "the moved filter does not lock"
+    # ...and a rule that actually reaches it, not just the class.
+    assert re.search(
+        r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html
+    ), "`is-locked` on the moved filter matches no rule"
+
+
+def test_only_reviewers_splits_the_shared_table_toolbar(client, db):
+    """`.table-card-toolbar` is shared by seven templates and only
+    Reviewers has panes. The two-column grid therefore rides a modifier:
+    turning the shared class into a grid would make the other six
+    templates' direct children grid items in a grid they were never laid
+    out for — Observers' toolbar holds the pager and nothing else, which
+    would right-align inside the LEFT half instead of across the card.
+    """
+    rs = _with_reviewers(client, db, "rc32")
+    reviewers = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    assert '<div class="table-card-toolbar is-split">' in _markup(reviewers)
+
+    # The shared rule stays flex; only the modifier is a grid.
+    shared = re.search(
+        r"body\.ui-v2 \.table-card-toolbar \{(.*?)\}", reviewers, re.S
+    )
+    assert shared, "shared .table-card-toolbar rule is gone"
+    assert "display: flex" in shared.group(1), (
+        "the shared toolbar rule became a grid; six other pages use it"
+    )
+
+    for page in ("reviewees", "observers"):
+        other = client.get(f"/operator/sessions/{rs.id}/{page}")
+        if other.status_code != 200:
+            continue
+        assert "table-card-toolbar is-split" not in _markup(other.text), (
+            f"{page} picked up the Reviewers-only split toolbar"
+        )
+
+
+def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
+    """Reviewers leads its page with the guidance card at full width,
+    where one measure runs to ~150 characters. The other six placements
+    sit in a half-width column, where two columns would be two
+    ~30-character ribbons — so the page opts in rather than the rule
+    applying everywhere the class does.
+    """
+    rs = _with_reviewers(client, db, "rc33")
+    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    assert "page-guidance-wide" in _markup(html), "Reviewers did not opt in"
+    assert re.search(
+        r"\.page-guidance-wide > \.page-guidance-body \{[^}]*column-count: 2",
+        html,
+        re.S,
+    ), "the two-column rule the template comment promises does not exist"
+
+    # A half-width placement must not pick it up.
+    other = client.get(f"/operator/sessions/{rs.id}/reviewees")
+    if other.status_code == 200:
+        other_markup = _markup(other.text)
+        assert "page-guidance" in other_markup, "vacuity: no guidance card"
+        assert "page-guidance-wide" not in other_markup

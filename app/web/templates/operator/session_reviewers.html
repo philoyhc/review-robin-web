@@ -48,7 +48,7 @@
   {# 19P.1 rung 2a — page guidance leads the page, full width. Its prose
      runs in two columns when open: at full width one measure is ~150
      characters, well past what stays readable. #}
-  {% call page_guidance.guidance() %}
+  {% call page_guidance.guidance(full_width=true) %}
   <p>
     Reviewers are the people who fill in the form. They may be the same
     people as the reviewees, as in a peer review. A session must have at
@@ -288,7 +288,6 @@
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
 
-    
     </div>
 
     <div>
@@ -432,11 +431,20 @@
     </form>
   {% endif %}
 
-  {# 19P.1 rung 2a — `or total_row_count > 0`: the filter strip now lives
-     in this card, so gating the card on the FILTERED list would hide the
-     only control that clears a search matching nothing. The table itself
-     is still gated below. #}
-  {% if reviewers or add_mode or total_row_count > 0 %}
+  {# 19P.1 rung 2a — the filter strip and `Add new` now live in this
+     card, so every gate on it is a gate on them.
+
+     `or total_row_count > 0`: gating on the FILTERED list would hide the
+     only control that clears a search matching nothing.
+
+     `or is_editable`: gating on the roster having rows would hide the
+     only `Add new` on the page from the one operator who most needs it —
+     a session whose roster is still empty. Before the strip moved, `Add`
+     lived in the always-rendered `Operator actions` card, so this gate
+     did not reach it.
+
+     The table itself is still gated below. #}
+  {% if reviewers or add_mode or total_row_count > 0 or is_editable %}
     {% set selectable = not edit_mode and is_editable %}
     {# 19I Item 12 rung 3 — a slot with no data anywhere in the roster
        renders neither chip nor column. ``edit_mode`` overrides: an
@@ -461,7 +469,7 @@
          showing. Right: the filter that decides it, moved out of the
          `Operator actions` card so the controls sit with the rows they
          act on rather than a grid away. #}
-      <div class="table-card-toolbar">
+      <div class="table-card-toolbar is-split">
         <div class="toolbar-pane toolbar-left">
           {# A chip row with no chips in it is a label and nothing else,
              so the row goes too when every slot is empty (19I Item 12
@@ -532,11 +540,19 @@
         </div>
       </div>
       {% if not (reviewers or add_mode) %}
-        {# Filter matched nothing — say so where the rows would be, with
-           the filter still above it. Was a separate card below this one,
+        {# No rows to show, for one of two reasons, and they need
+           different sentences: a filter that matched nothing is the
+           operator's own doing and clearable, an empty roster is a
+           starting point. Said where the rows would be, with the filter
+           still above it — this was a separate card below this one,
            which after the strip moved in here would have left the
            operator reading "no matches" with no way to clear them. #}
-        <p class="muted">No reviewers match the current filter.</p>
+        {% if total_row_count > 0 %}
+          <p class="muted">No reviewers match the current filter.</p>
+        {% else %}
+          <p class="muted">No reviewers yet. Upload a CSV or add a row to
+            get started.</p>
+        {% endif %}
       {% else %}
       <table id="reviewers-table"
              data-rrw-col-toggles="rrw-reviewer-tag-visibility"
