@@ -20,7 +20,7 @@ Three properties, each load-bearing for a different reason:
    checkbox the browser restored on reload or bfcache, which no
    dispatch accompanies.
 
-The suite has no JS runtime, so these cannot observe behaviour — they
+The suite has no JS runtime, so these cannot observe behavior — they
 pin the SOURCE-LEVEL contract, and the previous version of this file
 was three assertions that a regression sailed straight through. What
 makes the difference is `test_every_programmatic_dispatch_is_reachable`,
