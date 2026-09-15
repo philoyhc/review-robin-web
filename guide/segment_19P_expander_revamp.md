@@ -276,20 +276,32 @@ after `#2394`'s read landed post-merge):
   behavior change. It is pre-existing — `9ba9500:340` already wrapped it,
   and the unreachable `is_ready` branch inside it with it.
 
-**Two for the close, not for a slice** (rung 2a's second dev-slot fix,
-`#2402`):
+**2026-09-15 — the base rule lands BEFORE rung 2b.** Author's call.
+Recorded here first as *"two for the close, not for a slice"*; promoted
+because 2b moves four more live controls out of the same card, so the
+trap would get its third chance before the close ever arrived. Ladder
+gains rung **2a′**, below.
 
-- **The filter-strip shape is defined in four scopes with no unscoped
+- **The filter-strip shape was declared in four scopes with no unscoped
   base** — `.filter-card`, `.operator-actions-card`, `.toolbar-right`
-  and `.field-labels-actions` each redeclare the same six declarations.
-  That is why moving the strip out of one card dropped two rules in two
-  separate slices (`is-locked`, then `filter-actions`' `margin-top`).
-  A third move loses them again. The mitigation shipped is a comment
-  telling the next reader to audit the whole block; the fix is a base
-  rule the four scopes narrow, which is a change of its own and wants
-  the close, not a layout slice.
+  and `.field-labels-actions` each restated the same six declarations,
+  which is why moving the strip out of one card dropped two rules in
+  two separate slices (`is-locked`, then `filter-actions`'
+  `margin-top`). Now one unscoped base; the three scopes narrow **6
+  declarations between them, down from 49**.
 - **`.operator-actions-card .operator-actions-buttons` is dead** — no
-  template uses it, repo-wide. Pre-existing; retire it with the card.
+  template uses it, repo-wide. Pre-existing; still retires with the
+  card in 2b.
+
+**Decided at build, 2a′:** the base is unscoped *except* its generic
+`> label` rule, which takes a `body.ui-v2` prefix to outrank the global
+`body.ui-v2 label` (0,1,2) — without it every label reverts to
+`display: block` and un-stacks from its input, which also blockifies the
+select. Measured, not reasoned: the first cut of the base shipped
+without the prefix and a before/after computed-style diff across 6 pages
+caught it. The prefix must **not** spread to the `.filter-status` /
+`.filter-search` rules, where at (0,3,2) it would outrank
+`.operator-actions-card`'s only narrowing. Both facts are now tests.
 
 Also found: the slice's own comment and commit message claimed two-column
 guidance prose that was never ported from the mockup. Implemented as a
@@ -311,6 +323,15 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
    *Split 2026-09-15 into **2a** (the toolbar move) and **2b** (the row
    actions); the "keeps the filter strip" clause is superseded — the card
    goes. See `### Status`.*
+   * **2a′, inserted 2026-09-15 between them.** The filter-strip CSS
+     becomes one unscoped base the three card scopes narrow. Pure
+     refactor: no markup, no copy, no behavior — proved by a before /
+     after computed-style diff over 6 pages (0 differences). It goes
+     **before** 2b because 2b moves four more live controls out of
+     `.operator-actions-card`, and the two rules already lost to that
+     card's private copies were each found on the dev slot rather than
+     by the suite. Touches `spec/` only via a Doc impact bullet; the
+     §10 edit is still rung 4's.*
 3. **Wire Unlock and retire the three cards.** Upload, Delete-all and the
    friendly labels move into Unlock; `#upload-csv`, `.danger-zone` and the
    `_field_labels_editor` card are deleted; the gate extends `edit_mode`.
@@ -363,6 +384,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by rung 2a's cold read:** row **125** (`:227`) states the Reviewers `Add` label *and* the reason it is short — *"`Add` and `Delete` must both fit this row"*. Rung 2a renames the shipped label to `Add new` and dissolves that constraint (Delete leaves for the expander, so the two are no longer on one row), so the cell and its rationale sentence are both stale. `spec/setup_pages.md` says the same thing twice more — `:241` and `:536` list `Add` in the Operator-actions control set, and `:543` repeats the one-row rationale. A **rename**, which the bullet above covers only as a move (Item 1).
+- `spec/ui_elements.md` — **added 2026-09-15 by rung 2a′:** §10's layout-primitive table gains the filter strip. It was three private per-card copies and is now one unscoped base (`.filter-row`, `.filter-row > label`, `.filter-actions`) with three named narrowings, which is what §10 exists to record. Names the `body.ui-v2` prefix on the generic label rule as load-bearing specificity, not scoping (Item 1).
 - `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 1).
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
 - `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).
