@@ -1910,12 +1910,26 @@ def test_the_danger_zone_is_wired_in_the_panel(client, db):
 
 
 def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
-    """The divergence 3b settles.
+    """The divergence 3b settles, and the sole home of the empty-roster
+    half after 3c retired a weaker duplicate in
+    `test_reviewers_page_mutate.py`.
 
     The live card was `{% if total_row_count > 0 %}`; the scaffold copy
     it replaced rendered unconditionally, so an empty roster offered
     "delete the existing 0 reviewers" — a destructive control with
-    nothing to destroy, which the route refuses anyway.
+    nothing to destroy.
+
+    **Corrected 2026-09-15 (3c):** this docstring used to end "which the
+    route refuses anyway". It does not. POSTed on a roster of zero the
+    route answers 303 and writes an audit row reading "Deleted all 0
+    reviewers". 3b's cold read caught that claim in the template comment
+    and in the guide and both were fixed; this third copy was missed,
+    which is why a false sentence outlives its correction.
+
+    The real reason the gate matters is worse than a no-op: `_delete_all`
+    opens with `lifecycle.invalidate_if_validated(...)` before it counts
+    anything, so an ungated Delete-all knocks a `validated` session back
+    to `draft` while deleting nothing at all.
     """
     empty = _session(client, db, "rc-3b-empty")
     html = _markup(_page(client, empty))

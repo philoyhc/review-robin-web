@@ -924,36 +924,25 @@ def test_delete_all_comes_back_with_the_panel_open(
     ), response.headers["location"]
 
 
-def test_the_danger_zone_renders_only_on_a_roster_with_rows(
-    db: Session, client: TestClient
-) -> None:
-    """The gate 3b settled, kept after 3c retired the note it rode in on.
-
-    This was `..._the_roster_note_promises_delete_all_only_when_it_renders`
-    — a biconditional between the Danger Zone and a sentence in the
-    roster card promising it. Rung 3c retired the sentence, and the
-    obvious move was to retire the test with it. That would have dropped
-    the only assertion in the suite that the Danger Zone is ABSENT on an
-    empty roster: every other reference to `reviewers-danger-h` checks
-    that it is present somewhere. So the note's half goes and the gate's
-    half stays.
-
-    The gate matters for a reason worse than a no-op: `_delete_all` calls
-    `lifecycle.invalidate_if_validated(...)` before it counts anything,
-    so an ungated Delete-all knocks a `validated` session back to
-    `draft` while deleting nothing at all.
-    """
-    review_session = _make_session(client, db, code="rev-note-da")
-    base = f"/operator/sessions/{review_session.id}/reviewers"
-
-    empty = client.get(base).text
-    assert 'aria-labelledby="reviewers-danger-h"' not in empty, (
-        "an empty roster renders a Delete-all that would demote the "
-        "session while deleting nothing"
-    )
-
-    _seed(db, review_session.id, ["Alice"])
-    filled = client.get(base).text
-    assert 'aria-labelledby="reviewers-danger-h"' in filled, (
-        "a roster with rows does not offer the Delete-all it should"
-    )
+# The Danger Zone's roster-count gate is NOT tested here.
+#
+# Rung 3c retired the roster-card note, and the test that lived at this
+# point — `..._the_roster_note_promises_delete_all_only_when_it_renders`
+# — was a biconditional between that note and the Danger Zone. I kept
+# its gate half and renamed it, on the stated ground that it was "the
+# only assertion in the suite" that the card is ABSENT on an empty
+# roster.
+#
+# That was false, and the cold read caught it. `test_reviewers_roster_
+# card_scaffold.py::test_the_danger_zone_is_gated_on_the_roster_having_
+# rows` has asserted exactly that since 3b, and asserts it more
+# strongly: it also pins the `/reviewers/delete-all` route absent from
+# the whole page, which the version here did not.
+#
+# The uniqueness claim came from grepping for the literal string
+# `reviewers-danger-h` and finding no other absence assertion. The
+# sibling reaches the same element through the `_danger()` helper, so
+# the grep could not see it — the same "trust a substring" mistake that
+# produced this segment's vacuous assertions, this time aimed at the
+# test suite instead of the page. Retired rather than kept as a weaker
+# duplicate that invites someone to delete the better one.

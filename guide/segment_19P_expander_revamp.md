@@ -718,6 +718,41 @@ confirm had the same defect from 3b and is fixed with it; the row
 expander's confirm has no pills and is unaffected. **The screenshot is
 what caught this** — nothing in the markup looks wrong.
 
+**A mutation count I reported wrong, and why.** The commit and PR say "a
+bottom grid re-added below the table -> 2 fails". It is **1**
+(`..._nothing_is_left_below_the_table`). The second failure was an
+artefact of a broken mutation: the script used `str.replace` with no
+count on `{% endblock %}`, and this template has three, so it also
+injected the div into `{% block title %}` and `{% block body_class %}`
+— corrupting `ui-v2` and failing an unrelated test. A mutation that
+edits more than the rule under test inflates the count it is supposed
+to measure, which makes it worse than a guess: it reads as evidence.
+Re-run against the body block alone: 1.
+
+**Two things left undecided, recorded so rung 4 inherits them rather
+than rediscovers them:**
+
+- **No-JS reachability, which rung 3 changed without discussing.**
+  Before rung 3 an editable Reviewers page rendered Upload, delete-all
+  and the labels editor below the table unconditionally, so all three
+  worked with JS off. All three are now inside `#roster-unlock-panel`,
+  which ships `hidden` and is opened only by an inline click handler on
+  a `<button type="button">`. With JS disabled the page has no path to
+  bulk import. `?unlocked=1` is a working server-side escape hatch and
+  nothing on the page links to it. `CLAUDE.md` calls these scripts
+  "targeted progressive-enhancement"; `archive/segment_09_4C.md:15`
+  recorded the old anchored card as deliberately "**No JS toggle**, no
+  `<details>`, no query-param branch". The segment has never discussed
+  it — this is a rung-3 property, not a 3c one, and 3c is the last
+  cheap moment to write the decision down.
+- **The panel's redirect contract now has three spellings.**
+  `?unlocked=1#roster-card` is built inline in `_setup_reviewers.py`
+  twice and in `_shared.py` once behind `kind == "reviewers"`. Not a
+  layering violation — routes own their redirect URLs — but the doc
+  bullet above says to state it as one rule about the panel, and the
+  code went the other way in the same commit. A shared constant when
+  rung 4 writes the contract.
+
 **Open for the dev slot, unchanged from 3b:** both panel buttons are
 right-aligned via `.unlock-col-actions` (Upload moved left -> right, its
 top margin 20px -> 12px). `.btn-pair` and `.unlock-col-actions` do *not*
@@ -776,10 +811,19 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
   the mechanism — classes, markup, routes — not appearance; 19L stated the same
   limit (`archive/segment_19L_ux_refinements.md:207-209`).*
 - `Edit` enabled at exactly one row, the other three at one or more, asserted.
-- `grep -c 'id="upload-csv"\|danger-zone' session_reviewers.html` → 0, and the
-  `_field_labels_editor` include appears **once**, inside the Unlock panel —
-  the partial survives as a file (Reviewees and Relationships still include it)
-  and is re-used there, not duplicated.
+- ~~`grep -c 'id="upload-csv"\|danger-zone' session_reviewers.html` → 0, and the
+  `_field_labels_editor` include appears **once**, inside the Unlock panel~~ —
+  **both halves falsified, deliberately, and annotated at 3c's close rather
+  than quietly missed.** Measured at rung 3's end: the grep is **5** and the
+  include appears **twice**. Neither is drift. `danger-zone` stayed because it
+  is the only reach for the amber warning framing three sibling pages keep
+  (3b); `id="upload-csv"` travelled with the card because it costs nothing and
+  is the card's identity in this page's tests (3c); the second include is 3a's
+  locked-state fallback home, on the exact complement of the panel's condition,
+  which is one include in two positions rather than a duplicate. The criterion
+  was written assuming "moved into the panel" meant "the old strings are gone",
+  and three slices each found a reason that was too strong. The partial does
+  still survive as a file and is re-used, not duplicated — that half holds.
 - Upload, delete-all and the label save each fire from inside Unlock,
   asserted by route.
 - `edit_mode`-style locking: with Unlock open the preview renders
@@ -820,6 +864,8 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by rung 2a's cold read:** row **125** (`:227`) states the Reviewers `Add` label *and* the reason it is short — *"`Add` and `Delete` must both fit this row"*. Rung 2a renames the shipped label to `Add new` and dissolves that constraint (Delete leaves for the expander, so the two are no longer on one row), so the cell and its rationale sentence are both stale. `spec/setup_pages.md` says the same thing twice more — `:241` and `:536` list `Add` in the Operator-actions control set, and `:543` repeats the one-row rationale. A **rename**, which the bullet above covers only as a move (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15 by rung 2a′:** §10's layout-primitive table gains the filter strip. It was three private per-card copies and is now one unscoped base (`.filter-row`, `.filter-row > label`, `.filter-actions`) with three named narrowings, which is what §10 exists to record. Names the `body.ui-v2` prefix on the generic label rule as load-bearing specificity, not scoping (Item 1).
+- **Two forward references that define OTHER pages by pointing at Reviewers — added 2026-09-15 by rung 3c's cold read, and missed by the bullet below.** `spec/setup_pages.md:926` (Reviewees § Body grid) reads *"Same two-column shape as Reviewers — Upload card on the left, Danger Zone on the right"*, and `:961` (Relationships) says the same of Reviewers / Reviewees. Reviewers now renders no `.bottom-grid`, no Upload card below the table and no Danger Zone on the right, so both sentences send a reader to a section that describes an Unlock panel and tell them it is the Reviewees contract. **Why the bullet below missed them:** that grep looked for the card — `#upload-csv`, "Upload Reviewers" — and these two lines name it only as part of a shape borrowed from another page. A page's spec can be falsified by a change to a page it merely cites. Rung 4 should state the two layouts outright rather than by reference, since Reviewers is now the odd one out (Item 1).
+
 - **The Upload card's stated home, three files — added 2026-09-15 by rung 3c.** Each says where this card sits, and 3c moved it: `spec/operator_button_audit.md:223` (row 35) ends *"Sits **below** the preview table"*; `spec/setup_pages.md:894` lists it as **"Left:"** in the page's bottom row; `spec/operator_ui_concept.md:266` describes it as item 5, a card *"anchored at `#upload-csv`"*. The anchor and the `is_editable` gate both survive unchanged — what moved is the container, from a `.bottom-grid` that Reviewers no longer renders at all into the Unlock panel's right column. Found by grepping the three spec folders for the card, not by a cold read; the blast-radius grep at rung 3's slicing looked for `#upload-csv` as a **fragment target** and so missed every line that names the card in prose (Item 1).
 
 - `spec/ui_elements.md` — **added 2026-09-15 by rung 3c:** `.confirm-label` is `display: flex`, so a confirm that interleaves pills with prose must keep its sentence inside **one** child element or each bare text run becomes its own flex item and takes the 8px `gap` with it (measured: the closing "." sat 12px off the pill, 4px after wrapping, that 4px being the pill's own margin). Nothing states this, and the class is reached by four pages. Either §6's confirm entry says it, or the class stops using `gap` for what is really the checkbox's margin — the second is the better fix and is out of scope for a slice about the import card (Item 1).
