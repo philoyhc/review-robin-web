@@ -53,7 +53,14 @@ def test_reviewer_import_redirects_and_persists_rows(
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == f"/operator/sessions/{review_session.id}/reviewers"
+    # 19P.1 rung 3c — `?unlocked=1#roster-card`, not a bare path. The
+    # import card lives in the Unlock panel now, and a save must not
+    # close the panel it was made from; the Lock button is what closes
+    # it. Same contract as the labels save (3a) and delete-all (3b).
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/reviewers"
+        "?unlocked=1#roster-card"
+    )
     reviewers = list(
         db.execute(
             select(Reviewer).where(Reviewer.session_id == review_session.id)
@@ -321,6 +328,16 @@ def test_reviewee_import_persists_with_photolink(
     )
 
     assert response.status_code == 303
+    # 19P.1 rung 3c made the reviewers redirect carry
+    # `?unlocked=1#roster-card`, because that page grew an Unlock panel
+    # and the import card moved into it. Reviewees has no panel, so its
+    # redirect must stay bare — pinned here because the branch that
+    # decides it is a `kind == "reviewers"` check one line away from
+    # this path, and an unconditional flag would send a page a piece of
+    # UI state that means nothing on it.
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/reviewees"
+    )
     from app.db.models import Reviewee
 
     reviewees = list(

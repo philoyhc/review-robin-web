@@ -924,31 +924,36 @@ def test_delete_all_comes_back_with_the_panel_open(
     ), response.headers["location"]
 
 
-def test_the_roster_note_promises_delete_all_only_when_it_renders(
+def test_the_danger_zone_renders_only_on_a_roster_with_rows(
     db: Session, client: TestClient
 ) -> None:
-    """The Danger Zone is gated on the roster having rows; the note that
-    names it was not, so an empty roster read "tag labels and delete-all
-    live behind Unlock" with no delete-all behind Unlock.
+    """The gate 3b settled, kept after 3c retired the note it rode in on.
 
-    A biconditional against the card's own heading id, so the two cannot
-    part company again — the same shape of claim as the note about the
-    cards below the table.
+    This was `..._the_roster_note_promises_delete_all_only_when_it_renders`
+    — a biconditional between the Danger Zone and a sentence in the
+    roster card promising it. Rung 3c retired the sentence, and the
+    obvious move was to retire the test with it. That would have dropped
+    the only assertion in the suite that the Danger Zone is ABSENT on an
+    empty roster: every other reference to `reviewers-danger-h` checks
+    that it is present somewhere. So the note's half goes and the gate's
+    half stays.
+
+    The gate matters for a reason worse than a no-op: `_delete_all` calls
+    `lifecycle.invalidate_if_validated(...)` before it counts anything,
+    so an ungated Delete-all knocks a `validated` session back to
+    `draft` while deleting nothing at all.
     """
     review_session = _make_session(client, db, code="rev-note-da")
     base = f"/operator/sessions/{review_session.id}/reviewers"
 
     empty = client.get(base).text
-    assert "and delete-all" not in empty, (
-        "an empty roster promises a delete-all the panel does not offer"
-    )
     assert 'aria-labelledby="reviewers-danger-h"' not in empty, (
-        "fixture is not actually empty, so this asserts nothing"
+        "an empty roster renders a Delete-all that would demote the "
+        "session while deleting nothing"
     )
 
     _seed(db, review_session.id, ["Alice"])
     filled = client.get(base).text
-    assert "and delete-all" in filled, (
-        "a roster with rows does not mention the delete-all it offers"
+    assert 'aria-labelledby="reviewers-danger-h"' in filled, (
+        "a roster with rows does not offer the Delete-all it should"
     )
-    assert 'aria-labelledby="reviewers-danger-h"' in filled

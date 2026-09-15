@@ -190,26 +190,30 @@
      REAL height, so all three confirm affordances render here.
      ------------------------------------------------------------------ #}
   <div class="card roster-card" id="roster-card">
-    {# Gated on `unlock_available`, because both of its claims are only
-       true there. It shipped ungated at 3a and the scaffold string it
-       replaced was future-tense ("*will* live behind Unlock"), which
-       survived being ungated; turning it into a present-tense statement
-       of fact did not. On a locked session there is no Unlock control
-       on the page to live behind, and no cards below either — the
-       bottom grid takes the same gate — so the note was false in three
-       of five lifecycle states and in edit mode. The readouts below
-       stay: they are informational in every state. #}
-    {% if unlock_available %}
-      <p class="form-help roster-card-note">
-        {# The delete-all clause is conditional because the control is:
-           the Danger Zone is gated on the roster having rows, so on an
-           empty one this would promise something the panel does not
-           offer. #}
-        The roster's tag labels{% if total_row_count and total_row_count > 0 %}
-        and delete-all{% endif %} live behind <strong>Unlock</strong>. CSV
-        import follows; until it does, it is still live in the card below.
-      </p>
-    {% endif %}
+    {# 19P.1 rung 3c — the roster-card note is RETIRED here, which the
+       rung-3b entry called for rather than conditioning it a third
+       time.
+
+       It was a signpost for a half-migrated page: "the roster's tag
+       labels and delete-all live behind Unlock. CSV import follows;
+       until it does, it is still live in the card below." With this
+       rung the migration is over — there is no card below, and the
+       sentence that pointed at one cannot be made true by another
+       `{% if %}`. Its first clause is not worth keeping on its own: it
+       described where three controls went, to an operator standing in
+       front of the Unlock button that holds them.
+
+       It is also the one element on this page that acquired a new
+       condition at every rung — ungated at 3a (false in three
+       lifecycle states), gated on `unlock_available` in the UI pass,
+       then a nested gate on the roster count at 3b when it promised a
+       delete-all the panel does not render on an empty roster. A
+       sentence needing a new gate per slice is describing a layout
+       that is still moving; the layout has stopped, so the sentence
+       goes rather than acquiring a fourth.
+
+       The readouts below stay: they are informational in every state,
+       which is exactly what the note was not. #}
 
     <div class="roster-readouts">
       <div class="roster-readout">
@@ -321,12 +325,19 @@
               <label class="confirm-label">
                 <input type="checkbox" name="confirm" value="true" required
                        data-delete-confirm="delete-all">
-                Yes, delete the existing
+                {# One <span>, so the sentence is ONE flex item. Without
+                   it `.confirm-label`'s `display: flex` makes every bare
+                   text node its own item and puts an 8px `gap` between
+                   each, which detaches the closing "." from the pill
+                   before it — visible in Chromium as
+                   "8 REVIEWERS  ." The gap is for the checkbox, not for
+                   the words. #}
+                <span>Yes, delete the existing
                 <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
                 and their associated
                 <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
                 and
-                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
+                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
               </label>
               {% if roster_response_count > 0 %}
                 <input type="hidden" id="reviewers-delete-all-ack"
@@ -347,47 +358,110 @@
            starts below the TALLER column, which would drop the button to
            the panel's foot, far from the card it sits under. #}
         <div class="unlock-stack unlock-right">
-        <section class="card" aria-labelledby="scaffold-upload-h">
-          <h2 id="scaffold-upload-h">Upload Reviewers</h2>
-          {# Verbatim from the live card, INCLUDING the `Status` value
-             domain and the friendly-label header grammar. Rung 3 rehomes
-             this copy, and the plan waives `spec/csv_contracts.md` from
-             Doc impact on the ground that the grammar is untouched by
-             where the control renders — which stops being true if the
-             move quietly drops the only place an operator is shown it. #}
+        {# 19P.1 rung 3c — WIRED, and the last of the three cards to
+           move. The live card below the table goes in this same slice,
+           for the reason 2b established and 3b repeated: `sync`
+           resolves a confirm's button with a first-match
+           `querySelector`, so two `replace-roster` keys on one page
+           gate the wrong button.
+
+           `id="upload-csv"` travels with it. No cross-page fragment
+           targets it (measured at the slicing: the id appears in the
+           other three roster templates and nowhere else), but it is
+           the card's identity in this page's own tests and costs
+           nothing to keep. The `aria-labelledby` is new, matching the
+           Danger Zone's shape beside it.
+
+           `.unlock-col-actions` replaces the live card's
+           `<div class="btn-pair" style="margin-top: 20px;">`, and
+           unlike 3a's swap these two do NOT compute alike: `.btn-pair`
+           is a 16px-gap row that starts at the left, this is an 8px
+           flex-end row. So the Upload button moves left -> right and
+           its top margin 20px -> 12px. Chosen, not inherited: both
+           cards in this panel now right-align their action, `.btn-pair`
+           names a pair and this is one button, and `CLAUDE.md` asks for
+           a class over an inline style. It is the same left-vs-right
+           question 3b's Delete-all button already opened for the dev
+           slot — one answer for the panel, not two. #}
+        <section class="card" id="upload-csv"
+                 aria-labelledby="reviewers-upload-h">
+          <h2 id="reviewers-upload-h">Upload Reviewers</h2>
           <p class="form-help">
             CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
-            <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional
-            columns: <code>ReviewerTag1</code>, <code>ReviewerTag2</code>,
-            <code>ReviewerTag3</code>, <code>Status</code>
-            (<code>active</code> / <code>inactive</code>; defaults to
-            <code>active</code>).
+            <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional columns:
+            <code>ReviewerTag1</code>, <code>ReviewerTag2</code>, <code>ReviewerTag3</code>,
+            <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
+            to <code>active</code>).
             (Friendly tag labels can be keyed into the header after a period,
             e.g., <code>ReviewerTag1.Tutor</code>.)
             Other columns are ignored.
           </p>
-          <input type="file" accept=".csv,text/csv" disabled
-                 aria-label="CSV file (scaffold)">
-          {# ONE tick naming every loss, and each clause suppressed at
-             zero — matching the live card verbatim. The reverted build
-             split this in two and read "0 reviewers and 0 reviewer
-             responses" on an empty roster, while the danger-zone confirm
-             three elements away still named the assignments it drops.
-             One panel must not give two accounts of one destruction. #}
-          {% if total_row_count > 0 %}
-            <label class="confirm-label">
-              <input type="checkbox" disabled>
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-          {% endif %}
-          <div class="unlock-col-actions">
-            <button type="button" class="btn secondary" disabled>Upload</button>
-          </div>
+
+          {# The issue list renders HERE, inside the card the panel
+             absorbs — which is the whole reason this slice went last
+             and why `_handle_import` now sends `panel_open=True`. A
+             panel that shipped collapsed on a failed import would show
+             the operator a closed panel and no errors at all. The suite
+             cannot see that: with no JS runtime `hidden` is inert, so
+             every assertion on these issues passes either way. #}
+          {% include "operator/partials/validation_results.html" %}
+
+          <form method="post"
+                action="{{ reviewers_base_url }}/import"
+                enctype="multipart/form-data">
+            <input type="file" id="file" name="file" accept=".csv,text/csv"
+                   aria-label="CSV file" required>
+
+            {# Gated on `existing_count`, not on `total_row_count`. The
+               two are equal — both count the session's whole roster —
+               but `existing_count` is the value `_handle_import`'s own
+               `existing > 0` gate reads, so the confirm renders on
+               exactly the condition the route enforces. #}
+            {% if existing_count and existing_count > 0 %}
+              {# ONE tick naming every loss, each clause suppressed at
+                 zero, as the Danger Zone's confirm does beside it. The
+                 response clause is what the label was missing before
+                 19I: the import discards every saved answer under this
+                 roster and said nothing. #}
+              <label class="confirm-label">
+                <input type="checkbox" name="confirm_replace" value="true" required
+                       data-delete-confirm="replace-roster">
+                {# Wrapped for the same reason as the Danger Zone's
+                   confirm above — see there. This card is where the
+                   defect ARRIVED: below the table it was a plain
+                   `<label style="font-weight: normal;">`, so the
+                   sentence flowed inline and the period sat where it
+                   belonged. Moving it onto `.confirm-label` (a class,
+                   as `CLAUDE.md` asks) brought the flex layout with it. #}
+                <span>Yes, replace the existing
+                <span class="pill pill-empty">{{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+                and delete the
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+                and
+                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
+              </label>
+              {# The acknowledgement rides with this tick, as it does on
+                 the delete gates. Without it the route's
+                 `_require_response_loss_ack` 400s and no upload form
+                 sends the field — so replacing a roster was impossible
+                 on any session that had collected an answer, which is
+                 exactly when an operator reverts to draft to fix it. #}
+              {% if roster_response_count > 0 %}
+                <input type="hidden" id="reviewers-import-ack"
+                       name="acknowledge_response_loss" value="true">
+              {% endif %}
+            {% endif %}
+
+            <div class="unlock-col-actions">
+              {% if existing_count and existing_count > 0 %}
+                <button class="btn secondary" type="submit"
+                        data-delete-btn="replace-roster"
+                        disabled aria-disabled="true">Upload</button>
+              {% else %}
+                <button class="btn secondary" type="submit">Upload</button>
+              {% endif %}
+            </div>
+          </form>
         </section>
         {% if panel_open %}
         <div class="roster-card-actions">
@@ -465,7 +539,18 @@
      disables its own inputs and drops its buttons when the session is
      not editable, which is what makes one include serve both.
 
-     The container goes when the last of the three cards moves (3c). #}
+     `.card-columns` STAYS, and the rung-3 slicing's claim that it goes
+     with the last card (3c) is wrong — 3a falsified it without saying
+     so. The container was written off on the assumption it held the
+     three cards being absorbed; after 3a it holds exactly one thing,
+     this fallback editor, which the panel cannot host in the two states
+     above. Removing the wrapper now would not retire a container, it
+     would widen the locked-state editor from half the page to all of
+     it — a pixel change to a state nobody asked to change, in a slice
+     about the import card.
+
+     So the plan's line is annotated rather than followed. The container
+     goes if and when the fallback home does. #}
   {% if not unlock_available %}
   <div class="card-columns">
     <div>
@@ -1215,82 +1300,5 @@
         render();
       })();
     </script>
-  {% endif %}
-
-  {# Upload (Segment 19I Item 3; the Danger Zone this note used to name
-     alongside it moved into the Unlock panel at 19P.1 rung 3b). Was
-     ``not is_ready``, which left both rendering on ``expired``
-     and ``archived`` where the import and the delete-all both
-     409. The author's rule for rows — draft and validated edit,
-     the rest do not, because "the thing is over" — is a rule
-     about editing, and these are edits. #}
-  {% if unlock_available %}
-  <div class="bottom-grid">
-    <section class="card" id="upload-csv">
-      <h2>Upload Reviewers</h2>
-      <p class="form-help">
-        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
-        <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional columns:
-        <code>ReviewerTag1</code>, <code>ReviewerTag2</code>, <code>ReviewerTag3</code>,
-        <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
-        to <code>active</code>).
-        (Friendly tag labels can be keyed into the header after a period,
-        e.g., <code>ReviewerTag1.Tutor</code>.)
-        Other columns are ignored.
-      </p>
-
-      {% include "operator/partials/validation_results.html" %}
-
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/reviewers/import"
-            enctype="multipart/form-data">
-        <input type="file" id="file" name="file" accept=".csv,text/csv"
-               aria-label="CSV file" required>
-
-        {% if existing_count and existing_count > 0 %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required
-                     data-delete-confirm="replace-roster">
-              {# Names what the replace destroys, like the
-                 Danger Zone and the selected-rows delete
-                 (Segment 19I Item 5). The response clause is
-                 what was missing: the import discards every
-                 saved answer under this roster and said
-                 nothing. #}
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-            {# The acknowledgement rides with this tick, as it
-               does on the delete gates. Without it the route's
-               `_require_response_loss_ack` returned 400 and no
-               upload form sent the field — so replacing a
-               roster was impossible on any session that had
-               collected an answer, which is exactly when an
-               operator reverts to draft to fix it. #}
-            {% if roster_response_count > 0 %}
-              <input type="hidden" id="reviewers-import-ack"
-                     name="acknowledge_response_loss" value="true">
-            {% endif %}
-          </p>
-        {% endif %}
-
-        <div class="btn-pair" style="margin-top: 20px;">
-          {% if existing_count and existing_count > 0 %}
-            <button class="btn secondary" type="submit"
-                    data-delete-btn="replace-roster"
-                    disabled aria-disabled="true">Upload</button>
-          {% else %}
-            <button class="btn secondary" type="submit">Upload</button>
-          {% endif %}
-        </div>
-      </form>
-    </section>
-
-  </div>
   {% endif %}
 {% endblock %}

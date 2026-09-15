@@ -436,9 +436,9 @@ each card's own route, measured before cutting.**
 
 | slice | card | its route answers | why here |
 |---|---|---|---|
-| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home until 3c (see the 3a entry below) |
+| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home ~~until 3c~~ **indefinitely** (3a's own entry falsified this; 3c confirmed it and did not remove the container) |
 | **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence — **shipped 2026-09-15** |
-| **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last |
+| **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last — **shipped 2026-09-15** |
 
 **What the cut is made on.** `delete-all` and `field-labels` both 303 back
 to the page (`_setup_reviewers.py:551`, `:590`). The import does not: on a
@@ -668,6 +668,63 @@ clause is conditional now — the same ungated-copy mistake the UI pass
 made, one slice later, which is a sign the note wants retiring rather
 than more conditions when 3c empties the bottom grid.
 
+**2026-09-15 — 3c shipped, and rung 3 is done.** The import card moved
+into the Unlock panel; the bottom grid went with it, since it held
+nothing else.
+
+**The panel's start-open contract, which is why this slice went last.**
+The import does not redirect on a bad CSV — it re-renders with a 400 and
+the issue list, and that list renders *inside* the card the panel now
+absorbs. `?unlocked=1` cannot reach an in-place re-render, so
+`_handle_import` sets `panel_open` directly. **Measured both ways in
+Chromium, because the suite structurally cannot see it:** with the flag
+off, a failed import renders the error text into the DOM (`count: 1`)
+with `visible: False` and a null bounding box — the operator gets a
+collapsed panel and no errors, while every pytest assertion on that text
+passes. With it on, the error is on screen at y=636. The flag is
+`kind == "reviewers"`: Reviewees has no panel, and its bare redirect is
+now pinned so an unconditional flag fails.
+
+**The success redirect carries `?unlocked=1#roster-card` too.** The
+author's rule from the UI pass — a Save does not close the Reviewers
+card, the Lock button does — generalises to all three controls, and 3b
+shipped without it once already.
+
+**`.card-columns` does NOT go here, and the cut table's claim that it
+would was falsified by 3a without being corrected.** It was written off
+as one of the three absorbed containers; after 3a it holds exactly one
+thing, the labels editor's locked-state fallback home, which the panel
+cannot host. Removing it now would not retire a container — it would
+widen the locked-state editor from half the page to full, a pixel change
+to a state this slice has no business touching. The plan's line is
+annotated rather than followed; the container goes if the fallback home
+does.
+
+**The note is retired, not conditioned a third time.** It promised cards
+below the table that no longer exist, and a sentence that acquired a new
+gate at every rung of 3 was describing a layout still in motion. Its
+`base.html` rule went with it (no users left), so the two generated
+`tools/` twins were regenerated.
+
+**A defect this slice introduced, found only in Chromium.** Below the
+table the replace confirm was `<label style="font-weight: normal;">` and
+its sentence flowed inline. Moving it onto `.confirm-label` — a class
+over an inline style, as `CLAUDE.md` asks — brought `display: flex` with
+it, and a bare text node in a flex container is its own flex item: the
+closing "." detached from the pill by 12px. Wrapping the sentence in one
+`<span>` takes it to 4px, which is the pill primitive's own margin and
+is what every pill-in-a-sentence in the app shows. The Danger Zone's
+confirm had the same defect from 3b and is fixed with it; the row
+expander's confirm has no pills and is unaffected. **The screenshot is
+what caught this** — nothing in the markup looks wrong.
+
+**Open for the dev slot, unchanged from 3b:** both panel buttons are
+right-aligned via `.unlock-col-actions` (Upload moved left -> right, its
+top margin 20px -> 12px). `.btn-pair` and `.unlock-col-actions` do *not*
+compute alike, unlike 3a's swap — 16px/flex-start against 8px/flex-end —
+so this was a choice: one alignment for the panel rather than two, and
+`.btn-pair` names a pair where there is one button.
+
 ### PR ladder
 
 *Sequence unchanged; rung 1's content is superseded by `### Status` above, and
@@ -751,18 +808,22 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/setup_pages.md` — § *Shared body shape* items 4 and 6 and its `.card-columns` table row (`:94`, which sites the tag-label editor in the left column), § *Operator actions card*, § *Deleting the selected rows*, § *Per-row Edit / Add / bulk actions*, the Reviewers § *Body grid* and § *Implementation pointers* re-describe the expander and the Unlock panel. The two bottom-card sections lose their **card** description; their **route contract** — `confirm` / `confirm_replace` / `acknowledge_response_loss`, the failure modes, the three-state wording — is preserved verbatim, only re-homed. **Added 2026-09-15 by the mockup:** item 0 calls the guidance card *"a **half-width card**"* (`:52`) and the page's row of the `.card-columns` table (`:94`) sites *every* card above the preview table in that container — on Reviewers the guidance becomes **full width above the container** and `.card-columns` then has no tenant, so that row states the container is absent on this page. The § *Operator actions card* section retires rather than shrinking, and the preview-table section gains the two-pane toolbar that replaces it (Item 1).
 - `spec/operator_button_audit.md` — the Reviewers actions-strip rows move to the expander; rows **105 / 106** (`:220-221`, the tag-label Cancel / Save labels) and rows **35 / 37** (`:223`, `:233`, whose cells site the button "below the preview table") are **re-sited into Unlock, not retired** — their routes and destructive role survive; the `> Upload and Danger Zone buttons — must be absent, not disabled` gate (`:211`) is reframed around an Unlock panel rather than two cards; and the `.btn.destructive` "outside a danger zone" sentence (sibling of `ui_elements.md:368`) is restated for the expander (Item 1).
 - `spec/operator_ui_concept.md` — the shared Setup shape (`:258`, stated for the **three** roster pages) changes at items 3, **4** (`:265`, the leftmost checkbox column "drives the operator-actions selection" — after this it drives the injected expander), 5 and 6, and gains the roster index row. **Added 2026-09-15:** the one-sentence body shape at `:92` spells the container out — *"one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right"* — and `:264` states that pair as the container's right-hand half; both describe a layout this item removes from Reviewers, so each states the two shapes rung 4 already owes (Item 1).
-- `spec/lifecycle.md` — **added 2026-09-15 by rung 3b's cold read, and this file is on NO existing bullet.** `:347` and `:401` both say "the mutating-card grid (Upload, Danger Zone) is hidden" when a session freezes. The gate behaviour is unchanged, but the card's stated home is not — the Danger Zone is in the Unlock panel now, and §5 is where `operator_ui_concept.md:267` points for this card (Item 1).
+- `spec/lifecycle.md` — **added 2026-09-15 by rung 3b's cold read, and this file is on NO existing bullet. Widened by 3c.** `:347` and `:401` both say "the mutating-card grid (Upload, Danger Zone) is hidden" when a session freezes. The gate behaviour is unchanged, but the stated home of **both** named cards is now wrong, not just the Danger Zone's: 3c moved the Upload card into the Unlock panel too, and **the grid itself no longer exists on Reviewers**. So the sentence names a container that is gone and two cards that are elsewhere. §5 is where `operator_ui_concept.md:267` points for this card (Item 1).
 - `spec/visual_style_rrw.md` — **added 2026-09-15 by the same read:** `:262` sites the Danger Zone "at the bottom-right of the page (or in the bottom row of a `.bottom-grid`)", which rung 3b falsifies. The only existing bullet for this file names `:79`, and that bullet says in as many words that the blast-radius grep missed the file once already — so it missed a second line in it. Also price at rung 4: if the amber framing is ever dropped inside the panel, `:241` and `spec/ui_elements.md:188-195` become false of Reviewers as a matter of pixels, not placement (Item 1).
 - `spec/setup_pages.md` — **added 2026-09-15 by the UI pass's cold read:** `:861-865` states the row-action redirect contract for all four pages — it "preserves the row selection (`?selected=`) and the active search / status filter". On Reviewers it now also carries `offset=` and a `#reviewer-row-<id>` fragment, and `:644`'s delete redirect carries `offset=` and `#reviewers-table-card`. Stated per page, since the other three are unchanged (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15 by the same read:** §10 states the landing contract as `#<noun>-table-card` with `scroll-margin-top` on the card. There are now three targets and **none of them is a card**: `#<noun>-table-card` (the pager and the filter strip), `#<noun>-row-editor` on the add `<tr>`, and `#<noun>-row-<id>` on any row, both at 88px. Corrected 2026-09-15 — an earlier version of this bullet named the editor card, which has since been retired. `tr.row-action-target` and `.roster-card`'s own `scroll-margin-top` are new `base.html` primitives and §10 is where those are recorded. Supersedes the earlier bullet's "state the landing contract once, for both" — it is for three (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15:** `:592` says `.session-row-selected` is "not a general primitive" and "deliberately not promoted". The UI pass applies it to a server-rendered EDIT row on a Setup page — a row that is not selected at all. The existing bullet covers the page transfer (lobby → Setup); this is the **semantic** one, selection → edit state, and §6/§10 should say which meanings the class now carries (Item 1).
 - `spec/settings_inventory.md` — **added 2026-09-15:** `?unlocked=1` is URL-borne UI state with no entry anywhere. §2.5 indexes browser-local UI state and is already on this list for the labels editor's position; the panel's open state belongs beside it, including that it is set by the labels redirect and dropped by Search / Clear / the pager (Item 1).
-- `spec/setup_pages.md` — **added 2026-09-15 by rung 3's slicing:** the Unlock panel needs a stated **start-open** contract, because the CSV import re-renders the page in place on a parse / confirm / ack failure and its issue list renders inside the card the panel absorbs. A panel that always ships collapsed hides the errors. Named here rather than left to 3c, so the behavior is a contract and not an implementation detail of one slice (Item 1).
+- `spec/setup_pages.md` — **added 2026-09-15 by rung 3's slicing; 3c shipped the behaviour, so rung 4 states it rather than predicts it.** The Unlock panel needs a stated **start-open** contract, because the CSV import re-renders the page in place on a parse / confirm / ack failure and its issue list renders inside the card the panel absorbs. A panel that always ships collapsed hides the errors — verified in Chromium both ways, and invisible to the suite. As shipped the contract has **two** halves: the in-place re-render sets `panel_open` server-side, and every control that lives in the panel redirects with `?unlocked=1` (labels save, delete-all, and a successful import). State it as one rule about the panel, not three about the controls (Item 1).
 - `spec/visual_style_rrw.md` — **added 2026-09-15 by rung 2b step 3's cold read, and NOT found by the blast-radius grep** (which read five files; this was not one). § *Width discipline* (`:79`) names *"Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair"* as the canonical half-width pairing. Step 3 makes that false for Reviewers, which now has one tenant in the container. The lesson is the grep's, not the sentence's: a manifest measured by grepping a chosen file list misses the files not chosen (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by the same read:** rows **128 / 129** (`:231-232`, Reviewers Save / Cancel) say the pair is *"shown below the divider in Edit/Add mode"*. There is no divider on Reviewers after step 3 and the pair is in a card of its own, so the *"move to the expander"* bullet above does not cover these two — they moved somewhere else. Also, `:231` gives that `Save` the **Primary** role while the template renders `btn secondary`, identically on all four roster pages: pre-existing and not this item's to fix, but rung 4 is re-reading these exact rows (Item 1).
 - `spec/ui_elements.md` — `.session-expander*` and `tr.session-row-selected` stop being lobby-only, and §6's `.btn.destructive` note stops siting the roster Delete "between `Add` and `Search`". **Added 2026-09-15:** §10 gains the preview-table toolbar's two bare panes — card geometry, no border, fill or padding — which `:637` already distinguishes from `.card-columns` and now needs a name of its own (Item 1).
 - `spec/operator_button_audit.md` — **added 2026-09-15 by rung 2a's cold read:** row **125** (`:227`) states the Reviewers `Add` label *and* the reason it is short — *"`Add` and `Delete` must both fit this row"*. Rung 2a renames the shipped label to `Add new` and dissolves that constraint (Delete leaves for the expander, so the two are no longer on one row), so the cell and its rationale sentence are both stale. `spec/setup_pages.md` says the same thing twice more — `:241` and `:536` list `Add` in the Operator-actions control set, and `:543` repeats the one-row rationale. A **rename**, which the bullet above covers only as a move (Item 1).
 - `spec/ui_elements.md` — **added 2026-09-15 by rung 2a′:** §10's layout-primitive table gains the filter strip. It was three private per-card copies and is now one unscoped base (`.filter-row`, `.filter-row > label`, `.filter-actions`) with three named narrowings, which is what §10 exists to record. Names the `body.ui-v2` prefix on the generic label rule as load-bearing specificity, not scoping (Item 1).
+- **The Upload card's stated home, three files — added 2026-09-15 by rung 3c.** Each says where this card sits, and 3c moved it: `spec/operator_button_audit.md:223` (row 35) ends *"Sits **below** the preview table"*; `spec/setup_pages.md:894` lists it as **"Left:"** in the page's bottom row; `spec/operator_ui_concept.md:266` describes it as item 5, a card *"anchored at `#upload-csv`"*. The anchor and the `is_editable` gate both survive unchanged — what moved is the container, from a `.bottom-grid` that Reviewers no longer renders at all into the Unlock panel's right column. Found by grepping the three spec folders for the card, not by a cold read; the blast-radius grep at rung 3's slicing looked for `#upload-csv` as a **fragment target** and so missed every line that names the card in prose (Item 1).
+
+- `spec/ui_elements.md` — **added 2026-09-15 by rung 3c:** `.confirm-label` is `display: flex`, so a confirm that interleaves pills with prose must keep its sentence inside **one** child element or each bare text run becomes its own flex item and takes the 8px `gap` with it (measured: the closing "." sat 12px off the pill, 4px after wrapping, that 4px being the pill's own margin). Nothing states this, and the class is reached by four pages. Either §6's confirm entry says it, or the class stops using `gap` for what is really the checkbox's margin — the second is the better fix and is out of scope for a slice about the import card (Item 1).
+
 - `spec/ui_elements.md` — **added 2026-09-15:** §10 states the `#<noun>-table-card` fragment as the **pager's** contract (*"the route supplies the id, the pager never derives it"*). The filter strip's controls now take the same anchor, and entering edit mode takes a second one, `#<noun>-row-editor`. **Corrected 2026-09-15:** the reason recorded here was "because the editor is split across two cards" — it no longer is. The editor card was retired, so `#<noun>-row-editor` is an **add-mode-only id on the `<tr>` itself**, `Edit` builds `#<noun>-row-<id>` from the id it already has, and there is no card in the contract at all. §10 states the landing targets as they are, not as they were. `spec/setup_pages.md` § *Search + filter strip* describes the strip with no landing behavior at all (Item 1).
 - `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 1).
 - `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
