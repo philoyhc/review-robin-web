@@ -2782,7 +2782,10 @@
         gap: var(--space-4);
         align-items: start;
       }
-      body.ui-v2 .unlock-right {
+      /* The left column's two stacked cards, at the same gap the panel's
+         two columns use, so the grid reads as one rhythm either way you
+         scan it. */
+      body.ui-v2 .unlock-stack {
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
@@ -2834,7 +2837,11 @@
         gap: var(--space-2);
         font-size: var(--fs-small);
         font-weight: normal;
-        margin: 0;
+        /* Set apart from the control it gates rather than tucked under
+           it: a confirm sitting flush against a file input reads as that
+           input's own caption. Collapses against a preceding heading's
+           bottom margin, so the Danger Zone's spacing is unchanged. */
+        margin: var(--space-4) 0 0;
       }
       body.ui-v2 .confirm-label input[type="checkbox"] {
         margin-top: 3px;
