@@ -1695,10 +1695,24 @@
         width: 100%;
         box-sizing: border-box;
       }
+      /* `margin-top` and `align-items` are NOT decoration carried over
+         for tidiness — they are what `.operator-actions-card
+         .filter-actions` gave this strip before 19P.1 rung 2a moved it
+         out of that card, and neither followed it. The gap between a
+         filter row and its right-flushed buttons is 12px wherever this
+         shape appears (that rule, and `.field-labels-actions`); without
+         it the buttons sat flush against the search box at 0px.
+
+         Second instance of the same root cause as the `is-locked` bug
+         two blocks up: a rule scoped to the card the form no longer
+         lives in. Check the whole `.operator-actions-card` block, not
+         one declaration, when anything else moves out of it. */
       body.ui-v2 .toolbar-right .filter-actions {
         display: flex;
+        align-items: center;
         justify-content: flex-end;
         gap: var(--space-2);
+        margin-top: var(--space-3);
         flex-wrap: wrap;
       }
       @media (max-width: 860px) {

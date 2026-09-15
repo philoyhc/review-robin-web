@@ -771,3 +771,36 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
         other_markup = _markup(other.text)
         assert "page-guidance" in other_markup, "vacuity: no guidance card"
         assert "page-guidance-wide" not in other_markup
+
+
+def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
+    client, db
+):
+    """The second rule the strip lost by leaving `.operator-actions-card`.
+
+    `.operator-actions-card .filter-actions` gave it `margin-top: 12px`
+    — the gap between a filter row and its right-flushed buttons
+    everywhere this shape appears, `.field-labels-actions` included.
+    `.toolbar-right` cannot supply it as a flex `gap`: its only child is
+    the `<form>`, so that gap has nothing to sit between. Without the
+    margin the buttons sat flush against the search box at 0px.
+
+    Same root cause as `is-locked` one block up, which is why this
+    asserts the rule is addressed to the form's NEW home rather than
+    merely that some `.filter-actions` rule exists.
+    """
+    rs = _with_reviewers(client, db, "rc34")
+    html = _page(client, rs)
+
+    # Vacuity guard: the strip has to actually be in the toolbar, or a
+    # rule about `.toolbar-right` would be pinning an empty selector.
+    assert 'class="toolbar-pane toolbar-right"' in _markup(html)
+    assert '<div class="filter-actions">' in _markup(html)
+
+    rule = re.search(
+        r"body\.ui-v2 \.toolbar-right \.filter-actions \{(.*?)\}", html, re.S
+    )
+    assert rule, "no rule for the moved filter's button row"
+    assert "margin-top" in rule.group(1), (
+        "the moved buttons have no gap from the search box above them"
+    )
