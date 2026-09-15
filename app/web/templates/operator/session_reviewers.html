@@ -112,50 +112,8 @@
       </div>
 
       <div class="unlock-panel" id="roster-unlock-panel" hidden>
-        <section class="card" aria-labelledby="scaffold-upload-h">
-          <h2 id="scaffold-upload-h">Upload Reviewers</h2>
-          {# Verbatim from the live card, INCLUDING the `Status` value
-             domain and the friendly-label header grammar. Rung 3 rehomes
-             this copy, and the plan waives `spec/csv_contracts.md` from
-             Doc impact on the ground that the grammar is untouched by
-             where the control renders — which stops being true if the
-             move quietly drops the only place an operator is shown it. #}
-          <p class="form-help">
-            CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
-            <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional
-            columns: <code>ReviewerTag1</code>, <code>ReviewerTag2</code>,
-            <code>ReviewerTag3</code>, <code>Status</code>
-            (<code>active</code> / <code>inactive</code>; defaults to
-            <code>active</code>).
-            (Friendly tag labels can be keyed into the header after a period,
-            e.g., <code>ReviewerTag1.Tutor</code>.)
-            Other columns are ignored.
-          </p>
-          <input type="file" accept=".csv,text/csv" disabled
-                 aria-label="CSV file (scaffold)">
-          {# ONE tick naming every loss, and each clause suppressed at
-             zero — matching the live card verbatim. The reverted build
-             split this in two and read "0 reviewers and 0 reviewer
-             responses" on an empty roster, while the danger-zone confirm
-             three elements away still named the assignments it drops.
-             One panel must not give two accounts of one destruction. #}
-          {% if total_row_count > 0 %}
-            <label class="confirm-label">
-              <input type="checkbox" disabled>
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-          {% endif %}
-          <div class="unlock-col-actions">
-            <button type="button" class="btn secondary" disabled>Upload</button>
-          </div>
-        </section>
-
-        <div class="unlock-right">
+        {# Left column: the two cards an operator edits, stacked. #}
+        <div class="unlock-stack">
           {# Title and help copy lifted verbatim from the live card this
              will absorb, so rung 3's move is a rehome and not a rewrite. #}
           <section class="card" aria-labelledby="scaffold-labels-h">
@@ -200,7 +158,51 @@
             </div>
           </section>
         </div>
+
+        <section class="card" aria-labelledby="scaffold-upload-h">
+          <h2 id="scaffold-upload-h">Upload Reviewers</h2>
+          {# Verbatim from the live card, INCLUDING the `Status` value
+             domain and the friendly-label header grammar. Rung 3 rehomes
+             this copy, and the plan waives `spec/csv_contracts.md` from
+             Doc impact on the ground that the grammar is untouched by
+             where the control renders — which stops being true if the
+             move quietly drops the only place an operator is shown it. #}
+          <p class="form-help">
+            CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+            <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional
+            columns: <code>ReviewerTag1</code>, <code>ReviewerTag2</code>,
+            <code>ReviewerTag3</code>, <code>Status</code>
+            (<code>active</code> / <code>inactive</code>; defaults to
+            <code>active</code>).
+            (Friendly tag labels can be keyed into the header after a period,
+            e.g., <code>ReviewerTag1.Tutor</code>.)
+            Other columns are ignored.
+          </p>
+          <input type="file" accept=".csv,text/csv" disabled
+                 aria-label="CSV file (scaffold)">
+          {# ONE tick naming every loss, and each clause suppressed at
+             zero — matching the live card verbatim. The reverted build
+             split this in two and read "0 reviewers and 0 reviewer
+             responses" on an empty roster, while the danger-zone confirm
+             three elements away still named the assignments it drops.
+             One panel must not give two accounts of one destruction. #}
+          {% if total_row_count > 0 %}
+            <label class="confirm-label">
+              <input type="checkbox" disabled>
+              Yes, replace the existing
+              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and delete the
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+              and
+              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
+            </label>
+          {% endif %}
+          <div class="unlock-col-actions">
+            <button type="button" class="btn secondary" disabled>Upload</button>
+          </div>
+        </section>
       </div>
+
 
       <script>
         (function () {

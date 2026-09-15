@@ -189,9 +189,10 @@ def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
     rs = _with_reviewers(client, db, "rc8")
     _give_it_assignments(client, db, rs)
     html = _page(client, rs)
-    upload = re.search(
-        r'id="scaffold-upload-h".*?(?=id="scaffold-labels-h")', html, re.S
-    )
+    # Scoped to the upload card's own <section>, not to whatever card
+    # happens to follow it — the panel's column order is a layout choice
+    # and a test should not pin it by accident.
+    upload = re.search(r'id="scaffold-upload-h".*?</section>', html, re.S)
     danger = re.search(r'id="scaffold-danger-h".*?</section>', html, re.S)
     assert upload and danger, "scaffold panel columns not found"
     ticks = re.findall(r'<input[^>]*type="checkbox"[^>]*>', upload.group(0))
@@ -210,9 +211,10 @@ def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
     """Suppressed at zero, as the live card already does — rather than
     reading "replace the existing 0 reviewers"."""
     html = _page(client, _session(client, db, "rc9"))
-    upload = re.search(
-        r'id="scaffold-upload-h".*?(?=id="scaffold-labels-h")', html, re.S
-    )
+    # Scoped to the upload card's own <section>, not to whatever card
+    # happens to follow it — the panel's column order is a layout choice
+    # and a test should not pin it by accident.
+    upload = re.search(r'id="scaffold-upload-h".*?</section>', html, re.S)
     assert upload, "upload column not found"
     assert "replace the existing" not in upload.group(0), upload.group(0)
     # The card itself still renders: it is informational, and every state
@@ -397,4 +399,46 @@ def test_tick_order_prunes_on_untick_and_rebuilds_on_select_all(client, db):
     assert "rows().map" in select_all.group(0), (
         "select-all does not rebuild the tick order"
     )
+
+
+def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
+    """Left column: `Reviewer tag labels` over `Danger Zone`, stacked.
+    Right column: `Upload Reviewers`. Author's arrangement, so it is
+    pinned — a refactor that reflowed the panel would otherwise undo it
+    silently.
+
+    Asserts DOM order and stack membership, which is what the markup
+    decides; the column widths are the CSS grid's and are asserted as a
+    rule, not an effect.
+    """
+    html = _page(client, _with_reviewers(client, db, "rc19"))
+    panel = re.search(r'id="roster-unlock-panel".*?(?=<script>)', html, re.S)
+    assert panel, "Unlock panel not found"
+    body = panel.group(0)
+
+    labels = body.index('id="scaffold-labels-h"')
+    danger = body.index('id="scaffold-danger-h"')
+    upload = body.index('id="scaffold-upload-h"')
+    assert labels < danger < upload, (
+        "expected labels, then danger zone, then upload"
+    )
+
+    # The first two share the stack; upload is the grid's second child.
+    stack = re.search(r'<div class="unlock-stack">.*?\n        </div>', body, re.S)
+    assert stack, "left-column stack not found"
+    assert 'id="scaffold-labels-h"' in stack.group(0)
+    assert 'id="scaffold-danger-h"' in stack.group(0)
+    assert 'id="scaffold-upload-h"' not in stack.group(0), (
+        "upload belongs in the right column, not the stack"
+    )
+
+
+def test_the_replace_confirm_is_set_apart_from_the_file_input(client, db):
+    """A confirm flush against the input it gates reads as that input's
+    caption. Geometry, so this asserts the rule rather than its effect —
+    the suite has no layout engine."""
+    html = _page(client, _with_reviewers(client, db, "rc20"))
+    rule = re.search(r"\.confirm-label \{([^}]*)\}", html)
+    assert rule, ".confirm-label rule not found"
+    assert "margin: var(--space-4) 0 0" in rule.group(1), rule.group(1)
 
