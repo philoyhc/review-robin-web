@@ -44,6 +44,33 @@
         [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
   ] %}
 
+  {# The edit row's own action bar, on the analogy of a selected row:
+     the row being edited reads as selected (`session-row-selected`) and
+     its controls hang beneath it in a bracketed expander, exactly as the
+     selection panel does. Save and Cancel belong with the row they act
+     on, not in a card above the table.
+
+     One macro, two call sites (the Add row and the Edit row), because
+     the alternative is the same markup written twice — which on this
+     page has already drifted once, in the tag-label editor's
+     parameters. #}
+  {% macro row_editor_bar(col_count) %}
+    <tr class="session-expander session-expander-bracketed row-editor-bar">
+      <td colspan="{{ col_count }}">
+        <div class="row-expander-body">
+          <div class="row-expander-actions">
+            {# Cancel leaves the editor for the list, so it lands where
+               the list is — the same anchor `Clear` and `Search` take. #}
+            <a class="btn secondary"
+               href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
+            <button class="btn secondary" type="submit"
+                    form="reviewer-edit-form">Save</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endmacro %}
+
   <div class="session-nav-card">
     {% with current_page = "Reviewers" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -177,7 +204,12 @@
        "Save labels" anywhere, and the Unlock panel holds one. The
        readouts above stay — they are informational. #}
     {% if unlock_available %}
-      <div class="unlock-panel" id="roster-unlock-panel" hidden>
+      {# `panel_open` is server state, not a second source of truth for
+         the JS toggle below: the toggle still owns every click, this
+         only decides what the page ARRIVES as. Saving a label POSTs and
+         303s, and a panel that always shipped collapsed would shut
+         itself on every save — the Lock control is what closes it. #}
+      <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the two cards an operator edits, stacked. #}
         <div class="unlock-stack">
           {# 19P.1 rung 3a — WIRED. The scaffold hand-copied this card's
@@ -269,16 +301,32 @@
             <button type="button" class="btn secondary" disabled>Upload</button>
           </div>
         </section>
+        {% if panel_open %}
+        <div class="roster-card-actions">
+          <button type="button" class="btn secondary" id="roster-unlock-btn"
+                  aria-expanded="true" aria-controls="roster-unlock-panel">
+            Lock
+          </button>
+        </div>
+        {% endif %}
         </div>
       </div>
 
 
+      {# Collapsed this sits here, as the card's last child; open it
+         belongs under the upload card, inside the panel. The toggle
+         MOVES the one element between those two homes rather than
+         rendering two copies, so arriving open has to start it in the
+         panel — otherwise the first Lock click would move it out of a
+         place it was never in. #}
+      {% if not panel_open %}
       <div class="roster-card-actions">
         <button type="button" class="btn secondary" id="roster-unlock-btn"
                 aria-expanded="false" aria-controls="roster-unlock-panel">
           Unlock
         </button>
       </div>
+      {% endif %}
 
       <script>
         (function () {
@@ -389,15 +437,11 @@
           Edit the highlighted row below, then Save.
         {% endif %}
       </p>
-      <div style="display: flex; justify-content: flex-end;
-                  gap: 12px; margin-top: var(--space-3);">
-        <button class="btn secondary" type="submit"
-                form="reviewer-edit-form">Save</button>
-        {# Cancel leaves the editor for the list, so it lands where
-           the list is — the same anchor `Clear` and `Search` take. #}
-        <a class="btn secondary"
-           href="{{ reviewers_base_url }}#{{ pager_anchor }}">Cancel</a>
-      </div>
+      {# Save / Cancel moved to the row's own expander bar below the
+         edit row. Not duplicated here: two live submit buttons on one
+         `reviewer-edit-form` is the shape 2b step 2 was sliced to
+         avoid, and the card is the wrong place for them anyway — they
+         act on the row, and the row is in the table. #}
     </div>
   {% endif %}
 
@@ -614,11 +658,33 @@
         </tr>
         </thead>
         <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
+        {# The editor bar spans the row above it, so it has to know how
+           wide that row is. Derived from the same flags the `<thead>`
+           branches on rather than counted by hand: select + Name +
+           Email, then the optional columns, then Status + Updated. In
+           `edit_mode` every optional one is forced on, so this is 9
+           today — computed anyway, because a hand-written 9 stops being
+           true the first time a column is gated differently. #}
+        {% set edit_col_count = 3
+              + (1 if show_profile_link else 0)
+              + (1 if show_tag[1] else 0)
+              + (1 if show_tag[2] else 0)
+              + (1 if show_tag[3] else 0)
+              + 2 %}
         {% if add_mode %}
           {# Fresh blank edit row at the top of the table. #}
-          <tr class="reviewer-edit-row">
+          <tr class="reviewer-edit-row session-row-selected">
             <td class="row-select-cell"></td>
+            {# The caret starts here — see the script below the table.
+               Not `autofocus`: `Add new` navigates to a URL carrying a
+               fragment, and a fragment navigation moves focus to its
+               target, which beats the attribute. Measured both ways in
+               Chromium: with `#reviewers-row-editor` the active element
+               is BODY, without it the attribute takes. The fragment is
+               deliberate (it is what stops the page landing at the top),
+               so the caret is set in script instead. #}
             <td><input type="text" name="name" form="reviewer-edit-form"
+                       class="row-editor-first-field"
                        value="{{ edit_values.name }}" maxlength="255"
                        placeholder="Name" required></td>
             <td><input type="email" name="email" form="reviewer-edit-form"
@@ -653,10 +719,12 @@
             </td>
             <td class="muted">—</td>
           </tr>
+          {{ row_editor_bar(edit_col_count) }}
         {% endif %}
         {% for reviewer in reviewers %}
           {% if edit_id is not none and reviewer.id == edit_id %}
-            <tr class="reviewer-edit-row" id="reviewer-row-{{ reviewer.id }}">
+            <tr class="reviewer-edit-row session-row-selected"
+                id="reviewer-row-{{ reviewer.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewer-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
@@ -695,6 +763,7 @@
                 {{ reviewer.updated_at | format_datetime }}
               </td>
             </tr>
+            {{ row_editor_bar(edit_col_count) }}
           {% else %}
             <tr id="reviewer-row-{{ reviewer.id }}"
                 data-status="{{ reviewer.status }}">
@@ -736,6 +805,36 @@
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
       {% endif %}
     </div>
+  {% endif %}
+
+  {% if add_mode %}
+    <script>
+      (function () {
+        "use strict";
+        var field = document.querySelector(".row-editor-first-field");
+        if (!field || !field.focus) return;
+        function caret() {
+          // `preventScroll`: the landing anchor owns the scroll
+          // position (19P.1 / #2405 — without it the page jumps to the
+          // top). This sets the caret and nothing else. The field is
+          // already on screen where the anchor lands, measured at 368px
+          // down a 900px viewport, so there is nothing to scroll to.
+          try {
+            field.focus({ preventScroll: true });
+          } catch (e) {
+            field.focus();
+          }
+        }
+        // On `load`, not inline. `Add new` navigates to a URL carrying
+        // a fragment, and the fragment's own focus handling runs AFTER
+        // the document parses — so focusing during parse is undone a
+        // moment later. Measured: inline leaves `activeElement` at
+        // BODY, which is also why the `autofocus` attribute does
+        // nothing here.
+        if (document.readyState === "complete") caret();
+        else window.addEventListener("load", caret);
+      })();
+    </script>
   {% endif %}
 
   {% if reviewers and not edit_mode %}

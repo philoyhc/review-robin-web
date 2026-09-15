@@ -100,6 +100,7 @@ def _render_reviewers_page(
     offset: int = 0,
     edit_id: int | None = None,
     add_mode: bool = False,
+    panel_open: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
@@ -297,6 +298,14 @@ def _render_reviewers_page(
             "col_readouts": column_state.readouts,
             "edit_id": edit_id,
             "add_mode": add_mode,
+            # 19P.1 — the Unlock panel's open state, server-rendered.
+            # It has to survive a round trip: `Save labels` POSTs and
+            # 303s, and a panel that always ships collapsed would shut
+            # itself every time an operator saved one. The Lock control
+            # is what closes it. (Rung 3c needs the same flag for a
+            # different reason: a failed CSV import re-renders the page
+            # with its issue list inside the panel.)
+            "panel_open": panel_open,
             "edit_values": edit_values,
             "edit_error": edit_error,
             "breadcrumbs": breadcrumbs.operator_session_child(
@@ -315,6 +324,7 @@ def reviewers_list(
     offset: int = 0,
     edit_id: int | None = None,
     add: int = 0,
+    unlocked: int = 0,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -330,6 +340,7 @@ def reviewers_list(
         offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
+        panel_open=bool(unlocked),
         selected_ids=set(selected),
     )
 
@@ -588,8 +599,14 @@ async def reviewers_save_field_labels(
         submitted=submitted,
         correlation_id=request_correlation_id(),
     )
+    # `?unlocked=1`: saving a label must not close the panel the label
+    # editor lives in — the Lock control is what closes it. The fragment
+    # lands on the card rather than the top of the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewers"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
