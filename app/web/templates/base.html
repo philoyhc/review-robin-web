@@ -1490,7 +1490,8 @@
 
          The margin keeps the card's top border off the viewport's edge,
          which is what makes it read as a boundary rather than a crop. */
-      .table-pager-anchored {
+      .table-pager-anchored,
+      .row-editor-anchored {
         scroll-margin-top: var(--space-4);
       }
       /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
@@ -5013,6 +5014,27 @@
           if (!form) return;
           var formTarget = form.getAttribute("target");
           if (formTarget && formTarget !== "_self") return;
+          /* Same case the click handler guards above, one element type
+             over. A GET form whose action carries a fragment can submit
+             to the URL the page is already on — same path, same query,
+             same fragment — and the navigate algorithm treats that as a
+             same-document fragment navigation: no fetch, so no
+             `pageshow`, so an armed indicator would never clear and the
+             progress cursor would stick until the give-up timer. A
+             filter strip sent again unchanged does exactly this.
+             Verified in Chromium: `pageshow` does not fire. */
+          var method = (form.getAttribute("method") || "get").toLowerCase();
+          if (method === "get") {
+            var action = form.getAttribute("action");
+            if (action && action.indexOf("#") !== -1) {
+              try {
+                var target = new URL(action, window.location.href);
+                target.search =
+                  new URLSearchParams(new FormData(form)).toString();
+                if (target.href === window.location.href) return;
+              } catch (e) { /* fall through and arm */ }
+            }
+          }
           markBusy(event.submitter || document.activeElement || form);
           arm();
         });

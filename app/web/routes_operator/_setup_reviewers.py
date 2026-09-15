@@ -252,6 +252,11 @@ def _render_reviewers_page(
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
             "pager_anchor": "reviewers-table-card",
+            # The Add / Edit editor is split across two cards — the row
+            # is in the table, Save / Cancel are above it — so entering
+            # edit mode lands here rather than on the table card, where
+            # Save sits above the viewport.
+            "row_editor_anchor": "reviewers-row-editor",
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
             # already say where the operator is.
