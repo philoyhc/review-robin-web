@@ -38,6 +38,7 @@ from app.web.routes_operator._shared import (
     _setup_row_window,
     _handle_import,
     _redirect_keeping_selection,
+    _row_action_anchor,
     _require_delete_confirm,
     _require_editable,
     _require_selected_response_loss_ack,
@@ -354,34 +355,6 @@ def reviewers_list(
     )
 
 
-def _row_action_anchor(reviewer_ids: list[int]) -> str:
-    """Where a row action lands: the first row it acted on.
-
-    A bare 303 lands at the top of the document — measured at 821px of
-    jump from a mid-table action (19P.1). Anchoring the table card
-    instead only helps when the row is near its top, which is the Add
-    case and not the common one.
-
-    With no row to land on, the table card. `bulk-delete` passes `[]` by
-    design, since the rows it acted on no longer exist.
-
-    Two more cases leave the fragment unresolvable, and neither is
-    decided here: a row that survives but drops out of a filtered view
-    (`Inactivate` under `status=active`), and a row that moves to
-    another page under the operator's cookie sort — the bulk status
-    routes write `updated_at` as well as `status`, so a sort on either
-    reorders the row out from under a held `offset`. Both would need the
-    filter and the sort re-run to predict, which is a multi-row
-    computation and belongs outside a route handler. The page's fallback
-    script catches all three instead: a hash naming a row that is not in
-    the document scrolls to the card rather than leaving the browser at
-    the top.
-    """
-    if reviewer_ids:
-        return f"reviewer-row-{reviewer_ids[0]}"
-    return "reviewers-table-card"
-
-
 def _require_reviewer_in_session(
     db: Session, review_session: ReviewSession, reviewer_id: int
 ) -> Reviewer:
@@ -468,7 +441,7 @@ def reviewers_create(
         # from. Without it the anchor named a row the response did not
         # render and the fallback scrolled to the card instead.
         extra_params=[("focus", created.id)],
-        anchor=_row_action_anchor([created.id]),
+        anchor=_row_action_anchor([created.id], noun="reviewer"),
     )
 
 
@@ -534,7 +507,7 @@ def reviewers_update(
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
-        anchor=_row_action_anchor([reviewer_id]),
+        anchor=_row_action_anchor([reviewer_id], noun="reviewer"),
     )
 
 
@@ -566,7 +539,7 @@ def reviewers_bulk_inactivate(
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
-        anchor=_row_action_anchor(reviewer_ids),
+        anchor=_row_action_anchor(reviewer_ids, noun="reviewer"),
     )
 
 
@@ -598,7 +571,7 @@ def reviewers_bulk_reactivate(
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
-        anchor=_row_action_anchor(reviewer_ids),
+        anchor=_row_action_anchor(reviewer_ids, noun="reviewer"),
     )
 
 
@@ -734,5 +707,5 @@ def reviewers_bulk_delete(
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
-        anchor=_row_action_anchor([]),
+        anchor=_row_action_anchor([], noun="reviewer"),
     )

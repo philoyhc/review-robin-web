@@ -633,8 +633,9 @@ def _redirect_keeping_selection(
     (a delete removes them) pass the table card instead. A fragment that
     does not resolve is silently ignored by the browser and lands at the
     top again, so a caller passing ``anchor`` must also ship the
-    fallback script that catches a missing target. Only Reviewers does
-    today; the other three pages pass no anchor and are unaffected."""
+    fallback script that catches a missing target. **Reviewers and
+    Observers** do today (19P.1, 19P.2 rung 1); Reviewees and
+    Relationships pass no anchor and are unaffected until 19P.3."""
     params: list[tuple[str, object]] = []
     if filter_params:
         params.extend((key, value) for key, value in filter_params if value)
@@ -647,6 +648,56 @@ def _redirect_keeping_selection(
     if anchor:
         url += "#" + anchor
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _row_action_anchor(row_ids: list[int], *, noun: str) -> str:
+    """Where a row action lands: the first row it acted on.
+
+    ``noun`` is the singular entity name — ``"reviewer"`` yields
+    ``reviewer-row-<id>``, falling back to ``reviewers-table-card``. The
+    bare ``+ "s"`` plural holds for all four rosters (reviewer, reviewee,
+    observer, relationship) and the table-card ids they already ship.
+
+    A bare 303 lands at the top of the document — measured at 821px of
+    jump from a mid-table action (19P.1). Anchoring the table card
+    instead only helps when the row is near its top, which is the Add
+    case and not the common one.
+
+    With no row to land on, the table card. ``bulk-delete`` passes ``[]``
+    by design, since the rows it acted on no longer exist.
+
+    **Two** cases leave the fragment unresolvable, and neither is decided
+    here: a row that survives but drops out of a filtered view
+    (``Inactivate`` under ``status=active``), and a row that moves to
+    another page under the operator's cookie sort — the bulk status
+    routes write ``updated_at`` as well as ``status``, so a sort on
+    either reorders the row out from under a held ``offset``. Both would
+    need the filter and the sort re-run to predict, which is a multi-row
+    computation and belongs outside a route handler; the page's fallback
+    script catches them instead.
+
+    The delete case is **not** one of them, though this docstring said
+    "all three" until 19P.2 rung 1. The fallback script opens with
+    ``hash.indexOf("#<noun>-row-") !== 0 -> return``, and a delete
+    redirects to the table card, so the script returns on its first line
+    and never sees it. The route handles that case; the script handles
+    the other two.
+
+    **Two is the generic count, not every page's.** A page whose table
+    is not sortable has one — Observers, whose ``<table>`` carries no
+    ``data-rrw-sortable``. Each page's own script comment states its
+    own; this states the ceiling.
+
+    The same miscount reached `spec/setup_pages.md` and was corrected
+    there by 19P.1 rung 4a's cold read. **Two copies survive**, both
+    outside this rung's reach: `spec/ui_elements.md` § *Landing
+    targets* still reads "three cases", and is on Item 2's `Doc impact`
+    for rung 7; `session_reviewers.html`'s own script comment is
+    corrected alongside this one.
+    """
+    if row_ids:
+        return f"{noun}-row-{row_ids[0]}"
+    return f"{noun}s-table-card"
 
 
 def _require_instrument_in_session(

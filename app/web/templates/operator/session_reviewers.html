@@ -1055,13 +1055,22 @@
         // silently ignored — which puts the operator back at the top of
         // the document, the exact thing the anchor exists to prevent:
         //
-        //   1. a delete: the row is gone, so the route sends the table
-        //      card instead and this never fires;
-        //   2. a status change that drops the row out of a filtered
-        //      view — `Inactivate` while the filter reads `active`.
-        //      The route cannot know that without re-running the filter,
-        //      which is a multi-row computation and does not belong in
-        //      a route handler, so it is caught here instead.
+        //   1. a status change that drops the row out of a filtered
+        //      view — `Inactivate` while the filter reads `active`;
+        //   2. a row the operator's cookie-held sort moved off the page
+        //      the pager `offset` restored — the bulk status routes
+        //      write `updated_at` as well as `status`, so a sort on
+        //      either reorders the row out from under a held offset.
+        //
+        // Neither can be predicted without re-running the filter or the
+        // sort, which is a multi-row computation and does not belong in
+        // a route handler, so both are caught here instead.
+        //
+        // A delete is NOT one of them, though this comment counted it
+        // until 19P.2 rung 1: the route sends the table card, so the
+        // `indexOf` below returns on its first line and this never
+        // fires. Correcting the count also restored the sort case,
+        // which the old enumeration had dropped.
         var hash = window.location.hash;
         if (!hash || hash.indexOf("#reviewer-row-") !== 0) return;
         if (document.getElementById(hash.slice(1))) return;

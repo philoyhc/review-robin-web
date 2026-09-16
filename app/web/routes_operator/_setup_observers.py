@@ -48,6 +48,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _setup_row_window,
     _redirect_keeping_selection,
+    _row_action_anchor,
     _require_delete_confirm,
     _require_editable,
     _require_selected_response_loss_ack,
@@ -97,6 +98,7 @@ def _render_observers_page(
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
+    focus_id: int | None = None,
     issues: list | None = None,
     filename: str | None = None,
     http_status: int = status.HTTP_200_OK,
@@ -128,6 +130,11 @@ def _render_observers_page(
         is_filtered=is_filtered,
         offset=offset,
         edit_id=edit_id,
+        # 19P.2 rung 1 — a create appends past the end of the list, so on
+        # a roster over one page the new row is not on the page the form
+        # was submitted from and the redirect's fragment would name a row
+        # this response never renders. `locate_id` moves the window to it.
+        locate_id=focus_id,
     )
     observers = window.rows
     offset = window.offset
@@ -212,6 +219,15 @@ def _render_observers_page(
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
             "pager_anchor": "observers-table-card",
+            # The add row's own id. An `Add` from mid-page is a
+            # navigation like any other and lands at the top of the
+            # document without a fragment to name; the row IS the
+            # editor's second home on this page, so it is what the
+            # fragment names.
+            "row_editor_anchor": "observers-row-editor",
+            # The pager offset the row-action forms post back, so a
+            # mid-table action returns to the page it was taken on.
+            "current_offset": offset,
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
             # already say where the operator is.
@@ -269,6 +285,7 @@ def observers_page(
     status_filter: str = Query(default="all", alias="status"),
     q: str = "",
     offset: int = 0,
+    focus: int | None = None,
     edit_id: int | None = None,
     add: int = 0,
     selected: list[int] = Query(default=[]),
@@ -289,6 +306,7 @@ def observers_page(
         edit_id=edit_id,
         add_mode=bool(add),
         selected_ids=set(selected),
+        focus_id=focus,
     )
 
 
@@ -303,6 +321,9 @@ def observers_create(
     display_name: str = Form(default=""),
     tag_1: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -311,7 +332,7 @@ def observers_create(
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
-        observers_service.create_observer(
+        created = observers_service.create_observer(
             db,
             review_session=review_session,
             email=email,
@@ -337,9 +358,18 @@ def observers_create(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/observers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    # 19P.2 rung 1 — a create is the one action whose row a fragment
+    # alone cannot reach: rows list by id, so the new row appends past
+    # the end and, on a roster over one page, is not on the page the
+    # form was submitted from. `focus` relocates the window to it and
+    # the fragment then resolves.
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/observers",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        extra_params=[("focus", created.id)],
+        anchor=_row_action_anchor([created.id], noun="observer"),
     )
 
 
@@ -357,6 +387,7 @@ def observers_update(
     status_value: str = Form(default="active", alias="status"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -396,6 +427,8 @@ def observers_update(
         f"/operator/sessions/{review_session.id}/observers",
         [observer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([observer_id], noun="observer"),
     )
 
 
@@ -404,6 +437,7 @@ def observers_bulk_inactivate(
     observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -427,6 +461,8 @@ def observers_bulk_inactivate(
         f"/operator/sessions/{review_session.id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(observer_ids, noun="observer"),
     )
 
 
@@ -435,6 +471,7 @@ def observers_bulk_reactivate(
     observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -458,6 +495,8 @@ def observers_bulk_reactivate(
         f"/operator/sessions/{review_session.id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(observer_ids, noun="observer"),
     )
 
 
@@ -518,6 +557,7 @@ async def observers_cohort_rule_save(
     request: Request,
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -561,6 +601,8 @@ async def observers_cohort_rule_save(
         f"/operator/sessions/{review_session.id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(observer_ids, noun="observer"),
     )
 
 
@@ -666,6 +708,7 @@ def observers_bulk_delete(
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -704,4 +747,10 @@ def observers_bulk_delete(
         f"/operator/sessions/{review_session.id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        # `[]` by design: the rows this acted on no longer exist, so the
+        # helper answers with the table card. That is also why the page's
+        # fallback script never sees a delete — it guards on a
+        # `#observer-row-` hash, and this is not one.
+        anchor=_row_action_anchor([], noun="observer"),
     )
