@@ -1034,6 +1034,29 @@ pattern in all of them: a guard that proves less than it says.**
   asserted late, so the previous Status claimed corrections it had not made.
   One write per edit now.
 
+**Rung 2 — landed.** The filter strip, `Clear`, `Add` (now `Add new`) and
+`Search` are the right pane of a split toolbar inside the table card; the
+chips, the pager and the count line are the left. The `Operator actions`
+card is slimmed, not retired — it still holds the only working `Edit` /
+`Inactivate` / `Activate` / `Delete`, which rung 3 moves.
+
+**Two things the ladder line did not name.**
+
+- **`Add` came out of the card's `{% if is_editable %}` in the move**, and
+  the inner gate does not cover it: `is_ready` is `status == "ready"`
+  alone, so an `expired` or `archived` session rendered a **live** `Add
+  new` whose route 409s. Caught by writing the guard, not by the suite —
+  nothing else asserted what a locked roster page's toolbar may offer.
+  Re-wrapped, and both locked states are now pinned.
+- **The guidance card does NOT go full width here.** The two precedents
+  disagree on when: Reviewers moved it in its toolbar rung (19P.1 rung 2a),
+  Observers in its `.card-columns` rung (19P.2 rung 5). Observers' siting
+  is the one that matches this ladder's "one rung per concern", and
+  `.card-columns` on these two pages is rung 4's to settle — so it moves
+  there, with the labels editor it shares the left column with. Recorded
+  because a reader comparing the four pages mid-item will find this one
+  half-width and should not read it as drift.
+
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
 item does not own. For the rung-5 sweep.
@@ -1049,7 +1072,11 @@ item does not own. For the rung-5 sweep.
    change; this is the defect 19P.1 left behind.
 2. **The toolbar.** The filter strip moves into the preview table's two-pane
    toolbar; the action row slims to `Clear` / `Add new` / `Search`. Chips
-   join the left pane on both.
+   join the left pane on both. The table card's gate widens to
+   `... or total_row_count > 0 or is_editable` — otherwise the strip
+   vanishes with the table in the two states that most need it. The
+   guidance card stays half-width; it goes full width at rung 4 with
+   `.card-columns`.
 3. **The row expander + the edit-row bar.** `Edit` / `Inactivate` /
    `Activate` / `Delete`, the selected count and the delete confirm move into
    an injected panel; Save / Cancel move into a bracketed bar beneath the row

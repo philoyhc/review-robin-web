@@ -97,49 +97,19 @@
          row is being edited; the Edit form below the divider stays
          interactive. #}
       <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        {# Same filter strip as the other three roster pages: a Status
-           dropdown, and one Search box matching both sides of the
-           pair plus the row's own pair-context tags. #}
-        <form method="get"
-              action="{{ relationships_base_url }}"
+        {# 19P.3 rung 2 — the filter strip, `Clear` and `Add` have moved
+           into the preview table's toolbar, where `Add` reads `Add new`
+           beside the control it now sits next to. What is left is the
+           selection-driven action row, which stays live until rung 3
+           wires the expander and retires this card: it holds the only
+           working `Edit` / `Inactivate` / `Activate` / `Delete` on the
+           page. Reviewers went through the same intermediate state at
+           19P.1 rung 2a — slimming moves each control exactly once,
+           where retiring the card here would take four working actions
+           away for a slice. #}
+        <form method="get" action="{{ relationships_base_url }}"
               class="operator-actions-filter">
-          <div class="filter-row">
-            <label class="filter-status">
-              Status:
-              <select name="status">
-                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-                {% for value, label in filter_status_options %}
-                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-search">
-              Search:
-              <input type="text"
-                     name="q"
-                     id="relationships-search-input"
-                     list="relationships-search-options"
-                     value="{{ filter_search }}"
-                     autocomplete="off"
-                     placeholder="Name, email or tag">
-              <datalist id="relationships-search-options">
-                {% for label in filter_search_options %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-            </label>
-          </div>
-          {# One action row: the filter count / Clear, the
-             selection-driven action buttons, then the Search
-             submit last. Edit is JS-driven; Inactivate / Activate
-             submit the bulk form via ``form=`` + ``formaction``,
-             so they post the bulk form even though they sit inside
-             the GET filter form. #}
           <div class="filter-actions">
-            {% if filter_status != "all" or filter_search %}
-              <a class="btn secondary"
-                 href="{{ relationships_base_url }}">Clear</a>
-            {% endif %}
             {# Segment 19I Item 3 — the mutating controls render
                only where they can act. Clear, Search and the
                "Showing N of M" hint stay: reading a finished
@@ -158,22 +128,6 @@
                     form="relationships-bulk-form"
                     formaction="{{ relationships_base_url }}/bulk-reactivate"
                     disabled aria-disabled="true">Activate</button>
-            {% if is_ready or edit_mode %}
-              <a class="btn secondary disabled" aria-disabled="true">Add</a>
-            {% elif not can_add_relationship %}
-              <a class="btn secondary disabled" aria-disabled="true"
-                 title="Add a reviewer and a reviewee first — a relationship needs both.">Add</a>
-            {% else %}
-              <a class="btn secondary"
-                 {# 19P.3 rung 1 — the Add link carries the active filter, as
-                    Reviewers and Observers do. Without it the
-                    intervening GET rebuilds the page at
-                    `filter_status="all"` / `filter_q=""`, the form
-                    shell renders those defaults, and the create
-                    redirect's filter round-trip carries nothing —
-                    the route half works and the flow does not. #}
-                 href="{{ relationships_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add</a>
-            {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
                like Inactivate / Activate beside it. Enabled by
@@ -187,7 +141,6 @@
                     data-delete-btn="relationships-bulk-delete"
                     disabled aria-disabled="true">Delete</button>
             {% endif %}
-            <button class="btn secondary" type="submit">Search</button>
           </div>
           {# Second action row (Segment 19I Item 2): what the
              page is showing, what is selected, and the delete
@@ -314,7 +267,21 @@
     </form>
   {% endif %}
 
-  {% if relationships or add_mode %}
+  {# 19P.3 rung 2 — the filter strip lives in this card's toolbar now,
+     so every gate on the card is a gate on it.
+
+     `or total_row_count > 0`: gating on the FILTERED list would hide the
+     only control that clears a search matching nothing.
+
+     `or is_editable`: gating on the roster having rows would hide the
+     only `Add new` on the page from the one operator who most needs it —
+     a session whose roster is still empty. The predicate is `is_editable`
+     and NOT Observers' `not is_archived`: a relationship drives
+     assignments and responses and has a readiness rule, so 19P.2's wider
+     exception does not transfer (`spec/lifecycle.md` §5).
+
+     The table itself is still gated below. #}
+  {% if relationships or add_mode or total_row_count > 0 or is_editable %}
     {% set selectable = not edit_mode and is_editable %}
     {# 19I Item 12 rung 3 — a slot with no data anywhere in the roster
        renders neither chip nor column. ``edit_mode`` overrides: an
@@ -330,28 +297,143 @@
        column chips and the page links are both on screen with the
        new rows beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-      <div class="table-card-toolbar">
-      {# Column show/hide chips (19I Item 12 rung 1). They sit in the
-         table card, directly above the rows they govern, the way
-         Invitations and Responses have had them since Item 11 —
-         rather than in the "Fields with data" card a grid away —
-         which rung 4 then retired outright. #}
-      {# A chip row with no chips in it is a label and nothing else,
-         so the row goes too when every slot is empty (19I Item 12
-         rung 3). #}
-      {% if relationships and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"]) %}
-        <p class="col-chip-row" data-col-toggles-for="relationships-table" style="margin: 0 0 12px 0;">
-          <span>Show columns:</span>
-          {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
-            <span class="pill pill-count tag-chip is-selected"
-                  data-col-toggle="tag-{{ slot }}"
-                  role="button" tabindex="0" aria-pressed="true">{{ field_label_header(session, "pair_context", slot | string) }}</span>
-          {% endfor %}
-        </p>
-      {% endif %}
-      {% include "operator/partials/_pager_cluster.html" %}
+      {# 19P.3 rung 2 — two half-width panes. Left: what the table is
+         showing. Right: the filter that decides it, moved out of the
+         `Operator actions` card so the controls sit with the rows they
+         act on rather than a grid away. Reviewers settled this shape at
+         19P.1 rung 2a and Observers at 19P.2 rung 3. #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left">
+          {# Column show/hide chips (19I Item 12 rung 1). They sit in the
+             table card, directly above the rows they govern, the way
+             Invitations and Responses have had them since Item 11 —
+             rather than in the "Fields with data" card a grid away —
+             which rung 4 then retired outright. #}
+          {# A chip row with no chips in it is a label and nothing else,
+             so the row goes too when every slot is empty (19I Item 12
+             rung 3). #}
+          {% if relationships and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"]) %}
+            <p class="col-chip-row" data-col-toggles-for="relationships-table">
+              <span>Show columns:</span>
+              {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
+                <span class="pill pill-count tag-chip is-selected"
+                      data-col-toggle="tag-{{ slot }}"
+                      role="button" tabindex="0" aria-pressed="true">{{ field_label_header(session, "pair_context", slot | string) }}</span>
+              {% endfor %}
+            </p>
+          {% endif %}
+          {# Pager before the count line, as the other three rosters have
+             it — 19I Item 10 sited the sentence and the cluster together,
+             and `tests/unit/test_pager.py` pins the order so the two
+             cannot drift into different places on one page. #}
+          {% include "operator/partials/_pager_cluster.html" %}
+          {% include "operator/partials/_preview_count_line.html" %}
+        </div>
+
+        <div class="toolbar-pane toolbar-right">
+          {# Every control here reloads the page, and without a fragment
+             the reload lands at the very top — the operator is thrown
+             away from the rows they were filtering. The pager already
+             solved this (19J.8): `#{{ pager_anchor }}` sits on the table
+             card, which carries `scroll-margin-top`, so a search and a
+             page turn land identically. A GET form keeps the fragment of
+             its `action`: the submission algorithm replaces the query and
+             leaves the fragment alone. #}
+          {# The same filter strip as the other three roster pages: a
+             Status dropdown, and one Search box matching both sides of
+             the pair plus the row's own pair-context tags. #}
+          <form method="get"
+                action="{{ relationships_base_url }}#{{ pager_anchor }}"
+                class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
+            <div class="filter-row">
+              <label class="filter-status">
+                Status:
+                <select name="status">
+                  <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                  {% for value, label in filter_status_options %}
+                    <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-search">
+                Search:
+                <input type="text"
+                       name="q"
+                       id="relationships-search-input"
+                       list="relationships-search-options"
+                       value="{{ filter_search }}"
+                       autocomplete="off"
+                       placeholder="Name, email or tag">
+                <datalist id="relationships-search-options">
+                  {% for label in filter_search_options %}
+                    <option value="{{ label }}"></option>
+                  {% endfor %}
+                </datalist>
+              </label>
+            </div>
+            <div class="filter-actions">
+              {% if filter_status != "all" or filter_search %}
+                <a class="btn secondary"
+                   href="{{ relationships_base_url }}#{{ pager_anchor }}">Clear</a>
+              {% endif %}
+              {# `Add` is page-level and keeps its own gates — `is_ready`
+                 and, uniquely to this page, `can_add_relationship`: a
+                 pair needs both a reviewer and a reviewee to exist. It
+                 renders as `Add new` here, beside the control it reads
+                 next to. It takes NO fragment, unlike Reviewers' and
+                 Observers': the Add / Edit form it opens still lives in
+                 the `Operator actions` card at the top of the page, so a
+                 fragment would scroll the operator past the thing they
+                 just asked for. Rung 3 moves the editor into the row and
+                 the anchor goes with it. #}
+              {# Wrapped in `is_editable`, as Reviewers' is: this block
+                 lived inside the card's `{% if is_editable %}` and came
+                 out of it in the move. `is_ready` alone is `status ==
+                 "ready"`, so an `expired` or `archived` session would
+                 have rendered a LIVE `Add new` whose route 409s. #}
+              {% if is_editable %}
+                {% if is_ready or edit_mode %}
+                  <a class="btn secondary disabled" aria-disabled="true">Add new</a>
+                {% elif not can_add_relationship %}
+                  <a class="btn secondary disabled" aria-disabled="true"
+                     title="Add a reviewer and a reviewee first — a relationship needs both.">Add new</a>
+                {% else %}
+                  <a class="btn secondary"
+                     {# 19P.3 rung 1 — the Add link carries the active filter, as
+                        Reviewers and Observers do. Without it the
+                        intervening GET rebuilds the page at
+                        `filter_status="all"` / `filter_q=""`, the form
+                        shell renders those defaults, and the create
+                        redirect's filter round-trip carries nothing —
+                        the route half works and the flow does not. #}
+                     href="{{ relationships_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add new</a>
+                {% endif %}
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
+            </div>
+          </form>
+        </div>
       </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_count_line.html" %}
+      {% if not (relationships or add_mode) %}
+        {# No rows to show, for one of two reasons, and they need
+           different sentences: a filter that matched nothing is the
+           operator's own doing and clearable, an empty roster is a
+           starting point. Said where the rows would be, with the filter
+           still above it — this was a separate card below this one,
+           which after the strip moved in here would have left the
+           operator reading "no matches" with no way to clear them.
+
+           19P.3 rung 1 put the landing anchor on that separate card,
+           because the fallback's first case lands exactly here. The
+           anchor is now the one card's own id, so the branch cannot lose
+           it. #}
+        {% if total_row_count > 0 %}
+          <p class="muted">No relationships match the current filter.</p>
+        {% else %}
+          <p class="muted">No relationships yet. Upload a CSV or add a row
+            to get started.</p>
+        {% endif %}
+      {% else %}
       <table id="relationships-table"
              data-rrw-col-toggles="rrw-relationship-tag-visibility"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
@@ -542,21 +624,7 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
-
-    </div>
-  {% elif total_row_count > 0 %}
-    {# Filter matched nothing — preserve the total-row context. #}
-    {# 19P.3 rung 1 — the landing anchor lives here too. This is
-       the empty-filtered branch, and it is exactly where the
-       fallback's first case lands: inactivate the last row
-       matching `status=active` and the redirect names a row
-       fragment with nothing rendered. Without an id the
-       fallback's `getElementById` returns null and the
-       operator is left at the top of the document — the very
-       thing the anchor exists to prevent. Only one branch of
-       the chain renders, so the id is never duplicated. #}
-    <div class="card" id="{{ pager_anchor }}">
-      <p class="muted">No relationships match the current filter.</p>
+      {% endif %}
     </div>
   {% endif %}
 

@@ -28,14 +28,15 @@ ROSTER_PAGES = ("reviewers", "reviewees", "observers", "relationships")
 
 #: The pages whose filter strip and `Add new` moved into the table
 #: card's toolbar. Reviewers at 19P.1 rung 2a, Observers at 19P.2
-#: rung 3; Reviewees and Relationships follow at 19P.3.
+#: rung 3, **Reviewees and Relationships at 19P.3 rung 2** — so this is
+#: now every roster page, and the tuple is `ROSTER_PAGES` by value.
 #:
-#: Read only by the ordering assertion below, which is parametrized
-#: over `CARD_STRIP_PAGES` — so neither member is reachable there any
-#: more. Kept because the tuple names the property rather than the
-#: subset of it this file happens to reach, and because the next page
-#: to migrate joins both tuples' logic at once.
-TOOLBAR_PAGES = ("reviewers", "observers")
+#: Kept as its own name rather than collapsed into `ROSTER_PAGES`: the
+#: two tuples mean different things and only happen to agree today.
+#: `ROSTER_PAGES` is which pages exist; this is which of them moved
+#: their strip. A page added later belongs to the first immediately and
+#: to this one only once it has.
+TOOLBAR_PAGES = ROSTER_PAGES
 
 #: The pages that still render the count-and-gate strip server-side.
 #:
@@ -184,30 +185,25 @@ def test_delete_renders_destructive_and_wired(
     assert f"/{page}/bulk-delete" in element
     assert "disabled" in element, "ships disabled; the gate enables it"
 
-    # Ordering: after Add, before Search — on the pages that still carry
-    # all three in one strip. 19P.1 rung 2a moved Reviewers' `Add` and
-    # `Search` into the table's toolbar and 19P.2 rung 3 did the same for
-    # Observers, so those strips hold only the selection-driven four and
-    # there is nothing left to order against. Two pages left, and 19P.3
-    # takes them.
+    # Ordering: there is nothing left to order against. 19P.1 rung 2a
+    # moved Reviewers' `Add` and `Search` into the table's toolbar, 19P.2
+    # rung 3 did the same for Observers and **19P.3 rung 2 for these two**,
+    # so every roster strip now holds the selection-driven four alone.
     #
     # `spec/ui_elements.md` §6 (`:385`) sites the roster Delete "between
-    # `Add` and `Search`", which is false on two pages now. That
-    # sentence is NOT on Item 2's `ui_elements.md` Doc impact bullet —
-    # this comment claimed it was, and a cold read checked. Added to
-    # Doc impact at rung 3 so rung 7 fixes it.
-    if page in TOOLBAR_PAGES:
-        # Both spellings: the rename moved the label, and a strip that
-        # got `Add` back under its old name would be the same
-        # regression. Checking only the new spelling let the old one
-        # through.
-        assert (
-            ">Add new</a>" not in buttons
-            and ">Add</a>" not in buttons
-            and ">Search</button>" not in buttons
-        ), f"{page}'s strip should no longer carry Add / Add new or Search"
-    else:
-        assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
+    # `Add` and `Search`", which is now false on all four. It is on Item
+    # 3's `ui_elements.md` Doc impact bullet; rung 5 fixes it.
+    assert page in TOOLBAR_PAGES, (
+        f"{page} is parametrized here but not recorded as migrated"
+    )
+    # Both spellings: the rename moved the label, and a strip that got
+    # `Add` back under its old name would be the same regression.
+    # Checking only the new spelling let the old one through.
+    assert (
+        ">Add new</a>" not in buttons
+        and ">Add</a>" not in buttons
+        and ">Search</button>" not in buttons
+    ), f"{page}'s strip should no longer carry Add / Add new or Search"
 
 
 @pytest.mark.parametrize("page", CARD_STRIP_PAGES)
