@@ -26,8 +26,10 @@ canonical description, alongside the per-page idiosyncrasies.
 `require_observers_enabled_session` — the page returns 404 until
 the operator enables observers via the **User interface settings**
 card on the Create Session form or Edit Session Details page. When
-`session.observers_enabled` is `True` the page renders with the
-same CRUD shape as Reviewers / Reviewees.
+`session.observers_enabled` is `True` the page offers the same CRUD
+operations as Reviewees — per-row edit, add, bulk status flips,
+delete, CSV import. (Its **layout** matched Reviewers' too until
+19P.1 moved that page; the operations are what this names.)
 
 **Assignments is not a Setup page.** It sits on the Operations row
 and is not a per-entity Setup primitive: pair-level context lives on
@@ -50,7 +52,10 @@ Every Setup Page renders, top-to-bottom:
 
 0. **Page guidance** (`partials/_page_guidance.html`).
    A `<details class="card page-guidance">` — a **half-width
-   card**, not an inline band. **Closed by default**, showing one
+   card**, not an inline band, on five of the six pages. **Reviewers
+   renders it full width** at the top of the page since 19P.1
+   (`.page-guidance-wide`), where one measure would otherwise run to
+   ~150 characters, so its open body sets two columns. **Closed by default**, showing one
    line: the summary `What this page is for`, set in **card-header
    type** (`--fs-h2`, weight 600 — the summary *is* this card's
    heading, so it reads as one and starts flush with every other card
@@ -69,8 +74,11 @@ Every Setup Page renders, top-to-bottom:
    is why the theme customizer's facet is named `Help card` rather than
    after either caller.
 
-   Width comes from the column the page puts it in, never from the
-   macro — the macro takes no arguments. Closed, the card is
+   Width comes from the column the page puts it in. **The one
+   exception is the macro's only argument**, `full_width` (default
+   `false`), which Reviewers passes since 19P.1 because that page has
+   no column to take width from — it left `.card-columns`. Nothing
+   else is parameterized, and the summary wording still is not. Closed, the card is
    one line: `padding: 12px 16px` and `align-self: start`, so a
    stretching grid cannot inflate it to a neighbour's height.
 
@@ -92,7 +100,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers | **Not in the container.** The guidance card leads the page at **full width**, above everything else (19P.1). `.card-columns` still renders, but only as the tag-label editor's fallback home — see the Reviewers § *Body shape* below — so on this page the container holds at most one card and never the guidance. The lock card sits above it, as elsewhere. |
+   | Reviewers | **Not in the container.** The guidance card leads the page at **full width**, above everything else (19P.1). `.card-columns` renders **only** as the tag-label editor's fallback home, in the two states the Unlock panel cannot render in — see the Reviewers § *Body shape* below. The rest of the time the container is absent rather than empty, and it never holds the guidance. The lock card sits above it, as elsewhere. |
    | Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right. The lock card (rendered in every non-editable state) sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
@@ -216,9 +224,11 @@ Every Setup Page renders, top-to-bottom:
    three branches and their copy are specified in
    `spec/lifecycle.md` §5. Sits **above**
    the friendly-label editor so the yellow card immediately
-   follows the status info card (on Reviewers, above the roster
-   card that now holds the editor — the ordering is unchanged, the
-   card below it is not) — the same status-info-then-
+   follows the status info card (on Reviewers the card below it is the
+   guidance card, as it was before 19P.1 — that page moved the
+   guidance from a column to full width, which changed its width and
+   not its position, so this card's neighbour and ordering are both
+   unchanged) — the same status-info-then-
    yellow-lock pattern the Instruments page uses. **Not
    Assignments**: that page carries no yellow `.card.lock` at all —
    the Workflow card's stepper already states the lifecycle, per
@@ -748,8 +758,10 @@ loss that cannot occur. Relationships never had the gate. The
 requirement stands only where the cascade does, on Reviewers and
 Reviewees.
 
-The card itself is hidden whenever the session is not editable, with
-the Upload card beside it — `spec/lifecycle.md` §5.
+The card itself is hidden whenever the session is not editable, and so
+is the Upload card — beside it on the three pages that render a
+`.bottom-grid`, in the Unlock panel's other column on Reviewers.
+`spec/lifecycle.md` §5.
 
 The list is **capped at 200 rows** (lifted to **500** when a
 search or status filter is applied) — the cap is applied after
@@ -900,8 +912,11 @@ row's cells render as `<input>` / `<select>`; Add prepends a
 blank row at the top of the table. The Operator actions card
 swaps its filter strip + button row for the focused Save /
 Cancel pair — on Reviewers, whose card retired at 19P.1, the pair
-renders in an expander bar beneath the edited row instead and the
-toolbar is left alone. Editing a row's **status** to `inactive` /
+renders in an expander bar beneath the edited row instead, and the
+toolbar takes the same lock the card's strip did: the filter form
+greys out and stops accepting clicks (`.is-locked`), and `Add new`
+renders disabled. The rule was re-addressed to the toolbar's new home
+at rung 2a rather than dropped. Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the
 `status` of every checkbox-selected row in one POST (reversible,
@@ -913,9 +928,9 @@ the **active search / status filter** (so the operator lands
 back on the same filtered view, not the unfiltered list). CSV
 bulk upload stays as the bulk-create path.
 
-**Reviewers carries two more, since 19P.1; the other three pages do
-not.** Its redirect also preserves the **pager offset** (`offset=`) and
-lands on a **fragment**, so a row action taken mid-table comes back to
+**Reviewers carries three more, since 19P.1; the other three pages do
+not.** Its redirect also preserves the **pager offset** (`offset=`),
+lands on a **fragment**, and on a create carries **`focus=<id>`**, so a row action taken mid-table comes back to
 that row rather than to the top of the document — measured at 821px of
 jump before the anchor, and answering with page 1 after an action on
 page 2, because no caller passed the offset. The fragment is the first
@@ -923,10 +938,17 @@ acted-on row (`#reviewer-row-<id>`), or the table card
 (`#reviewers-table-card`) where the action leaves no row to land on —
 a delete. A fragment that cannot resolve is ignored by the browser and
 lands at the top again, so the page also ships a fallback script that
-catches a missing target and falls back to the card; three cases reach
-it (a deleted row, a row the active filter excludes, a row moved by a
-cookie-held sort). The other three pages pass no offset and no
-fragment and are unaffected. 19P.2 carries this to Observers.
+catches a missing target and falls back to the card. **Two cases reach
+that script** — a row the active filter excludes, and a row moved by a
+cookie-held sort. A delete is handled a step earlier, by the route:
+having no row to land on it sends `#reviewers-table-card` itself, so
+the script never fires on it. `focus=` exists because the fragment cannot cover a create: rows list
+by id, so a new row appends past the end and on any roster over one
+page is not on the page the form was submitted from — the anchor would
+name a row the response never rendered. It relocates the window to the
+new row and puts the caret in its name field. The other three pages
+pass no offset, no fragment and no focus, and are unaffected. 19P.2
+carries this to Observers.
 
 **Relationships pickers.** The Relationships Edit / Add rows
 choose reviewer + reviewee via **name-or-email search-box
@@ -954,8 +976,10 @@ section used to describe is gone from this page, and all three cards
 it and `.card-columns` held are now behind one disclosure. The three
 other roster pages keep the old shape until 19P.2–.4.
 
-Top-to-bottom: the lock card (when locked), the **roster card**, the
-**preview table card**, and nothing else.
+Top-to-bottom: the lock card (when locked), the **full-width guidance
+card**, the **roster card**, the `.card-columns` holding the tag-label
+editor *when the Unlock panel cannot render* (see below), and the
+**preview table card**. Nothing below the table.
 
 **The roster card** (`.card.roster-card#roster-card`) always renders.
 It carries two readouts — the roster count, and one pill per populated
@@ -979,14 +1003,31 @@ answer the same routes under the same gates, specified in
 - **The tag-label editor therefore has two homes**, one include in two
   positions on the exact complement of that condition: inside the
   panel when the panel can render, and in `.card-columns` when it
-  cannot. A locked page must still let an operator *read* the labels —
-  the rule is about not offering a control the route will refuse, not
-  about hiding information — and the roster readouts do not cover it,
-  since they pill only the columns that hold data. This is the only
-  tenant `.card-columns` has on this page.
-- **The `Danger Zone` keeps the `danger-zone` class** and its amber
-  framing inside the panel, as the other three roster pages have it
-  outside one.
+  cannot. That complement is **two different states, and the editor
+  behaves differently in each** — the partial reads `is_editable`, not
+  the panel's condition. On a **locked** session it renders disabled
+  with its buttons dropped, which is what forces the second home at
+  all: a locked page must still let an operator *read* the labels,
+  since the rule is about not offering a control the route will refuse
+  rather than about hiding information, and the roster readouts do not
+  cover it (they pill only the columns that hold data). In **edit /
+  add mode on an editable session** the same fallback renders
+  **live**, with working inputs and a working `Save labels` —
+  correctly, because the route would accept it. So "the editor outside
+  the panel is read-only" is false, and a guard asserting no `Save
+  labels` outside `#roster-unlock-panel` fails on any add-mode render.
+  This is the only tenant `.card-columns` has on this page, and the
+  container renders only in these two states — not empty the rest of
+  the time, absent.
+- **The `Danger Zone` renders only when the roster has rows**, as on
+  the other three pages — and for a reason worth stating, because the
+  route does *not* refuse an empty one: it answers 303 and writes an
+  audit row reading "Deleted all 0 reviewers". `_delete_all` calls
+  `invalidate_if_validated(...)` before it counts anything, so an
+  ungated Delete-all knocks a `validated` session back to `draft`
+  while deleting nothing at all.
+- **It keeps the `danger-zone` class** and its amber framing inside the
+  panel, as the other three roster pages have it outside one.
 
 **The panel's start-open contract.** The panel ships `hidden` and the
 Unlock control opens it, but the server decides what the page
@@ -1001,22 +1042,35 @@ Two mechanisms implement it, and both are required because the
 controls answer differently. The two that redirect (`Save labels`,
 `Delete all reviewers`) and a **successful** import carry
 `?unlocked=1` on the redirect. A **failed** import does not redirect
-at all — it re-renders the page in place with a 400 and its issue
-list, and that list renders *inside* the upload card — so that path
+at all — the parse and confirm failures re-render the page in place
+with a 400 and its issue list, and that list renders *inside* the
+upload card — so that path
 sets the panel's open state server-side instead. Leave it closed and a
 failed import answers with a collapsed panel and no visible errors.
-Closing the panel is the **Lock** control's job and nothing else's.
+**Opening is sticky; staying open is not.** `?unlocked=1` is a query
+param, so every navigation that does not carry it closes the panel —
+Search, Clear, a page turn, `Add new`, and the expander's `Edit` all
+do. That is intended: those navigate the table, and the panel is not
+what they act on. What the contract guarantees is narrower than "the
+panel stays open until Lock" — it is that **a control inside the panel
+never closes the panel it was used from.** The **Lock** control is the
+only thing that closes it deliberately.
 
 **Reachable without JavaScript.** The panel is opened by an inline
 handler, so each control renders a `<noscript>` link beside it —
 `?unlocked=1` to open, the bare page URL to close. `?unlocked=1` is a
 real server-rendered state (it is what the redirects above use), so
 this links to behaviour that already exists. It restores what this
-page could do before 19P.1 and no more: the confirm-gated `Upload` and
-`Delete all reviewers` buttons are still enabled only by
-`base.html`'s confirm-pairing script, so with JS off a *replace*
-remains unreachable exactly as it was before the move, while the
-empty-roster import — where the button ships enabled — works.
+page could do before 19P.1 and no more. Both confirm-gated buttons are
+enabled only by `base.html`'s confirm-pairing script, so with JS off
+`Delete all reviewers` (always gated) and a **replace** import (gated
+whenever the roster has rows) are both unreachable — exactly as they
+were before the move, since `Upload` shipped `disabled` on a non-empty
+roster then too. What the fallback restores is the **empty-roster
+import**, where the button ships enabled, and the ability to read all
+three cards. The pairing script itself was rewritten this segment (2b
+step 1, delegated capture-phase), which changed how the gate is wired
+and not whether it needs JS.
 
 ### Preview table
 
@@ -1057,13 +1111,22 @@ here, the one-row constraint that shortened it having gone with
 
 The selection-driven button row is a **row injected into the table**
 beneath the selected row, not a card beside it. It carries the
-selected count and the same controls the card's action row did —
-`Edit`, `Inactivate`, `Activate`, `Delete` and the delete confirm —
-rendered client-side from the current selection.
+selected count and the card's controls — `Edit`, `Inactivate`,
+`Activate`, `Delete` and the delete confirm — rendered client-side
+from the current selection.
 
-Its confirm renders the count as **bare text rather than a pill**: the
-expander's own background and the info-pill background resolve to the
-same primitive in both themes, so a pill inside it is invisible. The
+**The status pair is not a pure relocation.** The retired card
+rendered `Inactivate` and `Activate` **both, always**; the expander
+renders only what is actionable for the selection — `Inactivate` when
+every selected row is active, `Activate` when every one is inactive,
+both when the selection is mixed. Net-new at 19P.1 and deliberate, so
+a page copying this recipe should copy the rule and not just the
+buttons.
+
+It renders the selected count as **bare text rather than a pill** — a
+sibling of the confirm label, not inside it: the expander's own
+background and the info-pill background resolve to the same primitive
+in both themes, so a pill anywhere in the expander is invisible. The
 lobby renders the same fact the same way.
 
 **Entering edit or add mode** replaces the row's cells with inputs, as
