@@ -11,7 +11,9 @@ what these tests pin is the *builder*: that the response carries a
 script which would produce the right panel, and that nothing it
 replaced is still server-rendered. Whether the panel actually appears,
 where it anchors, and which buttons it shows for a given selection are
-measured in Chromium; `scratchpad/expander_r4.py` is that pass.
+measured in Chromium — that pass runs outside the repo (the agent
+sandbox's scratchpad), so its results live in the PR body and the
+segment plan's `### Status` rather than in a file a reader could open.
 
 Every assertion reads a scoped slice. `base.html` inlines the entire
 app's CSS and JS on every page, so a page-wide substring check passes
@@ -173,6 +175,14 @@ def test_the_status_actions_are_chosen_by_the_selection(
         "Activate is offered for selections with no inactive row"
     )
 
+    # And each label posts to its OWN route. Swapping the two branches
+    # — so `Inactivate` posts `/bulk-reactivate` — passed the whole
+    # suite: both route strings are still in the builder and both
+    # conditionals still exist. Nothing tied a label to a route.
+    assert '? "/bulk-inactivate" : "/bulk-reactivate"' in js, (
+        "the status labels and their routes can disagree"
+    )
+
     rows = re.findall(r'<tr[^>]*id="observer-row-\d+"[^>]*>', body)
     assert rows, "no rows rendered"
     for row in rows:
@@ -186,7 +196,14 @@ def test_edit_is_arity_one(client: TestClient, db: Session) -> None:
     js = _builder(_page(client, _session(client, db, "exp-arity")))
 
     assert "sel.length === 1" in js
-    assert "disabled aria-disabled" in js
+    # Scoped to Edit's own ternary: a bare `"disabled aria-disabled" in
+    # js` also matches the Delete button, which ships disabled for a
+    # different reason.
+    edit = re.search(r"var editable = sel\.length === 1;.*?Edit</button>", js, re.S)
+    assert edit, "no Edit branch"
+    assert "disabled aria-disabled" in edit.group(0), (
+        "Edit renders live at arity != 1"
+    )
 
 
 def test_edit_navigates_to_the_row_it_opens(
@@ -252,6 +269,17 @@ def test_the_editor_carries_its_save_and_cancel_in_a_row_bar(
     )
     assert bar, f"no editor bar in {mode} mode"
     held = bar.group(0)
+    # The colspan. Hardcoded in the template because this page has no
+    # conditional columns — which is true, and was unpinned until a
+    # cold read changed the 7 to a 4 and watched the whole suite pass
+    # with the bar spanning four of seven columns. Counted from the
+    # `<thead>` rather than repeated, so the two cannot drift.
+    head = re.search(r"<thead>.*?</thead>", body, re.S)
+    assert head, "no thead"
+    columns = len(re.findall(r"<th\b", head.group(0)))
+    assert f'colspan="{columns}"' in held, (
+        f"the bar spans the wrong number of columns (table has {columns})"
+    )
     assert 'form="observer-edit-form"' in held, "Save reaches no form"
     assert ">Save</button>" in held
     assert ">Cancel</a>" in held

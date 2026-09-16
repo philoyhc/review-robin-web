@@ -105,14 +105,18 @@ def _table_card(body: str, page: str) -> str:
 def _strip(body: str) -> str:
     """The operator-actions card, up to the end of its filter form.
 
-    Returns `""` when the card is absent. Reviewers has no such card at
-    all since 19P.1 rung 2b: step 2 moved the action row into the row
-    expander and step 3 gave the Add / Edit editor its own card, so the
-    shell went with it. The return is `""` for that page in EVERY mode,
-    not just outside edit mode as this said between the two steps, and
-    "the hint is not in the strip" is trivially true there. The tests
-    below say so rather than pretending to slice a card that is not on
-    the page.
+    Returns `""` when the card is absent. **Two pages have no such card
+    at all**: Reviewers since 19P.1 rung 2b, Observers since 19P.2
+    rung 4 — both moved the action row into a row expander and the
+    shell went with it. The return is `""` for those pages in EVERY
+    mode, and "the hint is not in the strip" is trivially true there.
+
+    That triviality is the point worth naming rather than hiding: the
+    two tests below that slice this still run for those pages and can
+    no longer fail on them. They keep their real force on the two
+    unmigrated pages, and 19P.3 will empty this helper entirely — at
+    which point it and its callers should go rather than shrink to
+    nothing quietly.
     """
     marker = 'class="card operator-actions-card"'
     if marker not in body:

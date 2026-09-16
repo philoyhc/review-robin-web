@@ -980,6 +980,89 @@ def test_the_operator_actions_card_is_retired(
         assert gone not in body, f"{gone} survived the card"
 
 
+def test_the_moved_filter_locks_while_a_row_is_being_edited(
+    client: TestClient, db: Session
+) -> None:
+    """New markup on this page, and unguarded until a cold read.
+
+    The filter used to take its lock from the enclosing
+    `.operator-actions-main.is-locked`; out in the toolbar it carries
+    its own. `base.html` says why the lock has to reach it: without it
+    "the lock is half a lock — the action buttons grey out while
+    `Search` and `Clear` stay live, and one click on either runs a GET
+    that throws the half-typed row away."
+    """
+    review_session = _observers_page(client, db, "obs-lock")
+    row_id = db.execute(
+        select(Observer.id).where(Observer.session_id == review_session.id)
+    ).scalars().first()
+    base = f"/operator/sessions/{review_session.id}/observers"
+
+    import re as _re
+
+    def filter_form(url: str) -> str:
+        m = _re.search(
+            r'<form method="get"[^>]*class="([^"]*)"',
+            _markup(client.get(url).text),
+        )
+        assert m, f"no filter form on {url}"
+        return m.group(1)
+
+    assert "is-locked" not in filter_form(base), (
+        "the filter is locked on an ordinary render"
+    )
+    assert "is-locked" in filter_form(f"{base}?edit_id={row_id}"), (
+        "the moved filter stays live while a row is being edited"
+    )
+    assert "is-locked" in filter_form(f"{base}?add=1"), (
+        "the moved filter stays live while a row is being added"
+    )
+
+    # The rule that gives the class its effect.
+    edit_body = client.get(f"{base}?edit_id={row_id}").text
+    assert ".operator-actions-filter.is-locked" in edit_body, (
+        "no rule backs the class"
+    )
+    # The second half of this check used to read
+    # `operator-actions-main is-locked` — the row actions' own lock in
+    # the card beside it. 19P.2 rung 4 retired that card, and the row
+    # actions do not render at all in edit mode now, so there is no
+    # second half to lock. The panel's absence is asserted by
+    # `test_the_operator_actions_card_is_retired`.
+    #
+    # Dropping that ONE assertion is all rung 4 licensed. The first
+    # draft of that rung deleted this whole test as card cleanup, which
+    # left the toolbar filter's lock unguarded one rung after a cold
+    # read added it. Caught by the next cold read.
+
+
+def test_add_new_is_absent_on_an_archived_session(
+    client: TestClient, db: Session
+) -> None:
+    """`Add new` moved into the toolbar at rung 3 and took its own
+    lifecycle gate with it — so the surface test that brackets
+    `archived` no longer enumerates it. Asserted here instead.
+
+    Rung 2's whole argument: a rendered control the server 409s is the
+    silent failure to remove. `/create` refuses on `archived`.
+    """
+    review_session = _observers_page(client, db, "obs-addarch")
+    review_session.status = "archived"
+    db.commit()
+    body = _markup(
+        client.get(f"/operator/sessions/{review_session.id}/observers").text
+    )
+
+    assert ">Add new</a>" not in body, (
+        "archived offers an Add new the create route refuses"
+    )
+    assert "?add=1" not in body, "an archived page links into add mode"
+    # The roster is still readable, and the filter still filters it —
+    # this is a gate on one control, not on the page.
+    assert 'id="observers-table"' in body
+    assert 'name="q"' in body
+
+
 def test_every_filter_control_lands_on_the_table_card(
     client: TestClient, db: Session
 ) -> None:

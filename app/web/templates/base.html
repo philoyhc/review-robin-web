@@ -4922,14 +4922,19 @@
         }
 
         /* Responding to a tick is DELEGATED, so a pair injected after
-           load works with no registration — the row expander (19P.1
-           rung 2b) builds its confirm and its Delete in JS, and a
-           listener bound at load could never reach them: the button
-           would ship `disabled` and stay that way forever.
+           load works with no registration — a row expander builds its
+           confirm and its Delete in JS (Reviewers 19P.1 rung 2b,
+           Observers 19P.2 rung 4), and a listener bound at load could
+           never reach them: the button would ship `disabled` and stay
+           that way forever.
 
            BOUND IN THE CAPTURE PHASE, and that is load-bearing rather
-           than stylistic. Four roster pages re-run this gate by hand
-           when the row selection changes —
+           than stylistic. The roster pages that still render their
+           strip server-side re-run this gate by hand when the row
+           selection changes — four when this was written, TWO now that
+           Reviewers and Observers build panels instead, and none once
+           19P.3 lands, at which point the capture binding is the only
+           thing keeping the remaining real-user path correct —
            `deleteConfirm.dispatchEvent(new Event("change"))` — and
            `new Event` does NOT bubble by default. A bubble-phase
            delegated listener never sees those, so the tick would clear

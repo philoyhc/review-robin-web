@@ -200,7 +200,10 @@ def test_the_whole_observers_surface_goes_on_archived(
 
     Re-tightening probes a widened gate's lower bound; nothing probed
     the upper. Every control the sibling test above asserts PRESENT on
-    a live session is asserted absent here, so the pair brackets it.
+    a live session is asserted absent here, so the pair brackets it —
+    including, since rung 4, the expander builder rather than the
+    server-rendered buttons it replaced. A cold read caught that claim
+    standing while the assertion behind it had gone vacuous.
     """
     s = _session(client, db, code=f"sl-obs-{status}")
     s.status = status
@@ -210,6 +213,13 @@ def test_the_whole_observers_surface_goes_on_archived(
 
     assert 'id="observers-delete-btn"' not in body
     assert 'id="observers-bulk-form"' not in body
+    # 19P.2 rung 4 moved the row actions into an injected panel, so the
+    # `observers-delete-btn` line above can no longer fail on ANY state
+    # — it is not server-rendered anywhere. What brackets the live
+    # sibling now is the builder's absence, which is what this asserts.
+    assert "observers-row-expander" not in body, (
+        "archived ships the expander builder over routes that 409"
+    )
     assert '<input type="checkbox" class="observer-select"' not in body
     assert 'class="card danger-zone"' not in body
     assert "/observers/delete-all" not in body
