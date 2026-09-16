@@ -296,16 +296,17 @@ def test_every_setup_page_nests_correctly(
 def test_the_observers_guidance_leads_the_left_column(
     client: TestClient, db: Session
 ) -> None:
-    """Top left, above the cohort editor and in the same column — so
-    opening it pushes the cohort editor down and leaves the right
-    column untouched.
+    """Full width at the top of the page, which is where it ended up.
 
-    That right column held the `Operator actions` card until 19P.2
-    rung 4 retired it into the row expander; it is empty for one rung,
-    until rung 5 moves the cohort editor into the expander too and
-    `.card-columns` goes. What this test is about is the ORDER within
-    the left column, which is unchanged — so the second assertion now
-    reads the column boundary instead of a card that is gone.
+    It led the LEFT COLUMN of a `.card-columns` grid until 19P.2: rung
+    4 retired the `Operator actions` card from the right column and
+    rung 5 moved the cohort editor into the row expander, leaving the
+    grid with nothing to arrange. The guidance now runs full width, as
+    it does on Reviewers since 19P.1.
+
+    What survives of the original claim is the part that still has
+    meaning: the guidance comes first, before anything the page offers
+    to act with.
     """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
@@ -316,13 +317,16 @@ def test_the_observers_guidance_leads_the_left_column(
 
     # Markup markers, not bare class names: both classes are also
     # styled in base.html, and a bare-name index finds the stylesheet.
-    assert body.index(CARD) < body.index('id="observers-cohort-heading"')
     assert 'class="card operator-actions-card"' not in body, (
-        "rung 4 retired the card; rung 5 retires the grid it sat in"
+        "rung 4 retired the card"
     )
-    # Still inside `.card-columns`, still the first thing in it.
-    grid = body.index('class="card-columns"')
-    assert grid < body.index(CARD) < body.index('id="observers-cohort-heading"')
+    assert 'class="card-columns"' not in body, (
+        "rung 5 retired the grid"
+    )
+    # First, and before the table it introduces.
+    assert body.index(CARD) < body.index('id="observers-table-card"')
+    # The cohort editor is in the expander's template now, below it.
+    assert body.index(CARD) < body.index('id="observers-cohort-template"')
 
 
 def test_the_disclosure_uses_the_instrument_cards_triangle(

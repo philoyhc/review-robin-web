@@ -1041,11 +1041,16 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
 
 
 def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
-    """Reviewers leads its page with the guidance card at full width,
-    where one measure runs to ~150 characters. The other six placements
-    sit in a half-width column, where two columns would be two
-    ~30-character ribbons — so the page opts in rather than the rule
-    applying everywhere the class does.
+    """A page that leads with the guidance card at full width runs its
+    prose in two columns, because one measure there is ~150 characters.
+    The half-width placements do not, because two columns of a
+    half-width card would be two ~30-character ribbons — so a page opts
+    in rather than the rule applying everywhere the class does.
+
+    **Two pages opt in**: Reviewers since 19P.1 rung 2a, Observers since
+    19P.2 rung 5 retired its `.card-columns`. The card spanning the page
+    and the prose being laid out for that span are separate things, and
+    rung 5's first draft did the first without the second.
     """
     rs = _with_reviewers(client, db, "rc33")
     html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
@@ -1056,12 +1061,19 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
         re.S,
     ), "the two-column rule the template comment promises does not exist"
 
+    enable_observers(db, rs)
+    observers = client.get(f"/operator/sessions/{rs.id}/observers")
+    assert observers.status_code == 200
+    assert "page-guidance-wide" in _markup(observers.text), (
+        "Observers runs full width since rung 5 but did not opt in"
+    )
+
     # A half-width placement must not pick it up.
     other = client.get(f"/operator/sessions/{rs.id}/reviewees")
-    if other.status_code == 200:
-        other_markup = _markup(other.text)
-        assert "page-guidance" in other_markup, "vacuity: no guidance card"
-        assert "page-guidance-wide" not in other_markup
+    assert other.status_code == 200
+    other_markup = _markup(other.text)
+    assert "page-guidance" in other_markup, "vacuity: no guidance card"
+    assert "page-guidance-wide" not in other_markup
 
 
 def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(

@@ -2117,9 +2117,11 @@
         transform: rotate(180deg);
       }
       /* 19P.1 rung 2a — two columns, but only where the card is full
-         width. The macro's other six placements sit in one column of a
-         `.card-columns` pair, where splitting a ~60-character measure
-         again would give two ~30-character ribbons. So the page opts in
+         width. TWO pages opt in now: Reviewers here, and Observers
+         since 19P.2 rung 5 retired its `.card-columns`. The macro's
+         other five placements sit in one column of such a pair, where
+         splitting a ~60-character measure again would give two
+         ~30-character ribbons. So the page opts in
          (`guidance(full_width=true)`) rather than the rule applying
          everywhere the class does. `break-inside: avoid` keeps a
          paragraph whole rather than splitting it across the gutter. */
@@ -3029,6 +3031,77 @@
         margin-left: auto;
       }
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
+      /* 19P.2 rung 5 — the two-column expander, Observers only so far.
+         Left: the cohort rule builder and its Save. Right: the count,
+         the delete confirm and the row actions.
+
+         A MODIFIER on `.row-expander-body`, like `.is-split` on the
+         toolbar, for the same reason: the lobby and Reviewers put a
+         single flex line in this element, and turning the shared rule
+         into a grid would re-lay-out both.
+
+         `align-items: start`, so the two columns are TOP-flush and do
+         not share a bottom edge. The builder is taller, and the
+         author's call was top-flush: bottom-aligning would anchor
+         `Save` to a button row it has no relationship with. */
+      body.ui-v2 .row-expander-body.is-split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 20px;
+      }
+      body.ui-v2 .row-expander-pane { min-width: 0; }
+      /* The right pane's contents run inline, top-aligned, flush
+         right — the author's shape. `margin-left: auto` on
+         `.row-expander-actions` already pushes the buttons; this
+         carries the count and the confirm with them. */
+      body.ui-v2 .row-expander-pane-right {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-3);
+      }
+      /* The cohort label is NOT a card heading. It takes the
+         Instruments rule builder's Link 1 idiom
+         (`instruments_index.html`, `new_model_rule_list`): normal
+         weight, a fixed bottom margin, and a flex row whose 8px gap
+         would seat a state pill inline if this editor ever wants one.
+         An `<h2>` here would read as a card title inside a panel that
+         is not a card.
+
+         No `font-size`: the first draft declared `var(--fs-base)`,
+         which is not a token this file defines (`--fs-body`, `--fs-h1`,
+         `--fs-h2`, `--fs-small`, `--fs-tiny` are), so the declaration
+         was invalid and dropped — the label inherited 16px and happened
+         to look right. The Link 1 idiom it copies declares no
+         font-size either, so inheriting IS the idiom. */
+      body.ui-v2 .row-expander-label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: normal;
+        margin: 0 0 12px;
+      }
+      /* `Save` sits inline immediately after the last rule cell's `X`,
+         so it trails the list as rules are added rather than floating
+         under it. Sized to the controls it sits among — the selects are
+         29px and the `X` 28.9 — so it takes the `X`'s own `4px 8px`
+         padding and inherits the rule row's 4px flex gap instead of
+         carrying a margin. The two gaps then match by construction
+         rather than by a tuned value.
+
+         `button.cohort-save-btn`, not `.cohort-save-btn`: the shared
+         `body.ui-v2 button.btn` rule above is (0,2,2) and wins on
+         specificity whatever the source order. The first draft of this
+         rule was (0,2,1) and did nothing at all — Save rendered at the
+         `.btn` default, 36.9px against the X's 28.9, while this comment
+         and a test both said otherwise. The `X` is only 28.9 because it
+         carries an inline `style=`. */
+      body.ui-v2 button.cohort-save-btn {
+        padding: 4px 8px;
+        flex-shrink: 0;
+      }
       /* The save error, in the edit row's own bar. It used to be a
          `.banner.banner-error` in the editor card; that card went, and
          the message came down to the row it is about. A banner's box
