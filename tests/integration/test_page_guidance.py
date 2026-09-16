@@ -297,8 +297,16 @@ def test_the_observers_guidance_leads_the_left_column(
     client: TestClient, db: Session
 ) -> None:
     """Top left, above the cohort editor and in the same column — so
-    opening it pushes the cohort editor down and leaves the Operator
-    actions card in the right column untouched."""
+    opening it pushes the cohort editor down and leaves the right
+    column untouched.
+
+    That right column held the `Operator actions` card until 19P.2
+    rung 4 retired it into the row expander; it is empty for one rung,
+    until rung 5 moves the cohort editor into the expander too and
+    `.card-columns` goes. What this test is about is the ORDER within
+    the left column, which is unchanged — so the second assertion now
+    reads the column boundary instead of a card that is gone.
+    """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
     review_session.observers_enabled = True
@@ -309,7 +317,12 @@ def test_the_observers_guidance_leads_the_left_column(
     # Markup markers, not bare class names: both classes are also
     # styled in base.html, and a bare-name index finds the stylesheet.
     assert body.index(CARD) < body.index('id="observers-cohort-heading"')
-    assert body.index(CARD) < body.index('class="card operator-actions-card"')
+    assert 'class="card operator-actions-card"' not in body, (
+        "rung 4 retired the card; rung 5 retires the grid it sat in"
+    )
+    # Still inside `.card-columns`, still the first thing in it.
+    grid = body.index('class="card-columns"')
+    assert grid < body.index(CARD) < body.index('id="observers-cohort-heading"')
 
 
 def test_the_disclosure_uses_the_instrument_cards_triangle(

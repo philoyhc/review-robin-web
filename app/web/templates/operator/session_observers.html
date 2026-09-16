@@ -9,6 +9,51 @@
   {% set observers_base_url =
         "/operator/sessions/" ~ session.id ~ "/observers" %}
 
+  {# The edit row's own action bar, on the analogy of a selected row:
+     the row being edited reads as selected and its controls hang
+     beneath it in a bracketed expander, exactly as the selection panel
+     does. Save and Cancel belong with the row they act on, not in a
+     card above the table — 19P.2 rung 4, following Reviewers at 19P.1
+     rung 2b.
+
+     One macro, two call sites (the Add row and the Edit row), because
+     the alternative is the same markup written twice. #}
+  {% macro row_editor_bar(col_count) %}
+    <tr class="session-expander session-expander-bracketed row-editor-bar">
+      <td colspan="{{ col_count }}">
+        <div class="row-expander-body">
+          {# The mode, for assistive tech only. The card that went
+             carried an `<h2>` — "Add new observer" / "Edit observer" —
+             and that heading was the only accessible name for the state
+             the page is in. What replaces it visually is a highlighted
+             row, and a highlight reaches nobody using a screen reader.
+             `aria-live` so it is read when a failed save re-renders the
+             page into edit mode under the operator. #}
+          <span class="visually-hidden" aria-live="polite">
+            {{ "Add new observer" if add_mode else "Edit observer" }}
+          </span>
+          {# The save error, which lived in the card until that card
+             went. It belongs with the row anyway: the message is about
+             the values in the row above, and the card put it a table's
+             height away from them. #}
+          {% if edit_error %}
+            <span class="row-editor-error">{{ edit_error }}</span>
+          {% endif %}
+          {# Save then Cancel, the order the card rendered and the order
+             the two unmigrated pages still render. #}
+          <div class="row-expander-actions">
+            <button class="btn secondary" type="submit"
+                    form="observer-edit-form">Save</button>
+            {# Cancel leaves the editor for the list, so it lands where
+               the list is — the same anchor `Clear` and `Search` take. #}
+            <a class="btn secondary"
+               href="{{ observers_base_url }}#{{ pager_anchor }}">Cancel</a>
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endmacro %}
+
   <div class="session-nav-card">
     {% with current_page = "Observers" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -175,110 +220,22 @@
     {% endif %}
     </div>
 
-    <div>
-    {% if _show_actions_slot %}
-    <div class="card operator-actions-card">
-      <h2 style="margin-top: 0;">Operator actions</h2>
-      {# 19P.2 rung 3 — SLIMMED, not retired. The filter strip and
-         `Add new` moved into the table card's toolbar, where the
-         controls sit with the rows they act on rather than a grid
-         away. What is left is the row actions, which have nowhere
-         better to be until rung 4 builds the expander.
+    {# 19P.2 rung 4 — the `Operator actions` card is RETIRED. Its
+       four row actions moved into the row expander below the table,
+       where they sit with the rows they act on; its count and delete
+       gate went with them; and the editor's Save / Cancel moved into
+       the edit row's own bar (`row_editor_bar` above). Nothing was
+       left but a heading.
 
-         No `<form>` wrapper any more: every button here reaches
-         `observers-bulk-form` through `form=` + `formaction`
-         already, and `Edit` is `type="button"` driven by the script
-         below. The GET form they used to sit inside was never their
-         form. #}
-      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        <div class="filter-actions">
-          <button class="btn secondary" type="button"
-                  id="observers-edit-btn"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="submit"
-                  id="observers-inactivate-btn"
-                  form="observers-bulk-form"
-                  formaction="{{ observers_base_url }}/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="observers-reactivate-btn"
-                  form="observers-bulk-form"
-                  formaction="{{ observers_base_url }}/bulk-reactivate"
-                  disabled aria-disabled="true">Activate</button>
-          {# Segment 19I Item 2 — posts the bulk form to
-             ``/bulk-delete`` via ``form=`` + ``formaction``,
-             like Inactivate / Activate beside it. Enabled by
-             the confirmation checkbox below through
-             base.html's ``data-delete-confirm`` pairing; the
-             server re-checks both gates regardless. #}
-          <button class="btn destructive" type="submit"
-                  id="observers-delete-btn"
-                  form="observers-bulk-form"
-                  formaction="{{ observers_base_url }}/bulk-delete"
-                  data-delete-btn="observers-bulk-delete"
-                  disabled aria-disabled="true">Delete</button>
-        </div>
-        <div class="filter-confirm">
-          <span class="pill pill-count"
-                id="observers-selected-count" hidden>0 of 0 selected</span>
-          <label class="delete-confirm-label">
-            <input type="checkbox"
-                   id="observers-delete-confirm"
-                   name="confirm" value="true"
-                   form="observers-bulk-form"
-                   data-delete-confirm="observers-bulk-delete"
-                   disabled>
-            {# The sentence names what goes, modelled on the
-               Instruments page's "…and its associated assignments
-               and reviewer responses." (Segment 19I Item 3). One
-               checkbox, not two: the strip's confirmed shape has a
-               single gate, so the acknowledgement rides with the
-               tick as a hidden field and the label says what is
-               being agreed to. The route still requires both
-               fields, and refuses without the tick that carries
-               them. #}
-            <span>
-              {%- if delete_discards_responses -%}
-                Yes, delete these and their associated assignments and reviewer responses
-              {%- elif delete_discards_assignments -%}
-                Yes, delete these and their associated assignments
-              {%- else -%}
-                Yes, delete these
-              {%- endif -%}
-            </span>
-            {% if delete_discards_responses %}
-              <input type="hidden" form="observers-bulk-form"
-                     id="observers-delete-ack"
-                     name="acknowledge_response_loss" value="true">
-            {% endif %}
-          </label>
-        </div>
-      </div>
-      {% if edit_mode %}
-        <hr class="operator-actions-divider">
-        <h2>{{ "Add new observer" if add_mode else "Edit observer" }}</h2>
-        {% if edit_error %}
-          <p class="banner banner-error">{{ edit_error }}</p>
-        {% endif %}
-        <p class="form-help">
-          {% if add_mode %}
-            Fill in the new row below, then Save.
-          {% else %}
-            Edit the highlighted row below, then Save.
-          {% endif %}
-        </p>
-        <div style="display: flex; justify-content: flex-end;
-                    gap: 12px; margin-top: var(--space-3);">
-          <button class="btn secondary" type="submit"
-                  form="observer-edit-form">Save</button>
-          <a class="btn secondary"
-             href="{{ observers_base_url }}">Cancel</a>
-        </div>
-      {% endif %}
-    </div>
-    {% endif %}
-    </div>
-  </div>
+       This column stays empty for ONE rung. The cohort editor is
+       still a card in the left column and `.card-columns` still needs
+       two children to keep its shape; rung 5 moves that editor into
+       the expander and retires the grid, at which point the guidance
+       runs full width as it does on Reviewers. Landing the empty half
+       rather than half-retiring the grid keeps the two moves
+       separable, which is the whole point of the ladder. #}
+    <div></div>
+  </div>{# .card-columns #}
 
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}
@@ -454,11 +411,15 @@
         </tr>
         </thead>
         <tbody>
+        {# Seven, fixed. Unlike Reviewers this page has no conditional
+           tag columns and no Photo column, so there is nothing to
+           count at render time. #}
+        {% set edit_col_count = 7 %}
         {% if add_mode %}
           {# The target `Add` lands on. Add-mode only: the row is
              transient, so there is no id to build the fragment from
              the way `Edit` does. #}
-          <tr class="observer-edit-row row-action-target"
+          <tr class="observer-edit-row session-row-selected row-action-target"
               id="{{ row_editor_anchor }}">
             <td class="row-select-cell"></td>
             <td><input type="text" name="display_name"
@@ -479,10 +440,11 @@
             <td class="muted">—</td>
             <td class="muted">—</td>
           </tr>
+          {{ row_editor_bar(edit_col_count) }}
         {% endif %}
         {% for observer in observers %}
           {% if edit_id is not none and observer.id == edit_id %}
-            <tr class="observer-edit-row row-action-target"
+            <tr class="observer-edit-row session-row-selected row-action-target"
                 id="observer-row-{{ observer.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="display_name"
@@ -503,6 +465,7 @@
               <td class="muted">—</td>
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
+            {{ row_editor_bar(edit_col_count) }}
           {% else %}
             {# `row-action-target` is the landing offset — `base.html`
                gives it `scroll-margin-top: 88px` so the acted-on row
@@ -511,6 +474,13 @@
                edge. 19P.2 rung 1, on the Reviewers analogy. #}
             <tr id="observer-row-{{ observer.id }}"
                 class="row-action-target"
+                {# 19P.2 rung 4 — the expander reads this to decide which
+                   status action the selection admits: `Inactivate` acts
+                   on active rows and `Activate` on inactive ones, so a
+                   selection that is all one status gets exactly one
+                   actionable button. Rendering the other would offer a
+                   control that no-ops on every row. #}
+                data-status="{{ observer.status }}"
                 {% if selectable %}data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}"{% endif %}>
               <td class="row-select-cell">
                 {% if selectable %}
@@ -587,12 +557,147 @@
   {% if not edit_mode and not is_archived %}
     <script>
       (function () {
-        var editBtn = document.getElementById("observers-edit-btn");
-        var inactivateBtn = document.getElementById("observers-inactivate-btn");
-        var reactivateBtn = document.getElementById("observers-reactivate-btn");
-        var countPill = document.getElementById("observers-selected-count");
-        var deleteConfirm = document.getElementById("observers-delete-confirm");
+        // 19P.2 rung 4 — the four row actions, the count and the delete
+        // gate moved out of the `Operator actions` card and into a row
+        // expander this script builds. What stays here is the cohort
+        // editor's half, which is still a card until rung 5.
         var selectAll = document.getElementById("observers-select-all");
+        var table = document.getElementById("observers-table");
+        var OBS_BASE = {{ observers_base_url | tojson }};
+        var tickOrder = [];
+        var panel = null;
+
+        function rows() {
+          if (!table) return [];
+          var tbody = table.querySelector("tbody");
+          if (!tbody) return [];
+          return Array.prototype.slice.call(
+            tbody.querySelectorAll("tr[data-status]"));
+        }
+        function selectedRows() {
+          return rows().filter(function (row) {
+            var box = row.querySelector(".observer-select");
+            return box && box.checked;
+          });
+        }
+        // Anchors after the most recently ticked row STILL selected, DOM
+        // order as fallback — the rule `sessions_list.html:585` settled.
+        // A single remembered id is not enough: it clears on any untick
+        // and the panel jumps back up the table.
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            var row = document.getElementById(tickOrder[i]);
+            if (!row) continue;
+            var box = row.querySelector(".observer-select");
+            if (box && box.checked) return row;
+          }
+          return null;
+        }
+        // Which status actions the selection admits. `Inactivate` acts
+        // on active rows and `Activate` on inactive ones, so a selection
+        // that is all one status has exactly one actionable button;
+        // rendering the other offers a control that no-ops on every row.
+        // Orthogonal to arity, which says how many rows each action
+        // takes.
+        function statusActions(sel) {
+          var out = [];
+          var hasActive = false;
+          var hasInactive = false;
+          sel.forEach(function (row) {
+            if (row.dataset.status === "active") hasActive = true;
+            else hasInactive = true;
+          });
+          if (hasActive) out.push("Inactivate");
+          if (hasInactive) out.push("Activate");
+          return out;
+        }
+        function visibleColumnCount() {
+          if (!table) return 1;
+          return Array.prototype.filter.call(
+            table.querySelectorAll("thead th"),
+            function (th) { return th.offsetParent !== null; }).length;
+        }
+
+        function buildPanel(sel) {
+          var tr = document.createElement("tr");
+          tr.className = "session-expander session-expander-bracketed";
+          tr.id = "observers-row-expander";
+          var td = document.createElement("td");
+          td.colSpan = visibleColumnCount();
+          // Bare text, not a `.pill-count`: `spec/ui_elements.md` calls
+          // the panel "a pill-free zone" — its fill resolves to the same
+          // primitive the pale pills do, so a pill here is invisible.
+          // The card this came from could afford one; the panel cannot.
+          var html =
+            '<div class="row-expander-body">' +
+              '<span class="row-expander-count"><strong>' + sel.length +
+              "</strong> of " + rows().length + " selected</span>" +
+              '<label class="confirm-label exp-confirm-label">' +
+                '<input type="checkbox" name="confirm" value="true"' +
+                ' form="observers-bulk-form"' +
+                ' data-delete-confirm="observers-bulk-delete"> ' +
+                {{ (
+                     "Yes, delete these and their associated assignments and reviewer responses"
+                     if delete_discards_responses else
+                     "Yes, delete these and their associated assignments"
+                     if delete_discards_assignments else
+                     "Yes, delete these"
+                   ) | tojson }} +
+                {{ ('<input type="hidden" form="observers-bulk-form"'
+                    ' id="observers-delete-ack"'
+                    ' name="acknowledge_response_loss" value="true">'
+                    if delete_discards_responses else "") | tojson }} +
+              "</label>" +
+              '<span class="row-expander-actions">';
+          // `Edit` acts on exactly one row.
+          var editable = sel.length === 1;
+          var editId = editable
+            ? sel[0].querySelector(".observer-select").value : "";
+          html += '<button type="button" class="btn secondary exp-edit"' +
+                  (editable
+                    ? ' data-edit-id="' + editId + '"'
+                    : ' disabled aria-disabled="true"') +
+                  ">Edit</button>";
+          // The selection reaches the POST through the row checkboxes'
+          // own `form=` + `name="observer_ids"`, so these need only say
+          // where to send it. Same routes and `formaction`s as the card
+          // they came from.
+          statusActions(sel).forEach(function (label) {
+            html += '<button type="submit" class="btn secondary"' +
+                    ' form="observers-bulk-form" formaction="' +
+                    OBS_BASE +
+                    (label === "Inactivate"
+                      ? "/bulk-inactivate" : "/bulk-reactivate") +
+                    '">' + label + "</button>";
+          });
+          // Ships `disabled`: nothing syncs an injected pair until its
+          // first tick, so a live-by-default Delete would be a
+          // destructive control with its gate open.
+          html += '<button type="submit" class="btn destructive"' +
+                  ' form="observers-bulk-form" formaction="' +
+                  OBS_BASE + '/bulk-delete"' +
+                  ' data-delete-btn="observers-bulk-delete"' +
+                  ' disabled aria-disabled="true">Delete</button>' +
+                  "</span></div>";
+          td.innerHTML = html;
+          tr.appendChild(td);
+          return tr;
+        }
+
+        function renderPanel() {
+          if (panel) { panel.remove(); panel = null; }
+          rows().forEach(function (row) {
+            row.classList.remove("session-row-selected");
+          });
+          var sel = selectedRows();
+          if (!sel.length) return;
+          sel.forEach(function (row) {
+            row.classList.add("session-row-selected");
+          });
+          panel = buildPanel(sel);
+          (currentAnchor() || sel[sel.length - 1])
+            .insertAdjacentElement("afterend", panel);
+        }
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortEmpty = document.getElementById("observers-cohort-empty");
         var cohortHeading = document.getElementById("observers-cohort-heading");
@@ -708,38 +813,18 @@
         function refresh() {
           var all = boxes();
           var n = countChecked();
-          if (editBtn) setBtn(editBtn, n !== 1);
-          if (inactivateBtn) setBtn(inactivateBtn, n === 0);
-          if (reactivateBtn) setBtn(reactivateBtn, n === 0);
-          if (countPill) {
-            // "N of M selected" (Segment 19I Item 4). M is the
-          // *rendered* window — the rows select-all can reach —
-          // not the whole roster, which is the number that makes
-          // the cap-versus-match gap visible next to the
-          // "Showing N of M" hint above the table.
-          countPill.textContent = n + " of " + all.length + " selected";
-            countPill.hidden = (n === 0);
-          // Delete gate, stage 1 (Segment 19I Item 2). A
-          // selection enables the checkbox; base.html's
-          // ``data-delete-confirm`` pairing then drives the
-          // button off the checkbox, so one script owns the
-          // button's ``disabled`` rather than two.
-          if (deleteConfirm) {
-            deleteConfirm.disabled = (n === 0);
-            if (deleteConfirm.checked) {
-              // The tick clears on *any* change of selection:
-              // "Yes, delete these" names the selection as it
-              // stood when it was ticked. A programmatic
-              // uncheck fires no ``change`` of its own, so the
-              // gate is re-run by hand or the button would
-              // stay enabled.
-              deleteConfirm.checked = false;
-              deleteConfirm.dispatchEvent(new Event("change"));
-            }
-          }
-          }
+          // The count, the delete gate and the four buttons all live in
+          // the panel now, and it is rebuilt wholesale on every change —
+          // so the "clear the tick when the selection changes" dance the
+          // card needed is structural here: a fresh panel carries a
+          // fresh, unticked checkbox and a `disabled` Delete. The rule
+          // it enforced still holds ("Yes, delete these" names the
+          // selection as it stood when it was ticked); it is now a
+          // consequence of the rebuild rather than a thing to remember.
+          renderPanel();
           if (selectAll) {
             selectAll.checked = (n > 0 && n === all.length);
+            selectAll.indeterminate = (n > 0 && n < all.length);
           }
           // The cohort CARD stays visible whenever the slot is
           // rendered (so the grid keeps its half-half shape).
@@ -803,34 +888,59 @@
             for (var i = 0; i < all.length; i++) {
               all[i].checked = selectAll.checked;
             }
+            // Rebuild wholesale rather than append: the anchor is a
+            // function of the order, and a stale entry for a row that
+            // was unticked and re-ticked would anchor the panel at that
+            // row instead of the last one.
+            tickOrder = selectAll.checked
+              ? rows().map(function (row) { return row.id; })
+              : [];
             refresh();
           } else if (t.classList &&
                      t.classList.contains("observer-select")) {
+            // Prune on untick as well as push on tick — the lobby does
+            // both (`sessions_list.html:596-614`).
+            var row = t.closest("tr");
+            if (row) {
+              tickOrder = tickOrder.filter(function (id) {
+                return id !== row.id;
+              });
+              if (t.checked) tickOrder.push(row.id);
+            }
             refresh();
           }
         });
-        if (editBtn) {
-          editBtn.addEventListener("click", function () {
-            var all = boxes();
-            var picked = null;
-            for (var i = 0; i < all.length; i++) {
-              if (all[i].checked) {
-                if (picked !== null) return;
-                picked = all[i];
-              }
-            }
-            if (picked === null) return;
-            // `#observer-row-<id>`: entering edit mode is a
-            // navigation, and without a fragment it lands at the top
-            // of the document — the same 821px defect the row actions
-            // fix. The edit row keeps its own id, so the fragment
-            // resolves onto the row being typed into.
-            window.location =
-              {{ observers_base_url | tojson }} + "?edit_id=" +
-              encodeURIComponent(picked.value) +
-              "#observer-row-" + encodeURIComponent(picked.value);
+        // `Edit` is a client-side GET, not a form post, so it carries
+        // the editor's landing anchor itself. Delegated from the table
+        // because the panel is injected and replaced on every selection
+        // change — binding the button directly would bind a button that
+        // is about to be thrown away.
+        if (table) {
+          table.addEventListener("click", function (event) {
+            var edit = event.target.closest
+              ? event.target.closest(".exp-edit[data-edit-id]") : null;
+            if (!edit) return;
+            var editId = edit.getAttribute("data-edit-id");
+            // `#observer-row-<id>`: entering edit mode is a navigation,
+            // and without a fragment it lands at the top of the
+            // document — the same 821px defect the row actions fix. The
+            // edit row keeps its own id, so the fragment resolves onto
+            // the row being typed into.
+            window.location = OBS_BASE + "?edit_id=" +
+              encodeURIComponent(editId) +
+              "#observer-row-" + encodeURIComponent(editId);
           });
         }
+
+        // A selection can arrive already made: the bulk routes redirect
+        // through `_redirect_keeping_selection`, which carries the
+        // acted-on ids as `?selected=` and the server re-checks those
+        // boxes. Without seeding `tickOrder` the restored rows would
+        // anchor the panel by DOM order rather than by tick order.
+        rows().forEach(function (row) {
+          var box = row.querySelector(".observer-select");
+          if (box && box.checked) tickOrder.push(row.id);
+        });
         refresh();
       })();
 

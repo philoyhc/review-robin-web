@@ -128,12 +128,19 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
                 (path.name, var, "bubbles" in opts)
             )
 
-    # Three, not four: Reviewers gave its `Operator actions` selection
-    # script up at 19P.1 rung 2b, and the expander rebuilds the panel
-    # wholesale on every selection change rather than re-running a
-    # gate on a surviving one. The floor moves with the fact; it is
-    # here so that the enumeration cannot pass by finding nothing.
-    assert len(dispatches) >= 3, (
+    # Two, not four: Reviewers gave its `Operator actions` selection
+    # script up at 19P.1 rung 2b and Observers at 19P.2 rung 4. An
+    # expander rebuilds the panel wholesale on every selection change,
+    # so a fresh panel carries a fresh unticked checkbox — there is no
+    # surviving one to re-run a gate on. The floor moves with the fact;
+    # it is here so the enumeration cannot pass by finding nothing.
+    #
+    # It bottoms out at 19P.3, when the last two pages migrate and this
+    # assertion has nothing left to count. Whoever lands that rung
+    # should replace the floor with the real claim — that no template
+    # dispatches a non-bubbling `change` at a confirm checkbox — rather
+    # than lowering it to zero, which is the vacuity this guards.
+    assert len(dispatches) >= 2, (
         f"vacuity: found only {dispatches}; the unmigrated roster pages "
         "each re-run this gate and should be here"
     )

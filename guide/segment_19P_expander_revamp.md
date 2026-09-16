@@ -895,6 +895,69 @@ continue`, and its fixture never enabled `observers_enabled`, so that
 page 404'd and the assertion never ran. It now enables the toggle and
 asserts against a page that renders.
 
+**Rung 4 — landed.** The four row actions, the selected count and the
+delete gate moved into a row expander built in JS against the selected
+rows; the `Operator actions` card retired. Reuses `base.html`'s
+`.session-expander` / `-bracketed` family unchanged, as the lobby and
+Reviewers do.
+
+**The card held more than the ladder's one line implies.** Retiring it
+also took the editor's `Save` / `Cancel`, its mode heading and its error
+banner — so rung 4 had to build the **second** expander too, the edit
+row's own bar, exactly as Reviewers did at 19P.1 rung 2b. One macro,
+two call sites (Add row, Edit row). Without it the editor would have
+had no way to save.
+
+**The right column is empty for one rung.** The cohort editor is still a
+card in the left column and `.card-columns` still needs two children, so
+the grid keeps its shape with a zero-height second child — measured:
+1,360px grid, left child 670×184, right child 670×0, no horizontal
+overflow. Rung 5 moves that editor into the expander and retires the
+grid. Landing the empty half rather than half-retiring the grid keeps
+the two moves separable, which is the point of the ladder — but it is a
+visible transitional state and the dev slot will show it.
+
+Guards: a new `tests/integration/test_observers_expander.py` (13 tests),
+**15/15 mutations caught**. One survived the first pass: making
+`statusActions` push both labels unconditionally left every other
+assertion green — the attribute is still read, the function still
+exists, both `formaction`s are still in the text. The conditionals
+themselves are pinned now, which is the most pytest can hold; whether
+the right button appears is Chromium's. Suite 4,097 → 4,104.
+
+**Most of this rung is invisible to pytest** — the panel does not exist
+until a checkbox is ticked and there is no JS runtime — so those tests
+pin the *builder* and the absence of what it replaced, and Chromium
+does the rest.
+
+Measured in Chromium, all of it: no selection renders no panel and no
+card; one active row gives `Edit / Inactivate / Delete` (no `Activate`
+— the row is already active), "1 of 4 selected", `Delete` disabled;
+ticking the gate enables it; a second tick **resets the gate** and
+disables `Edit` at arity 2, and the panel re-anchors to the later row;
+unticking walks the anchor back. `Inactivate` through the panel
+redirects with `?selected=`, restores the panel, and the buttons flip to
+`Activate` — the status logic end to end. Select-all on a mixed roster
+offers both. `Edit` navigates to `?edit_id=6#observer-row-6`, opens the
+editor row, and the bar sits flush under it (669 → 669).
+
+Seven test files were re-aimed rather than deleted, the same way each
+time: the claim moved from the card's markup to the builder's text, and
+Observers left `CARD_STRIP_PAGES` as Reviewers did before it. Two
+findings fell out of the re-aiming and are worth naming, because both
+were cold-read findings from rung 3 that the re-aiming had to settle
+properly: `TOOLBAR_PAGES`' doc-comment had been inserted into
+`CARD_STRIP_PAGES`', and is separated now; and
+`test_every_programmatic_dispatch_is_reachable`'s vacuity floor drops
+3 → 2, with a note that 19P.3 empties it entirely and should replace
+the floor with the real claim rather than lowering it to zero.
+
+A structural defect the re-aiming caught: retiring the card dropped
+`.card-columns`' closing `</div>`, which the HTML-balance check in
+`test_page_guidance` reported as `</main> closed <div>`. Caught by an
+existing test, not by reading.
+
+
 ### PR ladder
 
 1. **The `offset` / anchor fix — land where Reviewers lands.** Every row

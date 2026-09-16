@@ -888,18 +888,19 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(
     # `base.html`'s delete pairing and this page's selection script
     # both reach their controls with a first-match `querySelector`, so
     # a second copy silently takes the wiring.
+    # None of the row actions is server-rendered anywhere since rung 4
+    # built the expander — least of all here. Kept pointing at the
+    # toolbar because that is the place a stray copy would most
+    # plausibly reappear: it is where `Add new` and `Search` live.
     for row_action in (
         'id="observers-edit-btn"',
         'id="observers-inactivate-btn"',
         'id="observers-reactivate-btn"',
         'id="observers-delete-btn"',
     ):
-        assert row_action not in pane, (
-            f"{row_action} is in the toolbar; rung 4 moves it to the "
-            "expander, not here"
-        )
-        assert body.count(row_action) == 1, (
-            f"{row_action} renders twice — first-match wiring breaks"
+        assert row_action not in pane, f"{row_action} is in the toolbar"
+        assert body.count(row_action) == 0, (
+            f"{row_action} is server-rendered; the expander builds it"
         )
 
 
@@ -945,114 +946,38 @@ def test_the_left_pane_is_deliberately_chipless(
     )
 
 
-def test_the_operator_actions_card_is_slimmed_not_retired(
+def test_the_operator_actions_card_is_retired(
     client: TestClient, db: Session
 ) -> None:
-    """Rung 3 moves the filter; rung 4 moves these. Until then the card
-    is the only home the row actions have."""
-    review_session = _observers_page(client, db, "obs-slim")
+    """Rung 3 slimmed it to the row actions; rung 4 moved those into the
+    row expander and the card went with them.
+
+    Its whole contents are accounted for: the four buttons and the
+    count-and-gate strip are built by the expander script, and the
+    editor's Save / Cancel moved into the edit row's own bar.
+    """
+    review_session = _observers_page(client, db, "obs-retired")
     body = _markup(
         client.get(f"/operator/sessions/{review_session.id}/observers").text
     )
 
-    import re as _re
-    card = _re.search(
-        r'<div class="card operator-actions-card">.*?</div>\s*</div>\s*</div>',
-        body, _re.S,
-    )
-    assert card, "the Operator actions card is gone; rung 4 retires it"
-    held = card.group(0)
-    for control in (
+    assert 'class="card operator-actions-card"' not in body
+    assert ">Operator actions</h2>" not in body
+
+    # Server-rendered copies of what moved: none. The expander builds
+    # all of it, so a copy left behind would be a second control with
+    # the same id — and the delete pairing and the selection script
+    # both reach theirs with a first-match `querySelector`.
+    for gone in (
         'id="observers-edit-btn"',
         'id="observers-inactivate-btn"',
         'id="observers-reactivate-btn"',
         'id="observers-delete-btn"',
         'id="observers-selected-count"',
         'id="observers-delete-confirm"',
+        'class="filter-confirm"',
     ):
-        assert control in held, f"{control} left the card before rung 4"
-
-    # And the moved controls are NOT still here. Without this, a copy
-    # left behind would satisfy the toolbar test and this one at once.
-    assert 'name="q"' not in held, "the search box is still in the card"
-    assert ">Add new</a>" not in held, "`Add new` is still in the card"
-    assert ">Search</button>" not in held, "`Search` is still in the card"
-
-
-def test_the_moved_filter_locks_while_a_row_is_being_edited(
-    client: TestClient, db: Session
-) -> None:
-    """New markup on this page, and unguarded until a cold read.
-
-    The filter used to take its lock from the enclosing
-    `.operator-actions-main.is-locked`; out in the toolbar it carries
-    its own. `base.html` says why the lock has to reach it: without it
-    "the lock is half a lock — the action buttons grey out while
-    `Search` and `Clear` stay live, and one click on either runs a GET
-    that throws the half-typed row away."
-    """
-    review_session = _observers_page(client, db, "obs-lock")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == review_session.id)
-    ).scalars().first()
-    base = f"/operator/sessions/{review_session.id}/observers"
-
-    import re as _re
-
-    def filter_form(url: str) -> str:
-        m = _re.search(
-            r'<form method="get"[^>]*class="([^"]*)"',
-            _markup(client.get(url).text),
-        )
-        assert m, f"no filter form on {url}"
-        return m.group(1)
-
-    assert "is-locked" not in filter_form(base), (
-        "the filter is locked on an ordinary render"
-    )
-    assert "is-locked" in filter_form(f"{base}?edit_id={row_id}"), (
-        "the moved filter stays live while a row is being edited"
-    )
-    assert "is-locked" in filter_form(f"{base}?add=1"), (
-        "the moved filter stays live while a row is being added"
-    )
-
-    # The rule that gives the class its effect, and the class on the
-    # card's own half — the lock is only whole if both are reached.
-    edit_body = client.get(f"{base}?edit_id={row_id}").text
-    assert ".operator-actions-filter.is-locked" in edit_body, (
-        "no rule backs the class"
-    )
-    assert "operator-actions-main is-locked" in _markup(edit_body), (
-        "the row actions did not lock with the filter"
-    )
-
-
-def test_add_new_is_absent_on_an_archived_session(
-    client: TestClient, db: Session
-) -> None:
-    """`Add new` moved into the toolbar at rung 3 and took its own
-    lifecycle gate with it — so the surface test that brackets
-    `archived` no longer enumerates it. Asserted here instead.
-
-    Rung 2's whole argument: a rendered control the server 409s is the
-    silent failure to remove. `/create` refuses on `archived`.
-    """
-    review_session = _observers_page(client, db, "obs-addarch")
-    review_session.status = "archived"
-    db.commit()
-    body = _markup(
-        client.get(f"/operator/sessions/{review_session.id}/observers").text
-    )
-
-    assert ">Add new</a>" not in body, (
-        "archived offers an Add new the create route refuses"
-    )
-    assert "?add=1" not in body, "an archived page links into add mode"
-    # The roster is still readable, and the filter still filters it —
-    # this is a gate on one control, not on the page.
-    assert 'id="observers-table"' in body
-    assert 'name="q"' in body
+        assert gone not in body, f"{gone} survived the card"
 
 
 def test_every_filter_control_lands_on_the_table_card(
