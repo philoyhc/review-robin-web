@@ -890,10 +890,17 @@ Measured 2026-09-16 on `origin/main` after Item 2 closed. Both render the
 above the preview table and a `.bottom-grid` below it — the shape Reviewers
 left at 19P.1 and Observers at 19P.2.
 
-**The 821px landing defect is live on both.** Each has **five**
-`_redirect_keeping_selection` call sites and **zero** anchors: `grep -c
-"anchor=" app/web/routes_operator/_setup_{reviewees,relationships}.py` → 0
-and 0. `offset` appears twice in each module and reaches only the GET route
+**The 821px landing defect is live on both.** Each has **four**
+`_redirect_keeping_selection` call sites — `update`, the two bulk status
+routes and `bulk-delete` — and **zero** anchors: `grep -c "anchor="
+app/web/routes_operator/_setup_{reviewees,relationships}.py` → 0 and 0.
+(`grep -c` on the helper name returns 5; the fifth is the import line.
+The **fifth POST** needing the contract is `create`, which returns a
+**bare** `RedirectResponse` — no selection, no filter, no offset, no
+fragment — so it loses more than the other four and rung 1 *converts* it
+rather than adding two kwargs. **Four** POSTs per page redirect bare and
+correctly stay bare: `import`, `delete-all` and `field-labels`, plus
+Reviewees' import reaching the shared handler.) `offset` appears twice in each module and reaches only the GET route
 and the window helper, never a redirect — so a row action taken on page 2
 answers with page 1 and lands at the top of the document.
 
@@ -909,8 +916,8 @@ in one commit.
 
 Rejected: **a rung per page** — it is the same edit twice, and letting the
 two drift apart by a rung is exactly the divergence 19P.1's spec cold read
-spent fifteen findings on. Rejected: **deferring the landing fix** — it is a
-five-call-site change per page and a defect the operator meets today.
+spent fifteen findings on. Rejected: **deferring the landing fix** — it is four call sites plus one
+conversion per page, and a defect the operator meets today.
 
 **The divergence proof is done.** Item 2 took the idiom to the page that did
 not fit; these two fit. So this item is a transcription with three named
@@ -1019,16 +1026,39 @@ row and a row the cookie sort moved. Asserted, so a page that stops shipping
 
 **One file for both pages**, parametrized. A per-page file lets one page
 quietly gain a guard the other does not, which is this item's whole risk.
-18/18 mutations caught across two tables — the second one mutates the
-doubled anchors (both bulk routes, both form shells) as a set, since
-single-site mutation could not reach them.
+
+**The rung's first mutation table proved less than it claimed.** Eighteen
+mutations, eighteen caught — and the cold read then found **four more that
+survive the entire 4,164-test suite**: `"current_offset": 0`, deleting
+`locate_id=focus_id` from both render helpers, dropping `filter_offset` from
+the *edit* shell alone, and dropping `offset=` from `bulk-delete`.
+Reproduced, then guarded. A mutation table proves what its author thought to
+mutate, not that the code is held; the honest figure is 18 chosen and 4
+missed. The causes were fixture-shaped, as in Item 2: 3 seeded rows let
+`clamp_offset` pull `?offset=200` to `0`, so an `isdigit()` assertion held
+however the value was computed; a `>= 1` count over the page could not tell
+which of two form shells it had found, and only one renders per request; and
+nothing followed the create redirect to check `focus` had actually moved the
+window rather than merely ridden the URL.
+
+**Three more from the same read.** The fallback script was string-matched
+into the `{% if rows %}` branch on both pages — harmless today, since the
+empty-state card carries no id, and a live defect the moment rung 2 or 3
+gives it one; lifted out and pinned. The edit `<tr>` lacked
+`row-action-target`, which both precedents carry and which rung 3 makes
+reachable. And `_redirect_keeping_selection`'s own docstring still read
+*"Reviewees and Relationships pass no anchor and are unaffected until
+19P.3"* — false as of this rung, in the helper it newly calls.
 
 ### PR ladder
 
-1. **The landing contract, both pages.** Five POSTs each gain `offset`, a
-   fragment and `focus=<id>` on a create, plus the fallback script. No layout
-   change; this is the defect 19P.1 left behind, fixed the way rungs 1 of
-   both prior items fixed it.
+1. **The landing contract, both pages.** Four POSTs each gain `offset` and
+   a fragment; `create` is **converted** from a bare redirect and gains the
+   filter round-trip it never had, plus `focus=<id>`. The fallback script
+   carries **two** cases here, not Observers' one — both tables ship
+   `rrw-sortable` headers, so a row can move off the restored page under the
+   operator's cookie sort as well as drop out of a filtered view. No layout
+   change; this is the defect 19P.1 left behind.
 2. **The toolbar.** The filter strip moves into the preview table's two-pane
    toolbar; the action row slims to `Clear` / `Add new` / `Search`. Chips
    join the left pane on both.
@@ -1066,10 +1096,12 @@ single-site mutation could not reach them.
 - No `.bottom-grid` on any roster page; nothing renders below any preview
   table.
 - No spec sentence defers a roster shape to a future item:
-  `grep -rn "19P.2–.4\|19P.3–.4" spec/` → 0, from **9** today. Only the
-  forward-looking hedges retire — `spec/setup_pages.md:1168` and `:1207`
-  read *"until 19P.1"* about a transition that already happened, which is
-  history rather than a hedge and stays.
+  `grep -rn "19P\.3\|19P\.4" spec/` → 0, from **11** today — 9 matching the
+  `19P.2–.4` / `19P.3–.4` ranges plus **two naming `19P.3` without one**,
+  `spec/setup_pages.md:1170` and `:1208`. Those two sit *two lines below*
+  `:1168` and `:1207`, which read *"until 19P.1"* about a transition that
+  already happened and stay as history. The range-only grep reads the right
+  paragraphs and stops one sentence short, so it is not the check.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19P.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated

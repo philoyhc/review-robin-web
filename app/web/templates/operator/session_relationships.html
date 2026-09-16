@@ -444,7 +444,7 @@
           {% set reviewer = reviewer_by_id.get(row.reviewer_id) %}
           {% set reviewee = reviewee_by_id.get(row.reviewee_id) %}
           {% if edit_id is not none and row.id == edit_id %}
-            <tr class="relationship-edit-row" id="relationship-row-{{ row.id }}">
+            <tr class="relationship-edit-row row-action-target" id="relationship-row-{{ row.id }}">
               <td class="row-select-cell"></td>
               <td>
                 <input type="text" name="reviewer_pick"
@@ -536,6 +536,14 @@
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
 
+    </div>
+  {% elif total_row_count > 0 %}
+    {# Filter matched nothing — preserve the total-row context. #}
+    <div class="card">
+      <p class="muted">No relationships match the current filter.</p>
+    </div>
+  {% endif %}
+
   {# 19P.3 rung 1 — the fallback for a fragment that cannot resolve. #}
   {% if not edit_mode %}
     <script>
@@ -569,13 +577,6 @@
         if (card && card.scrollIntoView) card.scrollIntoView();
       })();
     </script>
-  {% endif %}
-    </div>
-  {% elif total_row_count > 0 %}
-    {# Filter matched nothing — preserve the total-row context. #}
-    <div class="card">
-      <p class="muted">No relationships match the current filter.</p>
-    </div>
   {% endif %}
 
   {% if relationships and not edit_mode %}

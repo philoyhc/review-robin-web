@@ -176,13 +176,19 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     ids = _seed(db, rs.id, page)
     response = client.post(
         f"{_base(rs.id, page)}/bulk-delete",
-        data={f"{page[:-1]}_ids": [ids[0]], "confirm": "true"},
+        data={f"{page[:-1]}_ids": [ids[0]], "confirm": "true",
+              "filter_offset": "200"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text[:300]
     loc = response.headers["location"]
     assert loc.endswith(f"#{page}-table-card"), loc
     assert f"#{noun}-row-" not in loc
+    # ...and it still keeps the operator's page. Having no row to land on
+    # is not having no place to return to — the offset was the one
+    # mutation that survived the Observers original, and dropping it here
+    # survived this file's first table too.
+    assert parse_qs(urlparse(loc).query).get("offset") == ["200"], loc
 
 
 # ── The create conversion ─────────────────────────────────────────────
@@ -232,28 +238,95 @@ def test_a_create_carries_the_filter_offset_and_focus(
     assert loc.endswith(f"#{noun}-row-{q['focus'][0]}"), loc
 
 
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_creating_a_row_pages_to_where_the_new_row_actually_is(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`focus` has to *do* something, not just ride in the Location.
+
+    Rows list by id, so a create appends past the end of a multi-page
+    roster and is not on the page the form was submitted from. `focus`
+    reaches `_setup_row_window` as `locate_id` and relocates the window
+    onto the page holding the new row; the fragment then resolves.
+
+    Asserted by **following the redirect and looking for the row**,
+    because the param's presence in the header proves only that it was
+    sent. Deleting `locate_id=focus_id` from both render helpers left
+    every other test in this file green.
+    """
+    rs = _make_session(client, db, f"pg-{page[:4]}")
+    _seed(db, rs.id, page, n=230)
+    if page == "reviewees":
+        payload = {
+            "name": "Zed", "email_or_identifier": "zed@example.org",
+            "profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "",
+            "status_value": "active",
+        }
+    else:
+        payload = {
+            "reviewer_pick": "Rr1 (rr1@example.org)",
+            "reviewee_pick": "Re2 (re2@example.org)",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+        }
+    response = client.post(
+        f"{_base(rs.id, page)}/create", data=payload, follow_redirects=False
+    )
+    assert response.status_code == 303, response.text[:400]
+    loc = response.headers["location"]
+    new_id = parse_qs(urlparse(loc).query)["focus"][0]
+
+    landed = client.get(loc).text
+    assert f'id="{noun}-row-{new_id}"' in landed, (
+        "the redirect landed on a page the new row is not on — `focus` "
+        "reached the URL but not the pager window"
+    )
+
+
 # ── The page's half ───────────────────────────────────────────────────
 
 
+def _shell(markup: str, form_id: str) -> str:
+    """One form shell by id. Both shells must be read separately: only
+    one renders per request, and a `>= 1` count over the page cannot
+    tell which."""
+    i = markup.index(f'id="{form_id}"')
+    return markup[i:markup.index("</form>", i)]
+
+
 @pytest.mark.parametrize("page,noun", PAGES)
-def test_the_page_sends_the_offset_the_route_reads(
+def test_both_form_shells_send_the_offset_the_route_reads(
     client: TestClient, db: Session, page: str, noun: str
 ) -> None:
-    """Both halves or neither. The route reading `filter_offset` is
-    worth nothing if the form never posts it, and a hidden input with an
-    empty value reads as absent for an `int` field with a default — so
-    this asserts a real number, not the field's presence.
+    """Both halves or neither, on **both** shells.
+
+    **Seeded past one page on purpose.** `clamp_offset` pulls an offset
+    past the end back to 0, so a 3-row roster renders `value="0"` and
+    any `isdigit()` assertion holds however the value is computed —
+    which is how `"current_offset": 0` survived this file's first
+    mutation table. 230 rows makes 200 a real offset.
+
+    **And each shell by id**, because only one renders per request: the
+    bulk shell on a plain GET, the edit shell under `?edit_id=`. A
+    page-wide count of `>= 1` cannot tell which one it found, and
+    `update` — the route that reads it — posts from the edit shell.
     """
     rs = _make_session(client, db, f"snd-{page[:4]}")
-    _seed(db, rs.id, page, n=3)
-    body = client.get(f"{_base(rs.id, page)}?offset=200").text
-    markup = re.sub(r"<(style|script)\b.*?</\1>", "", body, flags=re.S)
+    ids = _seed(db, rs.id, page, n=230)
 
-    fields = re.findall(
-        r'<input type="hidden" name="filter_offset" value="([^"]*)">', markup
+    bulk = client.get(f"{_base(rs.id, page)}?offset=200").text
+    bulk = re.sub(r"<(style|script)\b.*?</\1>", "", bulk, flags=re.S)
+    assert 'name="filter_offset" value="200"' in _shell(
+        bulk, f"{page}-bulk-form"
+    ), "the bulk shell does not send the live offset"
+
+    edit = client.get(f"{_base(rs.id, page)}?edit_id={ids[210]}").text
+    edit = re.sub(r"<(style|script)\b.*?</\1>", "", edit, flags=re.S)
+    shell = _shell(edit, f"{noun}-edit-form")
+    m = re.search(r'name="filter_offset" value="(\d+)"', shell)
+    assert m and m.group(1) != "0", (
+        "the edit shell does not send the offset of the page the edited "
+        f"row is on: {shell[:200]}"
     )
-    assert len(fields) >= 1, "no filter_offset in any form shell"
-    assert all(f.isdigit() for f in fields), fields
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
@@ -281,4 +354,32 @@ def test_rows_and_the_fallback_are_both_present(
     assert "rrw-sortable" in markup, (
         "this page is not sortable after all — the fallback's second "
         "case does not apply and its comment is wrong"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_fallback_survives_an_empty_filtered_view(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The fallback must not live inside the `{% if rows %}` branch.
+
+    Its first case taken to the limit IS the empty filtered view —
+    inactivate the last row matching `status=active` and the redirect
+    lands on `#<noun>-row-N` with nothing rendered. A fallback that only
+    ships when there are rows is absent exactly when it is needed.
+
+    The first draft string-matched the pager-cluster include and landed
+    inside that branch on both pages. Harmless today, because the
+    empty-state card carries no id for `getElementById` to find — and a
+    live defect the moment rung 2 or 3 gives it one.
+    """
+    rs = _make_session(client, db, f"emp-{page[:4]}")
+    _seed(db, rs.id, page, n=2)
+    body = client.get(f"{_base(rs.id, page)}?q=zzz-matches-nothing").text
+
+    assert "match the current filter" in body or "No " in body, (
+        "the fixture did not reach the empty-filtered branch"
+    )
+    assert f'hash.indexOf("#{noun}-row-")' in body, (
+        "the fallback is trapped inside the rows branch"
     )

@@ -439,7 +439,7 @@
         {% endif %}
         {% for reviewee in reviewees %}
           {% if edit_id is not none and reviewee.id == edit_id %}
-            <tr class="reviewee-edit-row" id="reviewee-row-{{ reviewee.id }}">
+            <tr class="reviewee-edit-row row-action-target" id="reviewee-row-{{ reviewee.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewee-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
@@ -523,6 +523,15 @@
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
 
+    </div>
+  {% elif total_row_count > 0 %}
+    {# Filter matched nothing — preserve the total-row context so
+       the operator knows the data isn't gone, just filtered out. #}
+    <div class="card">
+      <p class="muted">No reviewees match the current filter.</p>
+    </div>
+  {% endif %}
+
   {# 19P.3 rung 1 — the fallback for a fragment that cannot resolve. #}
   {% if not edit_mode %}
     <script>
@@ -556,14 +565,6 @@
         if (card && card.scrollIntoView) card.scrollIntoView();
       })();
     </script>
-  {% endif %}
-    </div>
-  {% elif total_row_count > 0 %}
-    {# Filter matched nothing — preserve the total-row context so
-       the operator knows the data isn't gone, just filtered out. #}
-    <div class="card">
-      <p class="muted">No reviewees match the current filter.</p>
-    </div>
   {% endif %}
 
   {% if reviewees and not edit_mode %}
