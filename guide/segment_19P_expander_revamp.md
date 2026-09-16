@@ -806,6 +806,63 @@ session. Quick setup is a draft-time wizard by its own contract, so this
 may be right as it stands. **Author's call, and it belongs to whoever
 owns quick setup rather than to this item.**
 
+**Rung 3 — landed.** The filter strip moved out of the `Operator
+actions` card into the table card's toolbar, which is now `is-split`.
+`Add` reads `Add new`, as the other roster pages have it. The card is
+**slimmed, not retired**: Edit / Inactivate / Activate / Delete and the
+count-and-confirm strip stay, with no `<form>` wrapper — every one of
+them already reached `observers-bulk-form` through `form=` +
+`formaction`, and `Edit` is `type="button"`. The GET form they sat
+inside was never their form.
+
+**The left pane is deliberately chipless.** Observers have one tag slot
+and it always renders, so there is nothing to toggle
+(`grep -c 'data-col-toggle='` → 0). The pane stays because the pager and
+the count line need their half of the split.
+
+Two things the ladder's one line did not name, both forced:
+
+- **The empty states had to move inside the card.** They were separate
+  cards *below* it, so a no-match render dropped the table card — and
+  with the filter strip now living in it, that would have left the
+  operator reading "no matches" with no way to clear them. Reviewers hit
+  this at 19P.1 rung 2a.
+- **The card's gate had to widen** to `observers or add_mode or
+  total_row_count > 0 or not is_archived`. Gating on the filtered list
+  hides the only control that clears a search matching nothing; gating
+  on the roster hides `Add new` from the operator who most needs it.
+
+Also fixed here because the move exposed it: the GET form and `Clear`
+posted to a bare URL, so every search and clear landed at the top of the
+document. Both carry `#{{ pager_anchor }}` now, the same anchor the
+pager has used since 19J.8.
+
+Verified in Chromium: panes at 652px each inside a 1,360px card, left
+ending exactly where right begins, no horizontal overflow, and both
+bottoms flush at 612.2px — `align-items: end`, identical to Reviewers.
+A `Search` from the foot of a 230-row roster (scrollY 9,680) lands the
+card at **16px**. A no-match render keeps the card, the search box and
+`Clear`, and renders no table.
+
+Guards: 6 new tests in `test_observers_page.py`, **8/8 mutations
+caught** — `is-split` removed, the form and `Clear` fragments dropped,
+the rename reverted, the empty states put back outside the card, the
+card gate narrowed, the left pane deleted, and a row action duplicated
+into the toolbar. That last one survived the first pass: the card test
+asserted the row actions were still in the card, which a control
+rendered in *both* places satisfies — and a duplicate is not cosmetic,
+since the delete pairing and the selection script both reach their
+controls with a first-match `querySelector`.
+
+Two re-aimings. `test_setup_delete_scaffold` gained a `TOOLBAR_PAGES`
+tuple, so the "Delete between Add and Search" ordering is asserted only
+on the two pages that still carry all three. And
+`test_only_reviewers_splits_the_shared_table_toolbar` became
+`test_the_split_toolbar_is_opt_in_not_the_shared_rule` — it had asserted
+Observers did **not** split, behind `if other.status_code != 200:
+continue`, and its fixture never enabled `observers_enabled`, so that
+page 404'd and the assertion never ran. It now enables the toggle and
+asserts against a page that renders.
 
 ### PR ladder
 

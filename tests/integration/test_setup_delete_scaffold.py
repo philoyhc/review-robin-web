@@ -36,6 +36,12 @@ ROSTER_PAGES = ("reviewers", "reviewees", "observers", "relationships")
 #: expander's contract in `test_reviewers_roster_card_scaffold.py`; what
 #: stays here is the shape the three unmigrated pages share, so this
 #: file keeps guarding them until they follow.
+#: The pages whose filter strip and `Add new` moved into the table
+#: card's toolbar, leaving the Operator actions card holding only the
+#: selection-driven row actions. Reviewers at 19P.1 rung 2a, Observers
+#: at 19P.2 rung 3; Reviewees and Relationships follow at 19P.3.
+TOOLBAR_PAGES = ("reviewers", "observers")
+
 CARD_STRIP_PAGES = ("reviewees", "observers", "relationships")
 
 
@@ -145,15 +151,18 @@ def test_delete_renders_destructive_and_wired(
     assert f"/{page}/bulk-delete" in element
     assert "disabled" in element, "ships disabled; the gate enables it"
 
-    # Ordering: after Add, before Search — on the three pages that still
-    # carry all three in one strip. 19P.1 rung 2a moved Reviewers' `Add`
-    # and `Search` into the table's toolbar, so its strip holds only the
-    # selection-driven four and there is nothing left to order against.
+    # Ordering: after Add, before Search — on the pages that still carry
+    # all three in one strip. 19P.1 rung 2a moved Reviewers' `Add` and
+    # `Search` into the table's toolbar and 19P.2 rung 3 did the same for
+    # Observers, so those strips hold only the selection-driven four and
+    # there is nothing left to order against. Two pages left, and 19P.3
+    # takes them.
+    #
     # `spec/ui_elements.md` §6 sites the roster Delete "between `Add` and
     # `Search`"; the plan's Doc impact names that sentence for rung 4.
-    if page == "reviewers":
-        assert ">Add</a>" not in buttons and ">Search</button>" not in buttons, (
-            "Reviewers' strip should no longer carry Add or Search"
+    if page in TOOLBAR_PAGES:
+        assert ">Add new</a>" not in buttons and ">Search</button>" not in buttons, (
+            f"{page}'s strip should no longer carry Add new or Search"
         )
     else:
         assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
