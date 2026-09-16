@@ -231,7 +231,9 @@ def test_plain_render_has_checkbox_column_and_name_display(
     table = body[body.find('id="relationships-table"') :]
     # Checkbox column + selection-driven Edit button.
     assert 'class="relationship-select"' in table
-    assert 'id="relationships-edit-btn"' in body
+    # 19P.3 rung 3 — `Edit` is built into the row expander against the
+    # selected rows, so what ships is the builder, not a button.
+    assert 'tr.id = "relationships-row-expander"' in body
     # Name shown stacked above the email.
     assert "Ali Khan" in table
     assert "<code>ali khan@example.edu</code>" in table
@@ -256,7 +258,10 @@ def test_edit_id_renders_pickers(
     ).text
     assert "relationship-edit-row" in body
     assert 'id="relationship-edit-form"' in body
-    assert ">Edit relationship</h2>" in body
+    # The card's `<h2>` is the edit-row bar's visually-hidden live
+    # region since 19P.3 rung 3 — same words, no box.
+    assert ">Edit relationship</h2>" not in body
+    assert "Edit relationship" in body
     # Reviewer / reviewee search-box pickers backed by a datalist,
     # both roster members listed as datalist options.
     assert 'name="reviewer_pick"' in body
@@ -264,7 +269,9 @@ def test_edit_id_renders_pickers(
     assert 'id="relationship-reviewer-options"' in body
     assert "Ali (ali@example.edu)" in body
     assert "Peter (peter@example.edu)" in body
-    assert "operator-actions-main is-locked" in body
+    # `.operator-actions-main` retired with the card; what locks while a
+    # row is being edited is the moved filter form in the toolbar.
+    assert "operator-actions-filter is-locked" in body
 
 
 def test_picker_marks_inactive_members(
@@ -549,11 +556,14 @@ def test_add_renders_blank_picker_row(
         f"/operator/sessions/{review_session.id}/relationships?add=1"
     ).text
     assert "relationship-edit-row" in body
-    assert ">Add new relationship</h2>" in body
+    assert ">Add new relationship</h2>" not in body
+    assert "Add new relationship" in body
     assert 'name="reviewer_pick"' in body
     assert 'name="reviewee_pick"' in body
     assert 'id="relationship-reviewer-options"' in body
-    assert "operator-actions-main is-locked" in body
+    # `.operator-actions-main` retired with the card; what locks while a
+    # row is being edited is the moved filter form in the toolbar.
+    assert "operator-actions-filter is-locked" in body
 
 
 def test_add_post_creates_and_redirects(
@@ -610,8 +620,13 @@ def test_add_post_duplicate_pair_rerenders_400(
     )
     assert response.status_code == 400
     assert "relationship-edit-row" in response.text
-    assert "banner-error" in response.text
-    assert ">Add new relationship</h2>" in response.text
+    # The error moved out of the card's banner and into the row's bar.
+    # `class=`, not the bare word: `base.html` inlines the whole app's
+    # CSS on every page and its comments mention `.banner.banner-error`.
+    assert 'class="banner banner-error"' not in response.text
+    assert "row-editor-error" in response.text
+    assert ">Add new relationship</h2>" not in response.text
+    assert "Add new relationship" in response.text
 
 
 def test_add_post_unresolvable_pick_rerenders_400(

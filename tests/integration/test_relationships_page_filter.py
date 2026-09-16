@@ -87,7 +87,11 @@ def test_plain_render_has_status_dropdown(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert 'class="card operator-actions-card"' in body
+    # The card retired at 19P.3 rung 3; the status filter it held moved
+    # into the preview table's toolbar at rung 2 and is what this test
+    # is actually about.
+    assert 'class="card operator-actions-card"' not in body
+    assert 'class="toolbar-pane toolbar-right"' in body
     assert '<select name="status">' in body
     assert '<option value="all"' in body
     assert '<option value="active"' in body

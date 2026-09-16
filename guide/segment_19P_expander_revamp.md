@@ -1056,9 +1056,10 @@ rung — and Observers' siting matches this ladder. It goes at rung 4.
 twenty-two first-round ones were caught: a live `Add new` mid-edit, the
 moved form flipped to `method="post"`, and the slimmed card's form losing
 its `action`. The first two are now guarded. The third is not: after the
-move that form holds no field and no submit of its own — every button in
-it targets `*-bulk-form` via `form=` + `formaction` — so its `action` is
-inert and the `<form>` itself is vestigial. **Rung 3 deletes it with the
+move that form holds no field and no submit of its own — its three submit
+buttons target `*-bulk-form` via `form=` + `formaction`, and `Edit` is a
+bare `type="button"` — so its `action` is inert and the `<form>` itself is
+vestigial. **Rung 3 deletes it with the
 card**; guarding an attribute that does nothing would pin the wrong thing.
 
 **A cold read found nine, all upheld.** Two matter beyond their own lines:
@@ -1070,6 +1071,82 @@ place (a 19I comment naming three controls none of which is still in its
 block), a test promising a pager its filtered fixture makes unreachable,
 one asserting `Add new` where Relationships renders the disabled variant,
 and an assertion comparing two module constants.
+
+**Rung 3 — landed.** The row expander and the edit-row bar on both pages;
+the `Operator actions` card renders on no roster page. Five
+`.operator-actions-card` CSS rules retired with their last tenant
+(`.operator-actions-main`, `.operator-actions-divider`,
+`.filter-confirm` and its children, `.operator-actions-buttons`); the card
+class itself stays for `session_assignments.html`. The dead
+`is_ready or edit_mode` disjunct is simplified on all three pages, which is
+the item rung 2's cold read deferred here.
+
+**Open question 2 is answered: no.** Relationships' edit-row bar needs
+nothing Reviewers' does not. Measured in Chromium: the bar sits flush
+under its row at the same width (1324px) with `colspan` equal to the
+row's own cell count on both pages — 9 on Reviewees, 8 on Relationships —
+and the two identity cells being `reviewer_pick` / `reviewee_pick` inputs
+changes only the row's height, which the bracket follows.
+
+**Twelve of twenty-five mutations survived, and the reasons differ.**
+
+- **Three are test gaps, now closed.** `data-status` deleted from the data
+  rows (twice) — the panel's ONLY input, so `rows()` returns nothing and
+  the whole expander stops, with the suite green because every other
+  guard reads the builder, which ships fine with nothing to build
+  against. And the add row's bracket class: both rows carry the identical
+  class string, so the mutation aimed at the edited row landed on the add
+  row, which nothing guarded. Found by a mutation missing its target.
+- **Five can only be guarded structurally.** `Edit`'s arity gate,
+  `statusActions`' two conditions, select-all's `indeterminate` (a DOM
+  property that never appears in a response at all), the sort re-render
+  binding and the restored-selection bootstrap are all JS evaluated
+  against live state, so what a server-side test can see is that the
+  expression ships, not that it works. Source assertions, with the
+  behaviour measured in Chromium and the caveat written into each
+  docstring rather than left for a reader to discover. The sort case's
+  *mechanism* was measured too, not assumed: with the binding removed, a
+  header click moved the panel from index 2 of 9 to index 8 — last child,
+  stranded, exactly as the comment claims.
+- **One was on a page this rung barely touched.** `Add new`'s surviving
+  `edit_mode` gate on **Reviewers** — the one line the `is_ready`
+  simplification changed there — had nothing watching it. Guarded in
+  `test_reviewers_roster_card_scaffold.py`.
+- **One was the add row's caret marker**, which is rendered markup and so
+  was a plain test gap, now closed on both pages.
+- **One is behaviour-preserving.** Hardcoding the bar's `colspan` changes
+  nothing today: the bar renders only in edit mode, and edit mode forces
+  every optional column on, so `edit_col_count` is always its maximum
+  (measured — 6 columns in the list view against 9 in edit mode). The
+  reason to compute it is the first time a column is gated differently,
+  which is a claim about the source, so it is asserted against the source.
+
+All twelve re-mutated after the fix and caught.
+
+**The cold read found twelve more, and the two that matter are gaps the
+mutation set did not think to probe.** Three claims BOTH precedents guard
+had no counterpart here — the tick-order anchor rule (prune on untick,
+rebuild on select-all, `currentAnchor() || sel[sel.length - 1]`), `Edit`'s
+navigation target, and the panel's pill-free zone. Deleting the prune or
+collapsing the anchor passed the whole suite on both new pages. All three
+are transcribed now. And
+`test_the_delete_sentence_names_what_goes_per_page` claimed to read the
+rendered builder while reading the template, and cross-referenced tests
+that do not exist; it now drives the three-way branch for real, with and
+without a saved response.
+
+The rest were prose: a `base.html` comment predicting "none once 19P.3
+lands" that this rung made true without updating, its Scope-2 header
+still listing four tenants where one remains, and `session_reviewers.html`
+claiming an `is_ready` gate three lines above the note saying it was
+removed.
+
+**Owed, not fixed here — rung 3's additions.** Two comment-placement
+bugs in `session_reviewers.html`: the `statusActions` header comment sits
+above `var BULK_BASE` (`:1149`) and the sort-handler comment above the
+`Edit` click handler (`:1199`). Both new copies attach them correctly, so
+the precedent is now the odd one out. Not fixed here because this rung
+did not cause them and the diff is already wide.
 
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
@@ -1141,9 +1218,8 @@ item does not own. For the rung-5 sweep.
 
 1. **Does the consolidating sweep land here or at 19P.4?** Proposed above:
    here, because Item 4 may become 19Q. **Author decides** before rung 5.
-2. **Does Relationships' edit-row bar need anything Reviewers' does not**,
-   given its two identity cells are inputs? **The dev slot decides**, after
-   rung 3 renders it.
+2. ~~**Does Relationships' edit-row bar need anything Reviewers' does
+   not?**~~ **Answered at rung 3: no.** See Status.
 
 ### Out of scope
 
@@ -1166,6 +1242,18 @@ item does not own. For the rung-5 sweep.
 - `spec/participant_model.md` — the Reviewees Setup page's description, the one spec outside the shared set that names it (Item 3).
 - `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
+
+**Rung 3 adds one, and it is a question rather than a relabel.**
+`spec/ui_elements.md:198-201` §6 says every destructive submit's paired
+confirmation checkbox "is also `required` (belt-and-suspenders against a
+JS-off submit)". **No roster page's confirm carries `required`** — not
+the injected panel's on any of the four, and not the card markup it
+replaced. That is not an oversight to correct in the templates: the
+confirm is attached to `*-bulk-form` via `form=`, and so are `Inactivate`
+and `Activate`, so a `required` checkbox would block those two submits
+as well. The rule cannot hold as written wherever the gate shares a form
+with non-destructive submits. **Rung 5 adjudicates the sentence**, not
+the markup.
 
 **Rung 2 adds five, none of them previously named here.** A cold read
 found the first: a test comment deferred `ui_elements.md:385` to "Item 3's

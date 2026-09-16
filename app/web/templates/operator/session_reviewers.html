@@ -65,8 +65,9 @@
              highlighted row, and a highlight reaches nobody using a
              screen reader. Visually hidden rather than restored on
              screen: the card was removed for being visual clutter, and
-             the three sibling roster pages still render the heading, so
-             this keeps the announcement without bringing the box back.
+             this keeps its announcement without bringing the box back.
+             (It read "the three sibling roster pages still render the
+             heading" until 19P.3 rung 3 — none of them does now.)
 
              `aria-live` so it is read when a failed save re-renders the
              page into edit mode under the operator. #}
@@ -84,11 +85,11 @@
             <span class="row-editor-error">{{ edit_error }}</span>
           {% endif %}
           {# Save then Cancel, which is what the card this replaced
-             rendered and what Reviewees, Observers and Relationships
-             still render. The first draft of this macro flipped them
-             without meaning to; the order is user-visible and the three
-             sibling pages will copy whatever ends up here, so it stays
-             as it was until someone decides otherwise on purpose. #}
+             rendered. The first draft of this macro flipped them without
+             meaning to; the order is user-visible, and the three sibling
+             pages did copy what ended up here — all four agree since
+             19P.3 rung 3 — so it stays as it is until someone decides
+             otherwise on purpose. #}
           <div class="row-expander-actions">
             <button class="btn secondary" type="submit"
                     form="reviewer-edit-form">Save</button>
@@ -756,11 +757,21 @@
                 <a class="btn secondary"
                    href="{{ reviewers_base_url }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
-              {# `Add` is page-level and keeps its own `is_ready` gate; it
+              {# `Add` is page-level and keeps its own inner gate; it
                  renders as `Add new` here, beside the control it reads
-                 next to. #}
+                 next to. (It said "its own `is_ready` gate" until 19P.3
+                 rung 3 removed that half — see the note on the condition
+                 below, which this sentence contradicted.) #}
               {% if is_editable %}
-                {% if is_ready or edit_mode %}
+                {# `edit_mode` alone. This read `is_ready or edit_mode`
+                   from 19P.1 rung 2a until 19P.3 rung 3, and the
+                   `is_ready` half was dead the whole time: it sits
+                   inside `{% if is_editable %}`, `lifecycle.is_editable`
+                   is `draft or validated` and `lifecycle.is_ready` is
+                   `status == "ready"`, and those are disjoint. A reader
+                   checking why a locked session has no `Add new` was
+                   sent to a condition that never fired. #}
+                {% if edit_mode %}
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
                   <a class="btn secondary"

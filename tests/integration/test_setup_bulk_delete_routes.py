@@ -411,15 +411,15 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     s = _make_session(client, db, code=f"bdr-ackbox-{page}")
     _rows(db, s, page, 1)
 
-    # 19P.1 rung 2b built the Reviewers gate in JS, so its markup
-    # reaches the response as an escaped string literal inside the
-    # expander builder rather than as HTML. The claim is the same —
-    # the field appears only when there is a loss to acknowledge — so
-    # the needle is escaped to match, rather than the test being
-    # scoped away from the page it is about.
+    # Every roster page builds its gate in JS now — Reviewers at 19P.1
+    # rung 2b, Observers at 19P.2 rung 4, these two at 19P.3 rung 3 — so
+    # the field reaches the response as an escaped string literal inside
+    # the expander builder rather than as HTML. Escaped because it is
+    # `{{ ... | tojson }}` output, unlike the builder's hand-written
+    # literals, which carry plain quotes. The claim is unchanged: the
+    # field appears only when there is a loss to acknowledge.
     def needle(p: str) -> str:
-        raw = f'id="{p}-delete-ack"'
-        return raw.replace('"', '\\"') if p == "reviewers" else raw
+        return f'id="{p}-delete-ack"'.replace('"', '\\"')
 
     without = client.get(f"/operator/sessions/{s.id}/{page}").text
     assert needle(page) not in without

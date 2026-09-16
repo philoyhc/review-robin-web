@@ -128,21 +128,22 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
                 (path.name, var, "bubbles" in opts)
             )
 
-    # Two, not four: Reviewers gave its `Operator actions` selection
-    # script up at 19P.1 rung 2b and Observers at 19P.2 rung 4. An
-    # expander rebuilds the panel wholesale on every selection change,
-    # so a fresh panel carries a fresh unticked checkbox — there is no
-    # surviving one to re-run a gate on. The floor moves with the fact;
-    # it is here so the enumeration cannot pass by finding nothing.
+    # **The floor bottomed out at 19P.3 rung 3**, exactly as the note it
+    # replaced predicted. Every roster page rebuilds its panel wholesale
+    # on each selection change, so a fresh panel carries a fresh unticked
+    # checkbox and there is no surviving one to re-run a gate on. No
+    # template dispatches at a confirm checkbox any more.
     #
-    # It bottoms out at 19P.3, when the last two pages migrate and this
-    # assertion has nothing left to count. Whoever lands that rung
-    # should replace the floor with the real claim — that no template
-    # dispatches a non-bubbling `change` at a confirm checkbox — rather
-    # than lowering it to zero, which is the vacuity this guards.
-    assert len(dispatches) >= 2, (
-        f"vacuity: found only {dispatches}; the unmigrated roster pages "
-        "each re-run this gate and should be here"
+    # That note asked whoever landed this rung to replace the floor with
+    # the real claim rather than lower it to zero, which would be the
+    # vacuity it was guarding — "found nothing" and "there is nothing to
+    # find" are the same result under a `>= 0`. So the claim is stated
+    # directly: the set is empty, and if a template ever dispatches
+    # again, `unreachable` below is what has to hold.
+    assert dispatches == [], (
+        "a template dispatches `change` at a confirm checkbox again. That "
+        "is allowed, but it has to bubble or be capture-bound — see the "
+        "assertion below, which is the rule this file exists for."
     )
     unreachable = [d for d in dispatches if not d[2] and not capture_bound]
     assert not unreachable, (

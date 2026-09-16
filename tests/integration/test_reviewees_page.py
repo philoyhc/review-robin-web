@@ -62,7 +62,9 @@ def test_plain_render_has_checkbox_column_and_buttons(
     ).text
     assert 'class="reviewee-select"' in body
     assert 'id="reviewees-select-all"' in body
-    assert 'id="reviewees-edit-btn"' in body
+    # 19P.3 rung 3 — `Edit` is built into the row expander against the
+    # selected rows, so what ships is the builder, not a button.
+    assert 'tr.id = "reviewees-row-expander"' in body
     assert "?add=1" in body
     assert "reviewee-edit-row" not in body
 
@@ -139,10 +141,15 @@ def test_edit_id_renders_target_row_as_inputs(
     ).text
     assert "reviewee-edit-row" in body
     assert 'id="reviewee-edit-form"' in body
-    assert ">Edit reviewee</h2>" in body
+    # The card's `<h2>` is the edit-row bar's visually-hidden live
+    # region since 19P.3 rung 3 — same words, no box.
+    assert ">Edit reviewee</h2>" not in body
+    assert "Edit reviewee" in body
     assert 'name="email_or_identifier"' in body
     assert 'name="profile_link"' in body  # edit mode always shows it
-    assert "operator-actions-main is-locked" in body
+    # `.operator-actions-main` retired with the card; what locks while a
+    # row is being edited is the moved filter form in the toolbar.
+    assert "operator-actions-filter is-locked" in body
 
 
 def test_edit_post_updates_row_and_redirects(
@@ -206,7 +213,8 @@ def test_add_renders_blank_edit_row(
         f"/operator/sessions/{review_session.id}/reviewees?add=1"
     ).text
     assert "reviewee-edit-row" in body
-    assert ">Add new reviewee</h2>" in body
+    assert ">Add new reviewee</h2>" not in body
+    assert "Add new reviewee" in body
 
 
 def test_add_post_creates_row(db: Session, client: TestClient) -> None:
@@ -250,8 +258,16 @@ def test_add_post_validation_error_rerenders(
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert ">Add new reviewee</h2>" in response.text
-    assert "banner-error" in response.text
+    assert ">Add new reviewee</h2>" not in response.text
+    assert "Add new reviewee" in response.text
+    # The error moved out of the card's banner and into the row's bar,
+    # beside the values it is about.
+    # The class, not the bare word: `base.html` inlines the whole app's
+    # CSS on every page and its comments mention `.banner.banner-error`,
+    # so a substring check on the name passes through a stylesheet
+    # comment rather than through markup.
+    assert 'class="banner banner-error"' not in response.text
+    assert "row-editor-error" in response.text
     assert (
         db.execute(
             select(Reviewee).where(

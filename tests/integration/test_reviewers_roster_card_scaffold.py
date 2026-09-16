@@ -2065,3 +2065,37 @@ def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
 # panel without being re-aimed. Three of its tests fail when the field
 # goes. Duplicating that fixture here to re-assert the same thing would
 # be a second, weaker copy of a guard that works.
+
+
+def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
+    """`is-locked` greys the toolbar pane; it does not disable the link
+    inside it. A live `Add new` mid-edit is one click from throwing a
+    half-typed row away.
+
+    **Added at 19P.3 rung 3, on a page that rung only touched in one
+    line.** That line simplified the gate from `is_ready or edit_mode` to
+    `edit_mode` — the `is_ready` half had been dead since 19P.1 rung 2a,
+    because it sits inside `{% if is_editable %}` and `is_editable`
+    (`draft or validated`) and `is_ready` (`status == "ready"`) are
+    disjoint. A mutation replacing the surviving gate with `False` passed
+    the whole suite, so the simplification was landing on a line nothing
+    watched. The sibling pages already had the equivalent guard — it
+    landed with their toolbar at rung 2, which is why this page was the
+    only one left uncovered.
+    """
+    rs = _with_reviewers(client, db, "rc-addlock")
+    reviewer = db.execute(select(Reviewer)).scalars().first()
+    html = _markup(
+        client.get(
+            f"/operator/sessions/{rs.id}/reviewers?edit_id={reviewer.id}"
+        ).text
+    )
+    assert 'name="name"' in html, "edit mode did not engage"
+
+    right = html[html.index('<div class="toolbar-pane toolbar-right">') :]
+    right = right[: right.index("</form>")]
+    assert (
+        '<a class="btn secondary disabled" aria-disabled="true">Add new</a>'
+        in right
+    ), right[-500:]
+    assert "?add=1" not in right, "a live Add new while a row is being edited"

@@ -207,19 +207,19 @@ def test_the_pill_ships_the_two_number_format(
 
     body = client.get(f"/operator/sessions/{s.id}/{page}").text
 
-    if page in ("reviewers", "observers"):
-        # 19P.1 rung 2b removed the placeholder on Reviewers and 19P.2
-        # rung 4 on Observers: the row expander writes the count and
-        # nothing else does, so the drift this test guards — two sources
-        # disagreeing about the format — cannot happen. Pinned as ONE
-        # source rather than two that agree, which is the stronger
-        # version of the same claim.
-        assert f'id="{page}-selected-count"' not in body, (
-            "the placeholder is back; there are two sources again"
-        )
-        assert '"</strong> of " + rows().length + " selected' in body, (
-            "the expander no longer writes the two-number format"
-        )
-        return
-
-    assert f'id="{page}-selected-count" hidden>0 of 0 selected</span>' in body
+    # **All four pages**, since 19P.3 rung 3 took the last two: the row
+    # expander writes the count and nothing else does, so the drift this
+    # test guards — two sources disagreeing about the format — cannot
+    # happen. Pinned as ONE source rather than two that agree, which is
+    # the stronger version of the same claim.
+    #
+    # The `if page in (...)` branch this replaced had the server-rendered
+    # placeholder as its `else`. Keeping that branch would have left the
+    # placeholder assertion unreachable rather than false — the test
+    # would pass, and nothing would say the two-source shape had gone.
+    assert f'id="{page}-selected-count"' not in body, (
+        "the placeholder is back; there are two sources again"
+    )
+    assert '"</strong> of " + rows().length + " selected' in body, (
+        "the expander no longer writes the two-number format"
+    )
