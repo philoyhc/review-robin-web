@@ -27,7 +27,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Relationship, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments
-from app.services._queries import tag_slot_presence
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 from app.services.relationships import RelationshipOperationError
@@ -67,6 +66,11 @@ def relationships_list(
     add: int = 0,
     focus: int | None = None,
     selected: list[int] = Query(default=[]),
+    # 19P.3 rung 4 — `?unlocked=1` renders the Unlock panel open. It
+    # exists for the redirects the panel's own controls answer with, and
+    # doubles as the no-JS way in (the `<noscript>` link beside the
+    # toggle).
+    unlocked: int = 0,
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -85,6 +89,7 @@ def relationships_list(
         add_mode=bool(add),
         focus_id=focus,
         selected_ids=set(selected),
+        panel_open=bool(unlocked),
     )
 
 
@@ -110,6 +115,20 @@ async def relationships_import_submit(
     )
 
     existing = relationships_service.existing_count(db, review_session.id)
+    # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. The
+    # issue list and the `missing_confirm` notice render inside the
+    # upload card, which is inside the Unlock panel, and a 400
+    # re-renders the page rather than redirecting — so `?unlocked=1`
+    # cannot reach these. A panel that shipped collapsed here would show
+    # the operator a closed panel and no errors at all.
+    #
+    # The suite cannot catch a regression: with no JS runtime `hidden` is
+    # an inert attribute, so the issues are in the markup and every
+    # assertion on them passes either way. Chromium is what proves it.
+    #
+    # This page has TWO such paths where the shared handler has one —
+    # a blocked CSV, and the replace-confirmation state Reviewees has no
+    # equivalent of.
     if result.is_blocked:
         return _render_relationships_page(
             request=request,
@@ -118,6 +137,7 @@ async def relationships_import_submit(
             db=db,
             issues=result.issues,
             filename=file.filename,
+            panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     if existing > 0 and confirm_replace != "true":
@@ -129,6 +149,7 @@ async def relationships_import_submit(
             issues=result.issues,
             filename=file.filename,
             missing_confirm=True,
+            panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -141,8 +162,16 @@ async def relationships_import_submit(
         correlation_id=request_correlation_id(),
         field_labels_captured=result.field_labels,
     )
+    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
+    # the Unlock panel now, and a bare redirect closes the panel the
+    # operator was working in: a Save does not close the card, the Lock
+    # control does. The fragment lands on the card rather than the top of
+    # the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
+        url=(
+            f"/operator/sessions/{review_session.id}/relationships"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -166,8 +195,16 @@ def relationships_delete_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
+    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
+    # the Unlock panel now, and a bare redirect closes the panel the
+    # operator was working in: a Save does not close the card, the Lock
+    # control does. The fragment lands on the card rather than the top of
+    # the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
+        url=(
+            f"/operator/sessions/{review_session.id}/relationships"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -515,9 +552,17 @@ def _render_relationships_page(
     edit_values: dict[str, object] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
+    # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
+    # open. Server state, not a second source of truth for the JS
+    # toggle: the toggle still owns every click, this only decides the
+    # starting state. Saving a label POSTs and 303s, and a panel that
+    # always shipped collapsed would shut itself on every save — the
+    # Lock control is what closes it.
+    panel_open: bool = False,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     is_ready = lifecycle.is_ready(review_session)
+    column_state = views.relationship_column_state(db, review_session)
     # Segment 19H Item 6 — the lock-card partial branches on
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
@@ -736,12 +781,15 @@ def _render_relationships_page(
             # here: this page shows imported data regardless of status,
             # where Assignments' pair-context chips count only active
             # relationships. The two answers differ on purpose.
-            "col_data": views.chip_slots(
-                tag_slot_presence(
-                    db, session_id=review_session.id, model=Relationship
-                ),
-                prefix="tag-",
-            ),
+            # 19P.3 rung 4 — the readouts and the visibility flags come
+            # from ONE query set (`RosterColumnState`), for the reason
+            # that dataclass states: they answer the same predicate, so
+            # asking twice would be two round trips for one fact and
+            # would leave a window where a concurrent delete renders a
+            # chip reading `Pair context 1 (0)`.
+            "col_data": column_state.col_data,
+            "col_readouts": column_state.readouts,
+            "panel_open": panel_open,
             "issues": issues,
             "missing_confirm": missing_confirm,
             "filename": filename,
@@ -788,8 +836,16 @@ async def relationships_save_field_labels(
         submitted=submitted,
         correlation_id=request_correlation_id(),
     )
+    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
+    # the Unlock panel now, and a bare redirect closes the panel the
+    # operator was working in: a Save does not close the card, the Lock
+    # control does. The fragment lands on the card rather than the top of
+    # the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
+        url=(
+            f"/operator/sessions/{review_session.id}/relationships"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

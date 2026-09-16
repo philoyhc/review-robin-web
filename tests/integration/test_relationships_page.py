@@ -180,8 +180,13 @@ def test_post_import_inserts_rows_and_redirects(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    assert response.headers["location"].endswith(
+    # 19P.3 rung 4 — the panel-open suffix. `endswith` on the bare path
+    # would now fail, and swapping it for a looser `in` would stop the
+    # test seeing a redirect that lost the suffix — so it asserts the
+    # whole URL.
+    assert response.headers["location"] == (
         f"/operator/sessions/{review_session.id}/relationships"
+        "?unlocked=1#roster-card"
     )
 
     rows = db.execute(

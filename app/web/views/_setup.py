@@ -28,8 +28,10 @@ from app.db.models import (
     Instrument,
     Invitation,
     Observer,
+    Relationship,
     Response,
     ReviewSession,
+    Reviewee,
     Reviewer,
 )
 from app.services import assignments, csv_imports
@@ -424,4 +426,135 @@ def observer_column_state(
             ),
         ],
         col_data={},
+    )
+
+
+def reviewee_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Reviewees roster.
+
+    The rule `observer_column_state` settled — **the readouts mirror the
+    columns the preview table renders** — applied to the page with the
+    most columns of the four. So identity (`Name`, `Email / Identifier`)
+    always, then `Profile link` and each tag slot **only where
+    populated**, because that is exactly when the table renders them
+    (`show_profile_link`, `show_tag[n]`).
+
+    `Profile link` is the one non-tag optional column on any roster page,
+    which is why it is asked for directly rather than bending
+    `tag_slot_counts` into a general shape for a single caller — the same
+    reason the `col_data` map already treats it specially.
+    """
+    sid = review_session.id
+    counts = tag_slot_counts(db, session_id=sid, model=Reviewee)
+    profile_count = slot_row_count(
+        db, session_id=sid, column=Reviewee.profile_link
+    )
+    readouts = [
+        ColumnReadout(
+            slot="name",
+            label=field_labels_service.resolve_pair(
+                review_session, "reviewee", "name"
+            ).friendly,
+            count=slot_row_count(db, session_id=sid, column=Reviewee.name),
+        ),
+        ColumnReadout(
+            slot="email",
+            label=field_labels_service.resolve_pair(
+                review_session, "reviewee", "email_or_identifier"
+            ).friendly,
+            count=slot_row_count(
+                db, session_id=sid, column=Reviewee.email_or_identifier
+            ),
+        ),
+    ]
+    if profile_count > 0:
+        readouts.append(
+            ColumnReadout(
+                slot="profile",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewee", "profile_link"
+                ).friendly,
+                count=profile_count,
+            )
+        )
+    for n in (1, 2, 3):
+        if counts[f"tag_{n}"] == 0:
+            continue
+        readouts.append(
+            ColumnReadout(
+                slot=f"tag-{n}",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewee", f"tag_{n}"
+                ).friendly,
+                count=counts[f"tag_{n}"],
+            )
+        )
+    return RosterColumnState(
+        readouts=readouts,
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)}
+        | {"profile": profile_count > 0},
+    )
+
+
+def relationship_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Relationships
+    roster.
+
+    Same rule as the other three — the readouts mirror the columns the
+    table renders — with one property worth naming rather than leaving a
+    reader to rediscover it.
+
+    **This page's identity chips are tautological.** `reviewer_id` and
+    `reviewee_id` are non-nullable foreign keys (`Relationship`), so
+    every row carries both and the two counts always equal the roster
+    total. On Reviewers or Reviewees a `Name (6)` beside a roster of 8
+    tells the operator something; here it never can.
+
+    They are rendered anyway, deliberately. `ColumnReadout.count` is
+    defined as "how many rows carry a value in this column", and that
+    answer is honestly N here — the tautology is a property of the data
+    model, not of the readout. Giving this one page a different meaning
+    for its chips (distinct reviewers, say) would be exactly the
+    per-page drift 19P.3 exists to remove, and would make one index row
+    uncomparable with three others. If the author wants a
+    distinct-participant count it is a new readout with its own name,
+    not a redefinition of this one.
+    """
+    sid = review_session.id
+    counts = tag_slot_counts(db, session_id=sid, model=Relationship)
+    readouts = [
+        ColumnReadout(
+            slot="reviewer",
+            label="Reviewer",
+            count=slot_row_count(
+                db, session_id=sid, column=Relationship.reviewer_id
+            ),
+        ),
+        ColumnReadout(
+            slot="reviewee",
+            label="Reviewee",
+            count=slot_row_count(
+                db, session_id=sid, column=Relationship.reviewee_id
+            ),
+        ),
+    ]
+    for n in (1, 2, 3):
+        if counts[f"tag_{n}"] == 0:
+            continue
+        readouts.append(
+            ColumnReadout(
+                slot=f"tag-{n}",
+                label=field_labels_service.resolve_pair(
+                    review_session, "pair_context", str(n)
+                ).friendly,
+                count=counts[f"tag_{n}"],
+            )
+        )
+    return RosterColumnState(
+        readouts=readouts,
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
     )

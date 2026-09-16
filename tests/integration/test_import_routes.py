@@ -335,8 +335,13 @@ def test_reviewee_import_persists_with_photolink(
     # decides it is a `kind == "reviewers"` check one line away from
     # this path, and an unconditional flag would send a page a piece of
     # UI state that means nothing on it.
+    # 19P.3 rung 4 — the panel-open suffix, as the Reviewers assertion
+    # above already carries. The upload card is inside the Unlock panel
+    # on this page too now, so a bare redirect would close the panel the
+    # operator just used.
     assert response.headers["location"] == (
         f"/operator/sessions/{review_session.id}/reviewees"
+        "?unlocked=1#roster-card"
     )
     from app.db.models import Reviewee
 

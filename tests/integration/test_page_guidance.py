@@ -374,74 +374,80 @@ def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:
 ROSTER_PAGES = ("reviewers", "reviewees", "relationships")
 
 
-def test_the_roster_pages_put_every_top_card_in_one_column_container(
+def test_no_roster_page_renders_the_column_container_on_a_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Every card above the preview table shares one `.card-columns`,
-    not two stacked row grids.
+    """`.card-columns` is the container every card above the preview
+    table used to share. **No roster page renders one on a draft page any
+    more** — Reviewers left at 19P.1 rung 3a, Observers at 19P.2 rung 5,
+    Reviewees and Relationships at 19P.3 rung 4 — because the Unlock
+    panel took the last tenant each of them had.
 
-    Three cards since 19I Item 12 rung 4 retired the "Fields with
-    data" card that used to head the right stack: guidance and the
-    tag-label editor on the left, Operator actions alone on the right.
+    Was `test_the_roster_pages_put_every_top_card_in_one_column_container`,
+    which asserted the source order of that container's tenants. With no
+    tenants on any page there is no order left to assert, so the claim
+    becomes the one that survives the move: a panel where the container
+    was, on all four.
 
-    Reviewers has left this shape entirely over 19P.1: guidance went
-    full width above the container at 2a, the `Operator actions` card
-    retired at 2b, and 3a moved the last tenant into the Unlock panel,
-    so on a draft page there is no container at all. It is checked for
-    that instead, in the loop below — the claim here is the other three
-    pages'.
-
-    Two containers would look identical when everything is closed and
-    still fail the point of the change: growth in the upper one pushes
-    *both* columns of the lower one down. So this asserts the source
-    order that only a single container with two column stacks produces —
-    the whole left column, then the whole right.
+    The container has NOT gone from the codebase — it is the tag-labels
+    editor's fallback home, which the test below exercises in the states
+    where the panel cannot render. That complement is the point: a page
+    showing both, or neither, is the drift the two-homes contract exists
+    to prevent.
     """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
+    review_session.observers_enabled = True
     db.flush()
 
     for page in ROSTER_PAGES:
         body = client.get(f"/operator/sessions/{session_id}/{page}").text
-
-        # Reviewers has NO container on a draft page since 19P.1 rung 3a:
-        # its last tenant, the tag-labels editor, renders inside the
-        # Unlock panel whenever that panel can render, and falls back to
-        # the container only where it cannot (locked, or mid-edit). The
-        # order claim below is about the container's tenants, so a page
-        # without one has nothing here to order.
-        if page == "reviewers":
-            assert body.count('class="card-columns"') == 0, (
-                "Reviewers rendered a container beside the Unlock panel"
-            )
-            assert 'id="roster-unlock-panel"' in body, (
-                "Reviewers has neither a container nor a panel"
-            )
-            continue
-
-        assert body.count('class="card-columns"') == 1, page
-
-        # Guidance, then the tag-labels editor — the source order a
-        # single container produces.
-        #
-        # **The `Operator actions` card was the third tenant** and was
-        # this assertion's right-hand column until 19P.3 rung 3 retired
-        # it on both remaining pages. Its controls are in the row
-        # expander now, which is not a card and not in this container, so
-        # the claim shrinks to the two tenants that are left rather than
-        # naming a card no roster page renders.
-        order = [body.index(CARD), body.index("field-labels-form")]
-        assert 'class="card operator-actions-card"' not in body, (
-            f"{page} still renders the retired Operator actions card"
+        assert body.count('class="card-columns"') == 0, (
+            f"{page} rendered a container beside its Unlock panel"
         )
-        assert order == sorted(order), (page, order)
+        assert 'id="roster-unlock-panel"' in body, (
+            f"{page} has neither a container nor a panel"
+        )
+        assert 'class="card operator-actions-card"' not in body, page
+        # The guidance card leads the page, full width, where the
+        # container used to be.
+        assert "page-guidance-wide" in body, f"{page} guidance is not full width"
 
-        # No row grid above those two. The Upload / Danger Zone pair
-        # below still is a `.bottom-grid` and should be — asserting
-        # position rather than absence keeps this independent of whether
-        # the preview table rendered.
-        assert body.index('class="bottom-grid"') > order[-1], page
+
+def test_the_container_comes_back_as_the_labels_editors_fallback(
+    client: TestClient, db: Session
+) -> None:
+    """The complement of the test above. Where the Unlock panel cannot
+    render, the tag-labels editor falls back to `.card-columns` — and
+    exactly one of the two homes is used per request.
+
+    `ready` is the locked state the panel is suppressed in (a locked page
+    must carry no "Save labels", and the panel holds one), so the editor
+    renders read-only in the container instead. Observers is excluded: it
+    has no labels editor, so it has no fallback and no container in any
+    state.
+    """
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.relationships_enabled = True
+    review_session.status = "ready"
+    db.flush()
+
+    for page in ("reviewers", "reviewees", "relationships"):
+        body = client.get(f"/operator/sessions/{session_id}/{page}").text
+        assert body.count('class="card-columns"') == 1, (
+            f"{page} lost the labels editor's fallback home"
+        )
+        assert 'id="roster-unlock-panel"' not in body, (
+            f"{page} offers Unlock on a locked session"
+        )
+        assert body.count("field-labels-form") == 1, (
+            f"{page} renders the editor twice, or not at all"
+        )
+        assert "Save labels" not in body, (
+            f"{page} offers a control its route will refuse"
+        )
 
 
 def test_the_activated_lock_card_sits_above_the_columns(

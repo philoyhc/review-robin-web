@@ -27,7 +27,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
-from app.services._queries import slot_has_data, tag_slot_presence
 from app.services import reviewees as reviewees_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewees import RevieweeOperationError
@@ -116,11 +115,19 @@ def _render_reviewees_page(
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
+    # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
+    # open. Server state, not a second source of truth for the JS
+    # toggle: the toggle still owns every click, this only decides the
+    # starting state. Saving a label POSTs and 303s, and a panel that
+    # always shipped collapsed would shut itself on every save — the
+    # Lock control is what closes it.
+    panel_open: bool = False,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Reviewees Setup page — the reviewee-side mirror of
     ``_render_reviewers_page`` (Segment 15F PR 4)."""
     is_ready = lifecycle.is_ready(review_session)
+    column_state = views.reviewee_column_state(db, review_session)
     # Segment 19H Item 6 — the lock-card partial branches on
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
@@ -285,28 +292,20 @@ def _render_reviewees_page(
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
             "is_editable": lifecycle.is_editable(review_session),
+            "panel_open": panel_open,
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. Keyed by the page's
             # own chip slot names, so the template reads a flag instead
             # of computing one.
-            # The Photo chip is the one non-tag slot on any of the
-            # six pages, so it is asked for directly rather than
-            # bending ``tag_slot_presence`` into a general shape for
-            # a single caller.
-            "col_data": views.chip_slots(
-                tag_slot_presence(
-                    db, session_id=review_session.id, model=Reviewee
-                ),
-                prefix="tag-",
-            )
-            | {
-                "profile": slot_has_data(
-                    db,
-                    session_id=review_session.id,
-                    column=Reviewee.profile_link,
-                )
-            },
+            # 19P.3 rung 4 — the readouts and the visibility flags come
+            # from ONE query set (`RosterColumnState`). They answer the
+            # same predicate — `col_data["tag-n"]` is exactly
+            # `counts["tag_n"] > 0` — so asking twice would be two round
+            # trips for one fact, and would leave a window where a
+            # concurrent delete renders a chip reading `Tag 1 (0)`.
+            "col_data": column_state.col_data,
+            "col_readouts": column_state.readouts,
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,
@@ -329,6 +328,11 @@ def reviewees_list(
     add: int = 0,
     focus: int | None = None,
     selected: list[int] = Query(default=[]),
+    # 19P.3 rung 4 — `?unlocked=1` renders the Unlock panel open. It
+    # exists for the redirects the panel's own controls answer with, and
+    # doubles as the no-JS way in (the `<noscript>` link beside the
+    # toggle).
+    unlocked: int = 0,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -345,6 +349,7 @@ def reviewees_list(
         add_mode=bool(add),
         focus_id=focus,
         selected_ids=set(selected),
+        panel_open=bool(unlocked),
     )
 
 
@@ -594,8 +599,16 @@ def reviewees_delete_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
+    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
+    # the Unlock panel now, and a bare redirect closes the panel the
+    # operator was working in: a Save does not close the card, the Lock
+    # control does. The fragment lands on the card rather than the top of
+    # the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewees"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -641,8 +654,16 @@ async def reviewees_save_field_labels(
         submitted=submitted,
         correlation_id=request_correlation_id(),
     )
+    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
+    # the Unlock panel now, and a bare redirect closes the panel the
+    # operator was working in: a Save does not close the card, the Lock
+    # control does. The fragment lands on the card rather than the top of
+    # the document.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewees"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
