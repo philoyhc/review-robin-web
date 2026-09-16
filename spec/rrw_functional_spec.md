@@ -1119,13 +1119,15 @@ Danger Zone are not three surfaces in three places on those pages. The
 filter strip and the selection actions moved into the preview table
 itself (a toolbar and an injected row expander), and the destructive
 cards moved into one **Unlock panel** above the table, leaving nothing
-below it. What each control *does* — every route, gate and confirm
-named above — is unchanged; only where an operator finds it.
+below it. What each control *does* — every route and confirm named
+above — is unchanged; only where an operator finds it. **The gates are
+unchanged on Reviewers; on Observers one of them is not**, and the
+paragraph below is that exception rather than a footnote to this one.
 `spec/setup_pages.md` § *Reviewers page* and § *Observers page* are
 authoritative. Reviewees and Relationships are as described until
 19P.3–.4.
 
-**Observers differs in one further respect, and it is a behaviour
+**Observers differs in one further respect, and it is a behavior
 change rather than a layout one:** its roster stays editable through
 `ready` and `expired`, closing only at `archived`. Observers never
 appear in assignments and produce no responses, so freezing their

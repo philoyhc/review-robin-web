@@ -308,10 +308,17 @@ Numbered 8.5 so the three existing roster sections keep their numbers
 and the cross-references to them stay true.
 
 > **Lifecycle.** This page does **not** read `is_editable`. All eight
-> mutating routes take `_require_not_archived`, so every control below
-> renders through `ready` and `expired` and is absent only on
-> `archived`. That is the exception the gate note above §6 describes;
-> `spec/lifecycle.md` §5 carries the reason.
+> mutating routes take `_require_not_archived`, so **every mutating
+> control below** — rows 165, 167–180 — renders through `ready` and
+> `expired` and is absent only on `archived`. That is the exception the
+> gate note above §6 describes; `spec/lifecycle.md` §5 carries the
+> reason.
+>
+> **Rows 164 and 166 are outside that rule**, as the gate note also
+> says: `Clear` and `Search` are read-only filter controls and render in
+> every state, `archived` included — an archived roster with rows still
+> renders its table card and toolbar, so it can still be searched. The
+> claim here is about the surface that mutates, not the whole page.
 
 > **Gate-hidden by default.** The page is only reachable, and its nav
 > tab only rendered, when `session.observers_enabled` is true.

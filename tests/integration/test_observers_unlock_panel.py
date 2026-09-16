@@ -442,6 +442,40 @@ def test_the_panel_is_suppressed_on_archived_but_the_index_stays(
     assert "danger-zone" not in markup
 
 
+def test_an_archived_roster_keeps_its_read_only_toolbar(
+    client: TestClient, db: Session
+) -> None:
+    """`archived` suppresses the mutating surface, not the page.
+
+    The table card still renders while there are rows, and `Search` and
+    `Clear` render in every state — they read the roster rather than
+    change it, and an archived session is exactly when someone is most
+    likely to be looking something up in it.
+
+    Pinned because the close's first draft of
+    `spec/operator_button_audit.md` § 8.5 said the opposite — that
+    *every* control on the page is absent on `archived` — which
+    contradicted that file's own gate note and nothing here could catch.
+    Codex caught it on the PR.
+    """
+    s = _session(client, db, "unl-24", rows=2)
+    s.status = "archived"
+    db.flush()
+
+    markup = _markup(_page(client, s))
+    assert 'id="observers-table-card"' in markup, (
+        "an archived roster with rows lost its table"
+    )
+    assert ">Search</button>" in markup, "Search does not render on archived"
+    # ...while the mutating surface is gone, which is the actual rule.
+    assert 'id="roster-unlock-panel"' not in markup
+    assert 'id="upload-csv"' not in markup
+
+    # `Clear` renders only with a filter active — on archived too.
+    filtered = _markup(_page(client, s, "?q=o0%40example.org"))
+    assert ">Clear</a>" in filtered, "Clear does not render on archived"
+
+
 def test_the_panel_stands_down_in_edit_mode(
     client: TestClient, db: Session
 ) -> None:

@@ -656,7 +656,7 @@ and, where it became contract, in `spec/`.
 - **Rung 2 also had to touch the shared lock card**, which the ladder
   did not see: unchanged, it would have read "cannot be modified while
   the session is ongoing" above a live roster. Solved with a `lock_when`
-  parameter, leaving the other three pages byte-identical in behaviour.
+  parameter, leaving the other three pages byte-identical in behavior.
 - **Rung 4's card held more than row actions** — Save / Cancel, a
   heading and an error slot — so retiring it meant building a *second*
   expander, the edit-row bar, not just the selection panel.
