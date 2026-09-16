@@ -23,6 +23,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession
 
+from ._feature_toggles import enable_observers
+
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
 
@@ -990,13 +992,23 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
     ), "`is-locked` on the moved filter matches no rule"
 
 
-def test_only_reviewers_splits_the_shared_table_toolbar(client, db):
-    """`.table-card-toolbar` is shared by seven templates and only
-    Reviewers has panes. The two-column grid therefore rides a modifier:
-    turning the shared class into a grid would make the other six
-    templates' direct children grid items in a grid they were never laid
-    out for — Observers' toolbar holds the pager and nothing else, which
+def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
+    """`.table-card-toolbar` is shared by seven templates and the panes
+    are a MODIFIER. Turning the shared class into a grid would make the
+    other templates' direct children grid items in a grid they were
+    never laid out for — a toolbar holding the pager and nothing else
     would right-align inside the LEFT half instead of across the card.
+
+    Was `test_only_reviewers_splits_...`: Observers opted in at 19P.2
+    rung 3, so "only Reviewers" is no longer the claim. The claim that
+    survives is that pages opt in one at a time and the shared rule
+    stays flex.
+
+    The old version also asserted the negative for Observers behind
+    `if other.status_code != 200: continue` — and this fixture never
+    enables `observers_enabled`, so that page 404'd and the assertion
+    never ran. `enable_observers` here, so the assertion about Observers
+    is made against a page that actually renders.
     """
     rs = _with_reviewers(client, db, "rc32")
     reviewers = client.get(f"/operator/sessions/{rs.id}/reviewers").text
@@ -1008,16 +1020,24 @@ def test_only_reviewers_splits_the_shared_table_toolbar(client, db):
     )
     assert shared, "shared .table-card-toolbar rule is gone"
     assert "display: flex" in shared.group(1), (
-        "the shared toolbar rule became a grid; six other pages use it"
+        "the shared toolbar rule became a grid; the other pages use it"
     )
 
-    for page in ("reviewees", "observers"):
-        other = client.get(f"/operator/sessions/{rs.id}/{page}")
-        if other.status_code != 200:
-            continue
-        assert "table-card-toolbar is-split" not in _markup(other.text), (
-            f"{page} picked up the Reviewers-only split toolbar"
-        )
+    enable_observers(db, rs)
+    observers = client.get(f"/operator/sessions/{rs.id}/observers")
+    assert observers.status_code == 200, (
+        "the Observers assertion below needs a page that renders"
+    )
+    assert "table-card-toolbar is-split" in _markup(observers.text), (
+        "Observers opted in at 19P.2 rung 3"
+    )
+
+    # The two pages that have not moved yet — 19P.3 takes them.
+    reviewees = client.get(f"/operator/sessions/{rs.id}/reviewees")
+    assert reviewees.status_code == 200
+    assert "table-card-toolbar is-split" not in _markup(reviewees.text), (
+        "Reviewees picked up a split toolbar before 19P.3"
+    )
 
 
 def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):

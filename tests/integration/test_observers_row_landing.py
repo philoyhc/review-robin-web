@@ -249,8 +249,8 @@ def test_add_carries_the_active_filter_into_add_mode(
     base = f"/operator/sessions/{review_session.id}/observers"
 
     body = client.get(f"{base}?status=inactive&q=ali").text
-    link = re.search(r'<a[^>]*>\s*Add\s*</a>', body)
-    assert link, "no Add link"
+    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
+    assert link, "no Add new link"
     assert "status=inactive" in link.group(0), link.group(0)
     assert "q=ali" in link.group(0), link.group(0)
 
@@ -258,7 +258,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     # and an empty search is nothing, so spelling them out would be
     # noise in the URL.
     plain = re.search(
-        r'<a[^>]*>\s*Add\s*</a>', client.get(base).text
+        r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
     ).group(0)
     assert "status=" not in plain and "q=" not in plain, plain
 
@@ -385,8 +385,8 @@ def test_add_lands_on_the_row_it_opens(
     _seed(db, review_session.id, ["Alice", "Bob"])
     base = f"/operator/sessions/{review_session.id}/observers"
 
-    link = re.search(r'<a[^>]*>\s*Add\s*</a>', client.get(base).text)
-    assert link, "no Add link"
+    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text)
+    assert link, "no Add new link"
     assert "#observers-row-editor" in link.group(0), link.group(0)
 
     # And the row that fragment names is actually rendered in add mode.

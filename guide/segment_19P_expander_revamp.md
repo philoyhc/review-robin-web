@@ -806,6 +806,94 @@ session. Quick setup is a draft-time wizard by its own contract, so this
 may be right as it stands. **Author's call, and it belongs to whoever
 owns quick setup rather than to this item.**
 
+**Rung 3 — landed.** The filter strip moved out of the `Operator
+actions` card into the table card's toolbar, which is now `is-split`.
+`Add` reads `Add new`, as the other roster pages have it. The card is
+**slimmed, not retired**: Edit / Inactivate / Activate / Delete and the
+count-and-confirm strip stay, with no `<form>` wrapper — every one of
+them already reached `observers-bulk-form` through `form=` +
+`formaction`, and `Edit` is `type="button"`. The GET form they sat
+inside was never their form.
+
+**The left pane is deliberately chipless.** Observers have one tag slot
+and it always renders, so there is nothing to toggle
+(`grep -c 'data-col-toggle='` → 0). The pane stays because the pager and
+the count line need their half of the split.
+
+Three things the ladder's one line did not name, all forced:
+
+- **The empty states had to move inside the card.** They were separate
+  cards *below* it, so a no-match render dropped the table card — and
+  with the filter strip now living in it, that would have left the
+  operator reading "no matches" with no way to clear them. Reviewers hit
+  this at 19P.1 rung 2a.
+- **The card's gate had to widen** to `observers or add_mode or
+  total_row_count > 0 or not is_archived`. Gating on the filtered list
+  hides the only control that clears a search matching nothing; gating
+  on the roster hides `Add new` from the operator who most needs it.
+- **`archived` + an empty roster now renders nothing** where it used to
+  render "No observers yet. Upload a CSV or add a row to get started."
+  Every disjunct above is false in that one case, and the old
+  unconditional `{% else %}` card is gone with it. Reviewers behaves
+  identically (`session_reviewers.html:666`), so this is parity rather
+  than divergence, and the old copy was telling an archived operator to
+  do two things the routes refuse. Found by a cold read, not by me —
+  the first draft of this Status called it two consequences.
+
+Also fixed here because the move exposed it: the GET form and `Clear`
+posted to a bare URL, so every search and clear landed at the top of the
+document. Both carry `#{{ pager_anchor }}` now, the same anchor the
+pager has used since 19J.8.
+
+Verified in Chromium: panes at 652px each inside a 1,360px card, left
+ending at x=710 and right beginning at x=730 — the modifier's own 20px
+`gap`, not the flush join "left ending exactly where right begins"
+claimed in the first draft — no horizontal overflow, and both bottoms
+flush at 612.2px — `align-items: end`, identical to Reviewers.
+A `Search` from the foot of a 230-row roster (scrollY 9,680) lands the
+card at **16px**. A no-match render keeps the card, the search box and
+`Clear`, and renders no table.
+
+Guards: 8 new tests in `test_observers_page.py`, **11/11 mutations
+caught** — `is-split` removed, the form and `Clear` fragments dropped,
+the rename reverted, the empty states put back outside the card, the
+card gate narrowed, the left pane deleted, and a row action duplicated
+into the toolbar. That last one survived the first pass: the card test
+asserted the row actions were still in the card, which a control
+rendered in *both* places satisfies — and a duplicate is not cosmetic,
+since the delete pairing and the selection script both reach their
+controls with a first-match `querySelector`.
+
+**A cold read found the set incomplete, not wrong.** Three more
+mutations of markup this rung introduced walked through all 4,095
+tests: the moved filter losing its `is-locked` (new markup here — it
+used to inherit the lock from the enclosing `.operator-actions-main`,
+and `base.html:1455` spells out why half a lock is worse than none:
+"the action buttons grey out while `Search` and `Clear` stay live, and
+one click on either runs a GET that throws the half-typed row away"),
+the card's own `is-locked`, and `Add new` rendered on `archived` over a
+`/create` that refuses — the very failure rung 2 exists to remove, and
+unguarded because `Add new` moved out of the surface that rung's
+`archived` test enumerates. All three are guarded now.
+
+**The move also broke a helper on this page.** `_strip()` in
+`test_setup_delete_scaffold.py` bounded its second slice by the next
+`</form>`, which held while every page wrapped its strip in the GET
+filter form. Taking that wrapper off Observers sent the slice past the
+card close, ending ~900 chars later inside `observers-bulk-form`'s
+hidden inputs — three tests were reading a slab where they meant a row.
+No assertion false-passed, so nothing went red. It counts depth now:
+observers 918 → 563, the other two unchanged.
+
+Two re-aimings. `test_setup_delete_scaffold` gained a `TOOLBAR_PAGES`
+tuple, so the "Delete between Add and Search" ordering is asserted only
+on the two pages that still carry all three. And
+`test_only_reviewers_splits_the_shared_table_toolbar` became
+`test_the_split_toolbar_is_opt_in_not_the_shared_rule` — it had asserted
+Observers did **not** split, behind `if other.status_code != 200:
+continue`, and its fixture never enabled `observers_enabled`, so that
+page 404'd and the assertion never ran. It now enables the toggle and
+asserts against a page that renders.
 
 ### PR ladder
 
@@ -862,7 +950,7 @@ owns quick setup rather than to this item.**
 - A row action taken on page 2 of a filtered roster returns to page 2, landing
   on the acted-on row, asserted by route test — **for all five POSTs**,
   `cohort-rule` included.
-- `grep -c 'data-col-toggle=' session_observers.html` → 0 and the toolbar still
+- **No chip row reaches the rendered page** and the toolbar still
   renders `is-split`, asserted — the empty left pane is intended, not a bug.
 - The expander renders **in full** on `ready` and `expired` and **not at all**
   on `archived`, asserted across all five states — and each of the **seven**
@@ -906,12 +994,12 @@ owns quick setup rather than to this item.**
 
 ### Doc impact
 
-- `spec/setup_pages.md` — § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2).
-- `spec/operator_button_audit.md` — the Observers rows for the four row actions move to the expander; the cohort `Save` gains its dirty-gate and its new home; the `Add` → `Add new` rename reaches this page. Its standing gate note — these controls are *absent, not disabled*, outside an editable session — keeps its shape but changes its predicate for this page alone (Item 2).
+- `spec/setup_pages.md` — § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2). **Rung 3 adds four more, none of them previously named:** § *Operator actions card* `:552` opens *"Reviewees, Relationships and Observers"* and `:574` says *"One shape on the three pages that carry this card"* — two now; its § item 2 **Action row** `:585-598` lists `Clear … Edit, Inactivate, Activate, Add and Delete … and finally the Search submit last` and scopes the exception to Reviewers alone; and § *Observers page* body-layout **item 5** `:1282` reads *"Preview table — always renders when observers exist (or when Add mode is active)"*, where the gate is now `observers or add_mode or total_row_count > 0 or not is_archived`. Doc impact named items 4 and 6, not 5.
+- `spec/operator_button_audit.md` — **that file has no Observers Setup section**: §§6/7/8 are Reviewers / Reviewees / Relationships and the only Observers row in it is the nav tab (`:80`). So there are no Observers rows for the four row actions or the rename to move; what is actually owed is `:230` (row 125), *"The three other roster pages still read `Add`, and keep the rationale, until 19P.2–.4"* — two now, after rung 3 — and a decision at the close about whether this page gets a section at all. The earlier wording here promised edits to rows that do not exist; corrected at rung 3, when the first slice tried to act on it (Item 2). Its standing gate note — these controls are *absent, not disabled*, outside an editable session — keeps its shape but changes its predicate for this page alone (Item 2).
 - `spec/operator_ui_concept.md` — the § *Setup pages* heading narrows again as Observers leaves the shared shape (Item 2).
 - `spec/lifecycle.md` — §5 states that the four roster pages hide their mutating surface outside `is_editable`. Observers becomes a **stated exception**: its roster is editable to `archived`, because an observer row is a view grant rather than a participant in assignments or responses. This is the first page to diverge from that predicate, so §3.1's "nothing may use a narrower one" needs its mirror — nothing may use a *wider* one either, without saying why here (Item 2).
 - `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=`, `focus=` and row fragment. **Three rows go stale the moment rung 1 lands**: `:384` reads *"Reviewers only; the other three roster pages pass no offset"*, `:385` scopes `focus=<id>` to Reviewers, and `:379-381` list `edit_id=` / `add=1` / `selected=` as Reviewers / Reviewees / Relationships though Observers has had all three all along (Item 2).
-- `spec/ui_elements.md` — §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
+- `spec/ui_elements.md` — §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
 
 ---

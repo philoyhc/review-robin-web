@@ -179,122 +179,80 @@
     {% if _show_actions_slot %}
     <div class="card operator-actions-card">
       <h2 style="margin-top: 0;">Operator actions</h2>
+      {# 19P.2 rung 3 — SLIMMED, not retired. The filter strip and
+         `Add new` moved into the table card's toolbar, where the
+         controls sit with the rows they act on rather than a grid
+         away. What is left is the row actions, which have nowhere
+         better to be until rung 4 builds the expander.
+
+         No `<form>` wrapper any more: every button here reaches
+         `observers-bulk-form` through `form=` + `formaction`
+         already, and `Edit` is `type="button"` driven by the script
+         below. The GET form they used to sit inside was never their
+         form. #}
       <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        <form method="get"
-              action="{{ observers_base_url }}"
-              class="operator-actions-filter">
-          <div class="filter-row">
-            <label class="filter-status">
-              Status:
-              <select name="status">
-                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-                {% for value, label in filter_status_options %}
-                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-search">
-              Search:
-              <input type="text"
-                     name="q"
-                     list="observers-search-options"
-                     value="{{ filter_search }}"
-                     autocomplete="off"
-                     placeholder="Observer name, email or tag">
-              <datalist id="observers-search-options">
-                {% for label in filter_search_options %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-            </label>
-          </div>
-          <div class="filter-actions">
-            {% if filter_status != "all" or filter_search %}
-              <a class="btn secondary"
-                 href="{{ observers_base_url }}">Clear</a>
+        <div class="filter-actions">
+          <button class="btn secondary" type="button"
+                  id="observers-edit-btn"
+                  disabled aria-disabled="true">Edit</button>
+          <button class="btn secondary" type="submit"
+                  id="observers-inactivate-btn"
+                  form="observers-bulk-form"
+                  formaction="{{ observers_base_url }}/bulk-inactivate"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="submit"
+                  id="observers-reactivate-btn"
+                  form="observers-bulk-form"
+                  formaction="{{ observers_base_url }}/bulk-reactivate"
+                  disabled aria-disabled="true">Activate</button>
+          {# Segment 19I Item 2 — posts the bulk form to
+             ``/bulk-delete`` via ``form=`` + ``formaction``,
+             like Inactivate / Activate beside it. Enabled by
+             the confirmation checkbox below through
+             base.html's ``data-delete-confirm`` pairing; the
+             server re-checks both gates regardless. #}
+          <button class="btn destructive" type="submit"
+                  id="observers-delete-btn"
+                  form="observers-bulk-form"
+                  formaction="{{ observers_base_url }}/bulk-delete"
+                  data-delete-btn="observers-bulk-delete"
+                  disabled aria-disabled="true">Delete</button>
+        </div>
+        <div class="filter-confirm">
+          <span class="pill pill-count"
+                id="observers-selected-count" hidden>0 of 0 selected</span>
+          <label class="delete-confirm-label">
+            <input type="checkbox"
+                   id="observers-delete-confirm"
+                   name="confirm" value="true"
+                   form="observers-bulk-form"
+                   data-delete-confirm="observers-bulk-delete"
+                   disabled>
+            {# The sentence names what goes, modelled on the
+               Instruments page's "…and its associated assignments
+               and reviewer responses." (Segment 19I Item 3). One
+               checkbox, not two: the strip's confirmed shape has a
+               single gate, so the acknowledgement rides with the
+               tick as a hidden field and the label says what is
+               being agreed to. The route still requires both
+               fields, and refuses without the tick that carries
+               them. #}
+            <span>
+              {%- if delete_discards_responses -%}
+                Yes, delete these and their associated assignments and reviewer responses
+              {%- elif delete_discards_assignments -%}
+                Yes, delete these and their associated assignments
+              {%- else -%}
+                Yes, delete these
+              {%- endif -%}
+            </span>
+            {% if delete_discards_responses %}
+              <input type="hidden" form="observers-bulk-form"
+                     id="observers-delete-ack"
+                     name="acknowledge_response_loss" value="true">
             {% endif %}
-            <button class="btn secondary" type="button"
-                    id="observers-edit-btn"
-                    disabled aria-disabled="true">Edit</button>
-            <button class="btn secondary" type="submit"
-                    id="observers-inactivate-btn"
-                    form="observers-bulk-form"
-                    formaction="{{ observers_base_url }}/bulk-inactivate"
-                    disabled aria-disabled="true">Inactivate</button>
-            <button class="btn secondary" type="submit"
-                    id="observers-reactivate-btn"
-                    form="observers-bulk-form"
-                    formaction="{{ observers_base_url }}/bulk-reactivate"
-                    disabled aria-disabled="true">Activate</button>
-            {% if edit_mode %}
-              <a class="btn secondary disabled" aria-disabled="true">Add</a>
-            {% else %}
-              <a class="btn secondary"
-                 {# 19P.2 rung 1 — carries the active filter into add
-                    mode, as Reviewers does since 19P.1. Without it,
-                    `Add` from a filtered view rendered an unfiltered
-                    add page, so the edit form's hidden `filter_*`
-                    fields held defaults and the create redirect came
-                    back unfiltered: the filter was lost at the
-                    NAVIGATION, not at the POST. #}
-                 href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add</a>
-            {% endif %}
-            {# Segment 19I Item 2 — posts the bulk form to
-               ``/bulk-delete`` via ``form=`` + ``formaction``,
-               like Inactivate / Activate beside it. Enabled by
-               the confirmation checkbox below through
-               base.html's ``data-delete-confirm`` pairing; the
-               server re-checks both gates regardless. #}
-            <button class="btn destructive" type="submit"
-                    id="observers-delete-btn"
-                    form="observers-bulk-form"
-                    formaction="{{ observers_base_url }}/bulk-delete"
-                    data-delete-btn="observers-bulk-delete"
-                    disabled aria-disabled="true">Delete</button>
-            <button class="btn secondary" type="submit">Search</button>
-          </div>
-          {# Second action row (Segment 19I Item 2): what the
-             page is showing, what is selected, and the delete
-             gate — one kind of thing, inline and flush right,
-             leaving the row above to the controls. The gate
-             sits with the count because it is about the
-             count. #}
-          <div class="filter-confirm">
-            <span class="pill pill-count"
-                  id="observers-selected-count" hidden>0 of 0 selected</span>
-            <label class="delete-confirm-label">
-              <input type="checkbox"
-                     id="observers-delete-confirm"
-                     name="confirm" value="true"
-                     form="observers-bulk-form"
-                     data-delete-confirm="observers-bulk-delete"
-                     disabled>
-              {# The sentence names what goes, modelled on the
-                 Instruments page's "…and its associated assignments
-                 and reviewer responses." (Segment 19I Item 3). One
-                 checkbox, not two: the strip's confirmed shape has a
-                 single gate, so the acknowledgement rides with the
-                 tick as a hidden field and the label says what is
-                 being agreed to. The route still requires both
-                 fields, and refuses without the tick that carries
-                 them. #}
-              <span>
-                {%- if delete_discards_responses -%}
-                  Yes, delete these and their associated assignments and reviewer responses
-                {%- elif delete_discards_assignments -%}
-                  Yes, delete these and their associated assignments
-                {%- else -%}
-                  Yes, delete these
-                {%- endif -%}
-              </span>
-              {% if delete_discards_responses %}
-                <input type="hidden" form="observers-bulk-form"
-                       id="observers-delete-ack"
-                       name="acknowledge_response_loss" value="true">
-              {% endif %}
-            </label>
-          </div>
-        </form>
+          </label>
+        </div>
       </div>
       {% if edit_mode %}
         <hr class="operator-actions-divider">
@@ -354,22 +312,130 @@
   {# Preview table — full-width, always rendered (mirrors the
      placeholder layout). When the filter matches nothing, render
      a muted notice instead of a stub row. #}
-  {% if observers or add_mode %}
-    {# Checkboxes need to be live whenever the cohort editor is
-       (``not is_archived``) so the operator can pick observers to
-       apply a rule to. The bulk operator-actions card still hides
-       during ``is_ready``, so the bulk Edit / Inactivate / Activate
-       buttons can't fire — checkboxes during ``ready`` only drive
-       the cohort editor below. #}
+  {# 19P.2 rung 3 — the card renders wherever there is anything to
+     say, not only where there are rows. The filter strip lives in its
+     toolbar now, so gating the card on the FILTERED list would take
+     away the only control that clears a search matching nothing; and
+     `or not is_archived` keeps `Add new` reachable on the one roster
+     that most needs it, an empty one. Reviewers settled both at 19P.1
+     rung 2a. #}
+  {% if observers or add_mode or total_row_count > 0 or not is_archived %}
+    {# Checkboxes are live wherever the routes accept — `not
+       is_archived` since 19P.2 rung 2, the page's predicate
+       throughout. #}
     {% set selectable = not edit_mode and not is_archived %}
     {# The page turn lands here (19J.8): the card's top edge, so the
-       column chips and the page links are both on screen with the
-       new rows beneath them. #}
+       filter and the page links are both on screen with the rows
+       beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-      <div class="table-card-toolbar">
-      {% include "operator/partials/_pager_cluster.html" %}
+      {# Two half-width panes. Left: what the table is showing.
+         Right: the filter that decides it.
+
+         The left pane holds no `Show columns:` chip row, and that is
+         intended rather than missing: observers have one tag slot and
+         it always renders, so there is nothing to toggle: no chip row
+         reaches the response, asserted by
+         `test_the_left_pane_is_deliberately_chipless`.
+
+         Deliberately NOT stated as a grep count of this file. The
+         first draft said that count was zero — which this very comment
+         then made one, a claim that falsifies itself by being written.
+         The rendered page is what matters and what the test reads.
+
+         The pane still exists so the pager and the count line keep
+         their half of the split. #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left">
+          {# Pager before the count line, as the other three rosters
+             have it — 19I Item 10 sited the sentence and the cluster
+             together, and `tests/unit/test_pager.py` pins the order. #}
+          {% include "operator/partials/_pager_cluster.html" %}
+          {% include "operator/partials/_preview_count_line.html" %}
+        </div>
+
+        <div class="toolbar-pane toolbar-right">
+          {# Every control here reloads the page, and without a
+             fragment the reload lands at the very top — the operator
+             is thrown away from the rows they were filtering. The
+             pager already solved this (19J.8): `#{{ pager_anchor }}`
+             sits on the table card, which carries
+             `scroll-margin-top`, so a search and a page turn land
+             identically. A GET form keeps its action's fragment: the
+             submission algorithm replaces the query and leaves the
+             fragment alone. #}
+          <form method="get"
+                action="{{ observers_base_url }}#{{ pager_anchor }}"
+                class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
+          <div class="filter-row">
+            <label class="filter-status">
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="filter-search">
+              Search:
+              <input type="text"
+                     name="q"
+                     list="observers-search-options"
+                     value="{{ filter_search }}"
+                     autocomplete="off"
+                     placeholder="Observer name, email or tag">
+              <datalist id="observers-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+            </label>
+          </div>
+            <div class="filter-actions">
+              {% if filter_status != "all" or filter_search %}
+                <a class="btn secondary"
+                   href="{{ observers_base_url }}#{{ pager_anchor }}">Clear</a>
+              {% endif %}
+              {# `Add` reads `Add new` here, beside the control it sits
+                 next to — the name the other roster pages use. Gated
+                 on `edit_mode` alone: since rung 2 the routes behind
+                 it accept until `archived`, and the whole card is
+                 absent there. #}
+              {% if edit_mode %}
+                <a class="btn secondary disabled" aria-disabled="true">Add new</a>
+              {% elif not is_archived %}
+                <a class="btn secondary"
+                   {# Carries the active filter into add mode (19P.2
+                      rung 1). Without it, `Add new` from a filtered
+                      view rendered an unfiltered add page, so the
+                      edit form's hidden `filter_*` fields held
+                      defaults and the create redirect came back
+                      unfiltered: the filter was lost at the
+                      NAVIGATION, not at the POST. #}
+                   href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
+            </div>
+          </form>
+        </div>
       </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_count_line.html" %}
+
+      {% if not (observers or add_mode) %}
+        {# No rows, for one of two reasons, and they need different
+           sentences: a filter matching nothing is the operator's own
+           doing and clearable, an empty roster is a starting point.
+           Said WHERE THE ROWS WOULD BE, inside this card — as separate
+           cards below it, which is where they were, the filter strip
+           that moved in here would have gone with the table and left
+           the operator reading "no matches" with no way to clear
+           them. #}
+        {% if total_row_count > 0 %}
+          <p class="muted">No observers match the current filter.</p>
+        {% else %}
+          <p class="muted">No observers yet. Upload a CSV or add a row
+            to get started.</p>
+        {% endif %}
+      {% else %}
       <table id="observers-table">
         <thead>
         <tr>
@@ -475,16 +541,7 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
-    </div>
-  {% elif total_row_count > 0 %}
-    <div class="card">
-      <p class="muted">No observers match the current filter.</p>
-    </div>
-  {% else %}
-    <div class="card">
-      <p class="muted">
-        No observers yet. Upload a CSV or add a row to get started.
-      </p>
+      {% endif %}{# rows / empty-state #}
     </div>
   {% endif %}
 

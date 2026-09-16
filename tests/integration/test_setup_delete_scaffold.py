@@ -36,6 +36,17 @@ ROSTER_PAGES = ("reviewers", "reviewees", "observers", "relationships")
 #: expander's contract in `test_reviewers_roster_card_scaffold.py`; what
 #: stays here is the shape the three unmigrated pages share, so this
 #: file keeps guarding them until they follow.
+#: The pages whose filter strip and `Add new` moved into the table
+#: card's toolbar, leaving the Operator actions card holding only the
+#: selection-driven row actions. Reviewers at 19P.1 rung 2a, Observers
+#: at 19P.2 rung 3; Reviewees and Relationships follow at 19P.3.
+#:
+#: `"reviewers"` is decorative here — the test that reads this is
+#: parametrized over `CARD_STRIP_PAGES`, which excludes it. Listed
+#: anyway so the tuple names the property rather than the subset of it
+#: this file happens to reach.
+TOOLBAR_PAGES = ("reviewers", "observers")
+
 CARD_STRIP_PAGES = ("reviewees", "observers", "relationships")
 
 
@@ -83,6 +94,32 @@ def _seed(db: Session, review_session: ReviewSession) -> None:
     db.commit()
 
 
+def _div_slice(body: str, start: int) -> str:
+    """The one `<div>` opening at ``start``, closed by depth count.
+
+    The status row used to be bounded by the next `</form>`, which held
+    while every page wrapped its strip in the GET filter form. 19P.2
+    rung 3 took that wrapper off Observers, so the slice ran past the
+    card close and ended ~900 chars later inside `observers-bulk-form`'s
+    hidden inputs — three tests were reading a slab instead of a row.
+    No assertion false-passed, but the helper's stated contract did not
+    hold for one of its three pages. Counting depth does not care
+    whether a form is in the way.
+    """
+    depth, i = 0, start
+    while True:
+        nxt_open = body.find("<div", i)
+        nxt_close = body.index("</div>", i)
+        if nxt_open != -1 and nxt_open < nxt_close:
+            depth += 1
+            i = nxt_open + 4
+            continue
+        depth -= 1
+        i = nxt_close + len("</div>")
+        if depth == 0:
+            return body[start:i]
+
+
 def _strip(body: str) -> tuple[str, str]:
     """The button row and the status row, as separate slices."""
     buttons_at = body.find('class="filter-actions"')
@@ -92,7 +129,7 @@ def _strip(body: str) -> tuple[str, str]:
     assert buttons_at < confirm_at, "status row must follow the buttons"
     return (
         body[buttons_at:confirm_at],
-        body[confirm_at : body.index("</form>", confirm_at)],
+        _div_slice(body, body.rfind("<div", 0, confirm_at)),
     )
 
 
@@ -145,16 +182,28 @@ def test_delete_renders_destructive_and_wired(
     assert f"/{page}/bulk-delete" in element
     assert "disabled" in element, "ships disabled; the gate enables it"
 
-    # Ordering: after Add, before Search — on the three pages that still
-    # carry all three in one strip. 19P.1 rung 2a moved Reviewers' `Add`
-    # and `Search` into the table's toolbar, so its strip holds only the
-    # selection-driven four and there is nothing left to order against.
-    # `spec/ui_elements.md` §6 sites the roster Delete "between `Add` and
-    # `Search`"; the plan's Doc impact names that sentence for rung 4.
-    if page == "reviewers":
-        assert ">Add</a>" not in buttons and ">Search</button>" not in buttons, (
-            "Reviewers' strip should no longer carry Add or Search"
-        )
+    # Ordering: after Add, before Search — on the pages that still carry
+    # all three in one strip. 19P.1 rung 2a moved Reviewers' `Add` and
+    # `Search` into the table's toolbar and 19P.2 rung 3 did the same for
+    # Observers, so those strips hold only the selection-driven four and
+    # there is nothing left to order against. Two pages left, and 19P.3
+    # takes them.
+    #
+    # `spec/ui_elements.md` §6 (`:385`) sites the roster Delete "between
+    # `Add` and `Search`", which is false on two pages now. That
+    # sentence is NOT on Item 2's `ui_elements.md` Doc impact bullet —
+    # this comment claimed it was, and a cold read checked. Added to
+    # Doc impact at rung 3 so rung 7 fixes it.
+    if page in TOOLBAR_PAGES:
+        # Both spellings: the rename moved the label, and a strip that
+        # got `Add` back under its old name would be the same
+        # regression. Checking only the new spelling let the old one
+        # through.
+        assert (
+            ">Add new</a>" not in buttons
+            and ">Add</a>" not in buttons
+            and ">Search</button>" not in buttons
+        ), f"{page}'s strip should no longer carry Add / Add new or Search"
     else:
         assert buttons.index(">Add</a>") < start < buttons.index(">Search</button>")
 
