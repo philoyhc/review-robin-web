@@ -24,8 +24,15 @@
    Activate bought nothing — and that page now passes
    ``lock_when=is_archived``. Left as ``not is_editable`` it would
    have rendered "cannot be modified while the session is ongoing"
-   directly above a live roster. The default keeps the other three
-   pages byte-identical.
+   directly above a live roster.
+
+   The default renders the other three pages in the same states as
+   before — measured across all three pages x five states. Not
+   byte-identical, as the first draft of this comment claimed: the
+   guard line below emits one blank line at each include site
+   (``trim_blocks`` is off), so each of those fifteen pages gains
+   exactly one. Inert whitespace, but "byte-identical" was a claim
+   worth either measuring or not making.
 
    Three branches, each naming the way out its own state has — the
    shape 19I.6 gave Instruments. ``revert_session_to_draft`` accepts

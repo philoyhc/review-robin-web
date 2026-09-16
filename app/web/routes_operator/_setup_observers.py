@@ -109,7 +109,20 @@ def _render_observers_page(
     edit state; ``edit_values`` / ``edit_error`` carry an
     operator's rejected submission back into the edit row."""
     is_ready = lifecycle.is_ready(review_session)
-    if is_ready:
+    # The editor renders wherever `create` / `update` accept. Was
+    # `if is_ready`, from 19I Item 3, when both routes took
+    # `_require_editable` and `ready` could not save — suppressing the
+    # editor there stopped the page offering a form the server would
+    # refuse.
+    #
+    # 19P.2 rung 2 relaxed those routes and the buttons above them, and
+    # left this behind: `Add` and `Edit` rendered on `ready` and
+    # produced no editor, which is the dead control the rung exists to
+    # remove, and a rejected save came back with the operator's typed
+    # values dropped and the error banner — scoped to `edit_mode` —
+    # unrendered. `archived` is the predicate now, the same one the
+    # buttons read, so the two cannot disagree again.
+    if lifecycle.is_archived(review_session):
         edit_id = None
         add_mode = False
 
@@ -256,8 +269,17 @@ def _render_observers_page(
             # ``is_archived`` on this page, not ``is_editable``: every
             # mutating route relaxed to ``_require_not_archived``, so
             # ``is_editable`` no longer describes any route's gate here.
-            # It stays in the context because the lock card and the
-            # status strip still read it.
+            # It stays in the context as DEAD data, and is named as
+            # such rather than quietly left: the lock card takes the
+            # `lock_when` branch on this page, and `is_editable` is
+            # absent from every partial this template includes
+            # (`session_top_nav`, `session_setup_status_row`,
+            # `validation_results`, `_pager_cluster`,
+            # `_preview_count_line`). A cold read caught the first
+            # version of this comment claiming two readers that do not
+            # exist. Kept for now because rungs 3-6 still move this
+            # page's surface around; it goes at the close if nothing
+            # has picked it up.
             "is_editable": lifecycle.is_editable(review_session),
             "is_archived": lifecycle.is_archived(review_session),
             "edit_id": edit_id,

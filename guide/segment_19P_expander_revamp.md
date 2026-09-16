@@ -720,7 +720,11 @@ renders a revert form anywhere, because the one state it still locks in
 is `archived`, where that form is correctly absent already — so
 `test_the_slug_each_page_renders_is_the_one_under_test` covers three
 pages now, not four. The route still honours the `observers` slug, and
-the route-level test still covers all four.
+the route-level test still covers all four — so `_REVERT_RETURN_TO`'s
+`observers` entry, added at 19H.6 rung 1 and re-justified in this item's
+rung 1, is now unreachable from the UI one rung after it was added.
+Kept as defence in depth; named here because rung 1's Status still
+presents it as a live fix.
 
 Verified in Chromium across the three frozen states. `ready` and
 `expired`: no lock card, 3 checkboxes, bulk form, `Delete`, upload card
@@ -730,22 +734,77 @@ card present, every one of those controls absent, and the three rows
 still **readable** — the relaxation did not turn `archived` into a
 blank page. An import on `ready` replaced the roster 3 → 1.
 
-Guards: 15 new tests (the suite grows by 15 net after the re-aiming
-below), most of them the seven mutators parametrized
-across `ready` / `expired` (accepts) and `archived` (still 409s), plus
-the whole-surface render, the lock card's absence and its survival on
-`archived`. Seventeen existing assertions were re-aimed rather than
-deleted — `LOCKED_STATES`, `FROZEN_PAGES` and `REFUSES_AT` now carry the
-divergence as data, so the three unchanged pages keep asserting the old
-contract in the same tests. Suite 4,065 → 4,080.
+Guards: **41 new test cases, 17 dropped by the re-aiming, +24 net**
+(4,065 → 4,089). Most are the seven mutators parametrized across
+`ready` / `expired` (accepts, `== 303`) and `archived` (still 409s),
+plus the whole-surface render, the editor pair below, and the lock
+card's absence on a live session and survival on `archived`. Seventeen
+existing **test cases** were re-aimed rather than deleted —
+`LOCKED_STATES`, `FROZEN_PAGES` and `REFUSES_AT` carry the divergence as
+data, so the three unchanged pages keep asserting the old contract in
+the same tests.
 
-**13/13 mutations caught**, each re-tightening one gate alone back to
+**16/16 mutations caught.** Thirteen re-tighten one gate alone back to
 `_require_editable`: all seven routes plus `cohort-rule` (which already
 had the looser gate and must keep it), the three template gates, the
-`lock_when` argument, and the partial's default. The `lock_when`
-mutation had to be re-run: deleting the kwarg broke the `{% with %}`
-syntax, so its 35 failures proved a template error rather than a lost
-gate. Re-run as a valid re-tightening to `not is_editable`: 4 failed.
+`lock_when` argument, and the partial's default. The `lock_when` one had
+to be re-run — deleting the kwarg broke the `{% with %}` syntax, so its
+35 failures proved a template error rather than a lost gate; re-run as a
+valid re-tightening it fails 4. Three more came out of the cold read and
+probe the **upper** bound, which nothing had: the `.bottom-grid` gate
+loosened to render on `archived`, and the editor predicate both put back
+to `is_ready` and removed outright.
+
+**Cold read** (`diff-reviewer`, 11 findings). It confirmed all three
+safety claims in Semantics against the code, and found nothing else
+caching a frozen roster. Two findings were **defects, not prose**:
+
+- **`Add` and `Edit` were dead controls on `ready`** — the exact failure
+  this rung exists to remove, shipped by it. `_render_observers_page`
+  discarded `edit_id` / `add_mode` under `if is_ready`, correct while
+  `create` / `update` took `_require_editable` and the page could not
+  save. The rung relaxed those routes and the buttons above them and
+  left the predicate behind, so both rendered on `ready` and opened
+  nothing. Now `is_archived`, the same predicate the buttons read.
+- **A rejected save on `ready` lost the operator's typing.** Same root
+  cause: the error-render path re-renders with `add_mode=True`, which
+  was then dropped, and the error banner is scoped to `{% if edit_mode %}`
+  — so a mistyped email answered 400 with a bare roster page, no values
+  and no reason.
+
+Neither was reachable by the mutation pass, which only re-tightened
+gates, and neither was exercised by the Chromium check: it covered
+checkboxes, bulk form, Delete, upload, Danger Zone and an Inactivate,
+and never Add or Edit. Both are covered now: on `ready` and `expired`
+the `Add` link opens a real add editor and `Edit` navigates to
+`#observer-row-<id>` and opens one; on `archived` neither renders; and a
+rejected save on `ready` comes back with the editor open, the typed
+value intact and the reason shown.
+
+A third finding was **coverage removed rather than replaced**: the
+re-aiming dropped Observers from
+`test_the_upload_and_danger_zone_cards_go_when_frozen`, and the
+replacement asserted only the two bulk ids — so loosening `.bottom-grid`
+to render Upload and Danger Zone on `archived`, over routes that 409,
+passed the whole suite. Bracketed now by asserting every control absent
+on `archived` that the live-session test asserts present.
+
+The rest was prose, all of it written in this rung: "byte-identically"
+(above), a comment claiming two readers of `is_editable` that do not
+exist, a stale `is_ready` header comment, a test docstring saying
+"through `archived`" where it means "until", a rename comment a blanket
+search-and-replace had turned into *"the name is `FROZEN_PAGES` and the
+alias is gone"*, and the count labels above.
+
+**One open question the cold read raised, not decided here.**
+`_quick_setup.py:637` writes observer rows via `csv_imports.save_observers`
+and still refuses on `ready`. This rung's scope is the Setup-Observers
+page, so it is untouched — but the ruling it rests on is about the
+*entity*, not the page, and the two now disagree: the same CSV accepts at
+`/observers/import` and refuses at `/quick-setup/observers` on the same
+session. Quick setup is a draft-time wizard by its own contract, so this
+may be right as it stands. **Author's call, and it belongs to whoever
+owns quick setup rather than to this item.**
 
 
 ### PR ladder

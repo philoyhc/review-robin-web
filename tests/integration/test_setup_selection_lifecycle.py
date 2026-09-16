@@ -15,15 +15,18 @@ mutating observers route relaxed from `_require_editable` to
 a view grant: observers never appear in assignments, never produce
 responses, and no readiness rule references them, so freezing their
 roster at Activate bought nothing. Its whole surface — checkboxes, bulk
-card, upload and Danger Zone — now renders through `archived`, and the
-routes accept there too. What was an exception on *checkboxes only*
-became the page's rule.
+card, upload and Danger Zone — now renders **until** `archived`, and the
+routes accept until then too. `archived` is the one state where both
+still stop. What was an exception on *checkboxes only* became the page's
+rule.
 
 So the `FROZEN` parametrizations below cover the three pages that still
 freeze at `is_editable`; Observers has its own section at the foot,
 which asserts the opposite in the same shape.
 """
 from __future__ import annotations
+
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -42,9 +45,13 @@ EDITABLE = ("draft", "validated")
 FROZEN = ("ready", "expired", "archived")
 ALL_STATUSES = EDITABLE + FROZEN
 # The three pages that still freeze at `is_editable` — see the module
-# docstring for why Observers is not among them. Named `FROZEN_PAGES`
-# when the divergence was checkboxes only; it is now every surface, so
-# the name is `FROZEN_PAGES` and the alias is gone.
+# docstring for why Observers is not among them. Was `CHECKBOX_PAGES`,
+# from when the divergence was checkboxes only; it is now every surface
+# on the page, so the name says what the tuple is for rather than which
+# control first diverged. (The rename was done with a blanket
+# search-and-replace, which rewrote this comment into saying the name
+# changed from `FROZEN_PAGES` to `FROZEN_PAGES` — caught by a cold
+# read.) `ALL_PAGES` below still carries all four.
 FROZEN_PAGES = ("reviewers", "reviewees", "relationships")
 ALL_PAGES = FROZEN_PAGES + ("observers",)
 # Observers still freezes here, and only here.
@@ -180,11 +187,21 @@ def test_reading_the_roster_still_works_when_frozen(
 
 
 @pytest.mark.parametrize("status", OBSERVERS_FROZEN)
-def test_the_observers_bulk_card_goes_only_on_archived(
+def test_the_whole_observers_surface_goes_on_archived(
     db: Session, client: TestClient, status: str
 ) -> None:
-    """What is left of the old gate. 19P.2 rung 2 moved the other two
-    frozen states out from under it."""
+    """What is left of the old gate, and the UPPER bound of the new one.
+
+    The re-aiming that widened this gate dropped Observers from
+    `test_the_upload_and_danger_zone_cards_go_when_frozen`, and its
+    first replacement checked only the two bulk ids — so loosening
+    `.bottom-grid` to render Upload and Danger Zone on `archived`, over
+    routes that 409, passed the whole suite. Mutation-verified.
+
+    Re-tightening probes a widened gate's lower bound; nothing probed
+    the upper. Every control the sibling test above asserts PRESENT on
+    a live session is asserted absent here, so the pair brackets it.
+    """
     s = _session(client, db, code=f"sl-obs-{status}")
     s.status = status
     db.commit()
@@ -193,6 +210,10 @@ def test_the_observers_bulk_card_goes_only_on_archived(
 
     assert 'id="observers-delete-btn"' not in body
     assert 'id="observers-bulk-form"' not in body
+    assert '<input type="checkbox" class="observer-select"' not in body
+    assert 'class="card danger-zone"' not in body
+    assert "/observers/delete-all" not in body
+    assert "/observers/import" not in body
 
 
 @pytest.mark.parametrize("status", ("ready", "expired"))
@@ -390,10 +411,13 @@ def test_every_observers_mutator_accepts_where_it_used_to_409(
 ) -> None:
     """The rung, stated as the thing an operator can now do.
 
-    Asserted as "not 409" rather than "== 303": a route that started
-    400ing for an unrelated reason would be a different bug, and this
-    test is about the lifecycle gate alone. The states are `ready` and
-    `expired` — `archived` still refuses, below.
+    `== 303`, not `!= 409`. The first draft asserted the weaker form on
+    the reasoning that "a route that started 400ing for an unrelated
+    reason would be a different bug" — which was wrong on this page: a
+    400 from `create` / `update` IS the route's own error-render path,
+    and a cold read found that path broken on `ready` while this test
+    stayed green. A redirect is what acceptance looks like here, so it
+    is what is asserted.
     """
     s = _session(client, db, code=f"ob-relax-{status[:3]}-{suffix[:6]}")
     row_id = db.execute(
@@ -404,8 +428,9 @@ def test_every_observers_mutator_accepts_where_it_used_to_409(
 
     response = _post_mutator(client, s, row_id, suffix, data)
 
-    assert response.status_code != 409, (
-        f"{suffix} still refuses on {status}: {response.status_code}"
+    assert response.status_code == 303, (
+        f"{suffix} did not accept on {status}: "
+        f"{response.status_code} {response.text[:200]}"
     )
 
 
@@ -454,7 +479,7 @@ def test_the_observers_import_accepts_mid_session(
         follow_redirects=False,
     )
 
-    assert response.status_code != 409, response.status_code
+    assert response.status_code == 303, response.status_code
     assert db.execute(
         select(Observer).where(
             Observer.session_id == s.id,
@@ -505,6 +530,120 @@ def test_the_whole_observers_surface_renders_wherever_the_routes_accept(
     assert 'class="card danger-zone"' in body
     assert "/observers/delete-all" in body
     assert "/observers/import" in body
+
+
+@pytest.mark.parametrize("status", OBSERVERS_LIVE)
+def test_add_and_edit_actually_open_an_editor_wherever_they_render(
+    db: Session, client: TestClient, status: str
+) -> None:
+    """A rendered control that does nothing is the failure this rung
+    exists to remove, and the rung shipped two of them.
+
+    `_render_observers_page` discarded `edit_id` / `add_mode` on
+    `ready` — correct while `create` / `update` took
+    `_require_editable`, since the page then could not save. Relaxing
+    those routes and the buttons above them without this left `Add` and
+    `Edit` rendering on `ready` and opening nothing.
+    """
+    s = _session(client, db, code=f"ob-editor-{status[:4]}")
+    row_id = db.execute(
+        select(Observer.id).where(Observer.session_id == s.id)
+    ).scalars().one()
+    s.status = status
+    db.commit()
+    base = f"/operator/sessions/{s.id}/observers"
+
+    # The buttons render...
+    listing = _render(client, s, "observers")
+    assert 'id="observers-edit-btn"' in listing, "no Edit button"
+    assert "?add=1" in listing, "no Add link"
+
+    # ...and both open a real editor. Scoped to the `<tr>`: `Add`'s own
+    # href carries `#observers-row-editor`, so a bare substring check
+    # on the id passes on a page with no add row at all.
+    add_row = re.search(
+        r'<tr\b[^>]*id="observers-row-editor"', client.get(f"{base}?add=1").text
+    )
+    assert add_row, f"Add opens no editor on {status}"
+
+    edit_body = client.get(f"{base}?edit_id={row_id}").text
+    edit_row = re.search(
+        rf'<tr\b[^>]*id="observer-row-{row_id}"[^>]*>', edit_body, re.S
+    )
+    assert edit_row and "observer-edit-row" in edit_row.group(0), (
+        f"Edit opens no editor on {status}"
+    )
+
+
+def test_archived_opens_no_editor_even_by_hand_crafted_url(
+    db: Session, client: TestClient
+) -> None:
+    """The upper bound of the fix above.
+
+    Deleting the suppression outright — rather than moving it from
+    `is_ready` to `is_archived` — passes every other test here: the
+    buttons are gone on `archived`, so nothing NAVIGATES to the editor.
+    A typed `?add=1` still would, over routes that 409. Mutation
+    survived until this was written.
+    """
+    s = _session(client, db, code="ob-arch-editor")
+    row_id = db.execute(
+        select(Observer.id).where(Observer.session_id == s.id)
+    ).scalars().one()
+    s.status = "archived"
+    db.commit()
+    base = f"/operator/sessions/{s.id}/observers"
+
+    assert not re.search(
+        r'<tr\b[^>]*id="observers-row-editor"', client.get(f"{base}?add=1").text
+    ), "archived opens an add editor the routes refuse"
+
+    edit_row = re.search(
+        rf'<tr\b[^>]*id="observer-row-{row_id}"[^>]*>',
+        client.get(f"{base}?edit_id={row_id}").text, re.S,
+    )
+    assert edit_row and "observer-edit-row" not in edit_row.group(0), (
+        "archived opens an edit editor the routes refuse"
+    )
+
+
+@pytest.mark.parametrize("status", OBSERVERS_LIVE)
+def test_a_rejected_save_comes_back_editable_wherever_it_can_save(
+    db: Session, client: TestClient, status: str
+) -> None:
+    """The second face of the same defect, and the one that loses work.
+
+    The error banner is scoped to `{% if edit_mode %}`, so dropping
+    `add_mode` on the error-render path took the operator's typed
+    values AND the reason with it: a mistyped email on `ready` answered
+    400 with a bare roster page.
+    """
+    s = _session(client, db, code=f"ob-err-{status[:4]}")
+    s.status = status
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{s.id}/observers/create",
+        data={
+            # Duplicate of the row `_session` seeds — a guaranteed
+            # rejection that is the service's, not the gate's.
+            "email": "o@example.edu", "display_name": "Typo",
+            "tag_1": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400, response.status_code
+    body = response.text
+    assert 'id="observer-edit-form"' in body, (
+        f"the rejected save lost its form on {status}"
+    )
+    assert "Typo" in body, "the operator's typed values were dropped"
+    # The banner, read inside the edit-mode block it lives in rather
+    # than page-wide — `base.html` inlines the whole app's CSS, so a
+    # bare class-name check would pass on any page.
+    assert re.search(r'id="observer-edit-form"', body)
+    assert "already" in body.lower(), "no reason given for the rejection"
 
 
 @pytest.mark.parametrize("status", ("ready", "expired"))
