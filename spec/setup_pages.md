@@ -75,7 +75,8 @@ Every Setup Page renders, top-to-bottom:
    stretching grid cannot inflate it to a neighbour's height.
 
    **Every half-width card above the preview table shares one
-   `.card-columns`, not a row grid — and not two of them.** Two
+   `.card-columns`, not a row grid — and not two of them** (Reviewers
+   excepted since 19P.1; see the table below and the Reviewers section). Two
    containers look identical while everything is closed and still lose
    the point: growth in the upper one pushes both columns of the lower
    one down. A full-width card (the Activated lock card) therefore
@@ -91,7 +92,8 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right. The lock card (rendered in every non-editable state) sits above the container, not between the pairs. |
+   | Reviewers | **Not in the container.** The guidance card leads the page at **full width**, above everything else (19P.1). `.card-columns` still renders, but only as the tag-label editor's fallback home — see the Reviewers § *Body shape* below — so on this page the container holds at most one card and never the guidance. The lock card sits above it, as elsewhere. |
+   | Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Operator actions` alone on the right. The lock card (rendered in every non-editable state) sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
@@ -214,7 +216,9 @@ Every Setup Page renders, top-to-bottom:
    three branches and their copy are specified in
    `spec/lifecycle.md` §5. Sits **above**
    the friendly-label editor so the yellow card immediately
-   follows the status info card — the same status-info-then-
+   follows the status info card (on Reviewers, above the roster
+   card that now holds the editor — the ordering is unchanged, the
+   card below it is not) — the same status-info-then-
    yellow-lock pattern the Instruments page uses. **Not
    Assignments**: that page carries no yellow `.card.lock` at all —
    the Workflow card's stepper already states the lifecycle, per
@@ -224,6 +228,17 @@ Every Setup Page renders, top-to-bottom:
    `.card-columns` container (see the placement table above).
    **Not** a `.bottom-grid`: that class carries only the Upload +
    Danger Zone pair further down.
+
+   **Reviewers does not have this pair, and has not since 19P.1.**
+   Its tag-label editor moved into the roster card's Unlock panel
+   and its `Operator actions` card retired entirely — the filter
+   strip became the preview table's own toolbar and the button row
+   became a row expander. Read the Reviewers § *Body shape* below
+   for what replaced it; everything in this item and in
+   § *Operator actions card* describes Reviewees, Relationships and
+   Observers. The three-page wording throughout both sections is
+   deliberate, not an oversight: 19P.2–.4 carry the same move to
+   the others, and until they do, the four pages genuinely differ.
    - The **friendly-label editor** is the
      inline editor card via
      `operator/partials/_field_labels_editor.html`. Reviewers +
@@ -251,7 +266,9 @@ Every Setup Page renders, top-to-bottom:
    Always renders when the entity is non-empty (or when Add mode
    is active), regardless of lifecycle state. A **leftmost
    checkbox column** drives the operator-actions selection (a
-   header select-all checkbox toggles every visible row). Column
+   header select-all checkbox toggles every visible row) — on
+   Reviewers it drives the **injected row expander** instead, the
+   same checkbox serving a different consumer. Column
    headers render the resolved friendly label via
    `operator/partials/_field_label_header.html`; when an override
    is set, the canonical name appears as `.field-label-canonical`
@@ -261,6 +278,13 @@ Every Setup Page renders, top-to-bottom:
    inputs / pickers — see "Per-row Edit / Add / bulk actions".
 6. **Body grid** — Upload + Danger Zone cards. Hidden when the
    session is Activated *or* while a row is being edited / added.
+
+   **Reviewers renders no body grid at all since 19P.1.** Both
+   cards are in the Unlock panel and `.bottom-grid` is absent from
+   the page, so on that page there is nothing below the preview
+   table. The gate is unchanged — the panel takes the same
+   `is_editable`-and-not-editing condition the grid took — and the
+   two cards' route contracts below are untouched by the move.
    Placed **after** the preview table so the operator's eye lands
    on the data they're managing first; the upload-CSV +
    delete-all destructive actions sit below the table as a
@@ -515,6 +539,21 @@ applies (the column data is still present in the DOM).
 
 ## Operator actions card
 
+**Reviewees, Relationships and Observers.** Reviewers retired this
+card at 19P.1 — its filter strip became the preview table's own
+toolbar and its button row became a row expander, both specified in
+the Reviewers § *Body shape* below. Everything in this section
+describes the three pages that still render it.
+
+The section is **not** retired, because the card is not: 19P.2–.4
+carry the same move to the others, and each will narrow this heading
+further. What *is* page-independent is the route contract in the four
+sub-sections below — `confirm` / `confirm_replace` /
+`acknowledge_response_loss`, the failure modes and the three-state
+wording. Those govern every roster page regardless of which control
+surface reaches them, Reviewers included, and they are stated here
+once rather than copied per page.
+
 The right-hand card of the page's `.card-columns` container
 (friendly-label editor on the left — **not** a `.bottom-grid`; that
 class carries only the Upload + Danger Zone pair below the table). It
@@ -522,7 +561,9 @@ is the per-row authoring surface, so an operator need not round-trip a
 CSV bulk-replace to fix one name, retire one person, or add one row.
 Top-to-bottom:
 
-1. **Search + filter strip.** One shape on all four pages: a
+1. **Search + filter strip.** One shape on the three pages that
+   carry this card, and on Reviewers the same shape in the table
+   toolbar: a
    **Status** filter (`all` / `active` / `inactive`) and a search box
    backed by a `<datalist>` typeahead. **Relationships carries the
    same Status filter as the rest** — it has a row `status` and ships
@@ -543,6 +584,9 @@ Top-to-bottom:
    `Add` is the short label, keeping room on one row for `Delete`,
    which carries the **Destructive** role (outline red,
    `spec/ui_elements.md` §6) and sits between `Add` and `Search`.
+   **Neither clause holds on Reviewers since 19P.1:** `Delete` moved
+   to the expander, which dissolved the one-row constraint, so the
+   label there is `Add new` and nothing sits between it and `Search`.
 3. **Status row** (`filter-confirm`) — the **selected-count
    pill** and the delete **confirmation checkbox** (`Yes, delete
    these`), inline and flush right beneath the controls. The gate sits
@@ -643,7 +687,9 @@ refuses.
 
 **The redirect keeps the filters and carries no `selected=`.** Every
 other bulk action re-checks the rows it acted on; these rows no longer
-exist. Services: `delete_selected` on each roster service, over
+exist. On Reviewers it also keeps the pager offset and lands on
+`#reviewers-table-card` rather than a row, for the same reason — the
+rows it would have landed on are the ones it deleted. Services: `delete_selected` on each roster service, over
 `app/services/roster_bulk.py`'s `bulk_delete`. Audit:
 `reviewer.bulk_deleted` / `reviewee.*` / `observer.*` /
 `relationship.*`, one event per call carrying `deleted`,
@@ -853,7 +899,9 @@ server-rendered states — no client-side DOM surgery. The target
 row's cells render as `<input>` / `<select>`; Add prepends a
 blank row at the top of the table. The Operator actions card
 swaps its filter strip + button row for the focused Save /
-Cancel pair. Editing a row's **status** to `inactive` /
+Cancel pair — on Reviewers, whose card retired at 19P.1, the pair
+renders in an expander bar beneath the edited row instead and the
+toolbar is left alone. Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the
 `status` of every checkbox-selected row in one POST (reversible,
@@ -864,6 +912,21 @@ selection** (`?selected=` query params re-check those rows) and
 the **active search / status filter** (so the operator lands
 back on the same filtered view, not the unfiltered list). CSV
 bulk upload stays as the bulk-create path.
+
+**Reviewers carries two more, since 19P.1; the other three pages do
+not.** Its redirect also preserves the **pager offset** (`offset=`) and
+lands on a **fragment**, so a row action taken mid-table comes back to
+that row rather than to the top of the document — measured at 821px of
+jump before the anchor, and answering with page 1 after an action on
+page 2, because no caller passed the offset. The fragment is the first
+acted-on row (`#reviewer-row-<id>`), or the table card
+(`#reviewers-table-card`) where the action leaves no row to land on —
+a delete. A fragment that cannot resolve is ignored by the browser and
+lands at the top again, so the page also ships a fallback script that
+catches a missing target and falls back to the card; three cases reach
+it (a deleted row, a row the active filter excludes, a row moved by a
+cookie-held sort). The other three pages pass no offset and no
+fragment and are unaffected. 19P.2 carries this to Observers.
 
 **Relationships pickers.** The Relationships Edit / Add rows
 choose reviewer + reviewee via **name-or-email search-box
@@ -884,28 +947,82 @@ Audit events: `reviewer.created` / `.updated` /
 
 ## Reviewers page (`session_reviewers.html`)
 
-### Body grid (after the preview table, when not Activated)
+### Body shape (19P.1)
 
-Two-column `bottom-grid` placed **below** the preview table so
-the operator's eye lands on the data first; the upload + delete-
-all destructive actions cluster as a deliberate de-prioritised
-section beneath:
+**There is nothing below the preview table.** The `.bottom-grid` this
+section used to describe is gone from this page, and all three cards
+it and `.card-columns` held are now behind one disclosure. The three
+other roster pages keep the old shape until 19P.2–.4.
 
-- **Left:** `Upload Reviewers` card. Required CSV columns
-  `ReviewerName`, `ReviewerEmail`; optional `ReviewerTag1..3`. POSTs
-  to `/operator/sessions/{id}/reviewers/import`. When existing rows
-  are present, surfaces the replace confirm checkbox. Its label names what the
-  replace destroys in three states — see "The Upload card's replace"
-  below for the wording; it is not restated here, because a partial
-  copy of it is how the response clause went missing once already.
-- **Right:** `Danger Zone` card with "Delete all reviewers". Only
-  rendered when at least one reviewer exists.
+Top-to-bottom: the lock card (when locked), the **roster card**, the
+**preview table card**, and nothing else.
+
+**The roster card** (`.card.roster-card#roster-card`) always renders.
+It carries two readouts — the roster count, and one pill per populated
+column showing that column's resolved friendly label and how many rows
+hold a value — and, when the session is editable and no row is being
+edited, the **Unlock** control.
+
+**The Unlock panel** (`#roster-unlock-panel`) holds the three cards
+this page used to spread across two containers, in two columns: the
+tag-label editor over the `Danger Zone` on the left, `Upload
+Reviewers` on the right, and the **Lock** control beneath the upload
+card. Each card's own contract is unchanged by the move — the label
+editor is the same shared partial, and the two destructive cards
+answer the same routes under the same gates, specified in
+§ *The Danger Zone's `delete-all`* and § *The Upload card's replace*.
+
+- **Suppressed, not disabled, when the session is not editable**, and
+  likewise in edit / add mode. A locked page must carry no `Save
+  labels` anywhere, so the whole panel stands down rather than
+  rendering disabled controls.
+- **The tag-label editor therefore has two homes**, one include in two
+  positions on the exact complement of that condition: inside the
+  panel when the panel can render, and in `.card-columns` when it
+  cannot. A locked page must still let an operator *read* the labels —
+  the rule is about not offering a control the route will refuse, not
+  about hiding information — and the roster readouts do not cover it,
+  since they pill only the columns that hold data. This is the only
+  tenant `.card-columns` has on this page.
+- **The `Danger Zone` keeps the `danger-zone` class** and its amber
+  framing inside the panel, as the other three roster pages have it
+  outside one.
+
+**The panel's start-open contract.** The panel ships `hidden` and the
+Unlock control opens it, but the server decides what the page
+*arrives* as, because a panel that always shipped collapsed would shut
+itself on every save. One rule, stated about the panel rather than
+about each control:
+
+> Whenever a control inside the panel answers, the page comes back
+> with the panel open.
+
+Two mechanisms implement it, and both are required because the
+controls answer differently. The two that redirect (`Save labels`,
+`Delete all reviewers`) and a **successful** import carry
+`?unlocked=1` on the redirect. A **failed** import does not redirect
+at all — it re-renders the page in place with a 400 and its issue
+list, and that list renders *inside* the upload card — so that path
+sets the panel's open state server-side instead. Leave it closed and a
+failed import answers with a collapsed panel and no visible errors.
+Closing the panel is the **Lock** control's job and nothing else's.
+
+**Reachable without JavaScript.** The panel is opened by an inline
+handler, so each control renders a `<noscript>` link beside it —
+`?unlocked=1` to open, the bare page URL to close. `?unlocked=1` is a
+real server-rendered state (it is what the redirects above use), so
+this links to behaviour that already exists. It restores what this
+page could do before 19P.1 and no more: the confirm-gated `Upload` and
+`Delete all reviewers` buttons are still enabled only by
+`base.html`'s confirm-pairing script, so with JS off a *replace*
+remains unreachable exactly as it was before the move, while the
+empty-roster import — where the button ships enabled — works.
 
 ### Preview table
 
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
-| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below (it drove the `Operator actions` card before 19P.1) |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
 | 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). **Not toggleable** — unlike the Reviewees Photo column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry with Reviewees is deliberate. |
@@ -919,13 +1036,59 @@ The `Show columns:` chip row sits in the preview-table card, above
 the rows; see "Preview tables (shared toggle pattern)" above for
 which chips render and for the persistence rules.
 
+#### The table card's toolbar (19P.1)
+
+The preview-table card opens with a **two-pane toolbar**
+(`.table-card-toolbar.is-split`): the left pane says what the table is
+showing — the column chips, the pager cluster, the count line — and
+the right pane carries the **filter strip** moved out of the retired
+`Operator actions` card, so the controls sit with the rows they act on
+rather than a grid away. The panes are bare: card geometry without a
+card's border, fill or padding.
+
+The strip's own contract is unchanged — the same Status filter and
+`<datalist>`-backed search specified in § *Operator actions card* item
+1, and the same matching and suggestion rules in § *Search matching
+and suggestions*. Only its home moved. `Add` is labelled `Add new`
+here, the one-row constraint that shortened it having gone with
+`Delete`.
+
+#### The row expander (19P.1)
+
+The selection-driven button row is a **row injected into the table**
+beneath the selected row, not a card beside it. It carries the
+selected count and the same controls the card's action row did —
+`Edit`, `Inactivate`, `Activate`, `Delete` and the delete confirm —
+rendered client-side from the current selection.
+
+Its confirm renders the count as **bare text rather than a pill**: the
+expander's own background and the info-pill background resolve to the
+same primitive in both themes, so a pill inside it is invisible. The
+lobby renders the same fact the same way.
+
+**Entering edit or add mode** replaces the row's cells with inputs, as
+on every roster page, but the `Save` / `Cancel` pair renders in an
+**expander bar directly beneath the edited row** — styled as that
+row's own expander — rather than below a divider in a card. There is
+no divider on this page and no editor card: the row is the editor. The
+add row carries `id="reviewers-row-editor"`; an edited row is reached
+as `#reviewer-row-<id>`.
+
 ## Reviewees page (`session_reviewees.html`)
 
 ### Body grid (when not Activated)
 
-Same two-column shape as Reviewers — Upload card on the left,
-Danger Zone on the right. CSV header copy lists `RevieweeName`,
-`RevieweeEmail` required; `PhotoLink`, `RevieweeTag1..3` optional.
+Two-column `bottom-grid` below the preview table — `Upload
+Reviewees` on the left, `Danger Zone` on the right, the latter only
+when at least one reviewee exists. CSV header copy lists
+`RevieweeName`, `RevieweeEmail` required; `PhotoLink`,
+`RevieweeTag1..3` optional.
+
+*Stated outright rather than as "same shape as Reviewers", which is
+what it said until 19P.1. Reviewers no longer has this shape, so the
+pointer sent a reader to a section describing an Unlock panel and told
+them it was the Reviewees contract. 19P.3 moves this page; until then
+it is the older shape and says so itself.*
 
 ### Preview table
 
@@ -958,8 +1121,12 @@ predicate field names, plus a per-row `active` / `inactive` status.
 
 ### Body grid (when not Activated)
 
-Same two-column shape as Reviewers / Reviewees — Upload card on
-the left, Danger Zone on the right. CSV header copy lists
+Two-column `bottom-grid` below the preview table — `Upload
+Relationships` on the left, `Danger Zone` on the right, the latter
+only when at least one relationship exists. (Said as "same shape as
+Reviewers / Reviewees" until 19P.1; Reviewers no longer has it, and
+19P.3 moves Reviewees, so each page now states its own.) CSV header
+copy lists
 `ReviewerEmail`, `RevieweeEmail` required; `PairContextTag1..3`,
 `Status` (`active` / `inactive`) optional. Defaults to `active`
 when `Status` is omitted. POSTs to
@@ -999,8 +1166,8 @@ button (`spec/session_home.md` §2).
 
 ## Observers page (`session_observers.html`)
 
-The Observers page is the third participant-roster Setup page. It
-mirrors the Reviewers / Reviewees shape with a simpler model:
+The Observers page is the third participant-roster Setup page. Its
+**model** mirrors Reviewers / Reviewees, more simply:
 `email` is the required identity (NOT NULL, unique per session),
 `display_name` is an optional human-facing label, and a single
 `tag_1` is the only categorical axis (no `tag_2` / `tag_3`). The
@@ -1047,8 +1214,9 @@ The Observers page renders, top-to-bottom:
 5. **Preview table** — always renders when observers exist (or
    when Add mode is active).
 6. **Upload card (left) + Danger Zone (right)** — a
-   `.bottom-grid` pair below the table, mirroring the
-   Reviewers / Reviewees layout. Hidden whenever the session is
+   `.bottom-grid` pair below the table, mirroring the Reviewees /
+   Relationships layout (and Reviewers' too, until 19P.1 moved both
+   cards into an Unlock panel). Hidden whenever the session is
    not `is_editable`, or while a row is being edited / added.
    - **Upload card** (`#upload-csv`): CSV file in UTF-8, max
      5 000 rows. Required column: `ObserverEmail`. Optional
@@ -1206,6 +1374,15 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   `{% if is_editable %}`; the `card lock` at the top of the body
   renders behind `{% if not is_editable %}`. Because both halves read
   the same flag, the explanation and the controls cannot disagree.
+
+  **19P.1 moved three of those controls on Reviewers without changing
+  the predicate.** The Unlock panel takes the same `is_editable` (plus
+  "not mid-edit"), so the three cards inside it are gated exactly as
+  they were in their old homes — the panel is *suppressed*, not
+  rendered disabled, precisely so a locked page still carries no
+  `Save labels`. The one addition is the label editor's second
+  position, which renders on the complement so a locked page can still
+  show the labels without offering the control.
 
   **`is_ready` is the wrong predicate here, and the failure mode is
   silent.** It is true only in `ready`, so a control keyed to it stays
