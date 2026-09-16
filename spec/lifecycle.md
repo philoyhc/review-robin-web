@@ -234,7 +234,7 @@ roster import, roster delete-all, relationships CRUD, assignment
 generate, assignment delete-all, Quick Setup, settings import,
 etc.) call this **first**.
 
-Two exceptions to that list, both easy to mis-read:
+Three exceptions to that list, all easy to mis-read:
 
 - **Instrument CRUD does not call this helper.** Its ~24 route
   sites call `_require_instrument_editable` →
@@ -244,6 +244,16 @@ Two exceptions to that list, both easy to mis-read:
   has to be made in the other.
 - **The email-template editor calls no lifecycle gate at all**, so
   it does not belong on this list; §5 states the same.
+- **The Observers roster calls `_require_not_archived` instead**, a
+  genuinely *wider* predicate rather than the same one under another
+  name. **All eight of its mutating routes take it** — `create`,
+  `update`, `bulk-inactivate`, `bulk-reactivate`, `bulk-delete`,
+  `delete-all`, `import` and `cohort-rule` — so the roster accepts
+  through `ready` and `expired` and 409s only on `archived`.
+  **Seven of the eight were relaxed at 19P.2**; `cohort-rule` already
+  read this gate, which is why the helper's own docstring still
+  describes itself in that narrower case. §5 carries the reason, and
+  the rule that governs a second such exception.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
 
@@ -341,16 +351,16 @@ GET-side rendering rules.
 
 ## 5. UI lock-card pattern
 
-**On the four roster Setup pages** (Reviewers / Reviewees /
-Relationships / Observers) whenever the session is **not
-editable** — i.e. not `draft` and not `validated`: the mutating
-cards (Upload, Danger Zone) are hidden and a **yellow lock card**
-renders in its place, explaining that setup is locked and offering
-the way out that state has.
+**On three of the four roster Setup pages** (Reviewers / Reviewees /
+Relationships) whenever the session is **not editable** — i.e. not
+`draft` and not `validated`: the mutating cards (Upload, Danger Zone)
+are hidden and a **yellow lock card** renders in its place, explaining
+that setup is locked and offering the way out that state has.
+**Observers is a stated exception**, below.
 
 **What is hidden differs by page since 19P.1; the rule does not.**
-On Reviewees, Relationships and Observers it is the `.bottom-grid`
-those two cards sit in. On Reviewers there is no such grid — the
+On Reviewees and Relationships it is the `.bottom-grid` those two
+cards sit in. On Reviewers there is no such grid — the
 two cards, plus the tag-label editor, are inside the roster card's
 **Unlock panel**, and it is the whole panel that is suppressed.
 Same predicate, one gate instead of a grid, and the Unlock control
@@ -359,6 +369,26 @@ whose contents its routes would refuse. The tag-label editor is the
 one exception and deliberately so — it re-renders outside the panel
 with its inputs disabled and its buttons dropped, because a locked
 page must still let an operator *read* the labels.
+
+**Observers uses a WIDER predicate — the first page to (19P.2).** Its
+mutating surface reads `not is_archived`, so the roster stays editable
+through `ready` and `expired` and only `archived` closes it. All seven
+mutating routes were relaxed to `_require_not_archived` in the same
+slice, so the page and its routes agree; the surface is suppressed
+exactly where they refuse.
+
+The reason is what an observer *is*. They never appear in assignments,
+never produce responses, and no readiness rule references them — so
+freezing their roster at Activate protects nothing, while refining who
+sees what mid-session is a legitimate flow. The lock card still
+renders, on the archived-only condition, so it never contradicts a
+live roster beneath it.
+
+**§3.1's rule gets its mirror here.** Nothing may use a predicate
+*narrower* than the lifecycle's, and nothing may use a **wider** one
+either without saying why in this section. Observers is the only entry;
+a second page claiming the exception without a reason stated here is a
+defect, not a precedent.
 
 All four render one partial,
 `operator/partials/_roster_lock_card.html`, parameterized on the

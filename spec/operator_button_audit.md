@@ -205,18 +205,28 @@ reader following either reference lands on the same pair.
 
 Source: `app/web/templates/operator/session_reviewers.html`.
 
-> **Lifecycle.** Every `Operator actions` row in the four roster
+> **Lifecycle.** Every `Operator actions` row in the roster
 > sections renders only while the session is `is_editable`
 > (`draft` / `validated`). Outside those states the controls — and the
 > Upload and Danger Zone buttons — must be **absent**, not disabled;
-> on Reviewers since 19P.1 that is achieved by suppressing the whole
-> **Unlock panel** the three cards now live in, which is the same rule
-> reaching them through one gate instead of three;
+> on Reviewers since 19P.1, and on Observers since 19P.2, that is
+> achieved by suppressing the whole **Unlock panel** those cards now
+> live in, which is the same rule reaching them through one gate
+> instead of three;
 > the enable/disable rules in the Notes column describe behavior
 > *within* an editable session. Clear and Search render in every
-> state. Observers' row checkboxes keep a looser `not is_archived`
-> gate because they drive the cohort rule editor. See
-> `spec/lifecycle.md` §5.
+> state.
+>
+> **Observers is the exception, and it is now the whole page, not just
+> its checkboxes.** 19P.2 relaxed all eight of its mutating routes to
+> `_require_not_archived`, so its row actions, its import and its
+> `delete-all` are live through `ready` and `expired` and its Unlock
+> panel is suppressed only on `archived`. The sentence here used to
+> scope the looser gate to the row checkboxes alone, on the reasoning
+> that they drove the cohort rule editor; the editor moved into the
+> expander with the actions and the gate went with it. See
+> `spec/lifecycle.md` §5 for why an observer's roster is allowed the
+> wider predicate.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -227,7 +237,7 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 36 | Row expander (was Operator actions) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`, and since 19P.1 to `#reviewer-row-<id>` with it so the page lands on the row rather than the top. Rendered into the expander row injected beneath the selection. |
 | 123 | Row expander (was Operator actions) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
 | 124 | Row expander (was Operator actions) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 125 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. **Relabelled `Add new` at 19P.1 rung 2a**, when the constraint that shortened it dissolved — `Delete` moved to the row expander, so the two no longer share a row. The old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with it. The three other roster pages still read `Add`, and keep the rationale, until 19P.2–.4. |
+| 125 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. **Relabelled `Add new` at 19P.1 rung 2a**, when the constraint that shortened it dissolved — `Delete` moved to the row expander, so the two no longer share a row. The old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with it. **Observers followed at 19P.2 rung 3**, for the same reason and with the same result: its `Delete` moved to the row expander, so its toolbar row is `Clear` / `Add new` / `Search`. Reviewees and Relationships still read `Add`, and keep the rationale, until 19P.3–.4. |
 | 161 | Operator actions | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/reviewers/bulk-delete`. Sits between `Add` and `Search`. Two-stage gate: a selection enables the `Yes, delete these` checkbox on the status row, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="reviewers-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
 | 126 | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the `filter-actions` row, after the selection-driven buttons. The selected-count pill sits on the status row below, not here. |
 | 127 | Table toolbar (was Operator actions) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
@@ -284,6 +294,47 @@ shape (Upload + Danger Zone + preview table).
 | 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. Sits **below** the preview table. |
 
 ---
+
+## Section 8.5 — Observers Setup (`/operator/sessions/{id}/observers`)
+
+Source: `app/web/templates/operator/session_observers.html`.
+
+**Added at the 19P.2 close.** This page had no section: §§6/7/8 were the
+other three rosters and the only Observers row in the file was the nav
+tab (row 8). That was a gap rather than a scoping choice — this file
+audits *every* button on the operator surface — and 19P.2 widened it,
+giving the page a row expander, a table toolbar and an Unlock panel.
+Numbered 8.5 so the three existing roster sections keep their numbers
+and the cross-references to them stay true.
+
+> **Lifecycle.** This page does **not** read `is_editable`. All eight
+> mutating routes take `_require_not_archived`, so every control below
+> renders through `ready` and `expired` and is absent only on
+> `archived`. That is the exception the gate note above §6 describes;
+> `spec/lifecycle.md` §5 carries the reason.
+
+> **Gate-hidden by default.** The page is only reachable, and its nav
+> tab only rendered, when `session.observers_enabled` is true.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 164 | Table toolbar | Clear | `<a>` | `btn secondary` | Secondary | Renders only when a search or status filter is active; links back to the bare list with the pager fragment. |
+| 165 | Table toolbar | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1#observers-row-editor`. Renders `disabled` while a row is being edited / added. Relabelled from `Add` at 19P.2 rung 3, following Reviewers at 19P.1 rung 2a — `Delete` left the row, so the two no longer share it. |
+| 166 | Table toolbar | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Last in the row; the toolbar carries no selection-driven controls. |
+| 167 | Row expander | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row. JS navigates to `?edit_id=<id>#observer-row-<id>`. Built into the injected expander, not server-rendered. |
+| 168 | Row expander | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/observers/bulk-inactivate`. **Offered by status, not arity** — it renders only when the selection holds an active row, so a selection admitting neither pair shows neither button rather than two disabled ones. |
+| 169 | Row expander | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/observers/bulk-reactivate`; the mirror of row 168, offered when the selection holds an inactive row. |
+| 170 | Row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/observers/bulk-delete`. Ships `disabled`: nothing syncs an injected confirm pair until its first tick, so a live-by-default Delete would be a destructive control with its gate open. Two-stage gate — a selection enables the `Yes, delete these` checkbox in the same panel, which enables this button (`data-delete-btn="observers-bulk-delete"`). |
+| 171 | Row expander (cohort pane) | `+` | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a rule cell. Sized by a class, not an inline `style` — see §6's no-inline-styled-buttons rule, which this page's four builder buttons were the last violation of. |
+| 172 | Row expander (cohort pane) | `AND` / `OR` | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Toggles the combinator; the label *is* the current value, written back to a hidden input. |
+| 173 | Row expander (cohort pane) | operator cycle | `<button type="button">` | `btn secondary cohort-cell-btn` | Secondary | Cycles the six operators (`IS THE SAME AS` / `IS DIFFERENT FROM` / `IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`); the label is the current value. One per rule cell. |
+| 174 | Row expander (cohort pane) | `X` | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes a rule cell; `disabled` on the first. Removing the **last** cell destroys the `Save` riding in its row, which is rebuilt — anything bound to `Save` is bound where `Save` is built. |
+| 175 | Row expander (cohort pane) | Save | `<button type="submit">` | `btn secondary cohort-cell-btn cohort-save-btn` | Secondary | Posts `/observers/cohort-rule` for every selected observer. Inline after the last cell's `X`, not bottom-right. `disabled` **until the rule is dirty**. An unsaved edit is guarded rather than discarded — `spec/setup_pages.md` § *Cohort match rule editor*. |
+| 176 | Edit-row bar | Save | `<button type="submit">` | `btn secondary` | Secondary | Posts `/observers/create` or `/observers/{id}/update` via `form="observer-edit-form"`. Renders in a bracketed expander beneath the row being edited, not in a card — the same shape Reviewers took at 19P.1 rung 2b. |
+| 177 | Edit-row bar | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the bare list with the pager fragment, abandoning the edit. |
+| 178 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel. **One element, two homes** — the card's last child when collapsed, inside the panel beneath the card its column holds when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back), the panel being unreachable without JS otherwise. |
+| 179 | Unlock panel — Upload Observers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/observers/import`. On a roster with rows it ships `disabled` behind the `replace-observers` confirm; on an empty roster it renders enabled, that being the initial bulk create. **Left** column, unlike Reviewers' right — see `spec/setup_pages.md` § *Body layout*. |
+| 180 | Unlock panel — Danger Zone | Delete all observers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/observers/delete-all`; `disabled` until the `delete-all` confirm is ticked, and the route 400s without it. No response-loss acknowledgement: nothing references an observer, so the loss the gate guards cannot occur. |
 
 ## Section 9 — Instruments Setup (`/operator/sessions/{id}/instruments`)
 

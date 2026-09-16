@@ -1113,17 +1113,28 @@ Each page offers:
 - **Danger Zone card** below the upload — Delete All (confirm-
   gated, wipes the whole roster).
 
-**Reviewers differs since 19P.1, at this altitude in one respect:**
-the operator-actions card, the upload card and the Danger Zone are
-not three surfaces in three places on that page. The filter strip
-and the selection actions moved into the preview table itself (a
-toolbar and an injected row expander), and the tag-label editor,
-the upload card and the Danger Zone moved into one **Unlock panel**
-above the table, leaving nothing below it. What each control *does*
-— every route, gate and confirm named above — is unchanged; only
-where an operator finds it. `spec/setup_pages.md` § *Reviewers page*
-is authoritative. The other three roster pages are as described
-until 19P.2–.4.
+**Reviewers (19P.1) and Observers (19P.2) differ, at this altitude in
+one respect:** the operator-actions card, the upload card and the
+Danger Zone are not three surfaces in three places on those pages. The
+filter strip and the selection actions moved into the preview table
+itself (a toolbar and an injected row expander), and the destructive
+cards moved into one **Unlock panel** above the table, leaving nothing
+below it. What each control *does* — every route, gate and confirm
+named above — is unchanged; only where an operator finds it.
+`spec/setup_pages.md` § *Reviewers page* and § *Observers page* are
+authoritative. Reviewees and Relationships are as described until
+19P.3–.4.
+
+**Observers differs in one further respect, and it is a behaviour
+change rather than a layout one:** its roster stays editable through
+`ready` and `expired`, closing only at `archived`. Observers never
+appear in assignments and produce no responses, so freezing their
+roster at Activate protects nothing, while refining who sees what
+mid-session is a legitimate flow. It is the only roster page whose
+mutating surface outlives `is_editable`; `spec/lifecycle.md` §5 states
+the exception and governs any second one. Its expander also carries a
+surface no other roster page has — the per-observer **cohort match
+rule** builder, which decides what that observer sees.
 
 The Reviewers page collects: name, email, tag 1 / 2 / 3, photo
 link, status.
