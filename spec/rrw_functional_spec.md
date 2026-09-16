@@ -1113,6 +1113,18 @@ Each page offers:
 - **Danger Zone card** below the upload — Delete All (confirm-
   gated, wipes the whole roster).
 
+**Reviewers differs since 19P.1, at this altitude in one respect:**
+the operator-actions card, the upload card and the Danger Zone are
+not three surfaces in three places on that page. The filter strip
+and the selection actions moved into the preview table itself (a
+toolbar and an injected row expander), and the tag-label editor,
+the upload card and the Danger Zone moved into one **Unlock panel**
+above the table, leaving nothing below it. What each control *does*
+— every route, gate and confirm named above — is unchanged; only
+where an operator finds it. `spec/setup_pages.md` § *Reviewers page*
+is authoritative. The other three roster pages are as described
+until 19P.2–.4.
+
 The Reviewers page collects: name, email, tag 1 / 2 / 3, photo
 link, status.
 The Reviewees page collects: name, email_or_identifier, tag 1 /

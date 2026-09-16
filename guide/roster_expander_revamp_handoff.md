@@ -38,6 +38,31 @@ happens, because all four pages would already share the expander.
 >   identical in action set, so they cannot falsify the expander's shape;
 >   Observers must come second, not fourth. See 19P Item 1's Decision.
 >
+> **Annotated 2026-09-16 (19P.1 closing). Reviewers shipped, and the
+> worked case study diverged from this document in three ways worth
+> knowing before the recipe is applied to the other three pages:**
+>
+> - **The expander was not the whole move.** This document proposes
+>   replacing the `Operator actions` strip with a row expander. What
+>   shipped also moved the filter strip into the table card's own
+>   toolbar and put the tag-label editor, the Danger Zone and the CSV
+>   upload card into an **Unlock panel** inside a new roster card,
+>   leaving nothing below the preview table. The expander is one of
+>   four changes, not the change.
+> - **"All three cards retire" was right about the cards and wrong
+>   about the container.** `.card-columns` survives on Reviewers as the
+>   tag-label editor's fallback home, because the panel is *suppressed*
+>   — not disabled — on a locked session and in edit mode, and a locked
+>   page must still let an operator read the labels. One include, two
+>   positions, complementary conditions.
+> - **The recipe now owes a start-open contract.** A failed CSV import
+>   re-renders the page in place rather than redirecting, and its issue
+>   list renders inside the upload card — so a panel that always shipped
+>   collapsed would hide a failed import's errors. Any page applying
+>   this recipe inherits that, and it is invisible to the test suite:
+>   with no JS runtime `hidden` is inert, so every assertion on the
+>   issue text passes either way. Chromium is what proves it.
+>
 > **Four more, found on the second cold read:**
 >
 > - **§3 cites `#bulk-session-expander`.** No such id. It is `#bulk-expander`,

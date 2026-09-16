@@ -343,10 +343,22 @@ GET-side rendering rules.
 
 **On the four roster Setup pages** (Reviewers / Reviewees /
 Relationships / Observers) whenever the session is **not
-editable** — i.e. not `draft` and not `validated`: the
-mutating-card grid (Upload, Danger Zone) is hidden and a
-**yellow lock card** renders in its place, explaining that setup
-is locked and offering the way out that state has.
+editable** — i.e. not `draft` and not `validated`: the mutating
+cards (Upload, Danger Zone) are hidden and a **yellow lock card**
+renders in its place, explaining that setup is locked and offering
+the way out that state has.
+
+**What is hidden differs by page since 19P.1; the rule does not.**
+On Reviewees, Relationships and Observers it is the `.bottom-grid`
+those two cards sit in. On Reviewers there is no such grid — the
+two cards, plus the tag-label editor, are inside the roster card's
+**Unlock panel**, and it is the whole panel that is suppressed.
+Same predicate, one gate instead of a grid, and the Unlock control
+itself goes with it: a locked page offers no way to open a panel
+whose contents its routes would refuse. The tag-label editor is the
+one exception and deliberately so — it re-renders outside the panel
+with its inputs disabled and its buttons dropped, because a locked
+page must still let an operator *read* the labels.
 
 All four render one partial,
 `operator/partials/_roster_lock_card.html`, parameterized on the
@@ -398,7 +410,8 @@ elements above says the roster cannot be modified. See
 
 **The gate is `is_editable`, not `is_ready`.** `is_ready` is only
 `status == "ready"`, so under it an `expired` or `archived` session
-renders the Upload and Danger Zone cards — and, on the roster
+renders the Upload and Danger Zone cards — on Reviewers, the Unlock
+panel holding them — and, on the roster
 pages, row checkboxes and a live Delete — while every route behind
 them answers 409. The page offers what `_require_editable` will
 accept and nothing else; §3.1 is the authority and the templates
