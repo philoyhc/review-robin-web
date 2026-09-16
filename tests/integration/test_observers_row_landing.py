@@ -216,6 +216,10 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     assert "row-action-target" in row.group(0), (
         "the row carries no landing margin"
     )
+    # Page-wide by nature: the rule lives in `base.html`'s inline
+    # `<style>`, which every page carries. So this guards that the base
+    # rule still exists, not anything Observers-specific — the scoped
+    # half is the class on the row, asserted above.
     assert "tr.row-action-target" in body, "no rule gives it that margin"
 
     # Read the fallback's OWN text. `'"observers-table-card"' in body`
@@ -237,7 +241,7 @@ def test_add_carries_the_active_filter_into_add_mode(
 
     `Add` linked to a bare `?add=1`, so the add page rendered
     unfiltered and its hidden `filter_*` fields held defaults — which
-    the create route then faithfully honoured all the way back to an
+    the create route then faithfully honored all the way back to an
     unfiltered list.
     """
     review_session = _make_session(client, db, code="obs-addfilter")
@@ -295,3 +299,100 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
         "the redirect lands on a page that does not render the new row"
     )
     assert ">Zed<" in landed
+
+
+def test_a_create_carries_the_pager_offset_too(
+    db: Session, client: TestClient
+) -> None:
+    """`_ROW_ACTIONS` structurally cannot cover a create — there is no
+    row id to act on until the POST returns — so the offset half is
+    asserted here.
+
+    Today the value can only be `0` through the UI, because `Add`
+    carries the filter but not the page. The wiring is still real: it
+    is what a future `Add` that keeps the page would ride on, and
+    without this the parameter could be deleted with the whole suite
+    green. It was one of two mutations that survived the first pass.
+    """
+    review_session = _make_session(client, db, code="obs-create-off")
+    base = f"/operator/sessions/{review_session.id}/observers"
+
+    loc = client.post(
+        f"{base}/create",
+        data={
+            "display_name": "Ada", "email": "ada@example.org",
+            "tag_1": "", "status": "active", "filter_offset": 200,
+        },
+        follow_redirects=False,
+    ).headers["location"]
+    assert "offset=200" in loc, loc
+
+
+def test_entering_edit_mode_lands_on_the_row_being_edited(
+    db: Session, client: TestClient
+) -> None:
+    """Entering edit mode is a navigation like any other.
+
+    The `Edit` button is client-side — it builds a URL from the checked
+    row — so what is pinned here is that the script builds a fragment at
+    all. Without it, `Edit` on a mid-table row threw the operator to the
+    top of the document while the row it named sat off screen; the
+    `row-action-target` on the edit row had nothing navigating to it.
+    """
+    review_session = _make_session(client, db, code="obs-editnav")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/observers"
+    ).text
+
+    script = re.search(
+        r'<script>(?:(?!</script>).)*?"\?edit_id="(?:(?!</script>).)*?</script>',
+        body, re.S,
+    )
+    assert script, "the Edit navigation script is gone"
+    assert '"#observer-row-"' in script.group(0), (
+        "Edit navigates without a fragment, so it lands at the top"
+    )
+
+    # And the row that fragment resolves onto carries the margin. The
+    # edit row is a different `<tr>` from the display row, so the class
+    # has to be on both; without this the edit row's copy could be
+    # deleted with the suite green.
+    row = _seed(db, review_session.id, ["Alice"])[0]
+    edit_page = client.get(
+        f"/operator/sessions/{review_session.id}/observers?edit_id={row.id}"
+    ).text
+    edit_row = re.search(
+        rf'<tr\b[^>]*id="observer-row-{row.id}"[^>]*>', edit_page, re.S
+    )
+    assert edit_row, "the edit row is not rendered with the id Edit names"
+    assert "observer-edit-row" in edit_row.group(0), edit_row.group(0)
+    assert "row-action-target" in edit_row.group(0), (
+        "the edit row carries no landing margin"
+    )
+
+
+def test_add_lands_on_the_row_it_opens(
+    db: Session, client: TestClient
+) -> None:
+    """The other half of the `Add` fix.
+
+    Carrying the filter stopped the add page rendering unfiltered; it
+    did nothing about where the page arrives. `Add` from mid-roster
+    still landed at the top of the document until the link named the
+    add row, which is the editor on this page.
+    """
+    review_session = _make_session(client, db, code="obs-addanchor")
+    _seed(db, review_session.id, ["Alice", "Bob"])
+    base = f"/operator/sessions/{review_session.id}/observers"
+
+    link = re.search(r'<a[^>]*>\s*Add\s*</a>', client.get(base).text)
+    assert link, "no Add link"
+    assert "#observers-row-editor" in link.group(0), link.group(0)
+
+    # And the row that fragment names is actually rendered in add mode.
+    add_page = client.get(f"{base}?add=1").text
+    row = re.search(r'<tr\b[^>]*id="observers-row-editor"[^>]*>', add_page)
+    assert row, "the add row does not carry the id the link names"
+    assert "row-action-target" in row.group(0), (
+        "the add row carries no landing margin"
+    )

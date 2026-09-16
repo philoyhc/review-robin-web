@@ -223,7 +223,7 @@
                     fields held defaults and the create redirect came
                     back unfiltered: the filter was lost at the
                     NAVIGATION, not at the POST. #}
-                 href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add</a>
+                 href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add</a>
             {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
@@ -375,7 +375,11 @@
         </thead>
         <tbody>
         {% if add_mode %}
-          <tr class="observer-edit-row">
+          {# The target `Add` lands on. Add-mode only: the row is
+             transient, so there is no id to build the fragment from
+             the way `Edit` does. #}
+          <tr class="observer-edit-row row-action-target"
+              id="{{ row_editor_anchor }}">
             <td class="row-select-cell"></td>
             <td><input type="text" name="display_name"
                        form="observer-edit-form"
@@ -474,21 +478,25 @@
     <script>
       (function () {
         "use strict";
-        // A row action lands on the row it acted on. Two cases leave
-        // that fragment unresolvable, and an unresolvable fragment is
-        // silently ignored — which puts the operator back at the top of
-        // the document, the exact thing the anchor exists to prevent:
+        // A row action lands on the row it acted on. ONE case on this
+        // page leaves that fragment unresolvable, and an unresolvable
+        // fragment is silently ignored — which puts the operator back
+        // at the top of the document, the exact thing the anchor
+        // exists to prevent: a row the active filter excludes, e.g.
+        // `Inactivate` while the filter reads `active`. The route
+        // cannot know that without re-running the filter, which is a
+        // multi-row computation and does not belong in a route
+        // handler, so it is caught here instead.
         //
-        //   1. a row the active filter excludes — `Inactivate` while
-        //      the filter reads `active`. The route cannot know that
-        //      without re-running the filter, which is a multi-row
-        //      computation and does not belong in a route handler, so
-        //      it is caught here instead;
-        //   2. a row the cookie sort moved off the page the pager
-        //      `offset` restored.
+        // Reviewers has a second case — a row its cookie-held sort
+        // moved off the restored page. This table is not sortable
+        // (no `data-rrw-sortable`; `_list_observers` orders by id),
+        // so that case cannot arise here. The shared docstring on
+        // `_row_action_anchor` is the generic count; this is the
+        // page's.
         //
-        // A delete is NOT one of them: the route sends the table card
-        // instead, so this returns on its first line.
+        // A delete does not reach it either: the route sends the
+        // table card instead, so this returns on its first line.
         var hash = window.location.hash;
         if (!hash || hash.indexOf("#observer-row-") !== 0) return;
         if (document.getElementById(hash.slice(1))) return;
@@ -741,8 +749,15 @@
               }
             }
             if (picked === null) return;
+            // `#observer-row-<id>`: entering edit mode is a
+            // navigation, and without a fragment it lands at the top
+            // of the document — the same 821px defect the row actions
+            // fix. The edit row keeps its own id, so the fragment
+            // resolves onto the row being typed into.
             window.location =
-              {{ observers_base_url | tojson }} + "?edit_id=" + picked.value;
+              {{ observers_base_url | tojson }} + "?edit_id=" +
+              encodeURIComponent(picked.value) +
+              "#observer-row-" + encodeURIComponent(picked.value);
           });
         }
         refresh();

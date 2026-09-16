@@ -219,6 +219,12 @@ def _render_observers_page(
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
             "pager_anchor": "observers-table-card",
+            # The add row's own id. An `Add` from mid-page is a
+            # navigation like any other and lands at the top of the
+            # document without a fragment to name; the row IS the
+            # editor's second home on this page, so it is what the
+            # fragment names.
+            "row_editor_anchor": "observers-row-editor",
             # The pager offset the row-action forms post back, so a
             # mid-table action returns to the page it was taken on.
             "current_offset": offset,
