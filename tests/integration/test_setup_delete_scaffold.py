@@ -26,28 +26,30 @@ from app.db.models import Observer, Relationship, Reviewee, Reviewer, ReviewSess
 TEMPLATES = pathlib.Path("app/web/templates/operator")
 ROSTER_PAGES = ("reviewers", "reviewees", "observers", "relationships")
 
-#: The pages that still render this strip server-side.
-#:
-#: Reviewers left at 19P.1 rung 2b: its selection surface is the row
-#: expander, built in JS against the selected rows, so there is no
-#: `.filter-confirm` row to slice and the count and the gate are not in
-#: the response at all. Asserting the card's shape there would pin a
-#: card that no longer exists. Its equivalents live with the rest of the
-#: expander's contract in `test_reviewers_roster_card_scaffold.py`; what
-#: stays here is the shape the three unmigrated pages share, so this
-#: file keeps guarding them until they follow.
 #: The pages whose filter strip and `Add new` moved into the table
-#: card's toolbar, leaving the Operator actions card holding only the
-#: selection-driven row actions. Reviewers at 19P.1 rung 2a, Observers
-#: at 19P.2 rung 3; Reviewees and Relationships follow at 19P.3.
+#: card's toolbar. Reviewers at 19P.1 rung 2a, Observers at 19P.2
+#: rung 3; Reviewees and Relationships follow at 19P.3.
 #:
-#: `"reviewers"` is decorative here — the test that reads this is
-#: parametrized over `CARD_STRIP_PAGES`, which excludes it. Listed
-#: anyway so the tuple names the property rather than the subset of it
-#: this file happens to reach.
+#: Read only by the ordering assertion below, which is parametrized
+#: over `CARD_STRIP_PAGES` — so neither member is reachable there any
+#: more. Kept because the tuple names the property rather than the
+#: subset of it this file happens to reach, and because the next page
+#: to migrate joins both tuples' logic at once.
 TOOLBAR_PAGES = ("reviewers", "observers")
 
-CARD_STRIP_PAGES = ("reviewees", "observers", "relationships")
+#: The pages that still render the count-and-gate strip server-side.
+#:
+#: Reviewers left at 19P.1 rung 2b and **Observers at 19P.2 rung 4**:
+#: their selection surface is the row expander, built in JS against the
+#: selected rows, so there is no `.filter-confirm` row to slice and the
+#: count and the gate are not in the response at all. Asserting the
+#: card's shape there would pin a card that no longer exists. Their
+#: equivalents live with the rest of the expander's contract —
+#: `test_reviewers_roster_card_scaffold.py` and
+#: `test_observers_expander.py`. What stays here is the shape the two
+#: unmigrated pages share, so this file keeps guarding them until they
+#: follow at 19P.3.
+CARD_STRIP_PAGES = ("reviewees", "relationships")
 
 
 def _make_session(
@@ -266,10 +268,11 @@ def test_the_other_filter_actions_pages_did_not_gain_the_row() -> None:
         for p in TEMPLATES.glob("session_*.html")
         if 'class="filter-confirm"' in p.read_text()
     )
-    # Reviewers gave the row up at 19P.1 rung 2b — the count and the
-    # gate moved into the row expander — so it is no longer among the
-    # pages that have one. The claim this test makes is unchanged: the
-    # three non-roster users of `.filter-actions` never gained it.
+    # Reviewers gave the row up at 19P.1 rung 2b and Observers at
+    # 19P.2 rung 4 — the count and the gate moved into the row expander
+    # each time — so neither is among the pages that have one. The
+    # claim this test makes is unchanged: the three non-roster users of
+    # `.filter-actions` never gained it.
     assert gained == sorted(f"session_{p}.html" for p in CARD_STRIP_PAGES)
 
 

@@ -200,7 +200,10 @@ def test_the_whole_observers_surface_goes_on_archived(
 
     Re-tightening probes a widened gate's lower bound; nothing probed
     the upper. Every control the sibling test above asserts PRESENT on
-    a live session is asserted absent here, so the pair brackets it.
+    a live session is asserted absent here, so the pair brackets it —
+    including, since rung 4, the expander builder rather than the
+    server-rendered buttons it replaced. A cold read caught that claim
+    standing while the assertion behind it had gone vacuous.
     """
     s = _session(client, db, code=f"sl-obs-{status}")
     s.status = status
@@ -210,6 +213,13 @@ def test_the_whole_observers_surface_goes_on_archived(
 
     assert 'id="observers-delete-btn"' not in body
     assert 'id="observers-bulk-form"' not in body
+    # 19P.2 rung 4 moved the row actions into an injected panel, so the
+    # `observers-delete-btn` line above can no longer fail on ANY state
+    # — it is not server-rendered anywhere. What brackets the live
+    # sibling now is the builder's absence, which is what this asserts.
+    assert "observers-row-expander" not in body, (
+        "archived ships the expander builder over routes that 409"
+    )
     assert '<input type="checkbox" class="observer-select"' not in body
     assert 'class="card danger-zone"' not in body
     assert "/observers/delete-all" not in body
@@ -526,10 +536,22 @@ def test_the_whole_observers_surface_renders_wherever_the_routes_accept(
 
     assert '<input type="checkbox" class="observer-select"' in body
     assert 'id="observers-bulk-form"' in body
-    assert 'id="observers-delete-btn"' in body
     assert 'class="card danger-zone"' in body
     assert "/observers/delete-all" in body
     assert "/observers/import" in body
+    # 19P.2 rung 4 moved the four row actions into a row expander the
+    # script builds against the selection, so `observers-delete-btn` is
+    # no longer in the response. What IS in the response is the script
+    # that builds it — read as its own text, because `base.html` inlines
+    # every page's JS and a page-wide substring check would pass on any
+    # page in the app.
+    panel = re.search(
+        r"<script>(?:(?!</script>).)*?observers-row-expander.*?</script>",
+        body, re.S,
+    )
+    assert panel, "no expander builder"
+    assert "/bulk-delete" in panel.group(0)
+    assert 'data-delete-btn="observers-bulk-delete"' in panel.group(0)
 
 
 @pytest.mark.parametrize("status", OBSERVERS_LIVE)
@@ -553,10 +575,16 @@ def test_add_and_edit_actually_open_an_editor_wherever_they_render(
     db.commit()
     base = f"/operator/sessions/{s.id}/observers"
 
-    # The buttons render...
+    # The controls are reachable...
     listing = _render(client, s, "observers")
-    assert 'id="observers-edit-btn"' in listing, "no Edit button"
     assert "?add=1" in listing, "no Add link"
+    # `Edit` is built by the expander since rung 4, so what the response
+    # carries is the builder. Scoped to the script's own text.
+    panel = re.search(
+        r"<script>(?:(?!</script>).)*?observers-row-expander.*?</script>",
+        listing, re.S,
+    )
+    assert panel and "exp-edit" in panel.group(0), "no Edit in the expander"
 
     # ...and both open a real editor. Scoped to the `<tr>`: `Add`'s own
     # href carries `#observers-row-editor`, so a bare substring check

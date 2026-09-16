@@ -895,6 +895,117 @@ continue`, and its fixture never enabled `observers_enabled`, so that
 page 404'd and the assertion never ran. It now enables the toggle and
 asserts against a page that renders.
 
+**Rung 4 — landed.** The four row actions, the selected count and the
+delete gate moved into a row expander built in JS against the selected
+rows; the `Operator actions` card retired. Reuses `base.html`'s
+`.session-expander` / `-bracketed` family unchanged, as the lobby and
+Reviewers do.
+
+**The card held more than the ladder's one line implies.** Retiring it
+also took the editor's `Save` / `Cancel`, its mode heading and its error
+banner — so rung 4 had to build the **second** expander too, the edit
+row's own bar, exactly as Reviewers did at 19P.1 rung 2b. One macro,
+two call sites (Add row, Edit row). Without it the editor would have
+had no way to save.
+
+**The right column is empty for one rung.** The cohort editor is still a
+card in the left column and `.card-columns` still needs two children, so
+the grid keeps its shape with a zero-height second child — measured:
+1,360px grid, left child 670×184, right child 670×0, no horizontal
+overflow. Rung 5 moves that editor into the expander and retires the
+grid. Landing the empty half rather than half-retiring the grid keeps
+the two moves separable, which is the point of the ladder — but it is a
+visible transitional state and the dev slot will show it.
+
+Guards: a new `tests/integration/test_observers_expander.py`,
+**20/20 mutations caught** after a cold read found the first set
+incomplete by five. Suite 4,097 → 4,106.
+
+**Most of this rung is invisible to pytest** — the panel does not exist
+until a checkbox is ticked and there is no JS runtime — so those tests
+pin the *builder* and the absence of what it replaced, and Chromium
+does the rest.
+
+Measured in Chromium, all of it: no selection renders no panel and no
+card; one active row gives `Edit / Inactivate / Delete` (no `Activate`
+— the row is already active), "1 of 4 selected", `Delete` disabled;
+ticking the gate enables it; a second tick **resets the gate** and
+disables `Edit` at arity 2, and the panel re-anchors to the later row;
+unticking walks the anchor back. `Inactivate` through the panel
+redirects with `?selected=`, restores the panel, and the buttons flip to
+`Activate` — the status logic end to end. Select-all on a mixed roster
+offers both. `Edit` navigates to `?edit_id=6#observer-row-6`, opens the
+editor row, and the bar sits flush under it (669 → 669).
+
+**Six** test files were re-aimed — the seventh the diff touches is the
+new one — the same way each time: the claim moved from the card's
+markup to the builder's text, and Observers left `CARD_STRIP_PAGES` as
+Reviewers did before it. "Rather than deleted" was the wrong words:
+four parametrized cases went with that tuple change, and the first
+draft deleted two whole tests outright (below). Two
+findings fell out of the re-aiming and are worth naming, because both
+were cold-read findings from rung 3 that the re-aiming had to settle
+properly: `TOOLBAR_PAGES`' doc-comment had been inserted into
+`CARD_STRIP_PAGES`', and is separated now; and
+`test_every_programmatic_dispatch_is_reachable`'s vacuity floor drops
+3 → 2, with a note that 19P.3 empties it entirely and should replace
+the floor with the real claim rather than lowering it to zero.
+
+A structural defect the re-aiming caught: retiring the card dropped
+`.card-columns`' closing `</div>`, which the HTML-balance check in
+`test_page_guidance` reported as `</main> closed <div>`. Caught by an
+existing test, not by reading.
+
+**Cold read** (`diff-reviewer`, 11 findings). It reproduced the whole
+Chromium table independently and confirmed the port is faithful —
+`refresh()`'s ordering, the cohort half, the delete gate's uniqueness
+and reset, and the editor bar in both modes all clean. The damage was
+in what the re-aiming took with it.
+
+**Two whole tests were deleted, not re-aimed, and both were live
+guards** — rung 3 cold-read additions, one rung old:
+
+- `test_the_moved_filter_locks_while_a_row_is_being_edited`. Only its
+  last assertion died with the card; the rest was about the toolbar
+  filter, which still exists. Stripping `is-locked` from it passed all
+  4,104 tests. Restored, with that one assertion dropped and why
+  recorded in place.
+- `test_add_new_is_absent_on_an_archived_session`. Nothing to do with
+  the card at all — added at rung 3 *because* the surface test stopped
+  enumerating `Add new`. Rendering it on `archived` over a `/create`
+  that 409s passed all 4,104 tests: the exact silent failure rung 2
+  exists to remove, reopened by tidying.
+
+A third assertion had gone vacuous rather than missing:
+`test_the_whole_observers_surface_goes_on_archived` still checked
+`observers-delete-btn` is absent, which is now true in every state, so
+its docstring's "the pair brackets it" was no longer earned. It asserts
+the builder's absence now.
+
+Two more mutations of this rung's own new code survived: the
+`edit_col_count = 7` hardcode (changed to 4, whole suite green, bar
+spanning four of seven columns — the sibling computes it from the same
+flags the `<thead>` branches on; this page counts from the rendered
+`<thead>` instead), and swapping the two status `formaction`s so
+`Inactivate` posts `/bulk-reactivate` (both route strings were still in
+the text, so nothing noticed the label and the route disagreeing).
+
+Also corrected: `_show_actions_slot` was left set and read by nothing;
+the body-layout comment still described the retired card and called
+`.card-columns` a `.bottom-grid`; the `?selected=` seeding comment gave
+a reason that is not true (the seed walks DOM order, so the anchor
+would be the same without it — it earns its place by keeping
+`tickOrder` consistent from the first render, not by fixing the
+anchor); `base.html` still said "four roster pages re-run this gate by
+hand" and attributed the expander to Reviewers alone; and two test
+docstrings described pages they no longer reach.
+
+Three more spec lines went onto rung 7's Doc impact, one of which makes
+a sentence in this document's own Doc impact stale — it claims the
+item-0 placement table is the only correct one of three, and rung 4
+falsified that table too.
+
+
 ### PR ladder
 
 1. **The `offset` / anchor fix — land where Reviewers lands.** Every row
@@ -994,12 +1105,12 @@ asserts against a page that renders.
 
 ### Doc impact
 
-- `spec/setup_pages.md` — § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2). **Rung 3 adds four more, none of them previously named:** § *Operator actions card* `:552` opens *"Reviewees, Relationships and Observers"* and `:574` says *"One shape on the three pages that carry this card"* — two now; its § item 2 **Action row** `:585-598` lists `Clear … Edit, Inactivate, Activate, Add and Delete … and finally the Search submit last` and scopes the exception to Reviewers alone; and § *Observers page* body-layout **item 5** `:1282` reads *"Preview table — always renders when observers exist (or when Add mode is active)"*, where the gate is now `observers or add_mode or total_row_count > 0 or not is_archived`. Doc impact named items 4 and 6, not 5.
+- `spec/setup_pages.md` — § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2). **Rung 3 adds four more, none of them previously named:** § *Operator actions card* `:552` opens *"Reviewees, Relationships and Observers"* and `:574` says *"One shape on the three pages that carry this card"* — two now; its § item 2 **Action row** `:585-598` lists `Clear … Edit, Inactivate, Activate, Add and Delete … and finally the Search submit last` and scopes the exception to Reviewers alone; and § *Observers page* body-layout **item 5** `:1282` reads *"Preview table — always renders when observers exist (or when Add mode is active)"*, where the gate is now `observers or add_mode or total_row_count > 0 or not is_archived`. Doc impact named items 4 and 6, not 5. **Rung 4 adds three more:** `:908-916` scopes the Save/Cancel-in-an-expander-bar shape to Reviewers, true of Observers now too; `:105`'s item-0 placement table still reads *"`Operator actions` alone in the right"* for Observers, which also makes THIS document's claim that *"the item-0 placement table is the only one of the three that is correct today"* stale; and `:894-907`'s page-independent button-state table describes a confirm *"on the status row"*, `Add` as a selection-gated column and the status pair as enabled-by-arity — none of which holds on a page whose panel renders them by status.
 - `spec/operator_button_audit.md` — **that file has no Observers Setup section**: §§6/7/8 are Reviewers / Reviewees / Relationships and the only Observers row in it is the nav tab (`:80`). So there are no Observers rows for the four row actions or the rename to move; what is actually owed is `:230` (row 125), *"The three other roster pages still read `Add`, and keep the rationale, until 19P.2–.4"* — two now, after rung 3 — and a decision at the close about whether this page gets a section at all. The earlier wording here promised edits to rows that do not exist; corrected at rung 3, when the first slice tried to act on it (Item 2). Its standing gate note — these controls are *absent, not disabled*, outside an editable session — keeps its shape but changes its predicate for this page alone (Item 2).
 - `spec/operator_ui_concept.md` — the § *Setup pages* heading narrows again as Observers leaves the shared shape (Item 2).
 - `spec/lifecycle.md` — §5 states that the four roster pages hide their mutating surface outside `is_editable`. Observers becomes a **stated exception**: its roster is editable to `archived`, because an observer row is a view grant rather than a participant in assignments or responses. This is the first page to diverge from that predicate, so §3.1's "nothing may use a narrower one" needs its mirror — nothing may use a *wider* one either, without saying why here (Item 2).
 - `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=`, `focus=` and row fragment. **Three rows go stale the moment rung 1 lands**: `:384` reads *"Reviewers only; the other three roster pages pass no offset"*, `:385` scopes `focus=<id>` to Reviewers, and `:379-381` list `edit_id=` / `add=1` / `selected=` as Reviewers / Reviewees / Relationships though Observers has had all three all along (Item 2).
-- `spec/ui_elements.md` — §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
+- `spec/ui_elements.md` — **`:609`** (`.session-row-selected`) names the injectors as *"`sessions_list.html`, `sessions_archived.html` and now `session_reviewers.html`"* and says Reviewers is the page rendering both the expander and the bracketed variant: Observers is a fourth injector and a second such page since rung 4, and it is the line the builder's own comment cites. §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
 
 ---
