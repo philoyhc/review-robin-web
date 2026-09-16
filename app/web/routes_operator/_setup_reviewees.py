@@ -249,6 +249,11 @@ def _render_reviewees_page(
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
             "pager_anchor": "reviewees-table-card",
+            # 19P.3 rung 3 — the add row's own id, and what `Add new`
+            # lands on. There is no editor card to name any more: the
+            # editor IS the row. `Edit` does not use it — it builds
+            # `#reviewee-row-<id>` from the id it already has.
+            "row_editor_anchor": "reviewees-row-editor",
             # 19P.3 rung 1 — the pager offset the row-action forms
             # post back, so a mid-table action returns to the page
             # it was taken on rather than to page 1.

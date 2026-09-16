@@ -13,6 +13,55 @@
   {% set reviewees_base_url =
         "/operator/sessions/" ~ session.id ~ "/reviewees" %}
 
+  {# 19P.3 rung 3 — the edit row's own expander bar, bracketed to the
+     row above it, holding what the `Operator actions` card held while
+     it existed: the mode, the save error, and Save / Cancel.
+
+     Reviewers settled this shape at 19P.1 rung 2b step 3 and Observers
+     at 19P.2 rung 4; this is the third and fourth copy of it. #}
+  {% macro row_editor_bar(col_count) %}
+    <tr class="session-expander session-expander-bracketed row-editor-bar">
+      <td colspan="{{ col_count }}">
+        <div class="row-expander-body">
+          {# The mode, for assistive tech only. The card that went
+             carried an `<h2>` — "Add new reviewee" / "Edit reviewee" — and
+             that heading was the only accessible name for the state the
+             page is in. What replaces the card visually is a
+             highlighted row, and a highlight reaches nobody using a
+             screen reader.
+
+             `aria-live` so it is read when a failed save re-renders the
+             page into edit mode under the operator. #}
+          <span class="visually-hidden" aria-live="polite">
+            {{ "Add new reviewee" if add_mode else "Edit reviewee" }}
+          </span>
+          {# The save error, which lived in the card as a
+             `.banner-error`. It belongs with the row: the message is
+             about the values in the row above, and the card put it a
+             table's height away from them. The card's other prose —
+             "Fill in the new row below, then Save" — described a layout
+             where the controls were somewhere else, so it went rather
+             than moving. #}
+          {% if edit_error %}
+            <span class="row-editor-error">{{ edit_error }}</span>
+          {% endif %}
+          {# Save then Cancel, the order the card rendered and the order
+             Reviewers and Observers settled on. All four roster pages
+             agree from this rung. #}
+          <div class="row-expander-actions">
+            <button class="btn secondary" type="submit"
+                    form="reviewee-edit-form">Save</button>
+            {# Cancel leaves the editor for the list, so it lands where
+               the list is — the same anchor `Clear` and `Search` take. #}
+            <a class="btn secondary"
+               href="{{ reviewees_base_url }}#{{ pager_anchor }}">Cancel</a>
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endmacro %}
+
+
   <div class="session-nav-card">
     {% with current_page = "Reviewees" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -95,130 +144,27 @@
     
     </div>
 
-    <div>
-      <div class="card operator-actions-card">
-      <h2>Operator actions</h2>
-      {# Filter + action buttons grey out (``is-locked``) while a
-         row is being edited / added; the Add / Edit form below the
-         divider stays interactive. #}
-      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
-        {# 19P.3 rung 2 — the filter strip, `Clear` and `Add` have moved
-           into the preview table's toolbar, where `Add` reads `Add new`
-           beside the control it now sits next to. What is left is the
-           selection-driven action row, which stays live until rung 3
-           wires the expander and retires this card: it holds the only
-           working `Edit` / `Inactivate` / `Activate` / `Delete` on the
-           page. Reviewers went through the same intermediate state at
-           19P.1 rung 2a — slimming moves each control exactly once,
-           where retiring the card here would take four working actions
-           away for a slice. #}
-        <form method="get" action="{{ reviewees_base_url }}"
-              class="operator-actions-filter">
-          <div class="filter-actions">
-            {# Segment 19I Item 3 — the mutating controls render only
-               where they can act. The sentence that used to follow
-               ("Clear, Search and the 'Showing N of M' hint stay")
-               named three things none of which is in this block any
-               more: the hint moved to the preview table at 19I Item 4
-               and the other two to the toolbar at 19P.3 rung 2.
-               Reviewers and Observers have both dropped it. #}
-            {% if is_editable %}
-            <button class="btn secondary" type="button"
-                    id="reviewees-edit-btn"
-                    disabled aria-disabled="true">Edit</button>
-            <button class="btn secondary" type="submit"
-                    id="reviewees-inactivate-btn"
-                    form="reviewees-bulk-form"
-                    formaction="{{ reviewees_base_url }}/bulk-inactivate"
-                    disabled aria-disabled="true">Inactivate</button>
-            <button class="btn secondary" type="submit"
-                    id="reviewees-reactivate-btn"
-                    form="reviewees-bulk-form"
-                    formaction="{{ reviewees_base_url }}/bulk-reactivate"
-                    disabled aria-disabled="true">Activate</button>
-            {# Segment 19I Item 2 — posts the bulk form to
-               ``/bulk-delete`` via ``form=`` + ``formaction``,
-               like Inactivate / Activate beside it. Enabled by
-               the confirmation checkbox below through
-               base.html's ``data-delete-confirm`` pairing; the
-               server re-checks both gates regardless. #}
-            <button class="btn destructive" type="submit"
-                    id="reviewees-delete-btn"
-                    form="reviewees-bulk-form"
-                    formaction="{{ reviewees_base_url }}/bulk-delete"
-                    data-delete-btn="reviewees-bulk-delete"
-                    disabled aria-disabled="true">Delete</button>
-            {% endif %}
-          </div>
-          {# Second action row (Segment 19I Item 2): what the
-             page is showing, what is selected, and the delete
-             gate — one kind of thing, inline and flush right,
-             leaving the row above to the controls. The gate
-             sits with the count because it is about the
-             count. #}
-          <div class="filter-confirm">
-            {% if is_editable %}
-            <span class="pill pill-count"
-                  id="reviewees-selected-count" hidden>0 of 0 selected</span>
-            <label class="delete-confirm-label">
-              <input type="checkbox"
-                     id="reviewees-delete-confirm"
-                     name="confirm" value="true"
-                     form="reviewees-bulk-form"
-                     data-delete-confirm="reviewees-bulk-delete"
-                     disabled>
-              {# The sentence names what goes, modelled on the
-                 Instruments page's "…and its associated assignments
-                 and reviewer responses." (Segment 19I Item 3). One
-                 checkbox, not two: the strip's confirmed shape has a
-                 single gate, so the acknowledgement rides with the
-                 tick as a hidden field and the label says what is
-                 being agreed to. The route still requires both
-                 fields, and refuses without the tick that carries
-                 them. #}
-              <span>
-                {%- if delete_discards_responses -%}
-                  Yes, delete these and their associated assignments and reviewer responses
-                {%- elif delete_discards_assignments -%}
-                  Yes, delete these and their associated assignments
-                {%- else -%}
-                  Yes, delete these
-                {%- endif -%}
-              </span>
-              {% if delete_discards_responses %}
-                <input type="hidden" form="reviewees-bulk-form"
-                       id="reviewees-delete-ack"
-                       name="acknowledge_response_loss" value="true">
-              {% endif %}
-            </label>
-            {% endif %}
-          </div>
-        </form>
-      </div>
-      {# Focused Add / Edit form — same card, below a divider. #}
-      {% if edit_mode %}
-        <hr class="operator-actions-divider">
-        <h2>{{ "Add new reviewee" if add_mode else "Edit reviewee" }}</h2>
-        {% if edit_error %}
-          <p class="banner banner-error">{{ edit_error }}</p>
-        {% endif %}
-        <p class="form-help">
-          {% if add_mode %}
-            Fill in the new row below, then Save.
-          {% else %}
-            Edit the highlighted row below, then Save.
-          {% endif %}
-        </p>
-        <div style="display: flex; justify-content: flex-end;
-                    gap: 12px; margin-top: var(--space-3);">
-          <button class="btn secondary" type="submit"
-                  form="reviewee-edit-form">Save</button>
-          <a class="btn secondary"
-             href="{{ reviewees_base_url }}">Cancel</a>
-        </div>
-      {% endif %}
-    </div>
-    </div>
+    {# 19P.3 rung 3 — the `Operator actions` card is RETIRED.
+
+       `Edit` / `Inactivate` / `Activate` / `Delete`, the selected count
+       and the delete confirm are in the row expander below, built
+       against the selected rows; Save / Cancel are in the edit row's own
+       bar. What was left after those moved was a `<form>` with no field
+       and no submit of its own — every button in it targeted
+       `reviewees-bulk-form` via `form=` + `formaction` — inside a card whose
+       only remaining content described where its controls had gone.
+
+       Wired and retired in ONE slice, as Reviewers was at 19P.1 rung 2b:
+       two live `Delete` buttons would need two `data-delete-confirm`
+       keys, and `base.html` resolves a confirm to its button with a
+       first-match `querySelector`, so the keys must stay unique
+       page-wide. Each control moves exactly once.
+
+       `.card-columns` keeps its ONE remaining column — the guidance card
+       and the tag-labels editor. The empty second column went with the
+       card it held. Rung 4 settles the container itself, when the labels
+       editor moves into the Unlock panel and the guidance runs full
+       width. #}
   </div>
 
 
@@ -383,27 +329,33 @@
                  renders as `Add new` here, beside the control it reads
                  next to.
 
-                 That inner gate reads `is_ready or edit_mode`, and the
-                 `is_ready` half is DEAD inside the `is_editable` wrapper
-                 below: `lifecycle.is_editable` is `draft or validated`
-                 and `is_ready` is `status == "ready"`, which are
-                 disjoint. So `edit_mode` is the only reason the disabled
-                 variant ever renders. Transcribed as-is from
-                 `session_reviewers.html`, which has carried the same dead
-                 disjunct since 19P.1 rung 2a — simplifying it on three
-                 pages is rung 3's, not a change to smuggle into a move. It takes NO fragment, unlike Reviewers' and
-                 Observers': the Add / Edit form it opens still lives in
-                 the `Operator actions` card at the top of the page, so a
-                 fragment would scroll the operator past the thing they
-                 just asked for. Rung 3 moves the editor into the row and
-                 the anchor goes with it. #}
+                 That inner gate is `edit_mode` alone: the disabled
+                 variant renders while a row is being edited, and the
+                 locked states are covered by the `is_editable` wrapper
+                 below. It read `is_ready or edit_mode` until rung 3
+                 simplified it on all three pages at once — see the note
+                 on the condition itself.
+
+                 It carries `#{{ row_editor_anchor }}` since rung 3 made
+                 the editor a ROW. At rung 2 it took no fragment, because
+                 the Add / Edit form was still a card at the top of the
+                 page and a fragment would have scrolled the operator
+                 past the thing they had just asked for. #}
               {# Wrapped in `is_editable`, as Reviewers' is: this block
                  lived inside the card's `{% if is_editable %}` and came
                  out of it in the move. `is_ready` alone is `status ==
                  "ready"`, so an `expired` or `archived` session would
                  have rendered a LIVE `Add new` whose route 409s. #}
               {% if is_editable %}
-                {% if is_ready or edit_mode %}
+                {# `edit_mode` alone. This read `is_ready or edit_mode`
+                   from 19P.1 rung 2a until 19P.3 rung 3, and the
+                   `is_ready` half was dead the whole time: it sits
+                   inside `{% if is_editable %}`, `lifecycle.is_editable`
+                   is `draft or validated` and `lifecycle.is_ready` is
+                   `status == "ready"`, and those are disjoint. A reader
+                   checking why a locked session has no `Add new` was
+                   sent to a condition that never fired. #}
+                {% if edit_mode %}
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
                 {% else %}
                   <a class="btn secondary"
@@ -414,7 +366,7 @@
                         shell renders those defaults, and the create
                         redirect's filter round-trip carries nothing —
                         the route half works and the flow does not. #}
-                     href="{{ reviewees_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add new</a>
+                     href="{{ reviewees_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
@@ -495,11 +447,32 @@
         </tr>
         </thead>
         <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
+        {# 19P.3 rung 3 — the editor bar spans the row above it, so it
+           has to know how wide that row is. Derived from the same flags
+           the `<thead>` branches on rather than counted by hand: select
+           + the two identity columns, then the optional ones, then
+           Status + Updated. A hand-written number stops being true the
+           first time a column is gated differently. #}
+        {% set edit_col_count = 3
+              + (1 if show_profile_link else 0)
+              + (1 if show_tag[1] else 0)
+              + (1 if show_tag[2] else 0)
+              + (1 if show_tag[3] else 0)
+              + 2 %}
         {% if add_mode %}
-          {# Fresh blank edit row at the top of the table. #}
-          <tr class="reviewee-edit-row">
+          {# Fresh blank edit row at the top of the table, and the
+             target `Add new` lands on: the row IS the editor now. #}
+          <tr class="reviewee-edit-row session-row-selected row-action-target"
+              id="{{ row_editor_anchor }}">
             <td class="row-select-cell"></td>
+            {# The caret starts here — see the script below the table.
+               Not `autofocus`: `Add new` navigates to a URL carrying a
+               fragment, and a fragment navigation moves focus to its
+               target, which beats the attribute. The fragment is
+               deliberate (it is what stops the page landing at the top),
+               so the caret is set in script instead. #}
             <td><input type="text" name="name" form="reviewee-edit-form"
+                       class="row-editor-first-field"
                        value="{{ edit_values.name }}" maxlength="255"
                        placeholder="Name" required></td>
             <td><input type="text" name="email_or_identifier"
@@ -536,10 +509,12 @@
             </td>
             <td class="muted">—</td>
           </tr>
+          {{ row_editor_bar(edit_col_count) }}
         {% endif %}
         {% for reviewee in reviewees %}
           {% if edit_id is not none and reviewee.id == edit_id %}
-            <tr class="reviewee-edit-row row-action-target" id="reviewee-row-{{ reviewee.id }}">
+            <tr class="reviewee-edit-row session-row-selected row-action-target"
+                id="reviewee-row-{{ reviewee.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewee-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
@@ -579,13 +554,18 @@
                 {{ reviewee.updated_at | format_datetime }}
               </td>
             </tr>
+            {{ row_editor_bar(edit_col_count) }}
           {% else %}
             {# `row-action-target` is the landing offset — `base.html`
                gives it `scroll-margin-top: 88px` so the acted-on row
                arrives second from the top with a neighbour above it
                for context, rather than flush against the viewport
                edge. 19P.3 rung 1, on the Reviewers analogy. #}
-            <tr id="reviewee-row-{{ reviewee.id }}" class="row-action-target">
+            {# `data-status` is how the row expander tells a DATA row from
+               the editor and the panel it injects, and what decides
+               which status action the selection admits. #}
+            <tr id="reviewee-row-{{ reviewee.id }}" class="row-action-target"
+                data-status="{{ reviewee.status }}">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="reviewee-select"
@@ -674,103 +654,305 @@
     </script>
   {% endif %}
 
-  {# Selection → action-button state binding (Segment 15F PR 4).
-     Only runs in the interactive non-edit / non-ready state. #}
-  {% if not edit_mode and is_editable %}
+  {# ------------------------------------------------------------------
+     19P.3 rung 3 — the row-selection bracket and its action panel.
+
+     These are the page's ONLY `Edit` / `Inactivate` / `Activate` /
+     `Delete`: the `Operator actions` row they came from is gone in the
+     same slice, so there is never a moment with two live `Delete`s
+     needing two `data-delete-confirm` keys.
+
+     Reuses `base.html`'s `.session-expander` /
+     `.session-expander-bracketed` / `tr.session-row-selected` unchanged.
+     The panel's INTERIOR uses its own `.row-expander-*` classes rather
+     than the lobby's `.session-expander-body` / `-actions`, because the
+     two layouts differ — the choice Reviewers made at 19P.1 rung 2b and
+     Observers kept at 19P.2 rung 4.
+
+     `{% if selectable %}` rather than a spelled-out repeat of its
+     definition: the panel's controls act on the checkboxes, so the
+     script must render under exactly the condition that renders them.
+     ------------------------------------------------------------------ #}
+  {% if selectable %}
     <script>
       (function () {
-        var editBtn = document.getElementById("reviewees-edit-btn");
-        var inactivateBtn = document.getElementById("reviewees-inactivate-btn");
-        var reactivateBtn = document.getElementById("reviewees-reactivate-btn");
-        var countPill = document.getElementById("reviewees-selected-count");
-        var deleteConfirm = document.getElementById("reviewees-delete-confirm");
+        "use strict";
+        var table = document.getElementById("reviewees-table");
         var selectAll = document.getElementById("reviewees-select-all");
-        if (!editBtn) return;
-        function boxes() {
-          return document.querySelectorAll(".reviewee-select");
+        if (!table || !selectAll) return;
+        var body = table.querySelector("tbody");
+        var tickOrder = [];
+        var panel = null;
+        var BULK_BASE = {{ reviewees_base_url | tojson }};
+
+        function rows() {
+          return Array.prototype.slice.call(
+            body.querySelectorAll("tr[data-status]"));
         }
-        function countChecked() {
-          var all = boxes();
+        function selectedRows() {
+          return rows().filter(function (row) {
+            var box = row.querySelector(".reviewee-select");
+            return box && box.checked;
+          });
+        }
+        // Anchors after the most recently ticked row STILL selected, DOM
+        // order as fallback — the rule `sessions_list.html:585` settled.
+        // A single remembered id is not enough: it clears on any untick
+        // and the panel jumps back up the table.
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            var row = document.getElementById(tickOrder[i]);
+            if (!row) continue;
+            var box = row.querySelector(".reviewee-select");
+            if (box && box.checked) return row;
+          }
+          return null;
+        }
+        // Which status actions the selection admits. Inactivate acts on
+        // active rows and Activate on inactive ones, so a selection that
+        // is all one status has exactly one actionable button; rendering
+        // the other offers a control that would no-op on every row.
+        // Orthogonal to arity, which says how many rows each action takes.
+        function statusActions(sel) {
+          var out = [];
+          var hasActive = false;
+          var hasInactive = false;
+          sel.forEach(function (row) {
+            if (row.dataset.status === "active") hasActive = true;
+            else hasInactive = true;
+          });
+          if (hasActive) out.push("Inactivate");
+          if (hasInactive) out.push("Activate");
+          return out;
+        }
+        function visibleColumnCount() {
+          return Array.prototype.filter.call(
+            table.querySelectorAll("thead th"),
+            function (th) { return th.offsetParent !== null; }).length;
+        }
+
+        function build(sel) {
+          var tr = document.createElement("tr");
+          tr.className = "session-expander session-expander-bracketed";
+          tr.id = "reviewees-row-expander";
+          var td = document.createElement("td");
+          td.colSpan = visibleColumnCount();
+          var html =
+            '<div class="row-expander-body">' +
+              {# The count was a `.pill-count` in the card. It is bare
+                 text here because `spec/ui_elements.md`
+                 .session-row-selected makes the panel "a pill-free
+                 zone": the panel's fill and `--status-info-bg` resolve
+                 to the same primitive, so a pill rendered inside it is
+                 invisible. The lobby says the same fact as bare text
+                 (`sessions_list.html:252-254`). #}
+              '<span class="row-expander-count"><strong>' + sel.length +
+              "</strong> of " + rows().length + " selected</span>" +
+              '<label class="confirm-label exp-confirm-label">' +
+                '<input type="checkbox" name="confirm" value="true"' +
+                ' form="reviewees-bulk-form"' +
+                ' data-delete-confirm="reviewees-bulk-delete"> ' +
+                {{ (
+                     "Yes, delete these and their associated assignments and reviewer responses"
+                     if delete_discards_responses else
+                     "Yes, delete these and their associated assignments"
+                     if delete_discards_assignments else
+                     "Yes, delete these"
+                   ) | tojson }} +
+                {# The route requires BOTH fields and 400s without the
+                   acknowledgement, so it rides with the tick exactly as
+                   it did in the card it came from, id and all. #}
+                {{ ('<input type="hidden" form="reviewees-bulk-form"'
+                    ' id="reviewees-delete-ack"'
+                    ' name="acknowledge_response_loss" value="true">'
+                    if delete_discards_responses else "") | tojson }} +
+              "</label>" +
+              '<span class="row-expander-actions">';
+          // `Edit` acts on exactly one row, which is the arity the card's
+          // script expressed by disabling the button unless `n === 1`.
+          var editable = sel.length === 1;
+          var editId = editable
+            ? sel[0].querySelector(".reviewee-select").value : "";
+          html += '<button type="button" class="btn secondary exp-edit"' +
+                  (editable
+                    ? ' data-edit-id="' + editId + '"'
+                    : ' disabled aria-disabled="true"') +
+                  ">Edit</button>";
+          // The selection reaches the POST through the row checkboxes'
+          // own `form=` + `name="reviewee_ids"`, so these need only say
+          // where to send it. Same routes, same `formaction`s, as the
+          // card they came from.
+          statusActions(sel).forEach(function (label) {
+            html += '<button type="submit" class="btn secondary"' +
+                    ' form="reviewees-bulk-form" formaction="' +
+                    BULK_BASE +
+                    (label === "Inactivate"
+                      ? "/bulk-inactivate" : "/bulk-reactivate") +
+                    '">' + label + "</button>";
+          });
+          // Ships `disabled`: nothing syncs an injected pair until its
+          // first tick, so a live-by-default Delete would be a
+          // destructive control with its gate already open.
+          html += '<button type="submit" class="btn destructive"' +
+                  ' form="reviewees-bulk-form" formaction="' +
+                  BULK_BASE + '/bulk-delete"' +
+                  ' data-delete-btn="reviewees-bulk-delete"' +
+                  ' disabled aria-disabled="true">Delete</button>' +
+                  "</span></div>";
+          td.innerHTML = html;
+          tr.appendChild(td);
+          return tr;
+        }
+
+        function render() {
+          if (panel) { panel.remove(); panel = null; }
+          rows().forEach(function (row) {
+            row.classList.remove("session-row-selected");
+          });
+          var sel = selectedRows();
+          // Before the early return: select-all's own state has to be
+          // right when the last box is unticked too.
+          syncSelectAll();
+          if (!sel.length) return;
+          sel.forEach(function (row) {
+            row.classList.add("session-row-selected");
+          });
+          panel = build(sel);
+          (currentAnchor() || sel[sel.length - 1])
+            .insertAdjacentElement("afterend", panel);
+        }
+
+        // Prune on untick as well as push on tick, and rebuild wholesale
+        // on select-all — the lobby does both
+        // (`sessions_list.html:596-614`), and the anchor is a function of
+        // the order, so a stale entry for a row that was unticked and
+        // re-ticked would anchor the panel at that row instead of the
+        // last one.
+        body.addEventListener("change", function (event) {
+          if (!event.target.classList.contains("reviewee-select")) return;
+          var row = event.target.closest("tr");
+          if (!row) return;
+          tickOrder = tickOrder.filter(function (id) { return id !== row.id; });
+          if (event.target.checked) tickOrder.push(row.id);
+          render();
+        });
+        // Ticking every box, and keeping select-all's own indeterminate
+        // state honest, used to live in the card's script. That script
+        // existed to drive the card's four buttons; this rung moved them
+        // into the panel, so this half moved here rather than being left
+        // in a script with nothing else to do. The two were
+        // complementary, not duplicated — one script owns selection
+        // state now rather than two agreeing about the checkboxes.
+        //
+        // Deferred through `setTimeout` so the browser paints the
+        // checkboxes before the panel is rebuilt against them.
+        function setAllBoxes(checked) {
+          var all = document.querySelectorAll(".reviewee-select");
+          for (var i = 0; i < all.length; i++) all[i].checked = checked;
+        }
+        function syncSelectAll() {
+          var all = document.querySelectorAll(".reviewee-select");
           var n = 0;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) n++;
-          }
-          return n;
+          for (var i = 0; i < all.length; i++) if (all[i].checked) n++;
+          selectAll.checked = (n > 0 && n === all.length);
+          // `indeterminate`, which the card's script never set: a
+          // partial selection now reads as a dash rather than an empty
+          // box claiming nothing is selected.
+          selectAll.indeterminate = (n > 0 && n < all.length);
         }
-        function setBtn(btn, disabled) {
-          // Sync ``aria-disabled`` with ``disabled`` — base.html
-          // greys + ``pointer-events: none`` any ``.btn`` carrying
-          // ``aria-disabled="true"``.
-          btn.disabled = disabled;
-          if (disabled) {
-            btn.setAttribute("aria-disabled", "true");
-          } else {
-            btn.removeAttribute("aria-disabled");
-          }
-        }
-        function refresh() {
-          var all = boxes();
-          var n = countChecked();
-          setBtn(editBtn, n !== 1);
-          setBtn(inactivateBtn, n === 0);
-          setBtn(reactivateBtn, n === 0);
-          // "N of M selected" (Segment 19I Item 4). M is the
-          // *rendered* window — the rows select-all can reach —
-          // not the whole roster, which is the number that makes
-          // the cap-versus-match gap visible next to the
-          // "Showing N of M" hint above the table.
-          countPill.textContent = n + " of " + all.length + " selected";
-          countPill.hidden = (n === 0);
-          // Delete gate, stage 1 (Segment 19I Item 2). A
-          // selection enables the checkbox; base.html's
-          // ``data-delete-confirm`` pairing then drives the
-          // button off the checkbox, so one script owns the
-          // button's ``disabled`` rather than two.
-          if (deleteConfirm) {
-            deleteConfirm.disabled = (n === 0);
-            if (deleteConfirm.checked) {
-              // The tick clears on *any* change of selection:
-              // "Yes, delete these" names the selection as it
-              // stood when it was ticked. A programmatic
-              // uncheck fires no ``change`` of its own, so the
-              // gate is re-run by hand or the button would
-              // stay enabled.
-              deleteConfirm.checked = false;
-              deleteConfirm.dispatchEvent(new Event("change"));
-            }
-          }
-          if (selectAll) {
-            selectAll.checked = (n > 0 && n === all.length);
-          }
-        }
-        document.addEventListener("change", function (e) {
-          var t = e.target;
-          if (!t) return;
-          if (t === selectAll) {
-            var all = boxes();
-            for (var i = 0; i < all.length; i++) {
-              all[i].checked = selectAll.checked;
-            }
-            refresh();
-          } else if (t.classList &&
-                     t.classList.contains("reviewee-select")) {
-            refresh();
-          }
+        selectAll.addEventListener("change", function () {
+          setAllBoxes(selectAll.checked);
+          tickOrder = selectAll.checked
+            ? rows().map(function (row) { return row.id; })
+            : [];
+          setTimeout(render, 0);
         });
-        editBtn.addEventListener("click", function () {
-          var all = boxes();
-          var picked = null;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) {
-              if (picked !== null) return;  // more than one
-              picked = all[i];
+
+        // `Edit` is a client-side GET, not a form post, so it carries
+        // its own landing anchor: `#reviewee-row-<id>`, the id the edit row
+        // keeps. With the editor card gone there is nothing else for the
+        // anchor to name.
+        table.addEventListener("click", function (event) {
+          var edit = event.target.closest
+            ? event.target.closest(".exp-edit[data-edit-id]") : null;
+          if (!edit) return;
+          var editId = edit.getAttribute("data-edit-id");
+          window.location = BULK_BASE + "?edit_id=" +
+            encodeURIComponent(editId) +
+            "#reviewee-row-" + encodeURIComponent(editId);
+        });
+
+        // Sorting reorders `tbody`'s children. The panel carries no sort
+        // cells, so it compares null and strands at the bottom, away from
+        // the row it belongs to — and being present when base.html stamps
+        // `rrwOriginalIndex` would shift every index after it, corrupting
+        // the unsorted restore order too. Capture phase, so this runs
+        // before the header's own inline handler: take the panel out
+        // first, put it back against its anchor after.
+        table.addEventListener("click", function (event) {
+          if (!event.target.closest(".rrw-sort-btn")) return;
+          if (panel) { panel.remove(); panel = null; }
+          setTimeout(render, 0);
+        }, true);
+
+        // A selection can arrive already made: the bulk routes redirect
+        // through `_redirect_keeping_selection`, which carries the
+        // acted-on ids as `?selected=` and the server re-checks those
+        // boxes. Without this the restored rows would have neither rails
+        // nor a panel until the operator toggled something.
+        rows().forEach(function (row) {
+          var box = row.querySelector(".reviewee-select");
+          if (box && box.checked) tickOrder.push(row.id);
+        });
+        render();
+      })();
+    </script>
+  {% endif %}
+
+  {# 19P.3 rung 3 — the editor's own landing, now that the editor is a
+     row rather than a card at the top of the page. #}
+  {% if edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        var row = document.querySelector(".reviewee-edit-row");
+        if (!row) return;
+        var field = document.querySelector(".row-editor-first-field");
+
+        function land() {
+          // Who owns the scroll depends on how the page was reached.
+          //
+          // `Add new` and `Edit` navigate with a fragment naming this
+          // row, and the fragment plus its `scroll-margin-top` place it
+          // — so the caret is set with `preventScroll` and nothing
+          // moves. But a FAILED save is not a navigation: the route
+          // re-renders in place with a 400 and no fragment at all, so
+          // the page would arrive at the top with the row, its error and
+          // its Save button all below the fold.
+          var hash = window.location.hash;
+          var anchored = hash && document.getElementById(hash.slice(1));
+          if (!anchored && row.scrollIntoView) {
+            row.scrollIntoView({ block: "center" });
+          }
+          // Add only — `.row-editor-first-field` is on the add row
+          // alone. An Edit arrives with the row already filled, and
+          // stealing focus there fights an operator heading for a
+          // different cell.
+          if (field && field.focus) {
+            try {
+              field.focus({ preventScroll: true });
+            } catch (e) {
+              field.focus();
             }
           }
-          if (picked === null) return;
-          window.location =
-            {{ reviewees_base_url | tojson }} + "?edit_id=" + picked.value;
-        });
-        refresh();
+        }
+
+        // On `load`, not inline: a fragment navigation's own focus
+        // handling runs after the document parses and beats anything set
+        // during it, which is also why the `autofocus` attribute does
+        // nothing here.
+        if (document.readyState === "complete") land();
+        else window.addEventListener("load", land);
       })();
     </script>
   {% endif %}

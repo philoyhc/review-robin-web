@@ -114,23 +114,23 @@ def test_the_selection_surface_renders_while_editable(
     assert f'class="{SELECT_CLASS[page]}"' in body, "row checkboxes"
     assert f'id="{page}-bulk-form"' in body, "the form they post to"
 
-    if page == "reviewers":
-        # 19P.1 rung 2b moved the controls into the row expander, which
-        # is BUILT IN JS against the selected rows — so they are not in
-        # the response as markup at all, and a substring assertion on
-        # their attributes now reads the builder's own escaped string
-        # literals rather than rendered HTML. What is still checkable
-        # here is that the builder ships and is reachable; the controls
-        # themselves are pinned against a real DOM in
-        # `test_reviewers_roster_card_scaffold.py`.
-        assert 'tr.id = "reviewers-row-expander"' in body, "the builder"
-        assert "/bulk-delete" in body, "Delete's route"
-        assert "data-delete-confirm" in body, "the delete gate"
-        return
-
-    assert f'id="{page}-delete-btn"' in body, "Delete"
-    assert f'id="{page}-edit-btn"' in body, "Edit"
-    assert f'id="{page}-delete-confirm"' in body, "the delete gate"
+    # The controls live in the row expander, which is BUILT IN JS against
+    # the selected rows — so they are not in the response as markup at
+    # all, and a substring assertion on their attributes reads the
+    # builder's string literals rather than rendered HTML. What is
+    # checkable here is that the builder ships and is reachable; the
+    # controls themselves are pinned against the builder in
+    # `test_reviewers_roster_card_scaffold.py` and
+    # `test_roster_expander.py`.
+    #
+    # **All three pages, not just Reviewers**: 19P.3 rung 3 took the last
+    # two. This branch was `if page == "reviewers": ... return` with the
+    # card-era ids below it, and leaving that shape would have left two
+    # parametrizations asserting ids that no longer exist in any state —
+    # which is the vacuity a cold read caught here once already.
+    assert f'tr.id = "{page}-row-expander"' in body, "the builder"
+    assert "/bulk-delete" in body, "Delete's route"
+    assert "data-delete-confirm" in body, "the delete gate"
 
 
 @pytest.mark.parametrize("page", FROZEN_PAGES)
@@ -150,23 +150,18 @@ def test_the_selection_surface_is_gone_once_the_session_is_frozen(
     assert f'class="{SELECT_CLASS[page]}"' not in body, "no row checkboxes"
     assert f'id="{page}-bulk-form"' not in body, "no bulk form"
 
-    if page == "reviewers":
-        # The ids below stopped existing in EVERY state at 19P.1 rung
-        # 2b, so asserting their absence here can no longer fail — a
-        # cold read caught that three of this test's five assertions had
-        # gone permanently vacuous. What still has to be absent when the
-        # session is frozen is the expander that replaced them.
-        # Needles are the expander's OWN — the roster lock card also
-        # carries a `data-delete-confirm`, and it renders when frozen,
-        # so a bare attribute check would fail on an unrelated gate.
-        assert 'tr.id = "reviewers-row-expander"' not in body, "no builder"
-        assert "reviewers-bulk-delete" not in body, "no delete gate"
-        assert "/bulk-delete" not in body, "no route to delete with"
-        return
-
-    assert f'id="{page}-delete-btn"' not in body, "no Delete"
-    assert f'id="{page}-edit-btn"' not in body, "no Edit"
-    assert f'id="{page}-delete-confirm"' not in body, "no delete gate"
+    # The card-era ids stopped existing in EVERY state — Reviewers at
+    # 19P.1 rung 2b, these two at 19P.3 rung 3 — so asserting their
+    # absence here can no longer fail. A cold read caught that vacuity on
+    # the Reviewers branch; the same fix now covers all three, rather
+    # than leaving two pages asserting nothing until someone notices.
+    #
+    # Needles are the expander's OWN: the roster lock card also carries a
+    # `data-delete-confirm` and it renders when frozen, so a bare
+    # attribute check would fail on an unrelated gate.
+    assert f'tr.id = "{page}-row-expander"' not in body, "no builder"
+    assert f"{page}-bulk-delete" not in body, "no delete gate"
+    assert "/bulk-delete" not in body, "no route to delete with"
 
 
 @pytest.mark.parametrize("page", FROZEN_PAGES)

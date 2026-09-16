@@ -422,18 +422,22 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
 
         assert body.count('class="card-columns"') == 1, page
 
-        # Left column in full, then right column in full — the source
-        # order only a single container of two column stacks produces.
+        # Guidance, then the tag-labels editor — the source order a
+        # single container produces.
         #
-        # Reviewers no longer reaches here at all — see the `continue`
-        # above. The three pages that do still carry both cards.
+        # **The `Operator actions` card was the third tenant** and was
+        # this assertion's right-hand column until 19P.3 rung 3 retired
+        # it on both remaining pages. Its controls are in the row
+        # expander now, which is not a card and not in this container, so
+        # the claim shrinks to the two tenants that are left rather than
+        # naming a card no roster page renders.
         order = [body.index(CARD), body.index("field-labels-form")]
-        card = 'class="card operator-actions-card"'
-        assert card in body, f"{page} lost its operator-actions card"
-        order.append(body.index(card))
+        assert 'class="card operator-actions-card"' not in body, (
+            f"{page} still renders the retired Operator actions card"
+        )
         assert order == sorted(order), (page, order)
 
-        # No row grid above those three. The Upload / Danger Zone pair
+        # No row grid above those two. The Upload / Danger Zone pair
         # below still is a `.bottom-grid` and should be — asserting
         # position rather than absence keeps this independent of whether
         # the preview table rendered.

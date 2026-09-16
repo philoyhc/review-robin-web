@@ -257,26 +257,12 @@ def test_the_chip_row_carries_no_inline_margin_in_the_pane(
     assert "style=" not in chip_row.group(0), chip_row.group(0)
 
 
-@pytest.mark.parametrize("page,noun", PAGES)
-def test_the_slimmed_card_keeps_the_four_it_still_owns(
-    client: TestClient, db: Session, page: str, noun: str
-) -> None:
-    """The card is slimmed, not retired: rung 3 owns the expander that
-    replaces these. A guard on what left would pass against a page that
-    lost all of it."""
-    rs = _make_session(client, db, f"tb-c-{page[:4]}")
-    _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page)).text)
-
-    card = _actions_card(html)
-    for control in ("edit-btn", "inactivate-btn", "reactivate-btn", "delete-btn"):
-        assert f'id="{page}-{control}"' in card, control
-    assert 'class="filter-confirm"' in card, "the count and the gate stay too"
-
-    # ...and none of the four that moved is still here.
-    for gone in (">Clear</a>", ">Add</a>", ">Add new</a>", ">Search</button>"):
-        assert gone not in card, f"{gone} did not leave the card"
-    assert 'class="filter-row"' not in card, "the filter row did not leave"
+# (`test_the_slimmed_card_keeps_the_four_it_still_owns` stood here. The
+# card it guarded is retired at 19P.3 rung 3, and the four controls it
+# named are in the row expander — where
+# `test_roster_expander.py::test_the_panel_carries_all_four_actions` and
+# its neighbours pin them. Deleted rather than re-aimed in place: a test
+# named for a card cannot be the one that guards a panel.)
 
 
 # ── The trap: the states where the strip must still be reachable ──────
@@ -429,16 +415,18 @@ def test_the_filter_and_clear_keep_the_landing_fragment(
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
-def test_add_new_still_carries_the_active_filter_and_takes_no_fragment(
+def test_add_new_still_carries_the_active_filter_and_lands_on_the_row(
     client: TestClient, db: Session, page: str, noun: str
 ) -> None:
     """Rung 1's contract, which the move must not drop: without the
     filter on this link the intervening GET rebuilds the page at the
     defaults and `create`'s round-trip carries nothing.
 
-    No fragment, unlike Reviewers' and Observers': the Add / Edit form
-    it opens still lives in the `Operator actions` card at the top of
-    the page until rung 3, so a fragment would scroll past it.
+    The fragment arrived at rung 3, when the editor became a row. Until
+    then the Add / Edit form was a card at the top of the page and a
+    fragment would have scrolled the operator past it. Where the fragment
+    LANDS is `test_roster_expander.py`'s claim; what this test adds is
+    that carrying it did not cost the filter round-trip.
     """
     rs = _make_session(client, db, f"tb-a-{page[:4]}")
     _seed(db, rs.id, page)
@@ -449,7 +437,7 @@ def test_add_new_still_carries_the_active_filter_and_takes_no_fragment(
     href = link.group(1).replace("&amp;", "&")
     assert "status=active" in href, href
     assert "q=Re0" in href, href
-    assert "#" not in href, href
+    assert href.endswith(f"#{page}-row-editor"), href
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
