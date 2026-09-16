@@ -880,12 +880,180 @@ edits above them.
 
 ## Item 3 — Reviewees and Relationships
 
-**Not yet planned.** Mechanical once Items 1 and 2 land, and measurably so:
-both match Reviewers exactly on action set (3 / 3) and arity (4 / 4), and both
-carry a labels editor. Likely one item, possibly one PR each.
+### Opportunity
 
-The one watch-item is Relationships: its rows are reviewer→reviewee **pairs**
-and its labels are *pair-context*, so its `Edit` acts on a pair, not a person.
+**Two pages still carry the pre-19P.1 shape, and one live defect with it.**
+
+Measured 2026-09-16 on `origin/main` after Item 2 closed. Both render the
+`Operator actions` card with the same seven controls (`Clear`, `Edit`,
+`Inactivate`, `Activate`, `Add`, `Delete`, `Search`), a `.card-columns`
+above the preview table and a `.bottom-grid` below it — the shape Reviewers
+left at 19P.1 and Observers at 19P.2.
+
+**The 821px landing defect is live on both.** Each has **five**
+`_redirect_keeping_selection` call sites and **zero** anchors: `grep -c
+"anchor=" app/web/routes_operator/_setup_{reviewees,relationships}.py` → 0
+and 0. `offset` appears twice in each module and reaches only the GET route
+and the window helper, never a redirect — so a row action taken on page 2
+answers with page 1 and lands at the top of the document.
+
+**And they are the only pages keeping the spec's hedges alive.** 19P.1
+committed to *"each item states its own page, and 19P.4's close does ONE
+consolidating sweep"*; after this item there is no page left hedged.
+
+### Decision
+
+**Apply the idiom to both pages in one item, one rung per concern rather
+than one rung per page.** Each rung lands the same change on both templates
+in one commit.
+
+Rejected: **a rung per page** — it is the same edit twice, and letting the
+two drift apart by a rung is exactly the divergence 19P.1's spec cold read
+spent fifteen findings on. Rejected: **deferring the landing fix** — it is a
+five-call-site change per page and a defect the operator meets today.
+
+**The divergence proof is done.** Item 2 took the idiom to the page that did
+not fit; these two fit. So this item is a transcription with three named
+differences, below, and its risk is drift rather than discovery.
+
+### Semantics
+
+- **The labels editor keeps Reviewers' two-homes solution, verbatim.** Both
+  pages render `_field_labels_editor.html` once and both have a
+  `.card-columns`, so they inherit the contract Reviewers settled: one
+  include, two positions, on the exact complement of the panel's condition —
+  inside the panel where it can render, in `.card-columns` where it cannot
+  (locked, or mid-edit). This is the piece Observers had no equivalent of,
+  so it is the only part of the move Item 2 did not rehearse.
+- **The gate is `is_editable`, NOT Observers' `not is_archived`.** Observers
+  earned the wider predicate because an observer row is a view grant —
+  no assignments, no responses, no readiness rule. Reviewees and
+  Relationships are the opposite on all three counts, so the exception does
+  not transfer, and `spec/lifecycle.md` §5 already says a second claim on it
+  needs its own stated reason. Stating this is the point: the risk is
+  someone reading 19P.2 as a precedent.
+- **Relationships' `Edit` acts on a pair, and can re-point it.** Its edit row
+  carries `reviewer_pick` / `reviewee_pick` alongside `status`, so the row's
+  identity is editable, not just its state. Arity is still exactly one row,
+  and the expander needs no new affordance — but the edit-row bar sits under
+  a row whose two identity cells are inputs, which is wider than anything
+  Reviewers or Observers renders.
+- **Both pages have column chips** (`data-col-toggle=` → 2 on Reviewees,
+  1 on Relationships), so the toolbar's left pane is populated on both.
+  Observers' deliberately-empty pane was its own case and does not recur.
+- **Confirm keys stay unique per page.** `base.html` pairs a confirm to its
+  button with a first-match `querySelector`, so each page's
+  `data-delete-confirm` / `data-delete-btn` keys must remain distinct from
+  its own others — the trap that made Item 1 wire and delete each card in
+  one commit.
+
+### Judgment calls — decided
+
+- **One item, both pages, rung-by-concern.** 2026-09-16 — same edit twice;
+  separate rungs invite drift.
+- **The consolidating sweep moves to THIS item's close, not 19P.4's.**
+  2026-09-16 — 19P.1 assigned it to 19P.4, but Item 4 is explicitly
+  undecided and may become 19Q, and after this item no roster page keeps the
+  old shape. A sweep owed by an item that may not exist is a sweep that does
+  not happen.
+
+### Blast radius (measured)
+
+Commands run 2026-09-16 on `origin/main` at `907df01`.
+
+- Templates: `wc -l app/web/templates/operator/session_{reviewees,relationships}.html`
+  → **742** and **710** (against Reviewers 1,351 and Observers 1,653 — these
+  are the two simplest roster pages).
+- Routes: nine each, eight mutating, all on `_require_editable` except
+  `field-labels`; `grep -c "_redirect_keeping_selection"` → **5** each.
+- Specs naming either Setup page: **`spec/setup_pages.md`**,
+  `spec/operator_button_audit.md`, `spec/operator_ui_concept.md`,
+  `spec/settings_inventory.md`, `spec/participant_model.md` (Reviewees
+  only), `docs/status.md`.
+- Tests hitting either Setup route: **67** files for Reviewees, **16** for
+  Relationships (`grep -rln "sessions/{[^}]*}/<page>\|/<page>/import\|..."`).
+  The Reviewees figure is the one to watch — it is four times Relationships'
+  and larger than either page's own suite, because reviewees are a fixture
+  for most of the app.
+
+### PR ladder
+
+1. **The landing contract, both pages.** Five POSTs each gain `offset`, a
+   fragment and `focus=<id>` on a create, plus the fallback script. No layout
+   change; this is the defect 19P.1 left behind, fixed the way rungs 1 of
+   both prior items fixed it.
+2. **The toolbar.** The filter strip moves into the preview table's two-pane
+   toolbar; the action row slims to `Clear` / `Add new` / `Search`. Chips
+   join the left pane on both.
+3. **The row expander + the edit-row bar.** `Edit` / `Inactivate` /
+   `Activate` / `Delete`, the selected count and the delete confirm move into
+   an injected panel; Save / Cancel move into a bracketed bar beneath the row
+   being edited. The `Operator actions` card retires here.
+4. **The Unlock panel.** The labels editor over the `Danger Zone` on the
+   left, `Upload` on the right, `Lock` beneath the upload card — Reviewers'
+   arrangement, both pages having its shape rather than Observers'. Carries
+   the two-homes fallback and the `?unlocked=1` contract.
+5. **Specs, the consolidating sweep, and the close.** Per-page sections for
+   both, then the sweep that removes every *"until 19P.2–.4"* and restores
+   one shared shape.
+
+### Definition of done
+
+- A row action on page 2 of a filtered roster returns to page 2 and lands on
+  the acted-on row, asserted by route test, on **both** pages and all five
+  POSTs each.
+- The `Operator actions` card renders on **no** roster page:
+  `grep -l "operator-actions-card" app/web/templates/operator/session_{reviewers,reviewees,relationships,observers}.html`
+  → no matches. **`operator-actions-card`, not `operator-actions`** — the
+  filter strip keeps the latter as `operator-actions-filter` after moving
+  into the toolbar, so the looser grep is nonzero on pages that have already
+  migrated and cannot reach 0. `session_assignments.html` renders the card
+  too and is **not** a roster page, so it is excluded by name rather than by
+  a `session_*` glob.
+- `_field_labels_editor.html` is included **once** per page and renders in
+  both homes on the complement condition, asserted per page.
+- No `.bottom-grid` on any roster page; nothing renders below any preview
+  table.
+- No spec sentence defers a roster shape to a future item:
+  `grep -rn "19P.2–.4\|19P.3–.4" spec/` → 0, from **9** today. Only the
+  forward-looking hedges retire — `spec/setup_pages.md:1168` and `:1207`
+  read *"until 19P.1"* about a transition that already happened, which is
+  history rather than a hedge and stays.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19P.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does the consolidating sweep land here or at 19P.4?** Proposed above:
+   here, because Item 4 may become 19Q. **Author decides** before rung 5.
+2. **Does Relationships' edit-row bar need anything Reviewers' does not**,
+   given its two identity cells are inputs? **The dev slot decides**, after
+   rung 3 renders it.
+
+### Out of scope
+
+- **Item 4 (Invitations / Responses).** A different move — see its block.
+- **`_field_labels_editor.html`'s markup** (`<div class="card">` with a bare
+  `<h2>` where the panel's other tenants are `<section aria-labelledby>`).
+  Owed since 19P.1, and this item makes it a three-page partial rather than
+  fixing it; recorded in this segment's *Left for later* list.
+- **`guide.html:174-177`**, which tells operators they edit tag labels
+  "through the Reviewers, Reviewees and Relationships pages" and says nothing
+  about Unlock. Recorded in the same list.
+
+### Doc impact
+
+- `spec/setup_pages.md` — per-page § *Body layout* for Reviewees and Relationships, each stated outright rather than by reference to Reviewers (the failure mode 19P.1 catalogued eight times); § *Operator actions card* **retires**, no page rendering it after this item; the § *Per-row Edit / Add / bulk actions* landing contract drops its page scoping; and the `.bottom-grid` / `.card-columns` sitings lose their last live referents (Item 3).
+- `spec/operator_button_audit.md` — §§7 and 8 re-site their rows into the toolbar, the expander and the Unlock panel, as §6 and §8.5 already are; the gate note above §6 drops its per-page hedging, Observers' exception aside; and row 125's *"Reviewees and Relationships still read `Add`"* retires with the relabel (Item 3).
+- `spec/operator_ui_concept.md` — § *Setup pages (Reviewees / Relationships) — shared shape* has no tenants left and retires into one shared description of all four pages (Item 3).
+- `spec/settings_inventory.md` — § *URL state* rows for `offset=`, `focus=` and `?unlocked=1` widen to all four roster pages (Item 3).
+- `spec/ui_elements.md` — `.session-row-selected`'s injector list gains the last two templates; `.table-card-toolbar`'s attribution becomes the roster pages rather than a list (Item 3).
+- `spec/participant_model.md` — the Reviewees Setup page's description, the one spec outside the shared set that names it (Item 3).
+- `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
+- `docs/status.md` — row for Item 3 as it lands (Item 3).
 
 ---
 
