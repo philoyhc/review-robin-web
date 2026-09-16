@@ -1131,6 +1131,91 @@ the record.
 
 
 
+**Rung 6 — landed.** `Upload Observers` and the `Danger Zone` moved off
+the foot of the page into a collapsed Unlock panel above the table, and
+`.bottom-grid` is gone from this page. No CSS: 19P.1 left
+`.unlock-panel` / `.unlock-stack` / `.unlock-col-actions` /
+`.roster-card-actions` in `base.html` as page-agnostic primitives, and
+they were enough.
+
+**`Upload` left, `Danger Zone` right** — the order they already had, so
+the operator's muscle memory survives. Reviewers is the mirror of this
+and cannot be copied: its left column holds a tag-labels editor
+Observers does not have.
+
+**The gate is `not is_archived`, not Reviewers' `is_editable`.** Rung 2
+relaxed import and delete-all with the rest, so on `ready` and `expired`
+both tenants are live; suppressing them would hide controls their own
+routes accept.
+
+**The roster index came with it — author's correction, mid-rung.** The
+first draft gated the whole CARD, reasoning that without the readouts
+Reviewers carries, a locked Observers card would be empty. The right
+answer was to give this page the readouts: they are informational in
+every lifecycle state, which is exactly what a mutating control is not.
+So the card renders always and only the panel is gated, as on Reviewers.
+It fixed half the wrinkle this entry first flagged — the card is no
+longer bare — and the first draft of this entry claimed it fixed the
+whole thing. It did not: `Lock` still sat at the top of an empty right
+column, and the cold read caught both the defect and the false claim.
+Fixed properly instead. `data-lock-home` marks whichever stack holds a
+card, so on an empty roster the control sits beneath `Upload`. Reviewers
+cannot reach that case — its right column holds the always-rendered
+Upload card — so following it means keeping the RELATIONSHIP, `Lock`
+beneath the card its column holds, rather than the column itself. It
+lands on the two likeliest paths, not an edge case: first use, and
+immediately after `delete-all`, which redirects back `?unlocked=1`
+precisely because uploading a replacement is the likely next move.
+
+`views.observer_column_state` is the second caller
+`reviewer_column_state`'s docstring was explicitly waiting for, and it
+settles the rule: **the index mirrors the columns the preview table
+renders.** On Reviewers that resolves to identity plus only the
+*populated* tag slots, because unpopulated tag columns are hidden there.
+On Observers it resolves to all three, because none are hidden — one
+fixed tag slot, no column chips (rung 3). One sentence, two answers,
+because the two tables differ. `col_data` is empty here: no chips, no
+flags to answer.
+
+**`Tag1` displays as `Tag`** (author's call). One tag slot, so the digit
+numbered a series of one. **Four display sites, not two.** The first
+draft moved the roster index and the `<th>` and stopped there; the cold
+read found the cohort rule builder's operand option and
+`_COHORT_OBSERVER_FRIENDLY` still reading `Observer: Tag 1`, so a single
+row read `Tag` in its column header and `Observer: Tag 1` in its Cohort
+cell. All four move together or the page disagrees with itself.
+
+What does NOT move: the CSV column `ObserverTag1`, an identifier in a
+file contract where a rename breaks every existing import for a cosmetic
+gain; and the rule key `observer.tag1`, which a saved `cohort_rule`
+stores. Labels moved, keys did not.
+
+**Three redirects, one rule.** `delete-all` and a successful import now
+answer `?unlocked=1#roster-card`, and the failed import's in-place
+re-render sets `panel_open` server-side because it returns 400 with the
+page and has no redirect to hang a param on. Stated once about the
+panel, not three times about its controls.
+
+**The suite was blind to the whole move.** All 4,131 tests that already
+existed **passed** with the cards relocated, the container deleted and
+both redirects rewritten — nothing pinned position, container or URL.
+(4,131 passed, 17 skipped. `--collect-only` on `main` reports 4,148,
+which is the same suite counted with the skips; the cold read compared
+the two figures and read a discrepancy that is not there. Noted because
+the next reader will do the same.) The 18 new tests in
+`test_observers_unlock_panel.py` are exactly that gap; 19/19 mutations
+caught. One survived the first table: a label assertion satisfied by the
+`<noscript>` twin beside the button, fixed by reading the label off the
+`<button>` itself.
+
+**Two mutations survived the readouts' first table**, both fixture
+blindness rather than missing assertions: every row had a name AND an
+email, so "Name counts email" passed; and every page was unfiltered, so
+`total_row_count` and `displayed_row_count` were equal and swapping them
+passed. Fixed by making the three counts differ by construction (3 rows,
+2 named, 1 tagged) and by adding a filtered page. 28/28 across both
+tables now.
+
 ### PR ladder
 
 1. **The `offset` / anchor fix — land where Reviewers lands.** Every row
@@ -1245,6 +1330,7 @@ the record.
 - `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=`, `focus=` and row fragment. **Three rows go stale the moment rung 1 lands**: `:384` reads *"Reviewers only; the other three roster pages pass no offset"*, `:385` scopes `focus=<id>` to Reviewers, and `:379-381` list `edit_id=` / `add=1` / `selected=` as Reviewers / Reviewees / Relationships though Observers has had all three all along (Item 2).
 - `spec/ui_elements.md` — **`:609`** (`.session-row-selected`) names the injectors as *"`sessions_list.html`, `sessions_archived.html` and now `session_reviewers.html`"* and says Reviewers is the page rendering both the expander and the bracketed variant: Observers is a fourth injector and a second such page since rung 4, and it is the line the builder's own comment cites. §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
+- **Rung 6 adds four, three of them falsified the moment it landed.** `spec/setup_pages.md:1258-1262` calls the cohort editor + Operator actions pair *"a `.bottom-grid`"* — already wrong (it was `.card-columns`, and this file already said so) and now wrong twice over, since `.bottom-grid` names the container rung 6 deleted; `:568-569` and `:763` both scope *"that class carries only the Upload + Danger Zone pair below the table"* to a layout Observers no longer has; and `:979-1002`'s *"There is nothing below the preview table"* section, written for Reviewers, is now true of this page too and should say so rather than being restated. `spec/lifecycle.md:351-356` says *"On Reviewees, Relationships and Observers it is the `.bottom-grid` those two cards sit in"* — two now, and the sentence's own point (same predicate, different container) is what changes. `spec/settings_inventory.md:383` scopes `?unlocked=1` to the *"Reviewers Setup page"*; the row's whole contract now holds on two pages, and Observers' version differs in one way worth stating — it has no labels editor, so the panel has two tenants, not three. **And two more the author's mid-rung corrections added:** the roster index row is a second-page feature now, so wherever `spec/` scopes it to Reviewers it wants the generalized rule stated once (*the index mirrors the columns the table renders*) rather than twice by page; and the Observers preview table's `Tag1` column header is now `Tag`. **That last one is a CLOSING, not an opening** — the first draft of this bullet had it backwards. `spec/setup_pages.md:1308` already reads `| 3 | Tag |`, so the CODE had drifted and the rename brings it back; what the close actually owes is the cohort label `Observer: Tag`, which the same rung moved in `_COHORT_OBSERVER_FRIENDLY` and which `:1310`'s example summary does not quote. **And the passage this register most conspicuously missed, found by the cold read: `spec/setup_pages.md:1284-1288`** — item 6 of the Observers page's own *Body layout*, stating the container, the position and the gate of the two cards this rung moved (*"a `.bottom-grid` pair below the table … Hidden whenever the session is not `is_editable`"*). Every clause is false of the code now, the `is_editable` half since rung 2. The citations above reach the cross-references from OTHER pages and the cohort-editor pair; none reached the page's own layout item (Item 2).
 - **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md:944-953` (*Lock-with-unsaved-edits*) and `spec/operator_button_audit.md:306`, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2).
 
 ---
