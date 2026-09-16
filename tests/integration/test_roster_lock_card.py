@@ -31,6 +31,24 @@ LOCKED = ("ready", "expired", "archived")
 EDITABLE = ("draft", "validated")
 ALL_STATES = EDITABLE + LOCKED
 
+#: The pages that freeze at ``is_editable`` — the card's default gate.
+FROZEN_PAGES = ("reviewers", "reviewees", "relationships")
+
+#: Which states each page actually locks in. **Observers diverged at
+#: 19P.2 rung 2**: every mutating observers route relaxed to
+#: ``_require_not_archived`` on the ground that an observer row is a
+#: view grant — observers never appear in assignments, never produce
+#: responses, and no readiness rule references them — so the roster
+#: stays live on ``ready`` and ``expired`` and the card would have
+#: contradicted the page beneath it. The card follows the controls;
+#: that is the whole reason it exists.
+LOCKED_STATES = {
+    "reviewers": LOCKED,
+    "reviewees": LOCKED,
+    "relationships": LOCKED,
+    "observers": ("archived",),
+}
+
 _CARD_OPEN = '<div class="card lock">'
 
 
@@ -105,7 +123,7 @@ def test_every_roster_page_posts_a_return_to_its_own_route_honours(
     ), page
 
 
-@pytest.mark.parametrize("page", ROSTER_PAGES)
+@pytest.mark.parametrize("page", FROZEN_PAGES)
 def test_the_slug_each_page_renders_is_the_one_under_test(
     db: Session, client: TestClient, page: str
 ) -> None:
@@ -164,7 +182,7 @@ def test_the_card_renders_exactly_where_the_page_is_locked(
 
     present = _CARD_OPEN in _page(client, s, page)
 
-    assert present is (state in LOCKED), (page, state)
+    assert present is (state in LOCKED_STATES[page]), (page, state)
 
 
 @pytest.mark.parametrize(
@@ -175,7 +193,7 @@ def test_the_card_renders_exactly_where_the_page_is_locked(
         ("archived", "cannot be modified because the session is archived"),
     ),
 )
-@pytest.mark.parametrize("page", ROSTER_PAGES)
+@pytest.mark.parametrize("page", FROZEN_PAGES)
 def test_the_card_names_the_state_it_is_explaining(
     db: Session, client: TestClient, page: str, state: str, phrase: str
 ) -> None:
@@ -195,6 +213,8 @@ def test_the_card_names_the_state_it_is_explaining(
         ("reviewers", "The reviewers cannot be modified"),
         ("reviewees", "The reviewees cannot be modified"),
         ("relationships", "Relationships cannot be modified"),
+        # Observers is read on ``archived``, the one state it still
+        # locks in — see ``LOCKED_STATES``.
         ("observers", "The observers cannot be modified"),
     ),
 )
@@ -204,14 +224,14 @@ def test_each_page_names_its_own_roster(
     """The one thing a shared partial could get wrong for everyone at
     once: four pages rendering the same noun."""
     s = _seed(client, db, code=f"lc-n-{page[:4]}")
-    s.status = "expired"
+    s.status = "archived" if page == "observers" else "expired"
     db.commit()
 
     assert subject in _lock_card(client, s, page), page
 
 
 @pytest.mark.parametrize("state", ("ready", "expired"))
-@pytest.mark.parametrize("page", ROSTER_PAGES)
+@pytest.mark.parametrize("page", FROZEN_PAGES)
 def test_revertable_states_carry_the_inline_revert_form(
     db: Session, client: TestClient, page: str, state: str
 ) -> None:

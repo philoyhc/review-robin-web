@@ -50,7 +50,6 @@ from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
     _row_action_anchor,
     _require_delete_confirm,
-    _require_editable,
     _require_selected_response_loss_ack,
     _require_not_archived,
     _templates,
@@ -250,9 +249,15 @@ def _render_observers_page(
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
             # left `expired` and `archived` sessions rendering checkboxes
-            # and a live Delete while every mutation 409d. This is what
-            # ``_require_editable`` enforces, so page and route agree by
-            # construction rather than by two lists kept in step.
+            # and a live Delete while every mutation 409d. Page and route
+            # agree by construction rather than by two lists kept in step.
+            #
+            # 19P.2 rung 2 — that pairing now runs through
+            # ``is_archived`` on this page, not ``is_editable``: every
+            # mutating route relaxed to ``_require_not_archived``, so
+            # ``is_editable`` no longer describes any route's gate here.
+            # It stays in the context because the lock card and the
+            # status strip still read it.
             "is_editable": lifecycle.is_editable(review_session),
             "is_archived": lifecycle.is_archived(review_session),
             "edit_id": edit_id,
@@ -330,7 +335,7 @@ def observers_create(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     try:
         created = observers_service.create_observer(
             db,
@@ -394,7 +399,7 @@ def observers_update(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     observer = _require_observer_in_session(db, review_session, observer_id)
     try:
         observers_service.update_observer(
@@ -444,7 +449,7 @@ def observers_bulk_inactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     try:
         observers_service.bulk_inactivate(
             db,
@@ -478,7 +483,7 @@ def observers_bulk_reactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     try:
         observers_service.bulk_reactivate(
             db,
@@ -569,12 +574,18 @@ async def observers_cohort_rule_save(
     in ``observer_ids`` (sourced from the bulk-form's row
     checkboxes); rejects an empty selection with a 400.
 
-    Lifecycle gate is ``_require_not_archived`` rather than the
-    stricter ``_require_editable`` used by the roster mutators:
-    cohort rules govern which parts of response data observers
-    see, not the response data or roster shape, so editing them
-    mid-session (ready / expired) is legitimate. Only archived
-    is a hard stop.
+    Lifecycle gate is ``_require_not_archived``. This route has
+    used it since it was written, on the ground that cohort rules
+    govern which parts of response data observers see, not the
+    response data or roster shape, so editing them mid-session
+    (ready / expired) is legitimate.
+
+    **19P.2 rung 2 extended that ground to the roster itself** and
+    the other six mutators joined it, so this is no longer the
+    looser of two gates on the page — it is the page's gate. An
+    observer row is a view grant either way: observers never
+    appear in assignments, never produce responses, and no
+    readiness rule references them. Only archived is a hard stop.
     """
     _require_not_archived(review_session)
     form = await request.form()
@@ -615,7 +626,7 @@ def observers_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -658,7 +669,7 @@ async def observers_import_submit(
     check (observers don't conflict with reviewers / reviewees —
     a person can be both an observer and a reviewer / reviewee
     by design)."""
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     content = await file.read()
     result = csv_imports.parse_observer_csv(content)
     existing = csv_imports.existing_observer_count(db, review_session.id)
@@ -723,7 +734,7 @@ def observers_bulk_delete(
     **not** the ids: the rows are gone, so re-checking them is not a
     thing the page can do.
     """
-    _require_editable(review_session)
+    _require_not_archived(review_session)
     _require_delete_confirm(confirm)
     _require_selected_response_loss_ack(
         db,

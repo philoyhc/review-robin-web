@@ -348,13 +348,26 @@ def test_an_id_from_another_session_is_refused(
     assert db.get(model, mine.id) is not None, "the valid id survives too"
 
 
+#: The state at which each page's bulk-delete stops accepting.
+#: **Observers diverged at 19P.2 rung 2**: every mutating observers
+#: route relaxed to `_require_not_archived`, on the ruling that an
+#: observer row is a view grant — so a `ready` session still deletes
+#: here, and only `archived` refuses. The other three are unchanged.
+REFUSES_AT = {
+    "reviewers": "ready",
+    "reviewees": "ready",
+    "relationships": "ready",
+    "observers": "archived",
+}
+
+
 @pytest.mark.parametrize("page", PAGES)
 def test_a_non_editable_session_refuses(
     db: Session, client: TestClient, page: str
 ) -> None:
     s = _make_session(client, db, code=f"bdr-locked-{page}")
     rows = _rows(db, s, page, 1)
-    s.status = "ready"
+    s.status = REFUSES_AT[page]
     db.commit()
 
     response = _post(
@@ -363,6 +376,29 @@ def test_a_non_editable_session_refuses(
 
     assert response.status_code in (400, 409), response.status_code
     assert db.get(type(rows[0]), rows[0].id) is not None
+
+
+def test_observers_bulk_delete_accepts_on_ready(
+    db: Session, client: TestClient
+) -> None:
+    """The other side of `REFUSES_AT`, stated rather than implied.
+
+    Without this, narrowing the observers gate back to
+    `_require_editable` would leave the test above green — it would
+    simply refuse one state earlier than the map says.
+    """
+    s = _make_session(client, db, code="bdr-obs-ready")
+    rows = _rows(db, s, "observers", 1)
+    s.status = "ready"
+    db.commit()
+
+    response = _post(
+        client, s, "observers",
+        **{ID_FIELD["observers"]: [rows[0].id]}, confirm="true"
+    )
+
+    assert response.status_code == 303, response.status_code
+    assert db.get(type(rows[0]), rows[0].id) is None
 
 
 # ── The acknowledgement checkbox ───────────────────────────────────────
