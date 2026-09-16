@@ -257,15 +257,22 @@ author is free to re-create the page.*
 
 ### Setup pages (Reviewees / Relationships) — shared shape
 
-**Reviewers left this shape at 19P.1** and is specified in
-`spec/setup_pages.md` § *Reviewers page*: full-width guidance, a roster
-card whose **Unlock panel** holds the tag-label editor, the Danger Zone
-and the Upload card, a preview table carrying the filter strip in its
-own toolbar and the selection actions in a row expander, and nothing
-below the table. Items 3, 4, 5 and 6 below are all false of it; the
-gates are not — the panel reads the same `is_editable` the cards did.
-19P.2–.4 carry the move to the others, so this heading narrows again
-each time rather than being rewritten now.
+**Reviewers left this shape at 19P.1 and Observers at 19P.2**, each
+specified in its own section of `spec/setup_pages.md`: full-width
+guidance, a roster card whose **Unlock panel** holds the destructive
+cards, a preview table carrying the filter strip in its own toolbar and
+the selection actions in a row expander, and nothing below the table.
+Items 3, 4, 5 and 6 below are all false of both.
+
+**The gates are false of Observers too**, which is where the two
+departures differ. Reviewers' panel reads the same `is_editable` its
+cards did; Observers reads `not is_archived`, because every mutating
+route on that page was relaxed to match (`spec/setup_pages.md`
+§ *Observers page* § *Lifecycle gate*, `spec/lifecycle.md` §5). It is
+the first roster page whose mutating surface outlives `is_editable`.
+
+19P.3–.4 carry the move to the remaining two, so this heading narrows
+again each time rather than being rewritten now.
 
 Both remaining setup-roster pages share an identical chrome shape:
 
@@ -273,8 +280,8 @@ Both remaining setup-roster pages share an identical chrome shape:
 2. Yellow lock card whenever the session is not editable. It carries `return_to=reviewers` / `reviewees` / `relationships` / `observers` so the operator returns *here* after reverting — **all four slugs must be in the revert route's allowlist**, or the revert silently lands on Session Home instead. Sits directly under the status strip, above the `.card-columns` container (on Reviewers the card below it is the full-width guidance card, with the roster card below that — the same position it has always held, and the same neighbour: 19P.1 changed the guidance card's width, not its place in the order). **Not Assignments** — per P4, a page rendering the Workflow card carries no lock card.
 3. **Friendly-label editor (left) + Operator actions card (right)** — the right-hand pair of the page's one `.card-columns` container, **not** a `.bottom-grid`; this page uses that only for Upload + Danger Zone. The friendly-label editor is the inline editor for the per-session tag-column labels; the Operator actions card carries the search / status filter strip and the selection-driven Edit · Inactivate · Activate · Add · Delete button row. See `spec/setup_pages.md` "Operator actions card".
 4. Browseable data-preview table of the saved rows (always visible, even while locked) — leftmost checkbox column drives the operator-actions selection; a row flips to inline inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
-5. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden unless the session is `is_editable` (`draft` / `validated`), or while a row is being edited / added. *(On Reviewers the anchor and the gate both survive 19P.1 unchanged; the container does not — the card is in the Unlock panel's right column, not a `.bottom-grid`.)*
-6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card: `is_editable`, the same predicate the lock card reads, so the card and the controls cannot disagree about which states are locked. See `spec/lifecycle.md` §5.
+5. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden unless the session is `is_editable` (`draft` / `validated`), or while a row is being edited / added. *(On Reviewers the anchor and the gate both survive 19P.1 unchanged; the container does not — the card is in the Unlock panel's right column, not a `.bottom-grid`. On Observers 19P.2 moved it into the panel's **left** column and the gate moved with the routes, to `not is_archived`.)*
+6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card: `is_editable`, the same predicate the lock card reads, so the card and the controls cannot disagree about which states are locked — and on Observers, where that predicate is `not is_archived`, the lock card is passed the matching condition so the two still agree. See `spec/lifecycle.md` §5.
 
 Per-row inline **Edit** and **Add**, bulk **Inactivate / Reactivate**, and a selection-driven **Delete** all live on the Operator actions card; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
 

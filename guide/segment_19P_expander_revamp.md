@@ -633,588 +633,131 @@ Commands and counts, 2026-09-16, `226c600`:
 - `grep -rl observers tests/ --include=*.py | wc -l` → **45** (reviewers 160)
 - The cohort editor is ~95 lines of builder markup plus ~180 lines of its own JS.
 
-### Status
+### Status — closed 2026-09-16
+
+**All six rungs landed and merged, plus a 5a the ladder did not have.**
+The shape the item set out to prove — Reviewers' idiom survives contact
+with the one roster page that does not match it — held. What follows is
+intended versus done; the rungs' own reasoning lives in their commits
+and, where it became contract, in `spec/`.
+
+**Where the ladder was wrong, and why.**
+
+- **Rung 1 acted on six POSTs, not the ladder's five.** The set was
+  enumerated from the page rather than measured from the routes.
+- **Rung 2 relaxed seven routes, not five.** `grep -c _require_editable`
+  → 7 at the rung's start. `bulk-delete` was an enumeration slip;
+  `import` was *structurally forced* — one `{% if %}` gates Upload and
+  Danger Zone together, so `delete-all` could not become reachable on
+  `ready` without Upload rendering beside it, and a rendered control the
+  server refuses is the silent failure the rung existed to remove. Put
+  to the author, who ruled it in. (Eight routes read the gate today;
+  `cohort-rule` already did.)
+- **Rung 2 also had to touch the shared lock card**, which the ladder
+  did not see: unchanged, it would have read "cannot be modified while
+  the session is ongoing" above a live roster. Solved with a `lock_when`
+  parameter, leaving the other three pages byte-identical in behavior.
+- **Rung 4's card held more than row actions** — Save / Cancel, a
+  heading and an error slot — so retiring it meant building a *second*
+  expander, the edit-row bar, not just the selection panel.
+- **`.card-columns` retired at rung 5, not rung 4.** Rung 4 left the
+  right column empty for one rung, deliberately and visibly, rather than
+  reflowing twice.
+- **Rung 5a is new.** Rung 5 made an unsaved cohort edit reachable and
+  it was discarded silently by any selection change — verified against
+  the column, which stayed `null` on every loss path. The author asked
+  for a warning; it took Instruments' idiom verbatim (18R Item 2) and
+  landed before rung 6 on the author's ruling.
+
+**Decisions confirmed at build.**
+
+- **Observers only view**, so the whole expander takes `not
+  is_archived` and the routes relax to match. This is the item's real
+  risk and its real finding: it makes Observers the first roster page
+  whose mutating surface outlives `is_editable`, now a stated exception
+  in `spec/lifecycle.md` §5 with a rule governing any second one.
+- **The cohort editor belongs in the expander**, not a card and not the
+  Unlock panel — it is selection-driven, so a card a grid away from the
+  rows it acts on was the defect.
+- **The empty left toolbar pane is intended**, not a gap: one fixed tag
+  slot means no chips exist to toggle.
+- **Author's corrections at rung 6**, both of which improved the design
+  rather than patching it: the guidance card wanted `full_width=true`
+  (rung 5), and the roster card wanted Reviewers' readouts — which then
+  settled the gating (card always, panel conditionally), forced
+  `views.observer_column_state` (the second caller
+  `reviewer_column_state`'s docstring had been waiting for), and
+  dissolved an empty-card problem the first draft had reasoned its way
+  into. `Tag1` displays as `Tag` in all four display sites; the CSV
+  column and the stored rule key are identifiers and did not move.
+
+**What the build cost, and what it taught.**
+
+Six cold reads, 63 findings, all upheld. Four were **live defects the
+rungs shipped**: controls rendered on `ready` that opened nothing (rung
+2 — the exact silent failure rung 2 existed to remove); two guards
+deleted as card cleanup one rung after a cold read added them (rung 4);
+`X` on the last rule cell permanently disabling `Save` (rung 5); and the
+same `X` breaking the nav flag so `Save` raised "Leave site?" and Cancel
+ate the save (rung 5a). **That control has bitten twice for one reason**
+— `Save` rides *inside* the last rule cell, so removing it destroys and
+recreates the button. Anything bound to `Save` is bound where `Save` is
+built; `spec/setup_pages.md` says so now.
+
+Three structural gaps closed, each found by shipping into it:
+
+- **Python never parsed the app's JS.** A stray `}` killed this page's
+  entire script and all 4,106 tests passed. Closed by
+  `tests/integration/test_inline_scripts_parse.py` (`node --check` over
+  every inline script on 13 pages), proven by breaking `base.html`'s.
+- **Assertions read JS as text**, so one matched the *comment* explaining
+  a class rather than the class. `_code()` strips comments inside
+  `_builder()`.
+- **The suite pinned no card's position.** All 4,131 existing tests
+  passed with rung 6's two cards relocated, their container deleted and
+  both redirects rewritten. `test_observers_unlock_panel.py` is that gap.
+
+Two vacuity traps recurred and are worth naming for 19P.3: `base.html`
+inlines the whole app's CSS and JS on every page, so `"bottom-grid" not
+in body` is unfalsifiable; and a substring that occurs twice in one
+script is satisfied by the innocent occurrence.
+
+**Carried forward, not fixed here.** `loadEditorFromRule` sets
+`tagSel.value` from `entry.operand_tag`; a literal-operator rule has
+none, so the select lands at `selectedIndex === -1` and submits nothing,
+while `_parse_cohort_rule_form` pads the parallel arrays at the *tail*
+only — a restored multi-rule cohort mixing tag and literal operators can
+submit a misaligned operand array. Pre-existing on `main`, but rung 5 is
+what made multi-rule cohorts load at all, so it is newly reachable.
+
+**At the close**, the spec pass found the register had missed the
+Observers page's own body-layout item — the passage most directly
+describing what moved — and had one rename recorded backwards
+(`spec/setup_pages.md` already read `Tag`; the code had drifted). The
+button audit gained a **Section 8.5**: the page had none, which was a
+gap rather than a scoping choice, since that file audits every button on
+the surface.
+
+**Four counts of mine were wrong, and the pattern is the lesson.** Each
+was corrected somewhere and not everywhere: eight routes read the gate
+where a sibling sentence said seven; six POSTs carry `offset` where
+`settings_inventory.md` said five — a figure this very Status block
+already corrected as *"six POSTs, not the ladder's five"*; two cases
+reach the fragment fallback where `ui_elements.md` said three, a
+correction `setup_pages.md` had carried since 19P.1 rung 4a; and one
+paragraph said *"the other three pages do not"* and then *"19P.2 carries
+this to Observers"* four sentences later. **A count restated in two files
+is two facts that can disagree**, and the close is where they do.
+
+**And an insertion invalidated a citation.** Adding §8.5 to
+`operator_button_audit.md` shifted every line after it, so
+`setup_pages.md`'s `:306` pointed at the new section's preamble instead
+of the Instruments Lock row. Cited by **row number** now, which is what
+that file is indexed by and what an insertion does not move; the plan's
+own bullet above carried the same stale reference and is fixed with it.
+Line-number citations into a table are a liability the moment anyone
+edits above them.
 
-**Rung 1 — landed.** Every row action on Observers keeps the pager
-`offset` and returns to the row it acted on.
-
-**Six POSTs, and it is a different set from the ladder's five, not a
-bigger one.** The ladder counted the five row/bulk POSTs
-(`bulk-inactivate`, `bulk-reactivate`, `bulk-delete`, `cohort-rule`,
-`delete-all`). Rung 1 covers `create` and `update` as well, and defers
-`delete-all` to rung 2, where its gate moves. `cohort-rule` is in both
-counts — the plan flagged it twice as the easy one to miss, and it was
-not missed.
-
-`_row_action_anchor` lifted from `_setup_reviewers.py` into `_shared.py`
-with a `noun` kwarg — the fourth roster page will want it too. Its
-docstring said "all three" cases leave the fragment unresolvable; the
-generic count is **two** (a delete redirects to the table card, so the
-fallback returns on its first line), and **one** on this page, which has
-no sortable table. Two copies of the miscount survived the lift:
-`session_reviewers.html`'s own comment, corrected here; and
-`spec/ui_elements.md:611`, now on rung 7's Doc impact.
-
-Four things the ladder did not name, all in scope because without them
-the rung does not work:
-
-- **`Add` carried a bare `?add=1`,** so an add from a filtered view
-  rendered an unfiltered page whose hidden `filter_*` fields held
-  defaults, which the create redirect faithfully honored. The filter was
-  lost at the navigation, not at the POST.
-- **`Add` and `Edit` both landed at the top of the document.** Carrying
-  the filter fixes what the add page *shows*, not where it *arrives*.
-  `Add` now names `#observers-row-editor` (a new id on the add row, as
-  Reviewers has); `Edit`'s script now builds `#observer-row-<id>` from
-  the id it already has, which is also what makes the edit row's
-  `row-action-target` live rather than dead markup.
-- **A delete's `offset` was unguarded on both pages.** The parametrized
-  offset test structurally cannot cover a delete: the row it acts on is
-  gone, so there is nothing for the anchor assertion to name.
-- **A create's `offset` was unguarded** for the mirror reason — there is
-  no row id until the POST returns. Through the UI it can only be `0`
-  today, since `Add` carries the filter but not the page; the wiring is
-  what a future `Add` that keeps the page would ride on.
-
-Verified in Chromium (the suite has no layout engine): an `Inactivate`
-on row 11 of page 2 lands the row at **88px** from the viewport top,
-scrollY 642 → 1051. With the filter reading `active`, the same action
-drops the row out of the view, the fragment does not resolve, and the
-fallback puts the table card at **16px** instead of leaving the operator
-at the top of the document. `Edit` on row 41 of 60: scrollY 2052 →
-2564, edit row at **88px**, and the row is the editor. `Add` from the
-foot of the roster: scrollY 2920 → 637, add row at **88px** — without
-the fragment that navigation landed at 0.
-
-Guards: `tests/integration/test_observers_row_landing.py`, 16 tests,
-20/20 mutations caught. Suite 4,049 → 4,065.
-
-**Cold read** (`diff-reviewer`, 11 findings, all upheld): the two
-surviving mutations above, the "one case not two" miscount in the page
-comment, two stale claims in `_shared.py` docstrings I had just written
-("this was its last copy"; "Only Reviewers does today"), the contradicting
-Reviewers comment, the half-done `Add` fix, four spec lines missing from
-Doc impact, a mis-scoped assertion message, a US-spelling slip, and the
-"six not five" claim above, whose stated reason was wrong.
-
-**Rung 2 — landed.** Seven routes, not five. The count was measured at
-the start of the rung, not assumed: `grep -c _require_editable
-_setup_observers.py` → 7. `bulk-delete` was an enumeration slip;
-`import` was the ruling recorded in rung 2's text above.
-
-Three template gates moved with them — `_show_actions_slot`, the
-`observers-bulk-form` shell, and the `.bottom-grid`. After the move
-`is_editable` appears nowhere in `session_observers.html`; the page's
-predicate is `is_archived` throughout, which is what keeps page and
-route agreeing by construction rather than by two lists kept in step
-(the property 19I.3 established, re-established at the new predicate).
-
-**The lock card was the thing the ladder did not see coming.**
-`_roster_lock_card.html` is shared by all four roster pages and gated on
-`not is_editable`, so on `ready` it would have rendered *"The observers
-cannot be modified while the session is ongoing"* directly above a live
-roster. Its gate is now a parameter (`lock_when`, defaulting to the old
-predicate); Observers passes `is_archived`. The other three pages render
-byte-identically. A consequence worth naming: Observers no longer
-renders a revert form anywhere, because the one state it still locks in
-is `archived`, where that form is correctly absent already — so
-`test_the_slug_each_page_renders_is_the_one_under_test` covers three
-pages now, not four. The route still honours the `observers` slug, and
-the route-level test still covers all four — so `_REVERT_RETURN_TO`'s
-`observers` entry, added at 19H.6 rung 1 and re-justified in this item's
-rung 1, is now unreachable from the UI one rung after it was added.
-Kept as defence in depth; named here because rung 1's Status still
-presents it as a live fix.
-
-Verified in Chromium across the three frozen states. `ready` and
-`expired`: no lock card, 3 checkboxes, bulk form, `Delete`, upload card
-and Danger Zone all present, and an `Inactivate` through the UI lands
-the row reading **INACTIVE** with still no lock card. `archived`: lock
-card present, every one of those controls absent, and the three rows
-still **readable** — the relaxation did not turn `archived` into a
-blank page. An import on `ready` replaced the roster 3 → 1.
-
-Guards: **41 new test cases, 17 dropped by the re-aiming, +24 net**
-(4,065 → 4,089). Most are the seven mutators parametrized across
-`ready` / `expired` (accepts, `== 303`) and `archived` (still 409s),
-plus the whole-surface render, the editor pair below, and the lock
-card's absence on a live session and survival on `archived`. Seventeen
-existing **test cases** were re-aimed rather than deleted —
-`LOCKED_STATES`, `FROZEN_PAGES` and `REFUSES_AT` carry the divergence as
-data, so the three unchanged pages keep asserting the old contract in
-the same tests.
-
-**16/16 mutations caught.** Thirteen re-tighten one gate alone back to
-`_require_editable`: all seven routes plus `cohort-rule` (which already
-had the looser gate and must keep it), the three template gates, the
-`lock_when` argument, and the partial's default. The `lock_when` one had
-to be re-run — deleting the kwarg broke the `{% with %}` syntax, so its
-35 failures proved a template error rather than a lost gate; re-run as a
-valid re-tightening it fails 4. Three more came out of the cold read and
-probe the **upper** bound, which nothing had: the `.bottom-grid` gate
-loosened to render on `archived`, and the editor predicate both put back
-to `is_ready` and removed outright.
-
-**Cold read** (`diff-reviewer`, 11 findings). It confirmed all three
-safety claims in Semantics against the code, and found nothing else
-caching a frozen roster. Two findings were **defects, not prose**:
-
-- **`Add` and `Edit` were dead controls on `ready`** — the exact failure
-  this rung exists to remove, shipped by it. `_render_observers_page`
-  discarded `edit_id` / `add_mode` under `if is_ready`, correct while
-  `create` / `update` took `_require_editable` and the page could not
-  save. The rung relaxed those routes and the buttons above them and
-  left the predicate behind, so both rendered on `ready` and opened
-  nothing. Now `is_archived`, the same predicate the buttons read.
-- **A rejected save on `ready` lost the operator's typing.** Same root
-  cause: the error-render path re-renders with `add_mode=True`, which
-  was then dropped, and the error banner is scoped to `{% if edit_mode %}`
-  — so a mistyped email answered 400 with a bare roster page, no values
-  and no reason.
-
-Neither was reachable by the mutation pass, which only re-tightened
-gates, and neither was exercised by the Chromium check: it covered
-checkboxes, bulk form, Delete, upload, Danger Zone and an Inactivate,
-and never Add or Edit. Both are covered now: on `ready` and `expired`
-the `Add` link opens a real add editor and `Edit` navigates to
-`#observer-row-<id>` and opens one; on `archived` neither renders; and a
-rejected save on `ready` comes back with the editor open, the typed
-value intact and the reason shown.
-
-A third finding was **coverage removed rather than replaced**: the
-re-aiming dropped Observers from
-`test_the_upload_and_danger_zone_cards_go_when_frozen`, and the
-replacement asserted only the two bulk ids — so loosening `.bottom-grid`
-to render Upload and Danger Zone on `archived`, over routes that 409,
-passed the whole suite. Bracketed now by asserting every control absent
-on `archived` that the live-session test asserts present.
-
-The rest was prose, all of it written in this rung: "byte-identically"
-(above), a comment claiming two readers of `is_editable` that do not
-exist, a stale `is_ready` header comment, a test docstring saying
-"through `archived`" where it means "until", a rename comment a blanket
-search-and-replace had turned into *"the name is `FROZEN_PAGES` and the
-alias is gone"*, and the count labels above.
-
-**One open question the cold read raised, not decided here.**
-`_quick_setup.py:637` writes observer rows via `csv_imports.save_observers`
-and still refuses on `ready`. This rung's scope is the Setup-Observers
-page, so it is untouched — but the ruling it rests on is about the
-*entity*, not the page, and the two now disagree: the same CSV accepts at
-`/observers/import` and refuses at `/quick-setup/observers` on the same
-session. Quick setup is a draft-time wizard by its own contract, so this
-may be right as it stands. **Author's call, and it belongs to whoever
-owns quick setup rather than to this item.**
-
-**Rung 3 — landed.** The filter strip moved out of the `Operator
-actions` card into the table card's toolbar, which is now `is-split`.
-`Add` reads `Add new`, as the other roster pages have it. The card is
-**slimmed, not retired**: Edit / Inactivate / Activate / Delete and the
-count-and-confirm strip stay, with no `<form>` wrapper — every one of
-them already reached `observers-bulk-form` through `form=` +
-`formaction`, and `Edit` is `type="button"`. The GET form they sat
-inside was never their form.
-
-**The left pane is deliberately chipless.** Observers have one tag slot
-and it always renders, so there is nothing to toggle
-(`grep -c 'data-col-toggle='` → 0). The pane stays because the pager and
-the count line need their half of the split.
-
-Three things the ladder's one line did not name, all forced:
-
-- **The empty states had to move inside the card.** They were separate
-  cards *below* it, so a no-match render dropped the table card — and
-  with the filter strip now living in it, that would have left the
-  operator reading "no matches" with no way to clear them. Reviewers hit
-  this at 19P.1 rung 2a.
-- **The card's gate had to widen** to `observers or add_mode or
-  total_row_count > 0 or not is_archived`. Gating on the filtered list
-  hides the only control that clears a search matching nothing; gating
-  on the roster hides `Add new` from the operator who most needs it.
-- **`archived` + an empty roster now renders nothing** where it used to
-  render "No observers yet. Upload a CSV or add a row to get started."
-  Every disjunct above is false in that one case, and the old
-  unconditional `{% else %}` card is gone with it. Reviewers behaves
-  identically (`session_reviewers.html:666`), so this is parity rather
-  than divergence, and the old copy was telling an archived operator to
-  do two things the routes refuse. Found by a cold read, not by me —
-  the first draft of this Status called it two consequences.
-
-Also fixed here because the move exposed it: the GET form and `Clear`
-posted to a bare URL, so every search and clear landed at the top of the
-document. Both carry `#{{ pager_anchor }}` now, the same anchor the
-pager has used since 19J.8.
-
-Verified in Chromium: panes at 652px each inside a 1,360px card, left
-ending at x=710 and right beginning at x=730 — the modifier's own 20px
-`gap`, not the flush join "left ending exactly where right begins"
-claimed in the first draft — no horizontal overflow, and both bottoms
-flush at 612.2px — `align-items: end`, identical to Reviewers.
-A `Search` from the foot of a 230-row roster (scrollY 9,680) lands the
-card at **16px**. A no-match render keeps the card, the search box and
-`Clear`, and renders no table.
-
-Guards: 8 new tests in `test_observers_page.py`, **11/11 mutations
-caught** — `is-split` removed, the form and `Clear` fragments dropped,
-the rename reverted, the empty states put back outside the card, the
-card gate narrowed, the left pane deleted, and a row action duplicated
-into the toolbar. That last one survived the first pass: the card test
-asserted the row actions were still in the card, which a control
-rendered in *both* places satisfies — and a duplicate is not cosmetic,
-since the delete pairing and the selection script both reach their
-controls with a first-match `querySelector`.
-
-**A cold read found the set incomplete, not wrong.** Three more
-mutations of markup this rung introduced walked through all 4,095
-tests: the moved filter losing its `is-locked` (new markup here — it
-used to inherit the lock from the enclosing `.operator-actions-main`,
-and `base.html:1455` spells out why half a lock is worse than none:
-"the action buttons grey out while `Search` and `Clear` stay live, and
-one click on either runs a GET that throws the half-typed row away"),
-the card's own `is-locked`, and `Add new` rendered on `archived` over a
-`/create` that refuses — the very failure rung 2 exists to remove, and
-unguarded because `Add new` moved out of the surface that rung's
-`archived` test enumerates. All three are guarded now.
-
-**The move also broke a helper on this page.** `_strip()` in
-`test_setup_delete_scaffold.py` bounded its second slice by the next
-`</form>`, which held while every page wrapped its strip in the GET
-filter form. Taking that wrapper off Observers sent the slice past the
-card close, ending ~900 chars later inside `observers-bulk-form`'s
-hidden inputs — three tests were reading a slab where they meant a row.
-No assertion false-passed, so nothing went red. It counts depth now:
-observers 918 → 563, the other two unchanged.
-
-Two re-aimings. `test_setup_delete_scaffold` gained a `TOOLBAR_PAGES`
-tuple, so the "Delete between Add and Search" ordering is asserted only
-on the two pages that still carry all three. And
-`test_only_reviewers_splits_the_shared_table_toolbar` became
-`test_the_split_toolbar_is_opt_in_not_the_shared_rule` — it had asserted
-Observers did **not** split, behind `if other.status_code != 200:
-continue`, and its fixture never enabled `observers_enabled`, so that
-page 404'd and the assertion never ran. It now enables the toggle and
-asserts against a page that renders.
-
-**Rung 4 — landed.** The four row actions, the selected count and the
-delete gate moved into a row expander built in JS against the selected
-rows; the `Operator actions` card retired. Reuses `base.html`'s
-`.session-expander` / `-bracketed` family unchanged, as the lobby and
-Reviewers do.
-
-**The card held more than the ladder's one line implies.** Retiring it
-also took the editor's `Save` / `Cancel`, its mode heading and its error
-banner — so rung 4 had to build the **second** expander too, the edit
-row's own bar, exactly as Reviewers did at 19P.1 rung 2b. One macro,
-two call sites (Add row, Edit row). Without it the editor would have
-had no way to save.
-
-**The right column is empty for one rung.** The cohort editor is still a
-card in the left column and `.card-columns` still needs two children, so
-the grid keeps its shape with a zero-height second child — measured:
-1,360px grid, left child 670×184, right child 670×0, no horizontal
-overflow. Rung 5 moves that editor into the expander and retires the
-grid. Landing the empty half rather than half-retiring the grid keeps
-the two moves separable, which is the point of the ladder — but it is a
-visible transitional state and the dev slot will show it.
-
-Guards: a new `tests/integration/test_observers_expander.py`,
-**20/20 mutations caught** after a cold read found the first set
-incomplete by five. Suite 4,097 → 4,106.
-
-**Most of this rung is invisible to pytest** — the panel does not exist
-until a checkbox is ticked and there is no JS runtime — so those tests
-pin the *builder* and the absence of what it replaced, and Chromium
-does the rest.
-
-Measured in Chromium, all of it: no selection renders no panel and no
-card; one active row gives `Edit / Inactivate / Delete` (no `Activate`
-— the row is already active), "1 of 4 selected", `Delete` disabled;
-ticking the gate enables it; a second tick **resets the gate** and
-disables `Edit` at arity 2, and the panel re-anchors to the later row;
-unticking walks the anchor back. `Inactivate` through the panel
-redirects with `?selected=`, restores the panel, and the buttons flip to
-`Activate` — the status logic end to end. Select-all on a mixed roster
-offers both. `Edit` navigates to `?edit_id=6#observer-row-6`, opens the
-editor row, and the bar sits flush under it (669 → 669).
-
-**Six** test files were re-aimed — the seventh the diff touches is the
-new one — the same way each time: the claim moved from the card's
-markup to the builder's text, and Observers left `CARD_STRIP_PAGES` as
-Reviewers did before it. "Rather than deleted" was the wrong words:
-four parametrized cases went with that tuple change, and the first
-draft deleted two whole tests outright (below). Two
-findings fell out of the re-aiming and are worth naming, because both
-were cold-read findings from rung 3 that the re-aiming had to settle
-properly: `TOOLBAR_PAGES`' doc-comment had been inserted into
-`CARD_STRIP_PAGES`', and is separated now; and
-`test_every_programmatic_dispatch_is_reachable`'s vacuity floor drops
-3 → 2, with a note that 19P.3 empties it entirely and should replace
-the floor with the real claim rather than lowering it to zero.
-
-A structural defect the re-aiming caught: retiring the card dropped
-`.card-columns`' closing `</div>`, which the HTML-balance check in
-`test_page_guidance` reported as `</main> closed <div>`. Caught by an
-existing test, not by reading.
-
-**Cold read** (`diff-reviewer`, 11 findings). It reproduced the whole
-Chromium table independently and confirmed the port is faithful —
-`refresh()`'s ordering, the cohort half, the delete gate's uniqueness
-and reset, and the editor bar in both modes all clean. The damage was
-in what the re-aiming took with it.
-
-**Two whole tests were deleted, not re-aimed, and both were live
-guards** — rung 3 cold-read additions, one rung old:
-
-- `test_the_moved_filter_locks_while_a_row_is_being_edited`. Only its
-  last assertion died with the card; the rest was about the toolbar
-  filter, which still exists. Stripping `is-locked` from it passed all
-  4,104 tests. Restored, with that one assertion dropped and why
-  recorded in place.
-- `test_add_new_is_absent_on_an_archived_session`. Nothing to do with
-  the card at all — added at rung 3 *because* the surface test stopped
-  enumerating `Add new`. Rendering it on `archived` over a `/create`
-  that 409s passed all 4,104 tests: the exact silent failure rung 2
-  exists to remove, reopened by tidying.
-
-A third assertion had gone vacuous rather than missing:
-`test_the_whole_observers_surface_goes_on_archived` still checked
-`observers-delete-btn` is absent, which is now true in every state, so
-its docstring's "the pair brackets it" was no longer earned. It asserts
-the builder's absence now.
-
-Two more mutations of this rung's own new code survived: the
-`edit_col_count = 7` hardcode (changed to 4, whole suite green, bar
-spanning four of seven columns — the sibling computes it from the same
-flags the `<thead>` branches on; this page counts from the rendered
-`<thead>` instead), and swapping the two status `formaction`s so
-`Inactivate` posts `/bulk-reactivate` (both route strings were still in
-the text, so nothing noticed the label and the route disagreeing).
-
-Also corrected: `_show_actions_slot` was left set and read by nothing;
-the body-layout comment still described the retired card and called
-`.card-columns` a `.bottom-grid`; the `?selected=` seeding comment gave
-a reason that is not true (the seed walks DOM order, so the anchor
-would be the same without it — it earns its place by keeping
-`tickOrder` consistent from the first render, not by fixing the
-anchor); `base.html` still said "four roster pages re-run this gate by
-hand" and attributed the expander to Reviewers alone; and two test
-docstrings described pages they no longer reach.
-
-Three more spec lines went onto rung 7's Doc impact, one of which makes
-a sentence in this document's own Doc impact stale — it claims the
-item-0 placement table is the only correct one of three, and rung 4
-falsified that table too.
-
-**Rung 5 — landed.** The cohort editor moved into the expander's left
-pane and `.card-columns` retired, so the guidance runs full width as it
-does on Reviewers and the empty half rung 4 left is gone.
-
-**`full_width=true` with it**, caught by the author mid-rung. The card
-spanning the page and its prose being laid out for that span are
-separate things: at this width one measure runs to ~150 characters, so
-the body takes `column-count: 2`. Reviewers passed the parameter when it
-made the same move at 19P.1 rung 2a; this rung's first draft moved the
-card without it. Observers is the second full-width placement, and
-`test_full_width_guidance_runs_its_prose_in_two_columns` now covers
-both — it had asserted the other pages do NOT opt in, behind an
-`if status_code == 200` that skipped Observers silently.
-
-**The builder is server-rendered once into a `<template>` and cloned per
-rebuild.** Not a JS string literal: the selects carry live per-session
-tag labels, and building those option lists in JS would put the same
-data in two places. A template's content is inert — parsed, not
-rendered, its controls not form-associated — so its ids and `form=`
-attributes do not collide with the clone.
-
-Shape, as agreed: two panes on `align-items: start` (top-flush; the
-builder is taller and bottom-aligning would anchor `Save` to a button
-row it has no relationship with), the label as an `<h3>` at normal
-weight per the Link 1 idiom rather than a card heading, and `Save`
-inline immediately after the last rule cell's `X`.
-
-**Two defects found in the browser that pytest could not see.**
-
-- **`Save` never appeared.** `setEditorToDefault` replaces the cell
-  list's `innerHTML` wholesale, so a `Save` appended at build time went
-  with it. It is placed *after* the editor state settles now, and
-  re-placed on every mutation — `observerAddRule` appends a clone after
-  the old last cell, which would otherwise strand it mid-list.
-- **Two `Save` buttons after one click of `+`.** `observerAddRule`
-  clones the FIRST cell; with one cell that is also the last, the one
-  holding `Save`. Both posted the same form and the stale one carried
-  the stale rule. Stripped in the clone, where the other resets live,
-  plus a de-duplicating guard in the placement.
-
-**The two-rule restore bug is fixed here**, as rung 4's cold read
-predicted it would have to be: `window.observerAddRule` was assigned
-*after* the IIFE whose `refresh()` calls it, so a `?selected=` restore of
-a shared cohort of two or more rules threw a TypeError that the
-`try/catch` swallowed into `setEditorToDefault()` — a blank one-rule
-builder for a rule that had two. The four helpers are defined before the
-IIFE now, and the ordering is asserted.
-
-Measured in Chromium: `.card-columns` 0, cohort card 0, template 1,
-guidance 1,360px (full width); panes 636px each, top-flush, label at
-`font-weight: 400`; `Save` disabled on arrival, previous sibling `X`,
-heights select 29 / X 28.9 / Save 36.9 and **both gaps exactly 4.0px**
-— the "match by construction rather than a tuned value" the shape asked
-for; enabled by an operand change, disabled again on the next rebuild;
-after `+` it trails the last cell and the add itself marks the rule
-dirty; a mixed selection shows the message, resets to one cell and
-disables `Save`. No page errors in any run.
-
-Guards: 9 new in `test_observers_expander.py`, **12/12 mutations
-caught**, plus 2 for the cold read's fixes. Suite 4,123 → 4,147. Three survived the first pass, and one of them is worth
-naming: `"is-split" in js` passed with the class no longer emitted,
-because it matched the *comment* explaining why it is emitted. The
-assertions read a comment-stripped view now.
-
-**A structural hole, found by shipping into it.** A stray `}` in this
-rung's first draft killed the page's entire JavaScript — no expander, no
-selection, no delete gate — and the whole suite passed: 4,106 tests,
-`ruff` clean. Python never parses this code, and the assertions that
-read it read it as *text*, so a substring check on a builder is just as
-happy inside a file the browser refused.
-`tests/integration/test_inline_scripts_parse.py` runs `node --check`
-over every inline `<script>` on thirteen pages — nine session-scoped and
-four standalone, the lobby among them, since `sessions_list.html` is the
-expander idiom this segment copies and so the surface most likely to be
-edited next. Proven twice: breaking a `base.html` script fails 7 of 8
-while the observers-expander file passes all 22, and breaking the
-lobby's own script fails the guard too. `ubuntu-latest` ships node, so
-CI runs it; skipped where it is absent.
-
-**Cold read** (`diff-reviewer`, 9 findings; it drove the editor in
-Chromium on its own seed and reproduced every measurement). The
-`<template>` approach came back clean — no leaks, no duplicate ids, the
-template stays pristine, two-rule restore genuinely works. Two live
-defects:
-
-- **`X` on the last rule cell permanently disabled `Save`.** The click
-  handler called `placeSaveButton(nodes)` and discarded the return.
-  `Save` rides *inside* the last cell's flex row — the shape the plan
-  asked for — so `X` on that cell destroys it; the replacement was
-  built, but `nodes.save` still pointed at the removed node, so `sync()`
-  toggled a detached button while the visible one stayed grey for the
-  rest of that selection. In a two-cell builder the first cell's `X` is
-  disabled, so *every* `X` in a two-rule edit hit this. My Chromium pass
-  exercised `+` and never `X`.
-- **`body.ui-v2 .cohort-save-btn` never applied.** (0,2,1) against the
-  shared `body.ui-v2 button.btn` at (0,2,2), which wins whatever the
-  source order. Save rendered at the `.btn` default — and the "29 /
-  28.9 / **36.9**" I reported as a result was the *pre-fix* measurement
-  restated as the post-fix state. Selector is `button.cohort-save-btn`
-  now; measured **29 / 28.9 / 28.9**, padding `4px 8px`, gaps still
-  4.0 / 4.0.
-
-Also: `--fs-base` on `.row-expander-label` is not a token this codebase
-defines, so the declaration was dropped and the label inherited 16px and
-happened to look right — the Link 1 idiom declares no font-size either,
-so inheriting *is* the idiom and the line is gone. `_code()` moved
-inside `_builder()` rather than sitting at the two call sites already
-caught, which is how the comment-matching hole reopens. Two stale
-comments in this file, the guidance macro's own docstring and
-`base.html`'s CSS comment all still said Reviewers was the *one*
-full-width placement. Dead `sel` parameter and unread `label` key
-removed. Suite numbers above were a merge stale — 4,106 was the count
-before rung 4 merged.
-
-**Left for rung 7 or later, not fixed here.** `loadEditorFromRule` sets
-`tagSel.value` from `entry.operand_tag`; a rule using a literal operator
-has none, so the select lands at `selectedIndex === -1` and submits
-nothing, while `_parse_cohort_rule_form` pads the parallel arrays at the
-*tail* only. A restored multi-rule cohort mixing tag and literal
-operators can therefore submit a misaligned operand array. Pre-existing
-on `main` and not this rung's to fix — but rung 5 is the rung that made
-multi-rule cohorts load at all, so it is newly reachable and belongs on
-the record.
-
-
-
-**Rung 6 — landed.** `Upload Observers` and the `Danger Zone` moved off
-the foot of the page into a collapsed Unlock panel above the table, and
-`.bottom-grid` is gone from this page. No CSS: 19P.1 left
-`.unlock-panel` / `.unlock-stack` / `.unlock-col-actions` /
-`.roster-card-actions` in `base.html` as page-agnostic primitives, and
-they were enough.
-
-**`Upload` left, `Danger Zone` right** — the order they already had, so
-the operator's muscle memory survives. Reviewers is the mirror of this
-and cannot be copied: its left column holds a tag-labels editor
-Observers does not have.
-
-**The gate is `not is_archived`, not Reviewers' `is_editable`.** Rung 2
-relaxed import and delete-all with the rest, so on `ready` and `expired`
-both tenants are live; suppressing them would hide controls their own
-routes accept.
-
-**The roster index came with it — author's correction, mid-rung.** The
-first draft gated the whole CARD, reasoning that without the readouts
-Reviewers carries, a locked Observers card would be empty. The right
-answer was to give this page the readouts: they are informational in
-every lifecycle state, which is exactly what a mutating control is not.
-So the card renders always and only the panel is gated, as on Reviewers.
-It fixed half the wrinkle this entry first flagged — the card is no
-longer bare — and the first draft of this entry claimed it fixed the
-whole thing. It did not: `Lock` still sat at the top of an empty right
-column, and the cold read caught both the defect and the false claim.
-Fixed properly instead. `data-lock-home` marks whichever stack holds a
-card, so on an empty roster the control sits beneath `Upload`. Reviewers
-cannot reach that case — its right column holds the always-rendered
-Upload card — so following it means keeping the RELATIONSHIP, `Lock`
-beneath the card its column holds, rather than the column itself. It
-lands on the two likeliest paths, not an edge case: first use, and
-immediately after `delete-all`, which redirects back `?unlocked=1`
-precisely because uploading a replacement is the likely next move.
-
-`views.observer_column_state` is the second caller
-`reviewer_column_state`'s docstring was explicitly waiting for, and it
-settles the rule: **the index mirrors the columns the preview table
-renders.** On Reviewers that resolves to identity plus only the
-*populated* tag slots, because unpopulated tag columns are hidden there.
-On Observers it resolves to all three, because none are hidden — one
-fixed tag slot, no column chips (rung 3). One sentence, two answers,
-because the two tables differ. `col_data` is empty here: no chips, no
-flags to answer.
-
-**`Tag1` displays as `Tag`** (author's call). One tag slot, so the digit
-numbered a series of one. **Four display sites, not two.** The first
-draft moved the roster index and the `<th>` and stopped there; the cold
-read found the cohort rule builder's operand option and
-`_COHORT_OBSERVER_FRIENDLY` still reading `Observer: Tag 1`, so a single
-row read `Tag` in its column header and `Observer: Tag 1` in its Cohort
-cell. All four move together or the page disagrees with itself.
-
-What does NOT move: the CSV column `ObserverTag1`, an identifier in a
-file contract where a rename breaks every existing import for a cosmetic
-gain; and the rule key `observer.tag1`, which a saved `cohort_rule`
-stores. Labels moved, keys did not.
-
-**Three redirects, one rule.** `delete-all` and a successful import now
-answer `?unlocked=1#roster-card`, and the failed import's in-place
-re-render sets `panel_open` server-side because it returns 400 with the
-page and has no redirect to hang a param on. Stated once about the
-panel, not three times about its controls.
-
-**The suite was blind to the whole move.** All 4,131 tests that already
-existed **passed** with the cards relocated, the container deleted and
-both redirects rewritten — nothing pinned position, container or URL.
-(4,131 passed, 17 skipped. `--collect-only` on `main` reports 4,148,
-which is the same suite counted with the skips; the cold read compared
-the two figures and read a discrepancy that is not there. Noted because
-the next reader will do the same.) The 18 new tests in
-`test_observers_unlock_panel.py` are exactly that gap; 19/19 mutations
-caught. One survived the first table: a label assertion satisfied by the
-`<noscript>` twin beside the button, fixed by reading the label off the
-`<button>` itself.
-
-**Two mutations survived the readouts' first table**, both fixture
-blindness rather than missing assertions: every row had a name AND an
-email, so "Name counts email" passed; and every page was unfiltered, so
-`total_row_count` and `displayed_row_count` were equal and swapping them
-passed. Fixed by making the three counts differ by construction (3 rows,
-2 named, 1 tagged) and by adding a filtered page. 28/28 across both
-tables now.
 
 ### PR ladder
 
@@ -1331,7 +874,7 @@ tables now.
 - `spec/ui_elements.md` — **`:609`** (`.session-row-selected`) names the injectors as *"`sessions_list.html`, `sessions_archived.html` and now `session_reviewers.html`"* and says Reviewers is the page rendering both the expander and the bracketed variant: Observers is a fourth injector and a second such page since rung 4, and it is the line the builder's own comment cites. §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
 - **Rung 6 adds four, three of them falsified the moment it landed.** `spec/setup_pages.md:1258-1262` calls the cohort editor + Operator actions pair *"a `.bottom-grid`"* — already wrong (it was `.card-columns`, and this file already said so) and now wrong twice over, since `.bottom-grid` names the container rung 6 deleted; `:568-569` and `:763` both scope *"that class carries only the Upload + Danger Zone pair below the table"* to a layout Observers no longer has; and `:979-1002`'s *"There is nothing below the preview table"* section, written for Reviewers, is now true of this page too and should say so rather than being restated. `spec/lifecycle.md:351-356` says *"On Reviewees, Relationships and Observers it is the `.bottom-grid` those two cards sit in"* — two now, and the sentence's own point (same predicate, different container) is what changes. `spec/settings_inventory.md:383` scopes `?unlocked=1` to the *"Reviewers Setup page"*; the row's whole contract now holds on two pages, and Observers' version differs in one way worth stating — it has no labels editor, so the panel has two tenants, not three. **And two more the author's mid-rung corrections added:** the roster index row is a second-page feature now, so wherever `spec/` scopes it to Reviewers it wants the generalized rule stated once (*the index mirrors the columns the table renders*) rather than twice by page; and the Observers preview table's `Tag1` column header is now `Tag`. **That last one is a CLOSING, not an opening** — the first draft of this bullet had it backwards. `spec/setup_pages.md:1308` already reads `| 3 | Tag |`, so the CODE had drifted and the rename brings it back; what the close actually owes is the cohort label `Observer: Tag`, which the same rung moved in `_COHORT_OBSERVER_FRIENDLY` and which `:1310`'s example summary does not quote. **And the passage this register most conspicuously missed, found by the cold read: `spec/setup_pages.md:1284-1288`** — item 6 of the Observers page's own *Body layout*, stating the container, the position and the gate of the two cards this rung moved (*"a `.bottom-grid` pair below the table … Hidden whenever the session is not `is_editable`"*). Every clause is false of the code now, the `is_editable` half since rung 2. The citations above reach the cross-references from OTHER pages and the cohort-editor pair; none reached the page's own layout item (Item 2).
-- **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md:944-953` (*Lock-with-unsaved-edits*) and `spec/operator_button_audit.md:306`, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2).
+- **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md` § *Save / Lock interaction* and `spec/operator_button_audit.md` row 57, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2). <!-- cites: spec/instruments.md -->
 
 ---
 
