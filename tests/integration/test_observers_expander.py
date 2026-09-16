@@ -565,6 +565,97 @@ def test_the_click_path_rebinds_the_save_it_replaces(
     )
 
 
+def test_an_unsaved_rule_edit_is_guarded_on_every_discard_path(
+    client: TestClient, db: Session
+) -> None:
+    """An unsaved cohort edit is DISCARDED by anything that rebuilds the
+    panel or leaves the page, and was discarded silently.
+
+    Measured before this guard: untick the row, tick a second one, or
+    hit Search, and the edit vanished with nothing written to the DB and
+    nothing said. Nothing auto-saves — the only write is the explicit
+    POST — so the loss is real and total.
+
+    Four paths ask the page's own question and then declare the
+    navigation deliberate: the row checkbox, select-all, `Edit`, and the
+    three `.exp-submit` bulk buttons. `beforeunload` catches what is
+    left — `Search`, `Clear`, the pager, `Add new`.
+
+    **A text guard, like its neighbours.** There is no JS runtime here,
+    and the panel does not exist until a box is ticked. Chromium is the
+    behavioural pin. What this file can do is make each claim fail on
+    its own, so every assertion below is scoped to the ONE construct it
+    is about — the cold read on the first draft found three mutations
+    surviving because a bare substring matched a second, innocent
+    occurrence elsewhere in the same script.
+    """
+    js = _builder(_page(client, _session(client, db, "coh-guard")))
+
+    assert 'window.confirm("Discard unsaved changes?")' in js, (
+        "no confirm on the in-page discard paths"
+    )
+    # The condition, not just the call: a guard that always returns
+    # true is a guard that never asks, and reads identically otherwise.
+    assert "if (!cohortDirty) return true;" in js, (
+        "okToDiscardCohortEdit does not consult the dirty flag"
+    )
+
+    # Every discard path asks. Counted on the CALL SITE pattern, which
+    # the function's own definition line does not match — `>= 3` against
+    # the bare name passed with a call site deleted, because the
+    # definition made up the difference.
+    assert js.count("if (!okToDiscardCohortEdit())") >= 4, (
+        "a discard path does not ask — expected the row checkbox, "
+        "select-all, Edit and the bulk submits"
+    )
+
+    # Declining must leave the selection alone, or the confirm is
+    # decoration: the panel would rebuild anyway and the edit still go.
+    assert "restoreBox(t, !t.checked);" in js, (
+        "declining still unticks the row"
+    )
+    # Select-all is tri-state, so declining has to restore the dash as
+    # well as the tick — recomputed from the rows, not inverted.
+    select_all = re.search(
+        r"if \(t === selectAll\) \{.*?\n            \}", js, re.S
+    )
+    assert select_all and "syncSelectAll();" in select_all.group(0), (
+        "declining still moves select-all"
+    )
+    # And a declined bulk submit must not post.
+    assert "event.preventDefault();" in js, (
+        "declining still fires the bulk action"
+    )
+
+    # The nav-away half.
+    assert 'addEventListener("beforeunload"' in js, "no nav-away guard"
+    assert "if (intentionalNav) return undefined;" in js, (
+        "the deliberate navigations still warn"
+    )
+
+    # Save carries the flag, and carries it from the CREATION site —
+    # `X` on the last rule cell destroys the Save inside that cell and
+    # `placeSaveButton` builds a replacement, so a listener attached
+    # once per panel did not reach it and Save raised "Leave site?".
+    # Scoped to that function, because `intentionalNav = true;` also
+    # appears on the Edit and bulk-submit paths and satisfied a
+    # page-wide substring with this listener deleted.
+    place = re.search(
+        r"function placeSaveButton\(nodes\) \{.*?\n        \}", js, re.S
+    )
+    assert place and "intentionalNav = true;" in place.group(0), (
+        "a rebuilt Save does not carry the intentional-nav flag"
+    )
+
+    # And the flag is cleared when the panel goes, or `beforeunload`
+    # blocks every later navigation over an edit already discarded —
+    # which is what the first draft did.
+    render = re.search(r"function renderPanel\(\) \{.*?\n        \}", js, re.S)
+    assert render and "cohortDirty = false;" in render.group(0), (
+        "the dirty flag outlives the panel that held the edit"
+    )
+
+
 def test_a_mixed_selection_resets_the_builder_and_says_so(
     client: TestClient, db: Session
 ) -> None:
@@ -595,11 +686,20 @@ def test_the_split_modifier_has_a_rule_behind_it(
     )
     assert "body.ui-v2 .row-expander-pane-right {" in body
     assert "body.ui-v2 .row-expander-label {" in body
-    # `button.cohort-save-btn`. A class-only selector here is (0,2,1)
-    # and loses to the shared `body.ui-v2 button.btn` — the first draft
-    # shipped exactly that and the rule did nothing, with this
-    # assertion green.
-    assert "body.ui-v2 button.cohort-save-btn {" in body
+    # The builder's two sizes, `button.<class>` in both cases. A
+    # class-only selector here is (0,2,1) and loses to the shared
+    # `body.ui-v2 button.btn` — the Save rule's first draft shipped
+    # exactly that and did nothing, with this assertion green.
+    assert "body.ui-v2 button.cohort-cell-btn {" in body
+    assert "body.ui-v2 button.cohort-combinator-btn {" in body
+    # And nothing on the page re-sizes a button from its own markup:
+    # `spec/ui_elements.md` §6 calls an inline `style` on a button a
+    # defect, because a role living in one template cannot be restyled
+    # from here. These four were the last on any Setup page.
+    for tag in re.finditer(r"<button\b[^>]*>", body, re.S):
+        assert "style=" not in tag.group(0), (
+            "an inline-styled button is back: " + tag.group(0)[:120]
+        )
     # Top-flush, not a shared bottom edge: the builder is taller, and
     # bottom-aligning would anchor Save to a button row it has no
     # relationship with.

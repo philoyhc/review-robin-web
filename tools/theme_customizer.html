@@ -3083,22 +3083,35 @@
         font-weight: normal;
         margin: 0 0 12px;
       }
-      /* `Save` sits inline immediately after the last rule cell's `X`,
-         so it trails the list as rules are added rather than floating
-         under it. Sized to the controls it sits among — the selects are
-         29px and the `X` 28.9 — so it takes the `X`'s own `4px 8px`
-         padding and inherits the rule row's 4px flex gap instead of
-         carrying a margin. The two gaps then match by construction
-         rather than by a tuned value.
+      /* The cohort builder's own two sizes. Both were inline `style=`
+         attributes on the buttons until 19P.2 rung 5a — a defect by
+         `spec/ui_elements.md` §6's own words ("a role that lives in one
+         template's markup cannot be restyled from `base.html`"), and
+         the last four on any Setup page. The roles are unchanged and so
+         are the pixels; only the place the numbers live moves.
 
-         `button.cohort-save-btn`, not `.cohort-save-btn`: the shared
-         `body.ui-v2 button.btn` rule above is (0,2,2) and wins on
-         specificity whatever the source order. The first draft of this
-         rule was (0,2,1) and did nothing at all — Save rendered at the
-         `.btn` default, 36.9px against the X's 28.9, while this comment
-         and a test both said otherwise. The `X` is only 28.9 because it
-         carries an inline `style=`. */
-      body.ui-v2 button.cohort-save-btn {
+         `button.<class>`, not `.<class>`: the shared `body.ui-v2
+         button.btn` rule above is (0,2,2), so a class-only selector
+         loses on specificity whatever the source order. The first draft
+         of the Save rule was (0,2,1) and did nothing at all — Save
+         rendered at the `.btn` default, 36.9px against the X's 28.9,
+         while its comment and a test both said otherwise. These tie at
+         (0,2,2) and win on source order, being later. */
+
+      /* `+` and the AND/OR toggle, in the builder's combinator column.
+         They sit in a centred row of their own, so no flex-shrink. */
+      body.ui-v2 button.cohort-combinator-btn {
+        padding: 4px 10px;
+      }
+      /* Everything sized to a rule cell's own row: the operator cycle,
+         the `X`, and `Save`, which sits inline immediately after the
+         last cell's `X` so it trails the list as rules are added rather
+         than floating under it. One class rather than three copies of
+         `4px 8px` — the selects are 29px and the `X` 28.9, and Save
+         matching them is now structural rather than a repeated number.
+         The 4px flex gap of the rule row does the spacing, so none of
+         them carries a margin and the gaps match by construction. */
+      body.ui-v2 button.cohort-cell-btn {
         padding: 4px 8px;
         flex-shrink: 0;
       }

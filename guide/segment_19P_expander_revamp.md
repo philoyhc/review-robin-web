@@ -1174,6 +1174,14 @@ the record.
 5. **The cohort editor into the expander.** The divergence proof proper: two
    columns, the Link 1 label idiom, `Save` inline and dirty-gated, per-control
    gating, mixed-selection behavior preserved. `.card-columns` retires here.
+5a. **The unsaved-edit guard.** Not in the original ladder — added on the
+   author's ruling once rung 5 made the loss reachable. The expander is rebuilt
+   wholesale on every selection change, so an unsaved rule edit was discarded
+   silently by untick, by a second tick and by every navigation. `confirm` on
+   the paths that stay on the page (row checkbox, select-all, `Edit`, the three
+   panel submits), `beforeunload` on the rest, wording verbatim from
+   Instruments (18R Item 2).
+
 6. **Unlock panel.** `Upload` + `Danger Zone` into the roster card; `Lock` at
    the stack's foot; nothing below the table. **Both moved controls' redirects
    gain `?unlocked=1`** — Observers' delete-all currently returns to a bare URL,
@@ -1237,6 +1245,7 @@ the record.
 - `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=`, `focus=` and row fragment. **Three rows go stale the moment rung 1 lands**: `:384` reads *"Reviewers only; the other three roster pages pass no offset"*, `:385` scopes `focus=<id>` to Reviewers, and `:379-381` list `edit_id=` / `add=1` / `selected=` as Reviewers / Reviewees / Relationships though Observers has had all three all along (Item 2).
 - `spec/ui_elements.md` — **`:609`** (`.session-row-selected`) names the injectors as *"`sessions_list.html`, `sessions_archived.html` and now `session_reviewers.html`"* and says Reviewers is the page rendering both the expander and the bracketed variant: Observers is a fourth injector and a second such page since rung 4, and it is the line the builder's own comment cites. §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
+- **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md:944-953` (*Lock-with-unsaved-edits*) and `spec/operator_button_audit.md:306`, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2).
 
 ---
 
