@@ -37,10 +37,10 @@ pytestmark = pytest.mark.skipif(
     shutil.which("node") is None, reason="node is not installed"
 )
 
-#: One page per distinct script surface. Not every route in the app —
-#: the point is coverage of the templates that carry hand-written JS,
-#: and `base.html`'s scripts ride along on every one of them.
-PAGES = (
+#: Session-scoped pages that carry hand-written JS. `base.html`'s own
+#: scripts ride along on every one of them — verified, by breaking a
+#: `base.html` script and watching 7 of 8 tests fail.
+SESSION_PAGES = (
     "",               # Session Home
     "/reviewers",
     "/reviewees",
@@ -48,6 +48,20 @@ PAGES = (
     "/observers",
     "/instruments",
     "/setup-invite",
+    "/assignments",
+    "/extract-data",
+)
+
+#: Pages outside a session that carry their own scripts. The lobby
+#: matters most: `sessions_list.html` is the expander idiom this whole
+#: segment copies, so it is the surface most likely to be edited next —
+#: and the first draft of this file left it out while claiming "one page
+#: per distinct script surface".
+STANDALONE_PAGES = (
+    "/operator/sessions",
+    "/operator/sessions/archived",
+    "/operator/sessions/new",
+    "/operator/settings",
 )
 
 _SCRIPT = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.S)
@@ -86,15 +100,8 @@ def _check(source: str) -> str | None:
         Path(path).unlink(missing_ok=True)
 
 
-@pytest.mark.parametrize("page", PAGES)
-def test_every_inline_script_on_the_page_parses(
-    client: TestClient, db: Session, page: str
-) -> None:
-    review_session = _session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}{page}")
-    assert response.status_code == 200, (page, response.status_code)
-
-    blocks = _SCRIPT.findall(response.text)
+def _assert_parses(page: str, body: str) -> None:
+    blocks = _SCRIPT.findall(body)
     # A page with no inline script would make this vacuous, and the
     # roster pages all have several — so the floor is asserted rather
     # than assumed.
@@ -110,6 +117,26 @@ def test_every_inline_script_on_the_page_parses(
         f"in a browser and every other test would still pass:\n"
         + "\n\n".join(f"block {i}:\n{err}" for i, err in failures)
     )
+
+
+@pytest.mark.parametrize("page", SESSION_PAGES)
+def test_every_inline_script_on_a_session_page_parses(
+    client: TestClient, db: Session, page: str
+) -> None:
+    review_session = _session(client, db)
+    response = client.get(f"/operator/sessions/{review_session.id}{page}")
+    assert response.status_code == 200, (page, response.status_code)
+    _assert_parses(page, response.text)
+
+
+@pytest.mark.parametrize("page", STANDALONE_PAGES)
+def test_every_inline_script_outside_a_session_parses(
+    client: TestClient, db: Session, page: str
+) -> None:
+    _session(client, db)  # so the lobby has a row to render
+    response = client.get(page)
+    assert response.status_code == 200, (page, response.status_code)
+    _assert_parses(page, response.text)
 
 
 def test_the_observers_expander_script_is_among_them(

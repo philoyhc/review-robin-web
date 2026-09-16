@@ -1064,7 +1064,7 @@ dirty; a mixed selection shows the message, resets to one cell and
 disables `Save`. No page errors in any run.
 
 Guards: 9 new in `test_observers_expander.py`, **12/12 mutations
-caught**. Three survived the first pass, and one of them is worth
+caught**, plus 2 for the cold read's fixes. Suite 4,123 → 4,147. Three survived the first pass, and one of them is worth
 naming: `"is-split" in js` passed with the class no longer emitted,
 because it matched the *comment* explaining why it is emitted. The
 assertions read a comment-stripped view now.
@@ -1076,10 +1076,58 @@ selection, no delete gate — and the whole suite passed: 4,106 tests,
 read it read it as *text*, so a substring check on a builder is just as
 happy inside a file the browser refused.
 `tests/integration/test_inline_scripts_parse.py` runs `node --check`
-over every inline `<script>` on seven operator pages. Re-introducing the
-exact defect: the new guard fails, and all 149 of the page's own tests
-still pass. `ubuntu-latest` ships node, so CI runs it; skipped where it
-is absent.
+over every inline `<script>` on thirteen pages — nine session-scoped and
+four standalone, the lobby among them, since `sessions_list.html` is the
+expander idiom this segment copies and so the surface most likely to be
+edited next. Proven twice: breaking a `base.html` script fails 7 of 8
+while the observers-expander file passes all 22, and breaking the
+lobby's own script fails the guard too. `ubuntu-latest` ships node, so
+CI runs it; skipped where it is absent.
+
+**Cold read** (`diff-reviewer`, 9 findings; it drove the editor in
+Chromium on its own seed and reproduced every measurement). The
+`<template>` approach came back clean — no leaks, no duplicate ids, the
+template stays pristine, two-rule restore genuinely works. Two live
+defects:
+
+- **`X` on the last rule cell permanently disabled `Save`.** The click
+  handler called `placeSaveButton(nodes)` and discarded the return.
+  `Save` rides *inside* the last cell's flex row — the shape the plan
+  asked for — so `X` on that cell destroys it; the replacement was
+  built, but `nodes.save` still pointed at the removed node, so `sync()`
+  toggled a detached button while the visible one stayed grey for the
+  rest of that selection. In a two-cell builder the first cell's `X` is
+  disabled, so *every* `X` in a two-rule edit hit this. My Chromium pass
+  exercised `+` and never `X`.
+- **`body.ui-v2 .cohort-save-btn` never applied.** (0,2,1) against the
+  shared `body.ui-v2 button.btn` at (0,2,2), which wins whatever the
+  source order. Save rendered at the `.btn` default — and the "29 /
+  28.9 / **36.9**" I reported as a result was the *pre-fix* measurement
+  restated as the post-fix state. Selector is `button.cohort-save-btn`
+  now; measured **29 / 28.9 / 28.9**, padding `4px 8px`, gaps still
+  4.0 / 4.0.
+
+Also: `--fs-base` on `.row-expander-label` is not a token this codebase
+defines, so the declaration was dropped and the label inherited 16px and
+happened to look right — the Link 1 idiom declares no font-size either,
+so inheriting *is* the idiom and the line is gone. `_code()` moved
+inside `_builder()` rather than sitting at the two call sites already
+caught, which is how the comment-matching hole reopens. Two stale
+comments in this file, the guidance macro's own docstring and
+`base.html`'s CSS comment all still said Reviewers was the *one*
+full-width placement. Dead `sel` parameter and unread `label` key
+removed. Suite numbers above were a merge stale — 4,106 was the count
+before rung 4 merged.
+
+**Left for rung 7 or later, not fixed here.** `loadEditorFromRule` sets
+`tagSel.value` from `entry.operand_tag`; a rule using a literal operator
+has none, so the select lands at `selectedIndex === -1` and submits
+nothing, while `_parse_cohort_rule_form` pads the parallel arrays at the
+*tail* only. A restored multi-rule cohort mixing tag and literal
+operators can therefore submit a misaligned operand array. Pre-existing
+on `main` and not this rung's to fix — but rung 5 is the rung that made
+multi-rule cohorts load at all, so it is newly reachable and belongs on
+the record.
 
 
 
@@ -1182,7 +1230,7 @@ is absent.
 
 ### Doc impact
 
-- `spec/setup_pages.md` — § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2). **Rung 3 adds four more, none of them previously named:** § *Operator actions card* `:552` opens *"Reviewees, Relationships and Observers"* and `:574` says *"One shape on the three pages that carry this card"* — two now; its § item 2 **Action row** `:585-598` lists `Clear … Edit, Inactivate, Activate, Add and Delete … and finally the Search submit last` and scopes the exception to Reviewers alone; and § *Observers page* body-layout **item 5** `:1282` reads *"Preview table — always renders when observers exist (or when Add mode is active)"*, where the gate is now `observers or add_mode or total_row_count > 0 or not is_archived`. Doc impact named items 4 and 6, not 5. **Rung 4 adds three more:** `:908-916` scopes the Save/Cancel-in-an-expander-bar shape to Reviewers, true of Observers now too; `:105`'s item-0 placement table still reads *"`Operator actions` alone in the right"* for Observers, which also makes THIS document's claim that *"the item-0 placement table is the only one of the three that is correct today"* stale; and `:894-907`'s page-independent button-state table describes a confirm *"on the status row"*, `Add` as a selection-gated column and the status pair as enabled-by-arity — none of which holds on a page whose panel renders them by status.
+- `spec/setup_pages.md` — **`:77-80`** says the guidance macro's `full_width` argument is one **Reviewers** passes; Observers passes it since rung 5. **`:1363-1365`** puts the mixed-rule message *"between the rule cells and the Save button"*, and Save is now inline in the last rule cell, so the message renders after it. **`:1352-1354`** calls the cohort `Save` a **primary** button `disabled` *"when no observer is checked"* — the code has shipped `btn secondary` since before 19P and the predicate is now "until the rule is dirty". § *Per-row Edit / Add / bulk actions* `:932-958` says the landing contract is *"Reviewers only… the other three pages pass no offset, no fragment and no focus"* — false from rung 1. § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2). **Rung 3 adds four more, none of them previously named:** § *Operator actions card* `:552` opens *"Reviewees, Relationships and Observers"* and `:574` says *"One shape on the three pages that carry this card"* — two now; its § item 2 **Action row** `:585-598` lists `Clear … Edit, Inactivate, Activate, Add and Delete … and finally the Search submit last` and scopes the exception to Reviewers alone; and § *Observers page* body-layout **item 5** `:1282` reads *"Preview table — always renders when observers exist (or when Add mode is active)"*, where the gate is now `observers or add_mode or total_row_count > 0 or not is_archived`. Doc impact named items 4 and 6, not 5. **Rung 4 adds three more:** `:908-916` scopes the Save/Cancel-in-an-expander-bar shape to Reviewers, true of Observers now too; `:105`'s item-0 placement table still reads *"`Operator actions` alone in the right"* for Observers, which also makes THIS document's claim that *"the item-0 placement table is the only one of the three that is correct today"* stale; and `:894-907`'s page-independent button-state table describes a confirm *"on the status row"*, `Add` as a selection-gated column and the status pair as enabled-by-arity — none of which holds on a page whose panel renders them by status.
 - `spec/operator_button_audit.md` — **that file has no Observers Setup section**: §§6/7/8 are Reviewers / Reviewees / Relationships and the only Observers row in it is the nav tab (`:80`). So there are no Observers rows for the four row actions or the rename to move; what is actually owed is `:230` (row 125), *"The three other roster pages still read `Add`, and keep the rationale, until 19P.2–.4"* — two now, after rung 3 — and a decision at the close about whether this page gets a section at all. The earlier wording here promised edits to rows that do not exist; corrected at rung 3, when the first slice tried to act on it (Item 2). Its standing gate note — these controls are *absent, not disabled*, outside an editable session — keeps its shape but changes its predicate for this page alone (Item 2).
 - `spec/operator_ui_concept.md` — the § *Setup pages* heading narrows again as Observers leaves the shared shape (Item 2).
 - `spec/lifecycle.md` — §5 states that the four roster pages hide their mutating surface outside `is_editable`. Observers becomes a **stated exception**: its roster is editable to `archived`, because an observer row is a view grant rather than a participant in assignments or responses. This is the first page to diverge from that predicate, so §3.1's "nothing may use a narrower one" needs its mirror — nothing may use a *wider* one either, without saying why here (Item 2).

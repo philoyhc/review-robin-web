@@ -508,10 +508,11 @@
   {# Selection → action-button state binding. Runs whenever the
      checkboxes render (``selectable`` above — not edit, not
      archived). The bulk-action buttons live in the Operator
-     actions card and disappear during ``is_ready`` (lock card);
-     the cohort editor lives in its own card and stays through
-     ``ready`` / ``expired``. The JS below null-checks each
-     element so it works regardless of which card is rendered. #}
+     19P.2 rungs 4 and 5 retired both cards: the row actions and the
+     cohort editor are built into the row expander now, and the gate
+     on all of it is ``not is_archived``. The JS below still
+     null-checks each element, because the panel is injected and its
+     nodes exist only while a selection does. #}
   {% if not edit_mode and not is_archived %}
     <script>
       {# 19P.2 rung 5 — these four are defined BEFORE the IIFE below,
@@ -616,8 +617,9 @@
       (function () {
         // 19P.2 rung 4 — the four row actions, the count and the delete
         // gate moved out of the `Operator actions` card and into a row
-        // expander this script builds. What stays here is the cohort
-        // editor's half, which is still a card until rung 5.
+        // expander this script builds. Rung 5 brought the cohort
+        // editor in beside them, cloned per rebuild from the page's
+        // `<template>`, so this script owns the whole panel.
         var selectAll = document.getElementById("observers-select-all");
         var table = document.getElementById("observers-table");
         var OBS_BASE = {{ observers_base_url | tojson }};
@@ -639,9 +641,9 @@
             root: block.parentNode,
             mixed: panel.querySelector(".observers-cohort-mixed-message"),
             // May be null before `placeSaveButton` has run — the
-            // button is created after the editor's markup settles.
+            // button is created after the editor's markup settles, and
+            // is rebound on every mutation that can destroy it.
             save: panel.querySelector(".cohort-save-btn"),
-            label: panel.querySelector(".row-expander-label"),
           };
         }
 
@@ -790,7 +792,7 @@
         // moving: the template stays intact so the next rebuild has
         // something to clone, and a moved builder would carry the
         // previous selection's rule state into the new panel.
-        function fillCohortPane(tr, sel) {
+        function fillCohortPane(tr) {
           if (!COHORT_TPL) return;
           var pane = tr.querySelector(".row-expander-pane-left");
           if (!pane) return;
@@ -853,7 +855,7 @@
             row.classList.add("session-row-selected");
           });
           panel = buildPanel(sel);
-          fillCohortPane(panel, sel);
+          fillCohortPane(panel);
           (currentAnchor() || sel[sel.length - 1])
             .insertAdjacentElement("afterend", panel);
         }
@@ -1016,8 +1018,18 @@
             // After the inline `onclick` has run, not before it: `+`
             // and `X` rebuild the cell list, so Save has to be moved to
             // the new last cell before its state is re-read.
+            //
+            // The return value is REBOUND, not discarded. `Save` rides
+            // inside the last cell's flex row, so `X` on that cell
+            // destroys it; `placeSaveButton` then builds a replacement,
+            // and a `nodes.save` still pointing at the removed node
+            // meant `sync()` toggled a detached button while the
+            // visible one stayed greyed out for the rest of that
+            // selection. In a two-cell builder the first cell's `X` is
+            // disabled, so the only removable cell is the last — every
+            // `X` in a two-rule edit hit this.
             setTimeout(function () {
-              placeSaveButton(nodes);
+              nodes.save = placeSaveButton(nodes);
               sync();
             }, 0);
           });
@@ -1055,7 +1067,7 @@
           // empty string = no saved rule). Shared signature → load that
           // rule into the editor; mixed → reset to default and show the
           // message. Author's call, 2026-09-16: mixed keeps today's
-          // behaviour rather than growing per-box "(Multiple values)",
+          // behavior rather than growing per-box "(Multiple values)",
           // which needs per-field comparison the signature cannot do.
           var seen = {};
           var distinct = 0;

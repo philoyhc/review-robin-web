@@ -65,7 +65,7 @@ def _builder(body: str) -> str:
         body, re.S,
     )
     assert m, "the expander builder is not in the response"
-    return m.group(0)
+    return _code(m.group(0))
 
 
 def _code(js: str) -> str:
@@ -74,8 +74,13 @@ def _code(js: str) -> str:
     Every comment in this builder explains what the code does, using the
     same identifiers — so `"is-split" in js` passed with the class no
     longer emitted, matched by the comment saying why it is emitted.
-    Assertions about behaviour read this; assertions about the reasoning
-    being present can read the raw text.
+
+    `_builder()` returns this, rather than callers remembering to wrap.
+    The first fix stripped comments at the two call sites that had
+    already been caught, which leaves the hole open for the next
+    assertion whose identifier a comment repeats — which is exactly how
+    it opened. Nothing in this file asserts on reasoning text; if
+    something ever needs to, it can read the response directly.
     """
     return "\n".join(
         re.sub(r"//.*$", "", line) for line in js.split("\n")
@@ -372,7 +377,7 @@ def test_the_edit_row_reads_as_selected(
 # `.card-columns` retired with it. As with the rest of this file: the
 # panel does not exist without JS, so what is pinned here is the
 # template it is cloned from, the builder that clones it, and the
-# absence of the card. The behaviour — the dirty gate, the reposition
+# absence of the card. The behavior — the dirty gate, the reposition
 # on add, the mixed reset — is measured in Chromium.
 
 
@@ -419,7 +424,7 @@ def test_the_panel_splits_and_clones_the_builder_into_it(
 ) -> None:
     js = _builder(_page(client, _session(client, db, "coh-split")))
 
-    code = _code(js)
+    code = js
     assert '" is-split"' in code, "the panel does not split"
     assert "row-expander-pane-left" in code
     assert "row-expander-pane-right" in code
@@ -522,10 +527,48 @@ def test_the_dirty_gate_is_re_armed_per_rebuild_not_once(
         assert event in gate.group(0), f"the gate ignores {event}"
 
 
+def test_the_click_path_rebinds_the_save_it_replaces(
+    client: TestClient, db: Session
+) -> None:
+    """`X` on the last rule cell destroys `Save` and gets a replacement.
+
+    `Save` rides inside that cell's flex row — the shape the plan asked
+    for — so `observerRemoveRule` takes it with the cell.
+    `placeSaveButton` builds a new one; if the click path discards the
+    return, `nodes.save` keeps pointing at the removed node and `sync()`
+    thereafter toggles a detached button while the visible one stays
+    greyed out for the rest of that selection. In a two-cell builder the
+    first cell's `X` is `disabled`, so every `X` in a two-rule edit hits
+    this path.
+
+    **This is a text guard and cannot be more.** There is no JS runtime
+    here, so the assertion is that the assignment is written, not that
+    it works — deleting the `nodes.save =` passed all 70 tests in this
+    file's neighbourhood. What proves the behaviour is Chromium:
+    three cells, `X` the last, `Save` must come back live because two
+    cells differ from the one-cell baseline.
+    """
+    js = _builder(_page(client, _session(client, db, "coh-rebind")))
+
+    handler = re.search(
+        r'addEventListener\("click".*?\}, 0\);', js, re.S
+    )
+    assert handler, "the delegated click handler is gone"
+    assert "nodes.save = placeSaveButton(nodes);" in handler.group(0), (
+        "the click path drops the replacement Save on the floor"
+    )
+    # Twice: the click path above, and the render path in `refresh()`
+    # that was always right. Counting rather than slicing, because the
+    # two are not in a fixed order in the file.
+    assert js.count("nodes.save = placeSaveButton(nodes);") == 2, (
+        "expected the rebinding on both the render and the click path"
+    )
+
+
 def test_a_mixed_selection_resets_the_builder_and_says_so(
     client: TestClient, db: Session
 ) -> None:
-    """Author's call, 2026-09-16: mixed keeps today's behaviour rather
+    """Author's call, 2026-09-16: mixed keeps today's behavior rather
     than growing per-box "(Multiple values)", which needs per-field
     comparison the whole-rule signature cannot do."""
     js = _builder(_page(client, _session(client, db, "coh-mixed")))
@@ -534,7 +577,7 @@ def test_a_mixed_selection_resets_the_builder_and_says_so(
     assert "nodes.mixed.hidden = (distinct <= 1)" in js, (
         "the mixed message does not follow the signature count"
     )
-    assert re.search(r"\} else \{\s*setEditorToDefault\(nodes\.block\);", _code(js)), (
+    assert re.search(r"\} else \{\s*setEditorToDefault\(nodes\.block\);", js), (
         "a mixed selection does not reset the builder"
     )
 
@@ -552,7 +595,11 @@ def test_the_split_modifier_has_a_rule_behind_it(
     )
     assert "body.ui-v2 .row-expander-pane-right {" in body
     assert "body.ui-v2 .row-expander-label {" in body
-    assert "body.ui-v2 .cohort-save-btn {" in body
+    # `button.cohort-save-btn`. A class-only selector here is (0,2,1)
+    # and loses to the shared `body.ui-v2 button.btn` — the first draft
+    # shipped exactly that and the rule did nothing, with this
+    # assertion green.
+    assert "body.ui-v2 button.cohort-save-btn {" in body
     # Top-flush, not a shared bottom edge: the builder is taller, and
     # bottom-aligning would anchor Save to a button row it has no
     # relationship with.
