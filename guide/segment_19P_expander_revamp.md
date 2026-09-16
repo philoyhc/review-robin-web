@@ -501,18 +501,187 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 
 ## Item 2 — Observers, the divergence proof
 
-**Not yet planned.** Second, deliberately, and not fourth. Observers is the only
-roster that differs: **4** `formaction` targets and **5** `setBtn(` lines against
-3 and 4 on the other three, an extra row action (`cohort-rule`), and **no**
-`_field_labels_editor` — so its Unlock panel is missing that half of the right
-column rather than rendering it blank.
+### Opportunity
 
-Reviewers / Reviewees / Relationships are *identical* in action set and so
-cannot falsify the expander's shape. Proving it on Reviewers and then Observers
-tests both ends in two items; leaving Observers until last risks reworking
-three shipped pages. 19N.1 paid for the same mistake — a blast radius that
-counted callers could not falsify the claim it was making, and took three
-verification passes to close.
+Observers is the only roster page that does **not** match Reviewers, which is
+why it is second and not fourth: Reviewees and Relationships are identical in
+action set and arity, so they cannot falsify the idiom. Measured differences —
+an extra row action (`cohort-rule`, 5 routes to Reviewers' 4), a per-observer
+**cohort match rule editor** with no equivalent anywhere else, a `Cohort`
+column, **no** `_field_labels_editor`, **no** column chips at all (one fixed
+tag slot), and a page that 404s unless `session.observers_enabled`.
+
+It also still carries the defect 19P.1 fixed only for Reviewers: **no row
+action passes `offset` or a fragment**, so an action taken on page 2 answers
+with page 1 and lands at the top of the document.
+
+And the cohort editor is in the wrong place for what it does: its own empty
+state reads *"Select observers in the table below…"*, yet it renders two
+containers above those rows — the complaint this segment exists to answer.
+
+### Decision
+
+**Apply the Reviewers idiom, and put the cohort editor in the row expander**
+beside `Edit`. Agreed by mockup (seven iterations on the app's own tokens,
+2026-09-16, built by transforming the real rendered page).
+
+Rejected: **leaving the cohort editor in a card** — it is selection-driven, so
+a card a grid away is the defect, not the layout. Rejected: **the Unlock
+panel** — that panel holds roster-wide controls; a per-row rule is not one.
+
+The shape, as agreed:
+
+- **Expander, two columns.** Left: the cohort label, its rule builder, and
+  `Save` **inline immediately after the last rule cell's `X`** (anchored to
+  the final `X`, so it trails the list as rules are added). Right: the
+  selected count, the delete confirm and `Edit` / `Inactivate` / `Delete`,
+  **all inline, top-aligned, flush right**.
+- **The cohort label is not a card heading.** It takes the Instruments rule
+  builder's Link 1 idiom — `<h3>` at `font-weight: normal`, `margin: 0 0 12px`,
+  flex with an 8px gap (`instruments_index.html`, `new_model_rule_list`), whose
+  gap seats a state pill inline if this editor ever wants one.
+- **`Save` is disabled until the rule is dirty**, and sized to the selects:
+  measured 29 / 28.9 / **36.9**px, so it takes the `X`'s `4px 8px` padding and
+  inherits the rule row's 4px flex gap rather than carrying a margin — the two
+  gaps then match by construction rather than by a tuned value.
+- **Toolbar asymmetry accepted.** The left pane renders empty on this page —
+  no column chips exist, and the pager appears only past one page. Consistency
+  with Reviewers wins over filling it. The filter's button row is **`Clear` /
+  `Add new` / `Search` only**; row actions live in the expander.
+- **Unlock panel: `Upload Observers` left, `Danger Zone` right**, with `Lock`
+  at the foot of the right-hand stack under the Danger Zone — the same
+  relationship Reviewers has (Lock under the card that stack holds).
+
+### Semantics
+
+- **The gate collision is this item's one genuinely new problem.** The cohort
+  editor renders on `not edit_mode and not is_archived`; the action buttons on
+  `is_editable`. The checkboxes deliberately follow the *looser* gate because
+  they drive the cohort editor, so rules can be refined mid-session. Putting
+  both in one expander means the container cannot carry a single gate: the
+  looser one would render `Inactivate` / `Delete` live on `ready`, where their
+  routes answer 409. **The expander gates per control** — something Reviewers
+  never needed. See Open questions for the residual.
+- **Mixed selections keep today's behaviour**: the builder resets to its blank
+  default and `#observers-cohort-mixed-message` explains that saving replaces
+  every selected observer's rule. Author's call, 2026-09-16 — good enough, and
+  it ships with the move rather than after it.
+- **The dirty snapshot is re-taken on every expander rebuild**, because the
+  expander re-renders client-side on every selection change. Taken once — as
+  the tag-label editor safely does, never rebuilding — it would leave `Save`
+  enabled against an unchanged rule or disabled against a changed one.
+- **`Save` writes one rule to every selected observer**, unchanged from today
+  (`observers_cohort_rule_save` applies the editor's rule to every id in
+  `observer_ids`). **What changes is where it lands.** It redirects like any
+  row action, and once the editor is *inside* the expander a top-of-document
+  landing throws the operator away from the rows they were just ruling on — the
+  same 821px defect rung 1 fixes, on the one control whose surface moved into
+  the table. So the cohort save takes the same contract: keep `offset`, return
+  to `#observer-row-<id>` of the first selected row. Rung 1 gives it that for
+  free **only if** the cohort route is included in the fix; it is a fifth POST
+  and easy to miss when the other four are the obvious set.
+- **The page is unreachable without `observers_enabled`** (404 via
+  `require_observers_enabled_session`), so every rung inherits a gate Reviewers
+  has no equivalent of.
+
+### Judgment calls — decided
+
+- **2026-09-16.** `.card-columns` **retires on this page**, unlike Reviewers.
+  It survived there only as the tag-label editor's locked-state fallback home;
+  Observers has no such editor, so once the cohort card leaves, the container
+  has no tenant at all.
+- **2026-09-16.** The expander's columns do not share a bottom edge; the
+  builder is taller. Accepted — top-flush was the author's call, and aligning
+  them would anchor `Save` to a button row it has no relationship with.
+- **2026-09-16.** The `offset`/anchor fix lands **first and alone**, before any
+  layout moves. It is owed from 19P.1, is independent of the shape, and a
+  landing bug is far easier to see on a page that has not just been rearranged.
+
+### Blast radius (measured)
+
+Commands and counts, 2026-09-16, `226c600`:
+
+- `wc -l app/web/templates/operator/session_observers.html` → **858** (Reviewers 1,342)
+- `wc -l app/web/routes_operator/_setup_observers.py` → **707** (Reviewers 738)
+- Routes: **5 POST** row/bulk actions + index + import + create + update.
+  `cohort-rule` is the one Reviewers lacks; `field-labels` is the one it has.
+- `grep -c 'setBtn(' session_observers.html` → **5**; `grep -c 'data-col-toggle=' → **0**;
+  `grep -c '_field_labels_editor' → **0**
+- `grep -rl observers tests/ --include=*.py | wc -l` → **45** (reviewers 160)
+- The cohort editor is ~95 lines of builder markup plus ~180 lines of its own JS.
+
+### PR ladder
+
+1. **The `offset` / anchor fix — land where Reviewers lands.** Every row
+   action keeps the pager `offset` and returns to the row it acted on:
+   `#observer-row-<id>` for the first acted-on row, `#observers-table-card`
+   where the action leaves no row (a delete), `tr.row-action-target` at 88px so
+   the row sits second from the top with a neighbour for context, `?focus=<id>`
+   on a create (a new row appends past the end, so the fragment alone names a
+   row the response never rendered), and the fallback script for the two cases
+   a fragment cannot resolve — a row the filter excludes, a row moved by the
+   cookie sort. No layout change; this is the defect 19P.1 left behind.
+2. **Toolbar.** Filter strip into the table card's toolbar, split panes, button
+   row narrowed to `Clear` / `Add new` / `Search`. The `Operator actions` card
+   is **slimmed, not retired** — it still holds the only live row actions.
+3. **Row expander.** The four row actions move in; the card retires; the
+   cohort card stays where it is, untouched.
+4. **The cohort editor into the expander.** The divergence proof proper: two
+   columns, the Link 1 label idiom, `Save` inline and dirty-gated, per-control
+   gating, mixed-selection behaviour preserved. `.card-columns` retires here.
+5. **Unlock panel.** `Upload` + `Danger Zone` into the roster card; `Lock` at
+   the stack's foot; nothing below the table.
+6. **Specs and the close.**
+
+### Definition of done
+
+- A row action taken on page 2 of a filtered roster returns to page 2, landing
+  on the acted-on row, asserted by route test — **for all five POSTs**,
+  `cohort-rule` included.
+- `grep -c 'data-col-toggle=' session_observers.html` → 0 and the toolbar still
+  renders `is-split`, asserted — the empty left pane is intended, not a bug.
+- The expander renders the cohort builder and the row actions with **separate**
+  gates, asserted across `draft` / `validated` / `ready` / `expired` / `archived`.
+- `Save` renders `disabled` on arrival and after every selection change,
+  asserted on a rebuilt expander, not just the first render.
+- A mixed selection renders the blank builder **and** the mixed-rule message.
+- `.card-columns` and `.bottom-grid` are both absent from the rendered page.
+- Verified in Chromium: the expander at two and at three rule rows, and the
+  panel's start-open state on a failed import.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19P.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **How does the expander gate per control on a `ready` session?** The cohort
+   editor must stay live to `archived`; `Inactivate` / `Delete` must not.
+   Options: render the action column empty outside `is_editable` (the expander
+   becomes cohort-only mid-session), or render the buttons disabled. The first
+   matches `spec/operator_button_audit.md`'s standing rule that these controls
+   are **absent, not disabled**, outside an editable session. *Author decides at
+   rung 4; the mockup does not answer it.*
+
+### Out of scope
+
+- **Per-box `(Multiple values)`.** Today's whole-rule signature cannot say
+  *which* field differs; labelling individual boxes needs per-field comparison
+  across the selected rows. Recorded in `guide/deferred_consolidated.md`.
+- **The other two roster pages.** 19P.3.
+- **The three wrong spec lines this item's audit found** are fixed at this
+  item's close, not before — see Doc impact.
+
+### Doc impact
+
+- `spec/setup_pages.md` — § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2).
+- `spec/operator_button_audit.md` — the Observers rows for the four row actions move to the expander; the cohort `Save` gains its dirty-gate and its new home; the `Add` → `Add new` rename reaches this page (Item 2).
+- `spec/operator_ui_concept.md` — the § *Setup pages* heading narrows again as Observers leaves the shared shape (Item 2).
+- `spec/lifecycle.md` — §5's per-page note gains Observers, and states the **per-control** gate inside one expander, which no page has needed before (Item 2).
+- `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=` and row fragment (Item 2).
+- `spec/ui_elements.md` — §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming (Item 2).
+- `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
 
 ---
 
