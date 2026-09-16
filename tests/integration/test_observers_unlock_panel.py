@@ -5,9 +5,9 @@ into a collapsed panel above the preview table, the way Reviewers did at
 19P.1 rung 3. Nothing renders below the table any more.
 
 **The suite was blind to this whole move before these tests.** Every one
-of the 4,131 existing tests passed with the cards relocated, the
-`.bottom-grid` deleted and both redirects rewritten — nothing pinned the
-cards' position, the container, or the redirect URLs. So the assertions
+of the 4,131 tests that already existed passed with the cards relocated,
+the `.bottom-grid` deleted and both redirects rewritten — nothing pinned
+the cards' position, the container, or the redirect URLs. So the assertions
 here are about *placement and plumbing*, which is precisely what nothing
 else reads.
 
@@ -145,10 +145,21 @@ def _toggle(body: str) -> str:
 
 
 def _panel(body: str) -> str:
+    """The panel's markup, bounded by the COLLAPSED control after it.
+
+    Only valid on a closed page. Open, the control moves inside the
+    panel — into whichever stack holds a card — so this bound would cut
+    the panel short and silently drop everything after it. Asserted
+    rather than assumed: every caller here reads a closed page, and a
+    future one that doesn't should fail loudly instead of quietly
+    testing half a panel.
+    """
     card = _card(body)
+    assert 'aria-expanded="false"' in card, (
+        "_panel() is only valid on a collapsed page — open, the control "
+        "moves inside the panel and this bound truncates it"
+    )
     start = card.index('id="roster-unlock-panel"')
-    # The panel closes before the collapsed `Lock`/`Unlock` control,
-    # which is the card's last child.
     end = card.index('class="roster-card-actions"', start)
     return card[start:end]
 
@@ -232,12 +243,64 @@ def test_the_lock_control_ships_as_the_cards_last_child(
     assert _control_label(open_card) == "Lock", _control_label(open_card)
 
     # And the toggle knows both homes, which is what makes one element
-    # serve two positions.
+    # serve two positions — the open one read off the template's marker
+    # rather than named as a column, see the empty-roster test below.
     toggle = _toggle(_page(client, _session(client, db, "unl-3c")))
     assert "card.appendChild(actions)" in toggle
-    assert 'panel.querySelector(".unlock-right").appendChild(actions)' in (
+    assert 'panel.querySelector("[data-lock-home]").appendChild(actions)' in (
         toggle
     )
+
+
+def test_the_lock_control_follows_the_column_that_has_a_card(
+    client: TestClient, db: Session
+) -> None:
+    """`Lock` sits beneath the card its column holds — and on an EMPTY
+    roster the right column holds none, because the Danger Zone is gated
+    on rows.
+
+    The first draft left it floating at the top of that empty column,
+    level with the Upload card's heading. It lands on the two likeliest
+    paths, not an edge case: first use, and immediately after
+    `delete-all` — which redirects back `?unlocked=1` precisely because
+    uploading a replacement is the likely next move.
+
+    Reviewers cannot reach this, its right column holding the
+    always-rendered Upload card, so following Reviewers means keeping
+    the RELATIONSHIP rather than the column.
+    """
+    # Populated: the marker is on the right stack, under the Danger Zone.
+    full = _card(
+        _page(client, _session(client, db, "unl-20", rows=2), "?unlocked=1")
+    )
+    right = full.index('class="unlock-stack unlock-right"')
+    assert full.index("data-lock-home") > right, (
+        "the lock home is not the right stack on a populated roster"
+    )
+    assert full.index("danger-zone") < full.index(
+        'class="roster-card-actions"'
+    ), "Lock is not beneath the Danger Zone"
+
+    # Empty: it moves to the left stack, under Upload.
+    empty = _card(
+        _page(client, _session(client, db, "unl-21", rows=0), "?unlocked=1")
+    )
+    assert "danger-zone" not in empty
+    left = empty.index('class="unlock-stack"')
+    right_empty = empty.index('class="unlock-stack unlock-right"')
+    home = empty.index("data-lock-home")
+    assert left < home < right_empty, (
+        "Lock is stranded in the empty right column"
+    )
+    assert empty.index('id="upload-csv"') < empty.index(
+        'class="roster-card-actions"'
+    ) < right_empty, "Lock is not beneath the Upload card"
+
+    # One control either way — the macro has one definition and only
+    # one branch renders it.
+    for card in (full, empty):
+        assert card.count('id="roster-unlock-btn"') == 1
+        assert card.count("data-lock-home") == 1
 
 
 def test_the_panel_ships_hidden_and_unlocked_opens_it(
@@ -483,6 +546,19 @@ def test_the_tag_column_reads_tag_not_tag1(
         "the CSV column name was renamed with the display label"
     )
 
+    # Every DISPLAY site moves together, or one row reads `Tag` in its
+    # column header and `Observer: Tag 1` in its Cohort cell. The cold
+    # read found both of these still carrying the digit.
+    assert "Observer: Tag 1" not in markup, (
+        "the cohort rule builder still offers `Observer: Tag 1`"
+    )
+    assert ">Observer: Tag</option>" in markup
+    from app.web.views._observers import _COHORT_OBSERVER_FRIENDLY
+    assert _COHORT_OBSERVER_FRIENDLY["observer.tag1"] == "Observer: Tag"
+    # The stored KEY is not a display label and must not move — a saved
+    # `cohort_rule` holds it.
+    assert 'value="observer.tag1"' in markup
+
 
 def test_the_danger_zone_is_gated_on_rows_and_upload_is_not(
     client: TestClient, db: Session
@@ -517,6 +593,69 @@ def test_each_confirm_key_still_appears_exactly_once(
     for key in ("replace-observers", "delete-all"):
         assert body.count(f'data-delete-confirm="{key}"') == 1, key
         assert body.count(f'data-delete-btn="{key}"') == 1, key
+
+
+def test_each_confirm_sentence_is_one_flex_item(
+    client: TestClient, db: Session
+) -> None:
+    """`.confirm-label` is `display: flex`, so the sentence must live in
+    ONE child element.
+
+    A bare text run inside a flex container becomes its own anonymous
+    flex item and takes the container's 8px `gap` with it, detaching the
+    closing "." from the pill before it — 12px off instead of the pill's
+    own 4px margin. `spec/ui_elements.md` §6 states the constraint and
+    records exactly how the defect arrives: *"by moving a label onto it
+    — correctly, a class over an inline style — and it was invisible in
+    the markup."*
+
+    Which is exactly how it arrived here. This rung swapped
+    `style="font-weight: normal;"` for `class="confirm-label"` on both
+    confirms and did not bring the wrapper; the cold read measured 12px
+    in Chromium on both. Nothing in the suite would have caught it, so
+    this test is the thing that makes the constraint checkable rather
+    than merely written down.
+    """
+    panel = _panel(_page(client, _session(client, db, "unl-22")))
+
+    for key in ("replace-observers", "delete-all"):
+        label = re.search(
+            r'<label class="confirm-label">(.*?)</label>',
+            panel[panel.index(f'data-delete-confirm="{key}"') - 400:],
+            re.S,
+        )
+        assert label, key
+        body = label.group(1)
+        # Everything after the checkbox must be inside one element: no
+        # bare text between the `<input>` and the wrapper, and none
+        # after the wrapper closes.
+        after_input = body[body.index(">", body.index("<input")) + 1:]
+        after_input = re.sub(r"\{#.*?#\}", "", after_input, flags=re.S)
+        assert after_input.strip().startswith("<span>"), (
+            f"{key}: the sentence does not start in a wrapper"
+        )
+        assert after_input.strip().endswith("</span>"), (
+            f"{key}: text escapes the wrapper — the closing period is "
+            "its own flex item and detaches from the pill"
+        )
+
+
+def test_the_danger_zone_can_carry_its_own_accessible_name(
+    client: TestClient, db: Session
+) -> None:
+    """`aria-labelledby` on a role-less `<div>` is dead markup: a
+    `<div>` is `generic` and a generic element takes no accessible name.
+
+    The first draft added the attribute to a `<div>` — so the thing the
+    rung added did nothing, and Chromium exposed one region on the page
+    (the upload card) rather than two.
+    """
+    panel = _panel(_page(client, _session(client, db, "unl-23")))
+    assert '<section class="card danger-zone"' in panel, (
+        "the Danger Zone is a div, so its aria-labelledby is inert"
+    )
+    assert 'aria-labelledby="observers-danger-h"' in panel
+    assert 'id="observers-danger-h"' in panel, "nothing to point at"
 
 
 def test_the_panel_is_reachable_without_javascript(

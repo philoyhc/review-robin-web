@@ -13,10 +13,17 @@ from __future__ import annotations
 import json
 from typing import Any
 
+# Display labels only. The KEYS are stored — they are what a saved
+# `cohort_rule` holds — so they never move; 19P.2 rung 6 changed the
+# right-hand side alone, dropping the digit from the tag slot's label to
+# match the roster index and the preview table's `<th>`. Observers have
+# exactly one tag slot, so `Tag 1` numbered a series of one, and after
+# the header changed a single row read `Tag` in its column and
+# `Observer: Tag 1` in its Cohort cell.
 _COHORT_OBSERVER_FRIENDLY: dict[str, str] = {
     "observer.name": "Observer: Name",
     "observer.email": "Observer: Email",
-    "observer.tag1": "Observer: Tag 1",
+    "observer.tag1": "Observer: Tag",
 }
 
 

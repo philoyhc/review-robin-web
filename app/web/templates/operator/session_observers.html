@@ -179,7 +179,11 @@
                       style="flex: 0 0 50%; min-width: 0; padding: 4px;">
                 <option value="observer.name">Observer: Name</option>
                 <option value="observer.email">Observer: Email</option>
-                <option value="observer.tag1">Observer: Tag 1</option>
+                {# Label only; the VALUE is what a saved `cohort_rule`
+                   stores, so it keeps its digit. Matches
+                   `_COHORT_OBSERVER_FRIENDLY`, which renders the same
+                   rule back into the preview table's Cohort cell. #}
+                <option value="observer.tag1">Observer: Tag</option>
               </select>
               <input form="observers-bulk-form" name="cohort_rule_operand_value"
                      data-observer-operand-value type="text" placeholder="value"
@@ -229,6 +233,26 @@
       <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
+
+  {# The `Lock` control, defined once and called from whichever column
+     actually holds a card — see `lock_home` below. A macro rather than
+     two copies of the markup: two copies of one control is how they
+     drift apart, and the toggle's `querySelector` would find only the
+     first of them anyway. #}
+  {% macro lock_control() %}
+    <div class="roster-card-actions">
+      <button type="button" class="btn secondary" id="roster-unlock-btn"
+              aria-expanded="true" aria-controls="roster-unlock-panel">
+        Lock
+      </button>
+      {# Without JS the button above is inert, so the same state change
+         is offered as a plain navigation. See the `Unlock` twin. #}
+      <noscript>
+        <a class="btn secondary"
+           href="{{ observers_base_url }}#roster-card">Lock</a>
+      </noscript>
+    </div>
+  {% endmacro %}
 
   {# ══ 19P.2 rung 6 — the Unlock panel ═════════════════════════════
      `Upload Observers` and the `Danger Zone` move off the foot of the
@@ -302,9 +326,28 @@
          decides what the page ARRIVES as. Both tenants answer with a
          redirect, and a panel that always shipped collapsed would shut
          itself on every one — the `Lock` control is what closes it. #}
+      {# The Danger Zone is gated on rows, so on an EMPTY roster the
+         right column has nothing in it — and the first draft of this
+         rung left `Lock` floating at the top of that empty column,
+         level with the Upload card's heading and ~180px above Upload's
+         own button. Flagged by the cold read.
+
+         It lands on the two likeliest paths, not an edge case: first
+         use (empty roster, open the panel to do the initial import),
+         and immediately after `delete-all`, which redirects back
+         `?unlocked=1` precisely because uploading a replacement is the
+         likely next move.
+
+         Reviewers cannot reach this — its right column holds the
+         always-rendered Upload card — so "follow Reviewers" means
+         keeping the RELATIONSHIP (`Lock` beneath the card its column
+         holds) rather than the column. `data-lock-home` marks whichever
+         stack that is, and the toggle below reads it instead of naming
+         a column. #}
+      {% set danger_visible = total_row_count and total_row_count > 0 %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the import card. #}
-        <div class="unlock-stack">
+        <div class="unlock-stack"{% if not danger_visible %} data-lock-home{% endif %}>
           <section class="card" id="upload-csv"
                    aria-labelledby="observers-upload-h">
             <h2 id="observers-upload-h">Upload Observers</h2>
@@ -332,8 +375,22 @@
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm_replace" value="true" required
                            data-delete-confirm="replace-observers">
-                    Yes, replace the existing
-                    <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
+                    {# One <span>, so the sentence is ONE flex item.
+                       `.confirm-label` is `display: flex`, and without
+                       the wrapper every bare text node becomes its own
+                       flex item and takes the 8px `gap` with it — which
+                       detaches the closing "." from the pill before it,
+                       12px off instead of the pill's own 4px margin.
+                       The gap is for the checkbox, not for the words.
+
+                       `spec/ui_elements.md` §6 states this because the
+                       defect arrives exactly the way it arrived here:
+                       by moving a label onto the class, correctly, a
+                       class over an inline style — and it is invisible
+                       in the markup. Caught by this rung's cold read
+                       after being measured at 12px in Chromium. #}
+                    <span>Yes, replace the existing
+                    <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.</span>
                   </label>
                 </p>
               {% endif %}
@@ -359,6 +416,7 @@
               </div>
             </form>
           </section>
+          {% if panel_open and not danger_visible %}{{ lock_control() }}{% endif %}
         </div>
 
         {# Right column: the Danger Zone, and — while open — the `Lock`
@@ -366,22 +424,28 @@
            row starts below the TALLER column, which would drop the
            button to the panel's foot, far from the card it sits
            under. #}
-        <div class="unlock-stack unlock-right">
+        <div class="unlock-stack unlock-right"{% if danger_visible %} data-lock-home{% endif %}>
           {# The `total_row_count > 0` gate is unchanged by the move,
              and it is not cosmetic. `delete_all_observers` is not a
              no-op on an empty roster — it writes an audit row reading
              "Deleted all 0 observers" — so an ungated card offers a
              destructive control with nothing to destroy. #}
-          {% if total_row_count and total_row_count > 0 %}
-            <div class="card danger-zone" aria-labelledby="observers-danger-h">
+          {% if danger_visible %}
+            {# `<section>`, not `<div>`: a role-less `<div>` is `generic`
+               and takes no accessible name, so the `aria-labelledby`
+               would be dead markup. Matches the Danger Zone's sibling
+               on Reviewers. #}
+            <section class="card danger-zone"
+                     aria-labelledby="observers-danger-h">
               <h2 id="observers-danger-h">Danger Zone</h2>
               <form method="post" action="{{ observers_base_url }}/delete-all">
                 <p>
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm" value="true" required
                            data-delete-confirm="delete-all">
-                    Yes, delete the existing
-                    <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
+                    {# One <span> — see the upload card's twin above. #}
+                    <span>Yes, delete the existing
+                    <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.</span>
                   </label>
                 </p>
                 <div class="unlock-col-actions">
@@ -390,23 +454,9 @@
                           disabled aria-disabled="true">Delete all observers</button>
                 </div>
               </form>
-            </div>
+            </section>
           {% endif %}
-          {% if panel_open %}
-            <div class="roster-card-actions">
-              <button type="button" class="btn secondary" id="roster-unlock-btn"
-                      aria-expanded="true" aria-controls="roster-unlock-panel">
-                Lock
-              </button>
-              {# Without JS the button above is inert, so the same state
-                 change is offered as a plain navigation. See the
-                 `Unlock` twin below. #}
-              <noscript>
-                <a class="btn secondary"
-                   href="{{ observers_base_url }}#roster-card">Lock</a>
-              </noscript>
-            </div>
-          {% endif %}
+          {% if panel_open and danger_visible %}{{ lock_control() }}{% endif %}
         </div>
       </div>
 
@@ -461,8 +511,13 @@
           var card = document.getElementById("roster-card");
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
+            // `[data-lock-home]`, not `.unlock-right`: the control
+            // belongs beneath the card its column holds, and on an
+            // empty roster the right column holds none — the Danger
+            // Zone is gated on rows. The template marks whichever stack
+            // that is, so this does not have to know the rule.
             if (open) card.appendChild(actions);
-            else panel.querySelector(".unlock-right").appendChild(actions);
+            else panel.querySelector("[data-lock-home]").appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves TO, not
             // "Done": the panel is a lock state, not a form being
