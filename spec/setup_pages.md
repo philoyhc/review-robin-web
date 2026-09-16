@@ -936,8 +936,8 @@ the **active search / status filter** (so the operator lands
 back on the same filtered view, not the unfiltered list). CSV
 bulk upload stays as the bulk-create path.
 
-**Reviewers carries three more, since 19P.1; the other three pages do
-not.** Its redirect also preserves the **pager offset** (`offset=`),
+**Reviewers carries three more since 19P.1, and Observers since 19P.2;
+Reviewees and Relationships do not.** Its redirect also preserves the **pager offset** (`offset=`),
 lands on a **fragment**, and on a create carries **`focus=<id>`**, so a row action taken mid-table comes back to
 that row rather than to the top of the document — measured at 821px of
 jump before the anchor, and answering with page 1 after an action on
@@ -959,9 +959,9 @@ fragment then resolves and lands on it. It places no caret — the
 response is a plain list, not an edit state. (Caret placement is a
 separate mechanism on a different flow: `?add=1` renders a blank row
 *as an edit state*, and the landing script focuses that row's first
-field. After a create there is no input to focus.) The other three pages
-pass no offset, no fragment and no focus, and are unaffected. 19P.2
-carries this to Observers.
+field. After a create there is no input to focus.) Reviewees and
+Relationships pass no offset, no fragment and no focus, and are
+unaffected until 19P.3–.4.
 
 **Relationships pickers.** The Relationships Edit / Add rows
 choose reviewer + reviewee via **name-or-email search-box
@@ -1264,8 +1264,16 @@ Reviewees and Relationships keep the old shape until 19P.3–.4.
 
 Top-to-bottom: chrome (`session-nav-card` with `Observers` highlighted),
 the status strip (`session_setup_status_row`), the **lock card** when
-the session is not editable, the **full-width guidance card**, the
+the session is `archived`, the **full-width guidance card**, the
 **roster card**, and the **preview table card**.
+
+**The lock card's condition is this page's, not the shared default.**
+`_roster_lock_card.html` defaults to `not is_editable`; Observers passes
+`lock_when = is_archived` so the card cannot read *"cannot be modified
+while the session is ongoing"* above a roster that is still live. The
+card and the controls agree about which states are locked, which is the
+rule — the predicate they agree *on* is the one this page's routes
+enforce.
 
 **The roster card** (`.card.roster-card#roster-card`) always renders,
 carrying the roster index and — when the panel can render — the
@@ -1462,9 +1470,9 @@ three panel submits. Every other way off the page raises the browser's
 unload warning. The deliberate actions set a flag first, so `Save` does
 not warn about the edit it is persisting. Same contract and the same
 sentence as Instruments' lock-with-unsaved-edits
-(`spec/instruments.md` § *Lock with unsaved edits*,
-`spec/operator_button_audit.md:306`) — one wording an operator meets on
-two pages.
+(`spec/instruments.md` § *Save / Lock interaction*,
+`spec/operator_button_audit.md` row 57) — one wording an operator meets
+on two pages.
 
 Storage: `observers.cohort_rule` (`sa.JSON()`, nullable). The
 payload validates through

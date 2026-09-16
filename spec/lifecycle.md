@@ -370,12 +370,13 @@ one exception and deliberately so — it re-renders outside the panel
 with its inputs disabled and its buttons dropped, because a locked
 page must still let an operator *read* the labels.
 
-**Observers uses a WIDER predicate — the first page to (19P.2).** Its
-mutating surface reads `not is_archived`, so the roster stays editable
-through `ready` and `expired` and only `archived` closes it. All seven
-mutating routes were relaxed to `_require_not_archived` in the same
-slice, so the page and its routes agree; the surface is suppressed
-exactly where they refuse.
+**Observers uses a WIDER predicate, and is the first page to do so**
+(19P.2). Its mutating surface reads `not is_archived`, so the roster
+stays editable through `ready` and `expired` and only `archived` closes
+it. **Seven of its eight mutating routes were relaxed** to
+`_require_not_archived` in the same slice — `cohort-rule` already read
+it — so the page and its routes agree and the surface is suppressed
+exactly where they refuse. §3.1 lists all eight.
 
 The reason is what an observer *is*. They never appear in assignments,
 never produce responses, and no readiness rule references them — so

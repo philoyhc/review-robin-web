@@ -733,12 +733,30 @@ what made multi-rule cohorts load at all, so it is newly reachable.
 **At the close**, the spec pass found the register had missed the
 Observers page's own body-layout item — the passage most directly
 describing what moved — and had one rename recorded backwards
-(`spec/setup_pages.md` already read `Tag`; the code had drifted). Two
-counts of mine were wrong and are corrected in the specs: seven routes
-where eight read the gate, and "three cases" reaching the
-fragment-fallback script where two do. The button audit gained a
-**Section 8.5**: the page had none, which was a gap rather than a
-scoping choice, since that file audits every button on the surface.
+(`spec/setup_pages.md` already read `Tag`; the code had drifted). The
+button audit gained a **Section 8.5**: the page had none, which was a
+gap rather than a scoping choice, since that file audits every button on
+the surface.
+
+**Four counts of mine were wrong, and the pattern is the lesson.** Each
+was corrected somewhere and not everywhere: eight routes read the gate
+where a sibling sentence said seven; six POSTs carry `offset` where
+`settings_inventory.md` said five — a figure this very Status block
+already corrected as *"six POSTs, not the ladder's five"*; two cases
+reach the fragment fallback where `ui_elements.md` said three, a
+correction `setup_pages.md` had carried since 19P.1 rung 4a; and one
+paragraph said *"the other three pages do not"* and then *"19P.2 carries
+this to Observers"* four sentences later. **A count restated in two files
+is two facts that can disagree**, and the close is where they do.
+
+**And an insertion invalidated a citation.** Adding §8.5 to
+`operator_button_audit.md` shifted every line after it, so
+`setup_pages.md`'s `:306` pointed at the new section's preamble instead
+of the Instruments Lock row. Cited by **row number** now, which is what
+that file is indexed by and what an insertion does not move; the plan's
+own bullet above carried the same stale reference and is fixed with it.
+Line-number citations into a table are a liability the moment anyone
+edits above them.
 
 
 ### PR ladder
@@ -856,7 +874,7 @@ scoping choice, since that file audits every button on the surface.
 - `spec/ui_elements.md` — **`:609`** (`.session-row-selected`) names the injectors as *"`sessions_list.html`, `sessions_archived.html` and now `session_reviewers.html`"* and says Reviewers is the page rendering both the expander and the bracketed variant: Observers is a fourth injector and a second such page since rung 4, and it is the line the builder's own comment cites. §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming. **§6 `:385` sites the roster `Delete` "between `Add` and `Search`" and scopes the exception to Reviewers** — false on Observers since rung 3, where the `Delete` is still in the card with nothing beside it; and `:613` attributes `.table-card-toolbar` to *"(19P.1, Reviewers)"* and describes the left pane as *"column chips, pager cluster, count line"*, where Observers has no chips. `:611` also carries the **"three cases"** miscount 19P.1 rung 4a corrected in `setup_pages.md` and 19P.2 rung 1 corrected in code — the delete case is not one of them (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
 - **Rung 6 adds four, three of them falsified the moment it landed.** `spec/setup_pages.md:1258-1262` calls the cohort editor + Operator actions pair *"a `.bottom-grid`"* — already wrong (it was `.card-columns`, and this file already said so) and now wrong twice over, since `.bottom-grid` names the container rung 6 deleted; `:568-569` and `:763` both scope *"that class carries only the Upload + Danger Zone pair below the table"* to a layout Observers no longer has; and `:979-1002`'s *"There is nothing below the preview table"* section, written for Reviewers, is now true of this page too and should say so rather than being restated. `spec/lifecycle.md:351-356` says *"On Reviewees, Relationships and Observers it is the `.bottom-grid` those two cards sit in"* — two now, and the sentence's own point (same predicate, different container) is what changes. `spec/settings_inventory.md:383` scopes `?unlocked=1` to the *"Reviewers Setup page"*; the row's whole contract now holds on two pages, and Observers' version differs in one way worth stating — it has no labels editor, so the panel has two tenants, not three. **And two more the author's mid-rung corrections added:** the roster index row is a second-page feature now, so wherever `spec/` scopes it to Reviewers it wants the generalized rule stated once (*the index mirrors the columns the table renders*) rather than twice by page; and the Observers preview table's `Tag1` column header is now `Tag`. **That last one is a CLOSING, not an opening** — the first draft of this bullet had it backwards. `spec/setup_pages.md:1308` already reads `| 3 | Tag |`, so the CODE had drifted and the rename brings it back; what the close actually owes is the cohort label `Observer: Tag`, which the same rung moved in `_COHORT_OBSERVER_FRIENDLY` and which `:1310`'s example summary does not quote. **And the passage this register most conspicuously missed, found by the cold read: `spec/setup_pages.md:1284-1288`** — item 6 of the Observers page's own *Body layout*, stating the container, the position and the gate of the two cards this rung moved (*"a `.bottom-grid` pair below the table … Hidden whenever the session is not `is_editable`"*). Every clause is false of the code now, the `is_editable` half since rung 2. The citations above reach the cross-references from OTHER pages and the cohort-editor pair; none reached the page's own layout item (Item 2).
-- **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md:944-953` (*Lock-with-unsaved-edits*) and `spec/operator_button_audit.md:306`, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2). <!-- cites: spec/instruments.md -->
+- **`spec/setup_pages.md` § *Cohort match rule editor* gains the unsaved-edit guard (rung 5a).** The section enumerates the editor's controls, the `Save` gate and the storage shape and says nothing about discarding: state that an unsaved rule edit prompts *"Discard unsaved changes?"* on the four in-page paths and raises the browser's unload warning on the rest. The sibling contract is already specced at `spec/instruments.md` § *Save / Lock interaction* and `spec/operator_button_audit.md` row 57, and both quote the same string, so this is a third site for one sentence rather than a new one — say it once and cite them (Item 2). <!-- cites: spec/instruments.md -->
 
 ---
 
