@@ -554,14 +554,32 @@ The shape, as agreed:
 
 ### Semantics
 
-- **The gate collision is this item's one genuinely new problem.** The cohort
-  editor renders on `not edit_mode and not is_archived`; the action buttons on
-  `is_editable`. The checkboxes deliberately follow the *looser* gate because
-  they drive the cohort editor, so rules can be refined mid-session. Putting
-  both in one expander means the container cannot carry a single gate: the
-  looser one would render `Inactivate` / `Delete` live on `ready`, where their
-  routes answer 409. **The expander gates per control** — something Reviewers
-  never needed. See Open questions for the residual.
+- **The gate collision is resolved by relaxing the routes, not by splitting the
+  container.** Author's ruling, 2026-09-16: **observers only view.** They never
+  appear in assignments, never produce responses, and no readiness rule
+  references them — so freezing their roster at Activate buys nothing, and the
+  whole expander takes the looser `not is_archived` gate.
+
+  **This is a behaviour change, not a layout one**, and it is the item's real
+  risk. Today `create` / `update` / `bulk-inactivate` / `bulk-reactivate` all
+  call `_require_editable`, so a relaxed template without relaxed routes would
+  render controls the server answers 409 to — the exact silent failure
+  `spec/lifecycle.md` names. The routes move to `_require_not_archived`
+  together with the template.
+
+  **The codebase already half-agrees**: `observers_cohort_rule_save` has used
+  `_require_not_archived` since it was written, with this reasoning in its
+  docstring — *"cohort rules govern which parts of response data observers see,
+  not the response data or roster shape"*. The ruling extends that from the
+  rule to the roster, on the ground that an observer roster is a view grant
+  either way.
+
+  **What makes it safe, checked rather than assumed:** no validation rule
+  mentions observers, so the roster never gates `draft → validated`;
+  `require_observer_in_session` re-reads `Observer.status == "active"` on every
+  request, so an inactivate mid-session revokes access at once rather than
+  leaving a stale grant; and `invalidate_if_validated` is a no-op outside
+  `validated`, so nothing demotes a running session.
 - **Mixed selections keep today's behaviour**: the builder resets to its blank
   default and `#observers-cohort-mixed-message` explains that saving replaces
   every selected observer's rule. Author's call, 2026-09-16 — good enough, and
@@ -621,17 +639,25 @@ Commands and counts, 2026-09-16, `226c600`:
    row the response never rendered), and the fallback script for the two cases
    a fragment cannot resolve — a row the filter excludes, a row moved by the
    cookie sort. No layout change; this is the defect 19P.1 left behind.
-2. **Toolbar.** Filter strip into the table card's toolbar, split panes, button
+2. **The gate relaxation.** `create` / `update` / `bulk-inactivate` /
+   `bulk-reactivate` move from `_require_editable` to `_require_not_archived`,
+   and the template's `_show_actions_slot` follows, so the roster is editable on
+   `ready` and `expired`. A **behaviour** rung, landing before any layout moves
+   so that a regression here is not hidden inside a rearrangement — and so the
+   expander later inherits one gate rather than reconciling two. Delete-all is
+   excluded pending the open question. The three other roster pages are
+   untouched: this argument is about observers, not about rosters.
+3. **Toolbar.** Filter strip into the table card's toolbar, split panes, button
    row narrowed to `Clear` / `Add new` / `Search`. The `Operator actions` card
    is **slimmed, not retired** — it still holds the only live row actions.
-3. **Row expander.** The four row actions move in; the card retires; the
+4. **Row expander.** The four row actions move in; the card retires; the
    cohort card stays where it is, untouched.
-4. **The cohort editor into the expander.** The divergence proof proper: two
+5. **The cohort editor into the expander.** The divergence proof proper: two
    columns, the Link 1 label idiom, `Save` inline and dirty-gated, per-control
    gating, mixed-selection behaviour preserved. `.card-columns` retires here.
-5. **Unlock panel.** `Upload` + `Danger Zone` into the roster card; `Lock` at
+6. **Unlock panel.** `Upload` + `Danger Zone` into the roster card; `Lock` at
    the stack's foot; nothing below the table.
-6. **Specs and the close.**
+7. **Specs and the close.**
 
 ### Definition of done
 
@@ -640,8 +666,10 @@ Commands and counts, 2026-09-16, `226c600`:
   `cohort-rule` included.
 - `grep -c 'data-col-toggle=' session_observers.html` → 0 and the toolbar still
   renders `is-split`, asserted — the empty left pane is intended, not a bug.
-- The expander renders the cohort builder and the row actions with **separate**
-  gates, asserted across `draft` / `validated` / `ready` / `expired` / `archived`.
+- The expander renders **in full** on `ready` and `expired` and **not at all**
+  on `archived`, asserted across all five states — and each relaxed route
+  accepts on `ready` where it previously answered 409, asserted per route so a
+  template-only relaxation fails.
 - `Save` renders `disabled` on arrival and after every selection change,
   asserted on a rebuilt expander, not just the first render.
 - A mixed selection renders the blank builder **and** the mixed-rule message.
@@ -656,13 +684,17 @@ Commands and counts, 2026-09-16, `226c600`:
 
 ### Open questions
 
-1. **How does the expander gate per control on a `ready` session?** The cohort
-   editor must stay live to `archived`; `Inactivate` / `Delete` must not.
-   Options: render the action column empty outside `is_editable` (the expander
-   becomes cohort-only mid-session), or render the buttons disabled. The first
-   matches `spec/operator_button_audit.md`'s standing rule that these controls
-   are **absent, not disabled**, outside an editable session. *Author decides at
-   rung 4; the mockup does not answer it.*
+1. ~~**How does the expander gate per control on a `ready` session?**~~
+   **Answered 2026-09-16 by the author:** it does not — observers only view, so
+   the looser `not is_archived` gate applies to the whole expander and the
+   routes relax to match. See Semantics.
+2. **Does the relaxation reach `Delete all observers` too?** It is roster-wide
+   and destructive, and it sits in the Unlock panel rather than the expander,
+   so the ruling above did not obviously cover it. The same argument applies —
+   it destroys view grants, not responses — but the blast radius differs from
+   inactivating a row. *Author decides before rung 2; the item ships either way,
+   and the conservative reading (delete-all stays `is_editable`) is assumed
+   until told otherwise.*
 
 ### Out of scope
 
@@ -676,9 +708,9 @@ Commands and counts, 2026-09-16, `226c600`:
 ### Doc impact
 
 - `spec/setup_pages.md` — § *Observers page* § *Body layout* items 4 and 6 and § *Cohort match rule editor* re-describe the expander, the toolbar and the Unlock panel. **Three statements there are already wrong, found by this item's audit and predating 19P:** `:1329` says the editor *"reveals **inside the Operator actions card**"* (it is its own card), and `:1258` calls the cohort + actions pair *"a `.bottom-grid`"* (it is `.card-columns`; `.bottom-grid` holds upload + Danger Zone). The item-0 placement table is the only one of the three that is correct today (Item 2).
-- `spec/operator_button_audit.md` — the Observers rows for the four row actions move to the expander; the cohort `Save` gains its dirty-gate and its new home; the `Add` → `Add new` rename reaches this page (Item 2).
+- `spec/operator_button_audit.md` — the Observers rows for the four row actions move to the expander; the cohort `Save` gains its dirty-gate and its new home; the `Add` → `Add new` rename reaches this page. Its standing gate note — these controls are *absent, not disabled*, outside an editable session — keeps its shape but changes its predicate for this page alone (Item 2).
 - `spec/operator_ui_concept.md` — the § *Setup pages* heading narrows again as Observers leaves the shared shape (Item 2).
-- `spec/lifecycle.md` — §5's per-page note gains Observers, and states the **per-control** gate inside one expander, which no page has needed before (Item 2).
+- `spec/lifecycle.md` — §5 states that the four roster pages hide their mutating surface outside `is_editable`. Observers becomes a **stated exception**: its roster is editable to `archived`, because an observer row is a view grant rather than a participant in assignments or responses. This is the first page to diverge from that predicate, so §3.1's "nothing may use a narrower one" needs its mirror — nothing may use a *wider* one either, without saying why here (Item 2).
 - `spec/settings_inventory.md` — § *URL state* gains Observers' `offset=` and row fragment (Item 2).
 - `spec/ui_elements.md` — §10's landing-target entry adds Observers; the expander's two-column variant is a new shape worth naming (Item 2).
 - `spec/rrw_functional_spec.md` — the roster-page description gains Observers alongside Reviewers (Item 2).
