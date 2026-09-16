@@ -1004,51 +1004,39 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
 **Rung 1 — landed.** Both pages' row actions keep the pager `offset` and
 return to the row they acted on.
 
-**The ladder's "five POSTs gain `offset` and a fragment" was right by
-accident.** `grep -c "_redirect_keeping_selection"` returns 5 because it
-counts the import line; there are **four** call sites. The fifth POST,
-`create`, returned a **bare** `RedirectResponse` — no selection, no filter,
-no offset, no fragment — so it was a *conversion*, not two added kwargs, and
-it also regained the filter round-trip the other four already had. Found by
-this plan's own cold read and independently while building; the Opportunity
-and the ladder now say so.
+**The ladder's "five POSTs" was right by accident.** `grep -c` counts the
+import line; there are **four** call sites, and the fifth POST — `create` —
+returned a bare `RedirectResponse`, so it is a conversion that also regains
+the filter round-trip. The Opportunity and the ladder now say so.
 
-**The cold read's other two findings are folded in**, both above: shared
-code (`_shared.py`'s `kind == "reviewers"` literals, and Relationships'
-bespoke import handler with two in-place re-render paths) was missing from
-the blast radius entirely, and the sweep's DoD grep stopped one sentence
-short of two live `19P.3` hedges at `spec/setup_pages.md:1170` and `:1208`.
+**Both pages are sortable**, unlike Observers, so the fallback carries two
+unresolvable-fragment cases rather than one. Asserted, so a page that stops
+shipping `rrw-sortable` fails rather than leaving the comment wrong.
 
-**Both pages are sortable**, unlike Observers, so rung 1's fallback script
-carries **two** unresolvable-fragment cases rather than one — a filtered-out
-row and a row the cookie sort moved. Asserted, so a page that stops shipping
-`rrw-sortable` headers fails the test rather than leaving the comment wrong.
+**Two reviews found seven things this rung shipped or claimed wrongly. The
+pattern in all of them: a guard that proves less than it says.**
 
-**One file for both pages**, parametrized. A per-page file lets one page
-quietly gain a guard the other does not, which is this item's whole risk.
+- **The mutation table.** 18 chosen, 18 caught — and four more mutations of
+  the same code passed the whole suite (`"current_offset": 0`; `locate_id`
+  deleted; `filter_offset` gone from the *edit* shell alone; `offset=` gone
+  from `bulk-delete`). Fixture-shaped, as Item 2's were: 3 rows let
+  `clamp_offset` pull `?offset=200` to `0`; a `>= 1` count could not tell
+  which of two shells it found, and only one renders per request. Now 230
+  rows, each shell by id, and the create redirect *followed*.
+- **`Add` linked bare `?add=1`** on both pages where Reviewers and Observers
+  carry the filter, so `create`'s round-trip was unreachable through the UI —
+  and the test posted the filter fields directly, supplying exactly what the
+  flow loses. Driven GET → POST now.
+- **The fallback was string-matched into the `{% if rows %}` branch**, and
+  the empty-filtered card carried no id, so it also had nothing to find.
+  Both halves fixed: its first case taken to the limit *is* that branch.
+- **Four plan edits were lost** to a script that wrote only at the end and
+  asserted late, so the previous Status claimed corrections it had not made.
+  One write per edit now.
 
-**The rung's first mutation table proved less than it claimed.** Eighteen
-mutations, eighteen caught — and the cold read then found **four more that
-survive the entire 4,164-test suite**: `"current_offset": 0`, deleting
-`locate_id=focus_id` from both render helpers, dropping `filter_offset` from
-the *edit* shell alone, and dropping `offset=` from `bulk-delete`.
-Reproduced, then guarded. A mutation table proves what its author thought to
-mutate, not that the code is held; the honest figure is 18 chosen and 4
-missed. The causes were fixture-shaped, as in Item 2: 3 seeded rows let
-`clamp_offset` pull `?offset=200` to `0`, so an `isdigit()` assertion held
-however the value was computed; a `>= 1` count over the page could not tell
-which of two form shells it had found, and only one renders per request; and
-nothing followed the create redirect to check `focus` had actually moved the
-window rather than merely ridden the URL.
-
-**Three more from the same read.** The fallback script was string-matched
-into the `{% if rows %}` branch on both pages — harmless today, since the
-empty-state card carries no id, and a live defect the moment rung 2 or 3
-gives it one; lifted out and pinned. The edit `<tr>` lacked
-`row-action-target`, which both precedents carry and which rung 3 makes
-reachable. And `_redirect_keeping_selection`'s own docstring still read
-*"Reviewees and Relationships pass no anchor and are unaffected until
-19P.3"* — false as of this rung, in the helper it newly calls.
+**Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
+carry no landing anchor either — the same gap, pre-existing, on files this
+item does not own. For the rung-5 sweep.
 
 ### PR ladder
 

@@ -383,3 +383,50 @@ def test_the_fallback_survives_an_empty_filtered_view(
     assert f'hash.indexOf("#{noun}-row-")' in body, (
         "the fallback is trapped inside the rows branch"
     )
+    # ...and it has something to scroll to. The script looks up
+    # `pager_anchor` by id; on the empty-filtered branch the table card
+    # is not rendered, so without an id here `getElementById` returns
+    # null and the fallback no-ops in the one state its first case
+    # actually reaches.
+    assert f'id="{page}-table-card"' in body, (
+        "the empty-filtered card carries no landing anchor, so the "
+        "fallback has nothing to find"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_add_carries_the_active_filter_into_add_mode(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The create route's filter round-trip is only reachable if `Add`
+    carries the filter *in*.
+
+    `Add` is a GET, so the page is rebuilt from the URL. Linked bare as
+    `?add=1` — which is how both these pages shipped — the rebuild uses
+    `filter_status="all"` / `filter_q=""`, the form shell renders those
+    defaults, and the create redirect then round-trips nothing. The
+    route half works and the flow does not.
+
+    **Driven GET → POST**, because a test that posts the filter fields
+    directly cannot see this: it supplies what the UI would have lost.
+    That is exactly how this file's first draft missed it.
+    """
+    rs = _make_session(client, db, f"add-{page[:4]}")
+    _seed(db, rs.id, page, n=3)
+    listing = client.get(f"{_base(rs.id, page)}?status=active&q=re").text
+
+    # The link the operator actually clicks.
+    m = re.search(rf'href="([^"]*{page}[^"]*add=1[^"]*)"', listing)
+    assert m, "no Add link on the page"
+    href = m.group(1).replace("&amp;", "&")
+    assert "status=active" in href, f"Add drops the status filter: {href}"
+    assert "q=re" in href, f"Add drops the search: {href}"
+
+    # ...and following it renders a shell that will post them back.
+    add_page = client.get(href).text
+    shell = _shell(
+        re.sub(r"<(style|script)\b.*?</\1>", "", add_page, flags=re.S),
+        f"{noun}-edit-form",
+    )
+    assert 'name="filter_status" value="active"' in shell, shell[:220]
+    assert 'name="filter_q" value="re"' in shell, shell[:220]

@@ -165,7 +165,14 @@
                  title="Add a reviewer and a reviewee first — a relationship needs both.">Add</a>
             {% else %}
               <a class="btn secondary"
-                 href="{{ relationships_base_url }}?add=1">Add</a>
+                 {# 19P.3 rung 1 — the Add link carries the active filter, as
+                    Reviewers and Observers do. Without it the
+                    intervening GET rebuilds the page at
+                    `filter_status="all"` / `filter_q=""`, the form
+                    shell renders those defaults, and the create
+                    redirect's filter round-trip carries nothing —
+                    the route half works and the flow does not. #}
+                 href="{{ relationships_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add</a>
             {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
@@ -539,7 +546,16 @@
     </div>
   {% elif total_row_count > 0 %}
     {# Filter matched nothing — preserve the total-row context. #}
-    <div class="card">
+    {# 19P.3 rung 1 — the landing anchor lives here too. This is
+       the empty-filtered branch, and it is exactly where the
+       fallback's first case lands: inactivate the last row
+       matching `status=active` and the redirect names a row
+       fragment with nothing rendered. Without an id the
+       fallback's `getElementById` returns null and the
+       operator is left at the top of the document — the very
+       thing the anchor exists to prevent. Only one branch of
+       the chain renders, so the id is never duplicated. #}
+    <div class="card" id="{{ pager_anchor }}">
       <p class="muted">No relationships match the current filter.</p>
     </div>
   {% endif %}
