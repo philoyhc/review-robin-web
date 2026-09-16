@@ -47,9 +47,14 @@ TOOLBAR_PAGES = ROSTER_PAGES
 #: card's shape there would pin a card that no longer exists. Their
 #: equivalents live with the rest of the expander's contract —
 #: `test_reviewers_roster_card_scaffold.py` and
-#: `test_observers_expander.py`. What stays here is the shape the two
-#: unmigrated pages share, so this file keeps guarding them until they
-#: follow at 19P.3.
+#: `test_observers_expander.py`.
+#:
+#: Reviewees and Relationships still render it. **Not because they have
+#: not migrated** — 19P.3 rung 2 moved their filter strip into the table
+#: toolbar, which is why they are in `TOOLBAR_PAGES` above. The card is
+#: slimmed, not retired: it keeps the selection-driven four and the
+#: count-and-gate row until **19P.3 rung 3** builds their expander. These
+#: two tuples stop agreeing at that rung, not at this one.
 CARD_STRIP_PAGES = ("reviewees", "relationships")
 
 
@@ -191,11 +196,14 @@ def test_delete_renders_destructive_and_wired(
     # so every roster strip now holds the selection-driven four alone.
     #
     # `spec/ui_elements.md` §6 (`:385`) sites the roster Delete "between
-    # `Add` and `Search`", which is now false on all four. It is on Item
-    # 3's `ui_elements.md` Doc impact bullet; rung 5 fixes it.
-    assert page in TOOLBAR_PAGES, (
-        f"{page} is parametrized here but not recorded as migrated"
-    )
+    # `Add` and `Search`", which is now false on all four. Rung 5 fixes
+    # it, under Item 3's "Rung 2 adds five" Doc-impact addendum — which
+    # this comment's predecessor claimed as already recorded when it was
+    # not, twice running. Checked against the guide before writing it.
+    # (A `page in TOOLBAR_PAGES` assertion stood here briefly. With
+    # `TOOLBAR_PAGES = ROSTER_PAGES` and this test parametrized over a
+    # subset of it, that compares two module constants and never touches
+    # the render — it could not fail for any code change.)
     # Both spellings: the rename moved the label, and a strip that got
     # `Add` back under its old name would be the same regression.
     # Checking only the new spelling let the old one through.

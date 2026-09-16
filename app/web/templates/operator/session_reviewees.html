@@ -115,10 +115,13 @@
         <form method="get" action="{{ reviewees_base_url }}"
               class="operator-actions-filter">
           <div class="filter-actions">
-            {# Segment 19I Item 3 — the mutating controls render
-               only where they can act. Clear, Search and the
-               "Showing N of M" hint stay: reading a finished
-               session's roster is legitimate. #}
+            {# Segment 19I Item 3 — the mutating controls render only
+               where they can act. The sentence that used to follow
+               ("Clear, Search and the 'Showing N of M' hint stay")
+               named three things none of which is in this block any
+               more: the hint moved to the preview table at 19I Item 4
+               and the other two to the toolbar at 19P.3 rung 2.
+               Reviewers and Observers have both dropped it. #}
             {% if is_editable %}
             <button class="btn secondary" type="button"
                     id="reviewees-edit-btn"
@@ -376,9 +379,19 @@
                 <a class="btn secondary"
                    href="{{ reviewees_base_url }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
-              {# `Add` is page-level and keeps its own `is_ready` gate; it
+              {# `Add` is page-level and keeps its own inner gate; it
                  renders as `Add new` here, beside the control it reads
-                 next to. It takes NO fragment, unlike Reviewers' and
+                 next to.
+
+                 That inner gate reads `is_ready or edit_mode`, and the
+                 `is_ready` half is DEAD inside the `is_editable` wrapper
+                 below: `lifecycle.is_editable` is `draft or validated`
+                 and `is_ready` is `status == "ready"`, which are
+                 disjoint. So `edit_mode` is the only reason the disabled
+                 variant ever renders. Transcribed as-is from
+                 `session_reviewers.html`, which has carried the same dead
+                 disjunct since 19P.1 rung 2a — simplifying it on three
+                 pages is rung 3's, not a change to smuggle into a move. It takes NO fragment, unlike Reviewers' and
                  Observers': the Add / Edit form it opens still lives in
                  the `Operator actions` card at the top of the page, so a
                  fragment would scroll the operator past the thing they

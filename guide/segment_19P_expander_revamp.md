@@ -1035,27 +1035,41 @@ pattern in all of them: a guard that proves less than it says.**
   One write per edit now.
 
 **Rung 2 — landed.** The filter strip, `Clear`, `Add` (now `Add new`) and
-`Search` are the right pane of a split toolbar inside the table card; the
-chips, the pager and the count line are the left. The `Operator actions`
-card is slimmed, not retired — it still holds the only working `Edit` /
-`Inactivate` / `Activate` / `Delete`, which rung 3 moves.
+`Search` are the right pane of a split toolbar inside the table card. The
+`Operator actions` card is slimmed, not retired: it keeps the only working
+`Edit` / `Inactivate` / `Activate` / `Delete` until rung 3.
 
-**Two things the ladder line did not name.**
+**`Add` came out of the card's `{% if is_editable %}` in the move**, and
+its inner gate does not cover the gap — `is_ready` is `status == "ready"`
+alone — so `expired` and `archived` rendered a **live** `Add new` whose
+route 409s. Re-wrapped. Found by writing the guard: nothing asserted what
+a locked roster page's toolbar may offer, so the suite was green with it
+in. That inner `is_ready` is in fact **dead** inside the wrapper
+(`is_editable` is `draft or validated`); Reviewers has carried the same
+dead disjunct since 19P.1 rung 2a, and rung 3 simplifies all three.
 
-- **`Add` came out of the card's `{% if is_editable %}` in the move**, and
-  the inner gate does not cover it: `is_ready` is `status == "ready"`
-  alone, so an `expired` or `archived` session rendered a **live** `Add
-  new` whose route 409s. Caught by writing the guard, not by the suite —
-  nothing else asserted what a locked roster page's toolbar may offer.
-  Re-wrapped, and both locked states are now pinned.
-- **The guidance card does NOT go full width here.** The two precedents
-  disagree on when: Reviewers moved it in its toolbar rung (19P.1 rung 2a),
-  Observers in its `.card-columns` rung (19P.2 rung 5). Observers' siting
-  is the one that matches this ladder's "one rung per concern", and
-  `.card-columns` on these two pages is rung 4's to settle — so it moves
-  there, with the labels editor it shares the left column with. Recorded
-  because a reader comparing the four pages mid-item will find this one
-  half-width and should not read it as drift.
+**The guidance card stays half-width.** The precedents disagree on when it
+moves — Reviewers at its toolbar rung, Observers at its `.card-columns`
+rung — and Observers' siting matches this ladder. It goes at rung 4.
+
+**Three of ten second-round mutations survived**, after twenty-two of
+twenty-two first-round ones were caught: a live `Add new` mid-edit, the
+moved form flipped to `method="post"`, and the slimmed card's form losing
+its `action`. The first two are now guarded. The third is not: after the
+move that form holds no field and no submit of its own — every button in
+it targets `*-bulk-form` via `form=` + `formaction` — so its `action` is
+inert and the `<form>` itself is vestigial. **Rung 3 deletes it with the
+card**; guarding an attribute that does nothing would pin the wrong thing.
+
+**A cold read found nine, all upheld.** Two matter beyond their own lines:
+a test comment deferred `ui_elements.md:385` to a Doc-impact bullet that
+did not name it — the same error its own predecessor had been written to
+correct against Item 2 — and no rung-2 sentence had been added to Doc
+impact at all. Five are listed there now. The rest were prose false in
+place (a 19I comment naming three controls none of which is still in its
+block), a test promising a pager its filtered fixture makes unreachable,
+one asserting `Add new` where Relationships renders the disabled variant,
+and an assertion comparing two module constants.
 
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
@@ -1152,6 +1166,18 @@ item does not own. For the rung-5 sweep.
 - `spec/participant_model.md` — the Reviewees Setup page's description, the one spec outside the shared set that names it (Item 3).
 - `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
+
+**Rung 2 adds five, none of them previously named here.** A cold read
+found the first: a test comment deferred `ui_elements.md:385` to "Item 3's
+Doc impact bullet" which did not mention it, so the deferral was
+unbacked — and the sentence that comment replaced had been written to fix
+that exact error against Item 2. Listed now, as Item 2 listed its own:
+
+- `spec/ui_elements.md:385` — §6 sites the roster `Delete` *"between `Add` and `Search`"*, true on no roster page since this rung.
+- `spec/ui_elements.md:613` — `.table-card-toolbar` attributed to *"(19P.1 Reviewers, 19P.2 Observers)"*; it is all four.
+- `spec/operator_button_audit.md` — **rows 132 / 133 / 134** (Reviewees `Add` / `Search` / `Clear`) and **139** (Relationships `Add`) site their controls in `Operator actions`, spell the label `Add`, and keep the rationale *"`Add` and `Delete` must both fit this row"*. Row **125**'s closing sentence — *"Reviewees and Relationships still read `Add` … until 19P.3–.4"* — is falsified outright.
+- `spec/operator_ui_concept.md:281` — *"the Operator actions card carries the search / status filter strip"*.
+- `spec/setup_pages.md` § *Operator actions card* items 1–2 — the strip's shape *"on the two pages that carry this card"*, its `Clear` → … → `Search` order, and *"`Add` is the short label"*.
 
 ---
 

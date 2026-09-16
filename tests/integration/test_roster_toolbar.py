@@ -48,6 +48,11 @@ PAGES = [("reviewees", "reviewee"), ("relationships", "relationship")]
 
 TEMPLATES = pathlib.Path("app/web/templates/operator")
 
+#: `_SETUP_DEFAULT_CAP` in `app/web/routes_operator/_shared.py` — one
+#: page of a Setup roster. Seeding past it is the only way to render a
+#: pager at all.
+_PAGE_SIZE = 200
+
 
 def _markup(html: str) -> str:
     """``base.html`` inlines the whole app's CSS and JS on every page, so
@@ -186,12 +191,22 @@ def test_the_filter_strip_renders_in_the_toolbars_right_pane(
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
-def test_the_left_pane_holds_the_chips_the_pager_and_the_count(
+def test_the_left_pane_holds_the_chips_and_the_count_line(
     client: TestClient, db: Session, page: str, noun: str
 ) -> None:
     """Unlike Observers, whose left pane is deliberately chipless, both
     of these pages have tag columns to toggle — so the pane is populated
-    and its contents are assertable."""
+    and its contents are assertable.
+
+    **The pager is not in this test's reach, by construction.** It and
+    the count line are alternatives, not neighbours: `_setup_row_window`
+    sets `pager = None` whenever the view is filtered
+    (`app/web/routes_operator/_shared.py:533`), and `preview_count_line`
+    returns `None` when it is not. This request is filtered, so naming
+    the pager here would promise a claim the fixture makes unreachable —
+    which an earlier draft of this test did. The pager has its own test
+    below, on an unfiltered roster past the page cap.
+    """
     rs = _make_session(client, db, f"tb-l-{page[:4]}")
     _seed(db, rs.id, page)
     html = _markup(client.get(_base(rs.id, page) + "?q=Re0").text)
@@ -203,6 +218,27 @@ def test_the_left_pane_holds_the_chips_the_pager_and_the_count(
     # asserted here too because the move could have reversed it inside
     # the pane while leaving the page-wide order intact.
     assert left.index("col-chip-row") < left.index("table-showing-hint")
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_pager_is_in_the_left_pane_too(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The third tenant, on the only kind of view that renders it: an
+    unfiltered roster with more rows than one page holds.
+
+    Seeding past the cap is what makes this falsifiable. A three-row
+    fixture renders no pager at all, so an assertion written against one
+    would pass with the pager anywhere on the page — or nowhere.
+    """
+    rs = _make_session(client, db, f"tb-p-{page[:4]}")
+    _seed(db, rs.id, page, n=_PAGE_SIZE + 5)
+    html = _markup(client.get(_base(rs.id, page)).text)
+
+    left = _pane(html, "left")
+    assert "table-pager-cluster" in left, "the pager is not in the left pane"
+    # The bottom copy is outside the toolbar and must stay there.
+    assert "table-pager-cluster-bottom" not in left
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
@@ -272,18 +308,34 @@ def test_a_filter_matching_nothing_still_renders_the_strip(
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
-def test_an_empty_roster_still_offers_add_new(
+def test_an_empty_roster_still_offers_a_LIVE_add_new(
     client: TestClient, db: Session, page: str, noun: str
 ) -> None:
     """Gating the card on the roster having rows would hide the only
-    `Add new` on the page from the one operator who most needs it."""
+    `Add new` on the page from the one operator who most needs it.
+
+    **A live one.** `>Add new</a>` matches the disabled variant just as
+    happily, and on Relationships an empty roster is exactly when the
+    disabled variant renders: with no reviewer and no reviewee there is
+    no pair to make, so `can_add_relationship` is False. An earlier draft
+    asserted the bare string and passed on that page against a control
+    the operator cannot use — the opposite of what the docstring claims.
+
+    So "empty roster" means empty of THIS page's rows: Relationships
+    seeds the two rosters it pairs and no relationships.
+    """
     rs = _make_session(client, db, f"tb-e-{page[:4]}")
+    if page == "relationships":
+        _seed(db, rs.id, "reviewees", n=2)
     html = _markup(client.get(_base(rs.id, page)).text)
 
     assert '<div class="table-card-toolbar is-split">' in html, (
         "the whole card went with the empty table"
     )
-    assert ">Add new</a>" in _pane(html, "right")
+    right = _pane(html, "right")
+    assert re.search(r'<a class="btn secondary"\s+[^>]*\?add=1', right), (
+        f"no LIVE Add new on an empty {page} roster: {right[-600:]}"
+    )
     assert f"No {page} yet." in html
 
 
@@ -342,6 +394,14 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
         r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html
     ), "`is-locked` on the moved filter matches no rule"
 
+    # `is-locked` greys the pane; it does not disable the link inside it.
+    # `Add new` mid-edit must be the DISABLED variant, or an operator one
+    # click from a half-typed row loses it. Nothing pinned this: a
+    # mutation making the disabled branch live passed the whole suite.
+    right = _pane(_markup(html), "right")
+    assert '<a class="btn secondary disabled" aria-disabled="true">Add new</a>' in right
+    assert "?add=1" not in right, "a live Add new while a row is being edited"
+
 
 # ── What the moved controls must keep ─────────────────────────────────
 
@@ -361,6 +421,10 @@ def test_the_filter_and_clear_keep_the_landing_fragment(
     anchor = f"{page}-table-card"
     right = _pane(html, "right")
     assert re.search(rf'<form[^>]*action="[^"]*/{page}#{anchor}"', right), right[:400]
+    # `method="get"` is what puts the filter in the query string and what
+    # keeps the action's fragment; the route behind it accepts GET only.
+    # Unpinned until now — flipping it to `post` passed the whole suite.
+    assert re.search(r'<form method="get"', right), "the moved filter is not a GET"
     assert re.search(rf'href="[^"]*/{page}#{anchor}">Clear</a>', right)
 
 
