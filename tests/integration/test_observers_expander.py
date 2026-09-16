@@ -565,6 +565,67 @@ def test_the_click_path_rebinds_the_save_it_replaces(
     )
 
 
+def test_an_unsaved_rule_edit_is_guarded_on_every_discard_path(
+    client: TestClient, db: Session
+) -> None:
+    """An unsaved cohort edit is DISCARDED by anything that rebuilds the
+    panel or leaves the page, and was discarded silently.
+
+    Measured before this guard: untick the row, tick a second one, or
+    hit Search, and the edit vanished with nothing written to the DB and
+    nothing said. Nothing auto-saves — the only write is the explicit
+    POST — so the loss is real and total.
+
+    Same idiom as Instruments (18R Item 2): a `confirm` on the paths
+    that stay on the page, a `beforeunload` on the ones that leave, and
+    an intentional-nav flag so `Save` does not warn about the edit it is
+    persisting. The wording is Instruments' verbatim — an operator meets
+    this sentence on two pages and should not have to read it twice.
+
+    **A text guard, like its neighbours.** There is no JS runtime here.
+    Chromium covers the seven cases: clean untick asks nothing; dirty
+    untick asks and, on dismiss, leaves the box, the panel, the operand
+    and a live `Save` exactly as they were; on accept it goes with the
+    DB untouched; select-all the same; `Save` asks nothing; a clean page
+    navigates freely; a dirty one asks.
+    """
+    js = _builder(_page(client, _session(client, db, "coh-guard")))
+
+    assert 'window.confirm("Discard unsaved changes?")' in js, (
+        "no confirm on the in-page discard paths"
+    )
+    assert "function okToDiscardCohortEdit()" in js
+
+    # Both in-page paths ask: the per-row checkbox and select-all.
+    assert js.count("okToDiscardCohortEdit()") >= 3, (
+        "a discard path does not ask — expected the row checkbox, "
+        "select-all and Edit"
+    )
+    # Declining must leave the selection alone, or the confirm is
+    # decoration: the panel would rebuild anyway and the edit still go.
+    assert "restoreBox(t, !t.checked);" in js, (
+        "declining still unticks the row"
+    )
+    assert "selectAll.checked = !selectAll.checked;" in js, (
+        "declining still moves select-all"
+    )
+
+    # The nav-away half.
+    assert 'addEventListener("beforeunload"' in js, "no nav-away guard"
+    assert "if (intentionalNav) return undefined;" in js, (
+        "Save warns about the edit it is saving"
+    )
+    assert "intentionalNav = true;" in js
+
+    # And the flag is cleared when the panel goes, or `beforeunload`
+    # blocks every later navigation over an edit already discarded —
+    # which is what the first draft did.
+    render = re.search(r"function renderPanel\(\) \{.*?\n        \}", js, re.S)
+    assert render and "cohortDirty = false;" in render.group(0), (
+        "the dirty flag outlives the panel that held the edit"
+    )
+
+
 def test_a_mixed_selection_resets_the_builder_and_says_so(
     client: TestClient, db: Session
 ) -> None:
