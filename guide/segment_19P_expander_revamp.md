@@ -1005,6 +1005,73 @@ a sentence in this document's own Doc impact stale — it claims the
 item-0 placement table is the only correct one of three, and rung 4
 falsified that table too.
 
+**Rung 5 — landed.** The cohort editor moved into the expander's left
+pane and `.card-columns` retired, so the guidance runs full width as it
+does on Reviewers and the empty half rung 4 left is gone.
+
+**The builder is server-rendered once into a `<template>` and cloned per
+rebuild.** Not a JS string literal: the selects carry live per-session
+tag labels, and building those option lists in JS would put the same
+data in two places. A template's content is inert — parsed, not
+rendered, its controls not form-associated — so its ids and `form=`
+attributes do not collide with the clone.
+
+Shape, as agreed: two panes on `align-items: start` (top-flush; the
+builder is taller and bottom-aligning would anchor `Save` to a button
+row it has no relationship with), the label as an `<h3>` at normal
+weight per the Link 1 idiom rather than a card heading, and `Save`
+inline immediately after the last rule cell's `X`.
+
+**Two defects found in the browser that pytest could not see.**
+
+- **`Save` never appeared.** `setEditorToDefault` replaces the cell
+  list's `innerHTML` wholesale, so a `Save` appended at build time went
+  with it. It is placed *after* the editor state settles now, and
+  re-placed on every mutation — `observerAddRule` appends a clone after
+  the old last cell, which would otherwise strand it mid-list.
+- **Two `Save` buttons after one click of `+`.** `observerAddRule`
+  clones the FIRST cell; with one cell that is also the last, the one
+  holding `Save`. Both posted the same form and the stale one carried
+  the stale rule. Stripped in the clone, where the other resets live,
+  plus a de-duplicating guard in the placement.
+
+**The two-rule restore bug is fixed here**, as rung 4's cold read
+predicted it would have to be: `window.observerAddRule` was assigned
+*after* the IIFE whose `refresh()` calls it, so a `?selected=` restore of
+a shared cohort of two or more rules threw a TypeError that the
+`try/catch` swallowed into `setEditorToDefault()` — a blank one-rule
+builder for a rule that had two. The four helpers are defined before the
+IIFE now, and the ordering is asserted.
+
+Measured in Chromium: `.card-columns` 0, cohort card 0, template 1,
+guidance 1,360px (full width); panes 636px each, top-flush, label at
+`font-weight: 400`; `Save` disabled on arrival, previous sibling `X`,
+heights select 29 / X 28.9 / Save 36.9 and **both gaps exactly 4.0px**
+— the "match by construction rather than a tuned value" the shape asked
+for; enabled by an operand change, disabled again on the next rebuild;
+after `+` it trails the last cell and the add itself marks the rule
+dirty; a mixed selection shows the message, resets to one cell and
+disables `Save`. No page errors in any run.
+
+Guards: 9 new in `test_observers_expander.py`, **12/12 mutations
+caught**. Three survived the first pass, and one of them is worth
+naming: `"is-split" in js` passed with the class no longer emitted,
+because it matched the *comment* explaining why it is emitted. The
+assertions read a comment-stripped view now.
+
+**A structural hole, found by shipping into it.** A stray `}` in this
+rung's first draft killed the page's entire JavaScript — no expander, no
+selection, no delete gate — and the whole suite passed: 4,106 tests,
+`ruff` clean. Python never parses this code, and the assertions that
+read it read it as *text*, so a substring check on a builder is just as
+happy inside a file the browser refused.
+`tests/integration/test_inline_scripts_parse.py` runs `node --check`
+over every inline `<script>` on seven operator pages. Re-introducing the
+exact defect: the new guard fails, and all 149 of the page's own tests
+still pass. `ubuntu-latest` ships node, so CI runs it; skipped where it
+is absent.
+
+
 
 ### PR ladder
 

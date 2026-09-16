@@ -71,154 +71,121 @@
     {% include "operator/partials/_roster_lock_card.html" %}
   {% endwith %}
 
-  {# Top row: the cohort match rule editor, alone in the left half of
-     a `.card-columns` grid — NOT a `.bottom-grid`, which is the pair
-     below the table. The same mislabel is in `spec/setup_pages.md` and
-     is on rung 7's Doc impact.
-     - Left card (Cohort): visible whenever the session isn't
-       ``archived`` (refining cohort rules mid-session is a
-       legitimate flow — see ``guide/archive/observers.md``).
-       ``hidden`` until at least one observer is selected;
-       the JS below flips it.
-     - Right column: EMPTY since 19P.2 rung 4, which retired the
-       `Operator actions` card into the row expander. `.card-columns`
-       keeps two children so the grid keeps its shape; rung 5 moves the
-       cohort editor into the expander too and the grid goes, at which
-       point the guidance runs full width as it does on Reviewers.
-  #}
-  {% set _show_cohort_slot = not edit_mode and not is_archived %}
-  <div class="card-columns">
-    <div>
-      {% call page_guidance.guidance() %}
-      <p>
-        Observers view collated results <strong>without reviewing
-        anyone</strong> (e.g., a tutor overseeing the tutorial groups). This
-        page is optional; a session <strong>works without any observers</strong>
-        at all. Observers have one tag slot rather than three, and never appear
-        in assignments.
-      </p>
-      <p>
-        Each observer's <strong>cohort match rule</strong> decides which
-        reviewees they may see, and <strong>an observer with no rule set sees
-        nothing</strong>. Their results page stays empty until a rule is saved.
-        What they see of each response (full, Anonymized, or Summarized) is set
-        <strong>per instrument</strong>, not here.
-      </p>
-      <p>
-        See
-        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
-        and set up a session</a> in the Guide.
-      </p>
-      {% endcall %}
-    {% if _show_cohort_slot %}
-      <div class="card">
-        <h2 id="observers-cohort-heading" style="margin-top: 0;">Cohort match rule</h2>
-        <p id="observers-cohort-empty" class="muted"
-           style="margin: 0;">
-          Select observers in the table below to set their
-          cohort match rule.
-        </p>
-        <div id="observers-cohort-block" hidden>
-          <div data-observer-cohort-builder
-               style="display: flex; align-items: stretch; gap: 8px;">
-            <div style="flex: 0 0 20%; display: flex;
-                        align-items: center; justify-content: center; gap: 4px;">
+  {# 19P.2 rung 5 — `.card-columns` is RETIRED. The cohort editor
+     moved into the row expander, beside the row actions rung 4 put
+     there, so nothing is left to occupy a second column and the
+     guidance runs full width as it does on Reviewers. #}
+    {% call page_guidance.guidance() %}
+    <p>
+      Observers view collated results <strong>without reviewing
+      anyone</strong> (e.g., a tutor overseeing the tutorial groups). This
+      page is optional; a session <strong>works without any observers</strong>
+      at all. Observers have one tag slot rather than three, and never appear
+      in assignments.
+    </p>
+    <p>
+      Each observer's <strong>cohort match rule</strong> decides which
+      reviewees they may see, and <strong>an observer with no rule set sees
+      nothing</strong>. Their results page stays empty until a rule is saved.
+      What they see of each response (full, Anonymized, or Summarized) is set
+      <strong>per instrument</strong>, not here.
+    </p>
+    <p>
+      See
+      <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+      and set up a session</a> in the Guide.
+    </p>
+    {% endcall %}
+
+  {# The cohort rule builder, server-rendered ONCE into an inert
+     `<template>` and cloned into the expander's left column by the
+     script below.
+
+     A template rather than JS-built markup because the selects carry
+     live tag labels — `cohort_match_tags` is per-session data, and
+     rebuilding those option lists in a string literal would put the
+     same list in two places. A `<template>`'s content is inert: it is
+     parsed but not rendered, its controls are not form-associated and
+     not focusable, so the ids and `form=` attributes inside it do not
+     collide with the clone the panel makes.
+
+     Gated exactly where the expander is: no selection surface, nothing
+     to clone into. #}
+  {% if not edit_mode and not is_archived %}
+    <template id="observers-cohort-template">
+      <div data-observer-cohort-builder
+           style="display: flex; align-items: stretch; gap: 8px;">
+        <div style="flex: 0 0 20%; display: flex;
+                    align-items: center; justify-content: center; gap: 4px;">
+          <button type="button" class="btn secondary"
+                  style="padding: 4px 10px;"
+                  data-observer-rule-add
+                  onclick="observerAddRule(this)"
+                  title="Add rule">+</button>
+          <button type="button" class="btn secondary"
+                  style="padding: 4px 10px;"
+                  data-observer-combinator-toggle
+                  onclick="observerToggleCombinator(this)"
+                  title="Toggle combinator">AND</button>
+          <input type="hidden" form="observers-bulk-form"
+                 name="cohort_combinator"
+                 data-observer-combinator-input
+                 value="AND">
+        </div>
+        <div style="width: 3px; background: var(--decor-muted); flex-shrink: 0;"></div>
+        <div data-observer-cohort-cells
+             style="flex: 1; min-width: 0; display: flex;
+                    flex-direction: column; gap: 12px;">
+          <div data-observer-rule-cell
+               style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select form="observers-bulk-form" name="cohort_rule_field"
+                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                  <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                {% endfor %}
+                {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                  <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                {% endfor %}
+              </select>
               <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
-                      data-observer-rule-add
-                      onclick="observerAddRule(this)"
-                      title="Add rule">+</button>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
-                      data-observer-combinator-toggle
-                      onclick="observerToggleCombinator(this)"
-                      title="Toggle combinator">AND</button>
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
+                      onclick="observerCycleOperator(this)"
+                      title="Toggle operator">IS THE SAME AS</button>
               <input type="hidden" form="observers-bulk-form"
-                     name="cohort_combinator"
-                     data-observer-combinator-input
-                     value="AND">
+                     name="cohort_rule_op"
+                     data-observer-op-input
+                     value="IS THE SAME AS">
             </div>
-            <div style="width: 3px; background: var(--decor-muted); flex-shrink: 0;"></div>
-            <div data-observer-cohort-cells
-                 style="flex: 1; min-width: 0; display: flex;
-                        flex-direction: column; gap: 12px;">
-              <div data-observer-rule-cell
-                   style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <select form="observers-bulk-form" name="cohort_rule_field"
-                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                    {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                      <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                      <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="button" class="btn secondary"
-                          style="padding: 4px 8px; flex-shrink: 0;"
-                          data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
-                          onclick="observerCycleOperator(this)"
-                          title="Toggle operator">IS THE SAME AS</button>
-                  <input type="hidden" form="observers-bulk-form"
-                         name="cohort_rule_op"
-                         data-observer-op-input
-                         value="IS THE SAME AS">
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <select form="observers-bulk-form" name="cohort_rule_operand_tag"
-                          data-observer-operand-tag
-                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                    <option value="observer.name">Observer: Name</option>
-                    <option value="observer.email">Observer: Email</option>
-                    <option value="observer.tag1">Observer: Tag 1</option>
-                  </select>
-                  <input form="observers-bulk-form" name="cohort_rule_operand_value"
-                         data-observer-operand-value type="text" placeholder="value"
-                         style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
-                  <button type="button" class="btn destructive"
-                          style="padding: 4px 8px; flex-shrink: 0;"
-                          data-observer-rule-remove
-                          onclick="observerRemoveRule(this)"
-                          disabled aria-disabled="true"
-                          title="Cannot remove the first rule">X</button>
-                </div>
-              </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select form="observers-bulk-form" name="cohort_rule_operand_tag"
+                      data-observer-operand-tag
+                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                <option value="observer.name">Observer: Name</option>
+                <option value="observer.email">Observer: Email</option>
+                <option value="observer.tag1">Observer: Tag 1</option>
+              </select>
+              <input form="observers-bulk-form" name="cohort_rule_operand_value"
+                     data-observer-operand-value type="text" placeholder="value"
+                     style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
+              <button type="button" class="btn destructive"
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      data-observer-rule-remove
+                      onclick="observerRemoveRule(this)"
+                      disabled aria-disabled="true"
+                      title="Cannot remove the first rule">X</button>
             </div>
-          </div>
-          <p id="observers-cohort-mixed-message" hidden
-             style="margin: var(--space-3) 0 0 0;
-                    color: var(--text-subtle);">
-            The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
-          </p>
-          <div style="display: flex; justify-content: flex-end;
-                      gap: 12px; margin-top: var(--space-3);">
-            <button class="btn secondary" type="submit"
-                    id="observers-cohort-save-btn"
-                    form="observers-bulk-form"
-                    formaction="{{ observers_base_url }}/cohort-rule"
-                    disabled aria-disabled="true">Save</button>
           </div>
         </div>
       </div>
-    {% endif %}
-    </div>
-
-    {# 19P.2 rung 4 — the `Operator actions` card is RETIRED. Its
-       four row actions moved into the row expander below the table,
-       where they sit with the rows they act on; its count and delete
-       gate went with them; and the editor's Save / Cancel moved into
-       the edit row's own bar (`row_editor_bar` above). Nothing was
-       left but a heading.
-
-       This column stays empty for ONE rung. The cohort editor is
-       still a card in the left column and `.card-columns` still needs
-       two children to keep its shape; rung 5 moves that editor into
-       the expander and retires the grid, at which point the guidance
-       runs full width as it does on Reviewers. Landing the empty half
-       rather than half-retiring the grid keeps the two moves
-       separable, which is the whole point of the ladder. #}
-    <div></div>
-  </div>{# .card-columns #}
+      <p class="observers-cohort-mixed-message" hidden
+         style="margin: var(--space-3) 0 0 0;
+                color: var(--text-subtle);">
+        The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
+      </p>
+    </template>
+  {% endif %}
 
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}
@@ -539,6 +506,105 @@
      element so it works regardless of which card is rendered. #}
   {% if not edit_mode and not is_archived %}
     <script>
+      {# 19P.2 rung 5 — these four are defined BEFORE the IIFE below,
+         not after it. They were after, and `refresh()` runs at the end
+         of that IIFE: a `?selected=` restore of a shared cohort of TWO
+         OR MORE rules called `window.observerAddRule` before this line
+         had executed, threw a TypeError, and the `try/catch` around the
+         rule load swallowed it into `setEditorToDefault()`. The
+         operator saw a blank one-rule builder for a rule that had two.
+         Reproduced in Chromium on `main`; a cold read found it at
+         rung 4 and rung 5 owns the editor, so it is fixed here. #}
+      // Cohort-rule builder — client-side only. Mirrors Band 1
+      // Link 2's add / remove / cycle / combinator pattern
+      // (newModelAddRule / newModelRemoveRule / newModelCycleOperator
+      // / newModelToggleCombinator on the Instruments page). No form
+      // binding, no persistence — just enough behaviour to evaluate
+      // the configurator shape.
+      window.observerAddRule = function (btn) {
+        var builder = btn.closest('[data-observer-cohort-builder]');
+        var container = builder.querySelector('[data-observer-cohort-cells]');
+        var first = container.querySelector('[data-observer-rule-cell]');
+        var clone = first.cloneNode(true);
+        clone.querySelectorAll('input[type="text"]').forEach(function (i) {
+          i.value = '';
+        });
+        clone.querySelectorAll('select').forEach(function (s) {
+          s.selectedIndex = 0;
+        });
+        // Reset the operator-cycle button + its hidden mirror to
+        // the first option in the cycle.
+        clone.querySelectorAll('[data-observer-op-cycle]').forEach(function (b) {
+          var cycle = (b.getAttribute('data-observer-op-cycle') || '').split('|');
+          if (cycle.length) b.textContent = cycle[0];
+        });
+        clone.querySelectorAll('[data-observer-op-input]').forEach(function (i) {
+          var btnCycle = clone.querySelector('[data-observer-op-cycle]');
+          var cycle = ((btnCycle && btnCycle.getAttribute('data-observer-op-cycle')) || '').split('|');
+          if (cycle.length) i.value = cycle[0];
+        });
+        // Default operand variant matches the default operator:
+        // first cycle entry is ``IS THE SAME AS`` → tag dropdown
+        // visible, value input hidden.
+        var tagSel = clone.querySelector('[data-observer-operand-tag]');
+        var valInput = clone.querySelector('[data-observer-operand-value]');
+        if (tagSel) tagSel.style.display = '';
+        if (valInput) valInput.style.display = 'none';
+        // 19P.2 rung 5 — a clone is a pristine RULE CELL, and `Save`
+        // is not part of one. It rides in the last cell's flex row, so
+        // when there is only one cell `first` IS that cell and the
+        // clone carries a second Save into the list. Measured: two
+        // buttons after one click of `+`.
+        clone.querySelectorAll('.cohort-save-btn').forEach(function (b) {
+          b.remove();
+        });
+        // Enable the cloned cell's X.
+        clone.querySelectorAll('[data-observer-rule-remove]').forEach(function (b) {
+          b.disabled = false;
+          b.removeAttribute('aria-disabled');
+          b.setAttribute('title', 'Remove rule');
+        });
+        container.appendChild(clone);
+      };
+
+      window.observerRemoveRule = function (btn) {
+        var cell = btn.closest('[data-observer-rule-cell]');
+        var container = cell.parentElement;
+        if (container.querySelectorAll('[data-observer-rule-cell]').length > 1) {
+          cell.remove();
+        }
+      };
+
+      window.observerCycleOperator = function (btn) {
+        var cycle = (btn.getAttribute('data-observer-op-cycle') || '').split('|');
+        if (!cycle.length) return;
+        var idx = cycle.indexOf(btn.textContent.trim());
+        var next = cycle[(idx + 1) % cycle.length];
+        btn.textContent = next;
+        var cell = btn.closest('[data-observer-rule-cell]');
+        // Keep the hidden ``cohort_rule_op`` mirror in sync so
+        // the form submission carries the operator label.
+        var opInput = cell.querySelector('[data-observer-op-input]');
+        if (opInput) opInput.value = next;
+        // Swap operand visibility: ``IS THE SAME AS`` / ``IS
+        // DIFFERENT FROM`` use the Observer-attribute dropdown
+        // (cross-side tag match); other ops use the literal value
+        // input.
+        var tagSel = cell.querySelector('[data-observer-operand-tag]');
+        var valInput = cell.querySelector('[data-observer-operand-value]');
+        var useTag = (next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM');
+        if (tagSel) tagSel.style.display = useTag ? '' : 'none';
+        if (valInput) valInput.style.display = useTag ? 'none' : '';
+      };
+
+      window.observerToggleCombinator = function (btn) {
+        var next = (btn.textContent.trim() === 'AND' ? 'OR' : 'AND');
+        btn.textContent = next;
+        var wrap = btn.closest('[data-observer-cohort-builder]');
+        var combInput = wrap && wrap.querySelector('[data-observer-combinator-input]');
+        if (combInput) combInput.value = next;
+      };
+
       (function () {
         // 19P.2 rung 4 — the four row actions, the count and the delete
         // gate moved out of the `Operator actions` card and into a row
@@ -547,8 +613,29 @@
         var selectAll = document.getElementById("observers-select-all");
         var table = document.getElementById("observers-table");
         var OBS_BASE = {{ observers_base_url | tojson }};
+        var COHORT_TPL = document.getElementById("observers-cohort-template");
         var tickOrder = [];
         var panel = null;
+
+        // The cohort editor's nodes are found INSIDE the panel, not by
+        // page id. Every one of them is a clone made this rebuild —
+        // holding a reference across rebuilds would point at a detached
+        // node, which is the shape of bug the card version could not
+        // have.
+        function cohortNodes() {
+          if (!panel) return null;
+          var block = panel.querySelector("[data-observer-cohort-builder]");
+          if (!block) return null;
+          return {
+            block: block,
+            root: block.parentNode,
+            mixed: panel.querySelector(".observers-cohort-mixed-message"),
+            // May be null before `placeSaveButton` has run — the
+            // button is created after the editor's markup settles.
+            save: panel.querySelector(".cohort-save-btn"),
+            label: panel.querySelector(".row-expander-label"),
+          };
+        }
 
         function rows() {
           if (!table) return [];
@@ -607,12 +694,35 @@
           tr.id = "observers-row-expander";
           var td = document.createElement("td");
           td.colSpan = visibleColumnCount();
+          // 19P.2 rung 5 — two panes. Left: the cohort rule builder,
+          // cloned from the page's `<template>` after this string is in
+          // the DOM. Right: the count, the delete confirm and the row
+          // actions, inline and flush right.
+          //
+          // `is-split` is a modifier on `.row-expander-body`, like the
+          // toolbar's: the lobby and Reviewers put a single flex line
+          // in this element, so turning the shared rule into a grid
+          // would re-lay-out both.
+          //
           // Bare text, not a `.pill-count`: `spec/ui_elements.md` calls
           // the panel "a pill-free zone" — its fill resolves to the same
           // primitive the pale pills do, so a pill here is invisible.
           // The card this came from could afford one; the panel cannot.
           var html =
-            '<div class="row-expander-body">' +
+            '<div class="row-expander-body' +
+              (COHORT_TPL ? " is-split" : "") + '">' +
+            (COHORT_TPL
+              ? '<div class="row-expander-pane row-expander-pane-left">' +
+                  '<h3 class="row-expander-label">' +
+                    (sel.length === 1
+                      ? "Selected observer is able to see responses where"
+                      : "Selected observers are able to see responses where") +
+                  "</h3>" +
+                "</div>"
+              : "") +
+            (COHORT_TPL
+              ? '<div class="row-expander-pane row-expander-pane-right">'
+              : "") +
               '<span class="row-expander-count"><strong>' + sel.length +
               "</strong> of " + rows().length + " selected</span>" +
               '<label class="confirm-label exp-confirm-label">' +
@@ -661,10 +771,67 @@
                   OBS_BASE + '/bulk-delete"' +
                   ' data-delete-btn="observers-bulk-delete"' +
                   ' disabled aria-disabled="true">Delete</button>' +
-                  "</span></div>";
+                  "</span>" + (COHORT_TPL ? "</div>" : "") + "</div>";
           td.innerHTML = html;
           tr.appendChild(td);
           return tr;
+        }
+
+        // The builder is cloned in AFTER the panel's own markup, because
+        // `innerHTML` would discard live nodes. Cloning rather than
+        // moving: the template stays intact so the next rebuild has
+        // something to clone, and a moved builder would carry the
+        // previous selection's rule state into the new panel.
+        function fillCohortPane(tr, sel) {
+          if (!COHORT_TPL) return;
+          var pane = tr.querySelector(".row-expander-pane-left");
+          if (!pane) return;
+          pane.appendChild(COHORT_TPL.content.cloneNode(true));
+        }
+
+        // `Save` sits inline immediately after the LAST rule cell's `X`,
+        // so it trails the list as rules are added rather than floating
+        // under it. Placed in that cell's own flex row, so it inherits
+        // the row's 4px gap instead of carrying a margin of its own.
+        //
+        // Created once per panel and MOVED thereafter, and called after
+        // every mutation rather than once at build time. Two things
+        // would otherwise destroy or strand it, and both are ordinary
+        // operations here:
+        //
+        //   - `setEditorToDefault` and `loadEditorFromRule` replace the
+        //     cell list's `innerHTML` wholesale. A Save appended at
+        //     build time was inside that markup and went with it — the
+        //     first version of this rung shipped exactly that, and the
+        //     button simply never appeared.
+        //   - `observerAddRule` clones the FIRST cell and appends it,
+        //     so a Save sitting in the old last cell is left mid-list.
+        function placeSaveButton(nodes) {
+          if (!nodes || !nodes.root) return null;
+          // De-duplicate before moving. `observerAddRule` strips Save
+          // from its clone, which is the fix at source; this keeps the
+          // invariant true whatever else learns to clone a rule cell,
+          // because a second Save is not a cosmetic bug — both post the
+          // same form, and the stale one carries the stale rule.
+          var all = nodes.root.querySelectorAll(".cohort-save-btn");
+          for (var i = 1; i < all.length; i++) all[i].remove();
+          var save = all[0] || null;
+          if (!save) {
+            save = document.createElement("button");
+            save.className = "btn secondary cohort-save-btn";
+            save.type = "submit";
+            save.setAttribute("form", "observers-bulk-form");
+            save.setAttribute("formaction", OBS_BASE + "/cohort-rule");
+            save.textContent = "Save";
+            save.disabled = true;
+            save.setAttribute("aria-disabled", "true");
+          }
+          var cells = nodes.block.querySelectorAll("[data-observer-rule-cell]");
+          var last = cells[cells.length - 1];
+          var xBtn = last && last.querySelector("[data-observer-rule-remove]");
+          if (xBtn && xBtn.parentNode) xBtn.parentNode.appendChild(save);
+          else nodes.block.appendChild(save);
+          return save;
         }
 
         function renderPanel() {
@@ -678,14 +845,10 @@
             row.classList.add("session-row-selected");
           });
           panel = buildPanel(sel);
+          fillCohortPane(panel, sel);
           (currentAnchor() || sel[sel.length - 1])
             .insertAdjacentElement("afterend", panel);
         }
-        var cohortBlock = document.getElementById("observers-cohort-block");
-        var cohortEmpty = document.getElementById("observers-cohort-empty");
-        var cohortHeading = document.getElementById("observers-cohort-heading");
-        var cohortMixedMessage = document.getElementById("observers-cohort-mixed-message");
-        var cohortSaveBtn = document.getElementById("observers-cohort-save-btn");
         function boxes() {
           return document.querySelectorAll(".observer-select");
         }
@@ -705,18 +868,24 @@
             btn.removeAttribute("aria-disabled");
           }
         }
-        // Snapshot the server-rendered first cell's outerHTML once
-        // so ``setEditorToDefault`` can restore the editor to a
-        // pristine single-cell state without losing the rendered
-        // option lists (which include the live tag labels).
+        // Snapshot the pristine first cell's outerHTML once, from the
+        // TEMPLATE rather than from a live builder, so
+        // ``setEditorToDefault`` can restore a single-cell state
+        // without losing the rendered option lists (which include the
+        // live tag labels).
+        //
+        // 19P.2 rung 5 — the source moved with the editor. Snapshotting
+        // a live clone would capture whatever the previous selection
+        // had typed into it; the template is never edited, so it is
+        // pristine by construction.
         var defaultCellHTML = null;
         function ensureDefaultCellSnapshot() {
           if (defaultCellHTML !== null) return;
-          if (!cohortBlock) return;
-          var first = cohortBlock.querySelector('[data-observer-rule-cell]');
+          if (!COHORT_TPL) return;
+          var first = COHORT_TPL.content.querySelector('[data-observer-rule-cell]');
           if (first) defaultCellHTML = first.outerHTML;
         }
-        function setEditorToDefault() {
+        function setEditorToDefault(cohortBlock) {
           if (!cohortBlock) return;
           ensureDefaultCellSnapshot();
           var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
@@ -728,9 +897,9 @@
           if (combBtn) combBtn.textContent = 'AND';
           if (combInput) combInput.value = 'AND';
         }
-        function loadEditorFromRule(rule) {
+        function loadEditorFromRule(cohortBlock, rule) {
           if (!cohortBlock) return;
-          setEditorToDefault();
+          setEditorToDefault(cohortBlock);
           var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
           if (!cells) return;
           var combBtn = cohortBlock.querySelector('[data-observer-combinator-toggle]');
@@ -793,6 +962,60 @@
           opt.disabled = true;
           selectEl.appendChild(opt);
         }
+        // The rule as the controls currently hold it, as a string.
+        // Compared rather than diffed: the question is only "has
+        // anything changed", and every control that can change is in
+        // this list.
+        function ruleSignature(block) {
+          if (!block) return "";
+          var parts = [];
+          var comb = block.querySelector("[data-observer-combinator-input]");
+          parts.push(comb ? comb.value : "");
+          var cells = block.querySelectorAll("[data-observer-rule-cell]");
+          for (var i = 0; i < cells.length; i++) {
+            var c = cells[i];
+            var field = c.querySelector('select[name="cohort_rule_field"]');
+            var op = c.querySelector("[data-observer-op-input]");
+            var tag = c.querySelector("[data-observer-operand-tag]");
+            var val = c.querySelector("[data-observer-operand-value]");
+            parts.push([
+              field ? field.value : "",
+              op ? op.value : "",
+              tag ? tag.value : "",
+              val ? val.value : "",
+            ].join("\u0001"));
+          }
+          return parts.join("\u0002");
+        }
+
+        // Re-armed on every rebuild — see the call site. `input` and
+        // `change` both, because the operand is a text box on some
+        // operators and a select on others; and a delegated `click`,
+        // because `+`, `X` and the two cycle buttons mutate the rule
+        // without firing either.
+        function armDirtyGate(nodes) {
+          if (!nodes || !nodes.save) return;
+          var baseline = ruleSignature(nodes.block);
+          function sync() {
+            var dirty = ruleSignature(nodes.block) !== baseline;
+            nodes.save.disabled = !dirty;
+            if (dirty) nodes.save.removeAttribute("aria-disabled");
+            else nodes.save.setAttribute("aria-disabled", "true");
+          }
+          nodes.block.addEventListener("input", sync);
+          nodes.block.addEventListener("change", sync);
+          nodes.block.addEventListener("click", function () {
+            // After the inline `onclick` has run, not before it: `+`
+            // and `X` rebuild the cell list, so Save has to be moved to
+            // the new last cell before its state is re-read.
+            setTimeout(function () {
+              placeSaveButton(nodes);
+              sync();
+            }, 0);
+          });
+          sync();
+        }
+
         function refresh() {
           var all = boxes();
           var n = countChecked();
@@ -809,29 +1032,23 @@
             selectAll.checked = (n > 0 && n === all.length);
             selectAll.indeterminate = (n > 0 && n < all.length);
           }
-          // The cohort CARD stays visible whenever the slot is
-          // rendered (so the grid keeps its half-half shape).
-          // Inside the card, the empty-placeholder and the
-          // editor block swap based on selection count.
-          if (cohortBlock) {
-            cohortBlock.hidden = (n === 0);
-          }
-          if (cohortEmpty) {
-            cohortEmpty.hidden = (n > 0);
-          }
-          if (cohortHeading) {
-            cohortHeading.textContent = (n === 0
-              ? "Cohort match rule"
-              : (n === 1
-                ? "Selected observer is able to see responses where"
-                : "Selected observers are able to see responses where"));
-          }
-          if (cohortSaveBtn) setBtn(cohortSaveBtn, n === 0);
+          // ── The cohort editor, now the panel's left pane ──────
+          //
+          // Everything below reaches into the CLONE this rebuild made.
+          // There is no persistent card any more, so there is no
+          // "empty placeholder" to swap against and no heading to
+          // retitle on the way to zero: at `n === 0` the whole panel is
+          // gone, which says it better than a muted sentence did.
+          var nodes = cohortNodes();
+          if (!nodes) return;
+
           // Mixed-state detection: gather the per-row cohort-rule
           // signatures (set server-side per ``observers.cohort_rule``;
-          // empty string = no saved rule). Shared signature → load
-          // that rule into the editor; mixed → reset to default +
-          // show the message; n === 0 → block is hidden, no action.
+          // empty string = no saved rule). Shared signature → load that
+          // rule into the editor; mixed → reset to default and show the
+          // message. Author's call, 2026-09-16: mixed keeps today's
+          // behaviour rather than growing per-box "(Multiple values)",
+          // which needs per-field comparison the signature cannot do.
           var seen = {};
           var distinct = 0;
           for (var j = 0; j < all.length; j++) {
@@ -843,25 +1060,36 @@
               distinct++;
             }
           }
-          if (cohortMixedMessage) {
-            cohortMixedMessage.hidden = (distinct <= 1);
-          }
-          if (cohortBlock && n > 0) {
-            if (distinct === 1) {
-              var onlySig = Object.keys(seen)[0];
-              if (onlySig === "") {
-                setEditorToDefault();
-              } else {
-                try {
-                  loadEditorFromRule(JSON.parse(onlySig));
-                } catch (e) {
-                  setEditorToDefault();
-                }
-              }
+          if (nodes.mixed) nodes.mixed.hidden = (distinct <= 1);
+
+          if (distinct === 1) {
+            var onlySig = Object.keys(seen)[0];
+            if (onlySig === "") {
+              setEditorToDefault(nodes.block);
             } else {
-              setEditorToDefault();
+              try {
+                loadEditorFromRule(nodes.block, JSON.parse(onlySig));
+              } catch (e) {
+                setEditorToDefault(nodes.block);
+              }
             }
+          } else {
+            setEditorToDefault(nodes.block);
           }
+
+          // The dirty gate. `Save` is disabled until the rule differs
+          // from what the selection already has — a `Save` that is live
+          // on arrival invites a write that changes nothing, and on a
+          // mixed selection that write would silently flatten every
+          // rule to the blank default.
+          //
+          // The snapshot is re-taken on EVERY rebuild, not once: the
+          // panel is thrown away and rebuilt on every selection change,
+          // so a snapshot held across rebuilds would compare this
+          // selection's rule against the previous one's and leave
+          // `Save` enabled against an unchanged rule.
+          nodes.save = placeSaveButton(nodes);
+          armDirtyGate(nodes);
         }
         document.addEventListener("change", function (e) {
           var t = e.target;
@@ -937,87 +1165,6 @@
         refresh();
       })();
 
-      // Cohort-rule builder — client-side only. Mirrors Band 1
-      // Link 2's add / remove / cycle / combinator pattern
-      // (newModelAddRule / newModelRemoveRule / newModelCycleOperator
-      // / newModelToggleCombinator on the Instruments page). No form
-      // binding, no persistence — just enough behaviour to evaluate
-      // the configurator shape.
-      window.observerAddRule = function (btn) {
-        var builder = btn.closest('[data-observer-cohort-builder]');
-        var container = builder.querySelector('[data-observer-cohort-cells]');
-        var first = container.querySelector('[data-observer-rule-cell]');
-        var clone = first.cloneNode(true);
-        clone.querySelectorAll('input[type="text"]').forEach(function (i) {
-          i.value = '';
-        });
-        clone.querySelectorAll('select').forEach(function (s) {
-          s.selectedIndex = 0;
-        });
-        // Reset the operator-cycle button + its hidden mirror to
-        // the first option in the cycle.
-        clone.querySelectorAll('[data-observer-op-cycle]').forEach(function (b) {
-          var cycle = (b.getAttribute('data-observer-op-cycle') || '').split('|');
-          if (cycle.length) b.textContent = cycle[0];
-        });
-        clone.querySelectorAll('[data-observer-op-input]').forEach(function (i) {
-          var btnCycle = clone.querySelector('[data-observer-op-cycle]');
-          var cycle = ((btnCycle && btnCycle.getAttribute('data-observer-op-cycle')) || '').split('|');
-          if (cycle.length) i.value = cycle[0];
-        });
-        // Default operand variant matches the default operator:
-        // first cycle entry is ``IS THE SAME AS`` → tag dropdown
-        // visible, value input hidden.
-        var tagSel = clone.querySelector('[data-observer-operand-tag]');
-        var valInput = clone.querySelector('[data-observer-operand-value]');
-        if (tagSel) tagSel.style.display = '';
-        if (valInput) valInput.style.display = 'none';
-        // Enable the cloned cell's X.
-        clone.querySelectorAll('[data-observer-rule-remove]').forEach(function (b) {
-          b.disabled = false;
-          b.removeAttribute('aria-disabled');
-          b.setAttribute('title', 'Remove rule');
-        });
-        container.appendChild(clone);
-      };
-
-      window.observerRemoveRule = function (btn) {
-        var cell = btn.closest('[data-observer-rule-cell]');
-        var container = cell.parentElement;
-        if (container.querySelectorAll('[data-observer-rule-cell]').length > 1) {
-          cell.remove();
-        }
-      };
-
-      window.observerCycleOperator = function (btn) {
-        var cycle = (btn.getAttribute('data-observer-op-cycle') || '').split('|');
-        if (!cycle.length) return;
-        var idx = cycle.indexOf(btn.textContent.trim());
-        var next = cycle[(idx + 1) % cycle.length];
-        btn.textContent = next;
-        var cell = btn.closest('[data-observer-rule-cell]');
-        // Keep the hidden ``cohort_rule_op`` mirror in sync so
-        // the form submission carries the operator label.
-        var opInput = cell.querySelector('[data-observer-op-input]');
-        if (opInput) opInput.value = next;
-        // Swap operand visibility: ``IS THE SAME AS`` / ``IS
-        // DIFFERENT FROM`` use the Observer-attribute dropdown
-        // (cross-side tag match); other ops use the literal value
-        // input.
-        var tagSel = cell.querySelector('[data-observer-operand-tag]');
-        var valInput = cell.querySelector('[data-observer-operand-value]');
-        var useTag = (next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM');
-        if (tagSel) tagSel.style.display = useTag ? '' : 'none';
-        if (valInput) valInput.style.display = useTag ? 'none' : '';
-      };
-
-      window.observerToggleCombinator = function (btn) {
-        var next = (btn.textContent.trim() === 'AND' ? 'OR' : 'AND');
-        btn.textContent = next;
-        var wrap = btn.closest('[data-observer-cohort-builder]');
-        var combInput = wrap && wrap.querySelector('[data-observer-combinator-input]');
-        if (combInput) combInput.value = next;
-      };
     </script>
   {% endif %}
 

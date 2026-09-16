@@ -68,6 +68,20 @@ def _builder(body: str) -> str:
     return m.group(0)
 
 
+def _code(js: str) -> str:
+    """The script with `//` comments stripped.
+
+    Every comment in this builder explains what the code does, using the
+    same identifiers — so `"is-split" in js` passed with the class no
+    longer emitted, matched by the comment saying why it is emitted.
+    Assertions about behaviour read this; assertions about the reasoning
+    being present can read the raw text.
+    """
+    return "\n".join(
+        re.sub(r"//.*$", "", line) for line in js.split("\n")
+    )
+
+
 def _page(client: TestClient, s: ReviewSession, suffix: str = "") -> str:
     return client.get(
         f"/operator/sessions/{s.id}/observers{suffix}"
@@ -350,3 +364,201 @@ def test_the_edit_row_reads_as_selected(
     row = re.search(rf'<tr[^>]*id="observer-row-{row_id}"[^>]*>', body)
     assert row
     assert "session-row-selected" in row.group(0)
+
+
+# ── The cohort editor, in the expander — 19P.2 rung 5 ─────────────────
+#
+# The editor moved out of its card and into the panel's left pane, and
+# `.card-columns` retired with it. As with the rest of this file: the
+# panel does not exist without JS, so what is pinned here is the
+# template it is cloned from, the builder that clones it, and the
+# absence of the card. The behaviour — the dirty gate, the reposition
+# on add, the mixed reset — is measured in Chromium.
+
+
+def test_the_cohort_card_and_its_grid_are_gone(
+    client: TestClient, db: Session
+) -> None:
+    s = _session(client, db, "coh-gone")
+    body = _page(client, s)
+
+    assert 'class="card-columns"' not in body, "the grid survived"
+    assert 'id="observers-cohort-block"' not in body
+    assert 'id="observers-cohort-empty"' not in body, (
+        "the 'select observers below' placeholder has no home now: at "
+        "zero selected the whole panel is absent, which says it better"
+    )
+    assert 'id="observers-cohort-heading"' not in body
+    assert 'id="observers-cohort-save-btn"' not in body
+
+
+def test_the_builder_is_server_rendered_once_into_a_template(
+    client: TestClient, db: Session
+) -> None:
+    """A `<template>`, not a JS string literal, because the selects
+    carry live per-session tag labels — building those option lists in
+    JS would put the same data in two places."""
+    s = _session(client, db, "coh-tpl")
+    body = _page(client, s)
+
+    tpl = re.search(
+        r'<template id="observers-cohort-template">.*?</template>',
+        body, re.S,
+    )
+    assert tpl, "no cohort template"
+    held = tpl.group(0)
+    assert "data-observer-cohort-builder" in held
+    assert "data-observer-rule-cell" in held
+    assert "observers-cohort-mixed-message" in held
+    # Exactly one. Two would be two sources for one editor.
+    assert body.count('id="observers-cohort-template"') == 1
+
+
+def test_the_panel_splits_and_clones_the_builder_into_it(
+    client: TestClient, db: Session
+) -> None:
+    js = _builder(_page(client, _session(client, db, "coh-split")))
+
+    code = _code(js)
+    assert '" is-split"' in code, "the panel does not split"
+    assert "row-expander-pane-left" in code
+    assert "row-expander-pane-right" in code
+    assert "COHORT_TPL.content.cloneNode(true)" in code, (
+        "the builder is moved rather than cloned, or not copied at all"
+    )
+    # The label takes the Link 1 idiom, not a card heading.
+    assert "row-expander-label" in code
+    assert "<h3" in code and "<h2" not in code, "an h2 reads as a card title"
+
+
+def test_save_is_created_disabled_and_placed_after_the_last_x(
+    client: TestClient, db: Session
+) -> None:
+    js = _builder(_page(client, _session(client, db, "coh-save")))
+
+    place = re.search(r"function placeSaveButton\(nodes\) \{.*?\n        \}", js, re.S)
+    assert place, "no placeSaveButton"
+    held = place.group(0)
+    assert "cohort-save-btn" in held
+    assert "save.disabled = true" in held, "Save ships live"
+    assert "/cohort-rule" in held, "Save posts nowhere"
+    assert 'form="observers-bulk-form"' in held or \
+           '"form", "observers-bulk-form"' in held, "Save carries no selection"
+    assert "xBtn.parentNode.appendChild(save)" in held, (
+        "Save is not appended to the last cell's X row — reading the "
+        "X out of the DOM is not the same as putting Save beside it"
+    )
+    # De-duplication, which a clone of the first cell would otherwise
+    # produce: measured at two Save buttons after one click of `+`.
+    assert "for (var i = 1; i < all.length; i++) all[i].remove();" in held, (
+        "nothing removes a duplicated Save"
+    )
+
+
+def test_the_rule_clone_does_not_carry_save_with_it(
+    client: TestClient, db: Session
+) -> None:
+    """`observerAddRule` clones the FIRST rule cell. With one cell that
+    is also the LAST — the cell holding Save — so the clone brought a
+    second Save into the list, both posting the same form, the stale one
+    carrying the stale rule."""
+    body = _page(client, _session(client, db, "coh-clone"))
+
+    fn = re.search(
+        r"window\.observerAddRule = function \(btn\) \{.*?\n      \};",
+        body, re.S,
+    )
+    assert fn, "observerAddRule is gone"
+    assert "cohort-save-btn" in fn.group(0), (
+        "the clone is not stripped of Save"
+    )
+
+
+def test_the_builder_helpers_are_defined_before_the_selection_script(
+    client: TestClient, db: Session
+) -> None:
+    """The two-rule restore bug, pinned by ordering.
+
+    `refresh()` runs at the end of the selection IIFE and calls
+    `window.observerAddRule` to grow the editor to N cells. That
+    assignment used to come AFTER the IIFE, so a `?selected=` restore of
+    a shared cohort of two or more rules threw a TypeError, which the
+    `try/catch` around the rule load swallowed into
+    `setEditorToDefault()` — the operator saw a blank one-rule builder
+    for a rule that had two. Reproduced in Chromium on `main`.
+    """
+    body = _page(client, _session(client, db, "coh-order"))
+
+    assign = body.index("window.observerAddRule = function")
+    # The selection IIFE, located by something only it contains.
+    use = body.index("function armDirtyGate(nodes)")
+    assert assign < use, (
+        "observerAddRule is assigned after the script that calls it"
+    )
+
+
+def test_the_dirty_gate_is_re_armed_per_rebuild_not_once(
+    client: TestClient, db: Session
+) -> None:
+    """The panel is thrown away and rebuilt on every selection change.
+    A baseline held across rebuilds would compare this selection's rule
+    against the previous one's, leaving `Save` live against an unchanged
+    rule."""
+    js = _builder(_page(client, _session(client, db, "coh-dirty")))
+
+    assert "function armDirtyGate" in js
+    assert "var baseline = ruleSignature(nodes.block);" in js, (
+        "the baseline is not taken inside the arming function"
+    )
+    # Armed from `refresh()`, which runs per rebuild — not from the
+    # IIFE body, which runs once.
+    refresh = re.search(r"function refresh\(\) \{.*?\n        \}", js, re.S)
+    assert refresh and "armDirtyGate(nodes)" in refresh.group(0), (
+        "the gate is armed once rather than per rebuild"
+    )
+    # Every control that can change the rule reaches the gate.
+    gate = re.search(r"function armDirtyGate\(nodes\) \{.*?\n        \}", js, re.S)
+    for event in ('"input"', '"change"', '"click"'):
+        assert event in gate.group(0), f"the gate ignores {event}"
+
+
+def test_a_mixed_selection_resets_the_builder_and_says_so(
+    client: TestClient, db: Session
+) -> None:
+    """Author's call, 2026-09-16: mixed keeps today's behaviour rather
+    than growing per-box "(Multiple values)", which needs per-field
+    comparison the whole-rule signature cannot do."""
+    js = _builder(_page(client, _session(client, db, "coh-mixed")))
+
+    assert "distinct" in js
+    assert "nodes.mixed.hidden = (distinct <= 1)" in js, (
+        "the mixed message does not follow the signature count"
+    )
+    assert re.search(r"\} else \{\s*setEditorToDefault\(nodes\.block\);", _code(js)), (
+        "a mixed selection does not reset the builder"
+    )
+
+
+def test_the_split_modifier_has_a_rule_behind_it(
+    client: TestClient, db: Session
+) -> None:
+    """The class the builder emits is inert without this. Read off the
+    response rather than `base.html` on disk, because what ships is what
+    the page carries."""
+    body = _page(client, _session(client, db, "coh-css"))
+
+    assert "body.ui-v2 .row-expander-body.is-split {" in body, (
+        "nothing lays the two panes out"
+    )
+    assert "body.ui-v2 .row-expander-pane-right {" in body
+    assert "body.ui-v2 .row-expander-label {" in body
+    assert "body.ui-v2 .cohort-save-btn {" in body
+    # Top-flush, not a shared bottom edge: the builder is taller, and
+    # bottom-aligning would anchor Save to a button row it has no
+    # relationship with.
+    rule = re.search(
+        r"body\.ui-v2 \.row-expander-body\.is-split \{(.*?)\}", body, re.S
+    )
+    assert rule and "align-items: start" in rule.group(1), (
+        "the panes share a bottom edge"
+    )
