@@ -74,8 +74,16 @@
   {# 19P.2 rung 5 — `.card-columns` is RETIRED. The cohort editor
      moved into the row expander, beside the row actions rung 4 put
      there, so nothing is left to occupy a second column and the
-     guidance runs full width as it does on Reviewers. #}
-    {% call page_guidance.guidance() %}
+     guidance runs full width as it does on Reviewers.
+
+     `full_width=true` with it. The card spanning the page is not the
+     same thing as the prose being laid out for that span: at this
+     width a single measure runs to ~150 characters, so the body
+     splits into two columns. Reviewers took the parameter when it made
+     the same move at 19P.1 rung 2a; this page is now the second
+     full-width placement, and the first draft of this rung moved the
+     card without it. #}
+    {% call page_guidance.guidance(full_width=true) %}
     <p>
       Observers view collated results <strong>without reviewing
       anyone</strong> (e.g., a tutor overseeing the tutorial groups). This

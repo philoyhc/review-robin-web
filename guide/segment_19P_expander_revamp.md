@@ -1009,6 +1009,16 @@ falsified that table too.
 pane and `.card-columns` retired, so the guidance runs full width as it
 does on Reviewers and the empty half rung 4 left is gone.
 
+**`full_width=true` with it**, caught by the author mid-rung. The card
+spanning the page and its prose being laid out for that span are
+separate things: at this width one measure runs to ~150 characters, so
+the body takes `column-count: 2`. Reviewers passed the parameter when it
+made the same move at 19P.1 rung 2a; this rung's first draft moved the
+card without it. Observers is the second full-width placement, and
+`test_full_width_guidance_runs_its_prose_in_two_columns` now covers
+both — it had asserted the other pages do NOT opt in, behind an
+`if status_code == 200` that skipped Observers silently.
+
 **The builder is server-rendered once into a `<template>` and cloned per
 rebuild.** Not a JS string literal: the selects carry live per-session
 tag labels, and building those option lists in JS would put the same
