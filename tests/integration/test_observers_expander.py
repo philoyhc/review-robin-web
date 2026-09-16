@@ -576,46 +576,76 @@ def test_an_unsaved_rule_edit_is_guarded_on_every_discard_path(
     nothing said. Nothing auto-saves — the only write is the explicit
     POST — so the loss is real and total.
 
-    Same idiom as Instruments (18R Item 2): a `confirm` on the paths
-    that stay on the page, a `beforeunload` on the ones that leave, and
-    an intentional-nav flag so `Save` does not warn about the edit it is
-    persisting. The wording is Instruments' verbatim — an operator meets
-    this sentence on two pages and should not have to read it twice.
+    Four paths ask the page's own question and then declare the
+    navigation deliberate: the row checkbox, select-all, `Edit`, and the
+    three `.exp-submit` bulk buttons. `beforeunload` catches what is
+    left — `Search`, `Clear`, the pager, `Add new`.
 
-    **A text guard, like its neighbours.** There is no JS runtime here.
-    Chromium covers the seven cases: clean untick asks nothing; dirty
-    untick asks and, on dismiss, leaves the box, the panel, the operand
-    and a live `Save` exactly as they were; on accept it goes with the
-    DB untouched; select-all the same; `Save` asks nothing; a clean page
-    navigates freely; a dirty one asks.
+    **A text guard, like its neighbours.** There is no JS runtime here,
+    and the panel does not exist until a box is ticked. Chromium is the
+    behavioural pin. What this file can do is make each claim fail on
+    its own, so every assertion below is scoped to the ONE construct it
+    is about — the cold read on the first draft found three mutations
+    surviving because a bare substring matched a second, innocent
+    occurrence elsewhere in the same script.
     """
     js = _builder(_page(client, _session(client, db, "coh-guard")))
 
     assert 'window.confirm("Discard unsaved changes?")' in js, (
         "no confirm on the in-page discard paths"
     )
-    assert "function okToDiscardCohortEdit()" in js
-
-    # Both in-page paths ask: the per-row checkbox and select-all.
-    assert js.count("okToDiscardCohortEdit()") >= 3, (
-        "a discard path does not ask — expected the row checkbox, "
-        "select-all and Edit"
+    # The condition, not just the call: a guard that always returns
+    # true is a guard that never asks, and reads identically otherwise.
+    assert "if (!cohortDirty) return true;" in js, (
+        "okToDiscardCohortEdit does not consult the dirty flag"
     )
+
+    # Every discard path asks. Counted on the CALL SITE pattern, which
+    # the function's own definition line does not match — `>= 3` against
+    # the bare name passed with a call site deleted, because the
+    # definition made up the difference.
+    assert js.count("if (!okToDiscardCohortEdit())") >= 4, (
+        "a discard path does not ask — expected the row checkbox, "
+        "select-all, Edit and the bulk submits"
+    )
+
     # Declining must leave the selection alone, or the confirm is
     # decoration: the panel would rebuild anyway and the edit still go.
     assert "restoreBox(t, !t.checked);" in js, (
         "declining still unticks the row"
     )
-    assert "selectAll.checked = !selectAll.checked;" in js, (
+    # Select-all is tri-state, so declining has to restore the dash as
+    # well as the tick — recomputed from the rows, not inverted.
+    select_all = re.search(
+        r"if \(t === selectAll\) \{.*?\n            \}", js, re.S
+    )
+    assert select_all and "syncSelectAll();" in select_all.group(0), (
         "declining still moves select-all"
+    )
+    # And a declined bulk submit must not post.
+    assert "event.preventDefault();" in js, (
+        "declining still fires the bulk action"
     )
 
     # The nav-away half.
     assert 'addEventListener("beforeunload"' in js, "no nav-away guard"
     assert "if (intentionalNav) return undefined;" in js, (
-        "Save warns about the edit it is saving"
+        "the deliberate navigations still warn"
     )
-    assert "intentionalNav = true;" in js
+
+    # Save carries the flag, and carries it from the CREATION site —
+    # `X` on the last rule cell destroys the Save inside that cell and
+    # `placeSaveButton` builds a replacement, so a listener attached
+    # once per panel did not reach it and Save raised "Leave site?".
+    # Scoped to that function, because `intentionalNav = true;` also
+    # appears on the Edit and bulk-submit paths and satisfied a
+    # page-wide substring with this listener deleted.
+    place = re.search(
+        r"function placeSaveButton\(nodes\) \{.*?\n        \}", js, re.S
+    )
+    assert place and "intentionalNav = true;" in place.group(0), (
+        "a rebuilt Save does not carry the intentional-nav flag"
+    )
 
     # And the flag is cleared when the panel goes, or `beforeunload`
     # blocks every later navigation over an edit already discarded —

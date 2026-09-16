@@ -766,7 +766,7 @@
           // where to send it. Same routes and `formaction`s as the card
           // they came from.
           statusActions(sel).forEach(function (label) {
-            html += '<button type="submit" class="btn secondary"' +
+            html += '<button type="submit" class="btn secondary exp-submit"' +
                     ' form="observers-bulk-form" formaction="' +
                     OBS_BASE +
                     (label === "Inactivate"
@@ -776,7 +776,7 @@
           // Ships `disabled`: nothing syncs an injected pair until its
           // first tick, so a live-by-default Delete would be a
           // destructive control with its gate open.
-          html += '<button type="submit" class="btn destructive"' +
+          html += '<button type="submit" class="btn destructive exp-submit"' +
                   ' form="observers-bulk-form" formaction="' +
                   OBS_BASE + '/bulk-delete"' +
                   ' data-delete-btn="observers-bulk-delete"' +
@@ -816,6 +816,28 @@
         //     button simply never appeared.
         //   - `observerAddRule` clones the FIRST cell and appends it,
         //     so a Save sitting in the old last cell is left mid-list.
+        // The dirty flag, readable from outside the gate. The panel is
+        // rebuilt constantly, so this is a module-level fact about "is
+        // there an unsaved rule edit right now" rather than state on a
+        // node that is about to be replaced.
+        //
+        // Instruments does the same job WITHOUT a flag: its unload
+        // guard queries the DOM live
+        // (`[data-instrument-card][data-instrument-dirty="true"]`,
+        // `instruments_index.html`), so it cannot go stale. A mirrored
+        // flag can, and one already did once here — see `renderPanel`.
+        // It is mirrored anyway because the dirty answer is a
+        // comparison against a baseline captured when the panel was
+        // built, not a property readable off a node.
+        var cohortDirty = false;
+        // Set by the deliberate navigations so the nav-away guard does
+        // not fire on the very act of leaving on purpose. Named for
+        // Instruments' `_newModelIntentionalNav`, but not the same
+        // shape: Instruments sets it on one code PATH, because its Save
+        // is an async fetch that never navigates. Ours is a form
+        // submit, so it is set on the nodes.
+        var intentionalNav = false;
+
         function placeSaveButton(nodes) {
           if (!nodes || !nodes.root) return null;
           // De-duplicate before moving. `observerAddRule` strips Save
@@ -835,6 +857,23 @@
             save.textContent = "Save";
             save.disabled = true;
             save.setAttribute("aria-disabled", "true");
+            // Wired HERE, at the creation site, rather than once per
+            // panel in `armDirtyGate`: every Save node in this page's
+            // life is built by this branch, so every Save node carries
+            // the flag, exactly once.
+            //
+            // Attaching it to the panel's first Save was a live defect.
+            // `X` on the LAST rule cell destroys the Save riding inside
+            // it, this branch builds a replacement, and the replacement
+            // had no listener — so pressing Save after an `X` raised
+            // the browser's "Leave site?", and dismissing that (the
+            // answer that reads as "stay") cancelled the submit. The
+            // operator pressed Save and nothing was written, with no
+            // error. Same control, `X` on the last cell, that broke the
+            // Save/`sync` rebind one rung earlier.
+            save.addEventListener("click", function () {
+              intentionalNav = true;
+            });
           }
           var cells = nodes.block.querySelectorAll("[data-observer-rule-cell]");
           var last = cells[cells.length - 1];
@@ -1012,17 +1051,6 @@
         // operators and a select on others; and a delegated `click`,
         // because `+`, `X` and the two cycle buttons mutate the rule
         // without firing either.
-        // The dirty flag, readable from outside the gate. The panel is
-        // rebuilt constantly, so this is a module-level fact about "is
-        // there an unsaved rule edit right now" rather than state on a
-        // node that is about to be replaced.
-        var cohortDirty = false;
-        // Set by the deliberate navigations (Save) so the nav-away
-        // guard below does not fire on the very act of saving — the
-        // same `_intentionalNav` shape Instruments uses (18R Item 2
-        // PR 2, `instruments_index.html`).
-        var intentionalNav = false;
-
         function armDirtyGate(nodes) {
           if (!nodes || !nodes.save) return;
           var baseline = ruleSignature(nodes.block);
@@ -1033,11 +1061,6 @@
             if (dirty) nodes.save.removeAttribute("aria-disabled");
             else nodes.save.setAttribute("aria-disabled", "true");
           }
-          // Saving IS the deliberate navigation, so it must not warn
-          // about the edit it is in the middle of persisting.
-          nodes.save.addEventListener("click", function () {
-            intentionalNav = true;
-          });
           nodes.block.addEventListener("input", sync);
           nodes.block.addEventListener("change", sync);
           nodes.block.addEventListener("click", function () {
@@ -1074,10 +1097,7 @@
           // selection as it stood when it was ticked); it is now a
           // consequence of the rebuild rather than a thing to remember.
           renderPanel();
-          if (selectAll) {
-            selectAll.checked = (n > 0 && n === all.length);
-            selectAll.indeterminate = (n > 0 && n < all.length);
-          }
+          syncSelectAll();
           // ── The cohort editor, now the panel's left pane ──────
           //
           // Everything below reaches into the CLONE this rebuild made.
@@ -1161,14 +1181,31 @@
           box.checked = wasChecked;
         }
 
+        // The header checkbox is tri-state: ticked when every row is,
+        // dashed when some are, clear when none are. Factored out of
+        // `refresh()` because the discard-declined path below has to
+        // restore it too, and restoring only `checked` left a plain
+        // unticked box sitting above a selection that still had rows in
+        // it — the browser clears `indeterminate` on the way into the
+        // click, and nothing put it back.
+        function syncSelectAll() {
+          if (!selectAll) return;
+          var all = boxes();
+          var n = countChecked();
+          selectAll.checked = (n > 0 && n === all.length);
+          selectAll.indeterminate = (n > 0 && n < all.length);
+        }
+
         document.addEventListener("change", function (e) {
           var t = e.target;
           if (!t) return;
           if (t === selectAll) {
             if (!okToDiscardCohortEdit()) {
               // Put select-all back where it was: the operator said no,
-              // so nothing about the selection may move.
-              selectAll.checked = !selectAll.checked;
+              // so nothing about the selection may move. Recomputed
+              // from the rows rather than inverted, which restores the
+              // dash as well as the tick — see `syncSelectAll`.
+              syncSelectAll();
               return;
             }
             var all = boxes();
@@ -1208,6 +1245,25 @@
         // is about to be thrown away.
         if (table) {
           table.addEventListener("click", function (event) {
+            // `Inactivate`, `Activate` and `Delete` post the bulk form
+            // and leave the page, taking an unsaved rule edit with
+            // them — the same loss `Edit` makes, so the same question.
+            // Before this they fell through to `beforeunload` and got
+            // the browser's "Leave site?", whose Cancel silently
+            // abandoned the bulk action the operator had just asked
+            // for. Marked with a class rather than matched on
+            // `formaction`, so a fourth panel action inherits the guard
+            // by joining the set rather than by being remembered.
+            var submit = event.target.closest
+              ? event.target.closest(".exp-submit") : null;
+            if (submit) {
+              if (!okToDiscardCohortEdit()) {
+                event.preventDefault();
+                return;
+              }
+              intentionalNav = true;
+              return;
+            }
             var edit = event.target.closest
               ? event.target.closest(".exp-edit[data-edit-id]") : null;
             if (!edit) return;
@@ -1227,9 +1283,11 @@
           });
         }
 
-        // The nav-away guard. `Search`, `Clear`, the pager, `Add new`
-        // and `Edit` all leave the page, and every one of them would
-        // otherwise take an unsaved rule edit with it silently.
+        // The nav-away guard, for the leaves-the-page paths that have
+        // no handler of their own: `Search`, `Clear`, the pager and
+        // `Add new`. The panel's own actions (`Edit` and the three
+        // `.exp-submit` buttons) ask the page's question first and then
+        // set `intentionalNav`, so they never reach this.
         //
         // `beforeunload` cannot carry custom text in any current
         // browser — the string is ignored and the browser's own wording
