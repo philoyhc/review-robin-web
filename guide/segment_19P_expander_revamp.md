@@ -567,9 +567,14 @@ The shape, as agreed:
   `spec/lifecycle.md` names. The routes move to `_require_not_archived`
   together with the template.
 
-  **The codebase already half-agrees**: `observers_cohort_rule_save` has used
-  `_require_not_archived` since it was written, with this reasoning in its
-  docstring — *"cohort rules govern which parts of response data observers see,
+  **The codebase already agreed twice.** `observers_cohort_rule_save` has used
+  `_require_not_archived` since it was written; and `observers_delete_all`
+  alone among the four roster pages has **no response-loss acknowledgement**,
+  exempted at 19I Item 3 on the measured ground that *"nothing references an
+  observer, so deleting the roster destroys no assignment and no response"* —
+  requiring one *"asked the operator to accept a loss that cannot occur"*. That
+  is this ruling's argument, already made in the narrowest place it applies.
+  The first of the two carries the reasoning in its docstring — *"cohort rules govern which parts of response data observers see,
   not the response data or roster shape"*. The ruling extends that from the
   rule to the roster, on the ground that an observer roster is a view grant
   either way.
@@ -640,13 +645,15 @@ Commands and counts, 2026-09-16, `226c600`:
    a fragment cannot resolve — a row the filter excludes, a row moved by the
    cookie sort. No layout change; this is the defect 19P.1 left behind.
 2. **The gate relaxation.** `create` / `update` / `bulk-inactivate` /
-   `bulk-reactivate` move from `_require_editable` to `_require_not_archived`,
-   and the template's `_show_actions_slot` follows, so the roster is editable on
-   `ready` and `expired`. A **behaviour** rung, landing before any layout moves
-   so that a regression here is not hidden inside a rearrangement — and so the
-   expander later inherits one gate rather than reconciling two. Delete-all is
-   excluded pending the open question. The three other roster pages are
-   untouched: this argument is about observers, not about rosters.
+   `bulk-reactivate` **and `delete-all`** move from `_require_editable` to
+   `_require_not_archived`, and the template's `_show_actions_slot` follows, so
+   the roster is editable on `ready` and `expired`. A **behaviour** rung,
+   landing before any layout moves so that a regression here is not hidden
+   inside a rearrangement — and so the expander later inherits one gate rather
+   than reconciling two. Delete-all keeps its other two gates untouched: it
+   still renders only on a non-empty roster and still 400s without the confirm.
+   The three other roster pages are untouched: this argument is about
+   observers, not about rosters.
 3. **Toolbar.** Filter strip into the table card's toolbar, split panes, button
    row narrowed to `Clear` / `Add new` / `Search`. The `Operator actions` card
    is **slimmed, not retired** — it still holds the only live row actions.
@@ -656,7 +663,10 @@ Commands and counts, 2026-09-16, `226c600`:
    columns, the Link 1 label idiom, `Save` inline and dirty-gated, per-control
    gating, mixed-selection behaviour preserved. `.card-columns` retires here.
 6. **Unlock panel.** `Upload` + `Danger Zone` into the roster card; `Lock` at
-   the stack's foot; nothing below the table.
+   the stack's foot; nothing below the table. **Both moved controls' redirects
+   gain `?unlocked=1`** — Observers' delete-all currently returns to a bare URL,
+   and 19P.1 rung 3b shipped exactly that omission and had to fix it after the
+   fact: a control inside the panel must not close the panel it was used from.
 7. **Specs and the close.**
 
 ### Definition of done
@@ -667,9 +677,11 @@ Commands and counts, 2026-09-16, `226c600`:
 - `grep -c 'data-col-toggle=' session_observers.html` → 0 and the toolbar still
   renders `is-split`, asserted — the empty left pane is intended, not a bug.
 - The expander renders **in full** on `ready` and `expired` and **not at all**
-  on `archived`, asserted across all five states — and each relaxed route
-  accepts on `ready` where it previously answered 409, asserted per route so a
-  template-only relaxation fails.
+  on `archived`, asserted across all five states — and each of the **five**
+  relaxed routes, `delete-all` included, accepts on `ready` where it previously
+  answered 409, asserted per route so a template-only relaxation fails.
+- `delete-all` on `ready` still 400s without the confirm and still renders only
+  on a non-empty roster — the relaxation moves one gate, not three.
 - `Save` renders `disabled` on arrival and after every selection change,
   asserted on a rebuilt expander, not just the first render.
 - A mixed selection renders the blank builder **and** the mixed-rule message.
@@ -688,13 +700,11 @@ Commands and counts, 2026-09-16, `226c600`:
    **Answered 2026-09-16 by the author:** it does not — observers only view, so
    the looser `not is_archived` gate applies to the whole expander and the
    routes relax to match. See Semantics.
-2. **Does the relaxation reach `Delete all observers` too?** It is roster-wide
-   and destructive, and it sits in the Unlock panel rather than the expander,
-   so the ruling above did not obviously cover it. The same argument applies —
-   it destroys view grants, not responses — but the blast radius differs from
-   inactivating a row. *Author decides before rung 2; the item ships either way,
-   and the conservative reading (delete-all stays `is_editable`) is assumed
-   until told otherwise.*
+2. ~~**Does the relaxation reach `Delete all observers` too?**~~ **Answered
+   2026-09-16 by the author: yes**, folded into rung 2. It destroys view grants
+   and nothing else, and withholding it would let an operator inactivate every
+   observer one selection at a time while the button that does exactly that
+   stayed dark — a distinction with no reason the operator could see.
 
 ### Out of scope
 
