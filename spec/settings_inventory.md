@@ -138,10 +138,16 @@ editor nor the allowlist, though their built-in defaults ("Name" /
 **Surface:**
 
 - **Edit:** Inline editor card above the data table on
-  `/operator/sessions/{id}/reviewers` (3 reviewer-tag slots),
-  `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots), and
+  `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots) and
   `/operator/sessions/{id}/relationships` (3 pair-context
-  slots). Save / Cancel pair (both Secondary, both
+  slots). On `/operator/sessions/{id}/reviewers` (3 reviewer-tag
+  slots) 19P.1 made the position **conditional rather than fixed**:
+  the same editor renders inside the roster card's **Unlock panel**
+  when that panel can render, and in its old `.card-columns` home
+  when it cannot — a locked session, or while a row is being edited.
+  One include in two positions, on exactly complementary conditions,
+  because a locked page must still let an operator *read* the labels
+  while offering no control the route would refuse. Save / Cancel pair (both Secondary, both
   disabled-until-dirty). Gated by `is_ready`: inputs render
   disabled when the session is active/closed; the page's
   existing `.card.lock` already messages "revert to draft to
@@ -370,10 +376,13 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
 | `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
 | `?rule_based_error=…` | Assignments page | Slot-scoped error feedback after a failed rule-based generate. |
-| `?edit_id=<id>` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers. |
+| `?edit_id=<id>` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers. On Reviewers the Save / Cancel pair renders in an expander bar beneath the row rather than in a card. |
 | `?add=1` | Reviewers / Reviewees / Relationships Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table. |
 | `?selected=<id>` (repeatable) | Reviewers / Reviewees / Relationships Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked. |
 | `?status=…` / `?q=…` | Reviewers / Reviewees / Relationships / Observers Setup pages | Operator-actions status filter (`all` / `active` / `inactive`) + search term, one shape on all four pages. Preserved through Edit / bulk actions via hidden `filter_status` / `filter_q` form fields. One search box per page, no side-picker — see `spec/setup_pages.md` "Search matching and suggestions". |
+| `?unlocked=1` | Reviewers Setup page | **The Unlock panel's open state, carried in the URL** (19P.1). The panel ships `hidden` and the Unlock button opens it, but this param makes the page *arrive* open, which is what stops a control inside the panel closing the panel it was used from. Set by every redirect out of the panel — the labels save, `delete-all`, and a successful import — and by the `<noscript>` link that is the no-JS way in. **Not** set on the in-place re-render a failed import answers with: that path has no redirect to hang a param on and sets the panel's open state server-side instead, which is the other half of one contract (`spec/setup_pages.md` § *Body shape*). Dropped by Search / Clear and by the pager, which is intended — those navigate the table, not the panel. Closing the panel is the Lock button's job. |
+| `?offset=<n>` | Reviewers Setup page | Pager offset, carried through a row action's redirect so a mid-table action returns to the page it was taken on rather than to page 1. Reviewers only; the other three roster pages pass no offset. |
+| `?focus=<id>` | Reviewers Setup page | The newly created row, so `Add new` puts the caret in that row's name field on arrival. |
 | `?template={invitation\|reminder\|responses_received}` | Email Template page (`/operator/sessions/{id}/setup-invite`) | Selects which of the three template tabs is active. Defaults to `invitation`. |
 | `?editing=…&saved=…` plus `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field errors and would-empty / delete-blocked confirmation flows. |
 
