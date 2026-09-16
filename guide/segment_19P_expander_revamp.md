@@ -162,623 +162,173 @@ At `46688cb`:
 
 ### Status
 
-**2026-09-15 — rung 1 shipped, was wrong, and was reverted.**
-
-`#2393` and `#2394` landed the scaffold; `#2395` reverted both. `main` is
-byte-identical to the pre-scaffold base (`3f7d5b6`), suite back to 3,955.
-Nothing else had landed between, so the revert is clean.
-
-**The Decision stands; its *surface* did not.** Variant B, the reuse of
-`.session-expander*`, the three retired cards, the `edit_mode` gate and the
-anchor rule are all unchanged. What the dev slot rejected was the shape the
-plan had sketched around them, so the shape was re-agreed by **mockup** before
-any further code. The ladder below is unchanged in sequence; rung 1's
-*content* is now the mockup, and these five points are the diff:
-
-1. **Roster index**: a row of readouts inside the card — `Reviewers roster:`
-   + count, `Populated columns:` + one pill per column — with `Unlock` bottom
-   right. Not the one-row table the ladder implied.
-2. **Unlock panel**: two columns — upload left, tag labels over Danger Zone
-   right.
-3. **Page guidance**: top of the page, full width, two-column prose when open.
-4. **`Operator actions`**: retired whole; its filter strip and `Add new` /
-   `Search` become the right pane of a toolbar **inside the preview-table
-   card**, with `Show columns:` and `Showing N of M` as the left pane.
-5. **Status-aware `Activate` / `Inactivate`**, and `Unlock` ↔ `Lock`.
-
-**Decisions confirmed at build:**
-
-- **`Populated columns` counts are not free.** The Decision called them a
-  re-house of the `col_data` the preview already computes; `views.chip_slots`
-  returns a boolean **presence** map, so `Name (154)` needs its own query.
-  `slot_row_count` / `tag_slot_counts` — counting twins of `slot_has_data` /
-  `tag_slot_presence` — are rung 1's, and presence must derive from the counts
-  rather than being a second query answering the same predicate.
-- **The two confirms must agree.** The reverted build's replace confirm read
-  *"replace the existing 0 reviewers and discard the existing 0 reviewer
-  responses"* on an empty roster and dropped the assignments clause the live
-  card names, while the Danger Zone confirm three elements away still named it.
-  One panel, two accounts of the same destruction. Both confirms name the same
-  losses and suppress a clause at zero, as the live cards already do.
-- **The guidance summary is already specced as card-header type**
-  (`spec/setup_pages.md:52-54`); rung 1 shipped it link-coloured. Conformance,
-  not a new decision.
-
-**2026-09-15 — rung 2 splits in two.** Author's call, after asking when
-the search box moves. As written, rung 2 carried three independent
-changes: the row-action wiring, the `Operator actions` retirement, and
-point 3's guidance move. They split on a clean seam — **layout above the
-table** versus **behavior in the table** — and the layout half is what
-the search box rides on. So:
-
-- **2a, the toolbar move.** Guidance to the top, full width. The filter
-  strip moves into a toolbar inside the preview-table card — right pane
-  the status / search controls and `Add new` / `Search`, left pane
-  `Show columns:` and `Showing N of M`. **The card is not retired
-  here**, only slimmed: it keeps the row-action row and the Add / Edit
-  block. No row action is wired.
-- **2b, the row actions and the retirement.** They move into the
-  expander, and the card — by then holding nothing else — is deleted.
-
-**The card cannot retire in 2a**, which the split's first draft had it
-doing. It holds the **only live** `Edit` / `Inactivate` / `Activate` /
-`Delete` controls and their `formaction`s; rung 1's expander copies are
-all `disabled` until 2b. Retiring it first would remove four working
-actions for a slice, and carrying them into the toolbar meanwhile would
-reproduce the crowded strip this segment exists to undo, then move them
-again. Slimming it costs one intermediate state and moves each control
-exactly once.
-
-Two things the ladder never named, found when the seam was cut:
-
-- **The `Operator actions` card also holds the Add / Edit block** — a
-  divider, a heading, the help line and Save / Cancel, rendered only in
-  `edit_mode` (`session_reviewers.html`, `.operator-actions-divider`).
-  It stays with the card through 2a and is rehomed when 2b deletes it:
-  its own card, still `edit_mode`-only, because folding an editing form
-  into a filter toolbar mixes two jobs in one strip. (This said *"in
-  the same position"* until step 3 shipped it **full width above the
-  preview table** instead. Reason in `### Status`, 2026-09-15 step 3 —
-  a card that appears only in `edit_mode` would make the container's
-  other column jump between half and full width on every Add.)
-- **`.card-columns` is left holding the tag-labels editor alone**, half
-  width in the left column, from 2a until the Unlock rung deletes it.
-  A known intermediate look (`spec/ui_elements.md` names the lone-card
-  case for `.bottom-grid`), and the alternative is pulling the Unlock
-  rung's deletion forward into a layout slice. In 2a it shares the
-  container with the slimmed `Operator actions` card, so the lone-card
-  state does not begin until 2b.
-
-**What 2a's cold read caught, before ready** (the pre-ready gate working,
-after `#2394`'s read landed post-merge):
-
-- **A shared primitive redefined for one page.** `.table-card-toolbar` is
-  used by **seven** templates; only Reviewers has panes. Turning the
-  shared rule into a two-column grid made the other six templates' direct
-  children grid items — Observers' toolbar holds the pager alone, which
-  would right-align inside the *left half* instead of across the card.
-  The grid now rides an `is-split` modifier. **The lesson generalizes to
-  2b:** check the user count before editing a `base.html` class.
-- **A gate that reached further than it looked.** `Add new` moved into
-  the preview-table card, which is gated on the roster having rows — so a
-  brand-new session had no way to add its first reviewer at all. Before
-  the move `Add` sat in the always-rendered `Operator actions` card. Every
-  gate on that card is now a gate on the filter and on `Add new`, which is
-  the same trap as the zero-match `Clear`, one state over.
-- **A lock that stopped reaching its target.** The filter greys out during
-  an edit (15F PR 3) via `.operator-actions-card .operator-actions-main
-  .is-locked`; the moved form is inside neither. The class shipped as
-  decoration until a rule was addressed to its new home.
-- **Two tests that could not fail** — one pinning a literal nothing emits,
-  one reading a pane that renders empty on its own fixture. Both were the
-  same root cause as `#2393`'s: asserting against a render not built to
-  produce the thing asserted. The fixture now paginates, and `_markup()`
-  strips the inline `<style>` block that satisfies any bare class-name
-  `in html`.
-- **Rejected:** the read called the `is_editable` wrapper on `Add` a new
-  behavior change. It is pre-existing — `9ba9500:340` already wrapped it,
-  and the unreachable `is_ready` branch inside it with it.
-
-**2026-09-15 — the base rule lands BEFORE rung 2b.** Author's call.
-Recorded here first as *"two for the close, not for a slice"*; promoted
-because 2b moves four more live controls out of the same card, so the
-trap would get its third chance before the close ever arrived. Ladder
-gains rung **2a′**, below.
-
-- **The filter-strip shape was declared in four scopes with no unscoped
-  base** — `.filter-card`, `.operator-actions-card`, `.toolbar-right`
-  and `.field-labels-actions` each restated the same six declarations,
-  which is why moving the strip out of one card dropped two rules in
-  two separate slices (`is-locked`, then `filter-actions`'
-  `margin-top`). **Three of the four** are now one unscoped base
-  narrowing **6 declarations between them, down from 49**.
-  `.field-labels-*` **stayed out**, deliberately: different class
-  names, a 3-up grid rather than a filter row, and only the
-  `margin-top` value in common. Folding it in would be a second
-  refactor wearing the first one's justification. It remains a private
-  copy; if a third move ever loses a rule there, this is the note that
-  predicted it.
-- **`.operator-actions-card .operator-actions-buttons` is dead** — no
-  template uses it, repo-wide. Pre-existing; still retires with the
-  card in 2b.
-
-**2a′'s cold read landed after the merge** (`#2403` merged on green
-before it returned). Nothing defective shipped — the refactor is
-behaviour-preserving, now proven over 7 pages / 44 elements rather than
-6 / 37 — but two findings were real and are follow-up rather than
-pre-merge:
-
-- **Two of the base's five rules were inert.** `body.ui-v2 select` /
-  `input[type="text"]` is (0,1,2)/(0,2,2) and outranked the unprefixed
-  `.filter-row select` (0,1,1). It sets the *same* `width` and
-  `box-sizing`, so nothing rendered differently — which is precisely
-  why neither the parity check nor a reading caught it. Latent, not
-  live: the day that global rule changes, all seven strips follow it.
-  Prefixed, and `width` / `box-sizing` added to the guard.
-- **The guard covered two of the three scopes** and could not see a
-  *fourth* scope appearing, which is the only direction the four-copy
-  shape ever grew from. Now enumerates every rule selecting the shape
-  and requires each to be the base or a known scope.
-
-**And its own cold read found the guard still weaker than claimed.**
-The enumeration was a line-anchored regex, so it saw only the last
-selector of a comma list split across lines — including, exactly, the
-rule the same slice had just added. It had no vacuity guard, so
-renaming the shape made it pass by matching nothing, and its closing
-assertion was built from the set it compared against and could not
-fail. Rewritten on a brace-to-brace parser with floors at both ends.
-The parity tool had the same shape of hole: empty snapshots printed
-"0 differences" and exited 0. Both now fail loudly, and the tool
-reports **covered** pages rather than rendered ones — `assignments`
-renders and carries no strip, so the honest figure was always 6 of 7,
-never 7.
-
-**Decided at build, 2a′:** the base is unscoped *except* its generic
-`> label` rule, which takes a `body.ui-v2` prefix to outrank the global
-`body.ui-v2 label` (0,1,2) — without it every label reverts to
-`display: block` and un-stacks from its input, which also blockifies the
-select. Measured, not reasoned: the first cut of the base shipped
-without the prefix and a before/after computed-style diff across 6 pages
-caught it. The prefix must **not** spread to the `.filter-status` /
-`.filter-search` rules, where at (0,3,2) it would outrank
-`.operator-actions-card`'s only narrowing. Both facts are now tests.
-
-Also found: the slice's own comment and commit message claimed two-column
-guidance prose that was never ported from the mockup. Implemented as a
-macro opt-in (`guidance(full_width=true)`), since the other six placements
-are half-width where two columns would be two ~30-character ribbons.
-
-**2026-09-15 — rung 2b, in two steps.** Step 1 (`#2406`) delegated the
-Delete-confirm pairing, because the expander builds its gate in JS and a
-load-bound listener could never reach it; bound in the CAPTURE phase,
-because four roster pages re-run that gate with a non-bubbling
-`dispatchEvent`. Step 2 is the wiring **and** the action row's
-retirement in one slice, not the two the earlier note suggested: keeping
-both live would have meant two `Delete` buttons needing two confirm keys,
-then churn to remove one. Each control moves exactly once.
-
-**Found when the seam was cut:** the card's selection script and the
-expander's were complementary, not duplicated — the card's ticked the
-boxes and kept select-all honest, the expander's tracked anchor order.
-Retiring the card's controls therefore meant merging them, and the
-expander script is now the single owner of selection state. Also: the
-delete gate's hidden `acknowledge_response_loss` field is required by
-the route, so it rides with the expander's confirm exactly as it did in
-the card.
-
-**A consequence worth stating for rung 3.** Markup moved into a JS
-builder is harder to assert on server-side, in two different ways: the
-two `tojson`-interpolated fragments arrive escaped (`id="x"` as
-`id=\"x\"`), while hand-written JS literals arrive verbatim — so a
-needle may need either form, and an *absence* check must strip
-`<script>` or it reads the builder's own literals as rendered markup.
-Eleven tests across six files asserted the card's shape; each was
-re-aimed rather than deleted.
-
-**The Decision's "action list" is superseded on this page, deliberately.**
-Item 1's `### Decision` calls for *"a helper taking an action list, not
-one hard-coding it"*, because Observers has a fourth action. Rung 2b
-hardcodes three emissions instead. Rung 1's list construct
-(`["Edit"].concat(statusActions(sel))`) had gone unused and was
-removed; the generalization belongs with the second page that needs it,
-where its shape will be known rather than guessed. **19P.2 owes the
-helper**, and this note is the record that it is owed rather than
-forgotten.
-
-**Net-new, not moved:** select-all gained an `indeterminate` state. The
-retired script only ever set `.checked`. Small and desirable, but the
-record should not call it a relocation.
-
-**2026-09-15 — rung 2b step 3: the editor's own card.** The Add / Edit
-block left `.card-columns` for a full-width `edit_mode`-only card
-directly above the preview table, and the `Operator actions` shell went
-with it. `.operator-actions-card` stays in `base.html` — Reviewees,
-Observers, Relationships and Assignments still use it.
-
-Full width rather than back in the container: its only other tenant is
-the tag-labels editor, and a card appearing only in `edit_mode` would
-make that column jump between half and full width on every Add. The
-container is now the lone half-width card this plan already signs off,
-until the Unlock rung deletes it.
-
-**`row_editor_anchor` does NOT collapse — measured, not assumed.** The
-build note said step 3 would retire it, on the reasoning that it existed
-only because the editor was split across two cards. The editor is still
-split: heading and Save / Cancel in this card, the row you type into in
-the table. Landing on `#reviewers-table-card` in add mode puts Save at
-**-59px**, off-screen above, exactly as before. Rehoming narrowed the
-gap to 20px; it did not close it. Both anchors stay, and rung 4 states
-the pair in `spec/ui_elements.md` §10 as already planned.
-
-**Also cleared:** two `<script></script>` pairs step 2 left behind when
-the code inside them moved, one carrying a comment that duplicated the
-expander script's own.
-
-**What step 3's cold read caught: a guard that lapsed when its subject
-was renamed.** *"Renders only in `edit_mode`"* was stated four times —
-template comment, commit message, plan, and a test comment claiming
-another assertion pinned it — and guarded nowhere. Replacing the gate
-with `{% if true %}` passed all 4,014 tests.
-
-It had been guarded by accident: the editor carried
-`.operator-actions-card`, and `test_reviewers_page_filter.py` asserts
-that class is absent on a plain load. Renaming the card moved the
-editor out from under that assertion, and moving it out of
-`.card-columns` stopped the container's own card count from seeing the
-leak — the two halves of this slice each removed one incidental guard.
-**The generalization for rungs 3 and 4:** when a slice renames or
-rehomes an element, the assertions that watched it by its old class or
-its old parent stop watching, silently and without failing. The guard
-is now explicit and named at both ends.
-
-**2026-09-15 — rung 3, sliced into three. Cut on the response shape of
-each card's own route, measured before cutting.**
-
-| slice | card | its route answers | why here |
-|---|---|---|---|
-| **3a** | Reviewer tag labels | `303` | lowest risk; settles the shared-partial question, and ~~takes `.card-columns` with it~~ — it does not: the container is the editor's locked-state home ~~until 3c~~ **indefinitely** (3a's own entry falsified this; 3c confirmed it and did not remove the container) |
-| **3b** | Danger Zone | `303` | destructive but redirect-only; settles a gate divergence — **shipped 2026-09-15** |
-| **3c** | Upload Reviewers | **re-renders in place** | carries the panel's only new behavior; goes last — **shipped 2026-09-15** |
-
-**What the cut is made on.** `delete-all` and `field-labels` both 303 back
-to the page (`_setup_reviewers.py:551`, `:590`). The import does not: on a
-parse, confirm or ack failure `_handle_import` **re-renders the Setup page**
-with `issues` (`_shared.py:658`, `:703`), and `validation_results.html` —
-which Reviewers includes *inside* `#upload-csv` — renders them there. Move
-that card into a panel that ships `hidden` and a failed import shows the
-operator a collapsed panel and no errors at all.
-
-**The suite cannot see it.** No JS runtime, so `hidden` is an inert
-attribute: the issues are in the markup and every assertion on them still
-passes. This is the `.is-locked` / `.filter-actions` shape a third time —
-both found on the dev slot, not by the suite. So 3c owes a server-rendered
-**start-open** state, and Chromium is what proves it.
-
-**Why each slice wires AND deletes its own card.** 2b step 1 established
-that `sync` resolves a confirm's button with a first-match
-`querySelector`, so keys are unique page-wide. Wiring before deleting puts
-two `replace-roster` / `delete-all` keys on one page and resolves the
-wrong button. Each control moves exactly once, as at 2b.
-
-**Decided while measuring, so the slices do not re-litigate it:**
-
-- **The labels editor is a shared partial** (`_field_labels_editor.html`,
-  three templates) and the panel currently hand-duplicates its markup. 3a
-  picks one — parameterize the partial or keep the panel's copy and drop
-  the include — but not both: two copies of one editor is the drift the
-  scaffold's own Unlock-button comment refuses for the button.
-- **A gate divergence 3b settles:** the live Danger Zone is
-  `{% if total_row_count and total_row_count > 0 %}` (`:1027`); the panel's
-  scaffold copy renders unconditionally.
-- **No deep links to lose.** `#upload-csv` appears in the other three
-  roster templates and nowhere else — no cross-page fragment targets it.
-- **Three sibling forms in the panel are legal**: the panel is inside no
-  `<form>`, which matters because the import's is `multipart/form-data`
-  and cannot share one with the other two.
-- **The lock interaction is already handled**, not new work:
-  `test_field_labels_editor_routes` asserts a locked page carries no
-  "Save labels" anywhere, which is why the whole panel is suppressed —
-  not disabled — when the session is not editable.
-
-**Intermediate look, accepted:** between 3a and 3c the bottom grid holds
-fewer cards while the panel fills up. Same class as the lone half-width
-`.card-columns` this plan already signs off.
-
-**2026-09-15 — 3a shipped, and acquired a second render the slicing did
-not name.** The Unlock panel is suppressed — not disabled — when the
-session is not editable, because a locked page must carry no
-"Save labels" anywhere; it also stands down in `edit_mode`. But a locked
-page must still *show* the labels
-(`..._renders_editor_disabled_in_every_locked_state`: "the page must not
-offer a control its route will refuse" is about the control, not the
-information), and the roster readouts do not cover it — they pill only
-the columns that HOLD data, so a friendly label on an empty tag column
-would appear nowhere.
-
-**Author's call:** one include, two positions — the panel when it can
-render, `.card-columns` on the exact complement. Not a copy: both read a
-single `{% set unlock_available %}`, and the partial already disables its
-own inputs and drops its buttons when the session is not editable, which
-is what lets one include serve both. Rejected: a read-only labels display
-in the roster card (net-new UI, wants the dev slot first), and dropping
-the locked view (would have meant rewriting a test that encodes a
-deliberate rule).
-
-**So `.card-columns` survives 3a after all** — it is the fallback home
-until 3c. The slicing said it would go here; it goes when the last card
-moves.
-
-**The partial replaced the scaffold's hand-copy, not the reverse.**
-`_field_labels_editor.html` serves three roster templates and already
-took every parameter needed. Its `.field-labels-actions` and the
-scaffold's `.unlock-col-actions` are computed-identical in Chromium
-(`flex` / `flex-end` / 8px / 12px, same 536×37 box), so no rule followed
-the markup. The partial also brought the dirty-check the copy lacked.
-
-**Mutation-tested, the invariant being "exactly once":** both homes
-rendering → 4 fail; the FALLBACK home never rendering → 9, including the
-locked-state rule; and the gate re-spelled as `not is_editable` — the
-drift `unlock_available` exists to prevent, which loses the editor
-mid-edit → 2. (3a's commit called the second of those "neither", which is
-a different mutation with a different count. Removing both includes gives
-13.)
-
-**What 3a's cold read caught, and it was the same mistake twice over.**
-The anti-drift argument above was applied to the gate and NOT to the six
-parameters the partial takes, which 3a spelled out once per home — and
-which had already drifted: the panel built the action from
-`reviewers_base_url`, the fallback hand-built it from `session.id`.
-Pointing the fallback at `/reviewees/field-labels` passed the entire
-suite. That copy renders with `is_editable` true during an edit, so its
-Save was live: the page would have written reviewer labels onto the
-reviewee set and 303'd. The parameters are one hoisted block now, and
-the action and all three slots are asserted in all ten states.
-
-**And "exactly once" was counted in five of ten.** The parametrization
-covered the lifecycle at rest only, dropping `edit_mode` — the axis that
-decides which home renders on an editable session, and half of
-`unlock_available`. Both axes now.
-
-**Also 3a's, also ungated:** the roster card's note ("the tag labels live
-behind Unlock... those two are still live in the cards below") replaced a
-future-tense scaffold string with a present-tense claim and kept its lack
-of a gate, so it was false in three lifecycle states and in edit mode —
-no Unlock control on the page, no cards below. Gated on
-`unlock_available`, as is the bottom grid it refers to, so the note and
-the thing it describes cannot part company.
-
-**Left for rung 4, not 3a's to take:** the partial renders `<div class=
-"card">` with a bare `<h2>` while the panel's other two tenants are
-`<section aria-labelledby>`, so one of three regions is unlabelled —
-closing that means editing a partial three templates share.
-`app/web/templates/guide.html:174-177` tells operators they edit friendly
-tag labels "through the Reviewers, Reviewees and Relationships pages",
-which on Reviewers now means clicking Unlock first, and says nothing
-about it.
-
-**2026-09-15 — a UI pass between 3a and 3b.** Author's list off the dev
-slot, landed together so the whole set can be looked at at once.
-
-Three were small: a labels save no longer closes the Unlock panel (the
-panel's open state is server-rendered now — the same flag 3c owes for
-import errors, so 3c inherits it); `Add new` puts the caret in the new
-row's Name box; and the edit row's Cancel / Save moved into a bracketed
-expander bar beneath it, on the analogy of a selected row, reusing the
-selection panel's classes unchanged.
-
-**The fourth was a defect the segment had been walking past.** A row
-action 303s with no fragment, so it lands at the top of the document —
-**measured at 821px of jump** from a mid-table action. Anchoring the
-table card (the fix 19J.8 used for the pager) only helps when the row is
-near the card's top, which is the Add case and not the common one, so
-the redirect names the acted-on row instead and `scroll-margin-top`
-leaves it 88px down with its neighbour visible.
-
-**Found while building it, and worse than the jump:** `offset` was
-carried by **none** of the 17 `_redirect_keeping_selection` call sites —
-only `status` and `q`. A row action taken on page 2 answered with page
-1, so the operator lost their place entirely and the acted-on row was
-not in the response for any anchor to find. Fixed in the same slice
-because the anchor is dead past page 1 without it.
-
-**Three cases the fragment cannot resolve**, all caught by a fallback
-script rather than by the route: a delete (the rows are gone — the route
-sends the table card by construction, since `bulk-delete` passes `[]`);
-a status change that drops the row out of a filtered view; and — found
-by the cold read — the **cookie sort**, because `bulk-inactivate` and
-`bulk-reactivate` mutate `status` *and* `updated_at`, so under a sort on
-either the acted-on row moves to a different page while `offset` holds
-the operator where they were. Deciding
-the second server-side means re-running the filter to ask whether a row
-survives it, which is a multi-row computation and `spec/architecture.md`
-puts that outside a route handler.
-
-**Scope:** Reviewers only. The helper's new parameters default to
-today's behavior, so Reviewees, Observers and Relationships are
-untouched and unbroken — but they have the same defect, and 19P.2 should
-carry the fix to Observers when it gets there.
-
-**Not fixed, and worth saying:** this removes the *jump*, not the
-*reload*. The page still round-trips, so there is still a flash, and the
-landing is the row rather than the exact scroll offset the operator had.
-Only intercepting the submit removes either, which is its own item.
-
-**2026-09-15 — 3b shipped.** The Danger Zone moved into the Unlock
-panel and the live card below the table went in the same slice, for the
-reason the slicing gave: `sync` resolves a confirm's button with a
-first-match `querySelector`, so two `delete-all` keys on one page gate
-the wrong button.
-
-**The gate divergence, settled the live card's way.** The scaffold copy
-rendered unconditionally; the live card was `{% if total_row_count > 0 %}`.
-
-**Corrected by the cold read: the route does NOT refuse an empty
-delete-all.** POSTed on a roster of zero it answers 303 and writes an
-audit row reading "Deleted all 0 reviewers". The gate is still right,
-and for a worse reason than the one first recorded: `_delete_all` opens
-with `lifecycle.invalidate_if_validated(...)` before it counts anything,
-so an ungated Delete-all knocks a `validated` session back to `draft`
-while deleting nothing. The wrong reason had shipped in the template
-comment and in this entry — a `guide/` record is what the next reader
-trusts, so the correction matters more than the original claim did.
-
-**Kept the scaffold's markup, not the live card's**, where they differed:
-`.confirm-label` carries the `font-weight: normal` the live card set
-inline, plus the checkbox alignment, and `CLAUDE.md` asks for a class
-over an inline style.
-
-**What else the read caught, all of it mine.** Two of the four guards
-this slice added did not guard: `"disabled" in card` is satisfied by
-`aria-disabled="true"`, and the acknowledgement test ran against a
-fixture with no responses, so it asserted `False == False`. The first is
-the **fourth** instance of this segment's own trap — a needle matching
-something the page renders anyway — and it was committed inside the test
-whose docstring is about scoping assertions so page-wide substrings
-cannot satisfy them. The correct matcher was twenty lines up in the same
-file. The acknowledgement contract turned out to be covered properly and
-better by `test_setup_danger_zone_delete_all.py`, which builds real
-responses and is parametrized across all four pages, so the weak copy is
-retired rather than repaired.
-
-**And the class the move dropped silently:** `card danger-zone` is the
-only reach for `base.html`'s amber warning framing, which
-`spec/ui_elements.md` says exists so the category is recognisable. The
-first draft rewrote the element instead of moving it and recorded no
-decision either way; the class is back, and whether amber reads well
-inside the panel's own frame is a dev-slot question rather than a silent
-one.
-
-**Also corrected:** the commit claimed six tests pinned the old card and
-"five re-aimed, one renamed" — it was five tests, four re-aimed plus one
-renamed; two hunks in one test were counted twice. And "the destructive
-button shipped enabled -> 3 fails" was 1, from a pre-existing repo-wide
-source check, not from anything this slice added.
-
-**`?unlocked=1` on delete-all.** The plan's cut table justified 3b as
-"redirect-only" because this route answers 303 like 3a's. It matched the
-status code, not the contract: moving a control into the panel means its
-redirect has to keep the panel open, which 3a's labels save needed and
-3b shipped without. Fixed, and the lesson for 3c is that "redirect-only"
-was the wrong axis — what matters is whether the control ends up inside
-the panel, which is true of all three.
-
-**Found while guarding it:** the roster card's note promised delete-all
-behind Unlock on a roster where the Danger Zone does not render. The
-clause is conditional now — the same ungated-copy mistake the UI pass
-made, one slice later, which is a sign the note wants retiring rather
-than more conditions when 3c empties the bottom grid.
-
-**2026-09-15 — 3c shipped, and rung 3 is done.** The import card moved
-into the Unlock panel; the bottom grid went with it, since it held
-nothing else.
-
-**The panel's start-open contract, which is why this slice went last.**
-The import does not redirect on a bad CSV — it re-renders with a 400 and
-the issue list, and that list renders *inside* the card the panel now
-absorbs. `?unlocked=1` cannot reach an in-place re-render, so
-`_handle_import` sets `panel_open` directly. **Measured both ways in
-Chromium, because the suite structurally cannot see it:** with the flag
-off, a failed import renders the error text into the DOM (`count: 1`)
-with `visible: False` and a null bounding box — the operator gets a
-collapsed panel and no errors, while every pytest assertion on that text
-passes. With it on, the error is on screen at y=636. The flag is
-`kind == "reviewers"`: Reviewees has no panel, and its bare redirect is
-now pinned so an unconditional flag fails.
-
-**The success redirect carries `?unlocked=1#roster-card` too.** The
-author's rule from the UI pass — a Save does not close the Reviewers
-card, the Lock button does — generalises to all three controls, and 3b
-shipped without it once already.
-
-**`.card-columns` does NOT go here, and the cut table's claim that it
-would was falsified by 3a without being corrected.** It was written off
-as one of the three absorbed containers; after 3a it holds exactly one
-thing, the labels editor's locked-state fallback home, which the panel
-cannot host. Removing it now would not retire a container — it would
-widen the locked-state editor from half the page to full, a pixel change
-to a state this slice has no business touching. The plan's line is
-annotated rather than followed; the container goes if the fallback home
-does.
-
-**The note is retired, not conditioned a third time.** It promised cards
-below the table that no longer exist, and a sentence that acquired a new
-gate at every rung of 3 was describing a layout still in motion. Its
-`base.html` rule went with it (no users left), so the two generated
-`tools/` twins were regenerated.
-
-**A defect this slice introduced, found only in Chromium.** Below the
-table the replace confirm was `<label style="font-weight: normal;">` and
-its sentence flowed inline. Moving it onto `.confirm-label` — a class
-over an inline style, as `CLAUDE.md` asks — brought `display: flex` with
-it, and a bare text node in a flex container is its own flex item: the
-closing "." detached from the pill by 12px. Wrapping the sentence in one
-`<span>` takes it to 4px, which is the pill primitive's own margin and
-is what every pill-in-a-sentence in the app shows. The Danger Zone's
-confirm had the same defect from 3b and is fixed with it; the row
-expander's confirm has no pills and is unaffected. **The screenshot is
-what caught this** — nothing in the markup looks wrong.
-
-**A mutation count I reported wrong, and why.** The commit and PR say "a
-bottom grid re-added below the table -> 2 fails". It is **1**
-(`..._nothing_is_left_below_the_table`). The second failure was an
-artefact of a broken mutation: the script used `str.replace` with no
-count on `{% endblock %}`, and this template has three, so it also
-injected the div into `{% block title %}` and `{% block body_class %}`
-— corrupting `ui-v2` and failing an unrelated test. A mutation that
-edits more than the rule under test inflates the count it is supposed
-to measure, which makes it worse than a guess: it reads as evidence.
-Re-run against the body block alone: 1.
-
-**Two things left undecided, recorded so rung 4 inherits them rather
-than rediscovers them:**
-
-- ~~**No-JS reachability, which rung 3 changed without discussing.**~~
-  **FIXED at 3c, not deferred** — raised by this slice's cold read and,
-  an hour later, independently by Codex as a P2, which is enough
-  agreement to treat it as this PR's work rather than rung 4's.
-
-  Rung 3 put Upload, delete-all and the labels editor inside
-  `#roster-unlock-panel`, which ships `hidden` and is opened only by an
-  inline handler on a `<button type="button">`, so with JS off the page
-  lost all three at once. The fix is a `<noscript>` link to
-  `?unlocked=1` — a state the server already renders, because it is what
-  the three controls redirect with — plus its twin back to the locked
-  state, so a no-JS operator is not stranded open against an inert Lock.
-
-  **Scope, measured rather than assumed, and narrower than the report.**
-  Codex said this "removes the no-JS path for a core setup operation".
-  True of the create path and of visibility; not true of replace. The
-  Upload and Delete-all buttons ship `disabled` and are enabled by
-  `base.html`'s confirm-pairing script, which this segment never touched
-  and which is byte-identical at `3f7d5b6`, the commit before the revamp
-  began — so with JS off and a roster that already has rows, Upload was
-  ALREADY unreachable, and still is. What came back is the empty-roster
-  import (button ships enabled) and the ability to read all three cards.
-
-  **Verified end to end in Chromium with `java_script_enabled=False`:**
-  panel hidden at rest, one `<noscript>` link, click it, panel and form
-  visible, button enabled, CSV submitted, one roster row landed.
-
-  **Found while doing it, and worth its own line:** the session-create
-  page's own submit button is JS-gated the same way, so with JS off you
-  cannot create a session at all. No-JS operation is not an established
-  property of this app, which is context for how far rung 4 should take
-  this — the fix here restores parity with what Reviewers did before,
-  and claims nothing more.
-- **The panel's redirect contract now has three spellings.**
-  `?unlocked=1#roster-card` is built inline in `_setup_reviewers.py`
-  twice and in `_shared.py` once behind `kind == "reviewers"`. Not a
-  layering violation — routes own their redirect URLs — but the doc
-  bullet above says to state it as one rule about the panel, and the
-  code went the other way in the same commit. A shared constant when
-  rung 4 writes the contract.
-
-**Open for the dev slot, unchanged from 3b:** both panel buttons are
-right-aligned via `.unlock-col-actions` (Upload moved left -> right, its
-top margin 20px -> 12px). `.btn-pair` and `.unlock-col-actions` do *not*
-compute alike, unlike 3a's swap — 16px/flex-start against 8px/flex-end —
-so this was a choice: one alignment for the panel rather than two, and
-`.btn-pair` names a pair where there is one button.
+*Compacted at close, 2026-09-16. The running log this section carried
+while the item was open is in the commits and the PR bodies; what
+follows is intended-versus-done. Nothing above this section was
+touched — Opportunity, Decision, Semantics, Judgment calls, Blast
+radius and the PR ladder stand as written.*
+
+**Shipped 2026-09-15/16 across 21 PRs, `#2393`–`#2414`.** The Reviewers
+Setup page now renders: full-width guidance, a roster card whose
+**Unlock panel** holds the tag-label editor, the Danger Zone and the
+CSV upload card, and a preview table carrying the filter strip in its
+own toolbar and the selection actions in an injected row expander.
+Nothing renders below the table. `spec/setup_pages.md` § *Reviewers
+page* is authoritative for the result; this section records how the
+ladder got there and what it cost.
+
+#### What the ladder became
+
+| Planned | Shipped |
+|---|---|
+| rung 1 — scaffold | `#2393`/`#2394`, **reverted** by `#2395`, re-planned from a mockup, re-landed `#2397` |
+| rung 2 — wire + retire | split **2a** (toolbar move), **2a′** (filter-strip base rule), **2b** (row actions + retirement, in three steps) |
+| — | a **UI pass** between 3a and 3b, off the dev slot |
+| rung 3 — Unlock | sliced **3a** labels, **3b** Danger Zone, **3c** upload |
+| rung 4 — specs + close | three slices in one PR (`#2414`) |
+
+**Rung 1 was reverted, and the Decision survived it.** `main` went back
+byte-identical to `3f7d5b6`. Variant B, the `.session-expander*` reuse,
+the three retired cards, the `edit_mode` gate and the anchor rule were
+all unchanged — what the dev slot rejected was the *surface* the plan
+had sketched around them. It was re-agreed by **mockup** before any
+further code, and the mockup is the diff: a roster **index row** of
+readouts rather than a one-row table; a two-column panel; guidance at
+the top, full width; `Operator actions` retired whole rather than
+slimmed; and status-aware `Activate` / `Inactivate`.
+
+**Rung 2 split because the author asked when the search box moves.** As
+written it carried three independent changes. The seam is *layout above
+the table* versus *behaviour in the table*, and the layout half is what
+the search box rides on. **The card could not retire in 2a** — it held
+the only live `Edit` / `Inactivate` / `Activate` / `Delete` and their
+`formaction`s, with rung 1's expander copies all `disabled` until 2b —
+so 2a slimmed it and 2b deleted it, which moves each control exactly
+once at the cost of one intermediate state.
+
+**2a′ was promoted out of the close.** The filter-strip shape was
+declared in four scopes with no unscoped base, which is why moving the
+strip dropped a rule in two separate slices. Three of the four are now
+one base narrowing **6 declarations, down from 49**;
+`.field-labels-*` stayed out deliberately (different class names, a
+3-up grid, only `margin-top` in common — folding it in would be a
+second refactor wearing the first one's justification).
+
+**Rung 3 was sliced on each card's route shape, measured before
+cutting.** `delete-all` and `field-labels` both 303; the import
+**re-renders in place** on a failure, with its issue list inside the
+card the panel absorbs — so the import went last and carries the
+panel's start-open work. Each slice **wires and deletes its own card in
+one commit**, because `sync` resolves a confirm's button by first-match
+`querySelector`: two live keys on one page gate the wrong button.
+
+#### Decisions confirmed at build
+
+- **`Populated columns` counts are not free.** The Decision called them
+  a re-house of `col_data`; `views.chip_slots` returns a *presence*
+  map, so the counts needed their own query (`slot_row_count`), and
+  presence now derives from the counts rather than asking the same
+  predicate twice.
+- **One panel must not give two accounts of one destruction.** Both
+  confirms name the same losses and suppress a clause at zero.
+- **The labels editor is one include in two positions**, not a copy:
+  the panel where it can render, `.card-columns` on the exact
+  complement. The panel is *suppressed* rather than disabled on a
+  locked session, because a locked page must carry no `Save labels`
+  anywhere — but it must still let an operator **read** the labels, and
+  the roster readouts do not cover that (they pill only columns that
+  hold data). Rejected: a read-only display in the roster card
+  (net-new UI, wants the slot), and dropping the locked view (would
+  have meant rewriting a test that encodes a deliberate rule).
+- **`.card-columns` survives**, contrary to the rung-3 cut table, which
+  3a falsified without saying so and 3c confirmed. It is that fallback
+  home's container; removing it would widen the locked-state editor
+  from half the page to full.
+- **The partial replaced the scaffold's hand-copy, not the reverse** —
+  it already took every parameter and brought a dirty-check the copy
+  lacked. Measured in Chromium: `.field-labels-actions` and
+  `.unlock-col-actions` compute identically, so no rule followed the
+  markup.
+- **The Danger Zone's roster-count gate stays**, and for a worse reason
+  than first recorded: the route does *not* refuse an empty delete-all
+  (it answers 303 and writes "Deleted all 0 reviewers"), but
+  `_delete_all` invalidates a `validated` session before counting, so
+  an ungated one demotes to `draft` while deleting nothing.
+- **Both panel buttons right-align.** Unlike 3a's swap, `.btn-pair` and
+  `.unlock-col-actions` do *not* compute alike (16px/flex-start vs
+  8px/flex-end), so this was a choice: one alignment for the panel.
+
+#### Scope that moved
+
+- **A row action landed at the top of the document** — measured at
+  **821px** of jump. Fixed in the UI pass by naming the acted-on row.
+  Found while building it and worse: `offset` was carried by **none**
+  of the 17 `_redirect_keeping_selection` call sites, so an action on
+  page 2 answered with page 1 and no anchor could resolve. Reviewers
+  only; the helper's new parameters default to today's behaviour, so
+  the other three pages are untouched — **and still carry the defect.**
+- **No-JS reachability**, raised by 19P.1's own cold read and
+  independently by Codex as a P2. Rung 3 put all three cards behind a
+  panel opened only by an inline handler. Fixed with a `<noscript>`
+  link to `?unlocked=1`, restoring the empty-roster import and the
+  ability to read the cards — *not* the replace path, which the
+  confirm-pairing script has gated since before this segment.
+- **A `.confirm-label` defect 3c introduced**, found only in a
+  screenshot: moving a label onto the class brought `display: flex`
+  with it, detaching the closing "." from its pill by 12px (4px after
+  wrapping the sentence, which is the pill's own margin).
+
+#### What this item kept getting wrong, for 19P.2–.4 to read
+
+Three failure modes recurred often enough to be the item's real
+lesson, and every one of them will be available again on the next page.
+
+1. **A needle that matches something the page renders anyway.** Six
+   times. `base.html` inlines the whole app's CSS and JS on every
+   response, so `scrollIntoView`, `danger-zone`, `bottom-grid` and the
+   page's own prose all match page-wide — one assertion passed against
+   a CSS *comment*, and `assert "disabled" in card` is satisfied by
+   `aria-disabled="true"`. One was created while fixing another; one
+   was committed inside the test whose docstring is about the trap. The
+   sixth aimed it at the **test suite** instead of the page: a
+   uniqueness claim from grepping for a literal string that a sibling
+   test reached through a helper. **Measure the needle against a real
+   response before writing the assertion.**
+2. **A page's spec falsified by a change to a page it merely cites.**
+   Eight sentences defined one roster page as "the same shape as"
+   another; a grep for the changed page finds none of them.
+3. **A confident sentence that is simply false.** The route that "would
+   refuse" an empty delete-all; "the only assertion in the suite"; "the
+   macro takes no arguments"; "closing the panel is the Lock control's
+   job and nothing else's". Two shipped in three places each and
+   outlived their own correction. The spec cold read found **fifteen**,
+   of which ten were plain errors about one page rather than artifacts
+   of specifying it mid-migration.
+
+Also worth carrying: **a mutation that edits more than the rule under
+test inflates the number it exists to measure.** A `str.replace` with
+no count hit three `{% endblock %}`s and reported 2 failures where the
+honest answer was 1.
+
+#### Left for later, deliberately
+
+- **19P.2 (Observers)** owes: the `offset`/anchor fix, and the same
+  `_field_labels_editor` absence its Decision already names.
+- **19P.4's close** owes the consolidating sweep that un-hedges the
+  per-page spec wording — see the note above Item 2.
+- **The partial's markup**: `_field_labels_editor.html` renders `<div
+  class="card">` with a bare `<h2>` while the panel's other two tenants
+  are `<section aria-labelledby>`, so one of three regions is
+  unlabelled. Closing it means editing a partial three templates share.
+- **`guide.html:174-177`** tells operators they edit tag labels
+  "through the Reviewers, Reviewees and Relationships pages", which on
+  Reviewers now means clicking Unlock first, and says nothing about it.
+- **`.confirm-label` should stop using `gap` for what is really the
+  checkbox's margin**, which would make the sentence wrappers
+  unnecessary. It changes a primitive four pages render, so it was
+  recorded rather than done.
+- **The dev slot's open question**: whether the Danger Zone's amber
+  framing reads well inside the panel's own frame.
 
 ### PR ladder
 
@@ -898,6 +448,43 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 - `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page. **Amended 2026-09-15 by 3a:** on Reviewers it is now TWO positions, not one — inside the Unlock panel where the panel can render, in its old home where it cannot (locked, or mid-edit) — so the line states the condition, not just a place (Item 1).
 
 - `spec/csv_contracts.md` — its one editor mention (`:77`) is non-positional, and the friendly-label **header grammar** it owns is untouched by where the control renders (Item 1). <!-- doc-impact-waived: deliberate exclusion — the mention is non-positional and the header grammar is untouched by where the control renders -->
+
+---
+
+> **Segment-level commitment, made at 19P.1's close (2026-09-16).
+> Author's call.** 19P.1 specified Reviewers while the other three
+> roster pages still carry the old shape, so nine spec files now state
+> the layout **per page** — "Reviewees / Relationships do X, Reviewers
+> does Y, until 19P.2–.4". That hedging is *accurate*: the four pages
+> genuinely differ today. It is also temporary scaffolding, and it
+> cost something measurable — five of the fifteen findings in 19P.1's
+> spec cold read were over-claimed or mis-stated divergence, the kind
+> of error a mid-migration sentence invites.
+>
+> **So: each item states its own page, and 19P.4's close does ONE
+> consolidating sweep** that removes every "until 19P.2–.4" and
+> restores a single shared shape. The alternative — holding the spec
+> until all four pages moved — was considered and declined: it would
+> leave a substantially rebuilt page undocumented for three more
+> items, and it would not have prevented the other ten findings, which
+> were plain errors about one page rather than artifacts of the split.
+>
+> The sweep's scope is the nine files in Item 1's `### Doc impact`,
+> plus `docs/status.md`. **Finding them: `grep -rn "19P\." spec/ docs/`
+> — 58 lines at 19P.1's close.** They are two different kinds and the
+> sweep must not treat them alike:
+>
+> - **10 name `19P.2` / `.3` / `.4`.** These are the temporary ones —
+>   a sentence that says "until 19P.2–.4" is definitionally spent once
+>   that item lands, and the sweep deletes the hedge.
+> - **48 say only "since 19P.1".** These are dated history, and most
+>   are *correct to keep* — "the `Add` label was shortened until 19P.1
+>   dissolved the constraint" stays true forever. The sweep reads each
+>   one and keeps it unless it is hedging rather than dating.
+>
+> Counted, because the first version of this note asserted that every
+> hedge named the item that would remove it. It does not — 48 of 58
+> do not — and a sweep run on that assumption would have missed them.
 
 ---
 
