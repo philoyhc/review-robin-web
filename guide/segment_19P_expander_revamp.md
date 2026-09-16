@@ -1141,6 +1141,33 @@ still listing four tenants where one remains, and `session_reviewers.html`
 claiming an `is_ready` gate three lines above the note saying it was
 removed.
 
+**Rung 4 — landed.** The roster card and the Unlock panel on both pages,
+in Reviewers' arrangement. `.card-columns` survives only as the labels
+editor's fallback home, so no roster page renders it on a draft, and the
+guidance card takes the width it vacated. `_handle_import`'s two
+`kind == "reviewers"` literals COLLAPSED rather than gaining a branch —
+it serves exactly the two kinds, and both have panels now.
+Relationships' bespoke handler needed `panel_open=True` on both of its
+in-place 400 paths, where the shared one has a single site.
+
+**Fifteen of twenty-four mutations survived, and the honest reading is
+that the rung shipped with no guard file of its own.** It leaned on two
+pre-existing tests that happened to fail. Almost every survivor was plain
+rendered markup a server-side test can read — the panel shipping open,
+`?unlocked=1` ignored, a labels save closing the panel, both 400 paths
+shipping closed, the delete-all gate removed, the readouts deleted, the
+Lock control orphaned, the retired inline styles restored. They survived
+because nothing looked. `tests/integration/test_roster_unlock_panel.py`
+(33 tests, both pages) now covers each; every one re-mutated and caught.
+
+**`none yet` cannot render, on any roster page.** Found by writing a test
+that asserted it and failing: the chip row's `{% else %}` fires only when
+`col_readouts` is empty, and all four `*_column_state` helpers emit their
+identity entries unconditionally. `.roster-readout-empty` is dead markup
+in four templates. **Not** removed here — deleting it on the two pages
+this rung touches would leave exactly the drift the item exists to
+remove. **Rung 5's sweep.**
+
 **Owed, not fixed here — rung 3's additions.** Two comment-placement
 bugs in `session_reviewers.html`: the `statusActions` header comment sits
 above `var BULK_BASE` (`:1149`) and the sort-handler comment above the
