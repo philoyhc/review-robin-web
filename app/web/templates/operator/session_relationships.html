@@ -270,6 +270,13 @@
           action="{{ edit_action }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      {# 19P.3 rung 1 — the pager offset, carried through the POST
+         so a row action taken on page 2 answers with page 2. Named
+         `filter_*` to match its neighbours: same job, carrying the
+         view the operator was looking at. Without it the redirect
+         lands on page 1 and the acted-on row is not in the
+         response for the fragment to find. #}
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
     {# Name-or-email-searchable pickers for the edit row. A
        `<datalist>` scales past a native `<select>` for 1,000+
@@ -290,6 +297,13 @@
           action="{{ relationships_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      {# 19P.3 rung 1 — the pager offset, carried through the POST
+         so a row action taken on page 2 answers with page 2. Named
+         `filter_*` to match its neighbours: same job, carrying the
+         view the operator was looking at. Without it the redirect
+         lands on page 1 and the acted-on row is not in the
+         response for the fragment to find. #}
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
 
@@ -474,7 +488,12 @@
               </td>
             </tr>
           {% else %}
-            <tr id="relationship-row-{{ row.id }}">
+            {# `row-action-target` is the landing offset — `base.html`
+               gives it `scroll-margin-top: 88px` so the acted-on row
+               arrives second from the top with a neighbour above it
+               for context, rather than flush against the viewport
+               edge. 19P.3 rung 1, on the Reviewers analogy. #}
+            <tr id="relationship-row-{{ row.id }}" class="row-action-target">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="relationship-select"
@@ -516,6 +535,41 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
+
+  {# 19P.3 rung 1 — the fallback for a fragment that cannot resolve. #}
+  {% if not edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        // A fragment naming a row the response did not render is
+        // silently ignored by the browser, which puts the operator back
+        // at the top of the document — the exact thing the anchor
+        // exists to prevent.
+        //
+        // **Two cases reach this, and this page has both**, unlike
+        // Observers, which is not sortable and has only the first:
+        //   - a row the active filter excludes (`Inactivate` while the
+        //     filter reads `active`);
+        //   - a row the operator's cookie-held sort moved to another
+        //     page — the bulk status routes write `updated_at` as well
+        //     as `status`, so a sort on either reorders the row out
+        //     from under a held `offset`. This table ships
+        //     `rrw-sortable` headers, so that is reachable here.
+        //
+        // Neither is knowable in the route without re-running the
+        // filter and the sort, which is a multi-row computation and
+        // does not belong in a route handler — so it is caught here.
+        //
+        // A delete does not reach it: the route sends the table card
+        // itself, so this returns on its first line.
+        var hash = window.location.hash;
+        if (!hash || hash.indexOf("#relationship-row-") !== 0) return;
+        if (document.getElementById(hash.slice(1))) return;
+        var card = document.getElementById({{ pager_anchor | tojson }});
+        if (card && card.scrollIntoView) card.scrollIntoView();
+      })();
+    </script>
+  {% endif %}
     </div>
   {% elif total_row_count > 0 %}
     {# Filter matched nothing — preserve the total-row context. #}

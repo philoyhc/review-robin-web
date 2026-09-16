@@ -968,13 +968,60 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
   `field-labels`; `grep -c "_redirect_keeping_selection"` → **5** each.
 - Specs naming either Setup page: **`spec/setup_pages.md`**,
   `spec/operator_button_audit.md`, `spec/operator_ui_concept.md`,
-  `spec/settings_inventory.md`, `spec/participant_model.md` (Reviewees
-  only), `docs/status.md`.
+  `spec/settings_inventory.md`, `spec/participant_model.md` (which names
+  the **Relationships** tab and its routes too, at `:41`, not Reviewees
+  alone), `docs/status.md` — plus **`spec/ui_elements.md`** and
+  **`spec/rrw_functional_spec.md`**, which Doc impact names and this list
+  first omitted. The latter is not optional: `rrw_functional_spec.md:1128`
+  carries a `19P.3–.4` hedge, so it is inside the sweep's target set.
+  **Eight documents, not six.**
 - Tests hitting either Setup route: **67** files for Reviewees, **16** for
   Relationships (`grep -rln "sessions/{[^}]*}/<page>\|/<page>/import\|..."`).
   The Reviewees figure is the one to watch — it is four times Relationships'
   and larger than either page's own suite, because reviewees are a fixture
   for most of the app.
+- **Shared code, which this list first omitted entirely.**
+  `_handle_import` in `app/web/routes_operator/_shared.py` carries the
+  panel-open contract as **`kind == "reviewers"` literals** at two sites
+  (`:830`, `:961`). Reviewees calls it, so **rung 4 must edit a module
+  Reviewers, Observers and other slices all read**. And **Relationships
+  does not use it at all** — `relationships_import_submit` is bespoke with
+  **two** in-place 400 re-render paths, not one: a blocked CSV, and a
+  `missing_confirm=True` replace-confirmation state Reviewees has no
+  equivalent of. 19P.1 put the import card last precisely because it
+  re-renders in place; Relationships has twice that surface and its own
+  handler, so rung 4 is **not** one change applied twice there.
+
+### Status
+
+**Rung 1 — landed.** Both pages' row actions keep the pager `offset` and
+return to the row they acted on.
+
+**The ladder's "five POSTs gain `offset` and a fragment" was right by
+accident.** `grep -c "_redirect_keeping_selection"` returns 5 because it
+counts the import line; there are **four** call sites. The fifth POST,
+`create`, returned a **bare** `RedirectResponse` — no selection, no filter,
+no offset, no fragment — so it was a *conversion*, not two added kwargs, and
+it also regained the filter round-trip the other four already had. Found by
+this plan's own cold read and independently while building; the Opportunity
+and the ladder now say so.
+
+**The cold read's other two findings are folded in**, both above: shared
+code (`_shared.py`'s `kind == "reviewers"` literals, and Relationships'
+bespoke import handler with two in-place re-render paths) was missing from
+the blast radius entirely, and the sweep's DoD grep stopped one sentence
+short of two live `19P.3` hedges at `spec/setup_pages.md:1170` and `:1208`.
+
+**Both pages are sortable**, unlike Observers, so rung 1's fallback script
+carries **two** unresolvable-fragment cases rather than one — a filtered-out
+row and a row the cookie sort moved. Asserted, so a page that stops shipping
+`rrw-sortable` headers fails the test rather than leaving the comment wrong.
+
+**One file for both pages**, parametrized. A per-page file lets one page
+quietly gain a guard the other does not, which is this item's whole risk.
+18/18 mutations caught across two tables — the second one mutates the
+doubled anchors (both bulk routes, both form shells) as a set, since
+single-site mutation could not reach them.
 
 ### PR ladder
 
@@ -1010,8 +1057,12 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
   migrated and cannot reach 0. `session_assignments.html` renders the card
   too and is **not** a roster page, so it is excluded by name rather than by
   a `session_*` glob.
-- `_field_labels_editor.html` is included **once** per page and renders in
-  both homes on the complement condition, asserted per page.
+- `_field_labels_editor.html` renders in **exactly one of two homes** per
+  request, on complementary conditions, asserted per page for each state.
+  **Two `{% include %}` tags, one render** — Reviewers has exactly that
+  (`session_reviewers.html:275` and `:598`), so "included once per page" is
+  false of the precedent and would send a builder hunting for a structure
+  the complement-condition layout cannot produce.
 - No `.bottom-grid` on any roster page; nothing renders below any preview
   table.
 - No spec sentence defers a roster shape to a future item:
