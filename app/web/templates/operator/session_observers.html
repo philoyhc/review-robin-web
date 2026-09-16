@@ -333,9 +333,17 @@
 
          The left pane holds no `Show columns:` chip row, and that is
          intended rather than missing: observers have one tag slot and
-         it always renders, so there is nothing to toggle
-         (`grep -c 'data-col-toggle=' -> 0`). The pane still exists so
-         the pager and the count line keep their half of the split. #}
+         it always renders, so there is nothing to toggle: no chip row
+         reaches the response, asserted by
+         `test_the_left_pane_is_deliberately_chipless`.
+
+         Deliberately NOT stated as a grep count of this file. The
+         first draft said that count was zero — which this very comment
+         then made one, a claim that falsifies itself by being written.
+         The rendered page is what matters and what the test reads.
+
+         The pane still exists so the pager and the count line keep
+         their half of the split. #}
       <div class="table-card-toolbar is-split">
         <div class="toolbar-pane toolbar-left">
           {# Pager before the count line, as the other three rosters
