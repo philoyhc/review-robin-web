@@ -27,6 +27,7 @@ from app.db.models import (
     EmailOutbox,
     Instrument,
     Invitation,
+    Observer,
     Response,
     ReviewSession,
     Reviewer,
@@ -366,4 +367,61 @@ def reviewer_column_state(
     return RosterColumnState(
         readouts=readouts,
         col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
+    )
+
+
+def observer_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Observers roster.
+
+    The second caller `reviewer_column_state` was written waiting for
+    (19P.2 rung 6), and it settles what actually generalizes: **the
+    readouts mirror the columns the preview table renders**, so the
+    index cannot disagree with the table beneath it.
+
+    On Reviewers that resolves to identity plus *populated* tag slots,
+    because an unpopulated tag column is hidden there. On Observers it
+    resolves to all three, because none are hidden — this page has one
+    fixed tag slot which always renders and no column chips at all
+    (19P.2 rung 3). So the rule is the same sentence; the two pages
+    differ because their tables do.
+
+    `Tag`, not a resolved friendly label: Observers carries no
+    `_field_labels_editor`, so its `<th>` is a literal string, and a
+    resolver call here would invent a label the table never shows. The
+    digit went with the move (author's call, 19P.2 rung 6) — this page
+    has exactly one tag slot, so `Tag1` numbered a series of one. The
+    CSV column stays `ObserverTag1`, being an identifier in a file
+    contract rather than a display label.
+
+    ``col_data`` is empty for the same reason: no chips are rendered on
+    this page, so there are no visibility flags to answer.
+    """
+    sid = review_session.id
+    return RosterColumnState(
+        readouts=[
+            ColumnReadout(
+                slot="name",
+                label="Name",
+                count=slot_row_count(
+                    db, session_id=sid, column=Observer.display_name
+                ),
+            ),
+            ColumnReadout(
+                slot="email",
+                label="Email",
+                count=slot_row_count(
+                    db, session_id=sid, column=Observer.email
+                ),
+            ),
+            ColumnReadout(
+                slot="tag-1",
+                label="Tag",
+                count=slot_row_count(
+                    db, session_id=sid, column=Observer.tag_1
+                ),
+            ),
+        ],
+        col_data={},
     )

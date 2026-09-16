@@ -6,6 +6,16 @@
 
 {% block content %}
   {% set edit_mode = (edit_id is not none) or add_mode %}
+  {# 19P.2 rung 6 — the Unlock panel's condition, named once because
+     three things read it: the roster card that holds the panel, the
+     panel's own two cards, and the `Unlock` / `Lock` control.
+
+     `not is_archived`, NOT Reviewers' `is_editable`. Rung 2 relaxed
+     every mutating observers route to `_require_not_archived`, import
+     and delete-all included, so on `ready` and `expired` both of this
+     panel's tenants are live and suppressing them would hide controls
+     their routes accept — the silent failure in reverse. #}
+  {% set unlock_available = not is_archived and not edit_mode %}
   {% set observers_base_url =
         "/operator/sessions/" ~ session.id ~ "/observers" %}
 
@@ -220,6 +230,251 @@
     </form>
   {% endif %}
 
+  {# ══ 19P.2 rung 6 — the Unlock panel ═════════════════════════════
+     `Upload Observers` and the `Danger Zone` move off the foot of the
+     page into a collapsed panel above the table, and nothing renders
+     below the table any more. Reviewers made this move at 19P.1 rung 3;
+     the primitives it left behind (`.unlock-panel`, `.unlock-stack`,
+     `.unlock-col-actions`, `.roster-card-actions`) are page-agnostic
+     and live in `base.html`, so this rung writes no CSS.
+
+     **The safety argument changes hands.** The old comment on the
+     `.bottom-grid` justified its position — *"Upload sits below the
+     preview table so a misfire on the destructive replace path can't
+     catch the operator before they've seen the current roster"*. That
+     reasoning is sound and is why the cards could not simply move up.
+     What replaces it is the panel: both controls now sit behind a
+     deliberate `Unlock`, which is a stronger gate than distance down
+     the page, and the confirm checkboxes each card already carries are
+     untouched.
+
+     **Upload LEFT, Danger Zone RIGHT**, which is the order they
+     already had in the grid — the operator's muscle memory for this
+     page survives the move. Reviewers is mirrored rather than copied
+     here: its left column holds a tag-labels editor Observers does not
+     have, so the columns cannot correspond anyway.
+
+     **The card is NOT gated; only the panel is** — following Reviewers,
+     and corrected mid-rung on the author's instruction. The first draft
+     gated the whole card on the reasoning that without the roster
+     readouts Reviewers carries, a locked Observers card would be empty.
+     The right answer was to give this page the readouts too: they are
+     informational in every lifecycle state, which is exactly what a
+     mutating control is not, and an operator on a `ready` or `archived`
+     session still wants to know how big the roster is and which columns
+     arrived. #}
+  <div class="card roster-card" id="roster-card">
+    {# The roster index — one row of readouts, not a table. Rendered in
+       every state, unlike the panel below it.
+
+       `Name` / `Email` / `Tag` are always listed, all three, because
+       this page's preview table always renders all three: it has one
+       fixed tag slot and no column chips (19P.2 rung 3). Reviewers
+       lists identity plus only the POPULATED tag slots because its
+       unpopulated tag columns are hidden. Same rule — the index mirrors
+       the columns the table renders — resolving differently because the
+       two tables differ. See `views.observer_column_state`.
+
+       A zero is worth seeing, which is the point of listing a column
+       that has no data: `Name (0)` says the CSV had no `ObserverName`
+       column, and that is a fact about the import, not an absence. #}
+    <div class="roster-readouts">
+      <div class="roster-readout">
+        <span class="roster-readout-label">Observers roster:</span>
+        <span class="pill pill-count">{{ total_row_count }}
+          observer{% if total_row_count != 1 %}s{% endif %}</span>
+      </div>
+      <div class="roster-readout">
+        <span class="roster-readout-label">Populated columns:</span>
+        <span class="roster-readout-values">
+          {% for col in col_readouts %}
+            <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
+          {% else %}
+            <span class="roster-readout-empty">none yet</span>
+          {% endfor %}
+        </span>
+      </div>
+    </div>
+
+    {% if unlock_available %}
+      {# `panel_open` is server state, not a second source of truth for
+         the toggle below: the toggle owns every click, this only
+         decides what the page ARRIVES as. Both tenants answer with a
+         redirect, and a panel that always shipped collapsed would shut
+         itself on every one — the `Lock` control is what closes it. #}
+      <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
+        {# Left column: the import card. #}
+        <div class="unlock-stack">
+          <section class="card" id="upload-csv"
+                   aria-labelledby="observers-upload-h">
+            <h2 id="observers-upload-h">Upload Observers</h2>
+            <p class="form-help">
+              CSV file in UTF-8, max {{ 5000 }} rows. Required column:
+              <code>ObserverEmail</code>. Optional columns:
+              <code>ObserverName</code>, <code>ObserverTag1</code>.
+              Other columns are ignored.
+            </p>
+
+            {# The issue list renders HERE, inside the card the panel
+               holds — which is why a failed import must arrive with
+               the panel open (`_setup_observers.py`, the import
+               route's `render`). #}
+            {% include "operator/partials/validation_results.html" %}
+
+            <form method="post"
+                  action="{{ observers_base_url }}/import"
+                  enctype="multipart/form-data">
+              <input type="file" id="file" name="file" accept=".csv,text/csv"
+                     aria-label="CSV file" required>
+
+              {% if existing_count and existing_count > 0 %}
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="confirm_replace" value="true" required
+                           data-delete-confirm="replace-observers">
+                    Yes, replace the existing
+                    <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
+                  </label>
+                </p>
+              {% endif %}
+
+              {# `.unlock-col-actions`, not the old
+                 `<div class="btn-pair" style="margin-top: 20px;">`.
+                 The two do NOT compute alike — `.btn-pair` is a 16px
+                 row starting at the left, this is an 8px flex-end row
+                 — so Upload moves left to right and its top margin
+                 20px to 12px. Chosen, not inherited: both cards in
+                 this panel right-align their action, `.btn-pair` names
+                 a pair and this is one button, and CLAUDE.md asks for
+                 a class over an inline style. Same answer Reviewers
+                 gave at 19P.1 rung 3c. #}
+              <div class="unlock-col-actions">
+                {% if existing_count and existing_count > 0 %}
+                  <button class="btn secondary" type="submit"
+                          data-delete-btn="replace-observers"
+                          disabled aria-disabled="true">Upload</button>
+                {% else %}
+                  <button class="btn secondary" type="submit">Upload</button>
+                {% endif %}
+              </div>
+            </form>
+          </section>
+        </div>
+
+        {# Right column: the Danger Zone, and — while open — the `Lock`
+           control beneath it. A stack, not a second grid row: a grid
+           row starts below the TALLER column, which would drop the
+           button to the panel's foot, far from the card it sits
+           under. #}
+        <div class="unlock-stack unlock-right">
+          {# The `total_row_count > 0` gate is unchanged by the move,
+             and it is not cosmetic. `delete_all_observers` is not a
+             no-op on an empty roster — it writes an audit row reading
+             "Deleted all 0 observers" — so an ungated card offers a
+             destructive control with nothing to destroy. #}
+          {% if total_row_count and total_row_count > 0 %}
+            <div class="card danger-zone" aria-labelledby="observers-danger-h">
+              <h2 id="observers-danger-h">Danger Zone</h2>
+              <form method="post" action="{{ observers_base_url }}/delete-all">
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="confirm" value="true" required
+                           data-delete-confirm="delete-all">
+                    Yes, delete the existing
+                    <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
+                  </label>
+                </p>
+                <div class="unlock-col-actions">
+                  <button class="btn destructive" type="submit"
+                          data-delete-btn="delete-all"
+                          disabled aria-disabled="true">Delete all observers</button>
+                </div>
+              </form>
+            </div>
+          {% endif %}
+          {% if panel_open %}
+            <div class="roster-card-actions">
+              <button type="button" class="btn secondary" id="roster-unlock-btn"
+                      aria-expanded="true" aria-controls="roster-unlock-panel">
+                Lock
+              </button>
+              {# Without JS the button above is inert, so the same state
+                 change is offered as a plain navigation. See the
+                 `Unlock` twin below. #}
+              <noscript>
+                <a class="btn secondary"
+                   href="{{ observers_base_url }}#roster-card">Lock</a>
+              </noscript>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Collapsed this sits here, as the card's last child; open it
+         belongs under the Danger Zone, inside the panel. The toggle
+         MOVES the one element between those two homes rather than
+         rendering two copies, so arriving open has to start it in the
+         panel — otherwise the first `Lock` click would move it out of
+         a place it was never in. #}
+      {% if not panel_open %}
+        <div class="roster-card-actions">
+          <button type="button" class="btn secondary" id="roster-unlock-btn"
+                  aria-expanded="false" aria-controls="roster-unlock-panel">
+            Unlock
+          </button>
+          {# The no-JS path back. This rung moves both mutating cards
+             into a panel that ships `hidden` and is opened only by the
+             button above, so with JS off the page would lose the CSV
+             import and the delete-all outright. `?unlocked=1` already
+             renders the panel open server-side — it exists for the
+             redirects both controls answer with — so this is a link to
+             a state the server already supports, not new machinery.
+
+             Scope, measured rather than assumed, as on Reviewers: both
+             buttons ship `disabled` and are enabled by `base.html`'s
+             confirm-pairing script, which this rung does not touch. So
+             with JS off and a roster that already has rows, Upload and
+             Delete-all were ALREADY unreachable and still are. What
+             this restores is the empty-roster import — the initial bulk
+             create, where Upload renders enabled — plus the ability to
+             read both cards at all. #}
+          <noscript>
+            <a class="btn secondary"
+               href="{{ observers_base_url }}?unlocked=1#roster-card">Unlock</a>
+          </noscript>
+        </div>
+      {% endif %}
+
+      <script>
+        (function () {
+          "use strict";
+          var btn = document.getElementById("roster-unlock-btn");
+          var panel = document.getElementById("roster-unlock-panel");
+          if (!btn || !panel) return;
+          // The control has two homes and one element. Collapsed it is
+          // the card's last child; open it belongs under the Danger
+          // Zone, in the panel's right column — which means inside the
+          // panel, and the panel is `display: none` when closed. So it
+          // moves rather than being rendered twice: two copies of one
+          // control is how they drift apart.
+          var actions = document.querySelector(".roster-card-actions");
+          var card = document.getElementById("roster-card");
+          btn.addEventListener("click", function () {
+            var open = !panel.hidden;
+            if (open) card.appendChild(actions);
+            else panel.querySelector(".unlock-right").appendChild(actions);
+            panel.hidden = open;
+            // The label names the state the control moves TO, not
+            // "Done": the panel is a lock state, not a form being
+            // finished.
+            btn.textContent = open ? "Unlock" : "Lock";
+            btn.setAttribute("aria-expanded", String(!open));
+          });
+        })();
+      </script>
+    {% endif %}
+  </div>
+
   {# Preview table — full-width, always rendered (mirrors the
      placeholder layout). When the filter matches nothing, render
      a muted notice instead of a stub row. #}
@@ -358,7 +613,14 @@
           </th>
           <th>Name</th>
           <th>Email</th>
-          <th>Tag1</th>
+          {# `Tag` for display, not `Tag1` — author's call, 19P.2 rung 6.
+             This page has exactly one tag slot, so the digit numbered a
+             series of one. The CSV column stays `ObserverTag1`: that is
+             an identifier in a file contract, and renaming it would
+             break every existing import for a cosmetic gain. The
+             roster index above uses the same string — the index must
+             not disagree with the table beneath it. #}
+          <th>Tag</th>
           <th>Status</th>
           <th>Cohort</th>
           <th>Updated</th>
@@ -1323,93 +1585,14 @@
     </script>
   {% endif %}
 
-  {# Bottom row: Upload card (left) + Danger Zone (right),
-     half-and-half. Mirrors the Reviewers / Reviewees layout —
-     Upload sits below the preview table so a misfire on the
-     destructive replace path can't catch the operator before
-     they've seen the current roster. Danger Zone keeps its
-     ``total_row_count > 0`` gate; Upload renders whenever the
-     session is editable. #}
-  {# Upload + Danger Zone (Segment 19I Item 3). Was
-     ``not is_ready``, which left both rendering on ``expired``
-     and ``archived`` where the import and the delete-all both
-     409.
+  {# 19P.2 rung 6 — the `.bottom-grid` is RETIRED. Upload and the
+     Danger Zone moved into the Unlock panel above the table, and
+     nothing renders below the table any more.
 
-     19P.2 rung 2 — now ``not is_archived``. **One gate holds both
-     cards**, which is what forced the ruling: `delete-all` could
-     not become reachable on ``ready`` without the upload card
-     rendering beside it, and a rendered control the server 409s is
-     the silent failure this rung exists to remove. Author's call,
-     2026-09-16: the import relaxes too. Holding it would leave an
-     operator on ``ready`` able to delete every observer and unable
-     to upload a replacement, re-adding them one row at a time.
-
-     Neither card's OTHER gates move: Danger Zone still renders
-     only on ``total_row_count > 0`` and `delete-all` still 400s
-     without the confirm. The relaxation moves one gate, not
-     three. #}
-  {% if not is_archived and not edit_mode %}
-    <div class="bottom-grid">
-      <section class="card" id="upload-csv">
-        <h2 style="margin-top: 0;">Upload Observers</h2>
-        <p class="form-help">
-          CSV file in UTF-8, max {{ 5000 }} rows. Required column:
-          <code>ObserverEmail</code>. Optional columns:
-          <code>ObserverName</code>, <code>ObserverTag1</code>.
-          Other columns are ignored.
-        </p>
-
-        {% include "operator/partials/validation_results.html" %}
-
-        <form method="post"
-              action="{{ observers_base_url }}/import"
-              enctype="multipart/form-data">
-          <input type="file" id="file" name="file" accept=".csv,text/csv"
-                 aria-label="CSV file" required>
-
-          {% if existing_count and existing_count > 0 %}
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required
-                       data-delete-confirm="replace-observers">
-                Yes, replace the existing
-                <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
-              </label>
-            </p>
-          {% endif %}
-
-          <div class="btn-pair" style="margin-top: 20px;">
-            {% if existing_count and existing_count > 0 %}
-              <button class="btn secondary" type="submit"
-                      data-delete-btn="replace-observers"
-                      disabled aria-disabled="true">Upload</button>
-            {% else %}
-              <button class="btn secondary" type="submit">Upload</button>
-            {% endif %}
-          </div>
-        </form>
-      </section>
-
-      {% if total_row_count and total_row_count > 0 %}
-        <div class="card danger-zone">
-          <h2>Danger Zone</h2>
-          <form method="post" action="{{ observers_base_url }}/delete-all">
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm" value="true" required
-                       data-delete-confirm="delete-all">
-                Yes, delete the existing
-                <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
-              </label>
-            </p>
-            <p>
-              <button class="btn destructive" type="submit"
-                      data-delete-btn="delete-all"
-                      disabled aria-disabled="true">Delete all observers</button>
-            </p>
-          </form>
-        </div>
-      {% endif %}
-    </div>
-  {% endif %}
+     Their gates travelled with them and are stated at the panel, not
+     here: `not is_archived and not edit_mode` is now `unlock_available`,
+     and the Danger Zone keeps its own `total_row_count > 0`. The
+     route contract each card posts to — `confirm` / `confirm_replace`,
+     the 400s, the missing response-loss gate and why — is unchanged
+     by the move and documented at the routes. #}
 {% endblock %}

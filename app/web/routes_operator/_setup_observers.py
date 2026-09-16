@@ -94,6 +94,7 @@ def _render_observers_page(
     offset: int = 0,
     edit_id: int | None = None,
     add_mode: bool = False,
+    panel_open: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
@@ -230,6 +231,20 @@ def _render_observers_page(
             # derived: a macro guessing the id would land silently at
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
+            # 19P.2 rung 6 — the roster index row. Informational in
+            # every lifecycle state, which is why the card carrying it
+            # renders even where the Unlock panel cannot.
+            "col_readouts": views.observer_column_state(
+                db, review_session
+            ).readouts,
+            # 19P.2 rung 6 — whether the Unlock panel ships open.
+            # Server state, not a second source of truth for the JS
+            # toggle: the toggle still owns every click, this only
+            # decides what the page ARRIVES as. Both the controls the
+            # panel now holds answer with a redirect, and a panel that
+            # always shipped collapsed would shut itself on every one —
+            # the Lock control is what closes it, not a Save.
+            "panel_open": panel_open,
             "pager_anchor": "observers-table-card",
             # The add row's own id. An `Add` from mid-page is a
             # navigation like any other and lands at the top of the
@@ -315,6 +330,7 @@ def observers_page(
     focus: int | None = None,
     edit_id: int | None = None,
     add: int = 0,
+    unlocked: int = 0,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
@@ -332,6 +348,7 @@ def observers_page(
         offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
+        panel_open=bool(unlocked),
         selected_ids=set(selected),
         focus_id=focus,
     )
@@ -665,8 +682,23 @@ def observers_delete_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
+    # `?unlocked=1#roster-card` — 19P.2 rung 6. This control lives
+    # INSIDE the Unlock panel now, and a bare redirect closes the panel
+    # the operator was working in. The Danger Zone itself is gone from
+    # the response (the roster is empty and the card is gated on rows),
+    # but Upload is not, and uploading a replacement is the likely next
+    # move.
+    #
+    # Called out in the plan's rung-6 entry because 19P.1 rung 3b
+    # shipped exactly this omission on Reviewers and had to fix it
+    # after the fact: a control inside the panel must not close the
+    # panel it was used from. Matching the status code is not matching
+    # the contract.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/observers",
+        url=(
+            f"/operator/sessions/{review_session.id}/observers"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -697,11 +729,24 @@ async def observers_import_submit(
     existing = csv_imports.existing_observer_count(db, review_session.id)
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+        # `panel_open=True`: this path re-renders the page in place and
+        # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
+        # False, a failed import would answer with a collapsed panel and
+        # the operator would see no errors at all —
+        # `validation_results.html` renders the issue list inside the
+        # card the panel now holds.
+        #
+        # The suite cannot catch a regression here. With no JS runtime
+        # `hidden` is an inert attribute, so the issues are in the
+        # markup and every assertion on them passes either way; Chromium
+        # is what proves it. Same shape that bit Reviewers at 19P.1
+        # rung 3c.
         return _render_observers_page(
             request=request,
             db=db,
             user=user,
             review_session=review_session,
+            panel_open=True,
             issues=result.issues,
             filename=file.filename,
             http_status=status_code,
@@ -728,8 +773,14 @@ async def observers_import_submit(
         filename=file.filename or "",
         correlation_id=request_correlation_id(),
     )
+    # Open, like the failure path above and like `delete-all`: one rule
+    # about the panel rather than three about its controls. A Save does
+    # not close this card; the Lock button does.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/observers",
+        url=(
+            f"/operator/sessions/{review_session.id}/observers"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
