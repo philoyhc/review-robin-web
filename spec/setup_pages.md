@@ -945,8 +945,13 @@ having no row to land on it sends `#reviewers-table-card` itself, so
 the script never fires on it. `focus=` exists because the fragment cannot cover a create: rows list
 by id, so a new row appends past the end and on any roster over one
 page is not on the page the form was submitted from — the anchor would
-name a row the response never rendered. It relocates the window to the
-new row and puts the caret in its name field. The other three pages
+name a row the response never rendered. **All it does is relocate the
+pager window** so the created row's page is the one rendered; the
+fragment then resolves and lands on it. It places no caret — the
+response is a plain list, not an edit state. (Caret placement is a
+separate mechanism on a different flow: `?add=1` renders a blank row
+*as an edit state*, and the landing script focuses that row's first
+field. After a create there is no input to focus.) The other three pages
 pass no offset, no fragment and no focus, and are unaffected. 19P.2
 carries this to Observers.
 

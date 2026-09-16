@@ -297,13 +297,24 @@ lesson, and every one of them will be available again on the next page.
 2. **A page's spec falsified by a change to a page it merely cites.**
    Eight sentences defined one roster page as "the same shape as"
    another; a grep for the changed page finds none of them.
-3. **A confident sentence that is simply false.** The route that "would
-   refuse" an empty delete-all; "the only assertion in the suite"; "the
-   macro takes no arguments"; "closing the panel is the Lock control's
-   job and nothing else's". Two shipped in three places each and
-   outlived their own correction. The spec cold read found **fifteen**,
-   of which ten were plain errors about one page rather than artifacts
-   of specifying it mid-migration.
+3. **A confident sentence that is simply false.** Seven distinct ones
+   across the item: the route that "would refuse" an empty delete-all;
+   "the only assertion in the suite"; "the macro takes no arguments";
+   "closing the panel is the Lock control's job and nothing else's";
+   `?focus=` "puts the caret in its name field" (it only relocates the
+   pager window — a mechanism that does not exist, described in two
+   files); the lock card's "different neighbour"; and, inside the note
+   recording this very lesson, "every hedge names the item that will
+   remove it". **Four of the seven shipped in two or three places
+   each, and three outlived a correction applied to one copy** — the
+   Lock claim and the neighbour claim were each fixed in one file and
+   left standing in another, caught only by a second reader.
+
+   The spec cold read found **fifteen**, ten of them plain errors about
+   one page rather than artifacts of specifying it mid-migration; the
+   close pass then found **four more**, three in the files the first
+   read had not covered. Neither count was reachable by any test: the
+   suite was green at 4,049 throughout.
 
 Also worth carrying: **a mutation that edits more than the rule under
 test inflates the number it exists to measure.** A `str.replace` with
