@@ -686,11 +686,20 @@ def test_the_split_modifier_has_a_rule_behind_it(
     )
     assert "body.ui-v2 .row-expander-pane-right {" in body
     assert "body.ui-v2 .row-expander-label {" in body
-    # `button.cohort-save-btn`. A class-only selector here is (0,2,1)
-    # and loses to the shared `body.ui-v2 button.btn` — the first draft
-    # shipped exactly that and the rule did nothing, with this
-    # assertion green.
-    assert "body.ui-v2 button.cohort-save-btn {" in body
+    # The builder's two sizes, `button.<class>` in both cases. A
+    # class-only selector here is (0,2,1) and loses to the shared
+    # `body.ui-v2 button.btn` — the Save rule's first draft shipped
+    # exactly that and did nothing, with this assertion green.
+    assert "body.ui-v2 button.cohort-cell-btn {" in body
+    assert "body.ui-v2 button.cohort-combinator-btn {" in body
+    # And nothing on the page re-sizes a button from its own markup:
+    # `spec/ui_elements.md` §6 calls an inline `style` on a button a
+    # defect, because a role living in one template cannot be restyled
+    # from here. These four were the last on any Setup page.
+    for tag in re.finditer(r"<button\b[^>]*>", body, re.S):
+        assert "style=" not in tag.group(0), (
+            "an inline-styled button is back: " + tag.group(0)[:120]
+        )
     # Top-flush, not a shared bottom edge: the builder is taller, and
     # bottom-aligning would anchor Save to a button row it has no
     # relationship with.
