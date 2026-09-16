@@ -7,12 +7,32 @@
                        and honoured by ``_REVERT_RETURN_TO``
                        (rung 1 — two of the four were missing from it)
 
-   Gated on ``not is_editable``, which is the predicate the rest of
-   the page already answers. It was ``is_ready`` on all four until
-   this item: 19I.3 moved every control to ``is_editable`` and left
-   the card behind, so on ``expired`` and ``archived`` the mutating
-   cards were correctly absent with nothing saying why. The card and
-   the controls now agree by construction rather than by coincidence.
+   Optional:
+     ``lock_when``     the gate, when the page's mutating surface does
+                       not vanish at ``is_editable``. Defaults to
+                       ``not is_editable``.
+
+   The card exists to say WHY a page's mutating controls are absent,
+   so its gate must be the page's own. It was ``is_ready`` on all
+   four until 19H.6: 19I.3 moved every control to ``is_editable`` and
+   left the card behind, so on ``expired`` and ``archived`` the
+   mutating cards were correctly absent with nothing saying why.
+
+   19P.2 rung 2 made the predicate a parameter rather than an
+   assumption. Observers' routes relaxed to ``_require_not_archived``
+   — an observer row is a view grant, so freezing the roster at
+   Activate bought nothing — and that page now passes
+   ``lock_when=is_archived``. Left as ``not is_editable`` it would
+   have rendered "cannot be modified while the session is ongoing"
+   directly above a live roster.
+
+   The default renders the other three pages in the same states as
+   before — measured across all three pages x five states. Not
+   byte-identical, as the first draft of this comment claimed: the
+   guard line below emits one blank line at each include site
+   (``trim_blocks`` is off), so each of those fifteen pages gains
+   exactly one. Inert whitespace, but "byte-identical" was a claim
+   worth either measuring or not making.
 
    Three branches, each naming the way out its own state has — the
    shape 19I.6 gave Instruments. ``revert_session_to_draft`` accepts
@@ -23,7 +43,8 @@
 
    ``expired`` reads **Closed** to an operator
    (``app/services/lifecycle_display.py``), so the copy says closed. #}
-{% if not is_editable %}
+{% if lock_when is defined and lock_when is not none %}{% set _locked = lock_when %}{% else %}{% set _locked = not is_editable %}{% endif %}
+{% if _locked %}
   <div class="card lock">
     <p style="margin: 0 0 12px 0;">
       {% if is_ready %}

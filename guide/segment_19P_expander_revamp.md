@@ -697,6 +697,116 @@ Reviewers comment, the half-done `Add` fix, four spec lines missing from
 Doc impact, a mis-scoped assertion message, a US-spelling slip, and the
 "six not five" claim above, whose stated reason was wrong.
 
+**Rung 2 — landed.** Seven routes, not five. The count was measured at
+the start of the rung, not assumed: `grep -c _require_editable
+_setup_observers.py` → 7. `bulk-delete` was an enumeration slip;
+`import` was the ruling recorded in rung 2's text above.
+
+Three template gates moved with them — `_show_actions_slot`, the
+`observers-bulk-form` shell, and the `.bottom-grid`. After the move
+`is_editable` appears nowhere in `session_observers.html`; the page's
+predicate is `is_archived` throughout, which is what keeps page and
+route agreeing by construction rather than by two lists kept in step
+(the property 19I.3 established, re-established at the new predicate).
+
+**The lock card was the thing the ladder did not see coming.**
+`_roster_lock_card.html` is shared by all four roster pages and gated on
+`not is_editable`, so on `ready` it would have rendered *"The observers
+cannot be modified while the session is ongoing"* directly above a live
+roster. Its gate is now a parameter (`lock_when`, defaulting to the old
+predicate); Observers passes `is_archived`. The other three pages render
+byte-identically. A consequence worth naming: Observers no longer
+renders a revert form anywhere, because the one state it still locks in
+is `archived`, where that form is correctly absent already — so
+`test_the_slug_each_page_renders_is_the_one_under_test` covers three
+pages now, not four. The route still honours the `observers` slug, and
+the route-level test still covers all four — so `_REVERT_RETURN_TO`'s
+`observers` entry, added at 19H.6 rung 1 and re-justified in this item's
+rung 1, is now unreachable from the UI one rung after it was added.
+Kept as defence in depth; named here because rung 1's Status still
+presents it as a live fix.
+
+Verified in Chromium across the three frozen states. `ready` and
+`expired`: no lock card, 3 checkboxes, bulk form, `Delete`, upload card
+and Danger Zone all present, and an `Inactivate` through the UI lands
+the row reading **INACTIVE** with still no lock card. `archived`: lock
+card present, every one of those controls absent, and the three rows
+still **readable** — the relaxation did not turn `archived` into a
+blank page. An import on `ready` replaced the roster 3 → 1.
+
+Guards: **41 new test cases, 17 dropped by the re-aiming, +24 net**
+(4,065 → 4,089). Most are the seven mutators parametrized across
+`ready` / `expired` (accepts, `== 303`) and `archived` (still 409s),
+plus the whole-surface render, the editor pair below, and the lock
+card's absence on a live session and survival on `archived`. Seventeen
+existing **test cases** were re-aimed rather than deleted —
+`LOCKED_STATES`, `FROZEN_PAGES` and `REFUSES_AT` carry the divergence as
+data, so the three unchanged pages keep asserting the old contract in
+the same tests.
+
+**16/16 mutations caught.** Thirteen re-tighten one gate alone back to
+`_require_editable`: all seven routes plus `cohort-rule` (which already
+had the looser gate and must keep it), the three template gates, the
+`lock_when` argument, and the partial's default. The `lock_when` one had
+to be re-run — deleting the kwarg broke the `{% with %}` syntax, so its
+35 failures proved a template error rather than a lost gate; re-run as a
+valid re-tightening it fails 4. Three more came out of the cold read and
+probe the **upper** bound, which nothing had: the `.bottom-grid` gate
+loosened to render on `archived`, and the editor predicate both put back
+to `is_ready` and removed outright.
+
+**Cold read** (`diff-reviewer`, 11 findings). It confirmed all three
+safety claims in Semantics against the code, and found nothing else
+caching a frozen roster. Two findings were **defects, not prose**:
+
+- **`Add` and `Edit` were dead controls on `ready`** — the exact failure
+  this rung exists to remove, shipped by it. `_render_observers_page`
+  discarded `edit_id` / `add_mode` under `if is_ready`, correct while
+  `create` / `update` took `_require_editable` and the page could not
+  save. The rung relaxed those routes and the buttons above them and
+  left the predicate behind, so both rendered on `ready` and opened
+  nothing. Now `is_archived`, the same predicate the buttons read.
+- **A rejected save on `ready` lost the operator's typing.** Same root
+  cause: the error-render path re-renders with `add_mode=True`, which
+  was then dropped, and the error banner is scoped to `{% if edit_mode %}`
+  — so a mistyped email answered 400 with a bare roster page, no values
+  and no reason.
+
+Neither was reachable by the mutation pass, which only re-tightened
+gates, and neither was exercised by the Chromium check: it covered
+checkboxes, bulk form, Delete, upload, Danger Zone and an Inactivate,
+and never Add or Edit. Both are covered now: on `ready` and `expired`
+the `Add` link opens a real add editor and `Edit` navigates to
+`#observer-row-<id>` and opens one; on `archived` neither renders; and a
+rejected save on `ready` comes back with the editor open, the typed
+value intact and the reason shown.
+
+A third finding was **coverage removed rather than replaced**: the
+re-aiming dropped Observers from
+`test_the_upload_and_danger_zone_cards_go_when_frozen`, and the
+replacement asserted only the two bulk ids — so loosening `.bottom-grid`
+to render Upload and Danger Zone on `archived`, over routes that 409,
+passed the whole suite. Bracketed now by asserting every control absent
+on `archived` that the live-session test asserts present.
+
+The rest was prose, all of it written in this rung: "byte-identically"
+(above), a comment claiming two readers of `is_editable` that do not
+exist, a stale `is_ready` header comment, a test docstring saying
+"through `archived`" where it means "until", a rename comment a blanket
+search-and-replace had turned into *"the name is `FROZEN_PAGES` and the
+alias is gone"*, and the count labels above.
+
+**One open question the cold read raised, not decided here.**
+`_quick_setup.py:637` writes observer rows via `csv_imports.save_observers`
+and still refuses on `ready`. This rung's scope is the Setup-Observers
+page, so it is untouched — but the ruling it rests on is about the
+*entity*, not the page, and the two now disagree: the same CSV accepts at
+`/observers/import` and refuses at `/quick-setup/observers` on the same
+session. Quick setup is a draft-time wizard by its own contract, so this
+may be right as it stands. **Author's call, and it belongs to whoever
+owns quick setup rather than to this item.**
+
+
 ### PR ladder
 
 1. **The `offset` / anchor fix — land where Reviewers lands.** Every row
@@ -711,7 +821,21 @@ Doc impact, a mis-scoped assertion message, a US-spelling slip, and the
 2. **The gate relaxation.** `create` / `update` / `bulk-inactivate` /
    `bulk-reactivate` **and `delete-all`** move from `_require_editable` to
    `_require_not_archived`, and the template's `_show_actions_slot` follows, so
-   the roster is editable on `ready` and `expired`. A **behavior** rung,
+   the roster is editable on `ready` and `expired`.
+
+   **Seven routes, not five — measured 2026-09-16 at the start of the rung.**
+   `grep -c _require_editable _setup_observers.py` → 7. Two were never
+   enumerated above. `bulk-delete` is an enumeration slip: rung 4 moves
+   `Delete` into the expander, so it is already inside *"the whole expander
+   takes the looser gate"*. `import` is a real widening, and a forced one —
+   `session_observers.html:863` gates Upload and Danger Zone with **one**
+   `{% if is_editable %}`, so `delete-all` cannot become reachable on `ready`
+   without the upload card rendering beside it, and a rendered control the
+   server 409s is exactly the silent failure this rung exists to remove.
+   **Author's ruling, 2026-09-16: import relaxes too** — same principle, and
+   the alternative leaves an operator on `ready` able to delete every observer
+   and unable to upload a replacement, re-adding them only one at a time. The
+   `Definition of done`'s "five relaxed routes" reads **seven** from here. A **behavior** rung,
    landing before any layout moves so that a regression here is not hidden
    inside a rearrangement — and so the expander later inherits one gate rather
    than reconciling two. Delete-all keeps its other two gates untouched: it
@@ -741,9 +865,10 @@ Doc impact, a mis-scoped assertion message, a US-spelling slip, and the
 - `grep -c 'data-col-toggle=' session_observers.html` → 0 and the toolbar still
   renders `is-split`, asserted — the empty left pane is intended, not a bug.
 - The expander renders **in full** on `ready` and `expired` and **not at all**
-  on `archived`, asserted across all five states — and each of the **five**
-  relaxed routes, `delete-all` included, accepts on `ready` where it previously
-  answered 409, asserted per route so a template-only relaxation fails.
+  on `archived`, asserted across all five states — and each of the **seven**
+  relaxed routes (`delete-all` and `import` included — see rung 2) accepts on
+  `ready` where it previously answered 409, asserted per route so a
+  template-only relaxation fails.
 - `delete-all` on `ready` still 400s without the confirm and still renders only
   on a non-empty roster — the relaxation moves one gate, not three.
 - `Save` renders `disabled` on arrival and after every selection change,
