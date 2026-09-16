@@ -13,6 +13,7 @@ appearance. 19L stated the same limit for the lobby bracket
 """
 from __future__ import annotations
 
+import pathlib
 import re
 
 import pytest
@@ -23,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession
 
-from ._feature_toggles import enable_observers
+from ._feature_toggles import enable_observers, enable_relationships
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
@@ -1000,9 +1001,12 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
     would right-align inside the LEFT half instead of across the card.
 
     Was `test_only_reviewers_splits_...`: Observers opted in at 19P.2
-    rung 3, so "only Reviewers" is no longer the claim. The claim that
-    survives is that pages opt in one at a time and the shared rule
-    stays flex.
+    rung 3 and Reviewees and Relationships at 19P.3 rung 2, so "only
+    Reviewers" is long past. **All four roster pages now split**, and
+    the claim that survives is about the OTHER three templates sharing
+    `.table-card-toolbar` — Assignments, Invitations, Responses — which
+    hold a pager and nothing else and must not be re-laid-out by a rule
+    they never opted into.
 
     The old version also asserted the negative for Observers behind
     `if other.status_code != 200: continue` — and this fixture never
@@ -1032,12 +1036,36 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
         "Observers opted in at 19P.2 rung 3"
     )
 
-    # The two pages that have not moved yet — 19P.3 takes them.
-    reviewees = client.get(f"/operator/sessions/{rs.id}/reviewees")
-    assert reviewees.status_code == 200
-    assert "table-card-toolbar is-split" not in _markup(reviewees.text), (
-        "Reviewees picked up a split toolbar before 19P.3"
+    # 19P.3 rung 2 — the last two roster pages opted in. Relationships
+    # is behind a per-session toggle and 404s without it, which would
+    # have made its assertion unreachable rather than false.
+    enable_relationships(db, rs)
+    for page in ("reviewees", "relationships"):
+        response = client.get(f"/operator/sessions/{rs.id}/{page}")
+        assert response.status_code == 200, page
+        assert "table-card-toolbar is-split" in _markup(response.text), (
+            f"{page} opted in at 19P.3 rung 2"
+        )
+
+    # The three templates that share the class and did NOT opt in. Read
+    # from source, not rendered: Invitations and Responses need a
+    # validated session to render at all, and their ABSENCE from the
+    # modifier is the claim. This is what "opt in" now means — the
+    # roster pages are all in, so a negative asserted against one of
+    # them would be asserting nothing.
+    shared_only = sorted(
+        path.name
+        for path in pathlib.Path("app/web/templates/operator").glob(
+            "session_*.html"
+        )
+        if '"table-card-toolbar' in path.read_text()
+        and "table-card-toolbar is-split" not in path.read_text()
     )
+    assert shared_only == [
+        "session_assignments.html",
+        "session_invitations.html",
+        "session_responses.html",
+    ], shared_only
 
 
 def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
