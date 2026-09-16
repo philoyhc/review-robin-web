@@ -451,3 +451,247 @@ def test_the_save_error_moved_into_the_bar(
     assert "banner-error" not in html, "the card's banner survived the move"
     bar = html[html.index("row-editor-bar") :]
     assert "row-editor-error" in bar[: bar.index("</tr>")]
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_every_data_row_carries_the_status_the_panel_reads(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`rows()` selects `tr[data-status]`. That attribute is doing two
+    jobs, and losing it breaks both silently:
+
+      - it is how the expander tells a DATA row from the editor row and
+        from the panel it injects itself, so without it `rows()` returns
+        **nothing** — no panel, no selection, no row actions at all;
+      - it is what `statusActions()` reads to decide whether the
+        selection admits `Inactivate`, `Activate` or both.
+
+    A mutation deleting it passed the entire suite. Nothing server-side
+    asserted the panel's only input, because every other guard here reads
+    the builder — which still ships perfectly while having no rows to
+    build against.
+    """
+    rs = _make_session(client, db, f"ex-st-{page[:4]}")
+    ids = _seed(db, rs.id, page)
+    html = _markup(client.get(_base(rs.id, page)).text)
+
+    for rid in ids:
+        row_at = html.index(f'id="{noun}-row-{rid}"')
+        row = html[row_at : html.index(">", row_at)]
+        assert 'data-status="active"' in row, (rid, row)
+
+    assert html.count("data-status=") == len(ids), (
+        "a row the expander cannot see, or one it should not"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_add_row_is_bracketed_too(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """Both rows carry the bracket, and both need it: the bar reads as
+    attached to the row above it only because that row is highlighted.
+
+    Guarded separately from the edited row because the two carry the
+    **identical class string**, so a mutation aimed at one lands on
+    whichever comes first in the file — which is how this gap was found.
+    The edited-row test above looks the row up by id; this one by the
+    add row's own anchor.
+    """
+    rs = _make_session(client, db, f"ex-ab-{page[:4]}")
+    _seed(db, rs.id, page)
+    html = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+
+    row = re.search(rf'<tr class="{noun}-edit-row[^"]*"[^>]*id="{page}-row-editor"', html)
+    assert row, "the add row is not marked as the editor"
+    assert "session-row-selected" in row.group(0), "the add row is not bracketed"
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_edit_is_gated_on_a_selection_of_exactly_one(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """Arity. `Edit` opens one row's editor, so a selection of two has
+    nothing for it to open — the panel renders it disabled.
+
+    **This is a source assertion, and weaker than it looks.** The gate is
+    JS evaluated against a live selection, so what the suite can see is
+    that the expression ships, not that it works. Replacing it with
+    `var editable = true;` passed every other test here. The behaviour is
+    measured in Chromium instead: at two rows the panel renders
+    `Edit(off)`, at one `Edit` with that row's id.
+    """
+    rs = _make_session(client, db, f"ex-ar-{page[:4]}")
+    _seed(db, rs.id, page)
+    builder = _builder(client.get(_base(rs.id, page)).text, page)
+
+    assert "var editable = sel.length === 1;" in builder
+    # The disabled branch itself, as the template writes it: a plain JS
+    # literal, so plain quotes.
+    assert """' disabled aria-disabled="true"'""" in builder, (
+        "the disabled branch of the arity gate is gone"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_bars_colspan_is_computed_not_written(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """A source assertion, deliberately, because the rendered value
+    cannot distinguish the two.
+
+    `edit_col_count` is **always its maximum**: the bar only renders in
+    edit mode, and edit mode forces every optional column on so the
+    operator can type into a tag that is empty today. Measured — the list
+    view renders 6 columns where edit mode renders 9. So hardcoding the
+    number is behaviour-preserving right now, and a mutation replacing
+    the expression with `9` passes every behavioural test there is,
+    including the one above that compares colspan to the row's cells.
+
+    The reason to compute it is therefore not today's rendering but the
+    first time a column is gated differently, at which point a written
+    number goes quietly wrong. That claim is about the source, so it is
+    asserted against the source.
+    """
+    source = (TEMPLATES / f"session_{page}.html").read_text()
+    assert "{% set edit_col_count = 3" in source
+    assert "+ (1 if show_tag[1] else 0)" in source
+    assert '<td colspan="{{ col_count }}">' in source, "the bar hardcodes its span"
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_status_actions_are_chosen_by_the_selection_not_always_both(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`Inactivate` acts on active rows and `Activate` on inactive ones,
+    so a selection that is all one status admits exactly one of them.
+    Rendering both offers a control that would no-op on every row.
+
+    Another source assertion, and the same caveat as the arity gate:
+    replacing the two conditions with unconditional pushes passed every
+    other test here. Measured in Chromium instead — an inactive row alone
+    offers `Edit / Activate / Delete`, one of each offers all four.
+    """
+    rs = _make_session(client, db, f"ex-sa-{page[:4]}")
+    _seed(db, rs.id, page)
+    script = _script(client.get(_base(rs.id, page)).text, page)
+
+    assert 'if (hasActive) out.push("Inactivate");' in script
+    assert 'if (hasInactive) out.push("Activate");' in script
+    assert 'row.dataset.status === "active"' in script, (
+        "the labels are chosen from something other than the row's status"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_select_all_keeps_its_indeterminate_state(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """A partial selection reads as a dash rather than an empty box
+    claiming nothing is selected. The retired card script never set this;
+    it arrived with the expander, which is the only owner of selection
+    state now.
+
+    Source assertion — `indeterminate` is a DOM property, never an
+    attribute, so it cannot appear in a response at all. Measured in
+    Chromium: true on every partial selection, false at 8 of 8.
+    """
+    rs = _make_session(client, db, f"ex-in-{page[:4]}")
+    _seed(db, rs.id, page)
+    script = _script(client.get(_base(rs.id, page)).text, page)
+
+    assert "selectAll.indeterminate = (n > 0 && n < all.length);" in script
+    assert "selectAll.checked = (n > 0 && n === all.length);" in script
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_sorting_takes_the_panel_out_and_puts_it_back(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """Sorting reorders `tbody`'s children. The panel carries no sort
+    cells, so it compares null and sorts to the bottom — away from the
+    rows it belongs to — and being present when `base.html` stamps
+    `rrwOriginalIndex` would shift every index after it, corrupting the
+    unsorted restore order too.
+
+    **The mechanism is measured, not assumed.** With this binding removed
+    and one row selected, a header click moved the panel from index 2 of
+    9 to index 8 of 9 — last child, stranded. With it, the panel stays at
+    index 2, still anchored to its row.
+
+    Capture phase matters: the header's own inline `onclick` does the
+    sorting, so this has to run first to take the panel out before the
+    reorder sees it.
+    """
+    rs = _make_session(client, db, f"ex-so-{page[:4]}")
+    _seed(db, rs.id, page)
+    body = client.get(_base(rs.id, page)).text
+    script = _script(body, page)
+
+    assert 'if (!event.target.closest(".rrw-sort-btn")) return;' in script
+    assert "}, true);" in script, "the sort binding is not capture-phase"
+    # Vacuity guard: a page that stopped shipping sortable headers would
+    # make the binding unreachable and this test meaningless.
+    assert "rrw-sort-btn" in _markup(body), "the table is no longer sortable"
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_a_selection_restored_by_the_server_gets_its_panel(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The bulk routes redirect through `_redirect_keeping_selection`,
+    which carries the acted-on ids as `?selected=` and the server
+    re-checks those boxes. Without the bootstrap the restored rows would
+    have neither rails nor a panel until the operator toggled something.
+
+    The server half is asserted here — the boxes really do come back
+    checked, which is what the bootstrap has to find. The JS half is a
+    source assertion, with Chromium confirming the result: two ids in the
+    query give two checked boxes, two rails, a panel after the second
+    row, and "2 of 8 selected".
+    """
+    rs = _make_session(client, db, f"ex-rs-{page[:4]}")
+    ids = _seed(db, rs.id, page)
+    url = f"{_base(rs.id, page)}?selected={ids[0]}&selected={ids[2]}"
+    body = client.get(url).text
+
+    assert _markup(body).count("checked") >= 2, (
+        "the server did not restore the selection the bootstrap reads"
+    )
+    script = _script(body, page)
+    assert "if (box && box.checked) tickOrder.push(row.id);" in script
+    # The bootstrap's own `render()` is the LAST statement of the IIFE —
+    # `_script()` slices to `</script>`, so the closing `})();` follows
+    # it. Matched as the tail pair rather than by `endswith("render();")`,
+    # which the closer defeats.
+    assert script.rstrip().endswith("render();\n      })();"), script[-120:]
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_add_rows_first_field_takes_the_caret(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`Add new` navigates to a fragment, and a fragment navigation moves
+    focus to its target — which beats the `autofocus` attribute. So the
+    caret is set in script, against `.row-editor-first-field`, and the
+    marker has to be on the field the operator should start in.
+
+    On the **add** row only: an Edit arrives with the row already filled,
+    and stealing focus there fights an operator heading for a different
+    cell. Measured in Chromium — the caret lands in `name` on Reviewees
+    and `reviewer_pick` on Relationships.
+    """
+    rs = _make_session(client, db, f"ex-cf-{page[:4]}")
+    ids = _seed(db, rs.id, page)
+
+    add = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+    assert add.count("row-editor-first-field") == 1, "no caret marker, or two"
+    marker_at = add.index("row-editor-first-field")
+    field = add[add.rindex("<input", 0, marker_at) : add.index(">", marker_at) + 1]
+    expected = "name" if page == "reviewees" else "reviewer_pick"
+    assert f'name="{expected}"' in field, field
+
+    edit = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    assert "row-editor-first-field" not in edit, (
+        "an Edit steals focus from the cell the operator was heading for"
+    )

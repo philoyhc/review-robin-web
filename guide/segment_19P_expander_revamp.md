@@ -1071,6 +1071,57 @@ block), a test promising a pager its filtered fixture makes unreachable,
 one asserting `Add new` where Relationships renders the disabled variant,
 and an assertion comparing two module constants.
 
+**Rung 3 — landed.** The row expander and the edit-row bar on both pages;
+the `Operator actions` card renders on no roster page. Five
+`.operator-actions-card` CSS rules retired with their last tenant
+(`.operator-actions-main`, `.operator-actions-divider`,
+`.filter-confirm` and its children, `.operator-actions-buttons`); the card
+class itself stays for `session_assignments.html`. The dead
+`is_ready or edit_mode` disjunct is simplified on all three pages, which is
+the item rung 2's cold read deferred here.
+
+**Open question 2 is answered: no.** Relationships' edit-row bar needs
+nothing Reviewers' does not. Measured in Chromium: the bar sits flush
+under its row at the same width (1324px) with `colspan` equal to the
+row's own cell count on both pages — 9 on Reviewees, 8 on Relationships —
+and the two identity cells being `reviewer_pick` / `reviewee_pick` inputs
+changes only the row's height, which the bracket follows.
+
+**Twelve of twenty-five mutations survived, and the reasons differ.**
+
+- **Three are test gaps, now closed.** `data-status` deleted from the data
+  rows (twice) — the panel's ONLY input, so `rows()` returns nothing and
+  the whole expander stops, with the suite green because every other
+  guard reads the builder, which ships fine with nothing to build
+  against. And the add row's bracket class: both rows carry the identical
+  class string, so the mutation aimed at the edited row landed on the add
+  row, which nothing guarded. Found by a mutation missing its target.
+- **Five can only be guarded structurally.** `Edit`'s arity gate,
+  `statusActions`' two conditions, select-all's `indeterminate` (a DOM
+  property that never appears in a response at all), the sort re-render
+  binding and the restored-selection bootstrap are all JS evaluated
+  against live state, so what a server-side test can see is that the
+  expression ships, not that it works. Source assertions, with the
+  behaviour measured in Chromium and the caveat written into each
+  docstring rather than left for a reader to discover. The sort case's
+  *mechanism* was measured too, not assumed: with the binding removed, a
+  header click moved the panel from index 2 of 9 to index 8 — last child,
+  stranded, exactly as the comment claims.
+- **One was on a page this rung barely touched.** `Add new`'s surviving
+  `edit_mode` gate on **Reviewers** — the one line the `is_ready`
+  simplification changed there — had nothing watching it. Guarded in
+  `test_reviewers_roster_card_scaffold.py`.
+- **One was the add row's caret marker**, which is rendered markup and so
+  was a plain test gap, now closed on both pages.
+- **One is behaviour-preserving.** Hardcoding the bar's `colspan` changes
+  nothing today: the bar renders only in edit mode, and edit mode forces
+  every optional column on, so `edit_col_count` is always its maximum
+  (measured — 6 columns in the list view against 9 in edit mode). The
+  reason to compute it is the first time a column is gated differently,
+  which is a claim about the source, so it is asserted against the source.
+
+All twelve re-mutated after the fix and caught.
+
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
 item does not own. For the rung-5 sweep.
@@ -1141,9 +1192,8 @@ item does not own. For the rung-5 sweep.
 
 1. **Does the consolidating sweep land here or at 19P.4?** Proposed above:
    here, because Item 4 may become 19Q. **Author decides** before rung 5.
-2. **Does Relationships' edit-row bar need anything Reviewers' does not**,
-   given its two identity cells are inputs? **The dev slot decides**, after
-   rung 3 renders it.
+2. ~~**Does Relationships' edit-row bar need anything Reviewers' does
+   not?**~~ **Answered at rung 3: no.** See Status.
 
 ### Out of scope
 
