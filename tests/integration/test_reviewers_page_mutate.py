@@ -691,6 +691,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
             "reviewer_ids": [rows[0].id],
             "confirm": "true",
             "acknowledge_response_loss": "true",
+            "filter_offset": 200,
         },
         follow_redirects=False,
     )
@@ -700,6 +701,12 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     assert "#reviewer-row-" not in loc, (
         "delete anchored a row it had just removed"
     )
+    # A delete has no row to name, but it still has a page to come back
+    # to. `_ROW_ACTIONS` cannot cover this one — deleting the row it
+    # acts on leaves nothing for the anchor assertion to name — so the
+    # offset half is asserted here. Added at 19P.2 rung 1, where the
+    # equivalent mutation on the Observers copy was the only survivor.
+    assert "offset=200" in loc, loc
 
 
 def test_rows_and_the_fallback_are_both_present_for_the_landing(

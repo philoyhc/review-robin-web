@@ -216,7 +216,14 @@
               <a class="btn secondary disabled" aria-disabled="true">Add</a>
             {% else %}
               <a class="btn secondary"
-                 href="{{ observers_base_url }}?add=1">Add</a>
+                 {# 19P.2 rung 1 — carries the active filter into add
+                    mode, as Reviewers does since 19P.1. Without it,
+                    `Add` from a filtered view rendered an unfiltered
+                    add page, so the edit form's hidden `filter_*`
+                    fields held defaults and the create redirect came
+                    back unfiltered: the filter was lost at the
+                    NAVIGATION, not at the POST. #}
+                 href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add</a>
             {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
@@ -303,18 +310,30 @@
 
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}
+  {# ``filter_*`` carry the active search / status filter through the
+     POST so the operator lands back on the same filtered view
+     (Segment 15F).
+
+     ``filter_offset`` joined them at 19P.2 rung 1, on the analogy of
+     Reviewers at 19P.1: without it a row action taken on page 2
+     answered with page 1, so the operator lost their place AND the
+     acted-on row was not in the response for the landing anchor to
+     find. Named `filter_*` to match its neighbours — same job,
+     carrying the view the operator was looking at through the POST. #}
   {% if edit_mode %}
     {% set edit_action = observers_base_url ~ "/create" if add_mode
           else observers_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="observer-edit-form" method="post" action="{{ edit_action }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% elif is_editable %}
     <form id="observers-bulk-form" method="post"
           action="{{ observers_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
 
@@ -379,7 +398,8 @@
         {% endif %}
         {% for observer in observers %}
           {% if edit_id is not none and observer.id == edit_id %}
-            <tr class="observer-edit-row" id="observer-row-{{ observer.id }}">
+            <tr class="observer-edit-row row-action-target"
+                id="observer-row-{{ observer.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="display_name"
                          form="observer-edit-form"
@@ -400,7 +420,13 @@
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% else %}
+            {# `row-action-target` is the landing offset — `base.html`
+               gives it `scroll-margin-top: 88px` so the acted-on row
+               arrives second from the top with a neighbour above it
+               for context, rather than flush against the viewport
+               edge. 19P.2 rung 1, on the Reviewers analogy. #}
             <tr id="observer-row-{{ observer.id }}"
+                class="row-action-target"
                 {% if selectable %}data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}"{% endif %}>
               <td class="row-select-cell">
                 {% if selectable %}
@@ -442,6 +468,34 @@
         No observers yet. Upload a CSV or add a row to get started.
       </p>
     </div>
+  {% endif %}
+
+  {% if not edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        // A row action lands on the row it acted on. Two cases leave
+        // that fragment unresolvable, and an unresolvable fragment is
+        // silently ignored — which puts the operator back at the top of
+        // the document, the exact thing the anchor exists to prevent:
+        //
+        //   1. a row the active filter excludes — `Inactivate` while
+        //      the filter reads `active`. The route cannot know that
+        //      without re-running the filter, which is a multi-row
+        //      computation and does not belong in a route handler, so
+        //      it is caught here instead;
+        //   2. a row the cookie sort moved off the page the pager
+        //      `offset` restored.
+        //
+        // A delete is NOT one of them: the route sends the table card
+        // instead, so this returns on its first line.
+        var hash = window.location.hash;
+        if (!hash || hash.indexOf("#observer-row-") !== 0) return;
+        if (document.getElementById(hash.slice(1))) return;
+        var card = document.getElementById({{ pager_anchor | tojson }});
+        if (card && card.scrollIntoView) card.scrollIntoView();
+      })();
+    </script>
   {% endif %}
 
   {# Selection → action-button state binding. Runs whenever the

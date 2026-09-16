@@ -633,6 +633,43 @@ Commands and counts, 2026-09-16, `226c600`:
 - `grep -rl observers tests/ --include=*.py | wc -l` → **45** (reviewers 160)
 - The cohort editor is ~95 lines of builder markup plus ~180 lines of its own JS.
 
+### Status
+
+**Rung 1 — landed.** Every row action on Observers keeps the pager
+`offset` and returns to the row it acted on. Six POSTs, not the five the
+ladder counted: `cohort-rule` is a row action this page has and Reviewers
+does not.
+
+`_row_action_anchor` lifted from `_setup_reviewers.py` into `_shared.py`
+with a `noun` kwarg — the fourth roster page will want it too. Its
+docstring said "all three" cases leave the fragment unresolvable; the
+count is **two** (a delete redirects to the table card, so the fallback
+returns on its first line). Corrected in the lift.
+
+Two things the ladder did not name, both in scope because without them
+the rung does not work:
+
+- **`Add` carried a bare `?add=1`.** So an add from a filtered view
+  rendered an unfiltered page, whose hidden `filter_*` fields then held
+  defaults, which the create redirect faithfully honoured. The filter was
+  lost at the navigation, not at the POST — the same defect 19P.1 fixed on
+  Reviewers, and it defeats the `filter_offset` this rung adds.
+- **A delete's `offset` was unguarded on both pages.** The parametrized
+  offset test structurally cannot cover a delete: the row it acts on is
+  gone, so there is nothing for the anchor assertion to name. It was the
+  only mutation of thirteen that survived. Asserted now in the delete test
+  on each page.
+
+Verified in Chromium (the suite has no layout engine): an `Inactivate` on
+row 11 of page 2 lands the row at **88px** from the viewport top, scrollY
+642 → 1051. With the filter reading `active`, the same action drops the
+row out of the view, the fragment does not resolve, and the fallback puts
+the table card at **16px** instead of leaving the operator at the top of
+the document.
+
+Guards: `tests/integration/test_observers_row_landing.py`, 13 tests,
+13/13 mutations caught. Suite 4,049 → 4,062.
+
 ### PR ladder
 
 1. **The `offset` / anchor fix — land where Reviewers lands.** Every row

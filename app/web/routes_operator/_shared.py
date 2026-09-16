@@ -649,6 +649,46 @@ def _redirect_keeping_selection(
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
+def _row_action_anchor(row_ids: list[int], *, noun: str) -> str:
+    """Where a row action lands: the first row it acted on.
+
+    ``noun`` is the singular entity name — ``"reviewer"`` yields
+    ``reviewer-row-<id>``, falling back to ``reviewers-table-card``. The
+    bare ``+ "s"`` plural holds for all four rosters (reviewer, reviewee,
+    observer, relationship) and the table-card ids they already ship.
+
+    A bare 303 lands at the top of the document — measured at 821px of
+    jump from a mid-table action (19P.1). Anchoring the table card
+    instead only helps when the row is near its top, which is the Add
+    case and not the common one.
+
+    With no row to land on, the table card. ``bulk-delete`` passes ``[]``
+    by design, since the rows it acted on no longer exist.
+
+    **Two** cases leave the fragment unresolvable, and neither is decided
+    here: a row that survives but drops out of a filtered view
+    (``Inactivate`` under ``status=active``), and a row that moves to
+    another page under the operator's cookie sort — the bulk status
+    routes write ``updated_at`` as well as ``status``, so a sort on
+    either reorders the row out from under a held ``offset``. Both would
+    need the filter and the sort re-run to predict, which is a multi-row
+    computation and belongs outside a route handler; the page's fallback
+    script catches them instead.
+
+    The delete case is **not** one of them, though this docstring said
+    "all three" until 19P.2 rung 1. The fallback script opens with
+    ``hash.indexOf("#<noun>-row-") !== 0 -> return``, and a delete
+    redirects to the table card, so the script returns on its first line
+    and never sees it. The route handles that case; the script handles
+    the other two. (The same miscount reached `spec/setup_pages.md` and
+    was corrected there by 19P.1 rung 4a's cold read — this was its last
+    copy.)
+    """
+    if row_ids:
+        return f"{noun}-row-{row_ids[0]}"
+    return f"{noun}s-table-card"
+
+
 def _require_instrument_in_session(
     instrument_id: int,
     review_session: ReviewSession = Depends(require_session_operator),
