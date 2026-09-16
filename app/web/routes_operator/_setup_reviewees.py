@@ -41,6 +41,7 @@ from app.web.routes_operator._shared import (
     _setup_row_window,
     _handle_import,
     _redirect_keeping_selection,
+    _row_action_anchor,
     _require_delete_confirm,
     _require_editable,
     _require_selected_response_loss_ack,
@@ -108,6 +109,9 @@ def _render_reviewees_page(
     search: str = "",
     offset: int = 0,
     edit_id: int | None = None,
+    # 19P.3 rung 1 — the created row, so the pager window can be
+    # relocated onto the page holding it. See the create route.
+    focus_id: int | None = None,
     add_mode: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
@@ -151,6 +155,7 @@ def _render_reviewees_page(
         all_rows=all_reviewees,
         is_filtered=is_filtered,
         offset=offset,
+        locate_id=focus_id,
         edit_id=edit_id,
     )
     reviewees = window.rows
@@ -244,6 +249,10 @@ def _render_reviewees_page(
             # the top of the document the first time someone renamed
             # it, which is a failure with no error.
             "pager_anchor": "reviewees-table-card",
+            # 19P.3 rung 1 — the pager offset the row-action forms
+            # post back, so a mid-table action returns to the page
+            # it was taken on rather than to page 1.
+            "current_offset": offset,
             # Segment 19J.5 rung 2 — the sentence is the filter's now,
             # not the table's: where the pager renders, the ranges
             # already say where the operator is.
@@ -313,6 +322,7 @@ def reviewees_list(
     offset: int = 0,
     edit_id: int | None = None,
     add: int = 0,
+    focus: int | None = None,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -328,6 +338,7 @@ def reviewees_list(
         offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
+        focus_id=focus,
         selected_ids=set(selected),
     )
 
@@ -360,13 +371,19 @@ def reviewees_create(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    # 19P.3 rung 1 — the filter round-trip the other four row
+    # actions already had. Create never carried it, so a create
+    # from a filtered view answered unfiltered.
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
-        reviewees_service.create_reviewee(
+        created = reviewees_service.create_reviewee(
             db,
             review_session=review_session,
             name=name,
@@ -398,9 +415,26 @@ def reviewees_create(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
-        status_code=status.HTTP_303_SEE_OTHER,
+    # 19P.3 rung 1 — this route answered with a BARE redirect: no
+    # selection, no filter, no offset, no fragment. So a create from a
+    # filtered, paged view threw the operator back to an unfiltered
+    # page 1 at the top of the document, losing more than the other
+    # four row actions did. The ladder called this "five POSTs gain
+    # offset and a fragment"; on this page it is also the filter
+    # round-trip the other four already had.
+    #
+    # `focus` is the create-only half: rows list by id, so a new row
+    # appends past the end and on a roster over one page is not on the
+    # page the form was submitted from — the fragment would name a row
+    # the response never rendered. It relocates the pager window; the
+    # fragment then resolves onto the row.
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewees",
+        [],
+        filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        extra_params=[("focus", created.id)],
+        anchor=_row_action_anchor([created.id], noun="reviewee"),
     )
 
 
@@ -421,6 +455,7 @@ def reviewees_update(
     status_value: str = Form(default="active", alias="status"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -464,6 +499,8 @@ def reviewees_update(
         f"/operator/sessions/{review_session.id}/reviewees",
         [reviewee_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([reviewee_id], noun="reviewee"),
     )
 
 
@@ -472,6 +509,7 @@ def reviewees_bulk_inactivate(
     reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -493,6 +531,8 @@ def reviewees_bulk_inactivate(
         f"/operator/sessions/{review_session.id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewee_ids, noun="reviewee"),
     )
 
 
@@ -501,6 +541,7 @@ def reviewees_bulk_reactivate(
     reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -522,6 +563,8 @@ def reviewees_bulk_reactivate(
         f"/operator/sessions/{review_session.id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor(reviewee_ids, noun="reviewee"),
     )
 
 
@@ -606,6 +649,7 @@ def reviewees_bulk_delete(
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
+    filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -642,4 +686,6 @@ def reviewees_bulk_delete(
         f"/operator/sessions/{review_session.id}/reviewees",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
+        offset=filter_offset,
+        anchor=_row_action_anchor([], noun="reviewee"),
     )

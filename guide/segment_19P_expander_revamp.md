@@ -890,10 +890,17 @@ Measured 2026-09-16 on `origin/main` after Item 2 closed. Both render the
 above the preview table and a `.bottom-grid` below it — the shape Reviewers
 left at 19P.1 and Observers at 19P.2.
 
-**The 821px landing defect is live on both.** Each has **five**
-`_redirect_keeping_selection` call sites and **zero** anchors: `grep -c
-"anchor=" app/web/routes_operator/_setup_{reviewees,relationships}.py` → 0
-and 0. `offset` appears twice in each module and reaches only the GET route
+**The 821px landing defect is live on both.** Each has **four**
+`_redirect_keeping_selection` call sites — `update`, the two bulk status
+routes and `bulk-delete` — and **zero** anchors: `grep -c "anchor="
+app/web/routes_operator/_setup_{reviewees,relationships}.py` → 0 and 0.
+(`grep -c` on the helper name returns 5; the fifth is the import line.
+The **fifth POST** needing the contract is `create`, which returns a
+**bare** `RedirectResponse` — no selection, no filter, no offset, no
+fragment — so it loses more than the other four and rung 1 *converts* it
+rather than adding two kwargs. **Four** POSTs per page redirect bare and
+correctly stay bare: `import`, `delete-all` and `field-labels`, plus
+Reviewees' import reaching the shared handler.) `offset` appears twice in each module and reaches only the GET route
 and the window helper, never a redirect — so a row action taken on page 2
 answers with page 1 and lands at the top of the document.
 
@@ -909,8 +916,8 @@ in one commit.
 
 Rejected: **a rung per page** — it is the same edit twice, and letting the
 two drift apart by a rung is exactly the divergence 19P.1's spec cold read
-spent fifteen findings on. Rejected: **deferring the landing fix** — it is a
-five-call-site change per page and a defect the operator meets today.
+spent fifteen findings on. Rejected: **deferring the landing fix** — it is four call sites plus one
+conversion per page, and a defect the operator meets today.
 
 **The divergence proof is done.** Item 2 took the idiom to the page that did
 not fit; these two fit. So this item is a transcription with three named
@@ -968,20 +975,78 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
   `field-labels`; `grep -c "_redirect_keeping_selection"` → **5** each.
 - Specs naming either Setup page: **`spec/setup_pages.md`**,
   `spec/operator_button_audit.md`, `spec/operator_ui_concept.md`,
-  `spec/settings_inventory.md`, `spec/participant_model.md` (Reviewees
-  only), `docs/status.md`.
+  `spec/settings_inventory.md`, `spec/participant_model.md` (which names
+  the **Relationships** tab and its routes too, at `:41`, not Reviewees
+  alone), `docs/status.md` — plus **`spec/ui_elements.md`** and
+  **`spec/rrw_functional_spec.md`**, which Doc impact names and this list
+  first omitted. The latter is not optional: `rrw_functional_spec.md:1128`
+  carries a `19P.3–.4` hedge, so it is inside the sweep's target set.
+  **Eight documents, not six.**
 - Tests hitting either Setup route: **67** files for Reviewees, **16** for
   Relationships (`grep -rln "sessions/{[^}]*}/<page>\|/<page>/import\|..."`).
   The Reviewees figure is the one to watch — it is four times Relationships'
   and larger than either page's own suite, because reviewees are a fixture
   for most of the app.
+- **Shared code, which this list first omitted entirely.**
+  `_handle_import` in `app/web/routes_operator/_shared.py` carries the
+  panel-open contract as **`kind == "reviewers"` literals** at two sites
+  (`:830`, `:961`). Reviewees calls it, so **rung 4 must edit a module
+  Reviewers, Observers and other slices all read**. And **Relationships
+  does not use it at all** — `relationships_import_submit` is bespoke with
+  **two** in-place 400 re-render paths, not one: a blocked CSV, and a
+  `missing_confirm=True` replace-confirmation state Reviewees has no
+  equivalent of. 19P.1 put the import card last precisely because it
+  re-renders in place; Relationships has twice that surface and its own
+  handler, so rung 4 is **not** one change applied twice there.
+
+### Status
+
+**Rung 1 — landed.** Both pages' row actions keep the pager `offset` and
+return to the row they acted on.
+
+**The ladder's "five POSTs" was right by accident.** `grep -c` counts the
+import line; there are **four** call sites, and the fifth POST — `create` —
+returned a bare `RedirectResponse`, so it is a conversion that also regains
+the filter round-trip. The Opportunity and the ladder now say so.
+
+**Both pages are sortable**, unlike Observers, so the fallback carries two
+unresolvable-fragment cases rather than one. Asserted, so a page that stops
+shipping `rrw-sortable` fails rather than leaving the comment wrong.
+
+**Two reviews found seven things this rung shipped or claimed wrongly. The
+pattern in all of them: a guard that proves less than it says.**
+
+- **The mutation table.** 18 chosen, 18 caught — and four more mutations of
+  the same code passed the whole suite (`"current_offset": 0`; `locate_id`
+  deleted; `filter_offset` gone from the *edit* shell alone; `offset=` gone
+  from `bulk-delete`). Fixture-shaped, as Item 2's were: 3 rows let
+  `clamp_offset` pull `?offset=200` to `0`; a `>= 1` count could not tell
+  which of two shells it found, and only one renders per request. Now 230
+  rows, each shell by id, and the create redirect *followed*.
+- **`Add` linked bare `?add=1`** on both pages where Reviewers and Observers
+  carry the filter, so `create`'s round-trip was unreachable through the UI —
+  and the test posted the filter fields directly, supplying exactly what the
+  flow loses. Driven GET → POST now.
+- **The fallback was string-matched into the `{% if rows %}` branch**, and
+  the empty-filtered card carried no id, so it also had nothing to find.
+  Both halves fixed: its first case taken to the limit *is* that branch.
+- **Four plan edits were lost** to a script that wrote only at the end and
+  asserted late, so the previous Status claimed corrections it had not made.
+  One write per edit now.
+
+**Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
+carry no landing anchor either — the same gap, pre-existing, on files this
+item does not own. For the rung-5 sweep.
 
 ### PR ladder
 
-1. **The landing contract, both pages.** Five POSTs each gain `offset`, a
-   fragment and `focus=<id>` on a create, plus the fallback script. No layout
-   change; this is the defect 19P.1 left behind, fixed the way rungs 1 of
-   both prior items fixed it.
+1. **The landing contract, both pages.** Four POSTs each gain `offset` and
+   a fragment; `create` is **converted** from a bare redirect and gains the
+   filter round-trip it never had, plus `focus=<id>`. The fallback script
+   carries **two** cases here, not Observers' one — both tables ship
+   `rrw-sortable` headers, so a row can move off the restored page under the
+   operator's cookie sort as well as drop out of a filtered view. No layout
+   change; this is the defect 19P.1 left behind.
 2. **The toolbar.** The filter strip moves into the preview table's two-pane
    toolbar; the action row slims to `Clear` / `Add new` / `Search`. Chips
    join the left pane on both.
@@ -1010,15 +1075,21 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
   migrated and cannot reach 0. `session_assignments.html` renders the card
   too and is **not** a roster page, so it is excluded by name rather than by
   a `session_*` glob.
-- `_field_labels_editor.html` is included **once** per page and renders in
-  both homes on the complement condition, asserted per page.
+- `_field_labels_editor.html` renders in **exactly one of two homes** per
+  request, on complementary conditions, asserted per page for each state.
+  **Two `{% include %}` tags, one render** — Reviewers has exactly that
+  (`session_reviewers.html:275` and `:598`), so "included once per page" is
+  false of the precedent and would send a builder hunting for a structure
+  the complement-condition layout cannot produce.
 - No `.bottom-grid` on any roster page; nothing renders below any preview
   table.
 - No spec sentence defers a roster shape to a future item:
-  `grep -rn "19P.2–.4\|19P.3–.4" spec/` → 0, from **9** today. Only the
-  forward-looking hedges retire — `spec/setup_pages.md:1168` and `:1207`
-  read *"until 19P.1"* about a transition that already happened, which is
-  history rather than a hedge and stays.
+  `grep -rn "19P\.3\|19P\.4" spec/` → 0, from **11** today — 9 matching the
+  `19P.2–.4` / `19P.3–.4` ranges plus **two naming `19P.3` without one**,
+  `spec/setup_pages.md:1170` and `:1208`. Those two sit *two lines below*
+  `:1168` and `:1207`, which read *"until 19P.1"* about a transition that
+  already happened and stay as history. The range-only grep reads the right
+  paragraphs and stops one sentence short, so it is not the check.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19P.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated

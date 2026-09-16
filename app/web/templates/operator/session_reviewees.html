@@ -163,7 +163,14 @@
               <a class="btn secondary disabled" aria-disabled="true">Add</a>
             {% else %}
               <a class="btn secondary"
-                 href="{{ reviewees_base_url }}?add=1">Add</a>
+                 {# 19P.3 rung 1 — the Add link carries the active filter, as
+                    Reviewers and Observers do. Without it the
+                    intervening GET rebuilds the page at
+                    `filter_status="all"` / `filter_q=""`, the form
+                    shell renders those defaults, and the create
+                    redirect's filter round-trip carries nothing —
+                    the route half works and the flow does not. #}
+                 href="{{ reviewees_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}">Add</a>
             {% endif %}
             {# Segment 19I Item 2 — posts the bulk form to
                ``/bulk-delete`` via ``form=`` + ``formaction``,
@@ -265,12 +272,26 @@
     <form id="reviewee-edit-form" method="post" action="{{ edit_action }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      {# 19P.3 rung 1 — the pager offset, carried through the POST
+         so a row action taken on page 2 answers with page 2. Named
+         `filter_*` to match its neighbours: same job, carrying the
+         view the operator was looking at. Without it the redirect
+         lands on page 1 and the acted-on row is not in the
+         response for the fragment to find. #}
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% elif is_editable %}
     <form id="reviewees-bulk-form" method="post"
           action="{{ reviewees_base_url }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
+      {# 19P.3 rung 1 — the pager offset, carried through the POST
+         so a row action taken on page 2 answers with page 2. Named
+         `filter_*` to match its neighbours: same job, carrying the
+         view the operator was looking at. Without it the redirect
+         lands on page 1 and the acted-on row is not in the
+         response for the fragment to find. #}
+      <input type="hidden" name="filter_offset" value="{{ current_offset }}">
     </form>
   {% endif %}
 
@@ -425,7 +446,7 @@
         {% endif %}
         {% for reviewee in reviewees %}
           {% if edit_id is not none and reviewee.id == edit_id %}
-            <tr class="reviewee-edit-row" id="reviewee-row-{{ reviewee.id }}">
+            <tr class="reviewee-edit-row row-action-target" id="reviewee-row-{{ reviewee.id }}">
               <td class="row-select-cell"></td>
               <td><input type="text" name="name" form="reviewee-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
@@ -466,7 +487,12 @@
               </td>
             </tr>
           {% else %}
-            <tr id="reviewee-row-{{ reviewee.id }}">
+            {# `row-action-target` is the landing offset — `base.html`
+               gives it `scroll-margin-top: 88px` so the acted-on row
+               arrives second from the top with a neighbour above it
+               for context, rather than flush against the viewport
+               edge. 19P.3 rung 1, on the Reviewers analogy. #}
+            <tr id="reviewee-row-{{ reviewee.id }}" class="row-action-target">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="reviewee-select"
@@ -503,13 +529,58 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
+
     </div>
   {% elif total_row_count > 0 %}
     {# Filter matched nothing — preserve the total-row context so
        the operator knows the data isn't gone, just filtered out. #}
-    <div class="card">
+    {# 19P.3 rung 1 — the landing anchor lives here too. This is
+       the empty-filtered branch, and it is exactly where the
+       fallback's first case lands: inactivate the last row
+       matching `status=active` and the redirect names a row
+       fragment with nothing rendered. Without an id the
+       fallback's `getElementById` returns null and the
+       operator is left at the top of the document — the very
+       thing the anchor exists to prevent. Only one branch of
+       the chain renders, so the id is never duplicated. #}
+    <div class="card" id="{{ pager_anchor }}">
       <p class="muted">No reviewees match the current filter.</p>
     </div>
+  {% endif %}
+
+  {# 19P.3 rung 1 — the fallback for a fragment that cannot resolve. #}
+  {% if not edit_mode %}
+    <script>
+      (function () {
+        "use strict";
+        // A fragment naming a row the response did not render is
+        // silently ignored by the browser, which puts the operator back
+        // at the top of the document — the exact thing the anchor
+        // exists to prevent.
+        //
+        // **Two cases reach this, and this page has both**, unlike
+        // Observers, which is not sortable and has only the first:
+        //   - a row the active filter excludes (`Inactivate` while the
+        //     filter reads `active`);
+        //   - a row the operator's cookie-held sort moved to another
+        //     page — the bulk status routes write `updated_at` as well
+        //     as `status`, so a sort on either reorders the row out
+        //     from under a held `offset`. This table ships
+        //     `rrw-sortable` headers, so that is reachable here.
+        //
+        // Neither is knowable in the route without re-running the
+        // filter and the sort, which is a multi-row computation and
+        // does not belong in a route handler — so it is caught here.
+        //
+        // A delete does not reach it: the route sends the table card
+        // itself, so this returns on its first line.
+        var hash = window.location.hash;
+        if (!hash || hash.indexOf("#reviewee-row-") !== 0) return;
+        if (document.getElementById(hash.slice(1))) return;
+        var card = document.getElementById({{ pager_anchor | tojson }});
+        if (card && card.scrollIntoView) card.scrollIntoView();
+      })();
+    </script>
   {% endif %}
 
   {% if reviewees and not edit_mode %}

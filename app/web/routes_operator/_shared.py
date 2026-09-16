@@ -633,9 +633,13 @@ def _redirect_keeping_selection(
     (a delete removes them) pass the table card instead. A fragment that
     does not resolve is silently ignored by the browser and lands at the
     top again, so a caller passing ``anchor`` must also ship the
-    fallback script that catches a missing target. **Reviewers and
-    Observers** do today (19P.1, 19P.2 rung 1); Reviewees and
-    Relationships pass no anchor and are unaffected until 19P.3."""
+    fallback script that catches a missing target. **All four roster
+    pages** do since 19P.3 rung 1 — Reviewers at 19P.1, Observers at
+    19P.2, Reviewees and Relationships together at 19P.3. Two of the
+    four ship a two-case fallback rather than one: Reviewees,
+    Relationships and Reviewers are sortable, so a row can move off the
+    restored page under a cookie-held sort as well as drop out of a
+    filtered view; Observers is not."""
     params: list[tuple[str, object]] = []
     if filter_params:
         params.extend((key, value) for key, value in filter_params if value)
