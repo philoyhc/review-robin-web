@@ -757,9 +757,11 @@
                 <a class="btn secondary"
                    href="{{ reviewers_base_url }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
-              {# `Add` is page-level and keeps its own `is_ready` gate; it
+              {# `Add` is page-level and keeps its own inner gate; it
                  renders as `Add new` here, beside the control it reads
-                 next to. #}
+                 next to. (It said "its own `is_ready` gate" until 19P.3
+                 rung 3 removed that half — see the note on the condition
+                 below, which this sentence contradicted.) #}
               {% if is_editable %}
                 {# `edit_mode` alone. This read `is_ready or edit_mode`
                    from 19P.1 rung 2a until 19P.3 rung 3, and the

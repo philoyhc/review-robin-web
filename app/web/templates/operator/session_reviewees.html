@@ -150,9 +150,11 @@
        and the delete confirm are in the row expander below, built
        against the selected rows; Save / Cancel are in the edit row's own
        bar. What was left after those moved was a `<form>` with no field
-       and no submit of its own — every button in it targeted
-       `reviewees-bulk-form` via `form=` + `formaction` — inside a card whose
-       only remaining content described where its controls had gone.
+       and no submit of its own: the three submit buttons in it targeted
+       `reviewees-bulk-form` via `form=` + `formaction`, and `Edit` was a
+       bare `type="button"` driven by script — so nothing submitted the
+       form the card wrapped. Inside a card whose only remaining content
+       described where its controls had gone.
 
        Wired and retired in ONE slice, as Reviewers was at 19P.1 rung 2b:
        two live `Delete` buttons would need two `data-delete-confirm`

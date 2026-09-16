@@ -45,7 +45,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
+import datetime as _dt
+
+from app.db.models import (
+    Assignment,
+    Instrument,
+    InstrumentResponseField,
+    Relationship,
+    Response,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
 
 #: ``(page, noun)`` — the two pages this rung moves.
 PAGES = [("reviewees", "reviewee"), ("relationships", "relationship")]
@@ -122,6 +133,49 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     for r in rows:
         db.refresh(r)
     return [r.id for r in rows]
+
+
+def _with_a_response(db: Session, rs: ReviewSession) -> None:
+    """One saved response, which is what flips `delete_discards_responses`
+    on the Reviewees page. Mirrors `test_setup_bulk_delete_routes._with_responses`."""
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == rs.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == rs.id)
+    ).scalars().first()
+    instrument = Instrument(session_id=rs.id, name="I", order=0)
+    db.add(instrument)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="f0",
+        label="F0",
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
+        order=0,
+    )
+    db.add(field)
+    assignment = Assignment(
+        session_id=rs.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+        include=True,
+        created_by_mode="rule_based",
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="1",
+            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+            version=1,
+        )
+    )
+    db.commit()
 
 
 def _base(sid: int, page: str) -> str:
@@ -300,18 +354,43 @@ def test_the_gate_is_paired_to_the_button_and_submits_with_the_selection(
     )
 
 
-def test_the_delete_sentence_names_what_goes_per_page() -> None:
-    """Reviewees discards assignments and responses; a relationship has
-    neither flag, so its sentence is the bare one. Read from the rendered
-    builder rather than the template, because the branch is evaluated
-    server-side and baked into the literal."""
-    # Asserted in the page tests below via the builder; here the claim is
-    # only that the two pages do NOT share one hard-coded sentence.
-    rev = (TEMPLATES / "session_reviewees.html").read_text()
-    rel = (TEMPLATES / "session_relationships.html").read_text()
-    for source in (rev, rel):
-        assert "delete_discards_responses" in source
-        assert "delete_discards_assignments" in source
+def test_the_delete_sentence_names_what_goes_per_page(
+    client: TestClient, db: Session
+) -> None:
+    """The sentence names what the tick agrees to, and the two pages do
+    not agree on what that is: a relationship carries neither flag
+    (`_setup_relationships.py` passes `delete_discards_*` as `False`
+    outright), so its sentence is the bare one, while a reviewee with
+    responses gets the longest of the three.
+
+    Read from the **rendered builder**, because the branch is evaluated
+    server-side and baked into the JS literal — the template only shows
+    that a branch exists, which is what an earlier version of this test
+    asserted while its docstring claimed otherwise.
+    """
+    rs = _make_session(client, db, "ex-sent")
+    _seed(db, rs.id, "reviewees")
+    _seed(db, rs.id, "relationships")
+
+    rev = _builder(client.get(_base(rs.id, "reviewees")).text, "reviewees")
+    rel = _builder(client.get(_base(rs.id, "relationships")).text, "relationships")
+
+    # No assignments and no responses yet: both pages say the bare thing.
+    assert '"Yes, delete these"' in rev, rev[:300]
+    assert '"Yes, delete these"' in rel
+    assert "reviewer responses" not in rel, (
+        "Relationships cannot discard responses and must not say it does"
+    )
+
+    # Give the reviewee a response, and only its sentence grows.
+    _with_a_response(db, rs)
+    rev = _builder(client.get(_base(rs.id, "reviewees")).text, "reviewees")
+    rel = _builder(client.get(_base(rs.id, "relationships")).text, "relationships")
+    assert (
+        '"Yes, delete these and their associated assignments and reviewer responses"'
+        in rev
+    ), rev[:400]
+    assert '"Yes, delete these"' in rel, "Relationships' sentence moved with it"
 
 
 # ── The edit row and its bar ──────────────────────────────────────────
@@ -543,10 +622,12 @@ def test_the_bars_colspan_is_computed_not_written(
     `edit_col_count` is **always its maximum**: the bar only renders in
     edit mode, and edit mode forces every optional column on so the
     operator can type into a tag that is empty today. Measured — the list
-    view renders 6 columns where edit mode renders 9. So hardcoding the
-    number is behaviour-preserving right now, and a mutation replacing
-    the expression with `9` passes every behavioural test there is,
-    including the one above that compares colspan to the row's cells.
+    view renders 6 columns on both pages, against 9 in edit mode on
+    Reviewees and 8 on Relationships — Relationships has no profile-link
+    column. So hardcoding the number is behaviour-preserving right now,
+    and a mutation replacing the expression with a literal passes every
+    behavioural test there is, including the one above that compares
+    colspan to the row's cells.
 
     The reason to compute it is therefore not today's rendering but the
     first time a column is gated differently, at which point a written
@@ -694,4 +775,97 @@ def test_the_add_rows_first_field_takes_the_caret(
     edit = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
     assert "row-editor-first-field" not in edit, (
         "an Edit steals focus from the cell the operator was heading for"
+    )
+
+
+# ── Three claims both precedents guard, transcribed ───────────────────
+#
+# Added after a cold read found them missing. The item's whole stated
+# risk is drift from the precedent, and each of these is guarded on
+# Reviewers (`test_reviewers_roster_card_scaffold.py`) and Observers
+# (`test_observers_expander.py`) but had no counterpart here — which the
+# rung's own mutation set did not think to probe either.
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_anchor_prunes_on_untick_and_rebuilds_on_select_all(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The panel anchors after the most recently ticked row that is STILL
+    selected, with DOM order as the fallback — the rule 19L settled for
+    the lobby (`sessions_list.html:585`).
+
+    Both halves are load-bearing. A single remembered id clears on any
+    untick and the panel jumps back up the table; and without the prune,
+    a row unticked and re-ticked leaves a stale entry that anchors the
+    panel at that row instead of the last one. Select-all rebuilds the
+    order wholesale rather than appending.
+
+    Source assertions — the order is JS state with no server-side
+    counterpart. Measured in Chromium: with rows 1 and 3 ticked the panel
+    renders after row 3, not row 8.
+    """
+    rs = _make_session(client, db, f"ex-an-{page[:4]}")
+    _seed(db, rs.id, page)
+    script = _script(client.get(_base(rs.id, page)).text, page)
+
+    assert "tickOrder = tickOrder.filter(function (id) { return id !== row.id; });" in script, (
+        "the prune is gone; a re-ticked row would anchor the panel"
+    )
+    assert "if (event.target.checked) tickOrder.push(row.id);" in script
+    assert "(currentAnchor() || sel[sel.length - 1])" in script, (
+        "the anchor collapsed to DOM order, losing the tick-order rule"
+    )
+    assert '.insertAdjacentElement("afterend", panel)' in script
+    assert "tickOrder = selectAll.checked" in script, (
+        "select-all appends rather than rebuilding the order"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_edit_navigates_to_the_row_it_is_about_to_edit(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`Edit` is a client-side GET, not a form post, so it carries its own
+    landing anchor — and the anchor is the row's id, not the editor
+    anchor `Add new` uses. With the editor card gone there is nothing
+    else for it to name.
+
+    Measured in Chromium: the click goes to
+    `?edit_id=2#reviewee-row-2` and the edit row renders.
+    """
+    rs = _make_session(client, db, f"ex-ed-{page[:4]}")
+    _seed(db, rs.id, page)
+    script = _script(client.get(_base(rs.id, page)).text, page)
+
+    assert 'BULK_BASE + "?edit_id=" +' in script
+    assert f'"#{noun}-row-" + encodeURIComponent(editId)' in script, (
+        "Edit lands somewhere other than the row it opens"
+    )
+    assert f"{page}-row-editor" not in script, (
+        "Edit names the add row's anchor, which is not the row it opens"
+    )
+
+
+@pytest.mark.parametrize("page,noun", PAGES)
+def test_the_panel_stays_a_pill_free_zone(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """`spec/ui_elements.md` `.session-row-selected`: the panel's fill
+    resolves to `--status-info-bg`'s primitive, so a `.pill-count`
+    rendered inside it reopens the collision one storey down — both
+    tokens are `--blue-pale` light and `--blue-abyss` dark, which makes
+    the pill invisible.
+
+    The count the card rendered as a pill is bare text here, as the lobby
+    renders the same fact. Both templates carry a comment citing that
+    spec; this is what holds them to it.
+    """
+    rs = _make_session(client, db, f"ex-pf-{page[:4]}")
+    _seed(db, rs.id, page)
+    builder = _builder(client.get(_base(rs.id, page)).text, page)
+
+    assert "pill" not in builder, f"a pill came back into the panel: {builder[:400]}"
+    assert '<span class="row-expander-count"><strong>' in builder, (
+        "the count is not rendered as bare text"
     )

@@ -1056,9 +1056,10 @@ rung — and Observers' siting matches this ladder. It goes at rung 4.
 twenty-two first-round ones were caught: a live `Add new` mid-edit, the
 moved form flipped to `method="post"`, and the slimmed card's form losing
 its `action`. The first two are now guarded. The third is not: after the
-move that form holds no field and no submit of its own — every button in
-it targets `*-bulk-form` via `form=` + `formaction` — so its `action` is
-inert and the `<form>` itself is vestigial. **Rung 3 deletes it with the
+move that form holds no field and no submit of its own — its three submit
+buttons target `*-bulk-form` via `form=` + `formaction`, and `Edit` is a
+bare `type="button"` — so its `action` is inert and the `<form>` itself is
+vestigial. **Rung 3 deletes it with the
 card**; guarding an attribute that does nothing would pin the wrong thing.
 
 **A cold read found nine, all upheld.** Two matter beyond their own lines:
@@ -1121,6 +1122,31 @@ changes only the row's height, which the bracket follows.
   which is a claim about the source, so it is asserted against the source.
 
 All twelve re-mutated after the fix and caught.
+
+**The cold read found twelve more, and the two that matter are gaps the
+mutation set did not think to probe.** Three claims BOTH precedents guard
+had no counterpart here — the tick-order anchor rule (prune on untick,
+rebuild on select-all, `currentAnchor() || sel[sel.length - 1]`), `Edit`'s
+navigation target, and the panel's pill-free zone. Deleting the prune or
+collapsing the anchor passed the whole suite on both new pages. All three
+are transcribed now. And
+`test_the_delete_sentence_names_what_goes_per_page` claimed to read the
+rendered builder while reading the template, and cross-referenced tests
+that do not exist; it now drives the three-way branch for real, with and
+without a saved response.
+
+The rest were prose: a `base.html` comment predicting "none once 19P.3
+lands" that this rung made true without updating, its Scope-2 header
+still listing four tenants where one remains, and `session_reviewers.html`
+claiming an `is_ready` gate three lines above the note saying it was
+removed.
+
+**Owed, not fixed here — rung 3's additions.** Two comment-placement
+bugs in `session_reviewers.html`: the `statusActions` header comment sits
+above `var BULK_BASE` (`:1149`) and the sort-handler comment above the
+`Edit` click handler (`:1199`). Both new copies attach them correctly, so
+the precedent is now the odd one out. Not fixed here because this rung
+did not cause them and the diff is already wide.
 
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
@@ -1216,6 +1242,18 @@ item does not own. For the rung-5 sweep.
 - `spec/participant_model.md` — the Reviewees Setup page's description, the one spec outside the shared set that names it (Item 3).
 - `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
+
+**Rung 3 adds one, and it is a question rather than a relabel.**
+`spec/ui_elements.md:198-201` §6 says every destructive submit's paired
+confirmation checkbox "is also `required` (belt-and-suspenders against a
+JS-off submit)". **No roster page's confirm carries `required`** — not
+the injected panel's on any of the four, and not the card markup it
+replaced. That is not an oversight to correct in the templates: the
+confirm is attached to `*-bulk-form` via `form=`, and so are `Inactivate`
+and `Activate`, so a `required` checkbox would block those two submits
+as well. The rule cannot hold as written wherever the gate shares a form
+with non-destructive submits. **Rung 5 adjudicates the sentence**, not
+the markup.
 
 **Rung 2 adds five, none of them previously named here.** A cold read
 found the first: a test comment deferred `ui_elements.md:385` to "Item 3's

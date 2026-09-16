@@ -2079,8 +2079,9 @@ def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
     (`draft or validated`) and `is_ready` (`status == "ready"`) are
     disjoint. A mutation replacing the surviving gate with `False` passed
     the whole suite, so the simplification was landing on a line nothing
-    watched. The sibling pages gained the same guard in
-    `test_roster_toolbar.py`.
+    watched. The sibling pages already had the equivalent guard — it
+    landed with their toolbar at rung 2, which is why this page was the
+    only one left uncovered.
     """
     rs = _with_reviewers(client, db, "rc-addlock")
     reviewer = db.execute(select(Reviewer)).scalars().first()

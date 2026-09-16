@@ -461,10 +461,14 @@ def test_the_landing_anchor_id_is_on_exactly_one_element(
 
 #: ``page -> how many ``Add new`` spellings its template holds``. Both
 #: pages render exactly one of them per request; the count is of
-#: BRANCHES. Reviewees has two — disabled (`is_ready or edit_mode`) and
-#: live. Relationships has three: it also refuses when the session has
-#: no reviewer or no reviewee to pair, because a relationship needs
-#: both.
+#: BRANCHES. Reviewees has two — disabled (`edit_mode`) and live.
+#: Relationships has three: it also refuses when the session has no
+#: reviewer or no reviewee to pair, because a relationship needs both.
+#:
+#: The disabled branch read `is_ready or edit_mode` until 19P.3 rung 3,
+#: where the `is_ready` half was removed as dead — it sits inside
+#: `{% if is_editable %}`, and `draft or validated` and `status ==
+#: "ready"` are disjoint. The counts are unchanged; only the reason was.
 ADD_NEW_BRANCHES = {"reviewees": 2, "relationships": 3}
 
 
