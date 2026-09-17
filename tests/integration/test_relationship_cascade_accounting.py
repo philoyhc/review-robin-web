@@ -691,3 +691,62 @@ def test_the_replace_verb_is_not_repeated_when_assignments_exist(
         "the verb is repeated where the assignment clause already "
         "introduced it"
     )
+
+
+# ── Rung 3: the prose that explains the cost before it is incurred ────
+
+
+def test_the_guide_tells_operators_what_order_to_work_in(
+    client: TestClient, db: Session
+) -> None:
+    """The confirmations name the cost at the moment it is about to be
+    paid; the Guide is where an operator learns to avoid paying it.
+
+    Its `Optional: relationships and observers` section was two
+    sentences about turning the features on and said nothing about the
+    dependency — so the only way to discover that a roster re-upload
+    empties this one was to do it.
+    """
+    rs = _mk(client, db, "relcc-guide")
+    body = client.get(
+        f"/guide?return_to=/operator/sessions/{rs.id}/relationships"
+    ).text
+    section = body[body.index("Optional: relationships and observers"):]
+    section = " ".join(re.sub(r"<[^>]+>", " ", section[:2000]).split())
+
+    assert "after the reviewer and reviewee rosters" in section, section[:400]
+    assert "deletes the relationships that referenced them" in section
+    # The honest half: the app warns and records, and neither undoes.
+    assert "nothing restores them" in section
+
+
+def test_the_three_cards_agree_about_what_an_upload_costs(
+    client: TestClient, db: Session
+) -> None:
+    """One fact, three pages, and each states the half it owns.
+
+    Reviewers and Reviewees say what an upload *there* destroys;
+    Relationships says why — every row names a pair, so it cannot
+    outlive either side. A reader landing on any one of the three gets
+    the whole rule, which is the point of saying it three times rather
+    than pointing twice.
+    """
+    rs = _mk(client, db, "relcc-cards")
+
+    bodies = {}
+    for page in ("reviewers", "reviewees", "relationships"):
+        body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+        start = body.index('<details class="card page-guidance')
+        bodies[page] = " ".join(
+            re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
+            .split()
+        )
+
+    for page in ("reviewers", "reviewees"):
+        assert "a relationship names a pair" in bodies[page], page
+        assert "cannot outlive either side" in bodies[page], page
+        assert "Deleting rows costs the same" in bodies[page], page
+
+    rel = bodies["relationships"]
+    assert "This roster depends on the other two" in rel
+    assert "Set the Reviewers and Reviewees rosters first" in rel

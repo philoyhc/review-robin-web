@@ -561,14 +561,25 @@ PAGE_CLAIMS = {
     "reviewers": (
         "email address is mandatory",
         "replaces the whole roster",
+        # 19O.5 rung 3. The cascade is a database FK with no ORM
+        # collection, so nothing in the app observed it and no copy
+        # named it: an operator re-uploading a roster lost every
+        # relationship under it without being told.
+        "every relationship involving the people it",
     ),
     "reviewees": (
         "need not be identified by an email address",
         "must be identified by an email address tied to their institutional",
+        "every relationship involving the people it",
     ),
     "relationships": (
         "works without any explicitly set relationships",
         "isn't already derivable from reviewer and reviewee tags",
+        # The dependency, which only this page can state: the other two
+        # rosters' guidance says what an upload there costs, and this
+        # says why the cost exists and what order to work in.
+        "This roster depends on the other two",
+        "deletes the relationships that referenced them",
     ),
     "observers": (
         "an observer with no rule set sees nothing</strong>.",
