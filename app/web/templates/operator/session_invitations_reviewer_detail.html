@@ -48,8 +48,27 @@
 
        Timestamp-or-em-dash in `pill-count` / `pill-empty` is the Manage
        Invitations table's own idiom for these two fields
-       (`session_invitations.html:228-262`); one fact in two places
-       should look like one fact. #}
+       (`session_invitations.html:228-262`), so the two surfaces look
+       alike.
+
+       **They are not always the same fact, and the difference shows
+       after Regenerate.** `Last reminder` is one fact — the table reads
+       `Invitation.last_reminder_at` too (`monitoring.py:149`). `Email
+       sent` is not: the table's is the outbox row's `sent_at`
+       (`views/_invitations.py:113-119`), this card's is the
+       invitation's. `regenerate_token` clears `Invitation.sent_at` and
+       leaves both the outbox rows and `last_reminder_at` alone
+       (`invitations.py:221-224`), so a regenerated invitation reads
+       "Email sent: —" here and a date on the table.
+
+       That divergence is **older than this card**: the chrome strip
+       already says `NOT SENT` after a regenerate
+       (`_INVITATION_STATES`, `views/_setup.py:175-180`) while the
+       table's Sent column shows a date. This card now sits on the
+       invitation's side of it rather than the outbox's. The state is
+       pinned by `test_detail_page_after_regenerate_reports_the_current_token`
+       so it cannot drift unnoticed; whether the app should reconcile
+       the two is Item 6 open question 4, not this rung's to decide. #}
     <div id="invitation-facts">
       <p>
         Invite:
@@ -79,7 +98,7 @@
        the body of the most recent invitation EMAIL
        (`most_recent_invitation_url`), so it is None until the invitation
        is sent — `generate_invitations` discards the raw token
-       (`invitations.py:167`) and only the hash is stored. So "no URL"
+       (`invitations.py:170`) and only the hash is stored. So "no URL"
        and "no invitation" are different states, and "issued" is the
        accurate verb for the middle one: the invitation exists, but no
        link has ever been put in front of the reviewer. #}

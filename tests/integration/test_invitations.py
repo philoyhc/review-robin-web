@@ -742,9 +742,11 @@ def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
 # assertion (`assert "created" not in body`) can fail on a CSS comment.
 # Both directions of that trap have cost this segment a rung already.
 #
-# The pill markup is asserted whole rather than by its text, because
-# "not created" contains "created": `assert "created" in facts` passes
-# on the state it is meant to exclude.
+# The pill markup is asserted whole rather than by its text. Asserting
+# the text would be ambiguous — "not created" contains "created" — and
+# matching the whole span also pins the pill role, which carries the
+# meaning: `pill-count` is informational, `pill-empty` is the warning
+# amber (`spec/ui_elements.md` §9).
 _CREATED = '<span class="pill pill-count">created</span>'
 _NOT_CREATED = '<span class="pill pill-empty">not created</span>'
 _NO_DATE = '<span class="pill pill-empty">\u2014</span>'
@@ -754,6 +756,19 @@ def _invitation_facts(body: str) -> str:
     """The `#invitation-facts` block: the Invite line and the dates line."""
     start = body.index('<div id="invitation-facts">')
     return body[start:body.index("</div>", start)]
+
+
+def _invitation_card(body: str) -> str:
+    """The whole Invitation card — heading through to the next card.
+
+    Wider than `_invitation_facts` on purpose. A negative assertion
+    scoped to the facts block is vacuous for anything the block cannot
+    contain by construction; the card is the region that could
+    plausibly regrow a field, so it is the region to deny.
+    """
+    start = body.index('<h2 style="margin-top: 0;">Invitation</h2>')
+    nxt = body.find('<div class="card">', start)
+    return body[start:nxt if nxt != -1 else len(body)]
 
 
 @pytest.mark.parametrize("how", ["inactive", "unassigned"])
@@ -806,7 +821,7 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     # rung 2a; the two are separate facts and the card reports both).
     facts = _invitation_facts(body)
     assert _NOT_CREATED in facts
-    assert _CREATED not in facts.replace(_NOT_CREATED, "")
+    assert _CREATED not in facts
     assert facts.count(_NO_DATE) == 2
     # The per-row cards need a row; this reviewer has none. The string
     # appears once in the whole template tree and not in `base.html`.
@@ -901,16 +916,20 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     facts = _invitation_facts(body)
     # The top line reports the state the page previously got wrong.
     assert _NOT_CREATED in facts
-    assert _CREATED not in facts.replace(_NOT_CREATED, "")
+    assert _CREATED not in facts
     # The dates line still renders, both slots empty: the author's
     # correction, 2026-09-17 — the em-dashes are right, they mean "no
     # date attached", and hiding the line was the over-correction.
+    assert "Invite:" in facts
     assert "Email sent:" in facts
     assert "Last reminder:" in facts
     assert facts.count(_NO_DATE) == 2
-    # And the card no longer reports an outbox-derived email status at
-    # all, which is what made it claim "not sent" with nothing to send.
-    assert "Email Status" not in facts
+    # And the card no longer reports an outbox-derived email status
+    # anywhere, which is what made it claim "not sent" with nothing to
+    # send. Asserted over the whole Invitation card, not over
+    # `#invitation-facts`: that block cannot contain the string by
+    # construction, so scoping this one would make it vacuous.
+    assert "Email Status" not in _invitation_card(body)
     # Review Progress is unaffected — the assignments are real.
     assert "Review Progress" in body
 
@@ -1072,6 +1091,103 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
     assert _NO_DATE not in facts
     assert "Email sent:" in facts
     assert "Last reminder:" in facts
+
+
+def test_detail_page_url_region_has_three_states_not_two(
+    client: TestClient, db: Session
+) -> None:
+    """`no URL` and `no invitation` are different, and say different things.
+
+    Added after a cold read showed the three-way branch entirely
+    unpinned: deleting the third branch left the suite at 48 passed.
+    The rung's own mutation run had scored this CAUGHT, but that mutant
+    rewrote `{% elif %}` to a second `{% else %}` and so was a Jinja
+    syntax error — every render failed, which proves nothing about the
+    assertions. A mutant that breaks the template is not a mutant.
+
+    The distinction is real: `generate_invitations` discards the raw
+    token (`invitations.py:170`), so the URL is recoverable only from
+    the body of the email that carried it. An invitation can exist with
+    no URL ever issued; an absent invitation is a different state, and
+    the third branch names the action that fixes it.
+    """
+    session = _ready_session(client, db, code="drill-3way")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    url = f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+
+    # No invitation: the card names the action, not the missing URL.
+    card = _invitation_card(client.get(url).text)
+    assert "Create invitations from" in card
+    assert "No invitation URL has been issued yet." not in card
+
+    # Invitation created, never sent: now it IS the missing URL.
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    card = _invitation_card(client.get(url).text)
+    assert "No invitation URL has been issued yet." in card
+    assert "Create invitations from" not in card
+
+    # Sent: the URL itself, and neither fallback.
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    card = _invitation_card(client.get(url).text)
+    assert "/me/invite/" in card
+    assert "No invitation URL has been issued yet." not in card
+    assert "Create invitations from" not in card
+
+
+def test_detail_page_after_regenerate_reports_the_current_token(
+    client: TestClient, db: Session
+) -> None:
+    """Regenerate resets the invitation; the card follows the invitation.
+
+    `regenerate_token` clears `sent_at` but leaves `last_reminder_at`
+    and every outbox row alone (`invitations.py:221-224`), so the three
+    slots disagree by design: no send date for the current token, the
+    old reminder date, and the previous URL still recoverable from the
+    outbox.
+
+    Pinned rather than smoothed over. The divergence is older than this
+    card — the chrome strip already reads `NOT SENT` here while the
+    table's Sent column shows a date — and reconciling it is a decision
+    about `regenerate_token`, not about this template. This test exists
+    so the state is known and cannot drift unnoticed while that is open
+    (Item 6 open question 4).
+    """
+    session = _ready_session(client, db, code="drill-regen")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate"
+    )
+    db.refresh(invitation)
+    assert invitation.sent_at is None, "premise: regenerate cleared the send"
+    assert invitation.last_reminder_at is not None, (
+        "premise: regenerate left the reminder stamp alone"
+    )
+
+    body = client.get(
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
+    ).text
+    facts = _invitation_facts(body)
+    assert _CREATED in facts
+    # Exactly one em-dash: Email sent is empty for the new token, Last
+    # reminder still carries the old stamp.
+    assert facts.count(_NO_DATE) == 1
 
 
 def test_per_row_remind_redirects_to_invitations_page(
