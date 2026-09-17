@@ -1192,6 +1192,14 @@ inherit the roster items' "re-houses, adds nothing" justification — which is
 also the argument for letting it become its own segment if the rosters show the
 idiom does not carry.
 
+> **Annotated 2026-09-17 (Item 5).** "Nothing to re-house" was measured on
+> *selection* machinery and is still true of that. It is not true of the pages:
+> Item 5 re-houses their filter card into the table toolbar, so these two pages
+> now take part of the idiom without taking selection. That also partly settles
+> the sequencing premise above — the toolbar half of the idiom is carried to
+> them before this item is taken up; what is left to judge is the expander
+> half. The stub's container question is untouched.
+
 ---
 
 ## Item 5 — The three Operations tables get the roster toolbar
@@ -1208,10 +1216,14 @@ furniture in three other places:
 
 | | Assignments | Invitations / Responses |
 |---|---|---|
-| Search | a half-width card *above* the table | a full-width card *above* the table |
+| Search card | **lone** child of a `bottom-grid`, `.grid-right` | **paired** with the info card in one `bottom-grid` |
 | Submit label | `Search` | **`Apply`** |
-| Pager | in the toolbar, after the chips | in the toolbar, after the chips |
-| Selection controls | in the search card, with the count | none — no checkboxes |
+| Count line | below the toolbar, outside it | below the toolbar, outside it |
+| Selection controls | in the search card | none — no checkboxes |
+
+All three search cards are **half width** (`base.html:1284-1286`;
+`spec/operations_pages.md:75` for the pair). Lone against paired is
+what decides where each card can go.
 
 Assignments also still carries the pre-19P arrangement: `setBtn(` ×3,
 `row-select` ×4, `formaction` ×3, **zero** expander — its `Inactivate`
@@ -1232,9 +1244,11 @@ they have no selection to re-house; their rows stay links.
 already say — the minority renames.
 
 **Rejected: a shared toolbar partial.** The panes differ per page
-(Assignments has a `Search by` slot, Invitations no `Clear`), so it
-would take a parameter list longer than the markup it saves. The shared
-thing is the CSS, and it already exists.
+— Assignments has a `Search by` select the other six lack, the four
+rosters carry `Add new` (button-audit rows 125/132/139/165) and these
+three do not — so it would take a parameter list longer than the markup
+it saves. The shared thing is the CSS, and it already exists. `Clear` is not one of the differences — all three render it on the
+rosters' own conditional (`session_invitations.html:94-97`).
 
 **Rejected: giving Invitations and Responses selection** to make the
 recipe uniform. That is Item 4's question, not this one; this item
@@ -1242,26 +1256,40 @@ moves controls and renames a button, and adds no capability.
 
 ### Semantics
 
-- **The full-width info card is not a separate change.** The info card
-  and the filter card are the two children of one `bottom-grid`
-  (`session_invitations.html:25,65`), so moving the filter into the
-  toolbar strands the info card in a `1fr 1fr` grid. It must go full
-  width in the same rung or it renders half width, left column.
-- **Assignments' `bottom-grid` empties entirely** — the
-  operator-actions card is its only child — so the grid goes too. The
-  author's 2026-09-10 call at `session_assignments.html:168-172` (lone
-  child back to half width, flush right) is about that same card, so
-  removing it honours the call rather than reversing it.
-- **`filter-card` is not retired.** `session_validate.html` uses it and
-  is out of scope, so the class stays and only these two pages stop
-  using it.
-- **The read-only half stays reachable on a finished session.** 19I
-  Item 3 settled that search, `Clear` and the count render in every
-  lifecycle state and only the selection-driven half follows `can_edit`
-  (`session_assignments.html:176-183`). The move must not re-gate them.
-- **Search and a page turn land identically.** The roster form posts to
-  `<base>#{{ pager_anchor }}`; a `GET` form keeps its action's
-  fragment. The three pages take the same anchor.
+- **Moving the filter card settles the info card's width in the same
+  rung.** They are the two children of one `bottom-grid`
+  (`session_invitations.html:25,65`), so moving one strands the other
+  in a `1fr 1fr` grid. **Full width, rejecting half width flush
+  right** — the author's choice in the same situation on 2026-09-10
+  (`session_assignments.html:168-172`), but for an *actions* card, a
+  control the eye seeks; a counters card is a readout the eye sweeps,
+  and eight pills in half a page wrap badly.
+- **Assignments' `bottom-grid` empties entirely**, the operator-actions
+  card being its only child, so the grid goes too. That 2026-09-10 call
+  is about this same card, so removing it honours the call rather than
+  reversing it.
+- **`filter-card` is not retired** — `session_validate.html` uses it
+  and is out of scope.
+- **Two counts, gating differently — do not conflate them.** The
+  *preview-count line* renders in every lifecycle state; the
+  *selected-count pill* is inside `{% if can_edit %}`
+  (`session_assignments.html:243-247`), and `spec/assignments.md` "The
+  page's lifecycle surface" puts it in the selection-driven half —
+  "the count itself is not in this card". The template comment at
+  `:176-184` is looser than the spec and is not the contract. So search
+  and `Clear` stay reachable on a `ready` session; the pill goes to the
+  expander with its buttons, still `can_edit`.
+- **The preview-count line moves into `toolbar-left`**, under the
+  pager, where the roster idiom puts it
+  (`session_reviewers.html:743`) and where
+  `spec/rrw_functional_spec.md:1114`, `spec/operator_ui_concept.md:92`
+  and `spec/ui_elements.md:626` all say it belongs. All three render it
+  just outside the toolbar today (`session_assignments.html:325`,
+  `:130`, `:108`); `tests/unit/test_pager.py` pins its order with the
+  pager.
+- **Search and a page turn land identically.** The roster form is a
+  `GET` to `<base>#{{ pager_anchor }}`, and a `GET` submission replaces
+  the query while leaving the fragment alone. Same anchor on all three.
 
 ### Judgment calls — decided
 
@@ -1279,35 +1307,63 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
 
 - Templates: `session_assignments.html` (581 lines),
   `session_invitations.html` (298), `session_responses.html` (221).
-- `grep -rn ">Apply<" app/web/templates/` → **2**, both in scope.
+- `grep -rn "Apply" app/web/templates/ | grep -v "^.*#"` → the label
+  ships **4** times: the two filter cards in scope,
+  `_preview_picker.html:48` (button-audit row 72, label on its own line
+  so `>Apply<` misses it) and `sys_admin_session_audit_log.html:168`
+  (`Apply filters`). Only the two are renamed — see Out of scope.
 - `grep -rln "filter-card" app/web/templates/` → **4**
   (`session_validate.html` and `base.html` stay).
 - `grep -rln "operator-actions-card" app/web/templates/` → **2**
   (`session_assignments.html`, `base.html`) — retirable after rung 1,
   to be confirmed rather than assumed.
-- Tests naming the routes: assignments **59** files, invitations **13**,
-  responses **6**.
-- Governing spec: `spec/operations_pages.md`.
+- `grep -rln "sessions/{.*}/<page>\|/<page>\"" tests/` → assignments
+  **59** files, invitations **13**, responses **6**. One pins the label
+  being renamed: `tests/integration/test_invitations.py:944` asserts
+  `">Apply</button>" in actions`.
+- `grep -rn "Apply" spec/ docs/` (the skill's rename sweep) →
+  `spec/rrw_functional_spec.md:1311` §9.9 states "Filter card — Status
+  dropdown + free-text search + Apply / Clear", naming both the card
+  being dissolved and the label.
+- Governing specs: `spec/operations_pages.md` for Invitations and
+  Responses, **`spec/assignments.md`** for Assignments — its "Assignments
+  operator page" § is what rungs 1-2 falsify.
 
 ### PR ladder
 
 1. **Assignments: the split toolbar.** Search, `Search by`, `Clear` and
-   the submit into `toolbar-right`; chips and pager into
-   `toolbar-left`. The selection controls and the count stay where they
-   are for now, so the rung is a move with no behavior change.
+   the submit into `toolbar-right`; chips, pager and the preview-count
+   line into `toolbar-left`. The selection controls and the selected
+   count stay put, so the page stays coherent — they reach the bulk
+   form through `form=` + `formaction`
+   (`session_assignments.html:252-262`), not through the GET form being
+   moved. **Not "no behavior change":** the form gains the
+   `#{{ pager_anchor }}` landing, and `base.html:1448`'s
+   `.operator-actions-card ... label.filter-search { flex: 4 }` stops
+   applying once the strip leaves the card, shifting the field ratios.
+   Both intended; neither is nothing. For one rung the emptied card
+   sits in the page corner holding `0 selected` and two buttons — a
+   dev-slot look.
 2. **Assignments: the expander.** `Inactivate` / `Activate` and the
-   selected count into the injected row, per 19P.1-3 rung 4. The
-   `bottom-grid` and `operator-actions-card` go if nothing else uses
-   them.
+   selected-count pill into the injected row, per 19P.1-3 rung 4. The
+   `bottom-grid`, `operator-actions-card` **and `.grid-right`** go if
+   nothing else uses them — `.grid-right` has exactly one caller
+   (`base.html:1301-1305`), so this rung leaves the rule dead.
 3. **Invitations and Responses: the split toolbar, the rename, and the
    full-width info card.** All three on both pages, because the grid
-   leaves them inseparable.
+   leaves them inseparable. The preview-count line joins `toolbar-left`
+   here too.
 4. **The close.** `spec/operations_pages.md`, the button audit row for
    `Apply`, `docs/status.md`.
 
 ### Definition of done
 
-- `grep -rn ">Apply<" app/web/templates/` → 0.
+- `grep -rn "Apply" app/web/templates/operator/session_invitations.html
+  app/web/templates/operator/session_responses.html` → 0. (Not
+  `>Apply<` across all templates: that pattern misses
+  `_preview_picker.html:48`, so it would pass with an `Apply` submit
+  still shipping.)
+- `tests/integration/test_invitations.py:944` asserts the new label.
 - All seven table toolbars carry `.table-card-toolbar.is-split`, and
   `base.html`'s note naming the three exceptions is rewritten or gone.
 - Assignments' selection controls render in the injected expander row
@@ -1315,13 +1371,16 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   app/web/templates/operator/session_assignments.html` → 0.
 - On Invitations and Responses the info card is the full width of the
   page in every state.
-- The search, `Clear` and the count still render on a `ready` session
-  on all three pages (19I Item 3's rule), asserted per page.
+- The search and `Clear` still render on a `ready` session on all three
+  pages (19I Item 3's rule), asserted per page — **and the
+  selected-count pill still does not**, per `spec/assignments.md`.
+- The preview-count line renders inside `toolbar-left` on all three;
+  `tests/unit/test_pager.py`'s order assertion still passes.
 - Looked at in Chromium, light and dark, at 1280px and phone width.
-- `### Doc impact` section present and current
+- `## Doc impact` section present and current
 - `python3 tools/close_check.py 19P.5` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
-- `### Status` compacted to intended vs done; answered open questions collapsed
+- `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
 
 ### Open questions
@@ -1332,8 +1391,11 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
    first. Two facts found while asking: the row already links to
    `/invitations/{id}/detail` from the reviewer's name
    (`session_invitations.html:182`), and
-   `/preview-surface/{n}?reviewer_email=` already renders the reviewer
-   surface read-only with saved responses prefilled (`_context.py:298`).
+   `/operator/sessions/{id}/preview-surface/{n}?reviewer_email=`
+   (`app/web/routes_operator/_preview_surface.py:113`) already renders
+   the reviewer surface with saved responses prefilled
+   (`app/web/routes_reviewer/_surface/_context.py:298`), read-only via
+   `preview_mode`.
 2. **Does Responses want the same links**, having its own
    `/responses/{reviewee_id}/detail`? Author's call, after 1.
 
@@ -1345,11 +1407,17 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   own work; this item does not touch it.
 - **`session_validate.html`'s filter card.** Same class, different
   page, no table toolbar to move into.
+- **The other two `Apply` buttons** — `_preview_picker.html:48` and
+  `sys_admin_session_audit_log.html:168` (`Apply filters`). Neither
+  sits in a table toolbar, and the ask was to harmonize these three
+  pages with Assignments, not to sweep the word. Named because the
+  rename grep finds them.
 
 ### Doc impact
 
 - `spec/operations_pages.md` — the three pages' table-toolbar shape: the split panes, what sits in each, and the `Search` label (Item 5).
 - `spec/ui_elements.md` — §10's layout primitives: `.table-card-toolbar.is-split` now covers all seven table pages, not four (Item 5).
 - `spec/operator_button_audit.md` — the `Apply` rows become `Search`; Assignments' `Inactivate` / `Activate` rows move to the expander (Item 5).
-- `spec/assignments.md` — the Assignments page's controls and where they render (Item 5).
+- `spec/assignments.md` — the Assignments page's controls and where they render, including which half the selected-count pill belongs to (Item 5).
+- `spec/rrw_functional_spec.md` — §9.9's "Filter card — Status dropdown + free-text search + Apply / Clear" for the two pages, and §1106-1114's two-pane toolbar now covering seven pages (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
