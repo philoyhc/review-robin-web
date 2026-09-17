@@ -1166,7 +1166,10 @@ files above, and all swept at rung 5. Rung 3 added a sixth that was a
 confirm shares `<noun>-bulk-form` with `Inactivate` / `Activate`), so
 rung 5b adjudicated the sentence rather than changing the markup.
 
-## Item 4 — Invitations and Responses — a different move, not the same recipe
+## Item 4 — Invitations and Responses — ~~a different move, not the same recipe~~ **retired 2026-09-17**
+
+**Retired by the author, unbuilt.** Reasoning in `### Status` below; the
+stub that raised it is kept verbatim after it.
 
 **Not yet planned, and its container is undecided.** It sits here to be
 sequenced, not to claim the segment: whether it becomes 19P Item 4 or **19Q**
@@ -1199,6 +1202,47 @@ idiom does not carry.
 > the sequencing premise above — the toolbar half of the idiom is carried to
 > them before this item is taken up; what is left to judge is the expander
 > half. The stub's container question is untouched.
+>
+> **Superseded by the retirement note above (2026-09-17).** "What is left
+> to judge is the expander half" was judged the same day: there is nothing
+> for it to hold.
+
+### Doc impact
+
+- `spec/operations_pages.md` — the two pages' row-level affordance, had the expander landed. <!-- doc-impact-waived: Item 4 retired unbuilt 2026-09-17; nothing shipped, so there is nothing to document. The section exists so `close_check.py 19P.4` reads a retirement rather than a gap -->
+
+### Status — retired 2026-09-17, unbuilt
+
+**The expander exists to re-house selection-driven bulk actions, and
+these two pages have never had any.** Re-measured at retirement, after
+Item 5 had carried them the toolbar half:
+
+| | `session_invitations.html` | `session_responses.html` |
+|---|---|---|
+| `type="checkbox"` | 0 | 0 |
+| `formaction` | 0 | 0 |
+| `session-expander` | 0 | 0 |
+| `bulk-*` routes in `_operations.py` | none | none |
+
+Giving them an expander would mean inventing selection **and** an
+activate / inactivate affordance neither page has ever offered, to
+carry a detail view that navigation already carries. The stub reached
+this measurement in 2026-09-14 and stopped one step short of the
+conclusion; the author took the step. **The container question is
+answered by not needing one** — neither 19P Item 4 nor 19Q.
+
+What the stub was really pointing at survives elsewhere. The two
+detail pages are thin — `session_responses_reviewee_detail.html`
+renders **no** field the table row does not, and the reviewer page
+adds exactly one, the last-issued invitation URL — and growing them is
+named in Item 5's *Out of scope*. The author's two held row-link asks
+(Item 5's open questions 1 and 2) are the live thread, and they are
+**navigation, not selection**, so nothing here blocks them.
+
+**One claim of Item 5's is now settled rather than partial.** Its
+annotation on this stub said the pages "take part of the idiom without
+taking selection" and left the expander half to judge. That is judged:
+there is nothing for it to hold.
 
 ---
 
