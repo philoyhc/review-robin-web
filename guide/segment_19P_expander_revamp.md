@@ -1668,12 +1668,16 @@ the Review Progress card gains a preview-surface link opening in a
   `preview_mode` forces `accepting=True`, so
   `responses_visible_when_closed` is bypassed. Deliberate operator
   affordance, author's call 2026-09-17.
-- **The re-key creates a reachable state the page has never had.**
-  Every table row is an active reviewer with an included assignment,
-  so the Review Progress card's `review_progress_total > 0` gate never
-  fails from the table. A reviewer-keyed URL can be **typed** for any
-  reviewer in the session — inactive, unassigned, or both — and that
-  page renders with no card and so no surface link. Right, and new.
+- **The re-key widens who can reach the no-row page; it does not
+  create it.** Every table row is an active reviewer with an included
+  assignment, so the Review Progress card's gate never fails *from the
+  table*. But deactivating a reviewer leaves their invitation alone,
+  so the old invitation-keyed URL already reached this page from a
+  bookmark — measured on the pre-re-key commit: 200, no card. What
+  changes is the set: any reviewer in the session, including one that
+  never had an invitation. The page renders with no cards and so no
+  surface link, which is right. Rung 1 pins both ways off the table,
+  inactive and unassigned.
 - **Forward compatibility with Item 7: this item adds no coupling to
   the Previews hub.** The link goes straight at `/preview-surface` and
   always passes a resolvable email. The two that already exist are

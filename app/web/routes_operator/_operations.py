@@ -608,10 +608,14 @@ def invitation_reviewer_detail(
     rows = views.build_invitations_rows(db, review_session)
     row = next((r for r in rows if r.reviewer.id == reviewer.id), None)
     # `row` is None for a reviewer the table does not list — inactive,
-    # or with no included assignment. Reachable only by typing the URL,
-    # and new at this rung: the old key could not name such a reviewer,
-    # because they have no invitation. The template renders the page
-    # without the per-row cards.
+    # or with no included assignment. **Not a new state**, though an
+    # earlier version of this comment said so: deactivating a reviewer
+    # leaves their invitation alone (`reviewers.bulk_inactivate` flips
+    # `status` only), so the old invitation-keyed URL already reached
+    # this page from a bookmark. Measured on the pre-re-key commit:
+    # 200, no Review Progress card. What changed is WHO can reach it —
+    # every reviewer in the session, including one that never had an
+    # invitation, where before only an invitation could name one.
     invitation = row.invitation if row is not None else None
     invite_url = (
         invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
@@ -626,7 +630,6 @@ def invitation_reviewer_detail(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewer": reviewer,
-            "invitation": invitation,
             "row": row,
             "invite_url": invite_url,
             "is_ready": lifecycle.is_ready(review_session),

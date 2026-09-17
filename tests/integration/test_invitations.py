@@ -3,18 +3,21 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import (
+    Assignment,
     AuditEvent,
     EmailOutbox,
     Invitation,
     Reviewer,
     ReviewSession,
 )
+from app.web import views
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -730,23 +733,44 @@ def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
     )
 
 
+@pytest.mark.parametrize("how", ["inactive", "unassigned"])
 def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, how: str
 ) -> None:
-    """A state the re-key newly makes reachable.
+    """The page must render when `row` is None, not 500.
 
     The table lists `_assigned_active_reviewers` — active reviewers
-    with an included assignment — so an inactive one has no row, and
-    under the old invitation key could not be named at all. A typed
-    reviewer URL now reaches the page. It must render, without the
-    per-row cards, rather than 500 on a `None` row.
+    with an included assignment — so there are **two** ways off it, and
+    both are covered here: the reviewer goes inactive, or their
+    assignments do.
+
+    **This state is not new at 19P.6**, though the first version of
+    this docstring said it was. Deactivating a reviewer leaves their
+    invitation alone, so the old invitation-keyed URL already reached
+    this page from a bookmark — measured on the pre-re-key commit:
+    200, no Review Progress card. What the re-key changes is *who* can
+    reach it: every reviewer in the session, including one that never
+    had an invitation, where before only an invitation could name one.
     """
-    session = _ready_session(client, db, code="drill-norow")
+    session = _ready_session(client, db, code=f"drill-norow-{how[:4]}")
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
-    reviewer.status = "inactive"
+    if how == "inactive":
+        reviewer.status = "inactive"
+    else:
+        for assignment in db.execute(
+            select(Assignment).where(Assignment.session_id == session.id)
+        ).scalars():
+            assignment.include = False
     db.commit()
+
+    # Precondition: the reviewer really is off the table. Without this
+    # the assertions below pass for a reviewer who simply has no
+    # responses yet.
+    assert reviewer.id not in {
+        r.reviewer.id for r in views.build_invitations_rows(db, session)
+    }
 
     response = client.get(
         f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
@@ -755,7 +779,8 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     body = response.text
     assert reviewer.email in body
     assert "No invitation URL has been issued yet." in body
-    # The per-row cards need a row; this reviewer has none.
+    # The per-row cards need a row; this reviewer has none. The string
+    # appears once in the whole template tree and not in `base.html`.
     assert "Review Progress" not in body
 
 
