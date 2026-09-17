@@ -109,10 +109,27 @@
       </p>
     {% elif invitation %}
       <p class="muted">No invitation URL has been issued yet.</p>
-    {% else %}
+    {% elif row %}
       <p class="muted">
         Create invitations from <strong>Create invites</strong> on the
         Workflow card.
+      </p>
+    {% else %}
+      {# `row` is None exactly when this reviewer is off the Manage
+         Invitations table, and that is the same predicate
+         `generate_invitations` selects on: active, with at least one
+         included assignment (`invitations.py:131-142` and
+         `monitoring.py:_assigned_active_reviewers` are the same join
+         and the same three filters). So pointing an operator at
+         **Create invites** here would send them to a button that
+         cannot reach this reviewer — the card would stay `not created`
+         however often they pressed it. Named by Codex on rung 2a's PR;
+         the population is the one rung 1 made reachable. #}
+      <p class="muted">
+        <strong>Create invites</strong> covers active reviewers with at
+        least one included assignment, so it will skip this one.
+        Reactivate them on <strong>Reviewers</strong>, or include an
+        assignment on <strong>Assignments</strong>, first.
       </p>
     {% endif %}
   </div>

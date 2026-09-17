@@ -823,6 +823,13 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     assert _NOT_CREATED in facts
     assert _CREATED not in facts
     assert facts.count(_NO_DATE) == 2
+    # 19P.6 rung 2a, after Codex: this reviewer is off the table, which
+    # is the same predicate `generate_invitations` selects on, so
+    # **Create invites** cannot reach them. The card must not tell the
+    # operator to press it.
+    card = _invitation_card(body)
+    assert "will skip this one" in card
+    assert "Create invitations from" not in card
     # The per-row cards need a row; this reviewer has none. The string
     # appears once in the whole template tree and not in `base.html`.
     assert "Review Progress" not in body

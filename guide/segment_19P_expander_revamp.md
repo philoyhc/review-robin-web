@@ -1801,6 +1801,13 @@ Decisions confirmed at build:
   mutant `INVALID` instead of `CAUGHT` — which immediately exposed a
   *second* false verdict in the same original run. The corrected run is
   nine mutants, all parseable, all caught.
+- **The card told an ineligible reviewer's operator to press a button
+  that cannot reach them.** `generate_invitations` selects active
+  reviewers with an included assignment — the same predicate that makes
+  `row` None here — so *Create invites* would have left the card at
+  `not created` however often it was pressed. The guidance now branches
+  on eligibility. Found by Codex on rung 2a's PR; the population is the
+  one rung 1 made reachable, which is why nothing earlier caught it.
 - **Two claims in the same rung said more than the code did**, the
   failure mode this segment keeps returning to: the template comment
   claimed the card and the table show "one fact in two places" (false
