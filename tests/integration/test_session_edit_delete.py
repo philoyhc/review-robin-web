@@ -193,7 +193,15 @@ def test_delete_all_reviewers_cascades_assignments(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.deleted_all")
     ).scalar_one()
-    assert event.detail["counts"] == {"deleted": 1, "cascaded_assignments": 1}
+    # 19O.5 — `cascaded_relationships` rides these events now. This
+    # fixture seeds none, and 0 is asserted rather than tolerated:
+    # the field must be PRESENT on a roster that can have them,
+    # which an `in`-style check would not catch if it vanished.
+    assert event.detail["counts"] == {
+        "deleted": 1,
+        "cascaded_assignments": 1,
+        "cascaded_relationships": 0,
+    }
 
 
 def test_delete_all_reviewees_cascades_assignments(
@@ -224,7 +232,15 @@ def test_delete_all_reviewees_cascades_assignments(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewees.deleted_all")
     ).scalar_one()
-    assert event.detail["counts"] == {"deleted": 1, "cascaded_assignments": 1}
+    # 19O.5 — `cascaded_relationships` rides these events now. This
+    # fixture seeds none, and 0 is asserted rather than tolerated:
+    # the field must be PRESENT on a roster that can have them,
+    # which an `in`-style check would not catch if it vanished.
+    assert event.detail["counts"] == {
+        "deleted": 1,
+        "cascaded_assignments": 1,
+        "cascaded_relationships": 0,
+    }
 
 
 def test_delete_all_assignments_clears_mode(

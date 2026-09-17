@@ -871,7 +871,14 @@ rows it would have landed on are the ones it deleted. Services: `delete_selected
 `app/services/roster_bulk.py`'s `bulk_delete`. Audit:
 `reviewer.bulk_deleted` / `reviewee.*` / `observer.*` /
 `relationship.*`, one event per call carrying `deleted`,
-`cascaded_assignments` and `cascaded_responses`.
+`cascaded_assignments` and `cascaded_responses` — plus
+**`cascaded_relationships`** on the two that can reach one, Reviewers
+and Reviewees (19O.5). It is **omitted rather than zero** on Observers
+and Relationships: nothing references either, so a key reading 0 would
+describe a cascade that cannot exist, exactly as their confirmations
+never mention assignments. The same field rides
+`{roster}.deleted_all` and `{roster}.imported`, a replace being a
+delete-and-re-add.
 
 **The whole selection surface is gated on the page's own predicate** —
 `is_editable` (`draft` or `validated`) on three pages, which is what
