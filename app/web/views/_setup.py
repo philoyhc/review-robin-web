@@ -329,19 +329,30 @@ def reviewer_column_state(
 
     Identity columns (`Name`, `Email`) are always listed — they are
     required by the CSV contract, so a zero there is itself worth
-    seeing. Tag slots appear only when populated, which is the gate the
-    column chips already used.
+    seeing. `Profile` and each tag slot appear only when populated,
+    which is the gate the column chips already used.
 
-    Labels come from ``field_labels.resolve_pair``, the same resolver the
-    preview table's own column headers read, so the index cannot disagree
-    with the table beneath it.
+    Tag labels come from ``field_labels.resolve_pair``, the same
+    resolver the preview table's own column headers read, so the index
+    cannot disagree with the table beneath it. The identity labels are
+    literals because ``field_labels.upsert`` refuses an identity slot —
+    the built-in default is the only string either surface can render,
+    and going through the resolver for it would suggest otherwise.
+    (`Profile` is renamable, so it does go through the resolver.)
 
-    Reviewers-shaped on purpose: 19P.2 (Observers) is the slice that
-    learns what actually generalizes, and a shape guessed before its
-    second caller exists is a shape guessed wrong.
+    **`Profile` was missing until 19P.3 rung 5c.** 19P.1 wrote this
+    function Reviewers-shaped and deliberately guessed nothing, leaving
+    the generalizing to Observers at 19P.2; `reviewee_column_state`
+    then grew a profile readout and this one never did, which is an
+    omission rather than a decision. The reviewer roster carries
+    `profile_link` and the table renders a `Profile` column from it on
+    exactly this rule.
     """
     sid = review_session.id
     counts = tag_slot_counts(db, session_id=sid, model=Reviewer)
+    profile_count = slot_row_count(
+        db, session_id=sid, column=Reviewer.profile_link
+    )
     readouts = [
         ColumnReadout(
             slot="name",
@@ -354,6 +365,16 @@ def reviewer_column_state(
             count=slot_row_count(db, session_id=sid, column=Reviewer.email),
         ),
     ]
+    if profile_count > 0:
+        readouts.append(
+            ColumnReadout(
+                slot="profile",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewer", "profile_link"
+                ).friendly,
+                count=profile_count,
+            )
+        )
     for n in (1, 2, 3):
         if counts[f"tag_{n}"] == 0:
             continue
@@ -368,7 +389,8 @@ def reviewer_column_state(
         )
     return RosterColumnState(
         readouts=readouts,
-        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)}
+        | {"profile": profile_count > 0},
     )
 
 

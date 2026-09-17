@@ -54,7 +54,7 @@ The card on both forms lives above the Quick Setup card. Saving the form persist
 The Setup-Observers page is documented in `spec/setup_pages.md` (Observers section). Key points relative to the participant model:
 
 - Routes mounted at `/operator/sessions/{id}/observers/*` are uniformly gated by `require_observers_enabled_session`. The page 404s when `observers_enabled = False`.
-- The model carries a **single `tag_1`** (not three) and an optional `display_name`; `email` is the required identity. The friendly-label editor card from the Reviewers / Reviewees pages is intentionally absent — single-tag observers don't benefit from it.
+- The model carries a **single `tag_1`** (not three) and an optional `display_name`; `email` is the required identity. The friendly-label editor the other three roster pages carry in their Unlock panel is intentionally absent — single-tag observers don't benefit from it, and its absence is what makes this page's panel two-tenanted and its `.card-columns` fallback home unnecessary (`spec/setup_pages.md` § *The roster card and the Unlock panel*).
 - The CSV import contract is documented in `spec/csv_contracts.md` §3.2b — required `ObserverEmail`, optional `ObserverName` / `ObserverTag1`.
 - Audit events: `observer.created` (snapshot), `observer.updated` (changes + refs), `observer.bulk_inactivated` / `observer.bulk_reactivated` (snapshot), `observers.imported` (counts + context), `observers.deleted_all` (counts). All registered in `EVENT_SCHEMAS`.
 

@@ -158,6 +158,17 @@
           {% for col in col_readouts %}
             <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
           {% else %}
+          {# 19P.3 rung 5c — the `{% else %}` is reachable on ONE page.
+             Relationships lists pair-context tags only (its identity
+             columns are non-nullable integer FKs, which `slot_row_count`
+             cannot be asked about), so an empty roster there renders
+             `none yet`. The other three always emit identity entries and
+             never reach it. Kept identical on all four rather than
+             deleted from three: one partial's worth of markup in four
+             copies is the drift 19P.3 exists to remove, and a page that
+             later grows an all-optional index would need it back.
+             Decided once, and recorded in `spec/setup_pages.md`
+             § *The roster index*. #}
             <span class="roster-readout-empty">none yet</span>
           {% endfor %}
         </span>

@@ -37,8 +37,20 @@
 -#}
 {% set field_labels_form_id =
       "field-labels-form-" ~ field_labels_source_type %}
-<div class="card field-labels-editor">
-  <h2>{{ field_labels_card_title }}</h2>
+{#- 19P.3 rung 5c — `<section aria-labelledby>`, matching the panel's
+    other tenants. It was a `<div class="card">` with a bare `<h2>`
+    since 15A, which the Unlock panel made worth fixing: the panel's
+    Upload and Danger Zone cards are both labeled sections, so this
+    was the one tenant a screen reader met as an unnamed group. The id
+    is suffixed with the entity, because the partial renders twice per
+    page (panel home and `.card-columns` fallback) on complementary
+    conditions — one at a time, so the id is unique per response. The
+    suffix is `field_labels_source_type`, which each page already sets
+    (`reviewer` / `reviewee` / `pair_context`), rather than a fourth
+    variable meaning the same thing. -#}
+<section class="card field-labels-editor"
+         aria-labelledby="field-labels-h-{{ field_labels_source_type }}">
+  <h2 id="field-labels-h-{{ field_labels_source_type }}">{{ field_labels_card_title }}</h2>
   <p class="form-help">{{ field_labels_help }}</p>
   <form method="post"
         action="{{ field_labels_form_action }}"
@@ -72,7 +84,7 @@
       </div>
     {% endif %}
   </form>
-</div>
+</section>
 {% if is_editable %}
 <script>
   (function () {

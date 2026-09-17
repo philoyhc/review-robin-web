@@ -87,9 +87,9 @@ or on Session Home's `#session-config` card.
 
 The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
-**Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors Reviewees — CSV upload, preview table with per-row authoring and its `Show columns:` chips, Danger Zone. (It mirrored Reviewers too until 19P.1 put that page's upload and Danger Zone behind an Unlock panel.)
+**Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors the other roster pages — CSV upload behind the Unlock panel, preview table with per-row authoring and its `Show columns:` chips, Danger Zone.
 
-The Reviewees / Relationships pages share a common body shape (chrome → status strip → optional lifecycle lock card → one `.card-columns` holding guidance and the friendly-label editor on the left, the **Operator actions card** on the right → preview table card, carrying its `Show columns:` chips above a table with a leftmost checkbox column, clickable sort headers and a right-end Updated column → upload-and-Danger-Zone grid). **Reviewers left that shape at 19P.1** — full-width guidance, a roster card whose Unlock panel holds all three mutating cards, and a preview table carrying its own toolbar and a row expander, with nothing below it; 19P.2–.4 carry the move to the others, and until they do the four pages genuinely differ. `spec/setup_pages.md` § *Reviewers page* has it in full. **Nothing else heads that right column**: a pill row naming the columns that hold data would say what the chips already say, and say it worse — a chip both reports the fact and acts on it. The Observers page shares the same shape minus the friendly-label editor and the chips (observers have a simpler fixed schema, one tag slot). The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+The four roster pages share one body shape (chrome → status strip → optional lifecycle lock card → full-width guidance card → roster card, whose **Unlock panel** holds the tag-label editor, `Upload CSV` and the `Danger Zone` → preview table card, its two-pane toolbar carrying the `Show columns:` chips and pager on the left and the filter strip on the right, above a table with a leftmost checkbox column driving a **row expander** and a right-end Updated column → **nothing below the table**). Reviewers arrived at it at 19P.1, Observers at 19P.2, Reviewees and Relationships at 19P.3. `spec/setup_pages.md` § *The roster card and the Unlock panel* has it in full. **Nothing else heads the roster card**: a pill row naming the columns that hold data is exactly what it carries, and the chips say the rest — a chip both reports the fact and acts on it. Observers is the one that differs, and `spec/setup_pages.md` § *Body layout* counts the ways in one place: no friendly-label editor and no `Show columns:` chips (a simpler fixed schema, one tag slot), no sortable headers, mirrored panel columns, and a `not is_archived` gate. The other three are sort adopters — see the sort-affordance paragraph below. The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 The **sort affordance** is the shared rrw-sort primitive. Any operator table that wants clickable sort headers opts in via a small annotation contract on the `<table>` + `<th>`s + `<td>`s; the shared JS in `base.html` + cookie persistence layer take care of state. Adopters: Reviewers / Reviewees / Relationships (Setup row), the Operations Assignments table, Invitations and Responses. Per-instrument `sort_display_fields` on the reviewer surface is a separate but compatible mechanism — the operator picks a default for reviewers via the Sort column on the Instruments Display Fields card; reviewers override live via the same header buttons. Functional spec at `spec/sort_by_reviewee.md`.
 
@@ -255,35 +255,51 @@ is refused rather than bounced. The fields, the lifecycle gate and the
 without it a reader looking up `/edit` finds nothing, and the next
 author is free to re-create the page.*
 
-### Setup pages (Reviewees / Relationships) — shared shape
+### Setup roster pages — shared shape
 
-**Reviewers left this shape at 19P.1 and Observers at 19P.2**, each
-specified in its own section of `spec/setup_pages.md`: full-width
-guidance, a roster card whose **Unlock panel** holds the destructive
-cards, a preview table carrying the filter strip in its own toolbar and
-the selection actions in a row expander, and nothing below the table.
-Items 3, 4, 5 and 6 below are all false of both.
-
-**The gates are false of Observers too**, which is where the two
-departures differ. Reviewers' panel reads the same `is_editable` its
-cards did; Observers reads `not is_archived`, because every mutating
-route on that page was relaxed to match (`spec/setup_pages.md`
-§ *Observers page* § *Lifecycle gate*, `spec/lifecycle.md` §5). It is
-the first roster page whose mutating surface outlives `is_editable`.
-
-19P.3–.4 carry the move to the remaining two, so this heading narrows
-again each time rather than being rewritten now.
-
-Both remaining setup-roster pages share an identical chrome shape:
+**All four** — Reviewers, Reviewees, Relationships, Observers — carry
+one shape, arrived at over 19P.1 (Reviewers), 19P.2 (Observers) and
+19P.3 (the other two). `spec/setup_pages.md` § *The roster card and the
+Unlock panel* is the contract; this is the chrome-level summary:
 
 1. Session top nav.
-2. Yellow lock card whenever the session is not editable. It carries `return_to=reviewers` / `reviewees` / `relationships` / `observers` so the operator returns *here* after reverting — **all four slugs must be in the revert route's allowlist**, or the revert silently lands on Session Home instead. Sits directly under the status strip, above the `.card-columns` container (on Reviewers the card below it is the full-width guidance card, with the roster card below that — the same position it has always held, and the same neighbour: 19P.1 changed the guidance card's width, not its place in the order). **Not Assignments** — per P4, a page rendering the Workflow card carries no lock card.
-3. **Friendly-label editor (left) + Operator actions card (right)** — the right-hand pair of the page's one `.card-columns` container, **not** a `.bottom-grid`; this page uses that only for Upload + Danger Zone. The friendly-label editor is the inline editor for the per-session tag-column labels; the Operator actions card carries the search / status filter strip and the selection-driven Edit · Inactivate · Activate · Add · Delete button row. See `spec/setup_pages.md` "Operator actions card".
-4. Browseable data-preview table of the saved rows (always visible, even while locked) — leftmost checkbox column drives the operator-actions selection; a row flips to inline inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
-5. **Upload CSV** card — anchored at `#upload-csv`, hosts the bulk import form. Hidden unless the session is `is_editable` (`draft` / `validated`), or while a row is being edited / added. *(On Reviewers the anchor and the gate both survive 19P.1 unchanged; the container does not — the card is in the Unlock panel's right column, not a `.bottom-grid`. On Observers 19P.2 moved it into the panel's **left** column and the gate moved with the routes, to `not is_archived`.)*
-6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Same gate as the Upload card: `is_editable`, the same predicate the lock card reads, so the card and the controls cannot disagree about which states are locked — and on Observers, where that predicate is `not is_archived`, the lock card is passed the matching condition so the two still agree. See `spec/lifecycle.md` §5.
+2. Yellow lock card whenever the page's own gate says the session is
+   locked. It carries `return_to=reviewers` / `reviewees` /
+   `relationships` / `observers` so the operator returns *here* after
+   reverting — **all four slugs must be in the revert route's
+   allowlist**, or the revert silently lands on Session Home instead.
+   Sits directly under the status strip, above the full-width guidance
+   card. **Not Assignments** — per P4, a page rendering the Workflow
+   card carries no lock card.
+3. **Full-width guidance card**, then the **roster card**: the roster
+   index, and the **Unlock** control when the panel can render.
+4. The **Unlock panel**, holding the tag-label editor (three pages;
+   Observers has none), the `Upload CSV` card — still anchored at
+   `#upload-csv` — and the `Danger Zone` with its **Delete all**
+   confirm-checkbox form.
+5. Browseable data-preview table of the saved rows, always visible even
+   while locked. Its card opens with a two-pane toolbar carrying the
+   filter strip; the leftmost checkbox column drives a **row expander**
+   holding Edit · Inactivate · Activate · Delete; a row flips to inline
+   inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
+6. **Nothing below the table.**
 
-Per-row inline **Edit** and **Add**, bulk **Inactivate / Reactivate**, and a selection-driven **Delete** all live on the Operator actions card; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
+Per-row inline **Edit**, bulk **Inactivate / Reactivate** and a
+selection-driven **Delete** live in the row expander; **Add new** is in
+the toolbar with `Clear` and `Search`, since it needs no selection. CSV
+Upload stays the bulk-create path.
+
+**One gate differs, and it is the only axis on which a *route* does.**
+The layout differences are Observers' too and are listed above.
+Reviewers, Reviewees and Relationships suppress the panel on
+`is_editable`, the
+same predicate their cards always read. Observers reads `not
+is_archived`, because every mutating route on that page was relaxed to
+match (`spec/setup_pages.md` § *Observers page* § *Lifecycle gate*,
+`spec/lifecycle.md` §5) — the first roster page whose mutating surface
+outlives `is_editable`. The lock card is passed the matching condition
+on each page, so the card and the controls cannot disagree about which
+states are locked.
 
 **Rules are authored on the Instruments page, nowhere else.** Band 1 of each instrument card owns its rule; there is no Rule Based Assignment card and no standalone Rule Builder page, and the Operations Assignments page confines itself to materialization + reconciliation. See `spec/assignments.md` for the engine contract and `spec/instruments.md` § Band 1 for the authoring surface.
 

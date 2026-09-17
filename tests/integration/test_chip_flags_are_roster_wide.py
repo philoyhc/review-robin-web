@@ -519,6 +519,78 @@ def test_the_photo_chip_and_the_photo_column_agree(
     )
 
 
+def test_the_reviewers_profile_column_reads_the_roster_not_the_window(
+    db: Session, client: TestClient
+) -> None:
+    """The one surface 19I Item 12 never converted, found at 19P.3
+    rung 5c.
+
+    Reviewers has no `profile` **chip** — its Profile column is decided
+    server-side and has no toggle (`spec/setup_pages.md` § *Reviewers
+    page* § *Preview table*), which is why the chip sweep above walked
+    past it. The column itself still scanned the rendered window
+    (``reviewers | selectattr("profile_link")``) where Reviewees reads
+    ``col_data["profile"]``, so filtering to rows that happen to carry
+    no link made a populated column disappear.
+
+    19P.3 gave this page a roster index that counts the **roster**, so
+    the two could now contradict each other on screen: `Profile (1)`
+    above a table with no Profile column. Both read ``col_data`` now,
+    and this pins the column, the index and the seed together.
+    """
+    review_session = _session(client, db, code="chip-rev-profile")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alpha",
+            email="alpha@example.edu",
+        )
+    )
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Bravo",
+            email="bravo@example.edu",
+            profile_link="https://example.edu/bravo",
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers?q=Alpha"
+    ).text
+    assert "Bravo" not in _rows(body), "seed is vacuous"
+    assert 'class="profile-col"' in body, (
+        "a filter that excludes the only profile row dropped the column"
+    )
+    assert "Profile (1)" in " ".join(body.split()), (
+        "the roster index does not list the populated Profile column"
+    )
+
+
+def test_the_reviewers_index_omits_profile_when_no_row_carries_one(
+    db: Session, client: TestClient
+) -> None:
+    """The complement: `Profile` is an optional column, so an unused
+    one is listed nowhere and renders no column — the same rule the tag
+    slots take."""
+    review_session = _session(client, db, code="chip-rev-noprofile")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alpha",
+            email="alpha@example.edu",
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    assert 'class="profile-col"' not in body
+    assert "Profile (" not in " ".join(body.split())
+
+
 def test_an_assignments_group_with_no_data_renders_no_row(
     db: Session, client: TestClient
 ) -> None:

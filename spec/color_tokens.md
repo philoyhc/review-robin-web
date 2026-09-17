@@ -446,8 +446,8 @@ the edge, which is tolerable only for a tinted slab nested *inside*
 another card, where an edge would be `.card`'s 2px `--border-default`
 cutting across a nested block. A help card standing **alone in a column**
 reads as unanchored without one, and `.page-guidance` is exactly that
-case — including on Reviewers, where 19P.1 moved the card out of
-`.card-columns` to full width above everything else. The argument is
+case — including on the four roster pages, where 19P moved the card out
+of `.card-columns` to full width above everything else. The argument is
 about a card with nothing beside it to anchor against, which a
 full-width card at the top of a page is even more plainly; the token
 set and the reasoning are both unchanged by the move, and the

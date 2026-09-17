@@ -137,22 +137,32 @@ editor nor the allowlist, though their built-in defaults ("Name" /
 
 **Surface:**
 
-- **Edit:** Inline editor card above the data table on
-  `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots) and
-  `/operator/sessions/{id}/relationships` (3 pair-context
-  slots). On `/operator/sessions/{id}/reviewers` (3 reviewer-tag
-  slots) 19P.1 made the position **conditional rather than fixed**:
-  the same editor renders inside the roster card's **Unlock panel**
-  when that panel can render, and in its old `.card-columns` home
-  when it cannot — a locked session, or while a row is being edited.
-  One include in two positions, on exactly complementary conditions,
-  because a locked page must still let an operator *read* the labels
-  while offering no control the route would refuse. Save / Cancel pair (both Secondary, both
-  disabled-until-dirty). Gated by `is_ready`: inputs render
-  disabled when the session is active/closed; the page's
-  existing `.card.lock` already messages "revert to draft to
-  modify". The same nine slots can also be set via the roster
-  CSV header suffix (see **Round-trip** below).
+- **Edit:** One inline editor, on each of the three pages that have
+  tag slots — `/operator/sessions/{id}/reviewers` (3 reviewer-tag
+  slots), `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots)
+  and `/operator/sessions/{id}/relationships` (3 pair-context slots).
+  Observers has no slots and no editor.
+
+  **Its position is conditional rather than fixed** on all three —
+  Reviewers since 19P.1, the other two since 19P.3. The same editor
+  renders inside the roster card's **Unlock panel** when that panel
+  can render, and in its `.card-columns` fallback home when it cannot
+  — a locked session, or while a row is being edited. One include in
+  two positions, on exactly complementary conditions, because a locked
+  page must still let an operator *read* the labels while offering no
+  control the route would refuse (`spec/setup_pages.md` § *The roster
+  card and the Unlock panel*).
+
+  Save / Cancel pair (both Secondary, both disabled-until-dirty).
+  **Gated by `is_editable`**, not `is_ready` — the partial reads
+  `is_editable` and has since Segment 19H Item 7, when `is_ready`
+  (`status == "ready"` alone) left `expired` and `archived` rendering
+  live inputs above a lock card saying the roster could not be
+  modified. *(Corrected at 19P.3's close; the sentence had said
+  `is_ready` since 15A.)* Inputs render disabled in every locked
+  state, and the page's `.card.lock` messages the way out. The same
+  nine slots can also be set via the roster CSV header suffix (see
+  **Round-trip** below).
 - **Read:** Friendly label flows through every operator
   preview surface (Reviewers / Reviewees / Relationships /
   Assignments column headers + the Assignments
@@ -380,9 +390,9 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | `?add=1` | All four roster Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table. |
 | `?selected=<id>` (repeatable) | All four roster Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked. On Reviewers and Observers the restored selection also rebuilds the row expander, since the panel is a function of the checked rows. |
 | `?status=…` / `?q=…` | Reviewers / Reviewees / Relationships / Observers Setup pages | Operator-actions status filter (`all` / `active` / `inactive`) + search term, one shape on all four pages. Preserved through Edit / bulk actions via hidden `filter_status` / `filter_q` form fields. One search box per page, no side-picker — see `spec/setup_pages.md` "Search matching and suggestions". |
-| `?unlocked=1` | Reviewers / Observers Setup pages | **The Unlock panel's open state, carried in the URL** (19P.1 Reviewers, 19P.2 Observers). The panel ships `hidden` and the Unlock button opens it, but this param makes the page *arrive* open, which is what stops a control inside the panel closing the panel it was used from. Set by every redirect out of the panel — on Reviewers the labels save, `delete-all` and a successful import; on Observers the latter two, its panel having no labels editor and so two tenants rather than three — and by the `<noscript>` link that is the no-JS way in. **Not** set on the in-place re-render a failed import answers with: that path has no redirect to hang a param on and sets the panel's open state server-side instead, which is the other half of one contract (`spec/setup_pages.md` § *Body shape* for Reviewers, § *Body layout* for Observers). **One rule, both pages**, which is why it is stated here rather than twice by page. Dropped by Search / Clear and by the pager, which is intended — those navigate the table, not the panel, and the page then renders closed (`panel_open=bool(unlocked)`). So the contract is **not** "the panel stays open until Lock": it is that a control *inside* the panel never closes the panel it was used from. Lock is the only control that closes it deliberately. |
-| `?offset=<n>` | Reviewers / Observers Setup pages | Pager offset, carried through a row action's redirect so a mid-table action returns to the page it was taken on rather than to page 1. Observers joined at 19P.2 rung 1, for **all six** of the POSTs that redirect — `create`, `update`, the two bulk status actions, `bulk-delete` and `cohort-rule`; `delete-all` and `import` land on the roster card instead, having no row to return to — Reviewees and Relationships still pass no offset. |
-| `?focus=<id>` | Reviewers / Observers Setup pages | The newly created row. **Relocates the pager window only** — rows list by id, so a create appends past the end and on a multi-page roster is not on the page the form was submitted from, which would leave the redirect's row fragment naming a row the response never rendered. It places no caret; the response is a plain list. (The caret in a *blank* Add row comes from `?add=1`, which renders an edit state the landing script can focus.) |
+| `?unlocked=1` | All four roster Setup pages | **The Unlock panel's open state, carried in the URL** (Reviewers 19P.1, Observers 19P.2, Reviewees and Relationships 19P.3). The panel ships `hidden` and the Unlock button opens it, but this param makes the page *arrive* open, which is what stops a control inside the panel closing the panel it was used from. Set by every redirect out of the panel — the labels save, `delete-all` and a successful import, minus the labels save on Observers, whose panel has no labels editor and so two tenants rather than three — and by the `<noscript>` link that is the no-JS way in. **Not** set on the in-place re-render a failed import answers with: that path has no redirect to hang a param on and sets the panel's open state server-side instead, which is the other half of one contract (`spec/setup_pages.md` § *The roster card and the Unlock panel*). Relationships has **two** such in-place paths where the others have one — a blocked CSV and the `missing_confirm` replace state — and both set it. **One rule, four pages**, which is why it is stated here rather than four times by page. Dropped by Search / Clear and by the pager, which is intended — those navigate the table, not the panel, and the page then renders closed (`panel_open=bool(unlocked)`). So the contract is **not** "the panel stays open until Lock": it is that a control *inside* the panel never closes the panel it was used from. Lock is the only control that closes it deliberately. |
+| `?offset=<n>` | All four roster Setup pages | Pager offset, carried through a row action's redirect so a mid-table action returns to the page it was taken on rather than to page 1. Reviewers 19P.1, Observers 19P.2 rung 1, Reviewees and Relationships 19P.3 rung 1. Carried by every POST that redirects to a row — `create`, `update`, the two bulk status actions, `bulk-delete`, and Observers' `cohort-rule`; `delete-all` and `import` land on the roster card instead, having no row to return to. |
+| `?focus=<id>` | All four roster Setup pages | The newly created row. **Relocates the pager window only** — rows list by id, so a create appends past the end and on a multi-page roster is not on the page the form was submitted from, which would leave the redirect's row fragment naming a row the response never rendered. It places no caret; the response is a plain list. (The caret in a *blank* Add row comes from `?add=1`, which renders an edit state the landing script can focus.) |
 | `?template={invitation\|reminder\|responses_received}` | Email Template page (`/operator/sessions/{id}/setup-invite`) | Selects which of the three template tabs is active. Defaults to `invitation`. |
 | `?editing=…&saved=…` plus `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field errors and would-empty / delete-blocked confirmation flows. |
 

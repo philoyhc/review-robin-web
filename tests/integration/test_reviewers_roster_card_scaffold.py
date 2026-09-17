@@ -206,8 +206,15 @@ def test_the_panel_holds_three_wired_cards_and_nothing_else(client, db):
     # class the scaffold also had: the labels editor by its own POST
     # target, the Danger Zone by its heading id, the import by its form
     # action. Deleting any of the three includes must fail here.
-    labels_card = _div_block(scope, '<div class="card field-labels-editor">')
-    assert labels_card, "the wired labels editor is not in the panel"
+    # 19P.3 rung 5c — a `<section aria-labelledby>` like the other two,
+    # where this was a `<div class="card">` with a bare `<h2>`. Excised
+    # the same way they are now, rather than by div-balancing.
+    labels = re.search(
+        r'<section[^>]*class="card field-labels-editor"[^>]*>'
+        r'.*?</section>', scope, re.S,
+    )
+    assert labels, "the wired labels editor is not in the panel"
+    labels_card = labels.group(0)
     assert f"/operator/sessions/{rs_id}/reviewers/field-labels" in labels_card
     scope = scope.replace(labels_card, "")
     assert "field-labels-editor" not in scope, "the excision missed a copy"
@@ -691,8 +698,11 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     # moves when the contents change is not a boundary.
     body = _panel(html)
 
-    # `scaffold-labels-h` went with the hand-copied markup at rung 3a;
-    # the partial renders a plain <h2> under its own card class.
+    # `scaffold-labels-h` went with the hand-copied markup at rung 3a.
+    # Since 19P.3 rung 5c the partial carries its own
+    # `field-labels-h-<source_type>`, but this reads the card class:
+    # the ordering claim is about the three cards, and the class is
+    # what all three orderings below have in common.
     labels = body.index('class="card field-labels-editor"')
     danger = body.index('id="reviewers-danger-h"')
     upload = body.index('id="reviewers-upload-h"')
