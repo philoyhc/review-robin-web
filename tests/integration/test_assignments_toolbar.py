@@ -363,14 +363,76 @@ def test_the_panel_is_removed_before_it_is_rebuilt(
     assert render.index("panel.remove()") < render.index("selectedRows()")
 
 
-def test_the_panel_spans_only_the_visible_columns(
+def test_the_panel_spans_the_columns_that_are_actually_shown(
     client: TestClient, db: Session
 ) -> None:
-    """Nine tag columns and `Include` are chip-toggled, so a fixed
-    `colSpan` would leave the panel short or overhanging. Counted from
-    the headers that are actually laid out (`offsetParent !== null`),
-    which is how the roster panels do it."""
-    rs = _seeded(client, db, "asn-exp-colspan")
-    builder = _builder(_page(client, rs))
+    """Nine tag columns are chip-toggled and the row-select column
+    follows `can_edit`, so a fixed `colSpan` would leave the panel
+    short or overhanging. (`Include` is *not* toggleable — it carries
+    no `col-*` class and no chip; the first draft of this docstring
+    said it was.)
 
-    assert "td.colSpan = visibleColumnCount();" in builder
+    Two assertions, because the builder and the counter are in
+    different scopes: `build()` must call it, and the counter must
+    count laid-out headers rather than all of them — which the first
+    draft claimed while reading only the builder's slice.
+    """
+    rs = _seeded(client, db, "asn-exp-colspan")
+    body = _page(client, rs)
+
+    assert "td.colSpan = visibleColumnCount();" in _builder(body)
+    counter = body[
+        body.index("function visibleColumnCount()") : body.index(
+            "function build(sel)"
+        )
+    ]
+    assert "th.offsetParent !== null" in counter
+    assert 'table.querySelectorAll("thead th")' in counter
+
+
+def test_the_panel_survives_a_sort(
+    client: TestClient, db: Session
+) -> None:
+    """The table declares `data-rrw-sortable`, and `_rrwApplySort`
+    slices `tbody.children` — the injected panel among them. It reads
+    `a.children[col]`, gets `undefined` for a row whose only cell is
+    the panel, sorts it null-last, and strands it at the foot of the
+    table while the selected rows keep their rails where they are.
+
+    Measured in Chromium before the guard: panel at row 30 of 31 with
+    the selection at 18. With it: 19, adjacent. All three *sortable*
+    roster pages carry the same capture-phase guard; Observers is the
+    one that does not, and the one that does not sort.
+    """
+    rs = _seeded(client, db, "asn-exp-sort")
+    body = _page(client, rs)
+
+    assert 'data-rrw-sortable="rrw-sort-assignments-' in body, (
+        "the guard below is only needed because this table sorts"
+    )
+    # Bounded by a fixed window from the guard's own first line, not
+    # by searching forward for `}, true);` — another inline script on
+    # the page ends that way, so an unbounded slice swallows it and a
+    # capture-phase mutation survives. It did.
+    start = body.index('if (!event.target.closest(".rrw-sort-btn")')
+    guard = body[start : start + 220]
+    assert "panel.remove()" in guard
+    assert "setTimeout(render, 0)" in guard
+    # Capture phase, so it runs before the header's inline handler.
+    assert "}, true);" in guard, guard
+
+
+def test_a_partial_selection_reads_as_a_dash(
+    client: TestClient, db: Session
+) -> None:
+    """`selectAll.indeterminate`, which the card script this replaced
+    never set and this file's first draft inherited the omission of.
+
+    Without it a mixed selection announces as unchecked — a box
+    claiming nothing is selected while the panel below says otherwise.
+    All four roster pages set it.
+    """
+    rs = _seeded(client, db, "asn-exp-indeterminate")
+    body = _page(client, rs)
+
+    assert "selectAll.indeterminate = (n > 0 && n < all.length);" in body

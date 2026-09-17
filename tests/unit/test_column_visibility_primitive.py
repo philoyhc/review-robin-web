@@ -181,10 +181,11 @@ def test_assignments_keeps_its_three_groups_on_one_row() -> None:
 
 
 def test_the_assignments_search_card_and_its_grid_rule_are_both_gone() -> None:
-    """19I Item 12 rung 1 left this card a lone child of a ``1fr 1fr``
-    grid, which put it in the *left* column; the author asked for it
-    back at half width flush right (2026-09-10) and ``.grid-right``
-    did that.
+    """19I Item 12 rung 1 unwrapped the ``bottom-grid`` when it took
+    the chips out of it, leaving this card full width; a refinement
+    after rung 4 put it back at half width flush right (author,
+    2026-09-10), which is what ``.grid-right`` did — a lone child of a
+    ``1fr 1fr`` grid otherwise lands in the *left* column.
 
     **19P.5 took the card in two steps** — rung 1 the filter strip to
     the table toolbar, rung 2 the selected count and bulk buttons to

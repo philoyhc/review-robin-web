@@ -1362,15 +1362,25 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   every row. It needs `data-status` per row, in the `active` /
   `inactive` vocabulary `spec/assignments.md` § *The status filter*
   already uses for `?status=`.
-- **`.grid-right` went with the card**, having no other caller, and
-  `.operator-actions-card` has no tenants left anywhere in the app —
-  the last of Segment 15F's seven rules.
+- **`.grid-right` went with the card**, having no other caller. The
+  `.operator-actions-card` scope was *already* empty by then — five
+  rules left with the roster pages across 19P.1-3 and rung 1 took the
+  last two with the filter strip — so rung 2 removed the markup, not a
+  rule. It is the class's last tenant anywhere in the app.
 - **Six existing tests pinned what these two rungs changed**, all
   re-aimed rather than relaxed. Two were asserting a container as a
   stand-in for what it held (the card for the search, then the card
   for the selection surface); one measured a `filter-actions` row that
   is now two rows on two different cards; two pinned CSS as "still
   needed" that had stopped matching anything.
+- **Rung 2's cold read found two the roster idiom carries and this
+  page had lost in the port.** The sort guard: this table declares
+  `data-rrw-sortable`, `_rrwApplySort` slices `tbody.children` with
+  the injected panel among them, and without the capture-phase guard
+  the panel sorts null-last and strands at the foot of the table —
+  measured at row 30 of 31 with the selection at 18. And
+  `selectAll.indeterminate`, so a partial selection reads as a dash
+  rather than an empty box. Both now pinned by their own tests.
 - **Open for the author:** Assignments' `Clear` renders on
   `{% if filter_q %}`, so a status-only filter leaves the page
   visibly filtered with no way to clear it — `_assignments.py:202`
@@ -1466,7 +1476,7 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
 ### Doc impact
 
 - `spec/operations_pages.md` — the three pages' table-toolbar shape: the split panes, what sits in each, and the `Search` label (Item 5).
-- `spec/ui_elements.md` — §10's layout primitives: `.table-card-toolbar.is-split` now covers all seven table pages, not four (Item 5).
+- `spec/ui_elements.md` — §10's layout primitives: `.table-card-toolbar.is-split` now covers all seven table pages, not four; the `.bottom-grid > .grid-right` row documents a rule rung 2 deleted; the `.session-row-selected` row counts six templates injecting panels and names them all roster pages, where Assignments is now a seventh and an Operations page, with `render()` for a funnel rather than `refreshExpander()`; and `.col-chip-row.is-grouped` is a new primitive (Item 5).
 - `spec/operator_button_audit.md` — the `Apply` rows become `Search`; Assignments' `Inactivate` / `Activate` rows move to the expander; rows 71i / 71j and §11.5's preamble still put `Search` / `Clear` in the operator-actions card, which 19P.1-3 rewrote to "Table toolbar (was Operator actions)" for the same move (Item 5).
 - `spec/assignments.md` — the Assignments page's controls and where they render, including which half the selected-count pill belongs to, and § *The split is per-half, not per-card*, whose premise (the search inside the card) rung 1 removed (Item 5).
 - `spec/operator_ui_concept.md` — Assignments' body shape still reads "→ an operator-actions search / bulk card, half width and flush right →" (Item 5).

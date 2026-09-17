@@ -475,7 +475,8 @@
     {% if can_edit %}
     {# ------------------------------------------------------------------
        19P.5 rung 2 — the row expander, the shape the four roster pages
-       took at 19P.1-3 rung 4. The old script drove a `{n} selected`
+       took one at a time: Reviewers at 19P.1 rung 2b, Observers at
+       19P.2 rung 4, Reviewees and Relationships at 19P.3 rung 3. The old script drove a `{n} selected`
        pill and two always-rendered buttons in a card in the page's
        corner; this one injects a panel under the selection itself.
 
@@ -484,8 +485,7 @@
        unchanged, and the panel's own `.row-expander-*` interior
        classes, as Reviewers settled at 19P.1 rung 2b.
 
-       TWO differences from the roster panels, both because this page
-       has less to put in one:
+       THREE differences from the roster panels:
 
        - no `Edit` and no `Delete`, so no arity rule and no
          `data-delete-confirm` pairing. An assignment is generated, not
@@ -495,6 +495,16 @@
          not a pill: `spec/ui_elements.md` § `.session-row-selected`
          makes the panel a pill-free zone, the panel fill and
          `--status-info-bg` resolving to the same primitive.
+       - **no restore-from-preselection loop.** The rosters seed
+         `tickOrder` from boxes already checked on load, because their
+         bulk routes redirect through `_redirect_keeping_selection`.
+         The two bulk routes here redirect through `_assignments_url`
+         with no `?selected=`, and no checkbox renders `checked`, so
+         there is never a selection to restore.
+
+       Everything else is the roster shape and must stay it — the sort
+       guard and `selectAll.indeterminate` in particular. A cold read
+       found both missing from this file's first draft.
 
        **`Inactivate` and `Activate` now render only where they act.**
        The card rendered both whenever anything was ticked, so a
@@ -555,9 +565,11 @@
           if (hasInactive) out.push("Activate");
           return out;
         }
-        // Counted rather than assumed: nine tag columns and the
-        // `Include` column are toggled by the chips, so a fixed
-        // colSpan would leave the panel short or overhanging.
+        // Counted rather than assumed: nine tag columns are chip-
+        // toggled and the row-select column follows `can_edit`, so a
+        // fixed colSpan would leave the panel short or overhanging.
+        // `Include` is NOT among them — it carries no `col-*` class
+        // and no chip, so it is always shown.
         function visibleColumnCount() {
           return Array.prototype.filter.call(
             table.querySelectorAll("thead th"),
@@ -638,14 +650,40 @@
             return box && box.checked;
           }).length;
           selectAll.checked = (n > 0 && n === all.length);
+          // A partial selection reads as a dash rather than an empty
+          // box claiming nothing is selected. The four roster pages
+          // all set this; the card script this replaced did not, and
+          // the first draft of this one inherited that omission.
+          selectAll.indeterminate = (n > 0 && n < all.length);
         }
         selectAll.addEventListener("change", function () {
           setAllBoxes(selectAll.checked);
           tickOrder = selectAll.checked
             ? rows().map(function (row) { return row.id; })
             : [];
-          render();
+          // Deferred, as the three sortable roster pages do it, so the
+          // browser paints the checkboxes before the panel is rebuilt
+          // against them.
+          setTimeout(render, 0);
         });
+
+        // Sorting reorders `tbody`'s children and the panel is one of
+        // them: `base.html`'s `_rrwApplySort` slices `tbody.children`,
+        // reads `a.children[col]`, and gets `undefined` for a row whose
+        // only cell is the panel — so it sorts null-last and strands
+        // the panel at the foot of the table while the selected rows
+        // keep their rails where they are. Capture phase, so this runs
+        // before the header's own inline handler: take the panel out
+        // first, put it back against its anchor after.
+        //
+        // This page declares `data-rrw-sortable` (see the table tag),
+        // which is why it needs the guard. Observers is the one roster
+        // page without it, and the one roster page that does not sort.
+        table.addEventListener("click", function (event) {
+          if (!event.target.closest(".rrw-sort-btn")) return;
+          if (panel) { panel.remove(); panel = null; }
+          setTimeout(render, 0);
+        }, true);
 
         render();
       })();

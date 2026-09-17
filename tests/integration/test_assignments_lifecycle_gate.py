@@ -47,8 +47,12 @@ from ._assignment_states import (
 # while measuring 19I Item 8.
 #
 # `CARD` lived here until 19P.5 rung 2 deleted the operator-actions
-# card; `tests/unit/test_column_visibility_primitive.py` asserts its
-# absence now, which is the only claim left to make about it.
+# card. Absence is the only claim left to make about it, and three
+# files make it: `tests/unit/test_column_visibility_primitive.py`
+# (markup and the grid rule), `tests/integration/
+# test_assignments_toolbar.py` (the rendered page) and
+# `tests/integration/test_roster_expander.py` (every template, and
+# that no CSS rule claims the class).
 SEARCH_INPUT = '<input type="text" name="q"'
 SEARCH_BY = '<select name="search_by">'
 BULK_FORM = '<form id="assignments-bulk-form"'
