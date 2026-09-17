@@ -733,6 +733,29 @@ def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
     )
 
 
+# 19P.6 rung 2a — the Invitation card's two fact lines, sliced out of
+# the page before anything is asserted about them.
+#
+# Scoped deliberately. `base.html` inlines the whole app's CSS and JS
+# into every page, so a substring assertion over `response.text` can
+# match prose *about* the thing rather than the thing, and a negative
+# assertion (`assert "created" not in body`) can fail on a CSS comment.
+# Both directions of that trap have cost this segment a rung already.
+#
+# The pill markup is asserted whole rather than by its text, because
+# "not created" contains "created": `assert "created" in facts` passes
+# on the state it is meant to exclude.
+_CREATED = '<span class="pill pill-count">created</span>'
+_NOT_CREATED = '<span class="pill pill-empty">not created</span>'
+_NO_DATE = '<span class="pill pill-empty">\u2014</span>'
+
+
+def _invitation_facts(body: str) -> str:
+    """The `#invitation-facts` block: the Invite line and the dates line."""
+    start = body.index('<div id="invitation-facts">')
+    return body[start:body.index("</div>", start)]
+
+
 @pytest.mark.parametrize("how", ["inactive", "unassigned"])
 def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     client: TestClient, db: Session, how: str
@@ -778,10 +801,13 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     assert response.status_code == 200, response.text
     body = response.text
     assert reviewer.email in body
-    # No invitation exists here, so the Invitation card says that
-    # rather than reporting an email status for one (19P.6 rung 2a).
-    assert "No invitation has been created for this reviewer yet" in body
-    assert "Email Status" not in body
+    # No invitation exists here, so the top line says so and the dates
+    # line is two em-dashes — "no date", not "no invitation" (19P.6
+    # rung 2a; the two are separate facts and the card reports both).
+    facts = _invitation_facts(body)
+    assert _NOT_CREATED in facts
+    assert _CREATED not in facts.replace(_NOT_CREATED, "")
+    assert facts.count(_NO_DATE) == 2
     # The per-row cards need a row; this reviewer has none. The string
     # appears once in the whole template tree and not in `base.html`.
     assert "Review Progress" not in body
@@ -822,6 +848,18 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
     ).text
     assert "/me/invite/" in body
     assert "No invitation URL has been issued yet." not in body
+    # 19P.6 rung 2a — and the card's own two lines survive the same
+    # way, for the same reason. They read `invitation`, whose `sent_at`
+    # and `last_reminder_at` are columns on the row itself; the first
+    # draft read `row`, which is `_assigned_active_reviewers` and so is
+    # None here — reporting "created" with no send date for a reviewer
+    # whose invitation had demonstrably been sent.
+    facts = _invitation_facts(body)
+    assert _CREATED in facts
+    assert facts.count(_NO_DATE) == 1, (
+        "Email sent carries the send timestamp even off the table; "
+        "only Last reminder is empty"
+    )
 
 
 def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
@@ -860,9 +898,19 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     body = client.get(
         f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
     ).text
-    assert "No invitation has been created for this reviewer yet" in body
-    assert "Email Status" not in body
-    assert "Last reminder" not in body
+    facts = _invitation_facts(body)
+    # The top line reports the state the page previously got wrong.
+    assert _NOT_CREATED in facts
+    assert _CREATED not in facts.replace(_NOT_CREATED, "")
+    # The dates line still renders, both slots empty: the author's
+    # correction, 2026-09-17 — the em-dashes are right, they mean "no
+    # date attached", and hiding the line was the over-correction.
+    assert "Email sent:" in facts
+    assert "Last reminder:" in facts
+    assert facts.count(_NO_DATE) == 2
+    # And the card no longer reports an outbox-derived email status at
+    # all, which is what made it claim "not sent" with nothing to send.
+    assert "Email Status" not in facts
     # Review Progress is unaffected — the assignments are real.
     assert "Review Progress" in body
 
@@ -945,12 +993,18 @@ def test_invitation_reviewer_detail_renders(
     assert response.status_code == 200
     body = response.text
     assert "rae@example.edu" in body
-    # Drill-in shows Email Status + Email Sent + Last reminder block.
-    assert "Email Status" in body
-    # Pre-send: no invitation URL.
+    # Created but never sent: top line created, both dates empty.
+    facts = _invitation_facts(body)
+    assert _CREATED in facts
+    assert _NOT_CREATED not in facts
+    assert facts.count(_NO_DATE) == 2
+    # Pre-send there is no URL to show, and "issued" is why: the raw
+    # token is discarded at generate and only recovered from the body
+    # of the email that carried it.
     assert "No invitation URL has been issued yet." in body
 
-    # After send: URL surfaces.
+    # After send: the Email sent slot takes a timestamp, Last reminder
+    # stays empty, and the URL surfaces.
     client.post(
         f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
     )
@@ -958,7 +1012,66 @@ def test_invitation_reviewer_detail_renders(
         f"/operator/sessions/{session.id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     ).text
+    facts = _invitation_facts(body)
+    assert _CREATED in facts
+    assert facts.count(_NO_DATE) == 1, (
+        "Email sent should carry a timestamp; only Last reminder is empty"
+    )
     assert "/me/invite/" in body
+
+
+def test_detail_page_dates_line_reports_a_sent_reminder(
+    client: TestClient, db: Session
+) -> None:
+    """The Last reminder slot takes a timestamp once a reminder goes.
+
+    Added because mutation testing found the whole second half of the
+    dates line unpinned: no test sent a reminder, so `{% if false %}`
+    in that slot, and reading `row.last_reminder_at` instead of
+    `invitation.last_reminder_at`, both survived the suite. Every
+    assertion below fails on at least one of those.
+
+    The reviewer is taken off the table on purpose, which is what
+    separates the two sources: `row` is `_assigned_active_reviewers`
+    and is None here, so the row-reading version renders an em-dash
+    for a reminder that demonstrably went out.
+    """
+    session = _ready_session(client, db, code="drill-remind")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+    )
+    db.refresh(invitation)
+    assert invitation.last_reminder_at is not None, (
+        "premise: the reminder actually stamped the invitation"
+    )
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    reviewer.status = "inactive"
+    db.commit()
+    assert reviewer.id not in {
+        r.reviewer.id for r in views.build_invitations_rows(db, session)
+    }
+
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{reviewer.id}"
+        ).text
+    )
+    assert _CREATED in facts
+    # Both slots filled: neither em-dash survives a sent invitation
+    # followed by a sent reminder.
+    assert _NO_DATE not in facts
+    assert "Email sent:" in facts
+    assert "Last reminder:" in facts
 
 
 def test_per_row_remind_redirects_to_invitations_page(

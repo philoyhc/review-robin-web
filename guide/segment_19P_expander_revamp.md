@@ -1753,6 +1753,39 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - Tests asserting the preview surface renders a **saved response**:
   **0**, across all six files above.
 
+### Status
+
+**The ladder became four rungs, not three.** Rung 2a was added after the
+author found the Invitation card on the dev slot reporting
+`Email Status: not sent · Email Sent: — · Last reminder: —` for a
+reviewer with **no invitation at all**, under a chrome pill reading
+`Invitations: NOT CREATED`. Not a regression rung 1 introduced: rung 1
+made the state *reachable from the table*, and the card had always
+derived its email status from the outbox, which falls back to
+"not sent" when there is nothing to send.
+
+Decisions confirmed at build:
+
+- **Three facts, not one.** Invitation created / email sent / reminder
+  sent are separate, and the card reports all three. Author's words,
+  2026-09-17: *"Top line to report whether the Invite has been created /
+  Bottom line to report when the Email has been sent (if at all), and
+  when was the Last reminder was sent (if at all)."*
+- **The em-dash means "no date", not "no invitation"** — author's
+  correction of a first fix that hid the whole line.
+- **Both lines read `invitation`, not `row`.** `sent_at` and
+  `last_reminder_at` are columns on `Invitation`; `row` is
+  `_assigned_active_reviewers`, so reading it lost both facts for an
+  invited-then-deactivated reviewer. Found by re-reading the code after
+  the copy was settled, and the reason the card could report "not sent"
+  with nothing to send.
+- **`No invitation URL has been issued yet.` stays**, and is not
+  redundant with "not created": `generate_invitations` discards the raw
+  token, so the URL exists only once an invitation has been *sent*.
+- **Mutation testing found the dates line half-unpinned.** No test sent
+  a reminder, so two mutants survived; `test_detail_page_dates_line_reports_a_sent_reminder`
+  closes it and all seven now fail the suite.
+
 ### PR ladder
 
 **Three slices. The scaffold-first rule is set aside for this item**
