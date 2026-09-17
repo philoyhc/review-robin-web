@@ -159,9 +159,15 @@ def test_status_block_reports_group_type_and_group_count(
 def test_bulk_inactivate_and_activate_assignments(
     client: TestClient, db: Session
 ) -> None:
-    """The operator-actions card's bulk Inactivate / Activate
-    buttons flip the ``include`` flag on the selected assignment
-    rows (Segment 13C slice 2)."""
+    """The bulk Inactivate / Activate controls flip the ``include``
+    flag on the selected assignment rows (Segment 13C slice 2).
+
+    They were the operator-actions card's; 19P.5 rung 2 moved them into
+    the row expander, where they are built client-side. The routes and
+    the payload are unchanged, which is the half this test is really
+    about — the markup half now asserts the builder that can put them
+    on the page, since there is no server-rendered button id to name.
+    """
     review_session = _make_session(client, db, code="page-bulk")
     _seed_pair(client, review_session.id)
     pin_full_matrix_on_all_instruments(db, review_session.id)
@@ -192,7 +198,9 @@ def test_bulk_inactivate_and_activate_assignments(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert 'id="assignments-select-all"' in body
-    assert 'id="assignments-inactivate-btn"' in body
+    assert 'class="assignment-select"' in body
+    assert 'tr.id = "assignments-row-expander"' in body
+    assert '"/bulk-inactivate"' in body and '"/bulk-activate"' in body
 
     payload = {"assignment_ids": [str(i) for i in ids]}
     resp = client.post(

@@ -1339,6 +1339,46 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   Responses, **`spec/assignments.md`** for Assignments — its "Assignments
   operator page" § is what rungs 1-2 falsify.
 
+### Status
+
+**Rungs 1-2 landed; rung 3 is Invitations and Responses.**
+
+- **Rung 1's cold read found three false claims about the code**, one
+  of them a spec citation shipped three times
+  (`spec/operator_ui_concept.md` for the count line's position; that
+  spec never mentions the count line). Also an inline
+  `margin: 0 0 12px 0` the three roster pages had dropped on this same
+  move, which falsified a "pixel-identical to Reviewers" claim that a
+  screenshot had missed — the chip row only gets a sibling in that
+  pane under a filter or 200+ rows.
+- **Two decisions rung 1 took that this plan had not carried**, both
+  now in `Semantics` above: the `can_edit` gate on the card, and
+  deleting Scope 2's last two CSS rules once the card lost its form.
+- **Rung 2 renders only the actionable status button**, which is the
+  roster idiom (Item 1 § Semantics) but a **behavior change** on this
+  page, not a move: the card offered `Inactivate` and `Activate`
+  together whenever anything was ticked, so a selection of
+  entirely-included rows carried an `Activate` that would no-op on
+  every row. It needs `data-status` per row, in the `active` /
+  `inactive` vocabulary `spec/assignments.md` § *The status filter*
+  already uses for `?status=`.
+- **`.grid-right` went with the card**, having no other caller, and
+  `.operator-actions-card` has no tenants left anywhere in the app —
+  the last of Segment 15F's seven rules.
+- **Six existing tests pinned what these two rungs changed**, all
+  re-aimed rather than relaxed. Two were asserting a container as a
+  stand-in for what it held (the card for the search, then the card
+  for the selection surface); one measured a `filter-actions` row that
+  is now two rows on two different cards; two pinned CSS as "still
+  needed" that had stopped matching anything.
+- **Open for the author:** Assignments' `Clear` renders on
+  `{% if filter_q %}`, so a status-only filter leaves the page
+  visibly filtered with no way to clear it — `_assignments.py:202`
+  counts status in `is_filtered`. Reviewers uses
+  `{% if filter_status != "all" or filter_search %}`. Pre-existing;
+  named at rung 1 and not fixed there.
+
+
 ### PR ladder
 
 1. **Assignments: the split toolbar.** Search, `Search by`, `Clear` and

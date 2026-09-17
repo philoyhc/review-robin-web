@@ -1298,11 +1298,17 @@
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
-      /* A lone card in a `.bottom-grid`, held to the right-hand
-         column at half width instead of stretching across both.
-         Without it a single child lands in column 1 and reads as a
-         card that failed to fill the row. */
-      .bottom-grid > .grid-right { grid-column: 2; }
+      /* `.grid-right` — a lone card in a `.bottom-grid`, held to the
+         right-hand column at half width instead of stretching across
+         both. Added 19I Item 12 rung 1 for Assignments' lone
+         operator-actions card (author, 2026-09-10); **removed 19P.5
+         rung 2** with that card, which was its only caller. It is
+         recorded here rather than silently dropped because the
+         question it answered recurs: a single child of a `1fr 1fr`
+         grid lands in column 1 and reads as a card that failed to
+         fill the row, and the answer is a decision — half width
+         flush right for a control, full width for a readout (19P.5
+         Item 5 § Semantics). */
       .bottom-left {
         display: flex;
         flex-direction: column;
@@ -1351,11 +1357,11 @@
          one, and Invitations and Responses are Operations surfaces too. (`.filter-actions` counted eight
          while rung 2a's orphan action row sat inside
          `.operator-actions-card` with no filter row above it; rung 2b
-         took it. It is **eight again** since 19P.5 rung 1, for the
-         same reason and on the same page: Assignments' second row
-         holds the selected-count pill and the bulk buttons while its
-         filter sits in the toolbar. Rung 2 takes that row and the
-         count returns to seven.)
+         took it. It went to eight again at 19P.5 rung 1,
+         when Assignments' filter moved to the toolbar and left its
+         action row behind in the card; rung 2 took that row to the row
+         expander, and it is seven once more — one per template, and
+         now for every one of the seven.)
 
          UNSCOPED, and that is the point. This shape used to be
          declared separately inside each card that held it, which meant
@@ -1433,27 +1439,18 @@
          unclassed label added later would go from `flex: 1 1 0` to
          `flex: 0 1 auto` with nothing to catch it. */
       .filter-card form { margin: 0; }
-      /* ---- Scope 2: `.operator-actions-card` (Segment 15F) —
-         **Assignments, and nothing else.** Every roster page has left:
-         Reviewers at 19P.1 rung 2b, Observers at 19P.2 rung 4, and
-         Reviewees and Relationships at 19P.3 rung 3, each moving the
-         action row into a row expander and the editor into the row. The
-         note further down this file, where five of this scope's rules
-         were deleted, says the same thing and the two must not drift
-         apart again.
+      /* ---- Scope 2: `.operator-actions-card` — **retired 19P.5
+         rung 2**, with the card itself. Segment 15F gave it seven
+         rules; the roster pages took five as each moved its action row
+         into a row expander (Reviewers 19P.1 rung 2b, Observers 19P.2
+         rung 4, Reviewees and Relationships 19P.3 rung 3), rung 1 here
+         took the last two with the filter strip, and rung 2 removed
+         the markup. Nothing carries the class now.
 
-         **The scope is now empty.** Its last two rules —
-         `form { margin: 0 }` and a `flex: 4` squeezing the status
-         dropdown to ~1/5 of the row — went at 19P.5 rung 1 with the
-         filter strip they served: the card holds no `<form>` and no
-         `.filter-row` any more, only the selected-count pill and the
-         two bulk buttons, which rung 2 takes to the row expander. The
-         `flex: 4` is deliberately NOT carried across to
-         `.toolbar-right`: it was a full-width card's affordance, and a
-         half-width pane keeps the base ratio.
-
-         The heading stays until rung 2 deletes the card, so the next
-         reader finds the reason rather than a gap. */
+         What is NOT carried forward, deliberately: the `flex: 4` that
+         squeezed the status dropdown to ~1/5 of the row. That was a
+         full-width card's affordance; `.toolbar-right` is half a card
+         wide and keeps the base ratio. */
       /* 19P.1 rung 2a — the filter strip moved out of the actions card
          into the table's toolbar, where neither half of that selector
          reaches it. Without this the lock is half a lock: the action
@@ -1804,12 +1801,13 @@
          the edit form is the row, so there is no second action row and
          no divider to draw.
 
-         `.operator-actions-card` itself still has one tenant:
-         `session_assignments.html` renders one holding the
-         selected-count pill and the two bulk buttons — **no filter
-         strip since 19P.5 rung 1**, which took the two rules this note
-         used to say were kept. 19P.5 rung 2 moves the pill and the
-         buttons into the row expander, and the scope goes with them. */
+         `.operator-actions-card` has **no tenants left**.
+         `session_assignments.html` was the last, and 19P.5 took it in
+         two steps: rung 1 moved the filter strip to the table toolbar
+         (and the two rules that served it), rung 2 moved the
+         selected count and the bulk buttons to the row expander and
+         removed the card. Every page that had one now puts its actions
+         beside the rows they act on, which is what Segment 19P is. */
       /* Reviewer picker on the Previews page (segment 11F). Two
          side-by-side half-width cards in a `.bottom-grid`:
          **Previewing as** (typeahead input + Apply on one flex row,

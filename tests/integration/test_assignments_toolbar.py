@@ -20,7 +20,10 @@ import pathlib
 import re
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.db.models import Assignment
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -212,3 +215,159 @@ def test_no_split_toolbar_chip_row_carries_an_inline_margin() -> None:
     # And the base rule the pages rely on instead is still there.
     base = pathlib.Path("app/web/templates/base.html").read_text()
     assert "body.ui-v2 .toolbar-left > * { margin: 0; }" in base
+
+
+# ── Rung 2: the row expander ───────────────────────────────────────────
+
+
+def _markup(html: str) -> str:
+    """The page with its inline `<style>` removed, as
+    `test_reviewers_roster_card_scaffold.py` does it."""
+    return re.sub(r"<style\b.*?</style>", "", html, flags=re.S)
+
+
+def _builder(body: str) -> str:
+    """The expander's `build()` body — the string literal that becomes
+    the injected panel. Bounded by the function that consumes it."""
+    start = body.index('tr.id = "assignments-row-expander"')
+    return body[start : body.index("function render()", start)]
+
+
+def test_the_operator_actions_card_is_gone_from_the_page(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 1 emptied it of the filter; rung 2 empties it entirely.
+
+    The card was the last `.operator-actions-card` in the app — the
+    four roster pages gave theirs up across 19P.1-3 — so the class, its
+    `bottom-grid` wrapper and `.grid-right` all go with it.
+    `.grid-right` had no other caller.
+    """
+    rs = _seeded(client, db, "asn-exp-card")
+    body = _page(client, rs)
+
+    # Markup only: `base.html` names both classes in its inline CSS,
+    # in the rules' own comments recording where they went, so a bare
+    # substring over the page is true everywhere and asserts nothing —
+    # the vacuous check `test_assignments_lifecycle_gate.py` calls out.
+    markup = _markup(body)
+    assert "operator-actions-card" not in markup
+    assert "grid-right" not in markup
+    assert 'id="assignments-selected-count"' not in body
+    assert 'id="assignments-inactivate-btn"' not in body
+    assert 'id="assignments-activate-btn"' not in body
+    # The bulk form stays: the checkboxes and the injected buttons both
+    # reach the routes through it.
+    assert '<form id="assignments-bulk-form"' in body
+
+
+def test_every_row_carries_the_status_the_panel_reads(
+    client: TestClient, db: Session
+) -> None:
+    """`data-status` is `Assignment.include`, in the vocabulary
+    `spec/assignments.md` § *The status filter* already uses for
+    `?status=` (`active` = `include IS true`).
+
+    It decides which of `Inactivate` / `Activate` the panel offers, so
+    a row whose attribute disagreed with its Include cell would offer
+    the button that no-ops. Asserted against the cell rather than
+    against the database, because the cell is what the operator reads.
+    """
+    rs = _seeded(client, db, "asn-exp-status")
+    rows = db.execute(
+        select(Assignment).where(Assignment.session_id == rs.id)
+    ).scalars().all()
+    assert rows, "fixture generated no assignments"
+    # Flip one so the page is not uniform — a page where every row is
+    # `active` cannot tell a correct mapping from a hardcoded one.
+    rows[0].include = False
+    db.commit()
+
+    body = _page(client, rs)
+    for row in rows:
+        marker = f'<tr id="assignment-row-{row.id}"'
+        assert marker in body, row.id
+        fragment = body[body.index(marker) : body.index("</tr>", body.index(marker))]
+        expected = "active" if row.include else "inactive"
+        assert f'data-status="{expected}"' in fragment, (row.id, expected)
+        # The cell the operator reads, in the same fragment.
+        assert (">yes<" if row.include else ">no<") in fragment, row.id
+
+
+def test_the_panel_offers_only_the_action_the_selection_admits(
+    client: TestClient, db: Session
+) -> None:
+    """The behavior change in this rung, not a move.
+
+    The card rendered `Inactivate` **and** `Activate` whenever anything
+    was ticked, so a selection of entirely-included rows offered an
+    `Activate` that would no-op on every one of them. The roster idiom
+    renders only what is actionable, which 19P Item 1 § Semantics
+    states: *"A control that would no-op on every selected row is not
+    rendered."*
+
+    Asserted on the rule in `statusActions`, which is where the
+    decision lives; the browser check that it drives the rendered panel
+    is in the PR body.
+    """
+    rs = _seeded(client, db, "asn-exp-actions")
+    body = _page(client, rs)
+    rule = body[
+        body.index("function statusActions(sel)") : body.index(
+            "function visibleColumnCount"
+        )
+    ]
+
+    assert 'if (hasActive) out.push("Inactivate");' in rule
+    assert 'if (hasInactive) out.push("Activate");' in rule
+    # Keyed on the row attribute, not on a count or a filter value.
+    assert 'row.dataset.status === "active"' in rule
+
+    # And each label posts to its OWN route. Swapping the two branches
+    # — so `Inactivate` posts `/bulk-activate` — passed this file's
+    # first draft: both route strings were still in the builder and
+    # both conditionals still existed, and nothing tied a label to a
+    # route. `test_observers_expander.py:197-202` carries the same
+    # guard, written after the same mutation survived there.
+    builder = _builder(body)
+    assert '? "/bulk-inactivate" : "/bulk-activate"' in builder, (
+        "the status labels and their routes can disagree"
+    )
+
+
+def test_the_panel_is_removed_before_it_is_rebuilt(
+    client: TestClient, db: Session
+) -> None:
+    """`render()` runs on every tick, so without the remove the page
+    accumulates one panel per change instead of moving one.
+
+    A source assertion, and a weak one — it pins the line rather than
+    the behavior, which only a browser can show. The Chromium pass in
+    the PR body is what actually demonstrates a single panel across
+    tick, untick, mixed and select-all. It is here because the
+    mutation that deletes this line survived the whole suite.
+    """
+    rs = _seeded(client, db, "asn-exp-remove")
+    body = _page(client, rs)
+    render = body[
+        body.index("function render()") : body.index(
+            "body.addEventListener", body.index("function render()")
+        )
+    ]
+
+    assert "if (panel) { panel.remove(); panel = null; }" in render
+    # Removed FIRST, before anything reads the selection.
+    assert render.index("panel.remove()") < render.index("selectedRows()")
+
+
+def test_the_panel_spans_only_the_visible_columns(
+    client: TestClient, db: Session
+) -> None:
+    """Nine tag columns and `Include` are chip-toggled, so a fixed
+    `colSpan` would leave the panel short or overhanging. Counted from
+    the headers that are actually laid out (`offsetParent !== null`),
+    which is how the roster panels do it."""
+    rs = _seeded(client, db, "asn-exp-colspan")
+    builder = _builder(_page(client, rs))
+
+    assert "td.colSpan = visibleColumnCount();" in builder

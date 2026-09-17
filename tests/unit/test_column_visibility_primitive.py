@@ -12,6 +12,8 @@ nothing else in the suite would notice.
 """
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 import pytest
@@ -174,18 +176,25 @@ def test_assignments_keeps_its_three_groups_on_one_row() -> None:
         assert label in src
 
 
-def test_the_assignments_search_card_is_half_width_and_right() -> None:
-    """Rung 1 unwrapped the ``bottom-grid`` when it took the chips out
-    of it, leaving this card full width — a lone child of a ``1fr 1fr``
-    grid would otherwise sit in the *left* column. The author asked for
-    it back at half width, flush right (2026-09-10), which is what
-    ``.grid-right`` does."""
+def test_the_assignments_search_card_and_its_grid_rule_are_both_gone() -> None:
+    """19I Item 12 rung 1 left this card a lone child of a ``1fr 1fr``
+    grid, which put it in the *left* column; the author asked for it
+    back at half width flush right (2026-09-10) and ``.grid-right``
+    did that.
+
+    **19P.5 took the card in two steps** — rung 1 the filter strip to
+    the table toolbar, rung 2 the selected count and bulk buttons to
+    the row expander — so there is no lone child and no card. This
+    page had the rule's only caller, so the rule went too rather than
+    waiting in `base.html` for a second one.
+    """
+    # Markup, not prose: the template's comment names both classes to
+    # record where they went, which a bare substring would trip on.
     src = (OPERATOR / "session_assignments.html").read_text()
-    assert 'class="card operator-actions-card grid-right"' in src
-    grid = src.index('<div class="bottom-grid">')
-    assert grid < src.index("operator-actions-card grid-right")
-    # And the primitive it depends on exists.
-    assert ".bottom-grid > .grid-right { grid-column: 2; }" in BASE.read_text()
+    classes = re.findall(r'class="([^"]*)"', src)
+    assert not [c for c in classes if "operator-actions-card" in c], classes
+    assert not [c for c in classes if "grid-right" in c], classes
+    assert ".bottom-grid > .grid-right {" not in BASE.read_text()
 
 
 def test_no_template_renders_a_fields_with_data_card() -> None:
