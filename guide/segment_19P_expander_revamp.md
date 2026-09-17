@@ -1594,3 +1594,327 @@ a no-match search shows, which is more than this item's move.
 - `spec/operator_ui_concept.md` — Assignments' body shape still reads "→ an operator-actions search / bulk card, half width and flush right →" (Item 5).
 - `spec/rrw_functional_spec.md` — §9.9's "Filter card — Status dropdown + free-text search + Apply / Clear" for the two pages; §1106-1114's two-pane toolbar now covering seven pages; and §1230-1238's "Operator-actions card", which still lists the status filter, the search box and the Search-by dropdown alongside the bulk controls (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
+
+---
+
+## Item 6 — The Invitations row opens a reviewer page that does not wait for an invitation
+
+### Opportunity
+
+Reported by the author, 2026-09-17, from the detail page on a `draft`
+session.
+
+**The table's rows do not depend on invitations; its links do.**
+`build_invitations_rows` iterates `monitoring.per_reviewer_progress`,
+whose row set is `_assigned_active_reviewers` — active reviewers with
+an included assignment — and consults no `Invitation`. But
+`session_invitations.html:207` wraps the name in
+`{% if row.invitation %}`, so before **Create invites** the page is a
+list of names that go nowhere.
+
+**The page they cannot reach adds one field** the table row does not,
+the last-issued invitation URL (measured at Item 4's retirement).
+**What would make it worth opening already exists**: the preview
+surface renders that reviewer's own surface, inert under
+`preview_mode`, **with their saved responses** — verified by seeding
+one, which no test does. Reachable today only from the Previews hub.
+
+### Decision
+
+**Re-key the route to the reviewer, render the link always, and put
+the reviewer's surface one click from it.**
+`/invitations/reviewers/{reviewer_id}` replaces
+`/invitations/{invitation_id}/detail`; the name links unconditionally;
+the Review Progress card gains a preview-surface link opening in a
+**new tab**.
+
+- **Rejected: keeping the invitation key** and gating the link. The
+  invitation is not the subject of the page: it supplies one field
+  (`most_recent_invitation_url`), while the reviewer it is looked up
+  from supplies the row match, the `<h1>`, the email, the breadcrumb
+  label and the template's `reviewer` slot. Keying on the field
+  rather than the subject is what makes the link conditional.
+- **Rejected: a second route** for the un-invited case. One page, one
+  key; the invitation becomes an optional field on it.
+- **Deferred to Item 7: moving the Previews hub's email previews
+  here.** That retires a chrome tab and needs its own Opportunity —
+  Item 7's stub holds what has been decided. Author's call,
+  2026-09-17: Item 6 first, Item 7 after seeing it, **so Item 6 must
+  not make the retirement harder** (§ *Semantics*).
+
+### Semantics
+
+- **Old URLs 308 to the new shape** where an invitation exists, so a
+  bookmark survives. `_require_invitation_in_session` stays for the
+  three per-row POSTs, which are genuinely invitation-keyed.
+- **No invitation is a normal state.** `invite_url` resolves to `None`
+  and the template already renders *"No invitation URL has been issued
+  yet."* — written for an unsent invitation, true unchanged for an
+  absent one.
+- **The reviewer-scoped lookup is hoisted, not copied.**
+  `_require_reviewer_in_session` lives in `_setup_reviewers.py`, a
+  sibling slice. Two rules push it to `_shared.py` and neither is a
+  spec prohibition: `spec/architecture.md` § *Three-layer split* calls
+  `_shared.py` "the preferred shape" for a lookup two routes need, and
+  the ban on slice-to-slice imports is `CLAUDE.md`, filed in
+  `docs/unenforced_conventions.md` §2.2 as a convention **with no
+  check**.
+- **A new tab is the existing contract.**
+  `spec/operator_ui_concept.md:197` already says this route is
+  *"opened in a new tab"*; `_preview_picker.html:80` is the shipped
+  precedent. It also disposes of back-navigation: the detail page
+  stays in the first tab.
+- **The surface shows responses an instrument is configured to hide.**
+  `preview_mode` forces `accepting=True`, so
+  `responses_visible_when_closed` is bypassed. Deliberate operator
+  affordance, author's call 2026-09-17.
+- **The re-key creates a reachable state the page has never had.**
+  Every table row is an active reviewer with an included assignment,
+  so the Review Progress card's `review_progress_total > 0` gate never
+  fails from the table. A reviewer-keyed URL can be **typed** for any
+  reviewer in the session — inactive, unassigned, or both — and that
+  page renders with no card and so no surface link. Right, and new.
+- **Forward compatibility with Item 7: this item adds no coupling to
+  the Previews hub.** The link goes straight at `/preview-surface` and
+  always passes a resolvable email. The two that already exist are
+  enumerated in Item 7's stub, § *What Item 6 leaves for it*, which
+  owns them.
+
+### Judgment calls — decided
+
+All 2026-09-17.
+
+- **`/invitations/reviewers/{reviewer_id}`, not `/reviewers/{id}`** —
+  the latter collides with the Setup roster namespace, and the page
+  belongs to the Invitations tab.
+- **308, not 303** — permanent, method-preserving, and what
+  `/preview` → `/preview-surface/1` already does.
+- **Banner copy replaced, not conditionalized.** One neutral sentence
+  is true from both entry points; two variants is a branch to keep
+  right.
+- **The surface link is `btn secondary`** — the canonical Secondary
+  role (`spec/ui_elements.md` §6), matching `_preview_picker.html:79`
+  for the same destination.
+
+### Where the link goes
+
+Decided up front, 2026-09-17, as the condition for setting the
+scaffold rule aside.
+
+- **A `.card-action-row` at the foot of the Review Progress card**,
+  after the scaffold note — right-flushed, `--space-3` above it. Not
+  inline in the stats line (it is a `.btn`, not prose) and not beside
+  the `<h2>` (this page has no heading-row action idiom).
+- **Because that is where the same button already sits.**
+  `_preview_picker.html:78-82` puts `Open full preview` — the same
+  destination — in a right-flushed card action row on the Previews
+  hub. Matching it means one button in two places looks like one
+  button, which is the drift Item 5 spent a rung undoing for
+  `Apply` / `Search`.
+- **`.card-action-row` gains a second caller**, having had exactly one
+  since 11F. It lives in `base.html` and is **not** in
+  `spec/ui_elements.md` §10; the second caller is what makes it worth
+  recording, so the manifest picks it up.
+- **Labeled `Open reviewer surface`**, not `Open full preview`. The
+  hub's label carries the word this item is neutralizing in the
+  banner, and from here the operator is inspecting rather than
+  previewing. **This leaves two labels for one destination**, which is
+  a known cost and not a drift: Item 7 either retires the hub, which
+  dissolves it, or keeps it and settles the pair. Recorded rather than
+  discovered.
+- **The card's scaffold note is now half false** — *"Per-assignment
+  and per-response detail will land in a future segment"* — since the
+  link reaches exactly that. Rung 2 rewords it; it does not survive
+  the thing it was promising.
+
+### Blast radius (measured)
+
+Commands run 2026-09-17 on `origin/main` at `0587ca8`.
+
+- `grep -rn "invitations/{{ .*}}/detail" app/web/templates/` → **1**
+  (`session_invitations.html:208`) — the only inbound link in the app.
+- `grep -rln "invitations/.*detail" tests/ --include=*.py` → **1**
+  (`test_invitations.py`), carrying **3** URL-bearing sites —
+  `:675-676`, `:689`, `:704` — under one test from `:680`.
+- `grep -rlnE "invitations/\{(invitation_id|iid|inv_id)\}/detail" spec/ docs/`
+  → **2 live** (`spec/operations_pages.md:310`, `docs/status.md:825`)
+  plus **2 dated 11C rows** kept as history. The placeholder is spelled
+  three ways, so a single-spelling grep finds one of the two.
+- `grep -rln "preview-surface" app/web/templates/` → **1**
+  (`_preview_picker.html`); `… spec/ docs/` → **5**; `… tests/` → **6**.
+- `spec/operator_button_audit.md` §13 → **5** rows (84, 85, 86, 87,
+  87a), `Source: session_invitations.html`. The new link ships on
+  `session_invitations_reviewer_detail.html`, which the audit does not
+  cover at all — see `Doc impact`.
+- Tests asserting the preview surface renders a **saved response**:
+  **0**, across all six files above.
+
+### PR ladder
+
+**Three slices. The scaffold-first rule is set aside for this item**
+(author, 2026-09-17) on the condition that the link's placement is
+decided up front rather than iterated on the dev slot — it is, in
+§ *Where the link goes* above. `CLAUDE.md` asks for an inert scaffold
+so a page's *shape* can be agreed before logic attaches; this item
+adds no page and no card, and the destination already ships, so a
+disabled link would show a reviewer less than a working one.
+
+1. **Re-key the route.** `/invitations/reviewers/{reviewer_id}`,
+   `_require_reviewer_in_session` hoisted to `_shared.py`, the old URL
+   308ing where an invitation exists, the table's link unconditional.
+   **The invitation is resolved by reviewer, not taken from the
+   path**: `most_recent_invitation_url` takes `invitation_id=` and
+   `InvitationsRow.invitation` already carries the row via
+   `monitoring._invitations_by_reviewer`. Plus a test for the state
+   the re-key newly makes reachable — a typed URL for an inactive or
+   unassigned reviewer. **No card on the page changes.**
+2. **The surface link and its destination's copy.** The
+   `.card-action-row` and its anchor; the scaffold note reworded; the
+   neutral banner on the preview surface; and the test that saved
+   responses render there. **Does not touch the Previews hub.**
+3. **The close.** Docs per the manifest at the end of this item.
+
+### Definition of done
+
+- `grep -c "{% if row.invitation %}" app/web/templates/operator/session_invitations.html` → 0, and a reviewer with no `Invitation` row reaches the page from the table and sees `No invitation URL has been issued yet.`
+- `GET .../invitations/{invitation_id}/detail` 308s to the reviewer URL, pinned by a test.
+- The surface link carries `target="_blank"` and `rel="noopener"`, and points at `/preview-surface/1?reviewer_email=`, not `/previews`.
+- It renders as `Open reviewer surface` in a `.card-action-row` that is the **last child** of the Review Progress card, and the card's scaffold note no longer promises per-response detail as future work.
+- A test asserts a **saved response value** renders on the operator preview surface — the gap this item found.
+- The preview-surface banner no longer opens with `Preview` nor claims the page's content is a preview.
+- Looked at in Chromium, light and dark, at 1280px and phone width, from both entry points.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19P.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does the Responses detail page get the same treatment?** It is
+   already reviewee-keyed (`/responses/{reviewee_id}/detail`) so it
+   needs no re-key, and a reviewee has no surface of their own to
+   link. Probably nothing to do; author's call at Item 7.
+2. **Item 7's shape** — Item 7's stub, § *The three candidate fates*.
+   Author's call, after this item is on the dev slot.
+
+### Out of scope
+
+- **The Previews hub, all of it.** Item 7's question. This item adds a
+  second door to the preview surface and closes none.
+- **Growing the detail page past its scaffold.** Named in Item 5's
+  *Out of scope*, still unowned.
+- **`_operations.py:944-945`'s stale docstring** — it claims the
+  Responses detail surface lists the reviewers assigned to the
+  reviewee, and the template renders no such list. Found by Item 4's
+  cold read and written down nowhere in `guide/` until this line.
+  Left for whoever grows that page.
+
+### Doc impact
+
+- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, and the surface link in the Review Progress card (Item 6).
+- `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, and "reached from the Previews hub picker card" becoming one entry point of two (Item 6).
+- `spec/preview_hub.md` — the preview surface gains a second entry point (Item 6).
+- `spec/operator_ui_concept.md` — `:102` and `:367`, the two passages naming the picker button as the way in. Not `:197`, which this item leaves alone (Item 6).
+- `spec/operator_button_audit.md` — the surface link's row, label `Open reviewer surface`, role Secondary. **Which section is an open question**: §13's `Source:` is `session_invitations.html` and this button ships on the drill-in page, which the audit does not cover (Item 6).
+- `spec/ui_elements.md` — §10 gains `.card-action-row`, which ships in `base.html` and is absent from the primitives table. This item is its second caller since 11F, which is what makes it worth naming (Item 6).
+- `docs/status.md` — the route-table row for the detail page, and the item row when it lands (Item 6).
+
+**Not committed to:** `spec/architecture.md`. Its § *Three-layer split*
+already prescribes `_shared.py` for a `_require_*_in_session` helper,
+so the hoist changes nothing it says.
+
+---
+
+## Item 7 — Should the Previews hub become the reviewer page? — **stub, author's call**
+
+**Not planned. Sequenced behind Item 6 by the author, 2026-09-17**:
+*"Item 6 first, then Item 7 after I've seen it. If we do 7, it will
+likely involve retiring the preview page."* This block exists to hold
+the decisions that conversation reached, so Item 6's references to
+"Item 7" resolve to something and so the reasoning is not re-derived.
+
+**No `### Doc impact` yet, deliberately.** There is nothing committed
+to change until the item is planned, and a pre-waived bullet written
+to satisfy `close_check.py` is the failure mode `segment-plan`'s own
+skill warns about. It arrives with the plan.
+
+### What is on the Previews hub, measured 2026-09-17
+
+`session_previews.html` is **40 lines** and includes three things:
+`next_action_card.html` (shared chrome), `_preview_picker.html` and
+`_email_preview_region.html`.
+
+| | What it is |
+|---|---|
+| "Previewing as" | `<input>` + `<datalist>` typeahead, Apply, and a `Prev` / `Next` / `Random` row |
+| "About this reviewer" | count line, name, email, assigned-reviewee count and first three names |
+| "Open full preview" | the reviewer surface, `target="_blank"` (`_preview_picker.html:80`) |
+| Email preview region | that reviewer's **Invitation** / **Reminder** / **Responses received** emails, all three `is_shipped=True` (`views/_previews.py:296-320`) |
+
+**All four are per-reviewer.** Nothing on the page is session-level,
+which is the whole argument for the move: a per-reviewer page is where
+per-reviewer things belong, and Item 6 builds one.
+
+### The case for, and the case against
+
+**For.** The Invitations table is a **better reviewer picker than the
+picker**: search, three chip-toggled tag columns, sortable headers,
+pagination and a status column, against a datalist and three buttons.
+The only thing the picker does that the table cannot is `Random`.
+
+**Against, and it is the real objection.** The two surfaces differ in
+*when*, not in *what*. Previews is *check before you launch*;
+Invitations is *watch what is happening*. Pre-launch nobody reaches
+for a tab called Invitations, and Item 6 does not change that — it
+only makes the destination reachable. Either that is accepted and the
+Workflow card's stepper carries people there, or something is renamed.
+
+### The three candidate fates
+
+1. **Retire the tab.** Everything moves; Operations goes from six tabs
+   to five. Author's stated lean, 2026-09-17, and the one this stub
+   is named for.
+2. **Keep the email previews**, lose only the surface link. Smallest
+   change, least payoff — and it leaves the per-reviewer content split
+   across two pages, which is the defect.
+3. **Keep it as a fast "pick anyone" shortcut** that redirects into the
+   per-reviewer page. Preserves the pre-launch front door and `Random`,
+   at the cost of a page whose only content is a picker.
+
+### What Item 6 leaves for it
+
+**Two couplings, not one.**
+
+1. **The preview surface resolves its reviewer through the hub's own
+   view builder.** `_resolve_preview_reviewer`
+   (`app/web/routes_operator/_preview_surface.py:67`) calls
+   `views.build_preview_picker_context`, whose docstring is *"Hydrate
+   the Previews-page reviewer picker."* Retiring the page leaves that
+   builder orphaned and still load-bearing for a route that survives.
+   **This is the larger coupling** and the one that decides how much
+   work a retirement actually is.
+2. **A 303 back to the hub**, in `preview_surface` itself
+   (`_preview_surface.py:121-130` — *not* in the resolver, which only
+   returns `None`). It fires on an unresolved `?reviewer_email=` and
+   on a session with zero reviewers.
+
+**Item 6 adds neither.** Its link points straight at
+`/preview-surface`, never through `/previews`, and always passes a
+resolvable email — precisely so this item stays open.
+
+Prose couplings are a third, smaller class: the module and helper
+docstrings in `_preview_surface.py`, and the hub references in
+`spec/preview_hub.md`, `spec/reviewer-surface.md`,
+`spec/operator_ui_concept.md` and `spec/role_navigator.md`. Counted
+when this item is planned, not before.
+
+### Open questions
+
+1. **Which fate**, per above. Author's, after Item 6 is on the dev slot.
+2. **Does Responses get the symmetric treatment?** Its detail page is
+   already reviewee-keyed, so it needs no re-key, and a reviewee has
+   no surface of their own — so the symmetry may be nominal. Answer
+   after 1.
+3. **Naming.** If the tab retires, does *"Invitations"* still describe
+   a page you use before any invitation exists? Only live under fate 1.
