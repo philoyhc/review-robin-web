@@ -112,57 +112,37 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 
 **Rungs 1–3 landed; rung 4 is the Relationships empty state.**
 
-**The plan's blast radius was wrong twice about one line.** It said no
-`relationship_count` existed. The service helper did
-(`relationships.existing_count`), *and* a context key of that exact
-name already reached these templates through
-`views.session_status_pills`. Rung 1 needed no wiring at all; its first
-draft added a second query on three paths and a cold read removed it.
-
-**`EVENT_SCHEMAS` needed no edit**, as the ladder suspected — but
-verifying mattered, because strict mode fails the *write*: a suite that
-never exercised the new key would have passed either way.
-
-**Rung 1 widened to the import path**, which the DoD's "four deleting
-events" had not counted. A replace deletes every row and re-adds, so it
-destroys relationships exactly as `delete-all` does; leaving it out
-would have had rung 2 quoting a number on two confirmations with no
-logged counterpart — the disagreement the Decision exists to prevent.
-
-**Rung 2 diverged from "one three-state rule grows a fourth clause."**
-The expander's clause reads the ticked rows where its three neighbours
-read the session, because `Semantics` asks for it and the selection
-only exists in the browser. The neighbours' imprecision is
-pre-existing and left alone. **Open for the author:** whether the four
-clauses should agree, in either direction.
-
-**Two copy defects, both caught by cold reads and not by the mutation
-tables.**
-
-- The CSV replace inherited its sentence's opening verb and told the
-  operator the relationships would be *replaced*. Its own test seeded
-  the state that was wrong — no assignments, which is the usual state —
-  and passed on it, because it counted a shared phrase instead of
-  reading the sentence.
-- Rung 3's first draft said the upload destroys *"every relationship
-  involving the people it removes"*, and gave the reason *"a
-  relationship names a pair, so it cannot outlive either side."* An
-  identical re-upload falsifies that: `_save` deletes and re-creates
-  every row, so both sides still exist by name and the relationship is
-  gone anyway. It now says the mechanism.
-
-**Three more of rung 3's own making, all from the same cold read:** the
-Guide pointed operators at the audit log, which is `require_sys_admin`;
-*"after any change to either"* prescribed a re-upload after operations
-that cost nothing; and the guidance rendered on sessions with
-`relationships_enabled` off, describing a loss that cannot happen —
-which is the rule `Decision` states for labels and rung 3 had not
-carried across.
-
-**The definition-of-done grep was adjudicated at rung 3**, not passed:
-it was line-based, so two of its three targets satisfied it by
-*wrapping* while still saying the sentence, and the third should keep
-saying it.
+- **The blast radius was wrong twice about one line.** No
+  `relationship_count` existed, it said; the service helper did
+  (`relationships.existing_count`) *and* a context key of that name
+  already reached these templates via `views.session_status_pills`.
+  Rung 1 needed no wiring.
+- **`EVENT_SCHEMAS` needed no edit** — but verify, never assume: strict
+  mode fails the *write*, so a suite not exercising the new key passes
+  either way.
+- **Rung 1 widened to the import path**, uncounted by the DoD's "four
+  deleting events". A replace deletes and re-adds, destroying
+  relationships as `delete-all` does; leaving it out would have rung 2
+  quoting a number with no logged counterpart.
+- **Rung 2's expander clause reads the ticked rows** where its three
+  neighbours read the session — `Semantics` asks for it and the
+  selection exists only in the browser. **Open for the author:** whether
+  the four clauses should agree, in either direction.
+- **Four copy defects, every one caught by reading and none by a
+  mutation table** — prose can be pinned, not proved. The CSV replace
+  inherited its sentence's opening verb and promised a roster that comes
+  back; rung 3 explained the loss with *"a relationship names a pair, so
+  it cannot outlive either side"*, which an identical re-upload
+  falsifies (`_save` deletes and re-creates every row); the Guide sent
+  operators to the `require_sys_admin` audit log; and the guidance
+  rendered with `relationships_enabled` off, describing an impossible
+  loss — the rule `Decision` states for labels, not carried across.
+- **The re-upload advice was over-broad** (found on review of rung 3's
+  PR): scoped to replacing a roster, since after a selected delete the
+  surviving relationships would be destroyed by the upload it advised.
+- **The definition-of-done grep was adjudicated at rung 3**, not passed:
+  line-based, so two targets satisfied it by *wrapping* while still
+  saying the sentence, and the third should keep saying it.
 
 ### PR ladder
 

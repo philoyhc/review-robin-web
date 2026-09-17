@@ -719,6 +719,14 @@ def test_the_guide_tells_operators_what_order_to_work_in(
     assert "replacing a roster deletes every relationship in the session" in section
     assert "deleting rows takes the relationships that involved them" in section
     assert "Marking someone inactive costs nothing" in section
+    # And the re-upload advice is scoped to the path that empties this
+    # roster. It first read "whenever you replace or delete rows in
+    # either", which is advice to destroy data: after a selected delete
+    # the relationships that did not involve those rows are still here,
+    # and an upload replaces the whole roster.
+    assert "upload them again whenever you replace either" in section
+    assert "replace or delete" not in section, section[:400]
+    assert "the rest survive" in section
     # The honest half: the app warns and does not undo. It no longer
     # points at the audit log — that page is `require_sys_admin`, so an
     # operator following the Guide there gets a 403.
@@ -769,6 +777,11 @@ def test_the_three_cards_agree_about_what_an_upload_costs(
     assert "Deleting selected rows there is narrower" in rel
     assert "marking someone inactive costs nothing" in rel
     assert "nothing here brings them back" in rel
+    # Same scoping as the Guide: re-upload after a replace, add rows
+    # back after a selected delete.
+    assert "upload this one again after you replace either" in rel
+    assert "replace or delete" not in rel, rel[:400]
+    assert "another upload here would replace the whole roster" in rel
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
