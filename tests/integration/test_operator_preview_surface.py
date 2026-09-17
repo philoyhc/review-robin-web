@@ -210,7 +210,13 @@ def test_renders_reviewer_surface_template_with_operator_banner(
     prose = re.sub(r"\s+", " ", body)
     # Operator banner from review_surface.html's preview_mode branch.
     assert "<strong>Operator view.</strong>" in body
-    assert "including any responses they have saved" in prose
+    # **Qualified, and the qualification is load-bearing.** Fields the
+    # operator has un-pinned are filtered out by `visible.is_(True)`
+    # and the dropped-fields notice is suppressed in `preview_mode`, so
+    # an unqualified "any responses they have saved" would let an
+    # operator conclude a response never existed.
+    assert "saved responses to the fields still being collected" in prose
+    assert "any responses they have saved" not in prose
     # **Names the controls the page actually has.** The first version of
     # this copy said "Save, Discard and Submit"; `_action_row.html`
     # renders Save / Cancel / Submit, and `CLAUDE.md` requires prose that
