@@ -1341,7 +1341,7 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
 
 ### Status
 
-**Rungs 1-2 landed; rung 3 is Invitations and Responses.**
+**Rungs 1-3 landed; what remains is the close.**
 
 - **Rung 1's cold read found three false claims about the code**, one
   of them a spec citation shipped three times
@@ -1381,6 +1381,27 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   measured at row 30 of 31 with the selection at 18. And
   `selectAll.indeterminate`, so a partial selection reads as a dash
   rather than an empty box. Both now pinned by their own tests.
+- **Rung 2's second review round found two more**, both from one
+  root cause the port had not carried: the roster expander idiom
+  assumes a selectable row is a visible row, and Assignments is the
+  only page with a *client-side* filter (the `Show` checkboxes hide
+  rows with `display: none`). The panel anchored after a hidden row
+  over a still-ticked invisible selection, and `colSpan` went stale on
+  a chip toggle. Fixed by restoring the invariant — `rows()` is the
+  visible rows — rather than patching the anchor.
+- **Rung 3 dropped `bottom-grid` rather than giving the info card a
+  width class.** A `1fr 1fr` grid with one child is not a grid, and the
+  card is full width at page width without new CSS. It also had to
+  lift the table card out of `{% if rows %}`: fine while the filter was
+  a separate card above it, a trap once the filter moved in, since a
+  search matching nothing would take away the only way to clear it.
+  Same restructure rung 1 made on Assignments, where it also fixed an
+  unclosed `<div>`.
+- **All seven table toolbars now split**, which empties the negative
+  `test_the_split_toolbar_is_opt_in_not_the_shared_rule` was built
+  around. Re-aimed at the two claims that survive: every carrier has
+  the modifier, and the shared rule stays `display: flex` so the next
+  page carrying a toolbar is not silently re-laid-out.
 - **Open for the author:** Assignments' `Clear` renders on
   `{% if filter_q %}`, so a status-only filter leaves the page
   visibly filtered with no way to clear it — `_assignments.py:202`

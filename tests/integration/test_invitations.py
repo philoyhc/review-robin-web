@@ -920,8 +920,13 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     to the top-left of the table card, in the rosters' class, so all
     seven preview pages report the same way in the same place.
 
-    `Clear` and `Apply` stay in the actions row: they are actions,
+    `Clear` and the submit stay in the actions row: they are actions,
     and the count is a report about the rows below.
+
+    **19P.5 rung 3 moved the filter into the table card's toolbar**, so
+    "with the table, not the filter row" is now a claim about the two
+    panes rather than about two cards. The submit is `Search` there,
+    not `Apply` — the label the other five pages use.
     """
     session = _ready_session_with_two_reviewers(client, db, "inv-count-line")
 
@@ -929,19 +934,19 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
         f"/operator/sessions/{session.id}/invitations?q=rae"
     ).text
 
-    # In the table card, in the shared class.
-    card = body[body.index("</form>") :]
-    assert '<p class="muted table-showing-hint">' in card
-    assert "Showing 1 reviewer." in card
+    # Left pane: what the table is showing.
+    left = body[body.index('<div class="toolbar-pane toolbar-left">') :]
+    left = left[: left.index('<div class="toolbar-pane toolbar-right">')]
+    assert '<p class="muted table-showing-hint">' in left
+    assert "Showing 1 reviewer." in left
 
-    # Gone from the actions row, which keeps Clear and Apply. Scoped
-    # to the rendered row: `base.html` inlines a CSS comment about
-    # this strip, so an unscoped search matches prose, not markup.
+    # Right pane's actions row: the controls, and no report.
     start = body.index('<div class="filter-actions">')
     actions = body[start : body.index("</div>", start)]
     assert "Showing" not in actions
     assert ">Clear</a>" in actions
-    assert ">Apply</button>" in actions
+    assert ">Search</button>" in actions
+    assert ">Apply</button>" not in actions
 
 
 def test_the_count_line_is_absent_when_no_filter_narrows(
