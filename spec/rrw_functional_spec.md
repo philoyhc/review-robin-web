@@ -1238,8 +1238,10 @@ on the Operations row of the chrome. It carries:
   suggestions, `Clear`, `Search` — right, in that order.
 - **Row expander** — ticking rows injects a panel beneath the
   selection carrying the selected count and the
-  selection-driven bulk **Inactivate** / **Activate**, only
-  ever the one that would act. The three used to sit in a
+  selection-driven bulk **Inactivate** / **Activate** —
+  whichever is actionable for the selection, so one where every
+  ticked pair is the same way and both where it is mixed. The
+  three used to sit in a
   half-width **Operator-actions card** in the page's corner,
   away from the rows they act on; 19P.5 rungs 1-2 moved the
   strip into the toolbar and the actions into the expander, and

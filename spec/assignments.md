@@ -982,9 +982,10 @@ warning-coloured `no` pill (`.pill-empty`); the row itself is **not**
 dimmed or otherwise restyled. The (select) column
 enables bulk-set Include via a checkbox column header + a
 per-row checkbox; the **row expander** injected beneath the
-selection carries the **`Inactivate`** / **`Activate`** button the
-selection drives — only ever the one that would act on the ticked
-rows, never both.
+selection carries the **`Inactivate`** / **`Activate`** buttons the
+selection drives — only what is actionable for it, so one on a
+single-status selection and both on a mixed one. § *The row expander*
+above states the rule.
 
 #### Bulk-set Include
 
