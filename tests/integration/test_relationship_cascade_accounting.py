@@ -35,7 +35,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     AuditEvent,
+    Instrument,
     Observer,
     Relationship,
     Reviewee,
@@ -485,40 +487,207 @@ def test_the_audit_log_page_shows_the_new_count(
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
-def test_rung_one_changes_no_copy(
+def test_every_confirmation_names_the_relationship_loss(
     client: TestClient, db: Session, page: str
 ) -> None:
-    """**The inertness claim, checked.** Rung 1 lands the number and
-    nothing that reads it, so no confirmation on either page may
-    mention relationships yet.
+    """**Rung 2 flips rung 1's inertness test rather than deleting it.**
+    The three gates per page are the same three; what changed is which
+    way the assertion points, so a clause landing anywhere else fails
+    here.
 
-    Rung 2 flips this test rather than deleting it: the same three
-    confirmations are where the clause belongs, so a failure here after
-    rung 2 means the copy landed somewhere else.
+    Keyed on `data-delete-confirm`, not on label markup: the JS-built
+    confirmation is a string inside a `<script>`, so a label-shaped
+    regex matches it twice — once as markup, once as the literal it
+    builds — and a naive count reads 4 for 3 gates.
     """
     rs = _mk(client, db, f"relcc-copy-{page[:4]}")
     _seed(db, rs.id)
     body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
     body = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
 
-    # Keyed on `data-delete-confirm`, not on label markup: the
-    # JS-built confirmation is a string inside a <script>, so a
-    # label-shaped regex matches it twice — once as markup and once as
-    # the literal it builds — and a naive count reads 4 for 3 gates.
     keys = set(re.findall(r'data-delete-confirm="([^"]+)"', body))
     assert keys == {"delete-all", "replace-roster", f"{page}-bulk-delete"}, keys
 
-    # The text each gate carries, wherever it is written.
-    phrases = [
-        " ".join(re.sub(r"<[^>]+>", " ", m).split())
-        for m in re.findall(
-            r'(?:Yes, delete the existing|Yes, replace the existing|'
-            r'Yes, delete these)[^<"]*', body
-        )
-    ]
-    assert len(phrases) >= 3, phrases
+    flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
+
+    # **The two numbered gates use different verbs, and the cold read
+    # found out why.** The Danger Zone opens "delete the existing N
+    # reviewers", which governs the clause. The Upload card opens
+    # "replace the existing N reviewers" — which does NOT: the
+    # relationships are destroyed and nothing re-creates them, so
+    # inheriting `replace` told the operator a roster would come back.
+    #
+    # This fixture seeds NO assignments, which is the state that was
+    # wrong: `delete` is introduced by the assignment clause when there
+    # is one, so with none the replace sentence had no verb of its own.
+    # The first version of this test asserted a count of the shared
+    # phrase and passed on the defective sentence.
+    noun = page[:-1]
+    assert (
+        f"delete the existing 3 {noun}s and the 3 relationships "
+        "involving them." in flat
+    ), flat[:400]
+    assert (
+        f"replace the existing 3 {noun}s and delete the 3 "
+        "relationships involving them." in flat
+    ), flat[:400]
+
+    # The expander's clause is numberless and selection-summed.
+    assert '" and the relationships involving them"' in " ".join(body.split())
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_a_roster_with_no_relationships_reads_exactly_as_before(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The zero case, pinned byte-identical.
+
+    `Semantics` makes this a contract, not a nicety: the three-state
+    rule exists because a label naming a loss that cannot happen is its
+    own defect, so a session with no relationships — including every
+    session with `relationships_enabled` off — must read exactly as it
+    did before this item.
+    """
+    rs = _mk(client, db, f"relcc-zero-{page[:4]}")
+    # Rosters, but no relationships between them.
+    db.add_all(
+        [Reviewer(session_id=rs.id, name="R", email="r@example.org"),
+         Reviewee(session_id=rs.id, name="E",
+                  email_or_identifier="e@example.org")]
+    )
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    flat = " ".join(re.sub(r"<style\b.*?</style>", "", body, flags=re.S).split())
+
+    # The confirmation SENTENCES, not the page: the chrome carries a
+    # `Relationships` nav tab and a status pill on every roster page, so
+    # an unscoped search reports a mention that was always there.
+    phrases = re.findall(
+        r"(?:Yes, delete the existing|Yes, replace the existing)[^.]*",
+        re.sub(r"<[^>]+>", " ", flat),
+    )
+    assert len(phrases) == 2, phrases
     for phrase in phrases:
-        assert "relationship" not in phrase.lower(), (
-            "rung 1 is meant to be inert on these pages; this clause "
-            "belongs to rung 2"
+        assert "relationship" not in phrase.lower(), phrase
+    # The clause is still COMPILED into the expander's script — it is
+    # summed at click time, not rendered away — so its absence from the
+    # sentence is the script's decision, not the server's.
+    assert '" and the relationships involving them"' in flat
+    assert 'data-relationships="0"' in flat
+
+
+@pytest.mark.parametrize("page,noun", [("reviewers", "reviewer"),
+                                       ("reviewees", "reviewee")])
+def test_each_row_carries_the_relationships_it_would_take(
+    client: TestClient, db: Session, page: str, noun: str
+) -> None:
+    """The numbers the expander sums, checked per row.
+
+    Seeded unevenly on purpose: a roster where every row carried the
+    same count would pass with the map keyed wrongly, or replaced by a
+    constant.
+    """
+    rs = _mk(client, db, f"relcc-rows-{page[:4]}")
+    reviewers, reviewees = _seed(db, rs.id, pairs=2)
+    # A third pair hanging off the FIRST row of each roster, so row 0
+    # carries 2 and row 1 carries 1.
+    db.add(
+        Relationship(
+            session_id=rs.id,
+            reviewer_id=reviewers[0].id,
+            reviewee_id=reviewees[1].id,
         )
+    )
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    rows = (reviewers if page == "reviewers" else reviewees)
+    found = {}
+    for row in rows:
+        m = re.search(
+            rf'id="{noun}-row-{row.id}".*?data-relationships="(\d+)"',
+            body, re.S,
+        )
+        assert m, f"row {row.id} carries no count"
+        found[row.id] = int(m.group(1))
+    assert sorted(found.values()) == [1, 2], found
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_the_expander_clause_is_gated_on_the_selection_not_the_roster(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """**A source assertion, and the reason is worth stating.**
+
+    The clause is appended by a script from the ticked rows'
+    `data-relationships`, so what a server-side test can see is that the
+    expression ships — not that it evaluates. Mutating the condition to
+    `true` or `false` passes every other test in this file, which is how
+    this gap was found.
+
+    Measured instead in headless Chromium against a local dev server in
+    the agent's container — **not** the Azure dev slot, which is still
+    the verification of record (`CLAUDE.md`, "Where work runs"). On a
+    roster where row A carries two pairs, row B one and row C none:
+
+        C alone   -> "Yes, delete these"
+        B alone   -> "Yes, delete these and the relationships between them"
+        A + C     -> "Yes, delete these and the relationships between them"
+
+    So a selection touching no pair stays silent, which is the
+    behaviour `Semantics` asks for and the reason this clause reads the
+    selection where its three neighbours read the session.
+    """
+    rs = _mk(client, db, f"relcc-src-{page[:4]}")
+    _seed(db, rs.id)
+    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+
+    assert "relationshipsIn(sel) > 0" in body, (
+        "the clause no longer reads the selection"
+    )
+    assert "parseInt(row.dataset.relationships, 10) || 0" in body, (
+        "the summing helper is gone or no longer defaults a missing "
+        "attribute to 0"
+    )
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_the_replace_verb_is_not_repeated_when_assignments_exist(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The other half of the verb rule.
+
+    With assignments, the sentence already says "and delete the N
+    assignments", and that `delete` governs everything after it — so
+    this clause must NOT supply a second one. With none, it must (the
+    case the cold read caught). One conditional, both states pinned.
+    """
+    rs = _mk(client, db, f"relcc-verb-{page[:4]}")
+    reviewers, reviewees = _seed(db, rs.id)
+    instrument = Instrument(session_id=rs.id, name="I", order=0)
+    db.add(instrument)
+    db.flush()
+    db.add(
+        Assignment(
+            session_id=rs.id,
+            reviewer_id=reviewers[0].id,
+            reviewee_id=reviewees[0].id,
+            instrument_id=instrument.id,
+            include=True,
+            created_by_mode="rule_based",
+        )
+    )
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
+
+    assert (
+        "and delete the 1 assignment and the 3 relationships involving "
+        "them." in flat
+    ), flat[:500]
+    assert "and delete the 3 relationships" not in flat, (
+        "the verb is repeated where the assignment clause already "
+        "introduced it"
+    )

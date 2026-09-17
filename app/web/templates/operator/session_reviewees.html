@@ -214,7 +214,10 @@
                     and their associated
                     <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
                     and
-                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
+                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
+                    and the
+                    <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
+                    involving them{% endif %}.</span>
                   </label>
                   {# The acknowledgement rides with this tick, as it does
                      on the selected-rows gate. Without it the route's
@@ -279,7 +282,10 @@
                     and delete the
                     <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
                     and
-                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
+                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
+                    and {% if not (assignment_count and assignment_count > 0) %}delete {% endif %}the
+                    <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
+                    involving them{% endif %}.</span>
                   </label>
                   {# The acknowledgement rides with this tick, as it
                      does on the delete gates. Without it the route's
@@ -810,7 +816,12 @@
                the editor and the panel it injects, and what decides
                which status action the selection admits. #}
             <tr id="reviewee-row-{{ reviewee.id }}" class="row-action-target"
-                data-status="{{ reviewee.status }}">
+                data-status="{{ reviewee.status }}"
+                {# 19O.5 rung 2 — how many relationships this row takes
+                   with it. The expander sums the ticked rows, so the
+                   confirmation names the SELECTION's loss and a
+                   selection touching no pair does not claim one. #}
+                data-relationships="{{ relationships_per_row.get(reviewee.id, 0) }}">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="reviewee-select"
@@ -958,6 +969,16 @@
         // is all one status has exactly one actionable button; rendering
         // the other offers a control that would no-op on every row.
         // Orthogonal to arity, which says how many rows each action takes.
+        // Sums `data-relationships` over the ticked rows. A row the
+        // server found no relationship for renders 0, and a missing or
+        // unparseable attribute reads 0 too — the confirmation may
+        // understate a loss the operator then sees in the audit log,
+        // never overstate one they were not warned about.
+        function relationshipsIn(sel) {
+          return sel.reduce(function (total, row) {
+            return total + (parseInt(row.dataset.relationships, 10) || 0);
+          }, 0);
+        }
         function statusActions(sel) {
           var out = [];
           var hasActive = false;
@@ -1004,6 +1025,17 @@
                      if delete_discards_assignments else
                      "Yes, delete these"
                    ) | tojson }} +
+                // 19O.5 rung 2 — the fourth clause, and the only one
+                // that reads the SELECTION rather than the session.
+                // `delete_discards_assignments` is a session-wide flag,
+                // so it says "and their associated assignments" even
+                // for a selection carrying none; that imprecision is
+                // pre-existing and left alone. This one is summed from
+                // the ticked rows' `data-relationships`, so a selection
+                // touching no pair stays silent — which is what the
+                // item's Semantics asks for.
+                (relationshipsIn(sel) > 0
+                  ? " and the relationships involving them" : "") +
                 {# The route requires BOTH fields and 400s without the
                    acknowledgement, so it rides with the tick exactly as
                    it did in the card it came from, id and all. #}

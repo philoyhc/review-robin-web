@@ -846,6 +846,28 @@ answered:
 | assignments only | "Yes, delete these and their associated assignments" |
 | neither | "Yes, delete these" |
 
+**A fourth clause since 19O.5, and it is scoped differently from the
+three above.** A reviewer or reviewee delete also destroys every
+relationship referencing it, through an `ondelete="CASCADE"` foreign
+key with no ORM collection on either parent — so nothing in Python
+observes it and the app said nothing about it. Where the selection
+carries any, the label gains *"and the relationships involving them"*.
+
+**It reads the selection; the three rows above read the session.**
+`delete_discards_assignments` is a session-wide flag, so those clauses
+fire for a selection carrying none — a pre-existing imprecision, left
+as it is. The relationship clause cannot afford it: each `<tr>` carries
+`data-relationships` and the expander's script sums the ticked rows, so
+a selection touching no pair stays silent. This is the same principle
+§ *Deleting the selected rows* already states about the count — *"the
+confirmation therefore states the **selected** count and never the
+match count"* — applied to a clause rather than a number, and the same
+one `acknowledge_response_loss` enforces server-side.
+
+**"involving", not "between".** Every relationship pairs a reviewer
+*with a reviewee*, so on a page listing one roster "between them" reads
+as relationships among the selected rows, which cannot exist.
+
 Observers and Relationships are always the third row: nothing
 references them, so neither delete can reach an assignment or a
 response, and a label implying otherwise would be describing a loss
@@ -917,7 +939,7 @@ because a bare `500 selected` a table's height below `Showing 500 of
 roster. **What a delete takes with it** — the cascade, and the
 `email_outbox` unlink a reviewer delete needs on top of it — is stated
 once under *Deleting the selected rows* above and governs this surface
-identically. It carries the **same two gates and the same three-state rule** as
+identically. It carries the **same two gates and the same label rule** as
 the selected-rows delete — the wording differs, since this one names
 counts ("the existing 12 reviewers and their associated…") where the
 strip says "these" — and the same single tick: `confirm` plus, where
@@ -962,10 +984,28 @@ the same single tick, with the acknowledgement riding as a hidden
 field beside it.
 
 **The confirmation names what the replace destroys**, in the same
-three states and the same order as `delete-all`:
+states and the same order as `delete-all`:
 
 > Yes, replace the existing `3 reviewers` and delete the
-> `1 assignment` and `2 reviewer responses`.
+> `1 assignment` and `2 reviewer responses` and the
+> `3 relationships` involving them.
+
+**This gate supplies its own verb, where `delete-all` does not.**
+`delete-all` opens *"delete the existing N reviewers"*, which governs
+every clause after it. This one opens *"**replace** the existing N
+reviewers"*, which governs none of them — the assignments, responses
+and relationships are destroyed and nothing re-creates them. `delete`
+is introduced by the assignment clause when there is one, so the
+relationship clause supplies it only when there is not:
+
+> Yes, replace the existing `3 reviewers` and delete the
+> `3 relationships` involving them.
+
+Without that conditional the sentence reads *"replace … and the 3
+relationships"*, promising a roster that comes back. Found by a cold
+read at 19O.5 rung 2, in the state it is most often seen: relationships
+are normally uploaded before assignments are generated, so the
+assignment clause that would have supplied the verb is usually absent.
 
 The assignment clause appears when the roster's rows carry
 assignments, the response clause when the session carries responses;
