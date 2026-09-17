@@ -427,15 +427,19 @@ Rule Based Assignment card, and no Self-reviews toggle card.
 Per-instrument Self review is an inline checkbox column on the
 Per-instrument status table, and Self review / Show on that table are
 plain form checkboxes rather than `.btn`-shaped controls, so they are
-not enumerated here. The `.btn`-shaped controls are the
-operator-actions search / bulk card's.
+not enumerated here. **The `.btn`-shaped controls were the
+operator-actions search / bulk card's until 19P.5**, when that card
+went: the filter strip is the preview table's toolbar right pane
+(rung 1) and the selection's status button is the row expander
+(rung 2), the same two homes the four roster pages gave them across
+19P.1-3.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 71g | Operator-actions card | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-inactivate`; submits the `assignments-bulk-form` from the row-select checkbox column; enabled on ≥1 selection **and** `can_edit`. |
-| 71h | Operator-actions card | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-activate`; enabled on ≥1 selection **and** `can_edit`. |
-| 71i | Operator-actions card | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" (All / Reviewers / Reviewees) + search GET; last in the inline `filter-actions` row. |
-| 71j | Operator-actions card | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a search term is active. |
+| 71g | Row expander (was Operator actions) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-inactivate`; submits the `assignments-bulk-form` from the row-select checkbox column; enabled on ≥1 selection **and** `can_edit`. Rendered **by status, not arity** since 19P.5 rung 2, as rows 123 / 124 are: emitted only when the selection holds an included pair, so a selection of entirely-included rows no longer also carries an `Activate` that would no-op on every row. Sits in the expander injected beneath the selection, after the `N of M selected` count. |
+| 71h | Row expander (was Operator actions) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-activate`; enabled on ≥1 selection **and** `can_edit`. Emitted only when the selection holds an excluded pair — see 71g. **No `Edit` and no `Delete` join them**: assignments are not edited row by row and not deleted, so this expander is the count and the status button(s) — two only on a mixed selection — where the rosters' also carries `Edit`, `Delete` and its confirm. |
+| 71i | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" (All / Reviewers / Reviewees) + search GET; last in the `filter-actions` row, which is now the toolbar's right pane. Carries the `#assignments-table-card` fragment so a search lands on the table. |
+| 71j | Table toolbar (was Operator actions) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a **search term** is active — a status-only filter leaves the page filtered with no `Clear`, which is pre-existing and open. |
 
 Button numbers in this section carry letter suffixes (`71g` etc.) so
 that inserting the section did not renumber every section after it.
@@ -476,8 +480,8 @@ Source: `app/web/templates/operator/session_invitations.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 84 | Filter card | Clear | `<a>` | `btn secondary` | Secondary | Rendered only when a filter is active |
-| 85 | Filter card | Apply | `<button type="submit">` | `btn secondary` | Secondary | |
+| 84 | Table toolbar (was Filter card) | Clear | `<a>` | `btn secondary` | Secondary | Rendered only when a filter is active; carries the `#<noun>-table-card` fragment, so clearing lands on the table |
+| 85 | Table toolbar (was Filter card) | Search | `<button type="submit">` | `btn secondary` | Secondary | **Relabeled from `Apply` at 19P.5 rung 3**, when the strip moved from a half-width `filter-card` into the table card's toolbar. Five surfaces already said `Search` — the four rosters and Assignments — and these two said `Apply`; the minority renamed. |
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row; visible while the invitation is `pending` |
 | 87 | Invitations table (per row) | Send reminder | `<button type="submit">` | `btn secondary` | Secondary (Disabled when row is complete or session not ready) | One per row; visible once the invitation is past `pending` |
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
@@ -495,8 +499,8 @@ Source: `app/web/templates/operator/session_responses.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 90 | Filter card | Clear | `<a>` | `btn secondary` | Secondary | Rendered only when a filter is active |
-| 91 | Filter card | Apply | `<button type="submit">` | `btn secondary` | Secondary | |
+| 90 | Table toolbar (was Filter card) | Clear | `<a>` | `btn secondary` | Secondary | Rendered only when a filter is active; carries the `#<noun>-table-card` fragment, so clearing lands on the table |
+| 91 | Table toolbar (was Filter card) | Search | `<button type="submit">` | `btn secondary` | Secondary | **Relabeled from `Apply` at 19P.5 rung 3** — see row 85. |
 
 **No bulk-action bar and no Actions column.** Send reminders belongs
 to the Workflow card's stepper (§5a) and the Invitations tab is

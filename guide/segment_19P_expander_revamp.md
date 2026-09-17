@@ -1345,101 +1345,79 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   Responses, **`spec/assignments.md`** for Assignments — its "Assignments
   operator page" § is what rungs 1-2 falsify.
 
-### Status
+### Status — closed 2026-09-17
 
-**Rungs 1-3 landed; what remains is the close.**
+**Landed as planned**, four rungs across five PRs — #2434 carried the
+plan and no rung, then #2435 rung 1, #2436 rung 2, #2437 rung 3, and
+this close as rung 4. All seven table
+pages carry `.table-card-toolbar.is-split`; Assignments took the
+expander too; `Apply` is `Search`; `.grid-right`,
+`.operator-actions-card` and `.filter-card` are all retired.
 
-- **Rung 1's cold read found three false claims about the code**, one
-  of them a spec citation shipped three times
-  (`spec/operator_ui_concept.md` for the count line's position; that
-  spec never mentions the count line). Also an inline
-  `margin: 0 0 12px 0` the three roster pages had dropped on this same
-  move, which falsified a "pixel-identical to Reviewers" claim that a
-  screenshot had missed — the chip row only gets a sibling in that
-  pane under a filter or 200+ rows.
-- **Two decisions rung 1 took that this plan had not carried**, both
-  now in `Semantics` above: the `can_edit` gate on the card, and
-  deleting Scope 2's last two CSS rules once the card lost its form.
-- **Rung 2 renders only the actionable status button**, which is the
-  roster idiom (Item 1 § Semantics) but a **behavior change** on this
-  page, not a move: the card offered `Inactivate` and `Activate`
-  together whenever anything was ticked, so a selection of
-  entirely-included rows carried an `Activate` that would no-op on
-  every row. It needs `data-status` per row, in the `active` /
-  `inactive` vocabulary `spec/assignments.md` § *The status filter*
-  already uses for `?status=`.
-- **`.grid-right` went with the card**, having no other caller. The
-  `.operator-actions-card` scope was *already* empty by then — five
-  rules left with the roster pages across 19P.1-3 and rung 1 took the
-  last two with the filter strip — so rung 2 removed the markup, not a
-  rule. It is the class's last tenant anywhere in the app.
-- **Six existing tests pinned what these two rungs changed**, all
-  re-aimed rather than relaxed. Two were asserting a container as a
-  stand-in for what it held (the card for the search, then the card
-  for the selection surface); one measured a `filter-actions` row that
-  is now two rows on two different cards; two pinned CSS as "still
-  needed" that had stopped matching anything.
-- **Rung 2's cold read found two the roster idiom carries and this
-  page had lost in the port.** The sort guard: this table declares
-  `data-rrw-sortable`, `_rrwApplySort` slices `tbody.children` with
-  the injected panel among them, and without the capture-phase guard
-  the panel sorts null-last and strands at the foot of the table —
-  measured at row 30 of 31 with the selection at 18. And
-  `selectAll.indeterminate`, so a partial selection reads as a dash
-  rather than an empty box. Both now pinned by their own tests.
-- **Rung 2's second review round found two more**, both from one
-  root cause the port had not carried: the roster expander idiom
-  assumes a selectable row is a visible row, and Assignments is the
-  only page with a *client-side* filter (the `Show` checkboxes hide
-  rows with `display: none`). The panel anchored after a hidden row
-  over a still-ticked invisible selection, and `colSpan` went stale on
-  a chip toggle. Fixed by restoring the invariant — `rows()` is the
-  visible rows — rather than patching the anchor.
-- **Rung 3 dropped `bottom-grid` rather than giving the info card a
-  width class.** A `1fr 1fr` grid with one child is not a grid, and the
-  card is full width at page width without new CSS. It also had to
-  lift the table card out of `{% if rows %}`: fine while the filter was
-  a separate card above it, a trap once the filter moved in, since a
-  search matching nothing would take away the only way to clear it.
-  Same restructure rung 1 made on Assignments, where it also fixed an
-  unclosed `<div>`.
-- **All seven table toolbars now split**, which empties the negative
-  `test_the_split_toolbar_is_opt_in_not_the_shared_rule` was built
-  around. Re-aimed at the two claims that survive: every carrier has
-  the modifier, and the shared rule stays `display: flex` so the next
-  page carrying a toolbar is not silently re-laid-out.
-- **Rung 3's cold read found the blast radius wrong about
-  `filter-card`**, and the error had already been restated twice — in
-  `Semantics` and again in new test prose. Both struck above. It also
-  found the Responses twin of the count-line test unre-aimed and
-  passing vacuously: it split the page at the first `</form>`, and
-  `next_action_card.html` emits up to twelve, so the slice was most of
-  the document.
-- **The guard written for that cold read failed its own mutation.**
-  Nothing pinned the retired `.filter-card` rule staying gone, so a
-  test was added — and it collected lines ending in `{`, which a
-  one-line rule does not. That is the defect the rung-2 cold read had
-  already flagged in `test_roster_expander.py`'s twin, copied across
-  without noticing it had a second half. Both now read the stylesheet
-  brace to brace, in one place
-  (`test_filter_strip_base_rule.py::test_the_two_retired_scopes_carry_no_rules_at_all`).
-- **`base.html`'s `is-split` note is owned by no rung.** The
-  Definition of done requires it rewritten; rung 4 lists only three
-  paths. Rewritten at rung 3, with the `.filter-card` scope and the
-  filter-strip note that went stale with it.
-- **The left pane stays gated on `{% if rows %}`** on these two pages
-  and on Assignments, where the four roster pages render the pager and
-  count line unconditionally (both partials self-guard). Pre-existing
-  on all three, preserved rather than changed: aligning it would alter
-  what a no-match search shows, which is beyond a move. **Open for the
-  author** if the seven should agree.
-- **Open for the author:** Assignments' `Clear` renders on
-  `{% if filter_q %}`, so a status-only filter leaves the page
-  visibly filtered with no way to clear it — `_assignments.py:202`
-  counts status in `is_filtered`. Reviewers uses
-  `{% if filter_status != "all" or filter_search %}`. Pre-existing;
-  named at rung 1 and not fixed there.
+**Four decisions the plan did not carry**, each recorded in
+`Semantics` or `Doc impact` above: the `can_edit` gate on Assignments'
+card (rung 1); deleting Scope 2's last two rules once the card lost
+its form (rung 1); rendering only the actionable status button, which
+is a **behaviour change** and not a move (rung 2); and lifting the
+table card out of `{% if rows %}` on Invitations and Responses,
+because a search matching nothing would otherwise take away the only
+way to clear it (rung 3). Assignments already rendered its card in
+every state — what rung 1 had to fix there was a toolbar `<div>`
+spanning both branches of `{% if not pair_sample %}`, which is the
+same restructure meeting the same conditional from the other side.
 
+**Three defects the rungs shipped and a cold read caught.** An
+unclosed `<div>` on Assignments' no-match page, from a toolbar opening
+above `{% if not pair_sample %}` and closing inside its `else`. A
+missing capture-phase sort guard — `_rrwApplySort` slices
+`tbody.children` with the injected panel among them, measured at row
+30 of 31. And one root cause behind two more: the roster idiom assumes
+a selectable row is a **visible** row, which this page's client-side
+`Show` filter breaks, stranding the panel after a hidden row and
+leaving `colSpan` stale on a chip toggle. Fixed by restoring the
+invariant, not by patching the anchor.
+
+**The lesson is one level up from Item 3's.** That item's was *a
+mutation table proves what its author thought to mutate*. This one:
+**a guard written in answer to a cold read still needs its own.** The
+test added to pin the retired `.filter-card` rule collected lines
+ending in `{`, so a one-line rule walked past it and the mutation
+restoring `.filter-card form { margin: 0; }` survived — the same
+defect the rung-2 cold read had already flagged in
+`test_roster_expander.py`'s twin, copied across without noticing it
+had a second half. Both now read the stylesheet brace to brace through
+one parser. Adjacent: the blast radius's `filter-card` line was wrong
+(a substring grep counting `severity-filter-card` as a caller) and had
+been restated twice before anyone re-ran it, and the Responses twin of
+the count-line test passed vacuously by splitting the page at the
+first of twelve `</form>`s.
+
+**The close's own cold read found four false sentences and four
+inconsistencies**, which is the same rate every rung of this item ran
+at and worth recording as the shape of the work rather than as a
+mishap. The four: `.session-row-selected`'s funnel is named
+`render()` on **four** of the seven pages and `renderPanel()` on
+Observers, not `refreshExpander()` on six; `operator_ui_concept.md`
+claimed an `Assignments preview` `<h2>` that no template renders and
+that `spec/assignments.md` correctly denies **500 lines away in the
+same commit**; the expander carries *two* buttons on a mixed
+selection, not "one"; and its `M` is the **visible** rows, not the
+rendered window — the roster contract's phrase, borrowed onto the one
+page whose client-side filter is exactly what makes it wrong. Three
+specs also gave three different orders for one filter strip, none of
+them the DOM's (`Status:` → `Search by:` → search → `Clear` →
+`Search`).
+
+**Two left open for the author**, both pre-existing and named rather
+than fixed: Assignments' `Clear` renders on `{% if filter_q %}` while
+`_assignments.py:202` counts status in `is_filtered`, so a status-only
+filter leaves the page visibly filtered with no way to clear it
+(Reviewers uses `{% if filter_status != "all" or filter_search %}`);
+and the three Operations pages gate the **whole left pane** on a
+has-rows conditional (`rows` on two, `pair_sample` on Assignments)
+where the four rosters include the partials unconditionally and let
+them self-guard. Aligning either changes what
+a no-match search shows, which is more than this item's move.
 
 ### PR ladder
 

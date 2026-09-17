@@ -1227,20 +1227,30 @@ on the Operations row of the chrome. It carries:
   self-review toggle (locked while `ready`), included count, and a
   per-instrument "Show in preview table" filter checkbox. (There
   is no Rule column — the rule lives on Band 1.)
-- **Operator-actions card** — a status filter, a search box with
-  typeahead suggestions, a Search-by dropdown (All / Reviewers /
-  Reviewees), and the selection-driven bulk Inactivate / Activate
-  / Show-pair-row controls. **Self-review assignments are flipped
-  active/inactive here**, per instrument, from the status card's
-  Self review column — there is no session-wide toggle on this
-  page; the session's self-reviews-active flag seeds the `include`
-  value at generation time and this surface overrides it after
-  (see [§8.6](#86-self-review-behaviour)).
 - **Assignments preview table** — every materialised pair,
   with reviewer identity + tag columns, reviewee identity +
   tag columns, pair-context tag columns, Include checkbox,
   Instrument column, sortable headers, column-visibility
-  toggles.
+  toggles. Its card opens with the same **two-pane toolbar**
+  the roster pages carry: chips, pager and preview-count line
+  left; the filter strip — status filter, a Search-by dropdown
+  (All / Reviewers / Reviewees), a search box with typeahead
+  suggestions, `Clear`, `Search` — right, in that order.
+- **Row expander** — ticking rows injects a panel beneath the
+  selection carrying the selected count and the
+  selection-driven bulk **Inactivate** / **Activate** —
+  whichever is actionable for the selection, so one where every
+  ticked pair is the same way and both where it is mixed. The
+  three used to sit in a
+  half-width **Operator-actions card** in the page's corner,
+  away from the rows they act on; 19P.5 rungs 1-2 moved the
+  strip into the toolbar and the actions into the expander, and
+  the card is gone. **Self-review assignments are flipped
+  active/inactive** per instrument from the status card's Self
+  review column — there is no session-wide toggle on this
+  page; the session's self-reviews-active flag seeds the
+  `include` value at generation time and this surface overrides
+  it after (see [§8.6](#86-self-review-behaviour)).
 
 Assignments are not edited row by row. The operator changes
 which pairs exist by changing the rule (in the **Instrument
@@ -1301,14 +1311,19 @@ event. Once active, the reviewer surface opens.
 The Invitations page (`/operator/sessions/{id}/invitations`) is
 a reviewer-centric Operations-row tab.
 
-- **Info card** at the top — eight lifecycle counters
-  (eligible reviewers, invitations created / sent / pending,
-  reminders sent / pending, completed / incomplete reviews).
+- **Info card** at the top, full width — eight lifecycle
+  counters (eligible reviewers, invitations created / sent /
+  pending, reminders sent / pending, completed / incomplete
+  reviews).
 - **Auto-send caption** — explains how the next invitation
   and reminder fires will resolve given the current schedule
   configuration, including any skipped reasons.
-- **Filter card** — Status dropdown + free-text search +
-  Apply / Clear.
+- **Two-pane table toolbar** — the table card opens with it.
+  Left pane: column chips, pager cluster, preview-count line.
+  Right pane: the filter strip — Status dropdown + free-text
+  search + Clear / **`Search`**. It was a half-width filter
+  card beside the info card, with an `Apply` submit, until
+  19P.5.
 - **Invitations table** — one row per reviewer carrying:
   reviewer name + email, email status (sent / queued / not
   sent), email-sent timestamp, per-reviewer engagement
@@ -1328,9 +1343,11 @@ unsent" from "partially sent".
 The Responses page (`/operator/sessions/{id}/responses`) is a
 reviewee-centric Operations-row tab.
 
-- **Info card** — counts of reviewees with responses, without
-  responses, total reviewees.
-- **Filter card** — search + status filter.
+- **Info card**, full width — counts of reviewees with
+  responses, without responses, total reviewees.
+- **Two-pane table toolbar** — the same shape as Invitations':
+  chips, pager and count line left; the filter strip (search +
+  status filter, Clear / **`Search`**) right.
 - **Responses table** — one row per reviewee, with name +
   email, coverage status (complete / adequate / at-risk /
   none), reviewers-completed count over total assigned, last-

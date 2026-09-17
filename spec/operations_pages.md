@@ -10,8 +10,9 @@ work of engaging reviewers and tracking reviewee coverage:
   visible.
 
 Both render the same overall chrome shape: the **Workflow card** at
-the top (per `spec/workflow_card.md`), then an info card with
-inline counters, then a filter card, then a table. Bulk-actions
+the top (per `spec/workflow_card.md`), then a full-width info card
+with inline counters, then a table whose card opens with a two-pane
+toolbar carrying the filter. Bulk-actions
 (Create invites · Send invites · Send reminders) live on the
 Workflow card's stepper — neither page body carries its own bulk
 action bar.
@@ -72,14 +73,21 @@ Both pages render the same four stacked regions, in order:
    affordances (Create invites · Send invites · Send reminders) so
    the page bodies stay focused on per-row inspection + targeted
    intervention.
-3. **Info card + filter card** — two half-width cards in a
-   `bottom-grid`. The info card on the left renders an inline
-   middle-dot prose row of lifecycle / coverage counters; the filter
-   card on the right is a `GET` form (Status `<select>` + Search
-   `<input>` with a `<datalist>` for autocomplete). Apply submits;
-   Clear is a link back to the bare URL.
-4. **Result table** — single-card containing the filtered row list,
-   or an empty-state `.muted` message when no rows match.
+3. **Info card** — full width, an inline middle-dot prose row of
+   lifecycle / coverage counters. It was half of a `bottom-grid`
+   whose other half was a filter card; 19P.5 rung 3 moved the filter
+   into the table toolbar, and a `1fr 1fr` grid with one child is not
+   a grid, so the wrapper went and the card is page width. Half width
+   flush right was the alternative and was rejected: a counters card
+   is a readout the eye sweeps, and eight pills in half a page wrap
+   badly.
+4. **Result table** — a single card that opens with the **two-pane
+   toolbar** (§ *The table toolbar*), then the filtered row list, or
+   an empty-state `.muted` message when no rows match. **The card and
+   its toolbar render in every state**, including a search that
+   matches nothing — the filter lives inside them now, so gating the
+   card on having rows would take away the only way to clear a search
+   that emptied the table.
 
 **The result table is a roster-style table** on both pages. Each
 carries the three facilities the Setup preview tables have, through
@@ -161,7 +169,26 @@ when the variant is "zero-is-good / nonzero-is-attention" and the
 value is nonzero — applied to Pending invitations, Pending
 reminders, and Incomplete reviews).
 
-### Filter card
+### The table toolbar
+
+The table card opens with a **two-pane toolbar**
+(`.table-card-toolbar.is-split`), the same primitive the four roster
+pages and Assignments carry — `spec/setup_pages.md`, § *The table
+toolbar*, states the shape once. The left pane says what the table is
+showing: the `Show columns:` chip row, the pager cluster, and the
+preview-count line. The right pane carries the **filter strip**, a
+`GET` form whose submit is labeled **`Search`**.
+
+Both panes are bare — card geometry without a card's border, fill or
+padding, because they are regions of one card rather than two cards.
+
+**The strip lived in a half-width `filter-card` beside the info card
+until 19P.5 rung 3.** Five surfaces said `Search` — the four rosters
+and Assignments — and these two said `Apply`; the minority renamed. The class went with them — they were
+its only callers, and `session_validate.html`'s `severity-filter-card`
+is a different token that a substring grep mistakes for a survivor.
+
+The strip is:
 
 - **Status `<select>`** — `all` plus the per-status options exposed
   by the route via `filter_status_options`.
@@ -175,15 +202,28 @@ reminders, and Incomplete reviews).
   are matchable but never suggested — a tag identifies too many rows
   to partition a list by. Matching a tag and suggesting one are
   separate questions, and the answer differs.
-- **Apply / Clear** — Apply submits the form; Clear (visible only
-  when a filter is active) is a link back to the unparameterised
-  page. **These are the only things in the row** — the count line
-  belongs above the table, not here.
+- **Clear / Search** — `Search` submits the form; `Clear` (visible
+  only when a filter is active) is a link back to the unparameterised
+  page. **These are the only things in the actions row** — the count
+  line is a report, and reports belong in the left pane with the rest
+  of what the table is showing.
 
-**The preview-count line** sits at the top-left of the table card,
-above the rows it counts, in `.table-showing-hint` — the same helper
-and partial the four roster pages and Assignments use
-(`spec/setup_pages.md`, "Preview tables"). Its noun here is
+Both carry the table card's `#<noun>-table-card` fragment, so
+submitting or clearing a filter lands the reader on the table rather
+than at the top of the page — the same landing target the pager takes
+(`spec/ui_elements.md` §10, *Landing targets*).
+
+**The preview-count line** sits in the **left pane**, at the top-left
+of the table card and above the rows it counts, in
+`.table-showing-hint` — the same helper and partial the four roster
+pages and Assignments use (`spec/setup_pages.md`, "Preview tables").
+**The whole left pane is gated on there being rows**, chips and pager
+with it, which is where these three Operations pages differ from the
+four rosters: there the pager and count line are included
+unconditionally and self-guard. Pre-existing on all three and
+preserved rather than aligned at 19P.5 — an empty pane and an absent
+pane look the same, and changing it would alter what a no-match search
+shows. The count line's noun here is
 **`reviewers`**, not "invitations": this table is one row per
 reviewer (`build_invitations_rows` iterates
 `monitoring.per_reviewer_progress`).
@@ -297,14 +337,14 @@ Number of reviewees N · With responses M · Without responses O
 renders as `.pill.pill-empty` when nonzero (the "zero-is-good"
 variant).
 
-### Filter card
+### The table toolbar
 
-Same shape as the Invitations filter card: Status `<select>` +
-Search `<input>` + Apply / Clear, and the same matching rule —
+Same shape as the Invitations toolbar and the same two panes: Status
+`<select>` + Search `<input>` + Clear / `Search` in the right pane,
+chips + pager + count line in the left, and the same matching rule —
 reviewee name and email-or-identifier by substring, `tag_1..3` by
 whole value, with the `<datalist>` offering `Name (email)` labels
-only. The preview-count line sits above the table rather than in
-this card, and its noun is **`reviewees`** — one row per reviewee,
+only. The count line's noun is **`reviewees`** — one row per reviewee,
 from `monitoring.per_reviewee_coverage`. This page **pages** on the
 same terms as Invitations: 200 rows to a page unfiltered, a filtered
 view uncapped and without a pager, so only the filter branch of the

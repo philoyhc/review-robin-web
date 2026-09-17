@@ -269,9 +269,11 @@
             <div class="filter-row">
               {# Segment 19I Item 9 — the status filter, in the roster
                  pages' shape. It reads `Assignment.include`, the
-                 boolean this card's own Inactivate / Activate buttons
-                 flip: the state was visible (dimmed rows) and
-                 unfilterable. #}
+                 boolean the row expander's Inactivate / Activate
+                 buttons flip: the state was visible (dimmed rows) and
+                 unfilterable. (Said "this card's own" until 19P.5
+                 rung 4 — rung 2 took both the card and the buttons,
+                 and the comment outlived them.) #}
               <label class="filter-status">
                 Status:
                 <select name="status">
@@ -312,9 +314,10 @@
               </label>
             </div>
             {# `Clear` and the submit only. The selected count and the
-               bulk buttons stayed behind in the card: they are the
-               selection-driven half and rung 2 takes them to the row
-               expander, not here. #}
+               bulk buttons are the selection-driven half and live in
+               the row expander, not here — rung 1 wrote this while
+               they were still in the card awaiting rung 2, which has
+               since taken them. #}
             <div class="filter-actions">
               {% if filter_q %}
                 <a class="btn secondary"
