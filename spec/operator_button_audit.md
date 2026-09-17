@@ -205,17 +205,19 @@ reader following either reference lands on the same pair.
 
 Source: `app/web/templates/operator/session_reviewers.html`.
 
-> **Lifecycle.** Every `Operator actions` row in the roster
-> sections renders only while the session is `is_editable`
-> (`draft` / `validated`). Outside those states the controls — and the
-> Upload and Danger Zone buttons — must be **absent**, not disabled;
-> on Reviewers since 19P.1, and on Observers since 19P.2, that is
-> achieved by suppressing the whole **Unlock panel** those cards now
+> **Lifecycle. This note governs §§6, 7, 8 and 8.5** — every roster
+> Setup page — and is stated here once rather than four times.
+>
+> The selection-driven controls, the Upload button and the Danger Zone
+> button render only while the session is `is_editable`
+> (`draft` / `validated`); outside those states they must be
+> **absent**, not disabled. Since each page moved to the Unlock panel
+> — Reviewers 19P.1, Observers 19P.2, Reviewees and Relationships
+> 19P.3 — that is achieved by suppressing the whole panel the cards
 > live in, which is the same rule reaching them through one gate
-> instead of three;
-> the enable/disable rules in the Notes column describe behavior
-> *within* an editable session. Clear and Search render in every
-> state.
+> instead of three. The enable/disable rules in the Notes column
+> describe behavior *within* an editable session. `Clear` and `Search`
+> render in every state.
 >
 > **Observers is the exception, and it is now the whole page, not just
 > its checkboxes.** 19P.2 relaxed all eight of its mutating routes to
@@ -237,9 +239,9 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 36 | Row expander (was Operator actions) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`, and since 19P.1 to `#reviewer-row-<id>` with it so the page lands on the row rather than the top. Rendered into the expander row injected beneath the selection. |
 | 123 | Row expander (was Operator actions) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
 | 124 | Row expander (was Operator actions) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 125 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. **Relabelled `Add new` at 19P.1 rung 2a**, when the constraint that shortened it dissolved — `Delete` moved to the row expander, so the two no longer share a row. The old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with it. **Observers followed at 19P.2 rung 3**, for the same reason and with the same result: its `Delete` moved to the row expander, so its toolbar row is `Clear` / `Add new` / `Search`. Reviewees and Relationships still read `Add`, and keep the rationale, until 19P.3–.4. |
-| 161 | Operator actions | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/reviewers/bulk-delete`. Sits between `Add` and `Search`. Two-stage gate: a selection enables the `Yes, delete these` checkbox on the status row, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="reviewers-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
-| 126 | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the `filter-actions` row, after the selection-driven buttons. The selected-count pill sits on the status row below, not here. |
+| 125 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. **Relabelled `Add new` at 19P.1 rung 2a**, when the constraint that shortened it dissolved — `Delete` moved to the row expander, so the two no longer share a row. The old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with it. **Observers followed at 19P.2 rung 3**, for the same reason and with the same result: its `Delete` moved to the row expander, so its toolbar row is `Clear` / `Add new` / `Search`. **Reviewees and Relationships followed at 19P.3 rung 2** (rows 132 and 139), so all four toolbars now read `Add new`. |
+| 161 | Row expander (was Operator actions) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/reviewers/bulk-delete`. Sits in the row expander with the selection it acts on; nothing sits between `Add new` and `Search` in the toolbar. Two-stage gate: a selection enables the `Yes, delete these` checkbox beside it, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="reviewers-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
+| 126 | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the `filter-actions` row. The selection-driven buttons are not beside it — they are in the row expander, with the selected count. |
 | 127 | Table toolbar (was Operator actions) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 128 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form. **Not "below the divider"** since 19P.1: there is no divider on Reviewers and no editor card — the pair renders in an expander bar directly beneath the edited row, styled as that row's own expander. **Role corrected here, not changed in code:** this row said **Primary** while the template has always rendered `btn secondary`, and so do Reviewees, Relationships and Observers — measured on all four. The audit was wrong about the shipped role rather than the code drifting from the audit, so the cell now records what ships; whether the pair *should* be Primary is a question for the page that next revisits it. |
 | 129 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list, carrying the pager anchor so Cancel lands where Save would. |
@@ -250,48 +252,53 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 ## Section 7 — Reviewees Setup (`/operator/sessions/{id}/reviewees`)
 
 Source: `app/web/templates/operator/session_reviewees.html`.
+The lifecycle note above §6 governs this section. The page took the
+shared roster shape at 19P.3 — toolbar, row expander, Unlock panel
+(`spec/setup_pages.md` § *The roster card and the Unlock panel*).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 107 | Reviewee field labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the six inputs (Name / Email / Photo / Tag 1-3) to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
 | 108 | Reviewee field labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
 | 38 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
-| 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Sits **below** the preview table. |
-| 40 | Operator actions | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
-| 130 | Operator actions | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 131 | Operator actions | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 132 | Operator actions | Add | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. The short label is deliberate: `Add` and `Delete` must both fit this row. |
-| 162 | Operator actions | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/reviewees/bulk-delete`. Sits between `Add` and `Search`. Two-stage gate: a selection enables the `Yes, delete these` checkbox on the status row, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="reviewees-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
-| 133 | Operator actions | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the `filter-actions` row, after the selection-driven buttons. The selected-count pill sits on the status row below, not here. |
-| 134 | Operator actions | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
-| 135 | Operator actions (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. **Role corrected 19P.1 rung 4** alongside row 128, not changed in code: `session_reviewees.html` renders `btn secondary` and always has. |
-| 136 | Operator actions (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
-| 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Sits **below** the preview table. |
+| 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/import`. In the **Unlock panel's right column** since 19P.3; nothing sits below the preview table. Ships `disabled` behind the `replace-roster` confirm whenever the roster has rows. |
+| 40 | Row expander (was Operator actions) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
+| 130 | Row expander (was Operator actions) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
+| 131 | Row expander (was Operator actions) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
+| 132 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. **Relabelled `Add new` at 19P.3 rung 2**, with `Delete` moving to the row expander — the old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with the constraint. |
+| 162 | Row expander (was Operator actions) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/reviewees/bulk-delete`. Sits in the row expander with the selection it acts on; nothing sits between `Add new` and `Search` in the toolbar. Two-stage gate: a selection enables the `Yes, delete these` checkbox beside it, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="reviewees-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
+| 133 | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the `filter-actions` row. The selection-driven buttons are not beside it — they are in the row expander, with the selected count. |
+| 134 | Table toolbar (was Operator actions) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
+| 135 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. **Role corrected 19P.1 rung 4** alongside row 128, not changed in code: `session_reviewees.html` renders `btn secondary` and always has. |
+| 136 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
+| 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewees/delete-all`. In the **Unlock panel's left column** since 19P.3, beneath the tag-labels editor; the card renders only on a roster with rows. |
 
 ---
 
 ## Section 8 — Relationships Setup (`/operator/sessions/{id}/relationships`)
 
 Source: `app/web/templates/operator/session_relationships.html`.
-The per-pair context table mirrors the Reviewers / Reviewees Setup
-shape (Upload + Danger Zone + preview table).
+The lifecycle note above §6 governs this section. The per-pair context
+table takes the shared roster shape, as it has since 19P.3 — toolbar,
+row expander, Unlock panel (`spec/setup_pages.md` § *The roster card
+and the Unlock panel*).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 109 | Pair-context labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three pair-context inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
 | 110 | Pair-context labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
 | 42 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
-| 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. Sits **below** the preview table. |
-| 44 | Operator actions | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
-| 137 | Operator actions | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 138 | Operator actions | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
-| 139 | Operator actions | Add | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. The short label is deliberate: `Add` and `Delete` must both fit this row. |
-| 163 | Operator actions | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/relationships/bulk-delete`. Sits between `Add` and `Search`. Two-stage gate: a selection enables the `Yes, delete these` checkbox on the status row, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="relationships-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
-| 140 | Operator actions | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the Status + search GET; there is no "Search by" side-picker. Sits last in the `filter-actions` row, after the selection-driven buttons. The selected-count pill sits on the status row below, not here. |
-| 141 | Operator actions | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
-| 142 | Operator actions (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. **Role corrected 19P.1 rung 4** alongside row 128, not changed in code: `session_relationships.html` renders `btn secondary` and always has. |
-| 143 | Operator actions (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
-| 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. Sits **below** the preview table. |
+| 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. In the **Unlock panel's right column** since 19P.3; nothing sits below the preview table. |
+| 44 | Row expander (was Operator actions) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
+| 137 | Row expander (was Operator actions) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. |
+| 138 | Row expander (was Operator actions) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. |
+| 139 | Table toolbar (was Operator actions) | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. **Relabelled `Add new` at 19P.3 rung 2**, with `Delete` moving to the row expander — the old cell's rationale (*"`Add` and `Delete` must both fit this row"*) went with the constraint. |
+| 163 | Row expander (was Operator actions) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/relationships/bulk-delete`. Sits in the row expander with the selection it acts on; nothing sits between `Add new` and `Search` in the toolbar. Two-stage gate: a selection enables the `Yes, delete these` checkbox beside it, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="relationships-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. |
+| 140 | Table toolbar (was Operator actions) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the Status + search GET; there is no "Search by" side-picker. Sits last in the `filter-actions` row. The selection-driven buttons are not beside it — they are in the row expander, with the selected count. |
+| 141 | Table toolbar (was Operator actions) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
+| 142 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. **Role corrected 19P.1 rung 4** alongside row 128, not changed in code: `session_relationships.html` renders `btn secondary` and always has. |
+| 143 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
+| 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. In the **Unlock panel's left column** since 19P.3, beneath the pair-context labels editor; the card renders only on a roster with rows. |
 
 ---
 

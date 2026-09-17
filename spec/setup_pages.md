@@ -48,7 +48,11 @@ import paths these pages expose, see
 
 ## Shared body shape
 
-Every Setup Page renders, top-to-bottom:
+Every Setup Page renders, top-to-bottom. **The four roster pages
+interpose one more card**, and their real order is in § *The roster
+card and the Unlock panel*: guidance, then the **roster card** carrying
+the index and the Unlock panel, then the preview table. Items 4 and 6
+below describe what that panel holds and what it replaced.
 
 0. **Page guidance** (`partials/_page_guidance.html`).
    A `<details class="card page-guidance">` — a **half-width
@@ -218,20 +222,20 @@ Every Setup Page renders, top-to-bottom:
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts
    pills per entity.
-3. **Lifecycle gate cards** (whenever the session is not
-   editable): the shared `card lock`
+3. **Lifecycle gate cards** (whenever the page's own gate says the
+   session is locked — `not is_editable` everywhere except Observers,
+   which passes `lock_when = is_archived`): the shared `card lock`
    (`operator/partials/_roster_lock_card.html`), which branches per
    locked state — `ready` and `expired` carry an inline Revert
    form, `archived` links Unarchive and carries no control. The
    three branches and their copy are specified in
-   `spec/lifecycle.md` §5. Sits **above**
-   the friendly-label editor so the yellow card immediately
-   follows the status info card (on Reviewers the card below it is the
-   guidance card, as it was before 19P.1 — that page moved the
-   guidance from a column to full width, which changed its width and
-   not its position, so this card's neighbour and ordering are both
-   unchanged) — the same status-info-then-
-   yellow-lock pattern the Instruments page uses. **Not
+   `spec/lifecycle.md` §5. Sits directly under the
+   status strip, so the yellow card immediately follows the status
+   info card — the same status-info-then-yellow-lock pattern the
+   Instruments page uses. On all four roster pages the card below it
+   is the **full-width guidance card**; moving the guidance out of a
+   column changed its width, not its place in the order, so this
+   card's neighbour and ordering are unchanged by 19P. **Not
    Assignments**: that page carries no yellow `.card.lock` at all —
    the Workflow card's stepper already states the lifecycle, per
    `spec/operator_ui_concept.md` P4.
@@ -287,7 +291,7 @@ Every Setup Page renders, top-to-bottom:
 differs in kind — Reviewers arrived at 19P.1, Observers at 19P.2,
 Reviewees and Relationships at 19P.3. It is stated once here because
 four near-identical copies is how the eight pointer bugs 19P.1
-catalogued were made; where a page genuinely differs, its own section
+cataloged were made; where a page genuinely differs, its own section
 says so and this one names the axis.
 
 Top-to-bottom, every roster page renders: chrome, the status strip, the
@@ -345,7 +349,8 @@ card's replace*.
 - **It keeps the `danger-zone` class** and its amber framing inside the
   panel, as it had outside one.
 
-**Where the four pages differ.** Three axes, and nothing else:
+**Where the four pages differ, inside this section's subject.** The
+panel and the roster card differ on three axes, all of them Observers':
 
 | Axis | Reviewers / Reviewees / Relationships | Observers |
 |---|---|---|
@@ -353,10 +358,21 @@ card's replace*.
 | Column contents | tag-label editor over the `Danger Zone` left, `Upload` right | `Upload` left, `Danger Zone` right — the order its `.bottom-grid` already had, kept because with no label editor the columns cannot correspond |
 | The `Lock` control | beneath the `Upload` card, which its right column always holds | **follows the card, not the column**: its right column holds the `Danger Zone`, which renders only on a roster with rows, so on an **empty** roster `Lock` moves to the left column beneath `Upload`. The template marks whichever stack holds a card and the toggle reads the marker; it never names a column. Not an edge case — it is first use, and the state `delete-all` redirects into |
 
-Observers' lock *card* also differs, for the same reason as its
-predicate; see its § *Body layout*.
+**Observers differs elsewhere on the page too**, and those are not
+this table's subject — they are listed once in its own § *Body layout*
+so a reader has one place to count them: no `Show columns:` chips, no
+sortable headers, a literal-labelled index that lists its one tag slot
+even at zero, a lock card passed the matching predicate, and no
+`acknowledge_response_loss` cascade on its destructive routes (which
+Relationships also lacks). Nothing in *this* section varies beyond the
+three rows above.
 
 ### The panel's start-open contract
+
+**This section owns the contract; `spec/settings_inventory.md` § *URL
+state* owns the param.** That table is where `?unlocked=1` is inventoried
+with the app's other URL state, and it points back here rather than
+restating the rule.
 
 The panel ships `hidden` and the Unlock control opens it, but the
 server decides what the page *arrives* as, because a panel that always
@@ -391,9 +407,10 @@ only thing that closes it deliberately.
 ### Reachable without JavaScript
 
 The panel is opened by an inline handler, so each control renders a
-`<noscript>` link beside it — `?unlocked=1#roster-card` to open, the
-bare page URL to close. `?unlocked=1` is a real server-rendered state
-(it is what the redirects above use), so this links to behaviour that
+`<noscript>` link beside it — `?unlocked=1#roster-card` to open and
+`#roster-card` alone to close, so both land on the card rather than at
+the top of the document. `?unlocked=1` is a real server-rendered state
+(it is what the redirects above use), so this links to behavior that
 already exists. It restores what these pages could do before the move
 and no more.
 
@@ -415,10 +432,17 @@ per column showing its label and how many rows hold a value.
 **Whole-roster counts** — a search or a page turn does not shrink them.
 
 **The readouts mirror the columns the preview table renders.** Identity
-columns always, optional columns only where populated — which is
-exactly when the table renders them. The labels are the operator's
-resolved `field_labels`, not the table's headings, so a rename shows in
-both places.
+columns always, optional columns (`Profile`, each tag slot) only where
+populated — which is exactly when the table renders them, because both
+read the same `col_data` flags.
+
+**Labels come from the same place the table's headers do, which is not
+one place.** A renamable column goes through `field_labels.resolve_pair`,
+so an override shows in the chip and the `<th>` together. An identity
+column is a literal, because `field_labels.upsert` refuses an identity
+slot — the built-in default is the only string either surface can
+render, and routing it through the resolver would suggest otherwise.
+Observers is literals throughout: it has no labels editor at all.
 
 **Relationships lists its pair-context tags and nothing else**, and is
 the only page whose index can be empty. Its `reviewer_id` /
@@ -776,7 +800,10 @@ page, taking the same `<entity>_ids` list and the same `filter_status`
 convenience; these decide:
 
 1. `confirm` must be exactly `"true"`, or **400** — the same refusal
-   the Danger Zone's `delete-all` uses.
+   the Danger Zone's `delete-all` uses. The expander's checkbox is a
+   convenience, and unlike the Danger Zone's it is **not** `required`:
+   it shares `<noun>-bulk-form` with `Inactivate` and `Activate`
+   (`spec/ui_elements.md` §6 *Delete-confirm standard*).
 2. When the **selected rows** carry saved responses,
    `acknowledge_response_loss` must be `"true"`, or **400** naming the
    exact number. `delete-all` can only ask whether the *session* has
@@ -819,11 +846,11 @@ references them, so neither delete can reach an assignment or a
 response, and a label implying otherwise would be describing a loss
 that cannot happen.
 
-**The acknowledgement rides with the tick.** The strip has one
+**The acknowledgement rides with the tick.** The expander has one
 checkbox, so where responses exist a hidden
 `acknowledge_response_loss` field accompanies it rather than a second
-box appearing on a row sized for one. The route still requires both
-fields and still refuses without the tick that carries them.
+box appearing beside it. The route still requires both fields and
+still refuses without the tick that carries them.
 
 An id from another session is a **400** and deletes nothing, including
 the valid ids in the same request — `roster_bulk.bulk_delete` raises
@@ -833,24 +860,25 @@ refuses.
 
 **The redirect keeps the filters and carries no `selected=`.** Every
 other bulk action re-checks the rows it acted on; these rows no longer
-exist. On Reviewers it also keeps the pager offset and lands on
-`#reviewers-table-card` rather than a row, for the same reason — the
+exist. It also keeps the pager offset and lands on
+`#<noun>-table-card` rather than a row, for the same reason — the
 rows it would have landed on are the ones it deleted. Services: `delete_selected` on each roster service, over
 `app/services/roster_bulk.py`'s `bulk_delete`. Audit:
 `reviewer.bulk_deleted` / `reviewee.*` / `observer.*` /
 `relationship.*`, one event per call carrying `deleted`,
 `cascaded_assignments` and `cascaded_responses`.
 
-**The whole selection surface is gated on `is_editable`** — `draft`
-or `validated`, which is what `_require_editable` enforces on every
-route behind it. On `ready`,
-`expired` and `archived` the row checkboxes, the selection-driven
-buttons, the selected-count pill, the delete confirmation and the
-bulk form they post to are all absent; the Status filter, the search
-box, the preview-count line and Clear remain, because reading a
-finished
-roster is legitimate. `ready` is open for receiving responses;
-`expired` and `archived` are over. The route still answers 409 either
+**The whole selection surface is gated on the page's own predicate** —
+`is_editable` (`draft` or `validated`) on three pages, which is what
+`_require_editable` enforces on every route behind it; `not
+is_archived` on Observers, whose routes take `_require_not_archived`
+instead (§ *Observers page* § *Lifecycle gate*). In the locked states
+the row checkboxes, the selection-driven buttons, the selected count,
+the delete confirmation and the bulk form they post to are all absent;
+the Status filter, the search box, the preview-count line and `Clear`
+remain, because reading a finished roster is legitimate. On the three
+`is_editable` pages, `ready` is open for receiving responses and
+`expired` / `archived` are over. The route still answers 409 either
 way — the page is a courtesy, not the guarantee. See
 `spec/lifecycle.md` §5.
 
@@ -864,9 +892,12 @@ match count. Two numbers say the rest, and on that same 600-row tag
 they read: `Showing 500 of 600 reviewers, 100 more not shown.` above
 the table — a filtered view carries no pager and so still truncates,
 and the line says the window is not the match — against
-`500 of 500 selected` in the status row, meaning every rendered row is
-picked. The two live on separate cards, so the pill has to state its
-own denominator for the pairing to read.
+`500 of 500 selected` in the row expander, meaning every rendered row
+is picked. Both now sit inside the preview-table card — the count line
+in the toolbar's left pane, the selected count in the expander beneath
+the rows — and the selected count still states its own denominator,
+because a bare `500 selected` a table's height below `Showing 500 of
+600` is not read as the same sentence.
 
 ### The Danger Zone's `delete-all`
 
@@ -1075,7 +1106,8 @@ and the corresponding `#<page>-table-card`.) A fragment that cannot resolve is i
 lands at the top again, so the page also ships a fallback script that
 catches a missing target and falls back to the card. **Two cases reach
 that script** — a row the active filter excludes, and a row moved by a
-cookie-held sort. A delete is handled a step earlier, by the route:
+cookie-held sort. **Observers reaches only the first**: its table is
+not sortable. A delete is handled a step earlier, by the route:
 having no row to land on it sends `#reviewers-table-card` itself, so
 the script never fires on it. `focus=` exists because the fragment cannot cover a create: rows list
 by id, so a new row appends past the end and on any roster over one
@@ -1275,6 +1307,26 @@ axes. Restated here only as far as its own reasons go:
   label editor there is no fallback tenant, and the cohort editor moved
   into the row expander at 19P.2 rung 5.
 
+**And elsewhere on the page, which the shared section's table
+deliberately does not cover.** Counted here so a reader has one place
+to count them:
+
+- **No `Show columns:` chips.** One fixed tag slot, so there is nothing
+  to toggle; `observer_column_state` returns an empty `col_data`. The
+  toolbar's left pane renders empty on an unpaged roster, which is the
+  intended shape rather than a gap to fill.
+- **No sortable headers.** The table carries no `data-rrw-sortable` and
+  `_list_observers` orders by id, so this page is not one of the sort
+  affordance's adopters (`spec/operator_ui_concept.md` § *Page
+  taxonomy*). It is also why the row-landing fallback script reaches
+  **one** case here and two elsewhere — a row the filter excludes, and
+  no cookie-held sort to move one.
+- **Its index is literal-labelled and lists `Tag` even at zero** —
+  § *The roster index* below.
+- **No `acknowledge_response_loss` cascade**, because nothing
+  references `observers`; Relationships is the same. § *Deleting the
+  selected rows*.
+
 **The lock card's condition is this page's too.**
 `_roster_lock_card.html` defaults to `not is_editable`; Observers
 passes `lock_when = is_archived` so the card cannot read *"cannot be
@@ -1322,7 +1374,7 @@ silent failure the relaxation exists to remove.
 
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
-| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all |
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Email | — | `observer.email` in `<code>` |
 | 2 | Name | — | `observer.display_name`; `—` when null |
 | 3 | Tag | — | `observer.tag_1`; `—` when null |

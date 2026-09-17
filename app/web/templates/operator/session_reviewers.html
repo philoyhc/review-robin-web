@@ -233,6 +233,17 @@
           {% for col in col_readouts %}
             <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
           {% else %}
+          {# 19P.3 rung 5c — the `{% else %}` is reachable on ONE page.
+             Relationships lists pair-context tags only (its identity
+             columns are non-nullable integer FKs, which `slot_row_count`
+             cannot be asked about), so an empty roster there renders
+             `none yet`. The other three always emit identity entries and
+             never reach it. Kept identical on all four rather than
+             deleted from three: one partial's worth of markup in four
+             copies is the drift 19P.3 exists to remove, and a page that
+             later grows an all-optional index would need it back.
+             Decided once, and recorded in `spec/setup_pages.md`
+             § *The roster index*. #}
             <span class="roster-readout-empty">none yet</span>
           {% endfor %}
         </span>
@@ -676,11 +687,19 @@
       2: edit_mode or col_data["tag-2"],
       3: edit_mode or col_data["tag-3"],
     } %}
-    {% set has_photo = reviewers | selectattr("profile_link") | list | length > 0 %}
     {# Profile-link column always shows in edit mode so the operator
        can fill / clear it; otherwise only when some row has data.
-       Mirrors the Reviewees Setup page. #}
-    {% set show_profile_link = edit_mode or has_photo %}
+
+       19P.3 rung 5c — `col_data["profile"]`, a WHOLE-ROSTER query,
+       where this read `reviewers | selectattr("profile_link")`: the
+       rendered window. On a filtered or paged view the two disagree,
+       and the window answer made a populated column vanish when the
+       operator narrowed to rows that happened not to fill it. It also
+       put this page's column at odds with its own roster index, which
+       counts the roster — the index would read `Profile (2)` above a
+       table with no Profile column. Reviewees has read `col_data`
+       since 19I Item 12; this is the page that never followed. #}
+    {% set show_profile_link = edit_mode or col_data["profile"] %}
     {# The page turn lands here (19J.8): the card's top edge, so the
        column chips and the page links are both on screen with the
        new rows beneath them. #}
@@ -1149,13 +1168,13 @@
           }
           return null;
         }
+        var BULK_BASE = {{ reviewers_base_url | tojson }};
+
         // Which status actions the selection admits. Inactivate acts on
         // active rows and Activate on inactive ones, so a selection that
         // is all one status has exactly one actionable button; rendering
         // the other offers a control that would no-op on every row.
         // Orthogonal to arity, which says how many rows each action takes.
-        var BULK_BASE = {{ reviewers_base_url | tojson }};
-
         function statusActions(sel) {
           var out = [];
           var hasActive = false;
@@ -1313,13 +1332,6 @@
           setTimeout(render, 0);
         });
 
-        // Sorting reorders `tbody`'s children. The panel carries no sort
-        // cells, so it compares null and strands at the bottom, away from
-        // the row it belongs to — and being present when base.html stamps
-        // `rrwOriginalIndex` would shift every index after it, corrupting
-        // the unsorted restore order too. Capture phase, so this runs
-        // before the header's own inline handler: take the panel out
-        // first, put it back against its anchor after.
         // `Edit` is a client-side GET, not a form post, so it carries
         // the editor's landing anchor itself. The reason recorded here
         // was "Save would be above the viewport"; Save moved into the
@@ -1338,6 +1350,13 @@
             "#reviewer-row-" + encodeURIComponent(editId);
         });
 
+        // Sorting reorders `tbody`'s children. The panel carries no sort
+        // cells, so it compares null and strands at the bottom, away from
+        // the row it belongs to — and being present when base.html stamps
+        // `rrwOriginalIndex` would shift every index after it, corrupting
+        // the unsorted restore order too. Capture phase, so this runs
+        // before the header's own inline handler: take the panel out
+        // first, put it back against its anchor after.
         table.addEventListener("click", function (event) {
           if (!event.target.closest(".rrw-sort-btn")) return;
           if (panel) { panel.remove(); panel = null; }

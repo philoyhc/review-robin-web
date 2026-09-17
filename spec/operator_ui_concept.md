@@ -89,7 +89,7 @@ The URL slug is `setup-invite`; the page's name is **Email Template**. The two d
 
 **Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors the other roster pages — CSV upload behind the Unlock panel, preview table with per-row authoring and its `Show columns:` chips, Danger Zone.
 
-The four roster pages share one body shape (chrome → status strip → optional lifecycle lock card → full-width guidance card → roster card, whose **Unlock panel** holds the tag-label editor, `Upload CSV` and the `Danger Zone` → preview table card, its two-pane toolbar carrying the `Show columns:` chips and pager on the left and the filter strip on the right, above a table with a leftmost checkbox column driving a **row expander**, clickable sort headers and a right-end Updated column → **nothing below the table**). Reviewers arrived at it at 19P.1, Observers at 19P.2, Reviewees and Relationships at 19P.3. `spec/setup_pages.md` § *The roster card and the Unlock panel* has it in full. **Nothing else heads the roster card**: a pill row naming the columns that hold data is exactly what it carries, and the chips say the rest — a chip both reports the fact and acts on it. Observers differs on three axes only: no friendly-label editor and no chips (a simpler fixed schema, one tag slot), mirrored panel columns, and a `not is_archived` gate. The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+The four roster pages share one body shape (chrome → status strip → optional lifecycle lock card → full-width guidance card → roster card, whose **Unlock panel** holds the tag-label editor, `Upload CSV` and the `Danger Zone` → preview table card, its two-pane toolbar carrying the `Show columns:` chips and pager on the left and the filter strip on the right, above a table with a leftmost checkbox column driving a **row expander** and a right-end Updated column → **nothing below the table**). Reviewers arrived at it at 19P.1, Observers at 19P.2, Reviewees and Relationships at 19P.3. `spec/setup_pages.md` § *The roster card and the Unlock panel* has it in full. **Nothing else heads the roster card**: a pill row naming the columns that hold data is exactly what it carries, and the chips say the rest — a chip both reports the fact and acts on it. Observers is the one that differs, and `spec/setup_pages.md` § *Body layout* counts the ways in one place: no friendly-label editor and no `Show columns:` chips (a simpler fixed schema, one tag slot), no sortable headers, mirrored panel columns, and a `not is_archived` gate. The other three are sort adopters — see the sort-affordance paragraph below. The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 The **sort affordance** is the shared rrw-sort primitive. Any operator table that wants clickable sort headers opts in via a small annotation contract on the `<table>` + `<th>`s + `<td>`s; the shared JS in `base.html` + cookie persistence layer take care of state. Adopters: Reviewers / Reviewees / Relationships (Setup row), the Operations Assignments table, Invitations and Responses. Per-instrument `sort_display_fields` on the reviewer surface is a separate but compatible mechanism — the operator picks a default for reviewers via the Sort column on the Instruments Display Fields card; reviewers override live via the same header buttons. Functional spec at `spec/sort_by_reviewee.md`.
 
@@ -284,12 +284,15 @@ Unlock panel* is the contract; this is the chrome-level summary:
    inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.
 6. **Nothing below the table.**
 
-Per-row inline **Edit** and **Add**, bulk **Inactivate / Reactivate**
-and a selection-driven **Delete** all live in the row expander; CSV
+Per-row inline **Edit**, bulk **Inactivate / Reactivate** and a
+selection-driven **Delete** live in the row expander; **Add new** is in
+the toolbar with `Clear` and `Search`, since it needs no selection. CSV
 Upload stays the bulk-create path.
 
-**One gate differs, and it is the only axis that does.** Reviewers,
-Reviewees and Relationships suppress the panel on `is_editable`, the
+**One gate differs, and it is the only axis on which a *route* does.**
+The layout differences are Observers' too and are listed above.
+Reviewers, Reviewees and Relationships suppress the panel on
+`is_editable`, the
 same predicate their cards always read. Observers reads `not
 is_archived`, because every mutating route on that page was relaxed to
 match (`spec/setup_pages.md` § *Observers page* § *Lifecycle gate*,

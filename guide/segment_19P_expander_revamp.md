@@ -1201,9 +1201,10 @@ item does not own. With them, for the rung-5 sweep:
   decision.
 - `spec/operator_button_audit.md` still files Reviewees' and
   Relationships' buttons under `Operator actions`, and
-  `spec/color_tokens.md` / `spec/email_template_editor.md` still describe
-  `.card-columns` as the roster pages' container. Rung 5 is the specs
-  rung; this is its list.
+  `spec/color_tokens.md` still scopes the guidance card's move to
+  Reviewers. (`spec/email_template_editor.md` was on this list in
+  error: its `.card-columns` is the Email Template page's own, which
+  19P does not touch.) Rung 5 is the specs rung; this is its list.
 
 **Rung 5a — the page shape, and a divergence from what Doc impact
 committed to.** The bullet says each page's § *Body layout* states the
@@ -1354,6 +1355,8 @@ fallback.
 - `spec/ui_elements.md` — `.session-row-selected`'s injector list gains the last two templates; `.table-card-toolbar`'s attribution becomes the roster pages rather than a list (Item 3).
 - `spec/participant_model.md` — the Reviewees Setup page's description, the one spec outside the shared set that names it (Item 3).
 - `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
+- `spec/visual_style_rrw.md` — § *Width discipline*'s roster example and § *Danger-zone card uses* both scoped the move to Reviewers; **added at rung 5c**, found by the cold read, not named at planning time (Item 3).
+- `spec/color_tokens.md` — the `.page-guidance` token argument scopes the full-width move to Reviewers; **added at rung 5c**, same finding (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
 
 **Rung 3 adds one, and it is a question rather than a relabel.**
