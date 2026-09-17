@@ -35,7 +35,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     AuditEvent,
+    Instrument,
     Observer,
     Relationship,
     Reviewee,
@@ -506,14 +508,32 @@ def test_every_confirmation_names_the_relationship_loss(
     keys = set(re.findall(r'data-delete-confirm="([^"]+)"', body))
     assert keys == {"delete-all", "replace-roster", f"{page}-bulk-delete"}, keys
 
-    flat = " ".join(body.split())
-    # The two numbered gates quote the count; the roster has 3.
-    assert flat.count(">3 relationships</span> between them") == 2, (
-        "delete-all and the CSV replace should each name the 3 "
-        "relationships they destroy"
-    )
+    flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
+
+    # **The two numbered gates use different verbs, and the cold read
+    # found out why.** The Danger Zone opens "delete the existing N
+    # reviewers", which governs the clause. The Upload card opens
+    # "replace the existing N reviewers" — which does NOT: the
+    # relationships are destroyed and nothing re-creates them, so
+    # inheriting `replace` told the operator a roster would come back.
+    #
+    # This fixture seeds NO assignments, which is the state that was
+    # wrong: `delete` is introduced by the assignment clause when there
+    # is one, so with none the replace sentence had no verb of its own.
+    # The first version of this test asserted a count of the shared
+    # phrase and passed on the defective sentence.
+    noun = page[:-1]
+    assert (
+        f"delete the existing 3 {noun}s and the 3 relationships "
+        "involving them." in flat
+    ), flat[:400]
+    assert (
+        f"replace the existing 3 {noun}s and delete the 3 "
+        "relationships involving them." in flat
+    ), flat[:400]
+
     # The expander's clause is numberless and selection-summed.
-    assert '" and the relationships between them"' in flat
+    assert '" and the relationships involving them"' in " ".join(body.split())
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
@@ -553,7 +573,7 @@ def test_a_roster_with_no_relationships_reads_exactly_as_before(
     # The clause is still COMPILED into the expander's script — it is
     # summed at click time, not rendered away — so its absence from the
     # sentence is the script's decision, not the server's.
-    assert '" and the relationships between them"' in flat
+    assert '" and the relationships involving them"' in flat
     assert 'data-relationships="0"' in flat
 
 
@@ -606,9 +626,10 @@ def test_the_expander_clause_is_gated_on_the_selection_not_the_roster(
     `true` or `false` passes every other test in this file, which is how
     this gap was found.
 
-    Measured in Chromium instead, on a roster where row A carries two
-    pairs, row B one and row C none (`?unlocked=1`, page rendered from
-    the dev server):
+    Measured instead in headless Chromium against a local dev server in
+    the agent's container — **not** the Azure dev slot, which is still
+    the verification of record (`CLAUDE.md`, "Where work runs"). On a
+    roster where row A carries two pairs, row B one and row C none:
 
         C alone   -> "Yes, delete these"
         B alone   -> "Yes, delete these and the relationships between them"
@@ -628,4 +649,45 @@ def test_the_expander_clause_is_gated_on_the_selection_not_the_roster(
     assert "parseInt(row.dataset.relationships, 10) || 0" in body, (
         "the summing helper is gone or no longer defaults a missing "
         "attribute to 0"
+    )
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_the_replace_verb_is_not_repeated_when_assignments_exist(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The other half of the verb rule.
+
+    With assignments, the sentence already says "and delete the N
+    assignments", and that `delete` governs everything after it — so
+    this clause must NOT supply a second one. With none, it must (the
+    case the cold read caught). One conditional, both states pinned.
+    """
+    rs = _mk(client, db, f"relcc-verb-{page[:4]}")
+    reviewers, reviewees = _seed(db, rs.id)
+    instrument = Instrument(session_id=rs.id, name="I", order=0)
+    db.add(instrument)
+    db.flush()
+    db.add(
+        Assignment(
+            session_id=rs.id,
+            reviewer_id=reviewers[0].id,
+            reviewee_id=reviewees[0].id,
+            instrument_id=instrument.id,
+            include=True,
+            created_by_mode="rule_based",
+        )
+    )
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
+
+    assert (
+        "and delete the 1 assignment and the 3 relationships involving "
+        "them." in flat
+    ), flat[:500]
+    assert "and delete the 3 relationships" not in flat, (
+        "the verb is repeated where the assignment clause already "
+        "introduced it"
     )
