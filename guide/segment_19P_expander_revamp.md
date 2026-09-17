@@ -1639,9 +1639,10 @@ the Review Progress card gains a preview-surface link opening in a
 - **Rejected: a second route** for the un-invited case. One page, one
   key; the invitation becomes an optional field on it.
 - **Deferred to Item 7: moving the Previews hub's email previews
-  here.** That retires a chrome tab and needs its own Opportunity.
-  Author's call, 2026-09-17: Item 6 first, Item 7 after seeing it —
-  **so Item 6 must not make the retirement harder** (§ *Semantics*).
+  here.** That retires a chrome tab and needs its own Opportunity —
+  Item 7's stub holds what has been decided. Author's call,
+  2026-09-17: Item 6 first, Item 7 after seeing it, **so Item 6 must
+  not make the retirement harder** (§ *Semantics*).
 
 ### Semantics
 
@@ -1735,9 +1736,8 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
    already reviewee-keyed (`/responses/{reviewee_id}/detail`) so it
    needs no re-key, and a reviewee has no surface of their own to
    link. Probably nothing to do; author's call at Item 7.
-2. **Item 7's shape** — whether the Previews tab retires, keeps the
-   email previews, or becomes a shortcut into this page. Author's
-   call, deferred until this item is on the dev slot.
+2. **Item 7's shape** — Item 7's stub, § *The three candidate fates*.
+   Author's call, after this item is on the dev slot.
 
 ### Out of scope
 
@@ -1758,3 +1758,81 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - `spec/operator_button_audit.md` — §13 gains the surface link's row (Item 6).
 - `spec/architecture.md` — `_require_reviewer_in_session` moves to `_shared.py`; the per-package module map names what lives there (Item 6).
 - `docs/status.md` — the route-table row for the detail page, and the item row when it lands (Item 6).
+
+---
+
+## Item 7 — Should the Previews hub become the reviewer page? — **stub, author's call**
+
+**Not planned. Sequenced behind Item 6 by the author, 2026-09-17**:
+*"Item 6 first, then Item 7 after I've seen it. If we do 7, it will
+likely involve retiring the preview page."* This block exists to hold
+the decisions that conversation reached, so Item 6's references to
+"Item 7" resolve to something and so the reasoning is not re-derived.
+
+**No `### Doc impact` yet, deliberately.** There is nothing committed
+to change until the item is planned, and a pre-waived bullet written
+to satisfy `close_check.py` is the failure mode `segment-plan`'s own
+skill warns about. It arrives with the plan.
+
+### What is on the Previews hub, measured 2026-09-17
+
+`session_previews.html` is **40 lines** and includes three things:
+`next_action_card.html` (shared chrome), `_preview_picker.html` and
+`_email_preview_region.html`.
+
+| | What it is |
+|---|---|
+| "Previewing as" | `<input>` + `<datalist>` typeahead, Apply, and a `Prev` / `Next` / `Random` row |
+| "About this reviewer" | count line, name, email, assigned-reviewee count and first three names |
+| "Open full preview" | the reviewer surface, `target="_blank"` (`_preview_picker.html:80`) |
+| Email preview region | that reviewer's **Invitation** / **Reminder** / **Responses received** emails, all three `is_shipped=True` (`views/_previews.py:296-320`) |
+
+**All four are per-reviewer.** Nothing on the page is session-level,
+which is the whole argument for the move: a per-reviewer page is where
+per-reviewer things belong, and Item 6 builds one.
+
+### The case for, and the case against
+
+**For.** The Invitations table is a **better reviewer picker than the
+picker**: search, three chip-toggled tag columns, sortable headers,
+pagination and a status column, against a datalist and three buttons.
+The only thing the picker does that the table cannot is `Random`.
+
+**Against, and it is the real objection.** The two surfaces differ in
+*when*, not in *what*. Previews is *check before you launch*;
+Invitations is *watch what is happening*. Pre-launch nobody reaches
+for a tab called Invitations, and Item 6 does not change that — it
+only makes the destination reachable. Either that is accepted and the
+Workflow card's stepper carries people there, or something is renamed.
+
+### The three candidate fates
+
+1. **Retire the tab.** Everything moves; Operations goes from six tabs
+   to five. Author's stated lean, 2026-09-17, and the one this stub
+   is named for.
+2. **Keep the email previews**, lose only the surface link. Smallest
+   change, least payoff — and it leaves the per-reviewer content split
+   across two pages, which is the defect.
+3. **Keep it as a fast "pick anyone" shortcut** that redirects into the
+   per-reviewer page. Preserves the pre-launch front door and `Random`,
+   at the cost of a page whose only content is a picker.
+
+### What Item 6 leaves for it
+
+- **One coupling, named not touched**: `_resolve_preview_reviewer`
+  303s to `/operator/sessions/{id}/previews` when `?reviewer_email=`
+  does not resolve. Unreachable from Item 6's link, and whichever fate
+  wins, this is the line that breaks on retirement.
+- **Nothing else.** Item 6's link points straight at
+  `/preview-surface`, never through `/previews`, precisely so this
+  item stays open.
+
+### Open questions
+
+1. **Which fate**, per above. Author's, after Item 6 is on the dev slot.
+2. **Does Responses get the symmetric treatment?** Its detail page is
+   already reviewee-keyed, so it needs no re-key, and a reviewee has
+   no surface of their own — so the symmetry may be nominal. Answer
+   after 1.
+3. **Naming.** If the tab retires, does *"Invitations"* still describe
+   a page you use before any invitation exists? Only live under fate 1.
