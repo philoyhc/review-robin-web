@@ -396,7 +396,16 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     client: TestClient, db: Session
 ) -> None:
     """Segment 19I Item 10 — see the twin in `test_invitations.py`.
-    This page counts reviewees, one row each."""
+    This page counts reviewees, one row each.
+
+    **19P.5 rung 3 moved the filter into the table card's toolbar**, so
+    "with the table, not the filter row" is a claim about the two panes
+    now. The twin was re-aimed at that; this one was missed, and kept
+    passing for a reason worth recording: it split the page at the
+    first `</form>`, and `next_action_card.html` emits up to twelve of
+    them, so `card` was most of the document and the assertion held
+    wherever the count line sat.
+    """
     session = _ready_session(
         client,
         db,
@@ -409,14 +418,18 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
         f"/operator/sessions/{session.id}/responses?q=carol"
     ).text
 
-    card = body[body.index("</form>") :]
-    assert '<p class="muted table-showing-hint">' in card
-    assert "Showing 1 reviewee." in card
+    # Left pane: what the table is showing.
+    left = body[body.index('<div class="toolbar-pane toolbar-left">') :]
+    left = left[: left.index('<div class="toolbar-pane toolbar-right">')]
+    assert '<p class="muted table-showing-hint">' in left
+    assert "Showing 1 reviewee." in left
 
+    # Right pane's actions row: the controls, and no report.
     start = body.index('<div class="filter-actions">')
     actions = body[start : body.index("</div>", start)]
     assert "Showing" not in actions
     assert ">Clear</a>" in actions
+    assert ">Search</button>" in actions
 
 
 def test_the_count_line_is_absent_when_no_filter_narrows(

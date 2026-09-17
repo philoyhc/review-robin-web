@@ -22,44 +22,44 @@
      card's stepper makes the lifecycle state explicit and the
      Activate session super-button is the single entry point. #}
 
-    <div class="card" id="invitations-info-card">
-      {# Info card — eight lifecycle counters. Bulk-action buttons
-         (Generate invitations / Send all pending / Regenerate all /
-         Send reminders) retired with the Workflow-card-as-Operations-
-         chrome rollout (per spec/workflow_card.md); the
-         Workflow card's Create / Send invites / Send reminders
-         super-buttons carry those affordances now. #}
-      {# 19E — why four of the eight counters below never move. Email
-         delivery is Segment 14B, still in planning; without this the
-         page reads as broken rather than as not-yet-switched-on.
-         REMOVE WITH 14B — `guide/segment_14B_email_infrastructure.md`
-         carries the reciprocal note. #}
-      <p class="muted" style="margin-top: 0;">
-        Note: Invitation and reminder columns are inactive until email
-        sending is switched on.
-      </p>
-      <p>
-        Eligible reviewers
-        <span class="pill pill-count">{{ eligible_count }}</span>
-        &middot; Invitations created
-        <span class="pill pill-count">{{ total_invitation_count }}</span>
-        &middot; Invitations sent
-        <span class="pill pill-count">{{ invitations_sent_count }}</span>
-        &middot; Pending invitations
-        <span class="pill {% if pending_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_count }}</span>
-        &middot; Reminders sent
-        <span class="pill pill-count">{{ reminders_sent_count }}</span>
-        &middot; Pending reminders
-        <span class="pill {% if pending_reminders_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_reminders_count }}</span>
-        &middot; Completed reviews
-        <span class="pill pill-count">{{ completed_count }}</span>
-        &middot; Incomplete reviews
-        <span class="pill {% if incomplete_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ incomplete_count }}</span>
-      </p>
-    </div>
+  <div class="card" id="invitations-info-card">
+    {# Info card — eight lifecycle counters. Bulk-action buttons
+       (Generate invitations / Send all pending / Regenerate all /
+       Send reminders) retired with the Workflow-card-as-Operations-
+       chrome rollout (per spec/workflow_card.md); the
+       Workflow card's Create / Send invites / Send reminders
+       super-buttons carry those affordances now. #}
+    {# 19E — why four of the eight counters below never move. Email
+       delivery is Segment 14B, still in planning; without this the
+       page reads as broken rather than as not-yet-switched-on.
+       REMOVE WITH 14B — `guide/segment_14B_email_infrastructure.md`
+       carries the reciprocal note. #}
+    <p class="muted" style="margin-top: 0;">
+      Note: Invitation and reminder columns are inactive until email
+      sending is switched on.
+    </p>
+    <p>
+      Eligible reviewers
+      <span class="pill pill-count">{{ eligible_count }}</span>
+      &middot; Invitations created
+      <span class="pill pill-count">{{ total_invitation_count }}</span>
+      &middot; Invitations sent
+      <span class="pill pill-count">{{ invitations_sent_count }}</span>
+      &middot; Pending invitations
+      <span class="pill {% if pending_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_count }}</span>
+      &middot; Reminders sent
+      <span class="pill pill-count">{{ reminders_sent_count }}</span>
+      &middot; Pending reminders
+      <span class="pill {% if pending_reminders_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_reminders_count }}</span>
+      &middot; Completed reviews
+      <span class="pill pill-count">{{ completed_count }}</span>
+      &middot; Incomplete reviews
+      <span class="pill {% if incomplete_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ incomplete_count }}</span>
+    </p>
+  </div>
 
-    {# Auto-send invites / reminders captions live on the Workflow
-       card's right-column aside (consolidated 2026-05-21). #}
+  {# Auto-send invites / reminders captions live on the Workflow
+     card's right-column aside (consolidated 2026-05-21). #}
 
   {# The page turn lands here (19J.8): the card's top edge, so the
      column chips and the page links are both on screen with the new

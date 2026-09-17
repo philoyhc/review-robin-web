@@ -1268,8 +1268,11 @@ moves controls and renames a button, and adds no capability.
   card being its only child, so the grid goes too. That 2026-09-10 call
   is about this same card, so removing it honours the call rather than
   reversing it.
-- **`filter-card` is not retired** — `session_validate.html` uses it
-  and is out of scope.
+- ~~**`filter-card` is not retired** — `session_validate.html` uses it
+  and is out of scope.~~ **Wrong, corrected at rung 3.** Validate
+  carries `severity-filter-card`, a different class token; a substring
+  grep counted it as a caller. Invitations and Responses were the
+  class's only tenants, so it retires with them.
 - **Two counts, gating differently — do not conflate them.** The
   *preview-count line* renders in every lifecycle state; the
   *selected-count pill* is inside `{% if can_edit %}`
@@ -1323,7 +1326,10 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   so `>Apply<` misses it) and `sys_admin_session_audit_log.html:168`
   (`Apply filters`). Only the two are renamed — see Out of scope.
 - `grep -rln "filter-card" app/web/templates/` → **4**
-  (`session_validate.html` and `base.html` stay).
+  (`session_validate.html` and `base.html` stay). **Wrong — a
+  substring grep.** Validate's token is `severity-filter-card`;
+  scanning `class="…"` by token gives **2**, both in scope, so the
+  class retires at rung 3 (found by the rung-3 cold read).
 - `grep -rln "operator-actions-card" app/web/templates/` → **2**
   (`session_assignments.html`, `base.html`) — retirable after rung 1,
   to be confirmed rather than assumed.
@@ -1402,6 +1408,31 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
   around. Re-aimed at the two claims that survive: every carrier has
   the modifier, and the shared rule stays `display: flex` so the next
   page carrying a toolbar is not silently re-laid-out.
+- **Rung 3's cold read found the blast radius wrong about
+  `filter-card`**, and the error had already been restated twice — in
+  `Semantics` and again in new test prose. Both struck above. It also
+  found the Responses twin of the count-line test unre-aimed and
+  passing vacuously: it split the page at the first `</form>`, and
+  `next_action_card.html` emits up to twelve, so the slice was most of
+  the document.
+- **The guard written for that cold read failed its own mutation.**
+  Nothing pinned the retired `.filter-card` rule staying gone, so a
+  test was added — and it collected lines ending in `{`, which a
+  one-line rule does not. That is the defect the rung-2 cold read had
+  already flagged in `test_roster_expander.py`'s twin, copied across
+  without noticing it had a second half. Both now read the stylesheet
+  brace to brace, in one place
+  (`test_filter_strip_base_rule.py::test_the_two_retired_scopes_carry_no_rules_at_all`).
+- **`base.html`'s `is-split` note is owned by no rung.** The
+  Definition of done requires it rewritten; rung 4 lists only three
+  paths. Rewritten at rung 3, with the `.filter-card` scope and the
+  filter-strip note that went stale with it.
+- **The left pane stays gated on `{% if rows %}`** on these two pages
+  and on Assignments, where the four roster pages render the pager and
+  count line unconditionally (both partials self-guard). Pre-existing
+  on all three, preserved rather than changed: aligning it would alter
+  what a no-match search shows, which is beyond a move. **Open for the
+  author** if the seven should agree.
 - **Open for the author:** Assignments' `Clear` renders on
   `{% if filter_q %}`, so a status-only filter leaves the page
   visibly filtered with no way to clear it — `_assignments.py:202`
@@ -1434,8 +1465,11 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
    full-width info card.** All three on both pages, because the grid
    leaves them inseparable. The preview-count line joins `toolbar-left`
    here too.
-4. **The close.** `spec/operations_pages.md`, the button audit row for
-   `Apply`, `docs/status.md`.
+4. **The close.** `spec/operations_pages.md` (§*Filter card* on both
+   pages, the body-shape line, and the count line's placement),
+   `spec/rrw_functional_spec.md` §9.9 / §9.10, `spec/ui_elements.md`'s
+   `.table-card-toolbar` row (four pages → seven), the button-audit
+   `Apply` rows 85 / 91, and `docs/status.md`.
 
 ### Definition of done
 

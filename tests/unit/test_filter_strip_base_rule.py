@@ -33,20 +33,21 @@ BASE_OWNED = (
 )
 
 #: Every scope allowed to carry a `.filter-row` / `.filter-actions`
-#: rule at all. A FOURTH scope is the direction the four-copy shape
+#: rule at all. A NEW scope is the direction the four-copy shape
 #: actually grew from, and `ALLOWED_NARROWINGS` cannot see it — that
 #: list only describes scopes someone already added to it.
+#:
+#: 19P.5 emptied two of the three: rung 1 took `.operator-actions-card`'s
+#: last rules and rung 2 its markup; rung 3 took `.filter-card`'s. Both
+#: stay listed, with empty narrowing sets, because the claim worth
+#: keeping is that they narrow NOTHING — a rule added back under either
+#: would be a new decision, not a restoration.
 KNOWN_SCOPES = {".filter-card", ".operator-actions-card", ".toolbar-right"}
 
 #: What each scope is allowed to narrow, and why. Adding to this list is
 #: a deliberate act; that is the point of it being a list.
 ALLOWED_NARROWINGS = {
-    ".filter-card": set(),                       # narrows nothing
-    # 19P.5 rung 1 took the filter strip out of this card and its two
-    # rules with it, so the scope narrows nothing. The entry stays
-    # rather than going, because `KNOWN_SCOPES` still lists the class
-    # and an empty set is the claim: a narrowing added back here would
-    # be a new decision, not a restoration.
+    ".filter-card": set(),
     ".operator-actions-card": set(),
     # Half-width pane: tighter gaps, smaller/subtler labels. Plus
     # `flex-direction`, which is the <=860px rule stacking the row —
@@ -343,3 +344,43 @@ def test_every_filter_row_label_is_classed() -> None:
                     f"back to `flex: 0 1 auto`: <label{attrs}>"
                 )
     assert checked >= 7, f"vacuity: only {checked} labels found"
+
+
+def test_the_two_retired_scopes_carry_no_rules_at_all(css: str) -> None:
+    """An empty narrowing set is not the same as an empty scope.
+
+    `.operator-actions-card` and `.filter-card` both lost their last
+    tenant during 19P.5 — the cards were deleted, and their rules with
+    them. `ALLOWED_NARROWINGS` records that they narrow nothing, which
+    stays true of a scope that still carries a rule the base already
+    sets. So it cannot catch a rule coming back, and a mutation
+    restoring `.filter-card form { margin: 0; }` survived the whole
+    suite until this.
+
+    Read through `_rules`, not line by line. A line-anchored version was
+    written first — collect lines ending in `{` — and it survived that
+    exact mutation, because a one-line rule ends in `}`. That is the
+    same defect the rung-2 cold read found in
+    `tests/integration/test_roster_expander.py`'s twin, copied without
+    noticing it had a second half. The brace-to-brace parser has neither
+    end of it, and sees inside media queries besides.
+
+    Dead CSS in a 5,000-line inline stylesheet is not inert: it is a
+    reader's evidence that a layout still exists
+    (`spec/ui_elements.md` §10).
+    """
+    rules = _rules(css)
+    # Vacuity guard: a parser that returns nothing would pass this for
+    # every scope, retired or not.
+    assert len(rules) >= 200, (
+        f"only {len(rules)} rules parsed out of the stylesheet; the "
+        "enumeration is seeing less than the file contains"
+    )
+    for scope in (".operator-actions-card", ".filter-card"):
+        live = [sel for sel, _ in rules if scope in sel]
+        assert live == [], (
+            f"`{scope}` was retired in 19P.5 and its card is gone from "
+            f"every template, but {len(live)} rule(s) still select it: "
+            f"{live}. A rule under a dead scope is not inert — it is "
+            f"evidence to the next reader that the card still exists."
+        )

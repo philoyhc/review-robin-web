@@ -67,9 +67,13 @@ def test_the_filter_is_in_the_toolbar_and_the_submit_says_search(
     assert ">Search</button>" in right
     assert ">Apply<" not in body
 
-    # The card it came from is gone from this page (Validate keeps the
-    # class, which is why the class itself stays in `base.html`).
-    assert "filter-card" not in _markup(body)
+    # The card it came from is gone — and with these two pages it was
+    # the class's last caller anywhere, so `base.html`'s Scope 1 went
+    # too. `session_validate.html` carries `severity-filter-card`, a
+    # DIFFERENT token, which is what made a substring grep report a
+    # surviving tenant. Matched as a class token here for that reason.
+    classes = re.findall(r'class="([^"]*)"', _markup(body))
+    assert not [c for c in classes if "filter-card" in c.split()], classes
 
 
 @pytest.mark.parametrize("page", PAGES)
@@ -159,22 +163,14 @@ def test_the_info_card_is_no_longer_half_a_grid(
 
     rs = _ready_session(client, db, code=f"ops-ic-{page[:3]}")
     body = _markup(_page(client, rs, page))
+    assert f'id="{page}-info-card"' in body, "the page did not render"
     assert not [
         c for c in re.findall(r'class="([^"]*)"', body) if "bottom-grid" in c
     ], page
 
 
-def test_all_seven_table_toolbars_are_split() -> None:
-    """The set this segment has been closing one page at a time.
-    Asserted from source because three of the seven need a session in a
-    particular state to render a table at all."""
-    carriers = {
-        path.name: path.read_text()
-        for path in sorted(OPERATOR.glob("session_*.html"))
-        if '"table-card-toolbar' in path.read_text()
-    }
-    assert len(carriers) == 7, sorted(carriers)
-    assert [
-        name for name, text in carriers.items()
-        if "table-card-toolbar is-split" not in text
-    ] == []
+# The "all seven carry the modifier" claim is owned by
+# `tests/integration/test_reviewers_roster_card_scaffold.py`
+# (`test_every_table_toolbar_splits_and_the_panes_stay_a_modifier`),
+# which also pins the shared rule staying `display: flex`. Asserting it
+# here as well would mean a future edit has to find both copies.
