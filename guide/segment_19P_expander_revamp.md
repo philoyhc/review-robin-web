@@ -1168,9 +1168,11 @@ rung 5b adjudicated the sentence rather than changing the markup.
 
 ## Item 4 — Invitations and Responses — ~~a different move, not the same recipe~~ **retired 2026-09-17**
 
-**Retired by the author, unbuilt.** Reasoning in `### Status` below; the
-stub's body that raised it follows verbatim (only this heading was
-edited).
+**Retired by the author, unbuilt.** Reasoning in `### Status` below.
+What follows first is the **2026-09-14 stub** that raised the question,
+body unchanged. Two things around it were edited at retirement and are
+not part of it: this heading, and the closing line of the 2026-09-17
+annotation below the stub, which now points here.
 
 **Not yet planned, and its container is undecided.** It sits here to be
 sequenced, not to claim the segment: whether it becomes 19P Item 4 or **19Q**
@@ -1245,14 +1247,14 @@ session-wide button belongs on the Workflow card that scopes it, and a
 per-row button already sits on its own row, which is the placement an
 expander exists to achieve.
 
-**19P shipped two expander flavours, and the second does not change
+**19P shipped two expander flavors, and the second does not change
 the answer either.** Besides the JS-injected selection panel, all four
 roster pages render a server-side **edit-row bar** — the same
 `session-expander` classes, gated on `edit_id` / `add_mode` rather
 than on selection, holding `Save` / `Cancel` for a row being edited.
 Assignments and these two pages have no row editor: assignments are
 regenerated rather than edited, and an invitation or a coverage row is
-a readout, not a record with fields. So neither flavour has a tenant
+a readout, not a record with fields. So neither flavor has a tenant
 here.
 
 Giving these pages an expander would therefore mean inventing
