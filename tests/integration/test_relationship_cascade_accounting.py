@@ -691,3 +691,128 @@ def test_the_replace_verb_is_not_repeated_when_assignments_exist(
         "the verb is repeated where the assignment clause already "
         "introduced it"
     )
+
+
+# ── Rung 3: the prose that explains the cost before it is incurred ────
+
+
+def test_the_guide_tells_operators_what_order_to_work_in(
+    client: TestClient, db: Session
+) -> None:
+    """The confirmations name the cost at the moment it is about to be
+    paid; the Guide is where an operator learns to avoid paying it.
+
+    Its `Optional: relationships and observers` section was two
+    sentences about turning the features on and said nothing about the
+    dependency — so the only way to discover that a roster re-upload
+    empties this one was to do it.
+    """
+    rs = _mk(client, db, "relcc-guide")
+    body = client.get(
+        f"/guide?return_to=/operator/sessions/{rs.id}/relationships"
+    ).text
+    section = body[body.index("Optional: relationships and observers"):]
+    section = " ".join(re.sub(r"<[^>]+>", " ", section[:2000]).split())
+
+    assert "after the reviewer and reviewee rosters" in section, section[:400]
+    # The two paths, scoped differently, and the one that costs nothing.
+    assert "replacing a roster deletes every relationship in the session" in section
+    assert "deleting rows takes the relationships that involved them" in section
+    assert "Marking someone inactive costs nothing" in section
+    # And the re-upload advice is scoped to the path that empties this
+    # roster. It first read "whenever you replace or delete rows in
+    # either", which is advice to destroy data: after a selected delete
+    # the relationships that did not involve those rows are still here,
+    # and an upload replaces the whole roster.
+    assert "upload them again whenever you replace either" in section
+    assert "replace or delete" not in section, section[:400]
+    assert "the rest survive" in section
+    # The honest half: the app warns and does not undo. It no longer
+    # points at the audit log — that page is `require_sys_admin`, so an
+    # operator following the Guide there gets a 403.
+    assert "nothing undoes it" in section
+    assert "audit log" not in section.lower(), (
+        "the Guide is operator-facing; the audit log is sys-admin-only"
+    )
+
+
+def test_the_three_cards_agree_about_what_an_upload_costs(
+    client: TestClient, db: Session
+) -> None:
+    """One fact, three pages, and each states the half it owns.
+
+    Reviewers and Reviewees say what an upload *there* destroys;
+    Relationships says why — every row names a pair, so it cannot
+    outlive either side. A reader landing on any one of the three gets
+    the whole rule, which is the point of saying it three times rather
+    than pointing twice.
+    """
+    rs = _mk(client, db, "relcc-cards")
+
+    bodies = {}
+    for page in ("reviewers", "reviewees", "relationships"):
+        body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+        start = body.index('<details class="card page-guidance')
+        bodies[page] = " ".join(
+            re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
+            .split()
+        )
+
+    for page in ("reviewers", "reviewees"):
+        # The replace destroys ALL of them, not only the removed
+        # people's: `_save` deletes every row and re-adds, so an
+        # identical re-upload still wipes the roster. The first draft
+        # said "every relationship involving the people it removes" and
+        # gave a reason — "a relationship names a pair, so it cannot
+        # outlive either side" — that an identical re-upload falsifies.
+        assert "every relationship in the session" in bodies[page], page
+        assert "removes and re-creates every row" in bodies[page], page
+        # And the narrower path, named rather than folded in: a
+        # selected delete takes only its own rows' relationships.
+        assert "Deleting selected rows is narrower" in bodies[page], page
+
+    rel = bodies["relationships"]
+    assert "This roster depends on the other two" in rel
+    assert "deletes every relationship in the session" in rel
+    assert "Deleting selected rows there is narrower" in rel
+    assert "marking someone inactive costs nothing" in rel
+    assert "nothing here brings them back" in rel
+    # Same scoping as the Guide: re-upload after a replace, add rows
+    # back after a selected delete.
+    assert "upload this one again after you replace either" in rel
+    assert "replace or delete" not in rel, rel[:400]
+    assert "another upload here would replace the whole roster" in rel
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_a_session_without_relationships_is_not_told_their_cost(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The item's own rule, applied to guidance rather than a label.
+
+    `Decision` rejects listing relationships unconditionally — *"a label
+    naming a loss that cannot happen is its own defect"* — and
+    `update_session` refuses to turn `relationships_enabled` off while
+    rows exist, so off means no relationships can exist and the cost
+    described is impossible. The page is not even in the nav.
+
+    The first draft of this rung shipped the paragraph unconditionally.
+    A cold read caught it: the rule had been reasoned about for rung 2's
+    labels and not carried across.
+    """
+    rs = _mk(client, db, f"relcc-off-{page[:4]}")
+    rs.relationships_enabled = False
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    start = body.index('<details class="card page-guidance')
+    prose = " ".join(
+        re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
+        .split()
+    )
+
+    assert "relationship" not in prose.lower(), prose
+    # The rest of the card is untouched — this is a suppressed clause,
+    # not a suppressed paragraph.
+    assert "replaces the whole roster" in prose
+    assert "clears any assignments already generated" in prose

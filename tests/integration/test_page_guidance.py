@@ -561,14 +561,36 @@ PAGE_CLAIMS = {
     "reviewers": (
         "email address is mandatory",
         "replaces the whole roster",
+        # 19O.5 rung 3. The cascade is a database FK with no ORM
+        # collection, so nothing in the app observed it and no copy
+        # named it: an operator re-uploading a roster lost every
+        # relationship under it without being told.
+        #
+        # The whole clause, not a prefix: the first version stopped at
+        # "the people it" to dodge the template's line wrap, which
+        # `_guidance_body` already normalises away — so prose reading
+        # "the people it keeps" would have passed.
+        "It also deletes <strong>every relationship in the session</strong>",
+        "comes back as a new entry that no relationship points to",
     ),
     "reviewees": (
         "need not be identified by an email address",
         "must be identified by an email address tied to their institutional",
+        "It also deletes <strong>every relationship in the session</strong>",
+        "comes back as a new entry that no relationship points to",
     ),
     "relationships": (
         "works without any explicitly set relationships",
         "isn't already derivable from reviewer and reviewee tags",
+        # The dependency, which only this page can state: the other two
+        # rosters' guidance says what an upload there costs, and this
+        # says why the cost exists and what order to work in.
+        "This roster depends on the other two",
+        "deletes every relationship in the session",
+        # The irreversibility, which nothing pinned on this card until
+        # a cold read noticed the Guide's twin was guarded and this was
+        # not — exactly the mutation the table had not thought to make.
+        "nothing here brings them back",
     ),
     "observers": (
         "an observer with no rule set sees nothing</strong>.",

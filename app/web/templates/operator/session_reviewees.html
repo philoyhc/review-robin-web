@@ -126,7 +126,13 @@
       </p>
       <p>
         Uploading a CSV <strong>replaces the whole roster</strong> and clears
-        any assignments already generated. To take someone out of a running
+        any assignments already generated.
+        {% if session.relationships_enabled %}It also deletes
+        <strong>every relationship in the session</strong>: the upload
+        removes and re-creates every row, so even someone listed in both
+        files comes back as a new entry that no relationship points to.
+        Deleting selected rows is narrower — it takes only the
+        relationships involving those rows.{% endif %} To take someone out of a running
         session without losing their rows, mark them
         <strong>inactive</strong> instead of deleting. You can also add
         individual reviewees on this page.

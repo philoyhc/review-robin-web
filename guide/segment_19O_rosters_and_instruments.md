@@ -108,6 +108,42 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
   field without a schema edit — **verify, do not assume**.
 - Tests asserting the confirm copy: **2** files.
 
+### Status
+
+**Rungs 1–3 landed; rung 4 is the Relationships empty state.**
+
+- **The blast radius was wrong twice about one line.** No
+  `relationship_count` existed, it said; the service helper did
+  (`relationships.existing_count`) *and* a context key of that name
+  already reached these templates via `views.session_status_pills`.
+  Rung 1 needed no wiring.
+- **`EVENT_SCHEMAS` needed no edit** — but verify, never assume: strict
+  mode fails the *write*, so a suite not exercising the new key passes
+  either way.
+- **Rung 1 widened to the import path**, uncounted by the DoD's "four
+  deleting events". A replace deletes and re-adds, destroying
+  relationships as `delete-all` does; leaving it out would have rung 2
+  quoting a number with no logged counterpart.
+- **Rung 2's expander clause reads the ticked rows** where its three
+  neighbours read the session — `Semantics` asks for it and the
+  selection exists only in the browser. **Open for the author:** whether
+  the four clauses should agree, in either direction.
+- **Four copy defects, every one caught by reading and none by a
+  mutation table** — prose can be pinned, not proved. The CSV replace
+  inherited its sentence's opening verb and promised a roster that comes
+  back; rung 3 explained the loss with *"a relationship names a pair, so
+  it cannot outlive either side"*, which an identical re-upload
+  falsifies (`_save` deletes and re-creates every row); the Guide sent
+  operators to the `require_sys_admin` audit log; and the guidance
+  rendered with `relationships_enabled` off, describing an impossible
+  loss — the rule `Decision` states for labels, not carried across.
+- **The re-upload advice was over-broad** (found on review of rung 3's
+  PR): scoped to replacing a roster, since after a selected delete the
+  surviving relationships would be destroyed by the upload it advised.
+- **The definition-of-done grep was adjudicated at rung 3**, not passed:
+  line-based, so two targets satisfied it by *wrapping* while still
+  saying the sentence, and the third should keep saying it.
+
 ### PR ladder
 
 1. **The count helper, its context keys, and the audit field.**
@@ -140,8 +176,19 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
   today's, asserted per confirmation.
 - The Relationships empty state names the dependency when either roster
   is empty, and reads as today when both are populated.
-- `grep -rn "clears any assignments already generated"
-  app/web/templates/operator/` → 0.
+- Every roster page's guidance names the relationship cost, pinned
+  through `PAGE_CLAIMS` so `test_every_setup_page_states_its_own_
+  invisible_fact` carries it.
+
+  **Adjudicated at rung 3, and the check replaced.** The line was
+  `grep -rn "clears any assignments already generated"
+  app/web/templates/operator/` → 0, on the assumption that sentence
+  would be rewritten everywhere. It should not be: an upload on any of
+  the three pages *does* clear assignments, and on Relationships that
+  is the whole story — there is no further cascade. Worse, the grep is
+  line-based, so Reviewers and Reviewees satisfied it by **wrapping**
+  while still saying it. A check two of its three targets pass
+  vacuously and the third should fail is measuring nothing.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19O.5` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -166,6 +213,7 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 - `spec/setup_pages.md` — § *Deleting the selected rows* describes the cascade as `Reviewer` / `Reviewee` → assignments → responses plus invitations, omitting relationships entirely; its three-state confirmation table gains a fourth state (Item 5).
 - `spec/csv_contracts.md` — the replace contract for the two rosters states what a replace destroys (Item 5).
 - `spec/architecture.md` — § *Audit-event detail schema*'s `counts` envelope gains `cascaded_relationships` alongside `cascaded_assignments` / `cascaded_responses` (Item 5).
+- `spec/setup_pages.md` § *Shared body shape*'s guidance-fact table — the row each card's copy is held to; **added at rung 3**, not named at planning time, because rule 2 of the copy contract requires the row to exist for `test_every_setup_page_states_its_own_invisible_fact` to pin anything (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---
