@@ -116,7 +116,10 @@ def test_the_chips_pager_and_count_line_are_in_the_left_pane(
     left = _pane(body, "left")
     count_line = '<p class="muted table-showing-hint">'
 
-    assert 'class="col-chip-row"' in left
+    # The class list, not the whole attribute: the row gained the
+    # `is-grouped` modifier, and a match anchored on the closing quote
+    # would read that as "the chip row left the pane".
+    assert 'class="col-chip-row' in left
     assert count_line in left, "the count line is outside the pane"
     # Once, and only in the pane: it used to render below the closing
     # `</div>`, so a move that copied rather than moved would leave two.

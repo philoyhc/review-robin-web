@@ -2805,16 +2805,30 @@
          has three: reviewer / reviewee / relationship tags). Each
          group is its own inline-flex box so a narrow viewport wraps
          BETWEEN groups rather than stranding a label at the end of a
-         line with its chips on the next. The wider left gap on every
-         group after the first is what separates them on one line. */
+         line with its chips on the next. */
       body.ui-v2 .chip-group {
         display: inline-flex;
         flex-wrap: wrap;
         align-items: center;
         gap: var(--space-2);
       }
-      body.ui-v2 .chip-group + .chip-group {
-        margin-left: var(--space-4);
+      /* Groups are separated by the ROW's column-gap, not by a margin
+         on each group after the first.
+
+         The margin was equivalent while the groups shared one line,
+         and wrong the moment they stopped: a wrapped group starts a
+         line still carrying its `margin-left`, so it sits indented
+         against the group above it. 19P.5 rung 1 made that visible by
+         moving this row into the half-width `.toolbar-left` pane,
+         where three groups no longer fit on one line. A column-gap is
+         between-items-on-a-line by definition, so it cannot do that.
+
+         A modifier, because the four roster chip rows put their label
+         and their chips DIRECTLY in `.col-chip-row` — widening the
+         gap there would space a label from its own chips. Only a row
+         built out of groups wants it. */
+      body.ui-v2 .col-chip-row.is-grouped {
+        column-gap: var(--space-4);
       }
       /* The one ``.tag-chip`` that is not a control: it sets
          ``cursor: default`` itself, so it must not wear the shade that

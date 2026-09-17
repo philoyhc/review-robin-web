@@ -226,7 +226,7 @@
          nothing at all — a bare "Show reviewees:" with no chips after
          it reads as a bug (rung 3). Only Assignments can reach this,
          having three groups. #}
-      <p class="col-chip-row" data-col-toggles-for="assignments-table">
+      <p class="col-chip-row is-grouped" data-col-toggles-for="assignments-table">
         {% for group_label, prefix, entity in col_groups
            if col_data[prefix ~ 1] or col_data[prefix ~ 2] or col_data[prefix ~ 3] %}
           <span class="chip-group">
