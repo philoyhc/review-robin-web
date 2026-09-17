@@ -878,7 +878,7 @@ edits above them.
 
 ---
 
-## Item 3 — Reviewees and Relationships
+## Item 3 — Reviewees and Relationships — closed 2026-09-17
 
 ### Opportunity
 
@@ -999,267 +999,89 @@ Commands run 2026-09-16 on `origin/main` at `907df01`.
   re-renders in place; Relationships has twice that surface and its own
   handler, so rung 4 is **not** one change applied twice there.
 
-### Status
+### Status — closed 2026-09-17
 
-**Rung 1 — landed.** Both pages' row actions keep the pager `offset` and
-return to the row they acted on.
+**The ladder landed as planned, five rungs, no rung dropped or merged.**
+1 the landing contract, 2 the toolbar, 3 the row expander and edit-row
+bar, 4 the roster card and Unlock panel, 5 the specs and the close. The
+`Operator actions` card renders on no roster page; nothing renders below
+any preview table.
 
-**The ladder's "five POSTs" was right by accident.** `grep -c` counts the
-import line; there are **four** call sites, and the fifth POST — `create` —
-returned a bare `RedirectResponse`, so it is a conversion that also regains
-the filter round-trip. The Opportunity and the ladder now say so.
+**Decisions confirmed at build.**
 
-**Both pages are sortable**, unlike Observers, so the fallback carries two
-unresolvable-fragment cases rather than one. Asserted, so a page that stops
-shipping `rrw-sortable` fails rather than leaving the comment wrong.
+- **The ladder's "five POSTs" was right by accident.** `grep -c` counted
+  the import line; there are four call sites, and the fifth POST —
+  `create` — returned a bare `RedirectResponse`. It is a conversion,
+  and it also regained the filter round-trip.
+- **Both pages are sortable**, unlike Observers, so the row-landing
+  fallback carries two unresolvable-fragment cases here and one there.
+- **Open question 2, answered at rung 3: no.** Relationships' edit-row
+  bar needs nothing Reviewers' does not. Measured in Chromium — the bar
+  sits flush under its row at the same width on both pages, and the
+  identity cells being pickers changes the row's height, which the
+  bracket follows.
+- **The guidance card moved at rung 4, not rung 2.** The precedents
+  disagree on when it goes — Reviewers at its toolbar rung, Observers at
+  its `.card-columns` rung — and Observers' siting matches this ladder.
+- **`_handle_import`'s two `kind == "reviewers"` literals collapsed**
+  rather than gaining a branch: it serves exactly two kinds and both
+  have panels now.
 
-**Two reviews found seven things this rung shipped or claimed wrongly. The
-pattern in all of them: a guard that proves less than it says.**
-
-- **The mutation table.** 18 chosen, 18 caught — and four more mutations of
-  the same code passed the whole suite (`"current_offset": 0`; `locate_id`
-  deleted; `filter_offset` gone from the *edit* shell alone; `offset=` gone
-  from `bulk-delete`). Fixture-shaped, as Item 2's were: 3 rows let
-  `clamp_offset` pull `?offset=200` to `0`; a `>= 1` count could not tell
-  which of two shells it found, and only one renders per request. Now 230
-  rows, each shell by id, and the create redirect *followed*.
-- **`Add` linked bare `?add=1`** on both pages where Reviewers and Observers
-  carry the filter, so `create`'s round-trip was unreachable through the UI —
-  and the test posted the filter fields directly, supplying exactly what the
-  flow loses. Driven GET → POST now.
-- **The fallback was string-matched into the `{% if rows %}` branch**, and
-  the empty-filtered card carried no id, so it also had nothing to find.
-  Both halves fixed: its first case taken to the limit *is* that branch.
-- **Four plan edits were lost** to a script that wrote only at the end and
-  asserted late, so the previous Status claimed corrections it had not made.
-  One write per edit now.
-
-**Rung 2 — landed.** The filter strip, `Clear`, `Add` (now `Add new`) and
-`Search` are the right pane of a split toolbar inside the table card. The
-`Operator actions` card is slimmed, not retired: it keeps the only working
-`Edit` / `Inactivate` / `Activate` / `Delete` until rung 3.
-
-**`Add` came out of the card's `{% if is_editable %}` in the move**, and
-its inner gate does not cover the gap — `is_ready` is `status == "ready"`
-alone — so `expired` and `archived` rendered a **live** `Add new` whose
-route 409s. Re-wrapped. Found by writing the guard: nothing asserted what
-a locked roster page's toolbar may offer, so the suite was green with it
-in. That inner `is_ready` is in fact **dead** inside the wrapper
-(`is_editable` is `draft or validated`); Reviewers has carried the same
-dead disjunct since 19P.1 rung 2a, and rung 3 simplifies all three.
-
-**The guidance card stays half-width.** The precedents disagree on when it
-moves — Reviewers at its toolbar rung, Observers at its `.card-columns`
-rung — and Observers' siting matches this ladder. It goes at rung 4.
-
-**Three of ten second-round mutations survived**, after twenty-two of
-twenty-two first-round ones were caught: a live `Add new` mid-edit, the
-moved form flipped to `method="post"`, and the slimmed card's form losing
-its `action`. The first two are now guarded. The third is not: after the
-move that form holds no field and no submit of its own — its three submit
-buttons target `*-bulk-form` via `form=` + `formaction`, and `Edit` is a
-bare `type="button"` — so its `action` is inert and the `<form>` itself is
-vestigial. **Rung 3 deletes it with the
-card**; guarding an attribute that does nothing would pin the wrong thing.
-
-**A cold read found nine, all upheld.** Two matter beyond their own lines:
-a test comment deferred `ui_elements.md:385` to a Doc-impact bullet that
-did not name it — the same error its own predecessor had been written to
-correct against Item 2 — and no rung-2 sentence had been added to Doc
-impact at all. Five are listed there now. The rest were prose false in
-place (a 19I comment naming three controls none of which is still in its
-block), a test promising a pager its filtered fixture makes unreachable,
-one asserting `Add new` where Relationships renders the disabled variant,
-and an assertion comparing two module constants.
-
-**Rung 3 — landed.** The row expander and the edit-row bar on both pages;
-the `Operator actions` card renders on no roster page. Five
-`.operator-actions-card` CSS rules retired with their last tenant
-(`.operator-actions-main`, `.operator-actions-divider`,
-`.filter-confirm` and its children, `.operator-actions-buttons`); the card
-class itself stays for `session_assignments.html`. The dead
-`is_ready or edit_mode` disjunct is simplified on all three pages, which is
-the item rung 2's cold read deferred here.
-
-**Open question 2 is answered: no.** Relationships' edit-row bar needs
-nothing Reviewers' does not. Measured in Chromium: the bar sits flush
-under its row at the same width (1324px) with `colspan` equal to the
-row's own cell count on both pages — 9 on Reviewees, 8 on Relationships —
-and the two identity cells being `reviewer_pick` / `reviewee_pick` inputs
-changes only the row's height, which the bracket follows.
-
-**Twelve of twenty-five mutations survived, and the reasons differ.**
-
-- **Three are test gaps, now closed.** `data-status` deleted from the data
-  rows (twice) — the panel's ONLY input, so `rows()` returns nothing and
-  the whole expander stops, with the suite green because every other
-  guard reads the builder, which ships fine with nothing to build
-  against. And the add row's bracket class: both rows carry the identical
-  class string, so the mutation aimed at the edited row landed on the add
-  row, which nothing guarded. Found by a mutation missing its target.
-- **Five can only be guarded structurally.** `Edit`'s arity gate,
-  `statusActions`' two conditions, select-all's `indeterminate` (a DOM
-  property that never appears in a response at all), the sort re-render
-  binding and the restored-selection bootstrap are all JS evaluated
-  against live state, so what a server-side test can see is that the
-  expression ships, not that it works. Source assertions, with the
-  behaviour measured in Chromium and the caveat written into each
-  docstring rather than left for a reader to discover. The sort case's
-  *mechanism* was measured too, not assumed: with the binding removed, a
-  header click moved the panel from index 2 of 9 to index 8 — last child,
-  stranded, exactly as the comment claims.
-- **One was on a page this rung barely touched.** `Add new`'s surviving
-  `edit_mode` gate on **Reviewers** — the one line the `is_ready`
-  simplification changed there — had nothing watching it. Guarded in
-  `test_reviewers_roster_card_scaffold.py`.
-- **One was the add row's caret marker**, which is rendered markup and so
-  was a plain test gap, now closed on both pages.
-- **One is behaviour-preserving.** Hardcoding the bar's `colspan` changes
-  nothing today: the bar renders only in edit mode, and edit mode forces
-  every optional column on, so `edit_col_count` is always its maximum
-  (measured — 6 columns in the list view against 9 in edit mode). The
-  reason to compute it is the first time a column is gated differently,
-  which is a claim about the source, so it is asserted against the source.
-
-All twelve re-mutated after the fix and caught.
-
-**The cold read found twelve more, and the two that matter are gaps the
-mutation set did not think to probe.** Three claims BOTH precedents guard
-had no counterpart here — the tick-order anchor rule (prune on untick,
-rebuild on select-all, `currentAnchor() || sel[sel.length - 1]`), `Edit`'s
-navigation target, and the panel's pill-free zone. Deleting the prune or
-collapsing the anchor passed the whole suite on both new pages. All three
-are transcribed now. And
-`test_the_delete_sentence_names_what_goes_per_page` claimed to read the
-rendered builder while reading the template, and cross-referenced tests
-that do not exist; it now drives the three-way branch for real, with and
-without a saved response.
-
-The rest were prose: a `base.html` comment predicting "none once 19P.3
-lands" that this rung made true without updating, its Scope-2 header
-still listing four tenants where one remains, and `session_reviewers.html`
-claiming an `is_ready` gate three lines above the note saying it was
-removed.
-
-**Rung 4 — landed.** The roster card and the Unlock panel on both pages,
-in Reviewers' arrangement. `.card-columns` survives only as the labels
-editor's fallback home, so no roster page renders it on a draft, and the
-guidance card takes the width it vacated. `_handle_import`'s two
-`kind == "reviewers"` literals COLLAPSED rather than gaining a branch —
-it serves exactly the two kinds, and both have panels now.
-Relationships' bespoke handler needed `panel_open=True` on both of its
-in-place 400 paths, where the shared one has a single site.
-
-**Fifteen of twenty-four mutations survived, and the honest reading is
-that the rung shipped with no guard file of its own.** It leaned on two
-pre-existing tests that happened to fail. Almost every survivor was plain
-rendered markup a server-side test can read — the panel shipping open,
-`?unlocked=1` ignored, a labels save closing the panel, both 400 paths
-shipping closed, the delete-all gate removed, the readouts deleted, the
-Lock control orphaned, the retired inline styles restored. They survived
-because nothing looked. `tests/integration/test_roster_unlock_panel.py`
-(35 tests, both pages) now covers each; every one re-mutated and caught.
-
-**Two claims this rung first made and then falsified.** Both said
-`none yet` was unreachable and `.roster-readout-empty` dead markup in
-four templates. Both were wrong, in different ways, and the corrections
-are the rung's two real defects:
+**Two real defects, both found by a cold read rather than by a mutation
+table.**
 
 - `relationship_column_state` counted `reviewer_id` / `reviewee_id`
   through `slot_row_count`, a TEXT predicate (`column != ''`). Postgres
   refuses `integer <> character varying`; SQLite compares across types
-  without a word, so the whole suite passed locally and `ci-postgres`
-  went red. The FK readouts are gone — a non-nullable column's count is
-  the roster total by construction anyway — which leaves Relationships
-  with an empty index on an empty roster, so `none yet` is **reachable
-  there** and nowhere else.
+  without a word, so the suite passed locally and `ci-postgres` went
+  red. The FK readouts are gone — a non-nullable column's count is the
+  roster total by construction — which makes the index's `none yet`
+  branch **reachable on Relationships and nowhere else**.
 - `_handle_import` still hardcoded `col_readouts = []` for Reviewees,
-  from when the page had no index row. A failed import therefore
-  answered "Populated columns: none yet" over a roster it was
-  displaying. Both branches now call the page's own helper; mutating
-  either to `[]` was caught, where before **neither** was.
+  from when the page had no index row, so a failed import answered
+  "Populated columns: none yet" over a roster it was displaying.
 
-Found by the cold read, not by the mutation pass — a table proves what
-its author thought to mutate.
+**One finding recurred at every rung, and it is the item's lesson: a
+guard that proves less than it says.** Mutation survivors ran 3/10,
+12/25 and 15/24 after first rounds that caught everything chosen, and
+the cold reads found 9, 12 and 12 more on top. The survivors were rarely
+subtle — rung 4 shipped with no guard file at all and leaned on two
+pre-existing tests that happened to fail. **A mutation table proves what
+its author thought to mutate**, which is why the cold read is the gate
+and not the table.
 
-**Owed, not fixed here — rung 3's additions.** Two comment-placement
-bugs in `session_reviewers.html`: the `statusActions` header comment sits
-above `var BULK_BASE` (`:1149`) and the sort-handler comment above the
-`Edit` click handler (`:1199`). Both new copies attach them correctly, so
-the precedent is now the odd one out. Not fixed here because this rung
-did not cause them and the diff is already wide.
+**Scope that moved.**
 
-**Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
-carry no landing anchor either — the same gap, pre-existing, on files this
-item does not own. With them, for the rung-5 sweep:
+- **Rung 5a diverged from Doc impact deliberately.** The bullet asked
+  for each page's § *Body layout* stated outright rather than by
+  reference to Reviewers — right when Reviewers was the only migrated
+  page, because a pointer then led to a section describing a *different*
+  shape. With all four identical it inverts: four ~90-line copies to
+  drift. `spec/setup_pages.md` gained one § *The roster card and the
+  Unlock panel* with a table of the three axes any page differs on, and
+  each page section keeps its own facts. The intent holds — no roster
+  page points at a section describing a shape it does not have.
+- **The definition-of-done grep was re-aimed**, not quietly passed: it
+  could not tell "defers to 19P.3" from "happened at 19P.3", and the
+  rewritten prose dates the move exactly as it dates 19P.1's.
+- **Two specs the plan never named** were falsified by the change and
+  added to Doc impact at rung 5c: `spec/visual_style_rrw.md` and
+  `spec/color_tokens.md`, both scoping the move to Reviewers.
+  `spec/email_template_editor.md` was on the owed list in error.
+- **Rung 5c fixed one thing the item did not cause.**
+  `session_reviewers.html` decided its Profile column from the rendered
+  window where Reviewees reads a whole-roster flag — the surface 19I
+  Item 12 rung 2 missed, because that sweep followed the chips and
+  Reviewers' Profile column has none. Giving `reviewer_column_state` the
+  `profile` readout it had always lacked would otherwise have let the
+  index read `Profile (1)` above a table with no Profile column.
 
-- `.roster-readout-empty` is live on Relationships only; the other three
-  always emit identity entries. Either reachable everywhere or nowhere,
-  but decided once.
-- `reviewer_column_state` has no `profile` slot, where
-  `reviewee_column_state` does — an unexamined 19P.1 asymmetry, not a
-  decision.
-- `spec/operator_button_audit.md` still files Reviewees' and
-  Relationships' buttons under `Operator actions`, and
-  `spec/color_tokens.md` still scopes the guidance card's move to
-  Reviewers. (`spec/email_template_editor.md` was on this list in
-  error: its `.card-columns` is the Email Template page's own, which
-  19P does not touch.) Rung 5 is the specs rung; this is its list.
-
-**Rung 5a — the page shape, and a divergence from what Doc impact
-committed to.** The bullet says each page's § *Body layout* states the
-shape *"outright rather than by reference to Reviewers (the failure mode
-19P.1 catalogued eight times)"*. Written when Reviewers was the only
-migrated page, that was right: a pointer then led to a section
-describing a **different** shape, which is what made those eight
-pointers bugs. With all four pages identical it inverts — stating ~90
-lines outright four times is four copies to drift, and the next reader
-cannot tell which differences are real.
-
-So `spec/setup_pages.md` gains one § *The roster card and the Unlock
-panel*, with a three-row table naming the only axes any page differs on
-(suppression predicate, column contents, where `Lock` sits — all three
-Observers'), and each page section keeps its own facts and points at it.
-`spec/operator_ui_concept.md`'s § *Setup pages (Reviewees /
-Relationships) — shared shape* becomes § *Setup roster pages*. The
-intent the bullet was protecting holds: **no roster page points at a
-section describing a shape it does not have.** Net −12 lines on a spec
-that gained a whole section.
-
-Also folded in, because they were the same sentences: Reviewers'
-duplicated `#### The table card's toolbar` / `#### The row expander`
-collapse into the shared § *Roster controls and their route contracts*,
-which is what `## Operator actions card` becomes — the card is retired,
-the four route contracts under it were always page-independent and stay
-put.
-
-**Rung 5b — the primitives, and one spec rule adjudicated rather than
-widened.** `spec/ui_elements.md:198` said every destructive submit's
-paired confirm "is also `required` (belt-and-suspenders against a JS-off
-submit)", unconditionally. **No roster page's bulk-delete confirm
-carries it**, and the templates are right: that checkbox is attached by
-`form="<noun>-bulk-form"`, and so are `Inactivate` and `Activate`
-(`session_reviewers.html:1231-1246`) — `required` would refuse those two
-submits until an operator ticked a *delete* confirmation. The rule now
-names where it holds (the `Danger Zone`'s `delete-all` and the Upload
-card's `replace-roster`, which own their forms and do carry `required`
-on all four pages) and states the exception with its cause. The gate
-that binds either way is the route's own `confirm == "true"`.
-
-The rest is attribution: `.session-row-selected`'s injector list goes to
-six templates, `.table-card-toolbar` to all four roster pages, §6's
-`Delete` siting loses "between `Add` and `Search`", the landing-target
-entry drops its Reviewers scoping, and `settings_inventory.md`'s
-`?unlocked=1` / `?offset=` / `?focus=` rows widen to all four.
-
-`spec/participant_model.md` — the one doc-impact bullet at risk of a
-waiver. It never described the Reviewees page's shape, only its URL, so
-there was nothing to widen; what it did carry was *"the friendly-label
-editor **card** from the Reviewers / Reviewees pages is intentionally
-absent"*, now a panel tenant rather than a card. Corrected, and the
-sentence gained the consequence it was one step short of: that absence
-is why Observers' panel is two-tenanted and needs no `.card-columns`
-fallback.
+**Owed at rung 4, all discharged at rung 5c** — the two comment
+placements, `.roster-readout-empty` (kept in four templates, decided and
+recorded), the labels editor's `<section aria-labelledby>`, and
+`guide.html`'s tag-label copy. The empty-filtered landing anchor needed
+no fix: the empty state is inside the anchored table card on all four
+pages.
 
 ### PR ladder
 
