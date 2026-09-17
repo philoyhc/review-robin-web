@@ -9,6 +9,8 @@ stage 3.
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -676,8 +678,16 @@ def test_add_disabled_when_a_roster_is_empty(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert "Add rows to the Reviewees roster first" in body
-    assert "Reviewers roster" not in body, (
+    tooltip = re.search(
+        r'aria-disabled="true"\s+title="([^"]*)">Add new', body
+    )
+    assert tooltip is not None, "Add new should be disabled here"
+    # Scoped to the tooltip, not the page: the guidance card says
+    # "Replacing the Reviewers or Reviewees roster" a few hundred lines
+    # up, so a whole-page `not in` would fail on a reword there and
+    # blame this button.
+    assert "Add rows to the Reviewees roster first" in tooltip.group(1)
+    assert "Reviewers" not in tooltip.group(1), (
         "this session HAS a reviewer; naming that roster is the old bug"
     )
 

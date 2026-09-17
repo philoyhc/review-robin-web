@@ -303,7 +303,8 @@ def test_an_empty_roster_still_offers_a_LIVE_add_new(
     **A live one.** `>Add new</a>` matches the disabled variant just as
     happily, and on Relationships an empty roster is exactly when the
     disabled variant renders: with no reviewer and no reviewee there is
-    no pair to make, so `can_add_relationship` is False. An earlier draft
+    no pair to make, so `relationship_prereqs.satisfied` is False (it
+    was `can_add_relationship` until 19O.5 rung 4). An earlier draft
     asserted the bare string and passed on that page against a control
     the operator cannot use — the opposite of what the docstring claims.
 

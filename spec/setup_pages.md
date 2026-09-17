@@ -547,7 +547,9 @@ falls through to a "No … match the current filter." message
 (`session_reviewers.html`'s `{% if reviewers or add_mode %}` …
 `{% elif total_row_count > 0 %}`, and the same shape on the other
 six). The line lives inside that gate, so there is no table for it
-to caption. This is the template's doing, not the helper's:
+to caption. **Relationships has a third branch below those two** — an
+empty roster that cannot yet be filled, § *The table toolbar*; the
+no-match branch itself is the same on all seven. This is the template's doing, not the helper's:
 `preview_count_line(shown=0, pool=0, …, is_filtered=True)` returns
 `Showing 0 reviewers.` if it is ever called.
 
@@ -760,8 +762,10 @@ expander.
 lifecycle gate.** A `Relationship` names one `Reviewer` and one
 `Reviewee` through non-nullable foreign keys, so with either roster
 empty there is no pair to make: `Add new` renders disabled, and an
-upload is no way round it — every row of the CSV fails validation with
-*"Unknown reviewer … import reviewers first"*. The page states that in
+upload is no way round it — every row of the CSV fails validation
+naming the side that is missing (*"Unknown reviewer … import reviewers
+first"* / *"Unknown reviewee … import reviewees first"*, checked in
+that order). The page states that in
 two places and both read one answer
 (`views.relationship_prerequisites`), so they cannot disagree about
 whether a relationship can be made:

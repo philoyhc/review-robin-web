@@ -760,17 +760,19 @@ def _render_relationships_page(
             "is_editable": lifecycle.is_editable(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
-            # 19O.5 rung 4 — ONE answer, read by two surfaces. This was
-            # `bool(reviewers) and bool(reviewees)` inline, and the
-            # empty state below the button knew nothing about it: an
-            # operator whose Reviewers roster had just been emptied got
-            # an inactive `Add new` beside "Upload a CSV or add a row to
-            # get started", with the reason only in a `title=`.
-            # `relationship_prereqs` carries WHICH roster is missing so
-            # the empty state can name it and link to it; this key stays
-            # for the button's own branch, and is now its `.satisfied`
-            # rather than a second expression that could drift.
-            "can_add_relationship": relationship_prereqs.satisfied,
+            # 19O.5 rung 4 — ONE answer, read by two surfaces, under
+            # ONE name. This was a `can_add_relationship` boolean
+            # computed inline as `bool(reviewers) and bool(reviewees)`,
+            # and the empty state below the button knew nothing about
+            # it: an operator whose Reviewers roster had just been
+            # emptied got an inactive `Add new` beside "Upload a CSV or
+            # add a row to get started", with the reason only in a
+            # `title=`. The first draft of this rung kept
+            # `can_add_relationship` as an alias for `.satisfied` and a
+            # cold read called it what it was — a second name for one
+            # fact, on the rung whose whole point is that there should
+            # be one. It is also why a mutation restoring the old inline
+            # expression survived: nothing could tell them apart.
             "relationship_prereqs": relationship_prereqs,
             "edit_values": edit_values,
             "edit_error": edit_error,

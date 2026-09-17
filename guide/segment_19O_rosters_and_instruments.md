@@ -110,7 +110,8 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 
 ### Status
 
-**Rungs 1–4 landed; rung 5 closes the item.**
+**The ladder is complete: rungs 1–4 landed.** What remains is the
+close itself — the `Definition of done` chores, as their own slice.
 
 - **The blast radius was wrong twice about one line.** No
   `relationship_count` existed, it said; the service helper did
@@ -219,7 +220,7 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 - `spec/csv_contracts.md` — the replace contract for the two rosters states what a replace destroys (Item 5).
 - `spec/architecture.md` — § *Audit-event detail schema*'s `counts` envelope gains `cascaded_relationships` alongside `cascaded_assignments` / `cascaded_responses` (Item 5).
 - `spec/setup_pages.md` § *Shared body shape*'s guidance-fact table — the row each card's copy is held to; **added at rung 3**, not named at planning time, because rule 2 of the copy contract requires the row to exist for `test_every_setup_page_states_its_own_invisible_fact` to pin anything (Item 5).
-- `spec/setup_pages.md` § *The filter strip* — the Relationships-only
+- `spec/setup_pages.md` § *The table toolbar* — the Relationships-only
   prerequisite gate behind `Add new`, and the third empty-state branch
   that is its twin; **added at rung 4**, not named at planning time
   (Item 5).

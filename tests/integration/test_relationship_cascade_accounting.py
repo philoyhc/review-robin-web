@@ -1,4 +1,11 @@
-"""What a roster delete costs in relationships, counted and logged.
+"""What a roster delete costs in relationships — counted, logged, and
+said on the pages that spend it.
+
+**The file is 19O.5's home, not rung 1's.** It opened as rung 1's and
+grew the copy each later rung added, so the sections below run rung 1's
+counter and audit payloads, rungs 2-3's confirmations and guidance, and
+rung 4's empty state and tooltip — the last of which seed rosters and
+never delete anything.
 
 19O.5 rung 1. `relationships.reviewer_id` / `reviewee_id` are declared
 `ondelete="CASCADE"` and `app/db/session.py` sets
@@ -830,12 +837,29 @@ def _empty_state(client: TestClient, sid: int) -> str:
 
 
 def _add_new_title(client: TestClient, sid: int) -> str | None:
-    """The disabled `Add new`'s tooltip, or None when it is live."""
+    """The disabled `Add new`'s tooltip, or None when there is no
+    disabled-with-a-title `Add new` on the page.
+
+    None covers three states, not one: the button is live, it is
+    disabled by `edit_mode` (which carries no `title`), or the whole
+    `{% if is_editable %}` block is suppressed on a locked session. Use
+    `_add_new_is_live` to mean *live* — the first draft asserted
+    `is None` with the message "Add new should be live" and would have
+    passed on a button that had vanished.
+    """
     body = client.get(f"/operator/sessions/{sid}/relationships").text
     match = re.search(
         r'aria-disabled="true"\s+title="([^"]*)">Add new', body
     )
     return match.group(1) if match else None
+
+
+def _add_new_is_live(client: TestClient, sid: int) -> bool:
+    """An `Add new` that is present, enabled and links somewhere."""
+    body = client.get(f"/operator/sessions/{sid}/relationships").text
+    return bool(
+        re.search(r'<a class="btn secondary"\s+[^>]*href="[^"]+">Add new', body)
+    )
 
 
 @pytest.mark.parametrize(
@@ -858,10 +882,11 @@ def test_the_empty_state_names_the_roster_that_is_missing(
 
     *"No relationships yet. Upload a CSV or add a row to get started"*
     invites two things that both fail when either roster is empty:
-    `Add new` is inactive, and every row of an uploaded CSV errors with
-    *"Unknown reviewer … import reviewers first"*
-    (`relationships.parse_relationship_csv`). The reported bug was an
-    operator reading that sentence beside a button they could not press.
+    `Add new` is inactive, and every row of an uploaded CSV errors —
+    naming the reviewer or the reviewee, whichever roster is the empty
+    one (`relationships.parse_relationship_csv` checks them in that
+    order, with a message each). The reported bug was an operator
+    reading that sentence beside a button they could not press.
 
     `not_named` is the half that matters most: with reviewers present
     and reviewees missing, naming Reviewers would be the old tooltip's
@@ -928,11 +953,16 @@ def test_the_empty_state_links_to_the_roster_it_names(
 def test_a_populated_pair_of_rosters_reads_as_it_did(
     client: TestClient, db: Session
 ) -> None:
-    """The fourth state, byte-identical to today's.
+    """The fourth state, reading as it did before this rung.
 
     Same rule the rung-2 labels follow: a sentence describing a
     condition that does not hold is its own defect, so the new branch
     must not leak into the state that was already right.
+
+    Not *byte-identical* — that word is load-bearing elsewhere in this
+    item and is enforced literally there. `_empty_state` collapses
+    whitespace, and the template wraps this sentence across two lines,
+    so what is pinned is the text rather than the bytes.
     """
     rs = _mk(client, db, "relcc-e-ok")
     _seed(db, rs.id, pairs=1)
@@ -946,7 +976,7 @@ def test_a_populated_pair_of_rosters_reads_as_it_did(
     assert _empty_state(client, rs.id) == (
         "No relationships yet. Upload a CSV or add a row to get started."
     )
-    assert _add_new_title(client, rs.id) is None, "Add new should be live"
+    assert _add_new_is_live(client, rs.id), "Add new should be live"
 
 
 @pytest.mark.parametrize(
@@ -1046,7 +1076,7 @@ def test_an_inactive_reviewer_still_counts_as_a_reviewer(
         row.status = "inactive"
     db.commit()
 
-    assert _add_new_title(client, rs.id) is None
+    assert _add_new_is_live(client, rs.id)
     assert _empty_state(client, rs.id) == (
         "No relationships yet. Upload a CSV or add a row to get started."
     )

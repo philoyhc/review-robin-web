@@ -596,8 +596,10 @@ class RelationshipPrerequisites:
     A `Relationship` row names one `Reviewer` and one `Reviewee` through
     non-nullable foreign keys, so with either roster empty there is no
     pair to make: `Add new` is inactive and every row of an uploaded CSV
-    fails validation with *"Unknown reviewer … import reviewers first"*
-    (`relationships.parse_relationship_csv`).
+    fails validation naming the side that is missing — *"Unknown reviewer
+    … import reviewers first"* or *"Unknown reviewee … import reviewees
+    first"*, the two branches `relationships.parse_relationship_csv`
+    checks in that order.
 
     The page had that fact twice and stated it once, in a `title=`
     attribute on the disabled button — invisible to anyone not hovering,
@@ -615,6 +617,28 @@ class RelationshipPrerequisites:
         return not self.missing
 
     @property
+    def roster_noun(self) -> str:
+        """`roster` or `rosters`, for the number missing."""
+        return "rosters" if len(self.missing) > 1 else "roster"
+
+    @property
+    def empty_state_clause(self) -> str:
+        """The verb phrase closing the empty state's first sentence.
+
+        The template renders the roster names itself, because each is a
+        link and markup does not belong in a view module — but the
+        number agreement does, beside the tooltip's. Both were spelled
+        out separately at first, in Python and in Jinja, so the two
+        surfaces shared *which* roster was missing and not the grammar
+        for saying so; a cold read caught it.
+        """
+        return (
+            "rosters both have rows"
+            if len(self.missing) > 1
+            else "roster has rows"
+        )
+
+    @property
     def add_disabled_title(self) -> str:
         """The disabled `Add new`'s tooltip, naming the roster to fix.
 
@@ -628,9 +652,8 @@ class RelationshipPrerequisites:
         if not self.missing:
             return ""
         names = " and ".join(roster.label for roster in self.missing)
-        noun = "rosters" if len(self.missing) > 1 else "roster"
         return (
-            f"Add rows to the {names} {noun} first — "
+            f"Add rows to the {names} {self.roster_noun} first — "
             "a relationship needs one of each."
         )
 
