@@ -22,69 +22,43 @@
      card's stepper makes the lifecycle state explicit and the
      Activate session super-button is the single entry point. #}
 
-  <div class="bottom-grid">
-    <div class="card" id="responses-info-card">
-      {# Info card — reviewee-coverage counters. Bulk-action buttons
-         (Manage Invitations / Send reminders) retired with the
-         Workflow-card-as-Operations-chrome rollout
-         (spec/workflow_card.md); the Workflow card's
-         Send reminders super-button + the chrome top-nav
-         Invitations tab carry those affordances now. #}
-      <p>
-        Number of reviewees
-        <span class="pill pill-count">{{ total_row_count }}</span>
-        &middot; With responses
-        <span class="pill pill-count">{{ reviewees_with_responses_count }}</span>
-        &middot; Without responses
-        <span class="pill {% if reviewees_without_responses_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ reviewees_without_responses_count }}</span>
-      </p>
-    </div>
-
-    <div class="card filter-card">
-      <form method="get"
-            action="/operator/sessions/{{ session.id }}/responses">
-        <div class="filter-row">
-          <label class="filter-status">
-            Status:
-            <select name="status">
-              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-              {% for value, label in filter_status_options %}
-                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label class="filter-search">
-            Search:
-            <input type="text"
-                   name="q"
-                   list="responses-search-options"
-                   value="{{ filter_search }}"
-                   autocomplete="off"
-                   placeholder="Reviewee name or email">
-            <datalist id="responses-search-options">
-              {% for label in filter_search_options %}
-                <option value="{{ label }}"></option>
-              {% endfor %}
-            </datalist>
-          </label>
-        </div>
-        <div class="filter-actions">
-          {% if filter_status != "all" or filter_search %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/responses">Clear</a>
-          {% endif %}
-          <button class="btn secondary" type="submit">Apply</button>
-        </div>
-      </form>
-    </div>
+  <div class="card" id="responses-info-card">
+    {# Info card — reviewee-coverage counters. Bulk-action buttons
+       (Manage Invitations / Send reminders) retired with the
+       Workflow-card-as-Operations-chrome rollout
+       (spec/workflow_card.md); the Workflow card's
+       Send reminders super-button + the chrome top-nav
+       Invitations tab carry those affordances now. #}
+    <p>
+      Number of reviewees
+      <span class="pill pill-count">{{ total_row_count }}</span>
+      &middot; With responses
+      <span class="pill pill-count">{{ reviewees_with_responses_count }}</span>
+      &middot; Without responses
+      <span class="pill {% if reviewees_without_responses_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ reviewees_without_responses_count }}</span>
+    </p>
   </div>
 
-  {% if rows %}
-    {# The page turn lands here (19J.8): the card's top edge, so the
-       column chips and the page links are both on screen with the
-       new rows beneath them. #}
-    <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-      <div class="table-card-toolbar">
+  {# The page turn lands here (19J.8): the card's top edge, so the
+     column chips and the page links are both on screen with the new
+     rows beneath them. #}
+  <div class="card table-pager-anchored" id="{{ pager_anchor }}">
+    {# 19P.5 rung 3 — two half-width panes, the idiom the four roster
+       pages took across 19P.1-3 and Assignments at rung 1. Left: what
+       the table is showing. Right: the filter that decides it, moved
+       out of the `filter-card` that used to sit beside the info card
+       in a `bottom-grid`.
+
+       The card and the toolbar render in EVERY state, including the
+       two no-rows ones. They used to live inside `{% if rows %}` —
+       which was fine while the filter was elsewhere on the page, and
+       is not once the filter is in here: a search matching nothing
+       would take away the only way to clear it. The messages sit
+       below the toolbar now, where the rows would be, as on the five
+       pages already doing this. #}
+    <div class="table-card-toolbar is-split">
+      <div class="toolbar-pane toolbar-left">
+      {% if rows %}
       {# Tag columns and their show/hide chips (19I Item 11 rung 3).
          The chips drive the shared primitive in ``base.html``; a slot
          with no data anywhere renders disabled and its column stays
@@ -93,8 +67,7 @@
          so the row goes too when every slot is empty (19I Item 12
          rung 3). #}
       {% if col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"] %}
-      <p class="col-chip-row" data-col-toggles-for="responses-table"
-         style="margin: 0 0 12px 0;">
+      <p class="col-chip-row" data-col-toggles-for="responses-table">
         <span>Show columns:</span>
         {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
           <span class="pill pill-count tag-chip is-selected"
@@ -103,9 +76,62 @@
         {% endfor %}
       </p>
       {% endif %}
-      {% include "operator/partials/_pager_cluster.html" %}
-      </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_count_line.html" %}
+        {# Pager before the count line, as the other six have it —
+           19I Item 10 sited the sentence and the cluster together and
+           `tests/unit/test_pager.py` pins the order. The count line
+           rendered just OUTSIDE the toolbar until this rung, which is
+           not where `spec/rrw_functional_spec.md:1114` and
+           `spec/ui_elements.md:626` put it. #}
+        {% include "operator/partials/_pager_cluster.html" %}
+        {% include "operator/partials/_preview_count_line.html" %}
+      {% endif %}
+      </div>
+
+      <div class="toolbar-pane toolbar-right">
+        {# The form's action carries `#{{ pager_anchor }}`: a `GET`
+           submission replaces the query and leaves the fragment
+           alone, so a search scrolls to the table card exactly as a
+           page turn does (19J.8) rather than landing at the document
+           top. `Clear` takes the same anchor. #}
+          <form method="get"
+                action="/operator/sessions/{{ session.id }}/responses#{{ pager_anchor }}"
+                class="operator-actions-filter">
+            <div class="filter-row">
+              <label class="filter-status">
+                Status:
+                <select name="status">
+                  <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                  {% for value, label in filter_status_options %}
+                    <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-search">
+                Search:
+                <input type="text"
+                       name="q"
+                       list="responses-search-options"
+                       value="{{ filter_search }}"
+                       autocomplete="off"
+                       placeholder="Reviewee name or email">
+                <datalist id="responses-search-options">
+                  {% for label in filter_search_options %}
+                    <option value="{{ label }}"></option>
+                  {% endfor %}
+                </datalist>
+              </label>
+            </div>
+            <div class="filter-actions">
+              {% if filter_status != "all" or filter_search %}
+                <a class="btn secondary"
+                   href="/operator/sessions/{{ session.id }}/responses#{{ pager_anchor }}">Clear</a>
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
+            </div>
+          </form>
+      </div>
+    </div>{# .table-card-toolbar #}
+    {% if rows %}
       {# `.table-scroll` (base.html) keeps a wide table's overflow
          inside its own card instead of pushing the whole page
          sideways. Ten columns on a page capped at ~1396px will
@@ -195,27 +221,25 @@
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
-    </div>
-    {# The slot -> column-class mapping is the page's own, by design:
-       the shared primitive only toggles ``col-hidden-{slot}`` on the
-       table and never assumes a slot vocabulary. #}
-    <style>
-      #responses-table.col-hidden-tag-1 .tag-col-1,
-      #responses-table.col-hidden-tag-2 .tag-col-2,
-      #responses-table.col-hidden-tag-3 .tag-col-3 {
-        display: none;
-      }
-    </style>
-  {% else %}
-    <div class="card">
-      {% if total_row_count > 0 %}
-        <p class="muted">No reviewees match the current filter.</p>
-      {% else %}
-        <p class="muted">
-          No reviewees assigned yet — generate assignments before
-          activating the session.
-        </p>
-      {% endif %}
-    </div>
+    {% elif total_row_count > 0 %}
+      <p class="muted">No reviewees match the current filter.</p>
+    {% else %}
+      <p class="muted">
+        No reviewees assigned yet — generate assignments before
+        activating the session.
+      </p>
+    {% endif %}
+  </div>
+  {% if rows %}
+  {# The slot -> column-class mapping is the page's own, by design:
+     the shared primitive only toggles ``col-hidden-{slot}`` on the
+     table and never assumes a slot vocabulary. #}
+  <style>
+    #responses-table.col-hidden-tag-1 .tag-col-1,
+    #responses-table.col-hidden-tag-2 .tag-col-2,
+    #responses-table.col-hidden-tag-3 .tag-col-3 {
+      display: none;
+    }
+  </style>
   {% endif %}
 {% endblock %}

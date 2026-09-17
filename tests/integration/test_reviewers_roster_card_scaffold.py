@@ -1003,21 +1003,28 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
     ), "`is-locked` on the moved filter matches no rule"
 
 
-def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
+def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     """`.table-card-toolbar` is shared by seven templates and the panes
-    are a MODIFIER. Turning the shared class into a grid would make the
-    other templates' direct children grid items in a grid they were
-    never laid out for — a toolbar holding the pager and nothing else
-    would right-align inside the LEFT half instead of across the card.
+    are a MODIFIER, not a change to the shared class.
 
-    Was `test_only_reviewers_splits_...`: Observers opted in at 19P.2
-    rung 3 and Reviewees and Relationships at 19P.3 rung 2, so "only
-    Reviewers" is long past. **All four roster pages split**, and
-    Assignments joined them at 19P.5 rung 1. The claim that survives is
-    about the two templates still sharing `.table-card-toolbar` without
-    the modifier — Invitations and Responses — which hold a chip row
-    and a pager and must not be re-laid-out by a rule they never opted
-    into. 19P.5 rung 3 takes them, and this list shrinks again.
+    **All seven now opt in** — Reviewers 19P.1 rung 2a, Observers 19P.2
+    rung 3, Reviewees and Relationships 19P.3 rung 2, Assignments 19P.5
+    rung 1, Invitations and Responses 19P.5 rung 3 — so the negative
+    this test was built around ("the templates that did NOT opt in")
+    has no members left. Two claims survive it, and both still matter:
+
+    - every page carries the modifier, so one of them silently losing
+      it is a failure rather than a formatting difference nobody
+      notices;
+    - the shared rule is still `display: flex`. Folding the grid into
+      it would work today, with every page split — and would break the
+      next page that carries a toolbar without opting in, by making its
+      direct children grid items in a grid they were never laid out
+      for. The separation is the design, not an artefact of the
+      migration being unfinished.
+
+    Was `test_only_reviewers_splits_...`, then
+    `test_the_split_toolbar_is_opt_in_not_the_shared_rule`.
 
     The old version also asserted the negative for Observers behind
     `if other.status_code != 200: continue` — and this fixture never
@@ -1058,24 +1065,23 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
             f"{page} opted in at 19P.3 rung 2"
         )
 
-    # The three templates that share the class and did NOT opt in. Read
-    # from source, not rendered: Invitations and Responses need a
-    # validated session to render at all, and their ABSENCE from the
-    # modifier is the claim. This is what "opt in" now means — the
-    # roster pages are all in, so a negative asserted against one of
-    # them would be asserting nothing.
-    shared_only = sorted(
-        path.name
+    # Read from source rather than rendered: Assignments, Invitations
+    # and Responses each need a session in a particular state to render
+    # a table at all, and the claim is about every template that
+    # carries the class.
+    carriers = {
+        path.name: path.read_text()
         for path in pathlib.Path("app/web/templates/operator").glob(
             "session_*.html"
         )
         if '"table-card-toolbar' in path.read_text()
-        and "table-card-toolbar is-split" not in path.read_text()
+    }
+    assert len(carriers) == 7, sorted(carriers)
+    unsplit = sorted(
+        name for name, text in carriers.items()
+        if "table-card-toolbar is-split" not in text
     )
-    assert shared_only == [
-        "session_invitations.html",
-        "session_responses.html",
-    ], shared_only
+    assert unsplit == [], unsplit
 
 
 def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):

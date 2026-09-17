@@ -206,14 +206,14 @@ def test_no_roster_page_renders_the_operator_actions_card() -> None:
         if "operator-actions-card" in path.read_text()
     )
     assert still_carrying == [], still_carrying
-    # The class has no markup left, so no rule may claim it.
-    base = (TEMPLATES.parent / "base.html").read_text()
-    live = [
-        line
-        for line in base.splitlines()
-        if ".operator-actions-card" in line and line.strip().endswith("{")
-    ]
-    assert live == [], live
+    # The CSS half of this claim — that no rule may name a class with no
+    # markup left — used to sit here as a line scan for `.operator-
+    # actions-card` on a line ending in `{`, which cannot see a one-line
+    # rule (those end in `}`) and cannot see a selector list split across
+    # lines either. It now lives in
+    # `tests/unit/test_filter_strip_base_rule.py::
+    # test_the_two_retired_scopes_carry_no_rules_at_all`, which reads the
+    # stylesheet brace to brace and covers `.filter-card` with it.
 
 
 def test_the_second_action_row_reaches_no_template_at_all() -> None:
