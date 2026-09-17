@@ -10,6 +10,166 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 5 — A roster delete destroys relationships and says nothing
+
+### Opportunity
+
+`relationships.reviewer_id` / `reviewee_id` are
+`ForeignKey(..., ondelete="CASCADE")` (`relationship.py:52,57`) and
+`session.py:20` sets `PRAGMA foreign_keys = ON`, so the cascade fires on
+both dialects. **Four destructive paths on Reviewers and Reviewees wipe
+the Relationships roster**, measured on a seeded session:
+
+| Path | Relationships after |
+|---|---|
+| `delete-all`, either page | **0** |
+| CSV replace via Upload, either page | **0** |
+| Row-expander `bulk-delete` of one row | 2 — proportionate, correct |
+
+**The cascade is right; the silence is not.** Twelve surfaces are wrong
+about it: six confirmations that name assignments and responses but not
+relationships, three guidance cards that stop at *"clears any
+assignments already generated"*, the Guide's two-sentence Relationships
+section, and the Relationships page afterwards — *"No relationships
+yet"* over a roster that had rows a moment ago, with the reason its
+`Add new` is inactive reachable only by hovering it.
+
+Reported by the author, who hit that button and could not tell why.
+
+### Decision
+
+**Say what the delete costs before it happens, and record it once it
+has.** `spec/setup_pages.md` already sets the rule this violates — *"The
+confirmation names what goes"* — with a three-state label for
+assignments and responses; this adds the fourth thing that goes.
+
+The twelve surfaces are copy and need one query the templates lack. A
+thirteenth is not: **the audit events undercount the loss**, carrying
+`cascaded_assignments` and `cascaded_responses` and no relationships,
+because the cascade runs in the database where the service never sees
+it. Author's call (2026-09-17): it lands here, being the same omission
+and sharing the same count — splitting it would leave the log
+disagreeing with the confirmation that preceded it.
+
+**Rejected: listing relationships unconditionally.** The three-state
+rule exists because a label naming a loss that cannot happen is its own
+defect — so a count of zero must read exactly as it does today.
+**Rejected: blocking the delete, or a second acknowledgement.** The
+cascade is correct and the operator is entitled to it; what they are
+owed is the price before they pay it.
+
+### Semantics
+
+- **Zero relationships** → the label is byte-identical to today's.
+  Nothing is appended for an empty roster.
+- **`relationships_enabled` false** → the roster cannot have rows, so
+  the count is zero and the clause never renders. No new gate.
+- **Bulk-delete of selected rows** counts the relationships those rows
+  carry, not the session's — the same distinction
+  `acknowledge_response_loss` already draws, and for the same reason: a
+  selection that touches no pair should not claim it does.
+- **The Relationships empty state** distinguishes *never had any* from
+  *cannot have any yet*: with either roster empty it names the
+  dependency instead of inviting an upload the page will refuse.
+- **No new acknowledgement field.** Relationships carry no responses, so
+  the copy half is a naming change, not a second gate.
+- **The audit count is taken before the delete**, in the service — a
+  re-query afterwards always reads zero. It is the number the
+  confirmation quoted, so the log and the label agree by construction.
+  `observers.*` reaches nothing and keeps its present payload.
+
+### Judgment calls — decided
+
+- **The count is the roster's, not the cascade's** (2026-09-17). The
+  confirmation asks "what will this cost", answered before the delete;
+  a post-hoc cascade count is the audit log's job, which is out of scope
+  below.
+- **The disabled `Add new` keeps its tooltip** and the empty-state line
+  carries the same fact in text. A tooltip is fine as a reminder and
+  useless as the only copy.
+- **The audit fix rides rung 1** (2026-09-17): a count computed twice
+  is a count that can disagree with itself.
+
+### Blast radius (measured)
+
+Commands run 2026-09-17 on `origin/main` at `7b65fda`.
+
+- The confirmations: `grep -c assignment_count` → **4** each in
+  `session_reviewers.html` / `session_reviewees.html`, plus
+  `delete_discards_*` → **3** each. Seven sites per page.
+- Guidance: `session_{reviewers:156,reviewees:128,relationships:124}.html`;
+  the Guide at `guide.html:337`.
+- **No `relationship_count` exists.** Precedents:
+  `existing_assignment_count` (`csv_imports.py:918`),
+  `session_response_count` (`session_lifecycle.py:1023`); both render
+  helpers pass them at `_setup_{reviewers,reviewees}.py:221-223,284-285`.
+- Audit: `EVENT_SCHEMAS` already declares `{"counts"}` for both event
+  types (`audit.py:577,635`), so the envelope likely admits the new
+  field without a schema edit — **verify, do not assume**.
+- Tests asserting the confirm copy: **2** files.
+
+### PR ladder
+
+1. **The count helper, its context keys, and the audit field.**
+   `relationship_count` in `app/services/relationships.py`, wired into
+   both render helpers and both import handlers; the four deleting
+   services count before they delete and pass
+   `cascaded_relationships` into their `audit.counts(...)` payload,
+   with `EVENT_SCHEMAS` unchanged (both event types already declare
+   `{"counts"}`, so the envelope admits the field — verify, do not
+   assume). **No copy changes** — the context keys render nowhere yet,
+   so the visible surface is provably unmoved and rung 2 has something
+   to read.
+2. **The six confirmations.** `delete-all`, CSV replace and
+   row-expander `bulk-delete`, on both pages. One three-state rule
+   grows a fourth clause; the zero case is pinned byte-identical.
+3. **The three guidance cards and the Guide.** Reviewers' and
+   Reviewees' *"clears any assignments"* sentences, Relationships'
+   card gaining the dependency, and `guide.html:337`.
+4. **The Relationships empty state and the inactive `Add new`.** The
+   two states the page cannot currently tell apart.
+
+### Definition of done
+
+- Deleting or replacing either roster names the relationship loss
+  before it happens, asserted on all six confirmations.
+- The four deleting events carry `cascaded_relationships`, asserted
+  against a seeded roster and equal to the number the confirmation
+  quoted; strict-mode audit tests pass.
+- A session with zero relationships renders labels byte-identical to
+  today's, asserted per confirmation.
+- The Relationships empty state names the dependency when either roster
+  is empty, and reads as today when both are populated.
+- `grep -rn "clears any assignments already generated"
+  app/web/templates/operator/` → 0.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19O.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. ~~**Does the audit-event undercount belong here or in its own
+   item?**~~ **Answered 2026-09-17: here.** Author's call — same
+   omission as the copy, and the two share a count.
+
+### Out of scope
+
+- **The cascade itself.** Correct as it stands; this item changes what
+  the app says, not what it does.
+- **Observers.** Nothing references `observers`, so no delete of one can
+  cascade anywhere.
+
+### Doc impact
+
+- `spec/setup_pages.md` — § *Deleting the selected rows* describes the cascade as `Reviewer` / `Reviewee` → assignments → responses plus invitations, omitting relationships entirely; its three-state confirmation table gains a fourth state (Item 5).
+- `spec/csv_contracts.md` — the replace contract for the two rosters states what a replace destroys (Item 5).
+- `spec/architecture.md` — § *Audit-event detail schema*'s `counts` envelope gains `cascaded_relationships` alongside `cascaded_assignments` / `cascaded_responses` (Item 5).
+- `docs/status.md` — row when the item lands (Item 5).
+
+---
+
 ## Item 4 — A client-side sort strands the injected selection panel
 
 ### Opportunity
