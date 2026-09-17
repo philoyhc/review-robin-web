@@ -1094,38 +1094,36 @@ Each page offers:
   built-in default always renders (see
   [§8.5](#85-friendly-labels)). The editor answers the same
   `is_editable` gate as the rest of the page.
-- **Operator-actions card** — a search + status-filter strip
-  and a selection-driven row of bulk and per-row actions
-  (Edit, Inactivate, Activate, Add, Delete, Search, Clear),
-  with a status row beneath it carrying the selected-count pill
-  (`N of M selected`, where M is the rendered window) and the
-  delete confirmation. The preview-count line sits above the
-  preview table, not in this row, and is shared by all seven
-  preview pages.
-  In Edit / Add mode an inline Save + Cancel pair replaces the
-  row of selection-driven buttons.
 - **Preview table** — every row in the roster (paginated by
   search + filter), with sortable headers, column-visibility
   toggles for the three optional tag columns and the
-  photo-link column, and a trailing **Updated** timestamp.
-- **Upload card** below the table — CSV file input + Upload
-  submit; replaces the roster wholesale on success.
-- **Danger Zone card** below the upload — Delete All (confirm-
-  gated, wipes the whole roster).
+  photo-link column, and a trailing **Updated** timestamp. Its
+  card opens with a **two-pane toolbar** carrying the search +
+  status-filter strip, `Clear`, `Add new` and `Search`; the
+  leftmost checkbox column drives an injected **row expander**
+  holding the selection-driven actions (Edit, Inactivate,
+  Activate, Delete), the selected count (`N of M selected`,
+  where M is the rendered window) and the delete confirmation.
+  In Edit / Add mode the row's cells become inputs and a Save +
+  Cancel pair renders in an expander bar beneath it. The
+  preview-count line sits in the toolbar's left pane and is
+  shared by all seven preview pages.
+- **Upload card** and **Danger Zone card** — CSV file input +
+  Upload submit, replacing the roster wholesale on success; and
+  Delete All, confirm-gated, wiping it. Both live in the roster
+  card's **Unlock panel** above the table, with the
+  friendly-label editor. **Nothing renders below the table.**
 
-**Reviewers (19P.1) and Observers (19P.2) differ, at this altitude in
-one respect:** the operator-actions card, the upload card and the
-Danger Zone are not three surfaces in three places on those pages. The
-filter strip and the selection actions moved into the preview table
-itself (a toolbar and an injected row expander), and the destructive
-cards moved into one **Unlock panel** above the table, leaving nothing
-below it. What each control *does* — every route and confirm named
-above — is unchanged; only where an operator finds it. **The gates are
-unchanged on Reviewers; on Observers one of them is not**, and the
-paragraph below is that exception rather than a footnote to this one.
-`spec/setup_pages.md` § *Reviewers page* and § *Observers page* are
-authoritative. Reviewees and Relationships are as described until
-19P.3–.4.
+**One shape, arrived at over three items** — Reviewers 19P.1,
+Observers 19P.2, Reviewees and Relationships 19P.3. Before that the
+three control surfaces sat in three places: an `Operator actions` card
+beside the label editor, and an upload-and-Danger-Zone grid below the
+table. What each control *does* — every route and confirm named above
+— is unchanged by the move; only where an operator finds it.
+`spec/setup_pages.md` § *The roster card and the Unlock panel* and
+§ *Roster controls and their route contracts* are authoritative.
+**The gates are unchanged on three of the four; on Observers one of
+them is not**, and the paragraph below is that exception.
 
 **Observers differs in one further respect, and it is a behavior
 change rather than a layout one:** its roster stays editable through

@@ -1232,6 +1232,34 @@ which is what `## Operator actions card` becomes — the card is retired,
 the four route contracts under it were always page-independent and stay
 put.
 
+**Rung 5b — the primitives, and one spec rule adjudicated rather than
+widened.** `spec/ui_elements.md:198` said every destructive submit's
+paired confirm "is also `required` (belt-and-suspenders against a JS-off
+submit)", unconditionally. **No roster page's bulk-delete confirm
+carries it**, and the templates are right: that checkbox is attached by
+`form="<noun>-bulk-form"`, and so are `Inactivate` and `Activate`
+(`session_reviewers.html:1231-1246`) — `required` would refuse those two
+submits until an operator ticked a *delete* confirmation. The rule now
+names where it holds (the `Danger Zone`'s `delete-all` and the Upload
+card's `replace-roster`, which own their forms and do carry `required`
+on all four pages) and states the exception with its cause. The gate
+that binds either way is the route's own `confirm == "true"`.
+
+The rest is attribution: `.session-row-selected`'s injector list goes to
+six templates, `.table-card-toolbar` to all four roster pages, §6's
+`Delete` siting loses "between `Add` and `Search`", the landing-target
+entry drops its Reviewers scoping, and `settings_inventory.md`'s
+`?unlocked=1` / `?offset=` / `?focus=` rows widen to all four.
+
+`spec/participant_model.md` — the one doc-impact bullet at risk of a
+waiver. It never described the Reviewees page's shape, only its URL, so
+there was nothing to widen; what it did carry was *"the friendly-label
+editor **card** from the Reviewers / Reviewees pages is intentionally
+absent"*, now a panel tenant rather than a card. Corrected, and the
+sentence gained the consequence it was one step short of: that absence
+is why Observers' panel is two-tenanted and needs no `.card-columns`
+fallback.
+
 ### PR ladder
 
 1. **The landing contract, both pages.** Four POSTs each gain `offset` and
