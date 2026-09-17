@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    Relationship,
     Response,
     Reviewee,
     Reviewer,
@@ -117,6 +118,43 @@ _ASSIGNMENT_FK = {
     Reviewee: Assignment.reviewee_id,
 }
 
+#: The relationship columns a roster delete cascades through.
+#: ``Observer`` is absent because nothing references it, and
+#: ``Relationship`` because a relationship delete reaches no other
+#: relationship — both count 0 and their events keep their old payload.
+_RELATIONSHIP_FK = {
+    Reviewer: Relationship.reviewer_id,
+    Reviewee: Relationship.reviewee_id,
+}
+
+
+def relationship_cascade_count(
+    db: Session, *, model: type, ids: list[int]
+) -> int:
+    """How many relationships deleting ``ids`` would take with them.
+
+    **The cascade is the database's, not the ORM's.**
+    ``relationships.reviewer_id`` / ``reviewee_id`` are declared
+    ``ondelete="CASCADE"`` and there is no ORM collection on either
+    parent, so SQLAlchemy never sees these rows go. Counting them
+    afterwards always reads 0 — the count has to be taken *before* the
+    delete, which is why this is a function a caller invokes rather than
+    something the delete could report.
+
+    Session scoping comes from ``ids``, which the caller has already
+    scoped; a relationship cannot reference a row from another session.
+    """
+    column = _RELATIONSHIP_FK.get(model)
+    if column is None or not ids:
+        return 0
+    return int(
+        db.execute(
+            select(func.count())
+            .select_from(Relationship)
+            .where(column.in_(ids))
+        ).scalar_one()
+    )
+
 
 def cascade_counts(
     db: Session, *, model: type, ids: list[int]
@@ -195,6 +233,8 @@ def bulk_delete(
 
     row_ids = [row.id for row in rows]
     assignments, responses = cascade_counts(db, model=model, ids=row_ids)
+    # Before the delete, deliberately — see `relationship_cascade_count`.
+    relationships = relationship_cascade_count(db, model=model, ids=row_ids)
 
     lifecycle.invalidate_if_validated(
         db,
@@ -231,6 +271,13 @@ def bulk_delete(
             deleted=deleted,
             cascaded_assignments=assignments,
             cascaded_responses=responses,
+            # 19O.5 — omitted, not zero, for the models that reach no
+            # relationship, so their events keep the payload they had.
+            **(
+                {"cascaded_relationships": relationships}
+                if model in _RELATIONSHIP_FK
+                else {}
+            ),
         ),
         correlation_id=correlation_id,
     )

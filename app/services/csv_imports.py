@@ -915,6 +915,13 @@ def _count_assignments(db: Session, session_id: int) -> int:
     return len(db.execute(stmt).all())
 
 
+def _count_relationships(db: Session, session_id: int) -> int:
+    from app.db.models import Relationship
+
+    stmt = select(Relationship.id).where(Relationship.session_id == session_id)
+    return len(db.execute(stmt).all())
+
+
 def existing_assignment_count(db: Session, session_id: int) -> int:
     """Used by routes to surface the cascade warning before import."""
     return _count_assignments(db, session_id)
@@ -992,6 +999,15 @@ def _delete_all(
         correlation_id=correlation_id,
     )
     cascaded = _count_assignments(db, review_session.id)
+    # 19O.5 — the whole session's relationships, because emptying either
+    # roster empties them all. Taken before the delete: the cascade is
+    # `ondelete="CASCADE"` on the FK with no ORM collection on either
+    # parent, so a count afterwards always reads 0.
+    cascaded_relationships = (
+        _count_relationships(db, review_session.id)
+        if model in (Reviewer, Reviewee)
+        else None
+    )
     rows = list(
         db.execute(
             select(model).where(model.session_id == review_session.id)
@@ -1014,6 +1030,13 @@ def _delete_all(
         payload=audit.counts(
             deleted=deleted,
             cascaded_assignments=cascaded,
+            # Omitted, not zero, for observers: nothing references them,
+            # so their event keeps the payload it had.
+            **(
+                {"cascaded_relationships": cascaded_relationships}
+                if cascaded_relationships is not None
+                else {}
+            ),
         ),
         correlation_id=correlation_id,
     )

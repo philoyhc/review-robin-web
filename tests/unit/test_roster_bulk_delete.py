@@ -367,6 +367,11 @@ def test_one_audit_event_carries_the_three_counts(db: Session) -> None:
         "deleted": 2,
         "cascaded_assignments": 2,
         "cascaded_responses": 5,
+        # 19O.5 — the fourth count. Zero here and asserted as present
+        # rather than tolerated: a reviewer delete CAN reach a
+        # relationship, so the key vanishing is the regression, not the
+        # value being 0.
+        "cascaded_relationships": 0,
     }, "counts are summed across the selection, not the last row's"
 
 
