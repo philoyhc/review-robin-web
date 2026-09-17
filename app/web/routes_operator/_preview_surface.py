@@ -10,9 +10,11 @@ the operator: renders the same ``reviewer/review_surface.html``
 template against the same ``_surface_context`` plumbing, but bypasses
 the deadline / acceptance gates and rewrites the action-row Prev/Next
 URLs back at this operator-side route so the operator can flip pages.
-Save / Discard / Submit render as inert disabled buttons in
+Save / Cancel / Submit render as inert disabled buttons in
 ``preview_mode``; the surface ``<form>`` is replaced with a ``<div>``
-so even pressing Enter cannot drive a write.
+so even pressing Enter cannot drive a write. **Inputs stay enabled** —
+``preview_mode`` forces ``accepting=True`` — so the operator can type;
+nothing they type goes anywhere.
 
 Distinct from the iframe-based preview card on the Previews hub
 (``_operations.py`` ``previews_index``), which renders the same

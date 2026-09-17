@@ -297,8 +297,8 @@ def test_review_surface_preview_banner_is_banner_info(
     # in `test_operator_preview_surface.py::
     # test_renders_reviewer_surface_template_with_operator_banner`;
     # here it is asserted only far enough to prove the banner is the
-    # operator one and has a body.
-    assert "Operator view &mdash; read-only." in body
+    # operator one.
+    assert "<strong>Operator view.</strong>" in body
 
 
 # ── D7: page header ─────────────────────────────────────────────────────

@@ -201,7 +201,12 @@ def test_reviewer_side_surface_still_renders_write_path(
         f"/me/sessions/{review_session.id}/1"
     ).text
 
-    assert "Preview — not visible to reviewers" not in body
+    # Re-aimed at 19P.6 rung 2. This watched for
+    # "Preview — not visible to reviewers", which that rung deleted from
+    # the app entirely — so the guard could no longer fail, and had
+    # stopped being able to see the operator banner leak onto the
+    # reviewer's live surface. It watches the live string now.
+    assert "Operator view" not in body
     assert ">Save</button>" in body
     assert (
         f'formaction="/me/sessions/{review_session.id}/submit"' in body
