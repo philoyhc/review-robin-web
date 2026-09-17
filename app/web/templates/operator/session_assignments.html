@@ -525,9 +525,28 @@
         var BULK_BASE =
           {{ ("/operator/sessions/" ~ session.id ~ "/assignments") | tojson }};
 
-        function rows() {
+        // Only the rows the operator can see. This page has something
+        // no roster page has: a CLIENT-side filter. The `Show`
+        // checkboxes in the status blocks set `style.display = "none"`
+        // on rows of an unticked instrument, so a row can be in the
+        // DOM, still ticked, and invisible — while the roster pages
+        // filter server-side, where a filtered-out row is not in the
+        // DOM at all and cannot be selected.
+        //
+        // That invariant is what the rest of this script assumes:
+        // select-all reaches these rows, the count's denominator is
+        // these rows, and the panel anchors among these rows. Without
+        // it the panel sits after an invisible row — attached, to the
+        // eye, to an unrelated visible one — over a selection that
+        // includes rows nobody can see.
+        function allRows() {
           return Array.prototype.slice.call(
             body.querySelectorAll("tr[data-status]"));
+        }
+        function rows() {
+          return allRows().filter(function (row) {
+            return row.style.display !== "none";
+          });
         }
         function selectedRows() {
           return rows().filter(function (row) {
@@ -667,6 +686,41 @@
           setTimeout(render, 0);
         });
 
+        // The instrument filter hides and shows rows after load, so a
+        // selection can go invisible under the operator. Untick what
+        // it hid — restoring the selected-implies-visible invariant
+        // above — and rebuild. The filter script announces rather than
+        // calling in: it lives in its own IIFE at the end of the page,
+        // runs whether or not the session is editable, and has no
+        // reference to anything here.
+        document.addEventListener("rrw:assignment-rows-filtered", function () {
+          allRows().forEach(function (row) {
+            if (row.style.display !== "none") return;
+            var box = row.querySelector(".assignment-select");
+            if (box) box.checked = false;
+          });
+          tickOrder = tickOrder.filter(function (id) {
+            var row = document.getElementById(id);
+            return row && row.style.display !== "none";
+          });
+          render();
+        });
+
+        // A chip toggle changes how many columns the table shows, and
+        // `colSpan` was counted when the panel was built. The shared
+        // primitive only flips `col-hidden-*` classes on the table, so
+        // nothing here would hear it: the table widens and the panel
+        // stays short. Delegated on `document` because the primitive
+        // is (`base.html`), and deferred so the class lands first.
+        document.addEventListener("click", function (event) {
+          if (!event.target.closest) return;
+          if (!event.target.closest("[data-col-toggle]")) return;
+          setTimeout(function () {
+            if (!panel) return;
+            panel.querySelector("td").colSpan = visibleColumnCount();
+          }, 0);
+        });
+
         // Sorting reorders `tbody`'s children and the panel is one of
         // them: `base.html`'s `_rrwApplySort` slices `tbody.children`,
         // reads `a.children[col]`, and gets `undefined` for a row whose
@@ -746,6 +800,12 @@
             r.dataset.rowInstrument
           ) >= 0 ? "" : "none";
         });
+        // 19P.5 rung 2 — the row expander needs to know: hiding a row
+        // must not leave it selected, and the panel must not anchor
+        // after something invisible. Announced rather than called,
+        // since that script is `{% raw %}{% if can_edit %}{% endraw %}` and this one is not.
+        document.dispatchEvent(
+          new CustomEvent("rrw:assignment-rows-filtered"));
       }
       boxes.forEach(function (b) {
         b.addEventListener("change", apply);

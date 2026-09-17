@@ -436,3 +436,63 @@ def test_a_partial_selection_reads_as_a_dash(
     body = _page(client, rs)
 
     assert "selectAll.indeterminate = (n > 0 && n < all.length);" in body
+
+
+def test_the_selection_surface_only_reaches_rows_you_can_see(
+    client: TestClient, db: Session
+) -> None:
+    """This page has a client-side filter; no roster page does.
+
+    The `Show` checkboxes in the status blocks set `style.display =
+    "none"` on rows of an unticked instrument, so a row can be in the
+    DOM, still ticked, and invisible. The roster pages filter through
+    `?status=`, where a filtered-out row is not in the DOM at all —
+    and the expander idiom assumes exactly that: select-all reaches
+    the rows, the count's denominator is the rows, and the panel
+    anchors among them.
+
+    Measured on the committed version before this guard: with the
+    owning instrument unticked the panel stayed put, anchored after a
+    hidden row, with one row hidden and still selected.
+    """
+    rs = _seeded(client, db, "asn-exp-filtered")
+    body = _page(client, rs)
+
+    # `rows()` is the visible ones; `allRows()` is the DOM's.
+    assert 'return row.style.display !== "none";' in body
+    assert "function allRows()" in body
+
+    # The filter announces, because it runs in its own IIFE outside
+    # `can_edit` and holds no reference to the expander.
+    assert 'new CustomEvent("rrw:assignment-rows-filtered")' in body
+    assert (
+        'document.addEventListener("rrw:assignment-rows-filtered"' in body
+    )
+    handler = body[
+        body.index('document.addEventListener("rrw:assignment-rows-filtered"') :
+    ][:600]
+    assert "box.checked = false" in handler, "a hidden row stays selected"
+    assert "tickOrder = tickOrder.filter" in handler, "stale anchor survives"
+    assert "render();" in handler
+
+
+def test_a_column_toggle_keeps_the_panel_the_table_s_width(
+    client: TestClient, db: Session
+) -> None:
+    """`colSpan` is counted when the panel is built, and the shared
+    chip primitive only flips `col-hidden-*` classes on the table — so
+    nothing in the expander would hear a toggle and the panel would
+    stay at its old width.
+
+    Measured on the committed version: panel `colSpan` 11 against 10
+    visible headers after one chip was unticked. With this listener,
+    10 and 10.
+    """
+    rs = _seeded(client, db, "asn-exp-colspan-live")
+    body = _page(client, rs)
+
+    start = body.index('if (!event.target.closest("[data-col-toggle]")) return;')
+    listener = body[start : start + 320]
+    assert "colSpan = visibleColumnCount()" in listener
+    # Deferred, so the primitive's class change lands first.
+    assert "setTimeout(" in listener
