@@ -1604,13 +1604,15 @@ a no-match search shows, which is more than this item's move.
 Reported by the author, 2026-09-17, with a screenshot of the detail
 page on a `draft` session.
 
-**The table lists every reviewer; the link works for some of them.**
+**The table's rows do not depend on invitations; its links do.**
 `build_invitations_rows` iterates `monitoring.per_reviewer_progress`,
-so there is a row per reviewer whether or not an invitation exists —
-but `session_invitations.html:207` wraps the name in
-`{% if row.invitation %}`. Before **Create invites** the page is a list
-of names that go nowhere, which is exactly when an operator wants to
-open one and check it.
+whose row set is `_assigned_active_reviewers` — **active** reviewers
+with **at least one included assignment**, not every reviewer — and
+nothing in it consults an `Invitation`. But
+`session_invitations.html:207` wraps the name in
+`{% if row.invitation %}`. Before **Create invites** the page is a
+list of names that go nowhere, which is exactly when an operator wants
+to open one and check it.
 
 **The page they cannot reach is a scaffold.** Measured at Item 4's
 retirement: `session_invitations_reviewer_detail.html` renders one
@@ -1634,8 +1636,11 @@ the Review Progress card gains a preview-surface link opening in a
 **new tab**.
 
 - **Rejected: keeping the invitation key** and gating the link. The
-  route already resolves the reviewer from the invitation and then
-  discards it, so the invitation was never the subject.
+  invitation is not the subject of the page: it supplies one field
+  (`most_recent_invitation_url`), while the reviewer it is looked up
+  from supplies the row match, the `<h1>`, the email, the breadcrumb
+  label and the template's `reviewer` slot. Keying on the field
+  rather than the subject is what makes the link conditional.
 - **Rejected: a second route** for the un-invited case. One page, one
   key; the invitation becomes an optional field on it.
 - **Deferred to Item 7: moving the Previews hub's email previews
@@ -1654,9 +1659,15 @@ the Review Progress card gains a preview-surface link opening in a
   yet."* — written for an unsent invitation, true unchanged for an
   absent one.
 - **The reviewer-scoped lookup is hoisted, not copied.**
-  `_require_reviewer_in_session` lives in `_setup_reviewers.py` and
-  `spec/architecture.md` forbids slice-to-slice imports, so it moves
-  to `_shared.py` beside `_require_instrument_in_session`.
+  `_require_reviewer_in_session` lives in `_setup_reviewers.py`, and
+  `_operations.py` is a sibling slice. **Two rules, neither of them
+  where an earlier draft of this bullet put them**:
+  `spec/architecture.md` § *Three-layer split* says a lookup needed by
+  more than one route belongs in `_shared.py` and calls that "the
+  preferred shape"; the ban on slice-to-slice imports is `CLAUDE.md`,
+  and `docs/unenforced_conventions.md` §2.2 files it as a convention
+  **with no check** — clean at 20 slices today. So the hoist is the
+  house shape plus an unenforced rule, not a spec prohibition.
 - **A new tab is the existing contract.**
   `spec/operator_ui_concept.md:197` already says this route is
   *"opened in a new tab"*; `_preview_picker.html:80` is the shipped
@@ -1666,14 +1677,30 @@ the Review Progress card gains a preview-surface link opening in a
   `preview_mode` forces `accepting=True`, so `responses_visible_when_closed`
   is bypassed. Deliberate operator affordance, author's call
   2026-09-17, and stated in the spec rather than rediscovered.
-- **No assignments means no link** — the Review Progress card renders
-  on `review_progress_total > 0`, and a reviewer with nothing assigned
-  has no surface to look at.
-- **Forward compatibility with Item 7.** The link points straight at
-  `/preview-surface`, never through `/previews`. One coupling remains,
-  **named not touched**: `_resolve_preview_reviewer` 303s to
-  `/previews` when `?reviewer_email=` does not resolve — unreachable
-  from this page, and Item 7's to repoint.
+- **The re-key creates a reachable state the page has never had.**
+  Every row in the table is an active reviewer with an included
+  assignment, so the Review Progress card's `review_progress_total > 0`
+  gate never fails from the table. A **reviewer-keyed URL can be typed
+  for any reviewer in the session** — inactive, unassigned, or both —
+  and that page renders with no card and so no surface link, which is
+  right (there is nothing to look at) but is new. Rung 1 asserts it
+  rather than discovering it.
+- **Forward compatibility with Item 7, and there are two couplings,
+  not one.** The link points straight at `/preview-surface`, never
+  through `/previews`, so Item 6 adds none. What is already there,
+  **named not touched**:
+  1. **The route resolves its reviewer through the hub's own view
+     builder.** `_resolve_preview_reviewer`
+     (`_preview_surface.py:67`) calls
+     `views.build_preview_picker_context`, whose docstring is
+     *"Hydrate the Previews-page reviewer picker."* Retiring the page
+     leaves that builder orphaned and load-bearing. This is the larger
+     coupling and the one Item 7 has to answer.
+  2. **A 303 back to the hub**, in `preview_surface` itself
+     (`_preview_surface.py:121-130`, not in the resolver, which only
+     returns `None`). It fires on an unresolved `?reviewer_email=`
+     *and* on a session with zero reviewers. Neither is reachable from
+     Item 6's link, which always passes a resolvable email.
 
 ### Judgment calls — decided
 
@@ -1686,6 +1713,11 @@ the Review Progress card gains a preview-surface link opening in a
 - **Banner copy replaced, not conditionalized.** One neutral sentence
   is true from both entry points; two variants is a branch to keep
   right. 2026-09-17.
+- **The surface link is `btn secondary`** — the canonical Secondary
+  role (`spec/ui_elements.md` §6), matching the shipped precedent for
+  the same destination at `_preview_picker.html:79`. Named here
+  because the button-audit row it earns has a `Canonical` column.
+  2026-09-17.
 
 ### Blast radius (measured)
 
@@ -1694,27 +1726,39 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - `grep -rn "invitations/{{ .*}}/detail" app/web/templates/` → **1**
   (`session_invitations.html:208`) — the only inbound link in the app.
 - `grep -rln "invitations/.*detail" tests/ --include=*.py` → **1**
-  (`test_invitations.py`, four sites from `:676`).
-- `grep -rn "invitations/{invitation_id}/detail" spec/ docs/` → **2**
-  (`spec/operations_pages.md:310`, `docs/status.md:825`); two dated 11C
-  rows stay as history.
+  (`test_invitations.py`), carrying **3** URL-bearing sites —
+  `:675-676`, `:689`, `:704` — under one test from `:680`.
+- `grep -rlnE "invitations/\{(invitation_id|iid|inv_id)\}/detail" spec/ docs/`
+  → **2 live** (`spec/operations_pages.md:310`,
+  `docs/status.md:825`) plus **2 dated 11C rows** that stay as
+  history. The placeholder is spelled three ways across them, so the
+  single-spelling grep an earlier draft recorded here found one of the
+  two and is not the command that produced the count.
 - `grep -rln "preview-surface" app/web/templates/` → **1**
-  (`_preview_picker.html`); `… spec/ docs/` → **5**.
-- `spec/operator_button_audit.md` §13 → **6** rows; this adds one.
-- Tests asserting the preview surface renders a **saved response**:
-  **0**, across the five files that touch the route.
+  (`_preview_picker.html`); `… spec/ docs/` → **5**; `… tests/` →
+  **6** (five test modules plus the `_full_preview.py` helper).
+- `spec/operator_button_audit.md` §13 → **5** rows (84, 85, 86, 87,
+  87a). Its declared `Source:` is `session_invitations.html`, and the
+  new link lands on `session_invitations_reviewer_detail.html`, which
+  has **no section at all** — see the manifest at the end of this item.
 
 ### PR ladder
 
 1. **Re-key the route.** `/invitations/reviewers/{reviewer_id}`,
    `_require_reviewer_in_session` hoisted to `_shared.py`, the old URL
-   308ing where an invitation exists, `invite_url` optional, the
-   table's link unconditional. **The detail page's cards do not
+   308ing where an invitation exists, the table's link unconditional.
+   **The invitation is resolved by reviewer, not taken from the
+   path**: `most_recent_invitation_url` takes `invitation_id=`, and
+   `InvitationsRow.invitation` already carries the row via
+   `monitoring._invitations_by_reviewer`, so `invite_url` is computed
+   when that is not `None` and skipped when it is. Plus a test for the
+   state the re-key newly makes reachable — a typed URL for an
+   inactive or unassigned reviewer. **The detail page's cards do not
    change** — it renders as it does today, for more reviewers.
 2. **The surface link.** A link in the Review Progress card, new tab;
    the neutral banner on the preview surface; and the test that saved
    responses render there. **Does not touch the Previews hub.**
-3. **The close.** Docs per `### Doc impact`.
+3. **The close.** Docs per the manifest at the end of this item.
 
 ### Definition of done
 
@@ -1746,18 +1790,28 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - **Growing the detail page past its scaffold.** Item 5's *Out of
   scope* named it; still unowned, and Item 7 is where it lands if
   anywhere.
-- **`_operations.py:944-946`'s stale docstring** (claims the Responses
-  detail surface lists assigned reviewers; it renders no such list).
-  Found by Item 4's cold read, recorded there, not this item's file.
+- **`_operations.py:944-945`'s stale docstring** — it claims the
+  Responses detail surface lists the reviewers assigned to the
+  reviewee, and the template renders no such list. Found by Item 4's
+  cold read and reported on its PR only; **it is written down nowhere
+  in `guide/`**, which an earlier draft of this bullet said it was.
+  Named here so it is, and left for whoever grows that page.
 
 ### Doc impact
 
-- `spec/operations_pages.md` — § *Per-row drill-in*: the new URL, the unconditional link, and the surface link in the Review Progress card (Item 6).
-- `spec/preview_hub.md` — the preview surface gains a second entry point; the banner's copy (Item 6).
-- `spec/operator_ui_concept.md` — line 197's preview-surface description names the Previews hub as the way in; it becomes one of two (Item 6).
-- `spec/operator_button_audit.md` — §13 gains the surface link's row (Item 6).
-- `spec/architecture.md` — `_require_reviewer_in_session` moves to `_shared.py`; the per-package module map names what lives there (Item 6).
+- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, and the surface link in the Review Progress card (Item 6).
+- `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, and "reached from the Previews hub picker card" becoming one entry point of two (Item 6).
+- `spec/preview_hub.md` — the preview surface gains a second entry point (Item 6).
+- `spec/operator_ui_concept.md` — the two passages that name the picker button as the way in, `:102` and `:367`. **Not `:197`**, which says the hub carries no iframe surface card and is untouched by this item (Item 6).
+- `spec/operator_button_audit.md` — the surface link's row. **Which section is an open question**: §13's declared `Source:` is `session_invitations.html` and this button ships on `session_invitations_reviewer_detail.html`, which the audit does not cover at all (Item 6).
 - `docs/status.md` — the route-table row for the detail page, and the item row when it lands (Item 6).
+
+**Not committed to, deliberately:** `spec/architecture.md`. Its
+§ *Three-layer split* already prescribes `_shared.py` for a
+`_require_*_in_session` helper, so the hoist changes nothing it says;
+an earlier draft of this manifest named it for a "per-package module
+map" that file does not contain, which would have failed C3 at close
+for want of anything to edit.
 
 ---
 
@@ -1819,13 +1873,31 @@ Workflow card's stepper carries people there, or something is renamed.
 
 ### What Item 6 leaves for it
 
-- **One coupling, named not touched**: `_resolve_preview_reviewer`
-  303s to `/operator/sessions/{id}/previews` when `?reviewer_email=`
-  does not resolve. Unreachable from Item 6's link, and whichever fate
-  wins, this is the line that breaks on retirement.
-- **Nothing else.** Item 6's link points straight at
-  `/preview-surface`, never through `/previews`, precisely so this
-  item stays open.
+**Two couplings, not one** — an earlier draft of this stub said one,
+and named the wrong function for it.
+
+1. **The preview surface resolves its reviewer through the hub's own
+   view builder.** `_resolve_preview_reviewer`
+   (`app/web/routes_operator/_preview_surface.py:67`) calls
+   `views.build_preview_picker_context`, whose docstring is *"Hydrate
+   the Previews-page reviewer picker."* Retiring the page leaves that
+   builder orphaned and still load-bearing for a route that survives.
+   **This is the larger coupling** and the one that decides how much
+   work a retirement actually is.
+2. **A 303 back to the hub**, in `preview_surface` itself
+   (`_preview_surface.py:121-130` — *not* in the resolver, which only
+   returns `None`). It fires on an unresolved `?reviewer_email=` and
+   on a session with zero reviewers.
+
+**Item 6 adds neither.** Its link points straight at
+`/preview-surface`, never through `/previews`, and always passes a
+resolvable email — precisely so this item stays open.
+
+Prose couplings are a third, smaller class: the module and helper
+docstrings in `_preview_surface.py`, and the hub references in
+`spec/preview_hub.md`, `spec/reviewer-surface.md`,
+`spec/operator_ui_concept.md` and `spec/role_navigator.md`. Counted
+when this item is planned, not before.
 
 ### Open questions
 
