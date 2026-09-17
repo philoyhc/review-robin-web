@@ -784,6 +784,43 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     assert "Review Progress" not in body
 
 
+def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
+    client: TestClient, db: Session
+) -> None:
+    """A sent invitation outlives its reviewer's place on the table.
+
+    `reviewers.bulk_inactivate` flips `status` only, so an invitation
+    that was already sent is still the live link in that reviewer's
+    inbox — and the page that shows it must keep showing it. Deriving
+    the invitation from `build_invitations_rows` loses it, because that
+    row set is `_assigned_active_reviewers`; the lookup is by reviewer
+    and session instead, which is what the old invitation-keyed route
+    effectively did.
+    """
+    session = _ready_session(client, db, code="drill-url-off")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    reviewer.status = "inactive"
+    db.commit()
+
+    assert reviewer.id not in {
+        r.reviewer.id for r in views.build_invitations_rows(db, session)
+    }
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    ).text
+    assert "/me/invite/" in body
+    assert "No invitation URL has been issued yet." not in body
+
+
 def test_detail_page_404s_for_a_reviewer_in_another_session(
     client: TestClient, db: Session
 ) -> None:

@@ -616,7 +616,27 @@ def invitation_reviewer_detail(
     # 200, no Review Progress card. What changed is WHO can reach it —
     # every reviewer in the session, including one that never had an
     # invitation, where before only an invitation could name one.
-    invitation = row.invitation if row is not None else None
+    #
+    # **The invitation is resolved from the reviewer, not from `row`.**
+    # Taking `row.invitation` loses it for exactly the reviewers above:
+    # a sent invitation outlives its reviewer's place on the table, and
+    # is still the live link in their inbox, so the page that shows it
+    # must keep showing it. `generate_invitations` skips reviewers who
+    # already have one and `regenerate_token` mutates in place, so
+    # there is at most one per (session, reviewer) and this is
+    # unambiguous.
+    #
+    # `session_id` in the filter is redundant by construction — the
+    # reviewer above is already session-scoped, so their invitation
+    # cannot belong to another session without corrupt data. Kept as
+    # defence in depth, and named here because no test can distinguish
+    # it: a mutation dropping it survives the suite, and should.
+    invitation = db.execute(
+        select(Invitation).where(
+            Invitation.session_id == review_session.id,
+            Invitation.reviewer_id == reviewer.id,
+        )
+    ).scalar_one_or_none()
     invite_url = (
         invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
         if invitation is not None
