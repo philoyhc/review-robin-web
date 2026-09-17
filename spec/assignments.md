@@ -597,20 +597,38 @@ The Operations-row page at
    summarising the current materialisation.
 2. **Validation results banner** (when `?validated=1` or a
    validation pass surfaces issues).
-3. **Operator-actions card** — the search / status filter and the
-   selection-driven bulk Inactivate / Activate row. Half width,
-   flush right (`.grid-right` in a `bottom-grid`).
-4. **Assignments preview card** — the row-level table of
+3. **Assignments preview card** — the row-level table of
    materialised pairs, with a per-row Include checkbox. It carries
    **no `<h2>`** — a preview-table card does not take one, and this
    page's `<h2>` belongs to the status table above.
 
-   Above the rows sit the **`Show columns:` chips**, all three
-   groups on one line — `Show reviewers:` / `Show reviewees:` /
-   `Show relationships:`, nine slots from three sources against one
+   The card opens with the **two-pane toolbar**
+   (`.table-card-toolbar.is-split`) the other six table pages carry;
+   `spec/setup_pages.md` § *The table toolbar* states the shape once.
+   The left pane holds the `Show columns:` chips, the pager cluster
+   and the preview-count line; the right pane holds the filter strip
+   — `Search by:`, the search box, the status filter, `Clear` and
+   `Search`.
+
+   **There was an `Operator-actions card` here until 19P.5**, half
+   width and flush right (`.grid-right` in a `bottom-grid`), carrying
+   both the strip and the bulk Inactivate / Activate row. Rung 1
+   moved the strip into the toolbar, rung 2 moved the actions into
+   the row expander, and the card, its grid and the `.grid-right`
+   rule went with them. **This page took the roster idiom last and
+   is the only Operations page with selection**, which is why it gets
+   both halves where Invitations and Responses get the toolbar alone.
+
+   The three chip groups sit on one line where they fit —
+   `Show reviewers:` / `Show reviewees:` / `Show relationships:`,
+   nine slots from three sources against one
    `rrw-assignment-col-visibility` key. A slot with nothing in it
    across the session's rosters renders neither chip nor column, and
-   a group with all three empty renders no label either. The rule
+   a group with all three empty renders no label either. In the
+   half-width pane three groups often do not fit, so the row carries
+   `.col-chip-row.is-grouped` and wraps **between** groups with the
+   second line flush left rather than indented
+   (`spec/ui_elements.md` §10). The rule
    and the primitive are in `spec/setup_pages.md`, "Preview tables
    (shared toggle pattern)"; pair-context presence is counted
    **active-only**, matching the rule engine, where the
@@ -686,6 +704,46 @@ change self-review inclusion."* on `ready` and `expired`, which
 …"* on `archived`, which it refuses. `spec/lifecycle.md` §2.5
 and §5 carry the state machine.
 
+### The row expander
+
+**The selection's controls are a row injected into the table** beneath
+the selected row, not a card beside it — the roster idiom
+(`spec/setup_pages.md` § *The row expander*), taken here at 19P.5
+rung 2. It carries the selected count — `N of M selected`, where **M
+is the rendered window**, as the rosters render it and not the card's
+bare `N selected` — and **one** button.
+
+Three things differ from the rosters, and each follows from what this
+page is:
+
+- **It offers only the actionable status button** — `Inactivate` when
+  every selected pair is included, `Activate` when every one is
+  excluded, both when the selection is mixed. The retired card
+  rendered both always, so a selection of entirely-included rows
+  carried an `Activate` that would no-op on every row. **A behaviour
+  change, not a relocation**, and the same one 19P.1 made on
+  Reviewers.
+- **No `Edit` and no `Delete`.** Assignments are not edited row by
+  row and not deleted at all — the operator changes which pairs exist
+  by changing the rule or the rosters and regenerating (§ *Reconcile +
+  regenerate*). So there is no two-stage delete gate here, and the
+  count is the only other thing in the row.
+- **The funnel counts visible rows, not selected ones.** This is the
+  only page with a *client-side* filter: the status table's
+  per-instrument `Show` checkboxes hide rows with `display: none`,
+  which breaks the rosters' unstated assumption that a selectable row
+  is a visible one. The panel anchors after the last **visible**
+  selected row and its `colSpan` is recounted on every chip toggle;
+  both were defects when the idiom was first ported. The page's
+  sortable headers need the same care — `_rrwApplySort` slices
+  `tbody.children` with the injected panel among them, so the panel is
+  removed before a sort rather than sorted null-last to the foot of
+  the table.
+
+The count renders as **bare text, not a pill**: the expander's
+background and the info-pill background resolve to the same primitive
+in both themes, so a pill inside the expander is invisible.
+
 ### The page's lifecycle surface
 
 The Assignments page splits the way the roster Setup pages do
@@ -693,23 +751,28 @@ The Assignments page splits the way the roster Setup pages do
 
 - **The selection-driven half follows `is_editable`** — row
   checkboxes, the select-all header cell, the hidden
-  `assignments-bulk-form` they post to, the selected-count pill,
+  `assignments-bulk-form` they post to, the selected count,
   `Inactivate` / `Activate` and the wiring script render only on
   `draft` and `validated`, which is what all five mutating routes
   enforce.
 - **The read-only half renders in every state** — the `Search by:`
   select, the search box, `Clear` and the `Search` button. The count
-  itself is not in this card — see "The preview-count line" below.
+  itself is not in the strip — see "The preview-count line" below.
   Reading a finished session's assignments is legitimate, and
   mid-session is exactly when an operator checks who is assigned to
   whom.
 
-**The split is per-half, not per-card, and that is the point.**
-Gating the whole operator-actions card on one predicate disagrees
-with the mutating routes on **three of the five lifecycle states**,
-in both directions: on `not is_ready`, `expired` and `archived`
-offer live controls the routes refuse, and `ready` loses the search
-altogether.
+**The split is per-half, not per-card — and since 19P.5 the two
+halves are not in one card at all.** The strip is the table
+toolbar's right pane and the selection controls are in the row
+expander, which is a stronger form of the same rule: a surface that
+renders in every state and a surface that appears only on a ticked
+row cannot share a predicate, because they no longer share an
+element. The rule is kept because the reason outlives the card —
+gating one container on one predicate disagreed with the mutating
+routes on **three of the five lifecycle states**, in both
+directions: on `not is_ready`, `expired` and `archived` offered live
+controls the routes refuse, and `ready` lost the search altogether.
 
 **No lock card here.** The four roster pages have none on
 `expired` / `archived` (`spec/lifecycle.md` §5) while Instruments
@@ -785,8 +848,8 @@ the instrument-side filter — client-side, over the rendered window.
 ### Status filter
 
 `?status=` filters the pairs by **`Assignment.include`** — the
-boolean the operator-actions card's own **Inactivate** / **Activate**
-buttons flip, and which the Include column already shows as a
+boolean the row expander's **Inactivate** / **Activate** buttons
+flip, and which the Include column already shows as a
 `no` pill. Without the filter an operator can inactivate in bulk
 and then have no way to list the result back, which is what it is
 for.
@@ -824,7 +887,9 @@ sentence the seven preview pages share, rendered by
 `operator/partials/_preview_count_line.html` in
 `.table-showing-hint` — the roster pages' class, and not
 `.form-help`, which sets `--fs-small` and would render this page's
-line a size smaller than the identical sentence on a roster.
+line a size smaller than the identical sentence on a roster. Since
+19P.5 rung 1 it renders **inside the toolbar's left pane**, with the
+chips and the pager, rather than below the toolbar.
 
 The noun is **`assignments`**, never `unique pairs`. The branches and
 the rule behind them are in `spec/setup_pages.md`, "Preview tables
@@ -907,8 +972,10 @@ A row with `include=False` renders its Include cell as a
 warning-coloured `no` pill (`.pill-empty`); the row itself is **not**
 dimmed or otherwise restyled. The (select) column
 enables bulk-set Include via a checkbox column header + a
-per-row checkbox; the operator-actions card carries the
-**`Inactivate`** / **`Activate`** buttons the selection drives.
+per-row checkbox; the **row expander** injected beneath the
+selection carries the **`Inactivate`** / **`Activate`** button the
+selection drives — only ever the one that would act on the ticked
+rows, never both.
 
 #### Bulk-set Include
 
