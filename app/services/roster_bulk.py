@@ -128,6 +128,17 @@ _RELATIONSHIP_FK = {
 }
 
 
+def reaches_relationships(model: type) -> bool:
+    """Whether deleting a ``model`` row can destroy a relationship.
+
+    One source of truth for a rule three call sites need —
+    ``bulk_delete`` here, and ``_delete_all`` / ``_save`` in
+    ``csv_imports``. It was written twice before 19O.5's cold read: a
+    hand-kept tuple there and this map here, agreeing by luck.
+    """
+    return model in _RELATIONSHIP_FK
+
+
 def relationship_cascade_count(
     db: Session, *, model: type, ids: list[int]
 ) -> int:
@@ -275,7 +286,7 @@ def bulk_delete(
             # relationship, so their events keep the payload they had.
             **(
                 {"cascaded_relationships": relationships}
-                if model in _RELATIONSHIP_FK
+                if reaches_relationships(model)
                 else {}
             ),
         ),

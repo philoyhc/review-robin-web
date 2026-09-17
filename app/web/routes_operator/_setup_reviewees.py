@@ -28,7 +28,6 @@ from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
 from app.services import reviewees as reviewees_service
-from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewees import RevieweeOperationError
 from app.web import breadcrumbs, views
@@ -223,13 +222,6 @@ def _render_reviewees_page(
             ),
             "roster_response_count": lifecycle.session_response_count(
                 db, review_session
-            ),
-            # 19O.5 rung 1 — the relationships this roster's rows
-            # carry. Wired here and rendered nowhere yet: the
-            # confirmations that will name it land at rung 2, and
-            # landing the number first keeps that slice to copy.
-            "relationship_count": relationships_service.existing_count(
-                db, review_session.id
             ),
             "delete_discards_responses": (
                 lifecycle.session_has_responses(db, review_session)

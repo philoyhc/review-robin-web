@@ -21,6 +21,7 @@ from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, field_label_csv
+from app.services import roster_bulk
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import EMAIL_RE, normalize_email
@@ -843,6 +844,13 @@ def _save(
         correlation_id=correlation_id,
     )
     cascaded_assignment_count = _count_assignments(db, session.id)
+    # Before the delete below: the FK cascade is the database's, so
+    # counting afterwards reads 0. Same mechanism as `_delete_all`.
+    cascaded_relationship_count = (
+        _count_relationships(db, session.id)
+        if roster_bulk.reaches_relationships(model)
+        else None
+    )
 
     existing_rows = list(
         db.execute(select(model).where(model.session_id == session.id)).scalars()
@@ -867,6 +875,14 @@ def _save(
             new=len(rows),
             replaced=replaced,
             cascaded_assignments=cascaded_assignment_count,
+            # 19O.5 — a replace deletes every existing row and re-adds,
+            # so it takes the relationships with it exactly as
+            # `delete-all` does. Counted before `_replace_rows` runs.
+            **(
+                {"cascaded_relationships": cascaded_relationship_count}
+                if cascaded_relationship_count is not None
+                else {}
+            ),
         ),
         context={"filename": filename} if filename else None,
         correlation_id=correlation_id,
@@ -881,6 +897,11 @@ def _save(
             "new": len(rows),
             "replaced": replaced,
             "cascaded_assignments": cascaded_assignment_count,
+            **(
+                {"cascaded_relationships": cascaded_relationship_count}
+                if cascaded_relationship_count is not None
+                else {}
+            ),
             "correlation_id": correlation_id,
         },
     )
@@ -916,10 +937,12 @@ def _count_assignments(db: Session, session_id: int) -> int:
 
 
 def _count_relationships(db: Session, session_id: int) -> int:
-    from app.db.models import Relationship
+    # The service's own counter, not a third copy of the query. Imported
+    # inside the function because `relationships` imports this module at
+    # its top level — a module-level import here would cycle.
+    from app.services import relationships as relationships_service
 
-    stmt = select(Relationship.id).where(Relationship.session_id == session_id)
-    return len(db.execute(stmt).all())
+    return relationships_service.existing_count(db, session_id)
 
 
 def existing_assignment_count(db: Session, session_id: int) -> int:
@@ -1005,7 +1028,7 @@ def _delete_all(
     # parent, so a count afterwards always reads 0.
     cascaded_relationships = (
         _count_relationships(db, review_session.id)
-        if model in (Reviewer, Reviewee)
+        if roster_bulk.reaches_relationships(model)
         else None
     )
     rows = list(
@@ -1048,6 +1071,11 @@ def _delete_all(
             "source": source_label,
             "deleted": deleted,
             "cascaded_assignments": cascaded,
+            **(
+                {"cascaded_relationships": cascaded_relationships}
+                if cascaded_relationships is not None
+                else {}
+            ),
             "correlation_id": correlation_id,
         },
     )

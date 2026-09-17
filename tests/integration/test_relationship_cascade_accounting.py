@@ -11,10 +11,18 @@ That is why the count is taken *before* the delete. A count afterwards
 reads 0 every time, which is precisely the shape of bug that let the
 audit log undercount this loss since the cascade was declared.
 
-**This rung deliberately changes no copy.** The count is wired into the
-page context and the audit payload; the confirmations that will name it
-land at rung 2. The last test here pins that, so "rung 1 was inert on
-the visible surface" is a checked claim rather than an intention.
+**This rung changes no copy on the roster pages**, which is narrower
+than the claim it first carried. The confirmations that will name the
+loss land at rung 2, and `test_rung_one_changes_no_copy` pins that.
+
+It is *not* inert everywhere, and a cold read caught the overstatement:
+`app/web/views/_audit_log.py` renders a `counts` envelope by iterating
+every key and using the raw key as the label, so the Sys-admin audit log
+gains a `cascaded_relationships` row on the six events below from this
+rung onward. That is intended — the field is the point — but it is a new
+user-visible string, so it is named here and pinned by
+`test_the_audit_log_page_shows_the_new_count` rather than left to a
+claim of inertness that reading the diff would disprove.
 """
 
 from __future__ import annotations
@@ -33,6 +41,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    User,
 )
 from app.services import roster_bulk
 
@@ -128,9 +137,27 @@ def test_the_counter_answers_per_model_and_per_row(
     assert roster_bulk.relationship_cascade_count(
         db, model=Reviewee, ids=[reviewees[0].id]
     ) == 1
+    # Real ids for both, so a mutation adding either model to the map
+    # would be caught. Ids that match no row would make this pass by
+    # accident rather than by rule.
+    observer = Observer(
+        session_id=rs.id, email="o@example.org", display_name="O"
+    )
+    db.add(observer)
+    db.commit()
+    db.refresh(observer)
+    every_relationship = [
+        r.id
+        for r in db.execute(
+            select(Relationship).where(Relationship.session_id == rs.id)
+        ).scalars()
+    ]
     assert roster_bulk.relationship_cascade_count(
-        db, model=Observer, ids=[1, 2, 3]
+        db, model=Observer, ids=[observer.id]
     ) == 0
+    assert roster_bulk.relationship_cascade_count(
+        db, model=Relationship, ids=every_relationship
+    ) == 0, "a relationship delete reaches no other relationship"
     # An empty selection. **This one is behaviour-preserving**: the
     # `not ids` short-circuit mirrors `cascade_counts`' and saves a
     # query, but `column.in_([])` already answers 0, so removing the
@@ -227,6 +254,41 @@ def test_bulk_delete_logs_only_the_selection_s_relationships(
     assert _counts(db, rs.id, event_type)["cascaded_relationships"] == 1
 
 
+@pytest.mark.parametrize(
+    "page,header,event_type",
+    [
+        ("reviewers", b"ReviewerName,ReviewerEmail", "reviewers.imported"),
+        ("reviewees", b"RevieweeName,RevieweeEmail", "reviewees.imported"),
+    ],
+)
+def test_a_csv_replace_logs_the_relationships_it_destroyed(
+    client: TestClient, db: Session, page: str, header: bytes, event_type: str
+) -> None:
+    """The path an operator actually takes, and the one rung 1 first
+    left out. A replace deletes every existing row and re-adds, so it
+    takes the relationships through the same FK cascade as `delete-all`.
+
+    Rung 2 will quote a number on this confirmation; without this the
+    log would have had no counterpart for it, which is the exact
+    disagreement the item's Decision argues against.
+    """
+    rs = _mk(client, db, f"relcc-imp-{page[:4]}")
+    _seed(db, rs.id)
+
+    response = client.post(
+        f"/operator/sessions/{rs.id}/{page}/import",
+        files={"file": ("r.csv", header + b"\nNew,new@example.org\n",
+                        "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+
+    assert _relationships(db, rs.id) == 0, "seed is vacuous"
+    assert _counts(db, rs.id, event_type)["cascaded_relationships"] == 3
+
+
 def test_observers_events_keep_the_payload_they_had(
     client: TestClient, db: Session
 ) -> None:
@@ -251,6 +313,48 @@ def test_observers_events_keep_the_payload_they_had(
     counts = _counts(db, rs.id, "observers.deleted_all")
     assert "cascaded_relationships" not in counts, counts
     assert _relationships(db, rs.id) == 3, "an observer delete reaches none"
+
+
+@pytest.mark.parametrize(
+    "page,field,event_type",
+    [
+        ("observers", "observer_ids", "observer.bulk_deleted"),
+        ("relationships", "relationship_ids", "relationship.bulk_deleted"),
+    ],
+)
+def test_bulk_delete_omits_the_key_for_the_models_that_reach_nothing(
+    client: TestClient, db: Session, page: str, field: str, event_type: str
+) -> None:
+    """The `bulk_delete` half of the omitted-not-zero rule, which the
+    first version of this file left untested: only `delete-all` had it,
+    so a regression emitting `cascaded_relationships: 0` on these two
+    would have passed the whole suite.
+    """
+    rs = _mk(client, db, f"relcc-om-{page[:4]}")
+    _seed(db, rs.id)
+    if page == "observers":
+        row = Observer(
+            session_id=rs.id, email="o@example.org", display_name="O"
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        row_id = row.id
+    else:
+        row_id = db.execute(
+            select(Relationship).where(Relationship.session_id == rs.id)
+        ).scalars().first().id
+
+    response = client.post(
+        f"/operator/sessions/{rs.id}/{page}/bulk-delete",
+        data={field: [str(row_id)], "confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+
+    counts = _counts(db, rs.id, event_type)
+    assert "cascaded_relationships" not in counts, counts
 
 
 def test_the_envelope_admits_the_field_without_a_schema_edit(
@@ -282,56 +386,102 @@ def test_the_envelope_admits_the_field_without_a_schema_edit(
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
-def test_the_page_carries_the_count_on_every_render_path(
+def test_every_render_path_already_reaches_the_count(
     client: TestClient, db: Session, page: str
 ) -> None:
-    """Both the plain GET and the failed-import 400, which builds its
-    own context. An absent key would raise in rung 2's confirmation
-    rather than degrade quietly — the trap 19P.1 and 19P.3 both hit on
-    this handler, so it is pinned before there is anything to break.
+    """Rung 2 needs the number in the template, and **it is already
+    there** — `views.session_status_pills` carries `relationship_count`
+    from the same `relationships_service.existing_count` call, and every
+    path these pages render through already puts `status_pills` in its
+    context, including the failed-import 400 that builds its own.
+
+    The first version of this rung added a second top-level key holding
+    the same number from a second query on all three paths. A cold read
+    caught it: `spec/architecture.md`'s fourth seam puts this shape in
+    `app/web/views/`, the view adapter already owns it, and a value
+    computed twice is a value that can disagree with itself — which is
+    the argument this very item makes about the audit log. The keys are
+    gone; rung 2 reads `status_pills.relationship_count`.
+
+    Pinned here because "already there" is what rung 2 depends on, and
+    the 400 path is where it would be missing if anywhere.
     """
     rs = _mk(client, db, f"relcc-ctx-{page[:4]}")
     _seed(db, rs.id)
 
-    from app.web.routes_operator import _setup_reviewees, _setup_reviewers
+    # One object, not three: `_setup_reviewers` and `_setup_reviewees`
+    # both import `_templates` FROM `_shared`, so patching per module
+    # would wrap the same object twice and restore it to a wrapper.
     from app.web.routes_operator import _shared
 
-    page_module = _setup_reviewers if page == "reviewers" else _setup_reviewees
-    # The 400 re-render is `_shared._handle_import`'s, and it renders
-    # through `_shared`'s own templates object — patching the page
-    # module's would capture the GET and silently miss the path this
-    # test exists for.
-    captured: dict = {}
-    patched = []
+    assert _shared._templates is __import__(
+        "app.web.routes_operator._setup_" + page, fromlist=["_templates"]
+    )._templates, "the page module no longer shares _shared's templates"
 
-    def _wrap(module):
-        original = module._templates.TemplateResponse
+    captured: list[dict] = []
+    original = _shared._templates.TemplateResponse
 
-        def _capture(request, name, context, *args, **kwargs):
-            captured.update(context)
-            return original(request, name, context, *args, **kwargs)
+    def _capture(request, name, context, *args, **kwargs):
+        captured.append(context)
+        return original(request, name, context, *args, **kwargs)
 
-        module._templates.TemplateResponse = _capture  # type: ignore[assignment]
-        patched.append((module, original))
-
-    _wrap(page_module)
-    if _shared is not page_module:
-        _wrap(_shared)
+    _shared._templates.TemplateResponse = _capture  # type: ignore[assignment]
     try:
         client.get(f"/operator/sessions/{rs.id}/{page}")
-        assert captured.get("relationship_count") == 3, sorted(captured)
-
-        captured.clear()
         response = client.post(
             f"/operator/sessions/{rs.id}/{page}/import",
             files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
         )
         assert response.status_code == 400, response.status_code
-        assert captured, "the 400 rendered through neither templates object"
-        assert captured.get("relationship_count") == 3, sorted(captured)
     finally:
-        for module, original in patched:
-            module._templates.TemplateResponse = original  # type: ignore[assignment]
+        # `del` rather than reassignment: `original` is the bound method
+        # off the class, so assigning it back would leave a permanent
+        # instance attribute shadowing it on a shared object.
+        del _shared._templates.TemplateResponse
+
+    assert "TemplateResponse" not in _shared._templates.__dict__, (
+        "the patch leaked onto an object every later test renders through"
+    )
+    assert len(captured) >= 2, "expected the GET and the 400 to render"
+    for context in captured:
+        assert context["status_pills"].relationship_count == 3, sorted(context)
+
+
+def test_the_audit_log_page_shows_the_new_count(
+    client: TestClient, db: Session
+) -> None:
+    """The one surface this rung DOES change for a reader.
+
+    `format_audit_detail` renders a `counts` envelope by iterating every
+    key with the raw key as its label, so the new field appears on the
+    Sys-admin audit log the moment it is written — no template change,
+    no opt-in. Intended, and pinned here so "rung 1 touches no visible
+    surface" is not claimed anywhere it would be false.
+    """
+    rs = _mk(client, db, "relcc-log")
+    _seed(db, rs.id)
+    client.post(
+        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+
+    # The page is behind `require_sys_admin`, which reads the column on
+    # the user row rather than the settings list.
+    signed_in = db.execute(select(User).order_by(User.id)).scalars().first()
+    signed_in.is_sys_admin = True
+    db.commit()
+
+    response = client.get(f"/operator/sys-admin/sessions/{rs.id}/audit-log")
+    assert response.status_code == 200, response.status_code
+
+    # The rendered `<dt>` inside the Counts section, NOT the raw-JSON
+    # expander below it — that carries the whole detail verbatim, so a
+    # bare substring search passes with the Counts section deleted.
+    # Mutation-checked: removing the section leaves the string in place.
+    body = response.text
+    section = body[body.index("Counts") : body.index("Counts") + 2000]
+    assert "<dt>cascaded_relationships</dt>" in section, section[:400]
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
@@ -351,12 +501,24 @@ def test_rung_one_changes_no_copy(
     body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
     body = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
 
-    labels = re.findall(
-        r'<label class="confirm-label[^"]*">(.*?)</label>', body, re.S
-    ) + re.findall(r'"(Yes, delete these[^"]*)"', body)
-    assert labels, "no confirmations on the page — the seed is vacuous"
-    for label in labels:
-        assert "relationship" not in label.lower(), (
-            "rung 1 is meant to be inert on the visible surface; this "
-            "clause belongs to rung 2"
+    # Keyed on `data-delete-confirm`, not on label markup: the
+    # JS-built confirmation is a string inside a <script>, so a
+    # label-shaped regex matches it twice — once as markup and once as
+    # the literal it builds — and a naive count reads 4 for 3 gates.
+    keys = set(re.findall(r'data-delete-confirm="([^"]+)"', body))
+    assert keys == {"delete-all", "replace-roster", f"{page}-bulk-delete"}, keys
+
+    # The text each gate carries, wherever it is written.
+    phrases = [
+        " ".join(re.sub(r"<[^>]+>", " ", m).split())
+        for m in re.findall(
+            r'(?:Yes, delete the existing|Yes, replace the existing|'
+            r'Yes, delete these)[^<"]*', body
+        )
+    ]
+    assert len(phrases) >= 3, phrases
+    for phrase in phrases:
+        assert "relationship" not in phrase.lower(), (
+            "rung 1 is meant to be inert on these pages; this clause "
+            "belongs to rung 2"
         )

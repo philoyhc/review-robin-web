@@ -86,10 +86,15 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
     ).scalar_one()
+    # 19O.5 — a replace deletes every existing row and re-adds, so it
+    # takes the relationships with it exactly as `delete-all` does.
+    # Asserted as PRESENT at 0, not merely tolerated: a reviewers import
+    # CAN destroy relationships, so the key vanishing is the regression.
     assert event.detail["counts"] == {
         "new": 1,
         "replaced": 0,
         "cascaded_assignments": 0,
+        "cascaded_relationships": 0,
     }
     assert event.detail["context"] == {"filename": "reviewers.csv"}
     assert "Imported 1 reviewers" in event.summary
@@ -180,6 +185,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
         "new": 1,
         "replaced": 1,
         "cascaded_assignments": 0,
+        "cascaded_relationships": 0,
     }
     assert events[0].detail["context"] == {"filename": "reviewers.csv"}
 

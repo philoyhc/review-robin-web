@@ -34,7 +34,6 @@ from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
-from app.services import relationships as relationships_service
 from app.services import lifecycle_display, roster_bulk
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
@@ -917,16 +916,6 @@ async def _handle_import(
                     "delete_discards_assignments": assignment_count > 0,
                     "roster_response_count": (
                         lifecycle.session_response_count(db, review_session)
-                    ),
-                    # 19O.5 rung 1 — this path builds its own context,
-                    # so it owes the same key. Rendered nowhere yet; an
-                    # absent one would raise in rung 2's confirmation
-                    # rather than degrade quietly, which is the trap
-                    # 19P.1 and 19P.3 both hit on this handler.
-                    "relationship_count": (
-                        relationships_service.existing_count(
-                            db, review_session.id
-                        )
                     ),
                     "col_data": col_data,
                     "col_readouts": col_readouts,
