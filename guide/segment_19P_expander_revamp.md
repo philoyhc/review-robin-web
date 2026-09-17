@@ -1696,6 +1696,37 @@ All 2026-09-17.
   role (`spec/ui_elements.md` §6), matching `_preview_picker.html:79`
   for the same destination.
 
+### Where the link goes
+
+Decided up front, 2026-09-17, as the condition for setting the
+scaffold rule aside.
+
+- **A `.card-action-row` at the foot of the Review Progress card**,
+  after the scaffold note — right-flushed, `--space-3` above it. Not
+  inline in the stats line (it is a `.btn`, not prose) and not beside
+  the `<h2>` (this page has no heading-row action idiom).
+- **Because that is where the same button already sits.**
+  `_preview_picker.html:78-82` puts `Open full preview` — the same
+  destination — in a right-flushed card action row on the Previews
+  hub. Matching it means one button in two places looks like one
+  button, which is the drift Item 5 spent a rung undoing for
+  `Apply` / `Search`.
+- **`.card-action-row` gains a second caller**, having had exactly one
+  since 11F. It lives in `base.html` and is **not** in
+  `spec/ui_elements.md` §10; the second caller is what makes it worth
+  recording, so the manifest picks it up.
+- **Labeled `Open reviewer surface`**, not `Open full preview`. The
+  hub's label carries the word this item is neutralizing in the
+  banner, and from here the operator is inspecting rather than
+  previewing. **This leaves two labels for one destination**, which is
+  a known cost and not a drift: Item 7 either retires the hub, which
+  dissolves it, or keeps it and settles the pair. Recorded rather than
+  discovered.
+- **The card's scaffold note is now half false** — *"Per-assignment
+  and per-response detail will land in a future segment"* — since the
+  link reaches exactly that. Rung 2 rewords it; it does not survive
+  the thing it was promising.
+
 ### Blast radius (measured)
 
 Commands run 2026-09-17 on `origin/main` at `0587ca8`.
@@ -1720,11 +1751,13 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 
 ### PR ladder
 
-**Four slices: the link and the banner are on different surfaces.**
-The affordance gets its own slice per `CLAUDE.md`'s scaffold-first
-rule — but **live, not inert**: the destination already ships, so a
-disabled link would show a reviewer less than a working one. Author
-may overrule; it is their convention.
+**Three slices. The scaffold-first rule is set aside for this item**
+(author, 2026-09-17) on the condition that the link's placement is
+decided up front rather than iterated on the dev slot — it is, in
+§ *Where the link goes* above. `CLAUDE.md` asks for an inert scaffold
+so a page's *shape* can be agreed before logic attaches; this item
+adds no page and no card, and the destination already ships, so a
+disabled link would show a reviewer less than a working one.
 
 1. **Re-key the route.** `/invitations/reviewers/{reviewer_id}`,
    `_require_reviewer_in_session` hoisted to `_shared.py`, the old URL
@@ -1735,19 +1768,18 @@ may overrule; it is their convention.
    `monitoring._invitations_by_reviewer`. Plus a test for the state
    the re-key newly makes reachable — a typed URL for an inactive or
    unassigned reviewer. **No card on the page changes.**
-2. **The surface link**, alone: one `btn secondary` in the Review
-   Progress card, new tab, live. Nothing else moves, so the dev-slot
-   look is of the affordance and its placement only.
-3. **The destination's copy and its missing guard**: the neutral
-   banner on the preview surface, and the test that saved responses
-   render there. **Does not touch the Previews hub.**
-4. **The close.** Docs per the manifest at the end of this item.
+2. **The surface link and its destination's copy.** The
+   `.card-action-row` and its anchor; the scaffold note reworded; the
+   neutral banner on the preview surface; and the test that saved
+   responses render there. **Does not touch the Previews hub.**
+3. **The close.** Docs per the manifest at the end of this item.
 
 ### Definition of done
 
 - `grep -c "{% if row.invitation %}" app/web/templates/operator/session_invitations.html` → 0, and a reviewer with no `Invitation` row reaches the page from the table and sees `No invitation URL has been issued yet.`
 - `GET .../invitations/{invitation_id}/detail` 308s to the reviewer URL, pinned by a test.
 - The surface link carries `target="_blank"` and `rel="noopener"`, and points at `/preview-surface/1?reviewer_email=`, not `/previews`.
+- It renders as `Open reviewer surface` in a `.card-action-row` that is the **last child** of the Review Progress card, and the card's scaffold note no longer promises per-response detail as future work.
 - A test asserts a **saved response value** renders on the operator preview surface — the gap this item found.
 - The preview-surface banner no longer opens with `Preview` nor claims the page's content is a preview.
 - Looked at in Chromium, light and dark, at 1280px and phone width, from both entry points.
@@ -1784,7 +1816,8 @@ may overrule; it is their convention.
 - `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, and "reached from the Previews hub picker card" becoming one entry point of two (Item 6).
 - `spec/preview_hub.md` — the preview surface gains a second entry point (Item 6).
 - `spec/operator_ui_concept.md` — `:102` and `:367`, the two passages naming the picker button as the way in. Not `:197`, which this item leaves alone (Item 6).
-- `spec/operator_button_audit.md` — the surface link's row. **Which section is an open question**: §13's `Source:` is `session_invitations.html` and this button ships on the drill-in page, which the audit does not cover (Item 6).
+- `spec/operator_button_audit.md` — the surface link's row, label `Open reviewer surface`, role Secondary. **Which section is an open question**: §13's `Source:` is `session_invitations.html` and this button ships on the drill-in page, which the audit does not cover (Item 6).
+- `spec/ui_elements.md` — §10 gains `.card-action-row`, which ships in `base.html` and is absent from the primitives table. This item is its second caller since 11F, which is what makes it worth naming (Item 6).
 - `docs/status.md` — the route-table row for the detail page, and the item row when it lands (Item 6).
 
 **Not committed to:** `spec/architecture.md`. Its § *Three-layer split*
