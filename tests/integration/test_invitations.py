@@ -778,7 +778,10 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     assert response.status_code == 200, response.text
     body = response.text
     assert reviewer.email in body
-    assert "No invitation URL has been issued yet." in body
+    # No invitation exists here, so the Invitation card says that
+    # rather than reporting an email status for one (19P.6 rung 2a).
+    assert "No invitation has been created for this reviewer yet" in body
+    assert "Email Status" not in body
     # The per-row cards need a row; this reviewer has none. The string
     # appears once in the whole template tree and not in `base.html`.
     assert "Review Progress" not in body
@@ -819,6 +822,49 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
     ).text
     assert "/me/invite/" in body
     assert "No invitation URL has been issued yet." not in body
+
+
+def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
+    client: TestClient, db: Session
+) -> None:
+    """Reported from the dev slot, 2026-09-17: assignments generated,
+    **Create invites not clicked**, and the Invitation card read
+    "Email Status: not sent &middot; Email Sent: — &middot; Last
+    reminder: —" — a card describing an invitation that does not
+    exist, on a page whose own chrome pill said `Invitations: NOT
+    CREATED` two inches above.
+
+    `email_status` comes from the **outbox**, so it falls back to
+    "not sent" when there is no invitation to have an outbox row. The
+    card used to be gated on `row`, and rows exist for every assigned
+    active reviewer. Rung 1 made that state reachable from the table;
+    before it, the page needed an invitation in the path, so "not
+    sent" always meant one existed.
+    """
+    session = _ready_session(client, db, code="drill-noinv")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    # Assignments exist; invitations deliberately do not.
+    assert db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalars().all() == []
+    row = next(
+        r for r in views.build_invitations_rows(db, session)
+        if r.reviewer.id == reviewer.id
+    )
+    assert row.email_status == "not sent", (
+        "premise: the row still reports an email status with no invitation"
+    )
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    ).text
+    assert "No invitation has been created for this reviewer yet" in body
+    assert "Email Status" not in body
+    assert "Last reminder" not in body
+    # Review Progress is unaffected — the assignments are real.
+    assert "Review Progress" in body
 
 
 def test_detail_page_links_to_the_reviewer_surface_in_a_new_tab(

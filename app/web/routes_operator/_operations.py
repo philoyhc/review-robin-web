@@ -650,6 +650,11 @@ def invitation_reviewer_detail(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewer": reviewer,
+            # Back in the context at 19P.6 rung 2a. Rung 1's cold read
+            # removed it as a slot nothing read — true then, and the
+            # reason the card below could not tell "no invitation" from
+            # "invitation not sent".
+            "invitation": invitation,
             "row": row,
             "invite_url": invite_url,
             "is_ready": lifecycle.is_ready(review_session),

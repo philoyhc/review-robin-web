@@ -22,7 +22,22 @@
 
   <div class="card">
     <h2 style="margin-top: 0;">Invitation</h2>
-    {% if row %}
+    {# 19P.6 rung 2a — **gated on the invitation, not on the row.**
+       `row.email_status` is derived from the outbox, so with no
+       invitation at all it reads "not sent", and this card said
+       "Email Status: not sent · Email Sent: — · Last reminder: —"
+       over a session whose own chrome pill said `Invitations: NOT
+       CREATED` two inches above. Rung 1 made that state reachable
+       from the table; before it, the page needed an invitation in the
+       path, so "not sent" always meant one existed. #}
+    {% if not invitation %}
+      <p class="muted">
+        No invitation has been created for this reviewer yet &mdash;
+        create them from <strong>Create invites</strong> on the
+        Workflow card.
+      </p>
+    {% else %}
+      {% if row %}
       <p>
         Email Status:
         {% if row.email_status == "sent" %}
@@ -45,14 +60,15 @@
           —
         {% endif %}
       </p>
-    {% endif %}
-    {% if invite_url %}
-      <p>
-        Invitation URL (last issued):<br>
-        <code>{{ invite_url }}</code>
-      </p>
-    {% else %}
-      <p class="muted">No invitation URL has been issued yet.</p>
+      {% endif %}
+      {% if invite_url %}
+        <p>
+          Invitation URL (last issued):<br>
+          <code>{{ invite_url }}</code>
+        </p>
+      {% else %}
+        <p class="muted">No invitation URL has been issued yet.</p>
+      {% endif %}
     {% endif %}
   </div>
 
