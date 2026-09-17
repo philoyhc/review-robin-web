@@ -1169,7 +1169,8 @@ rung 5b adjudicated the sentence rather than changing the markup.
 ## Item 4 — Invitations and Responses — ~~a different move, not the same recipe~~ **retired 2026-09-17**
 
 **Retired by the author, unbuilt.** Reasoning in `### Status` below; the
-stub that raised it is kept verbatim after it.
+stub's body that raised it follows verbatim (only this heading was
+edited).
 
 **Not yet planned, and its container is undecided.** It sits here to be
 sequenced, not to claim the segment: whether it becomes 19P Item 4 or **19Q**
@@ -1203,9 +1204,7 @@ idiom does not carry.
 > them before this item is taken up; what is left to judge is the expander
 > half. The stub's container question is untouched.
 >
-> **Superseded by the retirement note above (2026-09-17).** "What is left
-> to judge is the expander half" was judged the same day: there is nothing
-> for it to hold.
+> **Superseded the same day** — see `### Status` below.
 
 ### Doc impact
 
@@ -1213,23 +1212,57 @@ idiom does not carry.
 
 ### Status — retired 2026-09-17, unbuilt
 
-**The expander exists to re-house selection-driven bulk actions, and
-these two pages have never had any.** Re-measured at retirement, after
-Item 5 had carried them the toolbar half:
+**The spec had already decided this.** `spec/operations_pages.md` §
+*Out of scope for both pages* says, and said before this segment
+opened: *"**Bulk-select rows for batch action.** Bulk send / remind
+happens via the Workflow card's super-buttons (which act on every
+eligible row session-wide); per-row buttons handle targeted
+intervention. **No multi-select checkbox column on either table.**"*
+An expander is the home for selection-driven actions; a page the spec
+forbids selection on has none to home. That is the whole argument, and
+it is stronger than the greps below, which only confirm the code
+agrees.
+
+Re-measured at retirement, after Item 5 had carried these pages the
+toolbar half:
 
 | | `session_invitations.html` | `session_responses.html` |
 |---|---|---|
 | `type="checkbox"` | 0 | 0 |
 | `formaction` | 0 | 0 |
 | `session-expander` | 0 | 0 |
-| `bulk-*` routes in `_operations.py` | none | none |
 
-Giving them an expander would mean inventing selection **and** an
-activate / inactivate affordance neither page has ever offered, to
-carry a detail view that navigation already carries. The stub reached
-this measurement in 2026-09-14 and stopped one step short of the
-conclusion; the author took the step. **The container question is
-answered by not needing one** — neither 19P Item 4 nor 19Q.
+**"Selection-driven" is doing the work in that sentence, and these
+pages are not actionless.** Both include `next_action_card.html`
+unconditionally, whose Workflow-card super-buttons post to
+`/invitations/generate`, `/invitations/send-all` and
+`/invitations/remind-incomplete` — session-wide mass actions, named as
+the alternative in the very spec bullet above. Invitations also
+carries **three per-row buttons** in a trailing `col-shrink` Actions
+column: `Send`, `Send reminder`, `Regenerate`. Neither set is
+selection-driven, which is why neither wants an expander: a
+session-wide button belongs on the Workflow card that scopes it, and a
+per-row button already sits on its own row, which is the placement an
+expander exists to achieve.
+
+**19P shipped two expander flavours, and the second does not change
+the answer either.** Besides the JS-injected selection panel, all four
+roster pages render a server-side **edit-row bar** — the same
+`session-expander` classes, gated on `edit_id` / `add_mode` rather
+than on selection, holding `Save` / `Cancel` for a row being edited.
+Assignments and these two pages have no row editor: assignments are
+regenerated rather than edited, and an invitation or a coverage row is
+a readout, not a record with fields. So neither flavour has a tenant
+here.
+
+Giving these pages an expander would therefore mean inventing
+selection **and** an activate / inactivate affordance neither has ever
+offered, to carry a detail view that navigation already carries. The
+stub reached the same measurement on 2026-09-14 and stopped one step
+short; the author took the step, which also settles Item 5's
+annotation that the expander half was "left to judge". **The container
+question is answered by not needing one** — neither 19P Item 4 nor
+19Q.
 
 What the stub was really pointing at survives elsewhere. The two
 detail pages are thin — `session_responses_reviewee_detail.html`
@@ -1238,11 +1271,6 @@ adds exactly one, the last-issued invitation URL — and growing them is
 named in Item 5's *Out of scope*. The author's two held row-link asks
 (Item 5's open questions 1 and 2) are the live thread, and they are
 **navigation, not selection**, so nothing here blocks them.
-
-**One claim of Item 5's is now settled rather than partial.** Its
-annotation on this stub said the pages "take part of the idiom without
-taking selection" and left the expander half to judge. That is judged:
-there is nothing for it to hold.
 
 ---
 
@@ -1295,7 +1323,9 @@ it saves. The shared thing is the CSS, and it already exists. `Clear` is not one
 rosters' own conditional (`session_invitations.html:94-97`).
 
 **Rejected: giving Invitations and Responses selection** to make the
-recipe uniform. That is Item 4's question, not this one; this item
+recipe uniform. That was Item 4's question when this was written;
+Item 4 retired on 2026-09-17 having answered it *no*, so the rejection
+now stands on its own rather than deferring; this item
 moves controls and renames a button, and adds no capability.
 
 ### Semantics
@@ -1538,7 +1568,10 @@ a no-match search shows, which is more than this item's move.
 
 ### Out of scope
 
-- **Selection on Invitations and Responses** — Item 4's question.
+- **Selection on Invitations and Responses** — was Item 4's question;
+  Item 4 retired 2026-09-17 having answered it *no*, and
+  `spec/operations_pages.md` § *Out of scope for both pages* had
+  already said so. Out of scope here either way.
 - **The thin 11C detail pages themselves.** Growing
   `session_invitations_reviewer_detail.html` past its scaffold is its
   own work; this item does not touch it.
