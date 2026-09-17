@@ -816,3 +816,237 @@ def test_a_session_without_relationships_is_not_told_their_cost(
     # not a suppressed paragraph.
     assert "replaces the whole roster" in prose
     assert "clears any assignments already generated" in prose
+
+
+# ── Rung 4: the empty state and the inactive `Add new` ─────────────────
+
+
+def _empty_state(client: TestClient, sid: int) -> str:
+    """The paragraph rendered where the rows would be, tags stripped."""
+    body = client.get(f"/operator/sessions/{sid}/relationships").text
+    match = re.search(r'<p class="muted">No relationships.*?</p>', body, re.S)
+    assert match is not None, "no empty state on the page"
+    return " ".join(re.sub(r"<[^>]+>", " ", match.group(0)).split())
+
+
+def _add_new_title(client: TestClient, sid: int) -> str | None:
+    """The disabled `Add new`'s tooltip, or None when it is live."""
+    body = client.get(f"/operator/sessions/{sid}/relationships").text
+    match = re.search(
+        r'aria-disabled="true"\s+title="([^"]*)">Add new', body
+    )
+    return match.group(1) if match else None
+
+
+@pytest.mark.parametrize(
+    "reviewers,reviewees,names,not_named",
+    [
+        (0, 0, ("Reviewers", "Reviewees"), ()),
+        (2, 0, ("Reviewees",), ("Reviewers",)),
+        (0, 2, ("Reviewers",), ("Reviewees",)),
+    ],
+)
+def test_the_empty_state_names_the_roster_that_is_missing(
+    client: TestClient,
+    db: Session,
+    reviewers: int,
+    reviewees: int,
+    names: tuple[str, ...],
+    not_named: tuple[str, ...],
+) -> None:
+    """The two states the page could not tell apart.
+
+    *"No relationships yet. Upload a CSV or add a row to get started"*
+    invites two things that both fail when either roster is empty:
+    `Add new` is inactive, and every row of an uploaded CSV errors with
+    *"Unknown reviewer … import reviewers first"*
+    (`relationships.parse_relationship_csv`). The reported bug was an
+    operator reading that sentence beside a button they could not press.
+
+    `not_named` is the half that matters most: with reviewers present
+    and reviewees missing, naming Reviewers would be the old tooltip's
+    error moved into the empty state.
+    """
+    rs = _mk(client, db, f"relcc-e-{reviewers}{reviewees}")
+    db.add_all(
+        [
+            Reviewer(session_id=rs.id, name=f"R{i}", email=f"r{i}@example.org")
+            for i in range(reviewers)
+        ]
+        + [
+            Reviewee(
+                session_id=rs.id,
+                name=f"E{i}",
+                email_or_identifier=f"e{i}@example.org",
+            )
+            for i in range(reviewees)
+        ]
+    )
+    db.commit()
+
+    prose = _empty_state(client, rs.id)
+    assert "none can be added" in prose, prose
+    assert "Upload a CSV" not in prose, (
+        "an upload here fails every row; do not invite one"
+    )
+    for name in names:
+        assert f"{name}" in prose, (name, prose)
+    for name in not_named:
+        assert name not in prose, (
+            f"{name} has rows; naming it sends the operator to the wrong page"
+        )
+    # Plural agreement, which a substring assertion on the roster names
+    # would not catch: "rosters both have" vs "roster has".
+    expected = "rosters both have rows" if len(names) > 1 else "roster has rows"
+    assert expected in prose, prose
+    # Nav order, which the helper's docstring claims and which a
+    # per-name `in` check cannot see. It is also the order a
+    # relationships CSV names the two sides in.
+    if len(names) > 1:
+        assert prose.index("Reviewers") < prose.index("Reviewees"), prose
+
+
+def test_the_empty_state_links_to_the_roster_it_names(
+    client: TestClient, db: Session
+) -> None:
+    """Naming the page is half of it; the operator has to get there.
+
+    The link is what makes this better than the tooltip it replaces —
+    a `title=` has room for neither the name nor the way to act on it.
+    """
+    rs = _mk(client, db, "relcc-e-link")
+    db.add(Reviewer(session_id=rs.id, name="R", email="r@example.org"))
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/relationships").text
+    match = re.search(r'<p class="muted">No relationships.*?</p>', body, re.S)
+    assert match is not None
+    hrefs = re.findall(r'href="([^"]+)"', match.group(0))
+    assert hrefs == [f"/operator/sessions/{rs.id}/reviewees"], hrefs
+
+
+def test_a_populated_pair_of_rosters_reads_as_it_did(
+    client: TestClient, db: Session
+) -> None:
+    """The fourth state, byte-identical to today's.
+
+    Same rule the rung-2 labels follow: a sentence describing a
+    condition that does not hold is its own defect, so the new branch
+    must not leak into the state that was already right.
+    """
+    rs = _mk(client, db, "relcc-e-ok")
+    _seed(db, rs.id, pairs=1)
+    db.execute(
+        Relationship.__table__.delete().where(
+            Relationship.session_id == rs.id
+        )
+    )
+    db.commit()
+
+    assert _empty_state(client, rs.id) == (
+        "No relationships yet. Upload a CSV or add a row to get started."
+    )
+    assert _add_new_title(client, rs.id) is None, "Add new should be live"
+
+
+@pytest.mark.parametrize(
+    "reviewers,reviewees,expected",
+    [
+        (0, 0, "Add rows to the Reviewers and Reviewees rosters first"),
+        (2, 0, "Add rows to the Reviewees roster first"),
+        (0, 2, "Add rows to the Reviewers roster first"),
+    ],
+)
+def test_the_disabled_add_new_names_the_roster_that_is_missing(
+    client: TestClient,
+    db: Session,
+    reviewers: int,
+    reviewees: int,
+    expected: str,
+) -> None:
+    """The tooltip read *"Add a reviewer and a reviewee first"* in all
+    three cases, so an operator with a full Reviewers roster and no
+    reviewees was told to add a reviewer.
+
+    It is derived from the same `missing` tuple the empty state renders,
+    which is the point: two surfaces answering one question cannot give
+    two answers.
+    """
+    rs = _mk(client, db, f"relcc-t-{reviewers}{reviewees}")
+    db.add_all(
+        [
+            Reviewer(session_id=rs.id, name=f"R{i}", email=f"r{i}@example.org")
+            for i in range(reviewers)
+        ]
+        + [
+            Reviewee(
+                session_id=rs.id,
+                name=f"E{i}",
+                email_or_identifier=f"e{i}@example.org",
+            )
+            for i in range(reviewees)
+        ]
+    )
+    db.commit()
+
+    assert _add_new_title(client, rs.id) == (
+        f"{expected} — a relationship needs one of each."
+    )
+
+
+def test_a_roster_delete_is_what_puts_the_page_in_that_state(
+    client: TestClient, db: Session
+) -> None:
+    """The rung's reason for existing, end to end.
+
+    Rungs 2 and 3 tell the operator what a `delete-all` on Reviewers
+    will cost. This is the page they land on afterwards: the
+    relationships are gone *and* no new one can be made, which is
+    exactly the pair of facts the old *"No relationships yet"* hid.
+    """
+    rs = _mk(client, db, "relcc-e-after")
+    _seed(db, rs.id, pairs=2)
+    assert _relationships(db, rs.id) == 2
+
+    response = client.post(
+        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    assert _relationships(db, rs.id) == 0
+
+    prose = _empty_state(client, rs.id)
+    assert "none can be added" in prose, prose
+    assert "Reviewers" in prose, prose
+    assert _add_new_title(client, rs.id) == (
+        "Add rows to the Reviewers roster first — "
+        "a relationship needs one of each."
+    )
+
+
+def test_an_inactive_reviewer_still_counts_as_a_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """`list_reviewers` is status-blind and so is the gate that reads it.
+
+    A relationship can name an inactive reviewer — `create_relationship`
+    checks membership, not status — so a roster of inactive rows is not
+    an empty roster, and the page must not say it cannot be paired.
+    """
+    rs = _mk(client, db, "relcc-e-inactive")
+    reviewers, _ = _seed(db, rs.id, pairs=1)
+    db.execute(
+        Relationship.__table__.delete().where(
+            Relationship.session_id == rs.id
+        )
+    )
+    for row in reviewers:
+        row.status = "inactive"
+    db.commit()
+
+    assert _add_new_title(client, rs.id) is None
+    assert _empty_state(client, rs.id) == (
+        "No relationships yet. Upload a CSV or add a row to get started."
+    )

@@ -576,6 +576,13 @@ def _render_relationships_page(
     reviewees = assignments.list_reviewees(db, review_session.id)
     reviewer_by_id = {r.id: r for r in reviewers}
     reviewee_by_id = {r.id: r for r in reviewees}
+    # 19O.5 rung 4 — which of the two rosters a relationship needs is
+    # empty, computed from the lists already in hand rather than by two
+    # more `EXISTS` queries. Every row counts, active or not: an
+    # inactive reviewer is still a reviewer a relationship can name.
+    relationship_prereqs = views.relationship_prerequisites(
+        has_reviewers=bool(reviewers), has_reviewees=bool(reviewees)
+    )
     # Segment 13B Part 2 PR 7 — cookie-backed personal sort.
     # ``reviewer`` / ``reviewee`` resolve via the lookup maps; the
     # sort keys on the rendered name (Segment 15F PR 5 stage 2 —
@@ -753,7 +760,18 @@ def _render_relationships_page(
             "is_editable": lifecycle.is_editable(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
-            "can_add_relationship": bool(reviewers) and bool(reviewees),
+            # 19O.5 rung 4 — ONE answer, read by two surfaces. This was
+            # `bool(reviewers) and bool(reviewees)` inline, and the
+            # empty state below the button knew nothing about it: an
+            # operator whose Reviewers roster had just been emptied got
+            # an inactive `Add new` beside "Upload a CSV or add a row to
+            # get started", with the reason only in a `title=`.
+            # `relationship_prereqs` carries WHICH roster is missing so
+            # the empty state can name it and link to it; this key stays
+            # for the button's own branch, and is now its `.satisfied`
+            # rather than a second expression that could drift.
+            "can_add_relationship": relationship_prereqs.satisfied,
+            "relationship_prereqs": relationship_prereqs,
             "edit_values": edit_values,
             "edit_error": edit_error,
             "reviewer_picker_options": _relationship_picker_options(
