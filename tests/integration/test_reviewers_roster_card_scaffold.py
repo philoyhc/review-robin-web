@@ -1012,11 +1012,12 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
 
     Was `test_only_reviewers_splits_...`: Observers opted in at 19P.2
     rung 3 and Reviewees and Relationships at 19P.3 rung 2, so "only
-    Reviewers" is long past. **All four roster pages now split**, and
-    the claim that survives is about the OTHER three templates sharing
-    `.table-card-toolbar` — Assignments, Invitations, Responses — which
-    hold a pager and nothing else and must not be re-laid-out by a rule
-    they never opted into.
+    Reviewers" is long past. **All four roster pages split**, and
+    Assignments joined them at 19P.5 rung 1. The claim that survives is
+    about the two templates still sharing `.table-card-toolbar` without
+    the modifier — Invitations and Responses — which hold a chip row
+    and a pager and must not be re-laid-out by a rule they never opted
+    into. 19P.5 rung 3 takes them, and this list shrinks again.
 
     The old version also asserted the negative for Observers behind
     `if other.status_code != 200: continue` — and this fixture never
@@ -1072,7 +1073,6 @@ def test_the_split_toolbar_is_opt_in_not_the_shared_rule(client, db):
         and "table-card-toolbar is-split" not in path.read_text()
     )
     assert shared_only == [
-        "session_assignments.html",
         "session_invitations.html",
         "session_responses.html",
     ], shared_only

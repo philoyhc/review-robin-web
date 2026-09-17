@@ -14,6 +14,14 @@ five** states, in both directions:
 
 The matrix asserts both halves on every state, so neither can drift
 from the other silently.
+
+**19P.5 rung 1 moved the line, and the file still holds.** The card is
+gated whole again — on `can_edit` this time, not `not is_ready` — but
+it no longer contains the search, which went to the table toolbar and
+renders unconditionally there. So the read-only half survives every
+state as Item 3 requires, and the card is now exactly the
+selection-driven half. What each test asserts moved with it; the
+predicate the file is about did not.
 """
 from __future__ import annotations
 
@@ -50,6 +58,7 @@ SELECT_ALL = 'id="assignments-select-all"'
 INACTIVATE = 'id="assignments-inactivate-btn"'
 ACTIVATE = 'id="assignments-activate-btn"'
 SELECTED_PILL = 'id="assignments-selected-count"'
+TOOLBAR_RIGHT = '<div class="toolbar-pane toolbar-right">'
 
 
 def _page(client: TestClient, s, *, q: str = "") -> str:
@@ -93,9 +102,22 @@ def test_the_read_only_half_renders_in_every_state(
 
     page = _page(client, s)
 
-    assert CARD in page, state
     assert SEARCH_INPUT in page, state
     assert SEARCH_BY in page, state
+    # 19P.5 rung 1 — the rule is about the SEARCH, and the card was
+    # standing in for it. The search moved to the table toolbar's right
+    # pane, which renders in every state, so the rule is better served
+    # than before; `CARD` moved to the selection test below, the card
+    # now being exactly the selection-driven half. Asserting the pane
+    # keeps the rule pinned to where it lives rather than to a
+    # container that could move again.
+    assert TOOLBAR_RIGHT in page, state
+    # Bounded by the pane's own form rather than by counting `</div>`,
+    # which a nested element would throw off.
+    right = page[page.index(TOOLBAR_RIGHT):]
+    right = right[: right.index("</form>")]
+    assert SEARCH_INPUT in right, state
+    assert SEARCH_BY in right, state
 
 
 @pytest.mark.parametrize("state", ALL_STATES)
@@ -127,6 +149,12 @@ def test_the_selection_surface_renders_only_while_editable(
         INACTIVATE,
         ACTIVATE,
         SELECTED_PILL,
+        # 19P.5 rung 1 — the card is the selection surface now. It
+        # rendered in every state while it held the search, which is
+        # why it was asserted by the read-only test above; with the
+        # search gone it holds nothing but the pill and the two bulk
+        # buttons, so an unrenderable state would render an empty box.
+        CARD,
     ):
         assert (marker in page) is editable, (state, marker)
 

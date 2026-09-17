@@ -232,20 +232,26 @@ def test_the_second_action_row_reaches_no_template_at_all() -> None:
 
 
 def test_the_retired_rows_css_went_with_its_last_tenant() -> None:
-    """Five `.operator-actions-card` rules had no markup left that could
-    match them. Dead CSS in a 5,000-line inline stylesheet is not inert:
-    it is a reader's evidence that a layout still exists."""
+    """`.operator-actions-card` rules with no markup left to match them.
+    Dead CSS in a 5,000-line inline stylesheet is not inert: it is a
+    reader's evidence that a layout still exists.
+
+    Five went when the roster pages left. The last two went at 19P.5
+    rung 1 with Assignments' filter strip — the card holds no `<form>`
+    and no `.filter-row` now, so `form { margin: 0 }` and the
+    `flex: 4` on `label.filter-search` matched nothing. The scope is
+    empty; rung 2 deletes the card and the heading with it.
+    """
     base = (TEMPLATES.parent / "base.html").read_text()
     for gone in (
         ".operator-actions-card .filter-confirm {",
         ".operator-actions-card .operator-actions-main.is-locked {",
         ".operator-actions-card .operator-actions-divider {",
         ".operator-actions-card .operator-actions-buttons {",
+        ".operator-actions-card form { margin: 0; }",
+        ".operator-actions-card .filter-row > label.filter-search",
     ):
         assert gone not in base, gone
-    # ...and the rules the surviving tenant still needs did NOT go.
-    assert ".operator-actions-card form { margin: 0; }" in base
-    assert ".operator-actions-card .filter-row > label.filter-search" in base
 
 
 @pytest.mark.parametrize("page,noun", PAGES)

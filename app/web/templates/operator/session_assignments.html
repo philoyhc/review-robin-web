@@ -165,107 +165,45 @@
        computation now sits next to its only use, a hundred lines
        further down.
 
-       The ``bottom-grid`` stays, now with one child: rung 1 made this
-       card full width because a lone child of a ``1fr 1fr`` grid
-       would otherwise sit in the left column, and the author asked
-       (2026-09-10) for it back at half width, flush right.
-       ``.grid-right`` puts it in column 2. #}
-    {# Card B — operator-actions card (half width, right): a free-text
-         search to locate a row, plus row-selection-driven bulk
-         Inactivate / Activate. #}
-      {# Segment 19I Item 8 — the card itself renders in every
-         state. Item 3 settled that the read-only half of an
-         operator-actions strip (the search, Clear, the count) stays
-         wherever the page does, because reading a finished session is
-         legitimate; only the selection-driven half below follows
-         `can_edit`. This card used to be gated whole on
-         `not is_ready`, which removed the only way to find a row on
-         exactly the state an operator checks who is assigned to
-         whom. #}
+       19P.5 rung 1 — the FILTER left this card for the table toolbar's
+       right pane, where the four roster pages put theirs. What is left
+       here is the selection-driven half, and rung 2 takes that to the
+       row expander; the `bottom-grid`, the card and `.grid-right` go
+       with it.
+
+       The card is gated on `can_edit` now, which it never was: Segment
+       19I Item 8 kept it renderable in every lifecycle state because
+       the SEARCH was in it, and Item 3's rule is that the read-only
+       half stays wherever the page does. The search is in the toolbar
+       now, which renders in every state — so the rule is better served
+       than before, and an empty box on a `ready` session is not the
+       way to honour it. #}
+    {% if can_edit %}
     <div class="bottom-grid">
       <div class="card operator-actions-card grid-right">
-        <form method="get"
-              action="/operator/sessions/{{ session.id }}/assignments"
-              class="operator-actions-filter">
-          <div class="filter-row">
-            {# Segment 19I Item 9 — the status filter, in the roster
-               pages' shape. It reads `Assignment.include`, the
-               boolean this card's own Inactivate / Activate buttons
-               flip: the state was visible (dimmed rows) and
-               unfilterable. #}
-            <label class="filter-status">
-              Status:
-              <select name="status">
-                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-                {% for value, label in filter_status_options %}
-                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-status">
-              Search by:
-              <select name="search_by">
-                {% for value, label in [
-                  ("all", "All"),
-                  ("reviewer", "Reviewers"),
-                  ("reviewee", "Reviewees"),
-                ] %}
-                  <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-search">
-              Search:
-              {# Segment 19I Item 9 — name / handle labels only, both
-                 sides in one list. Picking one submits the whole
-                 label, which the route resolves to that side's handle
-                 and matches by equality; without that it would match
-                 nothing, being a substring of no name and no email. #}
-              <input type="text" name="q" value="{{ filter_q }}"
-                     list="assignments-search-options"
-                     autocomplete="off"
-                     placeholder="Name, email or tag">
-              <datalist id="assignments-search-options">
-                {% for label in filter_search_options %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-            </label>
-          </div>
-          {# One action row: the selected count first, then Clear,
-             the selection-driven bulk buttons, and the Search submit
-             last. The count leads because it is a *reading*, not a
-             control, and reading it between two buttons made it look
-             like one (author, 2026-09-10). The bulk buttons submit
-             ``assignments-bulk-form`` via ``form=`` + ``formaction``,
-             so they post the bulk form even though they sit inside
-             the GET filter form. #}
-          <div class="filter-actions">
-            {% if can_edit %}
-            <span class="pill pill-count"
-                  id="assignments-selected-count" hidden>0 selected</span>
-            {% endif %}
-            {% if filter_q %}
-              <a class="btn secondary"
-                 href="/operator/sessions/{{ session.id }}/assignments">Clear</a>
-            {% endif %}
-            {% if can_edit %}
-            <button class="btn secondary" type="submit"
-                    id="assignments-inactivate-btn"
-                    form="assignments-bulk-form"
-                    formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
-                    disabled aria-disabled="true">Inactivate</button>
-            <button class="btn secondary" type="submit"
-                    id="assignments-activate-btn"
-                    form="assignments-bulk-form"
-                    formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
-                    disabled aria-disabled="true">Activate</button>
-            {% endif %}
-            <button class="btn secondary" type="submit">Search</button>
-          </div>
-        </form>
+        {# The count leads because it is a *reading*, not a control,
+           and reading it between two buttons made it look like one
+           (author, 2026-09-10). The buttons submit
+           ``assignments-bulk-form`` via ``form=`` + ``formaction``, so
+           they never needed the GET form that used to wrap them —
+           which is why the filter could leave without them. #}
+        <div class="filter-actions">
+          <span class="pill pill-count"
+                id="assignments-selected-count" hidden>0 selected</span>
+          <button class="btn secondary" type="submit"
+                  id="assignments-inactivate-btn"
+                  form="assignments-bulk-form"
+                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="submit"
+                  id="assignments-activate-btn"
+                  form="assignments-bulk-form"
+                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
+                  disabled aria-disabled="true">Activate</button>
+        </div>
       </div>
     </div>
+    {% endif %}
     {% if can_edit %}
     {# Hidden shell — the row-select checkboxes and the Card B
        bulk buttons associate to it via ``form=``. The filter
@@ -283,12 +221,22 @@
        column chips and the page links are both on screen with the
        new rows beneath them. #}
     <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-      <div class="table-card-toolbar">
-      {# No heading: this is the only preview-table card in the app
-         that carried one (19I Item 12 rung 1). #}
-      {% if not pair_sample %}
-        <p class="muted">No assignments match the search.</p>
-      {% else %}
+      {# 19P.5 rung 1 — two half-width panes, the idiom the four roster
+         pages took across 19P.1-3. Left: what the table is showing.
+         Right: the filter that decides it, moved out of the
+         `Operator actions` card so the controls sit with the rows they
+         act on rather than a grid away.
+
+         The toolbar renders in EVERY state, including the no-match
+         one. It used to open here and close inside its `else` branch
+         below, so a search matching nothing emitted an unclosed
+         `<div>` — measured before this rung as a net `<div>` depth of
+         2 against every other operator page's 1. The empty-state
+         message now sits where the rows would be, below the toolbar,
+         as it does on the four rosters. #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left">
+        {% if pair_sample %}
       {# Three labelled groups on **one** row (author, 2026-09-10).
          The nine slots come from three different sources and
          collapsing the labels would lose that, so the groups stay —
@@ -306,7 +254,7 @@
          nothing at all — a bare "Show reviewees:" with no chips after
          it reads as a bug (rung 3). Only Assignments can reach this,
          having three groups. #}
-      <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 12px 0;">
+      <p class="col-chip-row" data-col-toggles-for="assignments-table">
         {% for group_label, prefix, entity in col_groups
            if col_data[prefix ~ 1] or col_data[prefix ~ 2] or col_data[prefix ~ 3] %}
           <span class="chip-group">
@@ -320,9 +268,95 @@
           </span>
         {% endfor %}
       </p>
-      {% include "operator/partials/_pager_cluster.html" %}
+          {# Pager before the count line, as the four rosters have it —
+             19I Item 10 sited the sentence and the cluster together and
+             `tests/unit/test_pager.py` pins the order. The count line
+             rendered just OUTSIDE the toolbar until this rung, which is
+             not where `spec/rrw_functional_spec.md:1114` ("the
+             preview-count line sits in the toolbar's left pane") and
+             `spec/ui_elements.md:626` ("Left pane: … column chips,
+             pager cluster, count line") put it. #}
+          {% include "operator/partials/_pager_cluster.html" %}
+          {% include "operator/partials/_preview_count_line.html" %}
+        {% endif %}
+        </div>
+
+        <div class="toolbar-pane toolbar-right">
+          {# Every control here reloads the page, so the form's action
+             carries `#{{ pager_anchor }}`: a `GET` submission replaces
+             the query and leaves the fragment alone, so a search
+             scrolls to the table card exactly as a page turn does
+             (19J.8) — to its top edge on a page tall enough, and as
+             far as the document allows otherwise. Without it the
+             reload lands at the document top and throws the operator
+             away from the rows they were filtering, which is what this
+             form did from its old home in the card. #}
+          <form method="get"
+                action="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}"
+                class="operator-actions-filter">
+            <div class="filter-row">
+              {# Segment 19I Item 9 — the status filter, in the roster
+                 pages' shape. It reads `Assignment.include`, the
+                 boolean this card's own Inactivate / Activate buttons
+                 flip: the state was visible (dimmed rows) and
+                 unfilterable. #}
+              <label class="filter-status">
+                Status:
+                <select name="status">
+                  <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                  {% for value, label in filter_status_options %}
+                    <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-status">
+                Search by:
+                <select name="search_by">
+                  {% for value, label in [
+                    ("all", "All"),
+                    ("reviewer", "Reviewers"),
+                    ("reviewee", "Reviewees"),
+                  ] %}
+                    <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-search">
+                Search:
+                {# Segment 19I Item 9 — name / handle labels only, both
+                   sides in one list. Picking one submits the whole
+                   label, which the route resolves to that side's handle
+                   and matches by equality; without that it would match
+                   nothing, being a substring of no name and no email. #}
+                <input type="text" name="q" value="{{ filter_q }}"
+                       list="assignments-search-options"
+                       autocomplete="off"
+                       placeholder="Name, email or tag">
+                <datalist id="assignments-search-options">
+                  {% for label in filter_search_options %}
+                    <option value="{{ label }}"></option>
+                  {% endfor %}
+                </datalist>
+              </label>
+            </div>
+            {# `Clear` and the submit only. The selected count and the
+               bulk buttons stayed behind in the card: they are the
+               selection-driven half and rung 2 takes them to the row
+               expander, not here. #}
+            <div class="filter-actions">
+              {% if filter_q %}
+                <a class="btn secondary"
+                   href="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}">Clear</a>
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
+            </div>
+          </form>
+        </div>
       </div>{# .table-card-toolbar #}
-      {% include "operator/partials/_preview_count_line.html" %}
+
+      {% if not pair_sample %}
+        <p class="muted">No assignments match the search.</p>
+      {% else %}
       {# `.table-scroll` (base.html) keeps a wide table's overflow
          inside its own card instead of pushing the whole page
          sideways — the wrapper Item 11 gave Invitations and

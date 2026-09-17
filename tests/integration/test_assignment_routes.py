@@ -626,19 +626,32 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         assert group in body
 
 
+def _all_indexes(haystack: str, needle: str) -> list[int]:
+    out, i = [], haystack.find(needle)
+    while i != -1:
+        out.append(i)
+        i = haystack.find(needle, i + 1)
+    return out
+
+
 def test_the_selected_count_leads_the_action_row(
     client: TestClient, db: Session
 ) -> None:
-    """The pill sits left of every button in `filter-actions`.
+    """The pill sits left of every button it shares a row with.
 
     It read as a control when it sat between `Clear` and
     `Inactivate` (author, 2026-09-10, from a screenshot); it is a
     reading, so it leads. Asserted by position within the row rather
     than by presence, which the surrounding tests already cover.
 
-    Scoped to the row: `Search` also appears in the filter card's
-    labels, and `Clear` only renders when a filter is active — hence
-    the query.
+    **19P.5 rung 1 split the row in two.** `Clear` and `Search` went
+    to the table toolbar's right pane with the filter they belong to;
+    the pill and the two bulk buttons stayed in the card, which is now
+    the selection surface. The author's rule is about what the pill is
+    read *next to*, so it survives the split intact — and the card's
+    row is the only one it is in. The query still matters: it is what
+    makes `Clear` render, and the second half of this test is that the
+    two rows really are separate.
     """
     review_session = _make_session(client, db, code="asn-pill-order")
     _seed_roster(
@@ -653,10 +666,20 @@ def test_the_selected_count_leads_the_action_row(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
     ).text
-    start = body.index('class="filter-actions"')
-    row = body[start : body.index("</div>", start)]
+    rows = [
+        body[m : body.index("</div>", m)]
+        for m in _all_indexes(body, 'class="filter-actions"')
+    ]
+    assert len(rows) == 2, f"expected the selection row and the filter row, got {len(rows)}"
 
-    pill = row.index('id="assignments-selected-count"')
-    for label in (">Clear<", ">Inactivate<", ">Activate<", ">Search<"):
-        assert label in row, label
-        assert pill < row.index(label), label
+    selection = next(r for r in rows if "assignments-selected-count" in r)
+    pill = selection.index('id="assignments-selected-count"')
+    for label in (">Inactivate<", ">Activate<"):
+        assert label in selection, label
+        assert pill < selection.index(label), label
+
+    # The halves are apart, and each holds only its own controls.
+    filter_row = next(r for r in rows if r is not selection)
+    assert ">Clear<" in filter_row and ">Search<" in filter_row
+    assert "assignments-selected-count" not in filter_row
+    assert ">Clear<" not in selection and ">Search<" not in selection

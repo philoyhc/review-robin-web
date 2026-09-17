@@ -1351,7 +1351,11 @@
          one, and Invitations and Responses are Operations surfaces too. (`.filter-actions` counted eight
          while rung 2a's orphan action row sat inside
          `.operator-actions-card` with no filter row above it; rung 2b
-         took it, and the count is back to seven — one per template.)
+         took it. It is **eight again** since 19P.5 rung 1, for the
+         same reason and on the same page: Assignments' second row
+         holds the selected-count pill and the bulk buttons while its
+         filter sits in the toolbar. Rung 2 takes that row and the
+         count returns to seven.)
 
          UNSCOPED, and that is the point. This shape used to be
          declared separately inside each card that held it, which meant
@@ -1434,18 +1438,22 @@
          Reviewers at 19P.1 rung 2b, Observers at 19P.2 rung 4, and
          Reviewees and Relationships at 19P.3 rung 3, each moving the
          action row into a row expander and the editor into the row. The
-         rules below therefore serve one tenant; the note further down
-         this file, where five of this scope's rules were deleted, says
-         the same thing and the two must not drift apart again.
+         note further down this file, where five of this scope's rules
+         were deleted, says the same thing and the two must not drift
+         apart again.
 
-         ONE narrowing: the status dropdown is squeezed to ~1/5 of the
-         row (4/5 to Search) rather than the base's 1/3, since the
-         status option list is tiny and the typeahead's "Name (email)"
-         labels want the room. A full-width card can afford that; the
-         half-width toolbar pane below cannot, which is why it keeps
-         the base ratio. */
-      .operator-actions-card form { margin: 0; }
-      .operator-actions-card .filter-row > label.filter-search { flex: 4; }
+         **The scope is now empty.** Its last two rules —
+         `form { margin: 0 }` and a `flex: 4` squeezing the status
+         dropdown to ~1/5 of the row — went at 19P.5 rung 1 with the
+         filter strip they served: the card holds no `<form>` and no
+         `.filter-row` any more, only the selected-count pill and the
+         two bulk buttons, which rung 2 takes to the row expander. The
+         `flex: 4` is deliberately NOT carried across to
+         `.toolbar-right`: it was a full-width card's affordance, and a
+         half-width pane keeps the base ratio.
+
+         The heading stays until rung 2 deletes the card, so the next
+         reader finds the reason rather than a gap. */
       /* 19P.1 rung 2a — the filter strip moved out of the actions card
          into the table's toolbar, where neither half of that selector
          reaches it. Without this the lock is half a lock: the action
@@ -1693,10 +1701,11 @@
          A MODIFIER, not a change to `.table-card-toolbar` itself. Seven
          templates share that class and pages opted in ONE AT A TIME —
          Reviewers at 19P.1 rung 2a, Observers at 19P.2 rung 3, Reviewees
-         and Relationships at 19P.3 rung 2. That is all four roster
-         pages; the three that stay unsplit are Assignments, Invitations
-         and Responses, which put a bare chip row and/or the pager
-         cluster straight into the toolbar. Turning the shared rule into
+         and Relationships at 19P.3 rung 2 (all four roster pages), and
+         Assignments at 19P.5 rung 1. The two that stay unsplit are
+         Invitations and Responses, which put a bare chip row and the
+         pager cluster straight into the toolbar; 19P.5 rung 3 takes
+         them. Turning the shared rule into
          a two-column grid would make those direct children grid items in
          a grid they were never laid out for. A pager-only toolbar is the
          sharpest case — as a grid item the cluster would right-align
@@ -1795,10 +1804,12 @@
          the edit form is the row, so there is no second action row and
          no divider to draw.
 
-         `.operator-actions-card` itself STAYS: `session_assignments.html`
-         still renders one, with a filter strip and nothing else — which
-         is why the two rules above this note are kept and these are
-         not. */
+         `.operator-actions-card` itself still has one tenant:
+         `session_assignments.html` renders one holding the
+         selected-count pill and the two bulk buttons — **no filter
+         strip since 19P.5 rung 1**, which took the two rules this note
+         used to say were kept. 19P.5 rung 2 moves the pill and the
+         buttons into the row expander, and the scope goes with them. */
       /* Reviewer picker on the Previews page (segment 11F). Two
          side-by-side half-width cards in a `.bottom-grid`:
          **Previewing as** (typeahead input + Apply on one flex row,

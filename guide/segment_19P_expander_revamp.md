@@ -1282,11 +1282,21 @@ moves controls and renames a button, and adds no capability.
 - **The preview-count line moves into `toolbar-left`**, under the
   pager, where the roster idiom puts it
   (`session_reviewers.html:743`) and where
-  `spec/rrw_functional_spec.md:1114`, `spec/operator_ui_concept.md:92`
-  and `spec/ui_elements.md:626` all say it belongs. All three render it
+  `spec/rrw_functional_spec.md:1114` and `spec/ui_elements.md:626` say
+  it belongs. (`spec/operator_ui_concept.md:92` was cited here too and
+  is struck: it describes the two-pane toolbar but never mentions the
+  count line.) All three render it
   just outside the toolbar today (`session_assignments.html:325`,
   `:130`, `:108`); `tests/unit/test_pager.py` pins its order with the
   pager.
+- **The operator-actions card is gated on `can_edit`** (rung 1, not
+  planned). It never was: 19I Item 8 kept it renderable in every state
+  because the *search* was in it and `spec/assignments.md` requires the
+  read-only half to survive every state. With the search in the toolbar
+  — which renders unconditionally — the rule is met better than before,
+  and what would be left on a locked session is an empty box. Rejected:
+  leaving it ungated until rung 2 deletes it, which ships that box for
+  one rung.
 - **Search and a page turn land identically.** The roster form is a
   `GET` to `<base>#{{ pager_anchor }}`, and a `GET` submission replaces
   the query while leaving the fragment alone. Same anchor on all three.
@@ -1417,7 +1427,8 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
 
 - `spec/operations_pages.md` — the three pages' table-toolbar shape: the split panes, what sits in each, and the `Search` label (Item 5).
 - `spec/ui_elements.md` — §10's layout primitives: `.table-card-toolbar.is-split` now covers all seven table pages, not four (Item 5).
-- `spec/operator_button_audit.md` — the `Apply` rows become `Search`; Assignments' `Inactivate` / `Activate` rows move to the expander (Item 5).
-- `spec/assignments.md` — the Assignments page's controls and where they render, including which half the selected-count pill belongs to (Item 5).
-- `spec/rrw_functional_spec.md` — §9.9's "Filter card — Status dropdown + free-text search + Apply / Clear" for the two pages, and §1106-1114's two-pane toolbar now covering seven pages (Item 5).
+- `spec/operator_button_audit.md` — the `Apply` rows become `Search`; Assignments' `Inactivate` / `Activate` rows move to the expander; rows 71i / 71j and §11.5's preamble still put `Search` / `Clear` in the operator-actions card, which 19P.1-3 rewrote to "Table toolbar (was Operator actions)" for the same move (Item 5).
+- `spec/assignments.md` — the Assignments page's controls and where they render, including which half the selected-count pill belongs to, and § *The split is per-half, not per-card*, whose premise (the search inside the card) rung 1 removed (Item 5).
+- `spec/operator_ui_concept.md` — Assignments' body shape still reads "→ an operator-actions search / bulk card, half width and flush right →" (Item 5).
+- `spec/rrw_functional_spec.md` — §9.9's "Filter card — Status dropdown + free-text search + Apply / Clear" for the two pages; §1106-1114's two-pane toolbar now covering seven pages; and §1230-1238's "Operator-actions card", which still lists the status filter, the search box and the Search-by dropdown alongside the bulk controls (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
