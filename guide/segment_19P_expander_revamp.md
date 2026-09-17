@@ -1358,9 +1358,12 @@ expander too; `Apply` is `Search`; `.grid-right`,
 card (rung 1); deleting Scope 2's last two rules once the card lost
 its form (rung 1); rendering only the actionable status button, which
 is a **behaviour change** and not a move (rung 2); and lifting the
-table card out of `{% if rows %}` on all three pages, because a search
-matching nothing would otherwise take away the only way to clear it
-(rungs 1 and 3).
+table card out of `{% if rows %}` on Invitations and Responses,
+because a search matching nothing would otherwise take away the only
+way to clear it (rung 3). Assignments already rendered its card in
+every state — what rung 1 had to fix there was a toolbar `<div>`
+spanning both branches of `{% if not pair_sample %}`, which is the
+same restructure meeting the same conditional from the other side.
 
 **Three defects the rungs shipped and a cold read caught.** An
 unclosed `<div>` on Assignments' no-match page, from a toolbar opening
@@ -1393,9 +1396,10 @@ than fixed: Assignments' `Clear` renders on `{% if filter_q %}` while
 `_assignments.py:202` counts status in `is_filtered`, so a status-only
 filter leaves the page visibly filtered with no way to clear it
 (Reviewers uses `{% if filter_status != "all" or filter_search %}`);
-and the three Operations pages gate the **whole left pane** on
-`{% if rows %}` where the four rosters include the partials
-unconditionally and let them self-guard. Aligning either changes what
+and the three Operations pages gate the **whole left pane** on a
+has-rows conditional (`rows` on two, `pair_sample` on Assignments)
+where the four rosters include the partials unconditionally and let
+them self-guard. Aligning either changes what
 a no-match search shows, which is more than this item's move.
 
 ### PR ladder
