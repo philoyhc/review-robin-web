@@ -28,8 +28,10 @@ from app.db.models import (
     Instrument,
     Invitation,
     Observer,
+    Relationship,
     Response,
     ReviewSession,
+    Reviewee,
     Reviewer,
 )
 from app.services import assignments, csv_imports
@@ -424,4 +426,133 @@ def observer_column_state(
             ),
         ],
         col_data={},
+    )
+
+
+def reviewee_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Reviewees roster.
+
+    The rule `observer_column_state` settled — **the readouts mirror the
+    columns the preview table renders** — applied to the page with the
+    most columns of the four. So identity (`Name`, `Email`) always, then
+    `Profile` and each tag slot **only where populated**.
+
+    Chips carry the field labels, not the table's headings: the `<th>`s
+    read `Email / Identifier` and `Profile link`, the chips `Email` and
+    `Profile`, because both come from `field_labels` and an operator who
+    renames a field sees the rename in both places.
+
+    "Only where populated" is this helper's own `count > 0`, deliberately
+    NOT the template's `show_*` flags — those are `edit_mode or
+    col_data[...]`, so in edit mode the table shows an empty column that
+    the index correctly declines to list as populated.
+
+    `Profile` is the one non-tag optional column on any roster page,
+    which is why it is asked for directly rather than bending
+    `tag_slot_counts` into a general shape for a single caller — the same
+    reason the `col_data` map already treats it specially.
+    """
+    sid = review_session.id
+    counts = tag_slot_counts(db, session_id=sid, model=Reviewee)
+    profile_count = slot_row_count(
+        db, session_id=sid, column=Reviewee.profile_link
+    )
+    readouts = [
+        ColumnReadout(
+            slot="name",
+            label=field_labels_service.resolve_pair(
+                review_session, "reviewee", "name"
+            ).friendly,
+            count=slot_row_count(db, session_id=sid, column=Reviewee.name),
+        ),
+        ColumnReadout(
+            slot="email",
+            label=field_labels_service.resolve_pair(
+                review_session, "reviewee", "email_or_identifier"
+            ).friendly,
+            count=slot_row_count(
+                db, session_id=sid, column=Reviewee.email_or_identifier
+            ),
+        ),
+    ]
+    if profile_count > 0:
+        readouts.append(
+            ColumnReadout(
+                slot="profile",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewee", "profile_link"
+                ).friendly,
+                count=profile_count,
+            )
+        )
+    for n in (1, 2, 3):
+        if counts[f"tag_{n}"] == 0:
+            continue
+        readouts.append(
+            ColumnReadout(
+                slot=f"tag-{n}",
+                label=field_labels_service.resolve_pair(
+                    review_session, "reviewee", f"tag_{n}"
+                ).friendly,
+                count=counts[f"tag_{n}"],
+            )
+        )
+    return RosterColumnState(
+        readouts=readouts,
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)}
+        | {"profile": profile_count > 0},
+    )
+
+
+def relationship_column_state(
+    db: Session, review_session: ReviewSession
+) -> RosterColumnState:
+    """Populated-column chips and visibility flags for the Relationships
+    roster.
+
+    Same rule as the other three — the readouts mirror the columns the
+    table renders — with **one column class this page has and they do
+    not**, which the rule cannot reach.
+
+    `Reviewer` and `Reviewee` are `reviewer_id` / `reviewee_id`:
+    **non-nullable integer foreign keys**. A readout answers "how many
+    rows carry a value in this column", and for a column that cannot be
+    without one the question is malformed — the answer is the roster
+    total by construction, which the readout beside it already states.
+
+    It is also not askable with the helper that answers it.
+    `slot_row_count` is a TEXT predicate — `column IS NOT NULL AND
+    column != ''` — and Postgres refuses `integer <> character varying`
+    outright:
+
+        ERROR: operator does not exist: integer <> character varying
+
+    SQLite compares across types without complaint, so the first version
+    of this function passed the whole suite locally and turned the
+    `ci-postgres` job red. Exactly the dialect gap `CLAUDE.md` warns
+    about, met in a query rather than a migration.
+
+    So this page lists its pair-context tags and nothing else, and on an
+    empty roster its readout list is genuinely empty — which makes the
+    chip row's `{% else %}` ("none yet") reachable HERE and nowhere else,
+    since the other three always emit identity entries.
+    """
+    sid = review_session.id
+    counts = tag_slot_counts(db, session_id=sid, model=Relationship)
+    readouts = [
+        ColumnReadout(
+            slot=f"tag-{n}",
+            label=field_labels_service.resolve_pair(
+                review_session, "pair_context", str(n)
+            ).friendly,
+            count=counts[f"tag_{n}"],
+        )
+        for n in (1, 2, 3)
+        if counts[f"tag_{n}"] > 0
+    ]
+    return RosterColumnState(
+        readouts=readouts,
+        col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
     )

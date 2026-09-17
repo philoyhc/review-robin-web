@@ -12,6 +12,30 @@
   {% set edit_mode = (edit_id is not none) or add_mode %}
   {% set reviewees_base_url =
         "/operator/sessions/" ~ session.id ~ "/reviewees" %}
+  {# 19P.3 rung 4 — the Unlock panel's condition, named once because TWO
+     gates read it: the panel itself, and the complement below it that
+     renders the tag-labels editor in its old home for exactly the states
+     the panel cannot cover. Written as one `{% set %}` and its `not`,
+     rather than two spelled-out conditions, so they cannot drift apart
+     into a state that renders the editor twice or not at all. #}
+  {% set unlock_available = is_editable and not edit_mode %}
+
+  {# The tag-labels editor's parameters, set ONCE for both of its homes —
+     the Unlock panel below and the `.card-columns` fallback under it.
+     One include, two positions: a second copy of these is how the two
+     homes drift into describing different editors. #}
+  {% set field_labels_form_action =
+        "/operator/sessions/" ~ session.id ~ "/reviewees/field-labels" %}
+  {% set field_labels_source_type = "reviewee" %}
+  {% set field_labels_card_title = "Reviewee tag labels" %}
+  {% set field_labels_help =
+        "Rename the three reviewee tag columns for this session. " ~
+        "Friendly labels flow through every operator preview + the " ~
+        "reviewer surface; leave a cell blank to fall back to the " ~
+        "default." %}
+  {% set field_labels_rows = [
+        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
+  ] %}
 
   {# 19P.3 rung 3 — the edit row's own expander bar, bracketed to the
      row above it, holding what the `Operator actions` card held while
@@ -73,28 +97,15 @@
     {% include "operator/partials/_roster_lock_card.html" %}
   {% endwith %}
 
-  {# 19E rung 6b — every card above the preview table in two
-     independent column stacks: the guidance card then the tag-label
-     editor on the left, Operator actions on the right. Opening the
-     guidance grows only the left column, and the right one neither
-     moves nor stretches.
+  {# 19P.3 rung 4 — page guidance leads the page, full width, now that
+     `.card-columns` has no second tenant to sit beside. Its prose runs
+     in two columns when open: at full width one measure is ~150
+     characters, well past what stays readable.
 
-     19I Item 12 rung 4 retired the "Fields with data" card that used
-     to head the right stack. Its pills named the columns holding any
-     value, which the column chips above the preview table now say —
-     and say better, since a chip both reports the fact and acts on
-     it. The two identity pills it also carried (Name, Email) were
-     appended whenever the roster had any rows at all, so they
-     restated a count the chrome status strip already shows.
-
-     The Activated lock card sits ABOVE the container rather than
-     between the two pairs (where it used to be, splitting them into
-     two row grids): it is full width, and a full-width card inside a
-     two-column stack would have to span, which `.card-columns` does
-     not do. Its notice reads at the top of the page anyway. #}
-  <div class="card-columns">
-    <div>
-      {% call page_guidance.guidance() %}
+     Reviewers made this move in its toolbar rung and Observers in its
+     `.card-columns` rung; this follows Observers, because the container
+     is what decides it. #}
+      {% call page_guidance.guidance(full_width=true) %}
       <p>
         Reviewees are the people being reviewed. They may be the same people
         as the reviewers, as in a peer review. A session must have at least one
@@ -127,47 +138,268 @@
       </p>
       {% endcall %}
 
-    {% set field_labels_form_action =
-          "/operator/sessions/" ~ session.id ~ "/reviewees/field-labels" %}
-    {% set field_labels_source_type = "reviewee" %}
-    {% set field_labels_card_title = "Reviewee tag labels" %}
-    {% set field_labels_help =
-          "Rename the three reviewee tag columns for this session. " ~
-          "Friendly labels flow through every operator preview + the " ~
-          "reviewer surface; leave a cell blank to fall back to the " ~
-          "default." %}
-    {% set field_labels_rows = [
-          [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-    ] %}
-    {% include "operator/partials/_field_labels_editor.html" %}
+  {# ------------------------------------------------------------------
+     19P.3 rung 4 — the roster card: what the roster holds, and an Unlock
+     panel holding the three controls that change it.
 
-    
+     Reviewers' arrangement, not Observers': the tag-labels editor over
+     the `Danger Zone` on the left, `Upload` on the right, `Lock`
+     beneath the upload card. Observers has no labels editor, so its
+     panel could not answer the two-homes question this page has to.
+     ------------------------------------------------------------------ #}
+  <div class="card roster-card" id="roster-card">
+    <div class="roster-readouts">
+      <div class="roster-readout">
+        <span class="roster-readout-label">Reviewees roster:</span>
+        <span class="pill pill-count">{{ total_row_count }}
+          reviewee{% if total_row_count != 1 %}s{% endif %}</span>
+      </div>
+      <div class="roster-readout">
+        <span class="roster-readout-label">Populated columns:</span>
+        <span class="roster-readout-values">
+          {# Label and count both come from the server — the label from
+             the same resolver the preview's own column headers read, so
+             the index cannot disagree with the table below it. #}
+          {% for col in col_readouts %}
+            <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
+          {% else %}
+            <span class="roster-readout-empty">none yet</span>
+          {% endfor %}
+        </span>
+      </div>
     </div>
 
-    {# 19P.3 rung 3 — the `Operator actions` card is RETIRED.
+    {# Suppressed, not disabled, when the session is not editable:
+       `test_field_labels_editor_routes` asserts a locked page carries no
+       "Save labels" anywhere, and this panel holds one. The readouts
+       above stay — they are informational in every state. #}
+    {% if unlock_available %}
+      <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
+        {# Left column: the two cards an operator edits, stacked. #}
+        <div class="unlock-stack">
+          {% include "operator/partials/_field_labels_editor.html" %}
 
-       `Edit` / `Inactivate` / `Activate` / `Delete`, the selected count
-       and the delete confirm are in the row expander below, built
-       against the selected rows; Save / Cancel are in the edit row's own
-       bar. What was left after those moved was a `<form>` with no field
-       and no submit of its own: the three submit buttons in it targeted
-       `reviewees-bulk-form` via `form=` + `formaction`, and `Edit` was a
-       bare `type="button"` driven by script — so nothing submitted the
-       form the card wrapped. Inside a card whose only remaining content
-       described where its controls had gone.
+          {# Gated on the roster having rows, as Reviewers' is. The
+             route does NOT refuse an empty delete-all — it answers 303
+             and writes an audit row reading "Deleted all 0" — and worse,
+             `_delete_all` opens with `invalidate_if_validated(...)`
+             before it counts anything, so an ungated Delete-all knocks a
+             `validated` session back to `draft` while deleting nothing
+             at all. #}
+          {% if total_row_count and total_row_count > 0 %}
+            <section class="card danger-zone" aria-labelledby="reviewees-danger-h">
+              <h2 id="reviewees-danger-h">Danger Zone</h2>
+              <form method="post" action="{{ reviewees_base_url }}/delete-all">
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="confirm" value="true" required
+                           data-delete-confirm="delete-all">
+                    {# Names what goes, modelled on the Instruments page
+                       (Segment 19I Item 3). The response clause is what
+                       the label was missing: `delete-all` destroys every
+                       saved answer under this roster and said nothing. #}
+                    <span>Yes, delete the existing
+                    <span class="pill pill-empty">{{ total_row_count }} reviewee{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+                    and their associated
+                    <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+                    and
+                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
+                  </label>
+                  {# The acknowledgement rides with this tick, as it does
+                     on the selected-rows gate. Without it the route's
+                     `_require_response_loss_ack` returned 400 and no
+                     roster template sent the field — so Delete-all was
+                     unreachable on any session with a response. #}
+                  {% if roster_response_count > 0 %}
+                    <input type="hidden" id="reviewees-delete-all-ack"
+                           name="acknowledge_response_loss" value="true">
+                  {% endif %}
+                </p>
+                <div class="unlock-col-actions">
+                  <button class="btn destructive" type="submit"
+                          data-delete-btn="delete-all"
+                          disabled aria-disabled="true">Delete all reviewees</button>
+                </div>
+              </form>
+            </section>
+          {% endif %}
+        </div>
 
-       Wired and retired in ONE slice, as Reviewers was at 19P.1 rung 2b:
-       two live `Delete` buttons would need two `data-delete-confirm`
-       keys, and `base.html` resolves a confirm to its button with a
-       first-match `querySelector`, so the keys must stay unique
-       page-wide. Each control moves exactly once.
+        {# Right column: the upload card, and — while open — the Lock
+           control beneath it. A stack, not a second grid row: a grid row
+           starts below the TALLER column, which would drop the button to
+           the panel's foot, far from the card it sits under. #}
+        <div class="unlock-stack unlock-right">
+          <section class="card" id="upload-csv" aria-labelledby="reviewees-upload-h">
+            <h2 id="reviewees-upload-h">Upload Reviewees</h2>
+            <p class="form-help">
+              CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+              <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional columns:
+              <code>PhotoLink</code>, <code>RevieweeTag1</code>,
+              <code>RevieweeTag2</code>, <code>RevieweeTag3</code>,
+              <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
+              to <code>active</code>).
+              (Friendly tag labels can be keyed into the header after a period,
+              e.g., <code>RevieweeTag1.Tutor</code>.)
+              Other columns are ignored.
+            </p>
 
-       `.card-columns` keeps its ONE remaining column — the guidance card
-       and the tag-labels editor. The empty second column went with the
-       card it held. Rung 4 settles the container itself, when the labels
-       editor moves into the Unlock panel and the guidance runs full
-       width. #}
+            {% include "operator/partials/validation_results.html" %}
+
+            <form method="post"
+                  action="{{ reviewees_base_url }}/import"
+                  enctype="multipart/form-data">
+              <input type="file" id="file" name="file" accept=".csv,text/csv"
+                     aria-label="CSV file" required>
+
+              {% if existing_count and existing_count > 0 %}
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="confirm_replace" value="true" required
+                           data-delete-confirm="replace-roster">
+                    {# Names what the replace destroys, like the
+                       Danger Zone and the selected-rows delete
+                       (Segment 19I Item 5). The response clause is
+                       what was missing: the import discards every
+                       saved answer under this roster and said
+                       nothing. #}
+                    <span>Yes, replace the existing
+                    <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+                    and delete the
+                    <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+                    and
+                    <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.</span>
+                  </label>
+                  {# The acknowledgement rides with this tick, as it
+                     does on the delete gates. Without it the route's
+                     `_require_response_loss_ack` returned 400 and no
+                     upload form sent the field — so replacing a
+                     roster was impossible on any session that had
+                     collected an answer, which is exactly when an
+                     operator reverts to draft to fix it. #}
+                  {% if roster_response_count > 0 %}
+                    <input type="hidden" id="reviewees-import-ack"
+                           name="acknowledge_response_loss" value="true">
+                  {% endif %}
+                </p>
+              {% endif %}
+
+              <div class="unlock-col-actions">
+                {% if existing_count and existing_count > 0 %}
+                  <button class="btn secondary" type="submit"
+                          data-delete-btn="replace-roster"
+                          disabled aria-disabled="true">Upload</button>
+                {% else %}
+                  <button class="btn secondary" type="submit">Upload</button>
+                {% endif %}
+              </div>
+            </form>
+          </section>
+        {% if panel_open %}
+        <div class="roster-card-actions">
+          <button type="button" class="btn secondary" id="roster-unlock-btn"
+                  aria-expanded="true" aria-controls="roster-unlock-panel">
+            Lock
+          </button>
+          {# Without JS the button above is inert, so the same state
+             change is offered as a plain navigation. See the Unlock twin
+             below. #}
+          <noscript>
+            <a class="btn secondary"
+               href="{{ reviewees_base_url }}#roster-card">Lock</a>
+          </noscript>
+        </div>
+        {% endif %}
+        </div>
+      </div>
+
+      {# Collapsed this sits here, as the card's last child; open it
+         belongs under the upload card, inside the panel. The toggle
+         MOVES the one element between those two homes rather than
+         rendering two copies, so arriving open has to start it in the
+         panel — otherwise the first Lock click would move it out of a
+         place it was never in. #}
+      {% if not panel_open %}
+      <div class="roster-card-actions">
+        <button type="button" class="btn secondary" id="roster-unlock-btn"
+                aria-expanded="false" aria-controls="roster-unlock-panel">
+          Unlock
+        </button>
+        {# The no-JS path in. The panel ships `hidden` and is opened only
+           by the button above, so with JS off this page would lose the
+           CSV import, the delete-all and the labels editor in one step.
+           `?unlocked=1` already renders the panel open server-side — it
+           exists for the redirects those controls answer with — so this
+           is a link to a state the server already supports, not new
+           machinery.
+
+           Scope, as Reviewers measured it: Upload and Delete-all ship
+           `disabled` and are enabled by `base.html`'s confirm-pairing
+           script, so on a roster that already has rows they were
+           unreachable without JS before this rung and still are. What
+           this restores is the empty-roster import — where the button
+           renders enabled — plus the ability to read all three cards at
+           all. #}
+        <noscript>
+          <a class="btn secondary"
+             href="{{ reviewees_base_url }}?unlocked=1#roster-card">Unlock</a>
+        </noscript>
+      </div>
+      {% endif %}
+
+      <script>
+        (function () {
+          "use strict";
+          var btn = document.getElementById("roster-unlock-btn");
+          var panel = document.getElementById("roster-unlock-panel");
+          if (!btn || !panel) return;
+          // The control has two homes, and one element. Collapsed it is
+          // the card's last child; open it belongs under the upload
+          // card, in the panel's right column — which means inside the
+          // panel, and the panel is `display: none` when closed. So it
+          // moves, rather than being rendered twice: two copies of one
+          // control is how they drift apart.
+          var actions = document.querySelector(".roster-card-actions");
+          var card = document.getElementById("roster-card");
+          btn.addEventListener("click", function () {
+            var open = !panel.hidden;
+            if (open) card.appendChild(actions);
+            else panel.querySelector(".unlock-right").appendChild(actions);
+            panel.hidden = open;
+            // The label names the state the control moves TO, not
+            // "Done": the panel is a lock state, not a form being
+            // finished.
+            btn.textContent = open ? "Unlock" : "Lock";
+            btn.setAttribute("aria-expanded", String(!open));
+          });
+        })();
+      </script>
+    {% endif %}
   </div>
+
+  {# 19P.3 rung 4 — the tag-labels editor's OTHER home, and the only
+     reason `.card-columns` survives on this page.
+
+     The Unlock panel holds the live editor, but the panel cannot render
+     in two states: a locked session (`ready` / `expired` / `archived`),
+     where it is suppressed rather than disabled because
+     `test_field_labels_editor_routes` requires a locked page to carry no
+     "Save labels" anywhere; and `edit_mode`, where the whole Unlock
+     affordance stands down. In both, an operator must still be able to
+     READ the labels.
+
+     So the same partial renders here instead, on the exact complement of
+     the panel's condition. Not a copy: ONE include, two positions, and
+     `unlock_available` is the single expression both read. The partial
+     disables its own inputs and drops its buttons when the session is
+     not editable, which is what makes one include serve both. #}
+  {% if not unlock_available %}
+  <div class="card-columns">
+    <div>
+    {% include "operator/partials/_field_labels_editor.html" %}
+    </div>
+  </div>
+  {% endif %}
 
 
 
@@ -965,111 +1197,4 @@
      409. The author's rule for rows — draft and validated edit,
      the rest do not, because "the thing is over" — is a rule
      about editing, and these are edits. #}
-  {% if is_editable and not edit_mode %}
-  <div class="bottom-grid">
-    <section class="card" id="upload-csv">
-      <h2>Upload Reviewees</h2>
-      <p class="form-help">
-        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
-        <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional columns:
-        <code>PhotoLink</code>, <code>RevieweeTag1</code>,
-        <code>RevieweeTag2</code>, <code>RevieweeTag3</code>,
-        <code>Status</code> (<code>active</code> / <code>inactive</code>; defaults
-        to <code>active</code>).
-        (Friendly tag labels can be keyed into the header after a period,
-        e.g., <code>RevieweeTag1.Tutor</code>.)
-        Other columns are ignored.
-      </p>
-
-      {% include "operator/partials/validation_results.html" %}
-
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/reviewees/import"
-            enctype="multipart/form-data">
-        <input type="file" id="file" name="file" accept=".csv,text/csv"
-               aria-label="CSV file" required>
-
-        {% if existing_count and existing_count > 0 %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required
-                     data-delete-confirm="replace-roster">
-              {# Names what the replace destroys, like the
-                 Danger Zone and the selected-rows delete
-                 (Segment 19I Item 5). The response clause is
-                 what was missing: the import discards every
-                 saved answer under this roster and said
-                 nothing. #}
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-            {# The acknowledgement rides with this tick, as it
-               does on the delete gates. Without it the route's
-               `_require_response_loss_ack` returned 400 and no
-               upload form sent the field — so replacing a
-               roster was impossible on any session that had
-               collected an answer, which is exactly when an
-               operator reverts to draft to fix it. #}
-            {% if roster_response_count > 0 %}
-              <input type="hidden" id="reviewees-import-ack"
-                     name="acknowledge_response_loss" value="true">
-            {% endif %}
-          </p>
-        {% endif %}
-
-        <div class="btn-pair" style="margin-top: 20px;">
-          {% if existing_count and existing_count > 0 %}
-            <button class="btn secondary" type="submit"
-                    data-delete-btn="replace-roster"
-                    disabled aria-disabled="true">Upload</button>
-          {% else %}
-            <button class="btn secondary" type="submit">Upload</button>
-          {% endif %}
-        </div>
-      </form>
-    </section>
-
-    {% if total_row_count and total_row_count > 0 %}
-      <div class="card danger-zone">
-        <h2>Danger Zone</h2>
-        <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required
-                     data-delete-confirm="delete-all">
-              {# Names what goes, modelled on the Instruments page
-                 (Segment 19I Item 3). The response clause is what
-                 the label was missing: `delete-all` destroys every
-                 saved answer under this roster and said nothing. #}
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ total_row_count }} reviewee{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and their associated
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-            {# The acknowledgement rides with this tick, as it does
-               on the selected-rows gate. Without it the route's
-               `_require_response_loss_ack` returned 400 and no
-               roster template sent the field — so Delete-all was
-               unreachable on any session with a response. #}
-            {% if roster_response_count > 0 %}
-              <input type="hidden" id="reviewees-delete-all-ack"
-                     name="acknowledge_response_loss" value="true">
-            {% endif %}
-          </p>
-          <p>
-            <button class="btn destructive" type="submit"
-                    data-delete-btn="delete-all"
-                    disabled aria-disabled="true">Delete all reviewees</button>
-          </p>
-        </form>
-      </div>
-    {% endif %}
-  </div>
-  {% endif %}
 {% endblock %}

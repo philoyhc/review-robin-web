@@ -1075,10 +1075,13 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     half-width card would be two ~30-character ribbons — so a page opts
     in rather than the rule applying everywhere the class does.
 
-    **Two pages opt in**: Reviewers since 19P.1 rung 2a, Observers since
-    19P.2 rung 5 retired its `.card-columns`. The card spanning the page
-    and the prose being laid out for that span are separate things, and
-    rung 5's first draft did the first without the second.
+    **All four roster pages opt in**: Reviewers since 19P.1 rung 2a,
+    Observers since 19P.2 rung 5 retired its `.card-columns`, Reviewees
+    and Relationships since 19P.3 rung 4 did the same. The card spanning
+    the page and the prose being laid out for that span are separate
+    things, and 19P.2 rung 5's first draft did the first without the
+    second — which is why the positive is asserted per page rather than
+    inferred from the container being gone.
     """
     rs = _with_reviewers(client, db, "rc33")
     html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
@@ -1090,14 +1093,20 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     ), "the two-column rule the template comment promises does not exist"
 
     enable_observers(db, rs)
-    observers = client.get(f"/operator/sessions/{rs.id}/observers")
-    assert observers.status_code == 200
-    assert "page-guidance-wide" in _markup(observers.text), (
-        "Observers runs full width since rung 5 but did not opt in"
-    )
+    enable_relationships(db, rs)
+    for page in ("observers", "reviewees", "relationships"):
+        response = client.get(f"/operator/sessions/{rs.id}/{page}")
+        assert response.status_code == 200, page
+        assert "page-guidance-wide" in _markup(response.text), (
+            f"{page} runs full width but did not opt in"
+        )
 
-    # A half-width placement must not pick it up.
-    other = client.get(f"/operator/sessions/{rs.id}/reviewees")
+    # A half-width placement must not pick it up. **Instruments**, not a
+    # roster page: every roster page opted in at 19P.3 rung 4, so the
+    # negative asserted against one of them would be asserting nothing.
+    # `instruments_index.html` and `session_setupinvite.html` are the two
+    # templates still calling the macro without `full_width`.
+    other = client.get(f"/operator/sessions/{rs.id}/instruments")
     assert other.status_code == 200
     other_markup = _markup(other.text)
     assert "page-guidance" in other_markup, "vacuity: no guidance card"

@@ -27,13 +27,11 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import (
     Instrument,
-    Reviewee,
     ReviewSession,
     User,
 )
 from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
-from app.services._queries import slot_has_data, tag_slot_presence
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, roster_bulk
@@ -827,11 +825,13 @@ async def _handle_import(
             # way; Chromium is what proves it. Third time this shape has
             # bitten this segment (`.is-locked`, `.filter-actions`).
             #
-            # Reviewers-only because the panel is: `session_reviewees.html`
-            # never reads this key, and saying so here beats sending it a
-            # flag that means nothing on that page.
+            # 19P.3 rung 4 — BOTH kinds now, and the literal collapses
+            # rather than gaining a branch. This handler serves exactly
+            # `reviewers` and `reviewees`, and both render the panel
+            # since Reviewees gained one, so there is no page left for
+            # which the flag means nothing.
             "current_offset": 0,
-            "panel_open": kind == "reviewers",
+            "panel_open": True,
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
@@ -869,22 +869,16 @@ async def _handle_import(
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
-                col_data = views.chip_slots(
-                    tag_slot_presence(
-                        db, session_id=review_session.id, model=Reviewee
-                    ),
-                    prefix="tag-",
-                ) | {
-                    "profile": slot_has_data(
-                        db,
-                        session_id=review_session.id,
-                        column=Reviewee.profile_link,
-                    )
-                }
-                # Reviewees have no roster index row yet — 19P.1 pilots on
-                # Reviewers alone. Set rather than left undefined, so the
-                # shared ``context.update`` below always carries the key.
-                col_readouts = []
+                # 19P.3 rung 4 — same as the branch above, and for the
+                # same reason. This once set ``col_readouts = []`` with
+                # a note that Reviewees had no index row yet; once it
+                # had one, the empty list stopped being a placeholder
+                # and started being a lie — a failed import rendered
+                # "Populated columns: none yet" over a roster of three.
+                # One helper answers both keys, so they cannot drift.
+                column_state = views.reviewee_column_state(db, review_session)
+                col_data = column_state.col_data
+                col_readouts = column_state.readouts
             context.update(
                 {
                     "total_row_count": len(list_items),
@@ -954,17 +948,21 @@ async def _handle_import(
         correlation_id=request_correlation_id(),
         field_labels_captured=result.field_labels,
     )
-    # 19P.1 rung 3c — a successful reviewers import lands back with the
-    # panel still open, matching the two controls that moved before it
-    # (3a's labels save, 3b's delete-all). The author's rule from the UI
-    # pass generalises to all three: a Save does not close the Reviewers
-    # card, the Lock button does. `#roster-card` lands on the card
-    # instead of the top of the document.
+    # 19P.1 rung 3c — a successful import lands back with the panel still
+    # open, matching the two controls that moved before it (the labels
+    # save and delete-all). The author's rule from the UI pass: a Save
+    # does not close the roster card, the Lock button does.
+    # `#roster-card` lands on the card instead of the top of the
+    # document.
     #
-    # Reviewees is left exactly as it was — no panel, so no flag.
-    suffix = "?unlocked=1#roster-card" if kind == "reviewers" else ""
+    # 19P.3 rung 4 — unconditional now. This was
+    # `if kind == "reviewers" else ""` while Reviewees had no panel to
+    # keep open; it has one, and this handler serves no other kind.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/{kind}{suffix}",
+        url=(
+            f"/operator/sessions/{review_session.id}/{kind}"
+            "?unlocked=1#roster-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

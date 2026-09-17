@@ -1141,6 +1141,47 @@ still listing four tenants where one remains, and `session_reviewers.html`
 claiming an `is_ready` gate three lines above the note saying it was
 removed.
 
+**Rung 4 — landed.** The roster card and the Unlock panel on both pages,
+in Reviewers' arrangement. `.card-columns` survives only as the labels
+editor's fallback home, so no roster page renders it on a draft, and the
+guidance card takes the width it vacated. `_handle_import`'s two
+`kind == "reviewers"` literals COLLAPSED rather than gaining a branch —
+it serves exactly the two kinds, and both have panels now.
+Relationships' bespoke handler needed `panel_open=True` on both of its
+in-place 400 paths, where the shared one has a single site.
+
+**Fifteen of twenty-four mutations survived, and the honest reading is
+that the rung shipped with no guard file of its own.** It leaned on two
+pre-existing tests that happened to fail. Almost every survivor was plain
+rendered markup a server-side test can read — the panel shipping open,
+`?unlocked=1` ignored, a labels save closing the panel, both 400 paths
+shipping closed, the delete-all gate removed, the readouts deleted, the
+Lock control orphaned, the retired inline styles restored. They survived
+because nothing looked. `tests/integration/test_roster_unlock_panel.py`
+(35 tests, both pages) now covers each; every one re-mutated and caught.
+
+**Two claims this rung first made and then falsified.** Both said
+`none yet` was unreachable and `.roster-readout-empty` dead markup in
+four templates. Both were wrong, in different ways, and the corrections
+are the rung's two real defects:
+
+- `relationship_column_state` counted `reviewer_id` / `reviewee_id`
+  through `slot_row_count`, a TEXT predicate (`column != ''`). Postgres
+  refuses `integer <> character varying`; SQLite compares across types
+  without a word, so the whole suite passed locally and `ci-postgres`
+  went red. The FK readouts are gone — a non-nullable column's count is
+  the roster total by construction anyway — which leaves Relationships
+  with an empty index on an empty roster, so `none yet` is **reachable
+  there** and nowhere else.
+- `_handle_import` still hardcoded `col_readouts = []` for Reviewees,
+  from when the page had no index row. A failed import therefore
+  answered "Populated columns: none yet" over a roster it was
+  displaying. Both branches now call the page's own helper; mutating
+  either to `[]` was caught, where before **neither** was.
+
+Found by the cold read, not by the mutation pass — a table proves what
+its author thought to mutate.
+
 **Owed, not fixed here — rung 3's additions.** Two comment-placement
 bugs in `session_reviewers.html`: the `statusActions` header comment sits
 above `var BULK_BASE` (`:1149`) and the sort-handler comment above the
@@ -1150,7 +1191,19 @@ did not cause them and the diff is already wide.
 
 **Owed, not fixed here.** Reviewers' and Observers' empty-filtered cards
 carry no landing anchor either — the same gap, pre-existing, on files this
-item does not own. For the rung-5 sweep.
+item does not own. With them, for the rung-5 sweep:
+
+- `.roster-readout-empty` is live on Relationships only; the other three
+  always emit identity entries. Either reachable everywhere or nowhere,
+  but decided once.
+- `reviewer_column_state` has no `profile` slot, where
+  `reviewee_column_state` does — an unexamined 19P.1 asymmetry, not a
+  decision.
+- `spec/operator_button_audit.md` still files Reviewees' and
+  Relationships' buttons under `Operator actions`, and
+  `spec/color_tokens.md` / `spec/email_template_editor.md` still describe
+  `.card-columns` as the roster pages' container. Rung 5 is the specs
+  rung; this is its list.
 
 ### PR ladder
 
