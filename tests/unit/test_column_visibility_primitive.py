@@ -12,6 +12,8 @@ nothing else in the suite would notice.
 """
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 import pytest
@@ -168,24 +170,36 @@ def test_assignments_keeps_its_three_groups_on_one_row() -> None:
     """
     src = (OPERATOR / "session_assignments.html").read_text()
     assert src.count(CHIP_ROW) == 1
-    assert src.count('<p class="col-chip-row"') == 1
+    # The class list, not the whole attribute: 19P.5 added the
+    # `is-grouped` modifier here, and a match anchored on the closing
+    # quote would read that as "the row is gone".
+    assert src.count('<p class="col-chip-row') == 1
+    assert 'class="col-chip-row is-grouped"' in src
     assert src.count('<span class="chip-group">') == 1  # one loop
     for label in ("Show reviewers", "Show reviewees", "Show relationships"):
         assert label in src
 
 
-def test_the_assignments_search_card_is_half_width_and_right() -> None:
-    """Rung 1 unwrapped the ``bottom-grid`` when it took the chips out
-    of it, leaving this card full width — a lone child of a ``1fr 1fr``
-    grid would otherwise sit in the *left* column. The author asked for
-    it back at half width, flush right (2026-09-10), which is what
-    ``.grid-right`` does."""
+def test_the_assignments_search_card_and_its_grid_rule_are_both_gone() -> None:
+    """19I Item 12 rung 1 unwrapped the ``bottom-grid`` when it took
+    the chips out of it, leaving this card full width; a refinement
+    after rung 4 put it back at half width flush right (author,
+    2026-09-10), which is what ``.grid-right`` did — a lone child of a
+    ``1fr 1fr`` grid otherwise lands in the *left* column.
+
+    **19P.5 took the card in two steps** — rung 1 the filter strip to
+    the table toolbar, rung 2 the selected count and bulk buttons to
+    the row expander — so there is no lone child and no card. This
+    page had the rule's only caller, so the rule went too rather than
+    waiting in `base.html` for a second one.
+    """
+    # Markup, not prose: the template's comment names both classes to
+    # record where they went, which a bare substring would trip on.
     src = (OPERATOR / "session_assignments.html").read_text()
-    assert 'class="card operator-actions-card grid-right"' in src
-    grid = src.index('<div class="bottom-grid">')
-    assert grid < src.index("operator-actions-card grid-right")
-    # And the primitive it depends on exists.
-    assert ".bottom-grid > .grid-right { grid-column: 2; }" in BASE.read_text()
+    classes = re.findall(r'class="([^"]*)"', src)
+    assert not [c for c in classes if "operator-actions-card" in c], classes
+    assert not [c for c in classes if "grid-right" in c], classes
+    assert ".bottom-grid > .grid-right {" not in BASE.read_text()
 
 
 def test_no_template_renders_a_fields_with_data_card() -> None:
@@ -253,3 +267,45 @@ def test_the_wide_chip_tables_sit_inside_a_table_scroll_wrapper(
     src = (OPERATOR / name).read_text()
     table = src.index('<table id="')
     assert src.rfind('<div class="table-scroll">', 0, table) != -1, name
+
+
+def test_chip_groups_are_separated_by_a_gap_not_a_margin() -> None:
+    """A wrapped group must not start its line indented.
+
+    `.chip-group + .chip-group { margin-left }` separated the groups
+    while they shared one line and was wrong the moment they stopped:
+    the second group wraps, starts a new line, and carries the margin
+    with it — 16px of indent against the group above. 19P.5 rung 1 made
+    that reachable by moving the chip row into the half-width
+    `.toolbar-left` pane, where Assignments' groups no longer fit on
+    one line.
+
+    A `column-gap` is between-items-on-a-line by definition, so it
+    cannot do that. It is a modifier because the roster chip rows put
+    their label and chips directly in `.col-chip-row`, where a wider
+    column-gap would space a label from its own chips.
+    """
+    base = BASE.read_text()
+
+    assert ".chip-group + .chip-group" not in base, (
+        "the adjacent-sibling margin is back; it indents wrapped groups"
+    )
+    assert "body.ui-v2 .col-chip-row.is-grouped {" in base
+    grouped = base[base.index("body.ui-v2 .col-chip-row.is-grouped {") :]
+    assert "column-gap: var(--space-4);" in grouped[: grouped.index("}")]
+
+
+def test_only_chip_rows_built_from_groups_are_marked_grouped() -> None:
+    """The modifier and the markup it describes cannot drift apart:
+    every row carrying `.chip-group` children takes `is-grouped`, and
+    no row without them does."""
+    for path in sorted(OPERATOR.glob("*.html")) + sorted(
+        (OPERATOR / "partials").glob("*.html")
+    ):
+        text = path.read_text()
+        for row in re.findall(r'<p class="col-chip-row[^"]*"[^>]*>', text):
+            after = text[text.index(row) + len(row) :]
+            body = after[: after.index("</p>")]
+            has_groups = '<span class="chip-group">' in body
+            marked = "is-grouped" in row
+            assert has_groups == marked, (path.name, row.strip())

@@ -193,19 +193,27 @@ def test_no_roster_page_renders_the_operator_actions_card() -> None:
     toolbar, so the looser grep is nonzero on every migrated page and can
     never reach 0.
 
-    `session_assignments.html` renders the card too and is **not** a
-    roster page, so it is excluded by name rather than by a `session_*`
-    glob — which is also why the `.operator-actions-card` CSS stays.
+    `session_assignments.html` was the last tenant and not a roster
+    page, so it used to be asserted the other way round — present, and
+    the reason the `.operator-actions-card` CSS stayed. **19P.5 rung 2
+    took it**, so the class is unused by every template and the CSS
+    went with it. The assertion widens from the roster pages to all of
+    them.
     """
     still_carrying = sorted(
-        page
-        for page in ROSTER_PAGES
-        if "operator-actions-card" in (TEMPLATES / f"session_{page}.html").read_text()
+        path.name
+        for path in TEMPLATES.glob("session_*.html")
+        if "operator-actions-card" in path.read_text()
     )
     assert still_carrying == [], still_carrying
-    assert (
-        "operator-actions-card" in (TEMPLATES / "session_assignments.html").read_text()
-    ), "the non-roster tenant went too; the CSS kept for it is now dead"
+    # The class has no markup left, so no rule may claim it.
+    base = (TEMPLATES.parent / "base.html").read_text()
+    live = [
+        line
+        for line in base.splitlines()
+        if ".operator-actions-card" in line and line.strip().endswith("{")
+    ]
+    assert live == [], live
 
 
 def test_the_second_action_row_reaches_no_template_at_all() -> None:

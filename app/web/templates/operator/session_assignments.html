@@ -165,45 +165,17 @@
        computation now sits next to its only use, a hundred lines
        further down.
 
-       19P.5 rung 1 — the FILTER left this card for the table toolbar's
-       right pane, where the four roster pages put theirs. What is left
-       here is the selection-driven half, and rung 2 takes that to the
-       row expander; the `bottom-grid`, the card and `.grid-right` go
-       with it.
+       19P.5 rung 1 took the FILTER out of the `Operator actions` card
+       into the table toolbar's right pane. **Rung 2 took the rest**:
+       the selected count and the bulk `Inactivate` / `Activate` are in
+       the row expander now, beside the rows they act on, which is what
+       the four roster pages did at 19P.1-3. The card, its
+       `bottom-grid` wrapper and `.grid-right` went with them — the
+       last was the rule's only caller, so it went from `base.html`
+       too.
 
-       The card is gated on `can_edit` now, which it never was: Segment
-       19I Item 8 kept it renderable in every lifecycle state because
-       the SEARCH was in it, and Item 3's rule is that the read-only
-       half stays wherever the page does. The search is in the toolbar
-       now, which renders in every state — so the rule is better served
-       than before, and an empty box on a `ready` session is not the
-       way to honour it. #}
-    {% if can_edit %}
-    <div class="bottom-grid">
-      <div class="card operator-actions-card grid-right">
-        {# The count leads because it is a *reading*, not a control,
-           and reading it between two buttons made it look like one
-           (author, 2026-09-10). The buttons submit
-           ``assignments-bulk-form`` via ``form=`` + ``formaction``, so
-           they never needed the GET form that used to wrap them —
-           which is why the filter could leave without them. #}
-        <div class="filter-actions">
-          <span class="pill pill-count"
-                id="assignments-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="submit"
-                  id="assignments-inactivate-btn"
-                  form="assignments-bulk-form"
-                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="assignments-activate-btn"
-                  form="assignments-bulk-form"
-                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
-                  disabled aria-disabled="true">Activate</button>
-        </div>
-      </div>
-    </div>
-    {% endif %}
+       Nothing stands between the Workflow card and the preview table
+       any more. #}
     {% if can_edit %}
     {# Hidden shell — the row-select checkboxes and the Card B
        bulk buttons associate to it via ``form=``. The filter
@@ -254,7 +226,7 @@
          nothing at all — a bare "Show reviewees:" with no chips after
          it reads as a bug (rung 3). Only Assignments can reach this,
          having three groups. #}
-      <p class="col-chip-row" data-col-toggles-for="assignments-table">
+      <p class="col-chip-row is-grouped" data-col-toggles-for="assignments-table">
         {% for group_label, prefix, entity in col_groups
            if col_data[prefix ~ 1] or col_data[prefix ~ 2] or col_data[prefix ~ 3] %}
           <span class="chip-group">
@@ -440,7 +412,17 @@
         {% for assignment in pair_sample %}
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
           {% set rel_active = rel and rel.status == "active" %}
-          <tr data-row-instrument="{{ assignment.instrument_id }}">
+          {# 19P.5 rung 2 — `id` and `data-status` are the expander's
+             two requirements: the id carries the tick order (the panel
+             anchors after the most recently ticked row still selected),
+             and the status decides which of `Inactivate` / `Activate`
+             that selection admits. `active` / `inactive` is this page's
+             own vocabulary for `Assignment.include`, not a borrowed
+             one — `spec/assignments.md` § *The status filter* maps
+             `?status=active` to `include IS true`. #}
+          <tr id="assignment-row-{{ assignment.id }}"
+              data-row-instrument="{{ assignment.instrument_id }}"
+              data-status="{{ 'active' if assignment.include else 'inactive' }}">
             {% if can_edit %}
             <td class="row-select-cell">
               <input type="checkbox" class="assignment-select"
@@ -491,60 +473,273 @@
       }
     </style>
     {% if can_edit %}
-    {# Card B selection wiring — count the ticked row checkboxes,
-       drive the "{n} selected" pill + the Inactivate / Activate
-       buttons, and mirror the header select-all. #}
+    {# ------------------------------------------------------------------
+       19P.5 rung 2 — the row expander, the shape the four roster pages
+       took one at a time: Reviewers at 19P.1 rung 2b, Observers at
+       19P.2 rung 4, Reviewees and Relationships at 19P.3 rung 3. The old script drove a `{n} selected`
+       pill and two always-rendered buttons in a card in the page's
+       corner; this one injects a panel under the selection itself.
+
+       Reuses `base.html`'s `.session-expander` /
+       `.session-expander-bracketed` / `tr.session-row-selected`
+       unchanged, and the panel's own `.row-expander-*` interior
+       classes, as Reviewers settled at 19P.1 rung 2b.
+
+       THREE differences from the roster panels:
+
+       - no `Edit` and no `Delete`, so no arity rule and no
+         `data-delete-confirm` pairing. An assignment is generated, not
+         authored; `Inactivate` is how a pair is taken out of play.
+       - the count is `{n} of {total} selected` as the rosters render
+         it, replacing the card's bare `{n} selected` pill. Bare text,
+         not a pill: `spec/ui_elements.md` § `.session-row-selected`
+         makes the panel a pill-free zone, the panel fill and
+         `--status-info-bg` resolving to the same primitive.
+       - **no restore-from-preselection loop.** The rosters seed
+         `tickOrder` from boxes already checked on load, because their
+         bulk routes redirect through `_redirect_keeping_selection`.
+         The two bulk routes here redirect through `_assignments_url`
+         with no `?selected=`, and no checkbox renders `checked`, so
+         there is never a selection to restore.
+
+       Everything else is the roster shape and must stay it — the sort
+       guard and `selectAll.indeterminate` in particular. A cold read
+       found both missing from this file's first draft.
+
+       **`Inactivate` and `Activate` now render only where they act.**
+       The card rendered both whenever anything was ticked, so a
+       selection of entirely-included rows offered an `Activate` that
+       would no-op on every one of them. `data-status` on each row is
+       `Assignment.include`, in the vocabulary
+       `spec/assignments.md` § *The status filter* already uses.
+       ------------------------------------------------------------------ #}
     <script>
       (function () {
-        var inactivateBtn =
-          document.getElementById("assignments-inactivate-btn");
-        var activateBtn =
-          document.getElementById("assignments-activate-btn");
-        var countPill =
-          document.getElementById("assignments-selected-count");
+        "use strict";
+        var table = document.getElementById("assignments-table");
         var selectAll = document.getElementById("assignments-select-all");
-        if (!inactivateBtn || !activateBtn) return;
-        function boxes() {
-          return document.querySelectorAll(".assignment-select");
+        if (!table || !selectAll) return;
+        var body = table.querySelector("tbody");
+        var tickOrder = [];
+        var panel = null;
+        var BULK_BASE =
+          {{ ("/operator/sessions/" ~ session.id ~ "/assignments") | tojson }};
+
+        // Only the rows the operator can see. This page has something
+        // no roster page has: a CLIENT-side filter. The `Show`
+        // checkboxes in the status blocks set `style.display = "none"`
+        // on rows of an unticked instrument, so a row can be in the
+        // DOM, still ticked, and invisible — while the roster pages
+        // filter server-side, where a filtered-out row is not in the
+        // DOM at all and cannot be selected.
+        //
+        // That invariant is what the rest of this script assumes:
+        // select-all reaches these rows, the count's denominator is
+        // these rows, and the panel anchors among these rows. Without
+        // it the panel sits after an invisible row — attached, to the
+        // eye, to an unrelated visible one — over a selection that
+        // includes rows nobody can see.
+        function allRows() {
+          return Array.prototype.slice.call(
+            body.querySelectorAll("tr[data-status]"));
         }
-        function setBtn(btn, disabled) {
-          btn.disabled = disabled;
-          if (disabled) {
-            btn.setAttribute("aria-disabled", "true");
-          } else {
-            btn.removeAttribute("aria-disabled");
-          }
+        function rows() {
+          return allRows().filter(function (row) {
+            return row.style.display !== "none";
+          });
         }
-        function refresh() {
-          var all = boxes();
-          var n = 0;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) n++;
-          }
-          setBtn(inactivateBtn, n === 0);
-          setBtn(activateBtn, n === 0);
-          countPill.textContent = n + " selected";
-          countPill.hidden = (n === 0);
-          if (selectAll) {
-            selectAll.checked = (n > 0 && n === all.length);
-          }
+        function selectedRows() {
+          return rows().filter(function (row) {
+            var box = row.querySelector(".assignment-select");
+            return box && box.checked;
+          });
         }
-        document.addEventListener("change", function (e) {
-          var t = e.target;
-          if (!t) return;
-          if (t === selectAll) {
-            var all = boxes();
-            for (var i = 0; i < all.length; i++) {
-              all[i].checked = selectAll.checked;
-            }
-            refresh();
-          } else if (
-            t.classList && t.classList.contains("assignment-select")
-          ) {
-            refresh();
+        // Anchors after the most recently ticked row STILL selected,
+        // DOM order as fallback — the rule `sessions_list.html:585`
+        // settled. A single remembered id is not enough: it clears on
+        // any untick and the panel jumps back up the table.
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            var row = document.getElementById(tickOrder[i]);
+            if (!row) continue;
+            var box = row.querySelector(".assignment-select");
+            if (box && box.checked) return row;
           }
+          return null;
+        }
+        // Which status actions the selection admits. `Inactivate` acts
+        // on included rows and `Activate` on excluded ones, so a
+        // selection that is all one way has exactly one actionable
+        // button; rendering the other offers a control that would
+        // no-op on every row.
+        function statusActions(sel) {
+          var out = [];
+          var hasActive = false;
+          var hasInactive = false;
+          sel.forEach(function (row) {
+            if (row.dataset.status === "active") hasActive = true;
+            else hasInactive = true;
+          });
+          if (hasActive) out.push("Inactivate");
+          if (hasInactive) out.push("Activate");
+          return out;
+        }
+        // Counted rather than assumed: nine tag columns are chip-
+        // toggled and the row-select column follows `can_edit`, so a
+        // fixed colSpan would leave the panel short or overhanging.
+        // `Include` is NOT among them — it carries no `col-*` class
+        // and no chip, so it is always shown.
+        function visibleColumnCount() {
+          return Array.prototype.filter.call(
+            table.querySelectorAll("thead th"),
+            function (th) { return th.offsetParent !== null; }).length;
+        }
+
+        function build(sel) {
+          var tr = document.createElement("tr");
+          tr.className = "session-expander session-expander-bracketed";
+          tr.id = "assignments-row-expander";
+          var td = document.createElement("td");
+          td.colSpan = visibleColumnCount();
+          var html =
+            '<div class="row-expander-body">' +
+              '<span class="row-expander-count"><strong>' + sel.length +
+              "</strong> of " + rows().length + " selected</span>" +
+              '<span class="row-expander-actions">';
+          // The selection reaches the POST through the row checkboxes'
+          // own `form=` + `name="assignment_ids"`, so these need only
+          // say where to send it — the same two `formaction`s the card
+          // carried.
+          statusActions(sel).forEach(function (label) {
+            html += '<button type="submit" class="btn secondary"' +
+                    ' form="assignments-bulk-form" formaction="' +
+                    BULK_BASE +
+                    (label === "Inactivate"
+                      ? "/bulk-inactivate" : "/bulk-activate") +
+                    '">' + label + "</button>";
+          });
+          html += "</span></div>";
+          td.innerHTML = html;
+          tr.appendChild(td);
+          return tr;
+        }
+
+        function render() {
+          if (panel) { panel.remove(); panel = null; }
+          rows().forEach(function (row) {
+            row.classList.remove("session-row-selected");
+          });
+          var sel = selectedRows();
+          // Before the early return: select-all's own state has to be
+          // right when the last box is unticked too.
+          syncSelectAll();
+          if (!sel.length) return;
+          sel.forEach(function (row) {
+            row.classList.add("session-row-selected");
+          });
+          panel = build(sel);
+          (currentAnchor() || sel[sel.length - 1])
+            .insertAdjacentElement("afterend", panel);
+        }
+
+        // Prune on untick as well as push on tick, and rebuild
+        // wholesale on select-all — the anchor is a function of the
+        // order, so a stale entry for a row that was unticked and
+        // re-ticked would anchor the panel at that row instead of the
+        // last one.
+        body.addEventListener("change", function (event) {
+          if (!event.target.classList.contains("assignment-select")) return;
+          var row = event.target.closest("tr");
+          if (!row) return;
+          tickOrder = tickOrder.filter(function (id) { return id !== row.id; });
+          if (event.target.checked) tickOrder.push(row.id);
+          render();
         });
-        refresh();
+
+        function setAllBoxes(checked) {
+          rows().forEach(function (row) {
+            var box = row.querySelector(".assignment-select");
+            if (box) box.checked = checked;
+          });
+        }
+        function syncSelectAll() {
+          var all = rows();
+          var n = all.filter(function (row) {
+            var box = row.querySelector(".assignment-select");
+            return box && box.checked;
+          }).length;
+          selectAll.checked = (n > 0 && n === all.length);
+          // A partial selection reads as a dash rather than an empty
+          // box claiming nothing is selected. The four roster pages
+          // all set this; the card script this replaced did not, and
+          // the first draft of this one inherited that omission.
+          selectAll.indeterminate = (n > 0 && n < all.length);
+        }
+        selectAll.addEventListener("change", function () {
+          setAllBoxes(selectAll.checked);
+          tickOrder = selectAll.checked
+            ? rows().map(function (row) { return row.id; })
+            : [];
+          // Deferred, as the three sortable roster pages do it, so the
+          // browser paints the checkboxes before the panel is rebuilt
+          // against them.
+          setTimeout(render, 0);
+        });
+
+        // The instrument filter hides and shows rows after load, so a
+        // selection can go invisible under the operator. Untick what
+        // it hid — restoring the selected-implies-visible invariant
+        // above — and rebuild. The filter script announces rather than
+        // calling in: it lives in its own IIFE at the end of the page,
+        // runs whether or not the session is editable, and has no
+        // reference to anything here.
+        document.addEventListener("rrw:assignment-rows-filtered", function () {
+          allRows().forEach(function (row) {
+            if (row.style.display !== "none") return;
+            var box = row.querySelector(".assignment-select");
+            if (box) box.checked = false;
+          });
+          tickOrder = tickOrder.filter(function (id) {
+            var row = document.getElementById(id);
+            return row && row.style.display !== "none";
+          });
+          render();
+        });
+
+        // A chip toggle changes how many columns the table shows, and
+        // `colSpan` was counted when the panel was built. The shared
+        // primitive only flips `col-hidden-*` classes on the table, so
+        // nothing here would hear it: the table widens and the panel
+        // stays short. Delegated on `document` because the primitive
+        // is (`base.html`), and deferred so the class lands first.
+        document.addEventListener("click", function (event) {
+          if (!event.target.closest) return;
+          if (!event.target.closest("[data-col-toggle]")) return;
+          setTimeout(function () {
+            if (!panel) return;
+            panel.querySelector("td").colSpan = visibleColumnCount();
+          }, 0);
+        });
+
+        // Sorting reorders `tbody`'s children and the panel is one of
+        // them: `base.html`'s `_rrwApplySort` slices `tbody.children`,
+        // reads `a.children[col]`, and gets `undefined` for a row whose
+        // only cell is the panel — so it sorts null-last and strands
+        // the panel at the foot of the table while the selected rows
+        // keep their rails where they are. Capture phase, so this runs
+        // before the header's own inline handler: take the panel out
+        // first, put it back against its anchor after.
+        //
+        // This page declares `data-rrw-sortable` (see the table tag),
+        // which is why it needs the guard. Observers is the one roster
+        // page without it, and the one roster page that does not sort.
+        table.addEventListener("click", function (event) {
+          if (!event.target.closest(".rrw-sort-btn")) return;
+          if (panel) { panel.remove(); panel = null; }
+          setTimeout(render, 0);
+        }, true);
+
+        render();
       })();
     </script>
     {% endif %}
@@ -605,6 +800,12 @@
             r.dataset.rowInstrument
           ) >= 0 ? "" : "none";
         });
+        // 19P.5 rung 2 — the row expander needs to know: hiding a row
+        // must not leave it selected, and the panel must not anchor
+        // after something invisible. Announced rather than called,
+        // since that script is `{% raw %}{% if can_edit %}{% endraw %}` and this one is not.
+        document.dispatchEvent(
+          new CustomEvent("rrw:assignment-rows-filtered"));
       }
       boxes.forEach(function (b) {
         b.addEventListener("change", apply);

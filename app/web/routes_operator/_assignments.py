@@ -540,8 +540,9 @@ def assignments_bulk_inactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Bulk-exclude the selected assignments — the Inactivate
-    button on the Assignments-page operator-actions card."""
+    """Bulk-exclude the selected assignments — the `Inactivate`
+    button in the Assignments page's row expander (19P.5 rung 2; it
+    was the operator-actions card's until that card was deleted)."""
     _require_editable(review_session)
     assignments.bulk_set_assignment_include(
         db,
@@ -574,8 +575,9 @@ def assignments_bulk_activate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Bulk-include the selected assignments — the Activate button
-    on the Assignments-page operator-actions card."""
+    """Bulk-include the selected assignments — the `Activate`
+    button in the Assignments page's row expander (19P.5 rung 2; it
+    was the operator-actions card's until that card was deleted)."""
     _require_editable(review_session)
     assignments.bulk_set_assignment_include(
         db,

@@ -41,23 +41,34 @@ from ._assignment_states import (
     seed_session_with_assignment as _seed,
 )
 
-# Match rendered elements, never bare class names: `base.html` carries
-# `.operator-actions-card` in its inline CSS 15 times, so a substring
-# test for it is true on every page and asserts nothing. That was a
-# real vacuous check caught while measuring this item.
-# The card, not its exact class list: 19I Item 12 added
-# ``grid-right`` when the author asked for it back at half
-# width, and a whole-attribute match broke on a layout class
-# that has nothing to do with what these tests check.
-CARD = 'class="card operator-actions-card'
+# Match rendered elements, never bare class names: a substring test
+# for a class that also appears in `base.html`'s inline CSS is true on
+# every page and asserts nothing. That was a real vacuous check caught
+# while measuring 19I Item 8.
+#
+# `CARD` lived here until 19P.5 rung 2 deleted the operator-actions
+# card. Absence is the only claim left to make about it, and three
+# files make it: `tests/unit/test_column_visibility_primitive.py`
+# (markup and the grid rule), `tests/integration/
+# test_assignments_toolbar.py` (the rendered page) and
+# `tests/integration/test_roster_expander.py` (every template, and
+# that no CSS rule claims the class).
 SEARCH_INPUT = '<input type="text" name="q"'
 SEARCH_BY = '<select name="search_by">'
 BULK_FORM = '<form id="assignments-bulk-form"'
 ROW_CHECKBOX = 'name="assignment_ids"'
 SELECT_ALL = 'id="assignments-select-all"'
-INACTIVATE = 'id="assignments-inactivate-btn"'
-ACTIVATE = 'id="assignments-activate-btn"'
-SELECTED_PILL = 'id="assignments-selected-count"'
+# 19P.5 rung 2 — the bulk buttons and the count are built client-side
+# in the injected expander, so there are no server-rendered ids for
+# them any more. What the page ships instead is the builder: the
+# script that injects the panel, and the two `formaction`s it writes.
+# Asserting the builder is asserting the surface, since nothing else
+# can put those controls on the page.
+EXPANDER_BUILDER = 'tr.id = "assignments-row-expander"'
+BULK_INACTIVATE_ACTION = '"/bulk-inactivate"'
+BULK_ACTIVATE_ACTION = '"/bulk-activate"'
+# NOT in the matrix below: `data-status` describes the row, not the
+# selection, and renders in every state as the Include cell does.
 TOOLBAR_RIGHT = '<div class="toolbar-pane toolbar-right">'
 
 
@@ -146,15 +157,13 @@ def test_the_selection_surface_renders_only_while_editable(
         BULK_FORM,
         ROW_CHECKBOX,
         SELECT_ALL,
-        INACTIVATE,
-        ACTIVATE,
-        SELECTED_PILL,
-        # 19P.5 rung 1 — the card is the selection surface now. It
-        # rendered in every state while it held the search, which is
-        # why it was asserted by the read-only test above; with the
-        # search gone it holds nothing but the pill and the two bulk
-        # buttons, so an unrenderable state would render an empty box.
-        CARD,
+        # 19P.5 rung 2 — the card that used to stand for this half is
+        # gone; the expander replaces it. These three are what makes
+        # the panel possible: the builder and the two routes it posts
+        # to.
+        EXPANDER_BUILDER,
+        BULK_INACTIVATE_ACTION,
+        BULK_ACTIVATE_ACTION,
     ):
         assert (marker in page) is editable, (state, marker)
 

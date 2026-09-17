@@ -20,7 +20,10 @@ import pathlib
 import re
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.db.models import Assignment
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -113,7 +116,10 @@ def test_the_chips_pager_and_count_line_are_in_the_left_pane(
     left = _pane(body, "left")
     count_line = '<p class="muted table-showing-hint">'
 
-    assert 'class="col-chip-row"' in left
+    # The class list, not the whole attribute: the row gained the
+    # `is-grouped` modifier, and a match anchored on the closing quote
+    # would read that as "the chip row left the pane".
+    assert 'class="col-chip-row' in left
     assert count_line in left, "the count line is outside the pane"
     # Once, and only in the pane: it used to render below the closing
     # `</div>`, so a move that copied rather than moved would leave two.
@@ -212,3 +218,281 @@ def test_no_split_toolbar_chip_row_carries_an_inline_margin() -> None:
     # And the base rule the pages rely on instead is still there.
     base = pathlib.Path("app/web/templates/base.html").read_text()
     assert "body.ui-v2 .toolbar-left > * { margin: 0; }" in base
+
+
+# ── Rung 2: the row expander ───────────────────────────────────────────
+
+
+def _markup(html: str) -> str:
+    """The page with its inline `<style>` removed, as
+    `test_reviewers_roster_card_scaffold.py` does it."""
+    return re.sub(r"<style\b.*?</style>", "", html, flags=re.S)
+
+
+def _builder(body: str) -> str:
+    """The expander's `build()` body — the string literal that becomes
+    the injected panel. Bounded by the function that consumes it."""
+    start = body.index('tr.id = "assignments-row-expander"')
+    return body[start : body.index("function render()", start)]
+
+
+def test_the_operator_actions_card_is_gone_from_the_page(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 1 emptied it of the filter; rung 2 empties it entirely.
+
+    The card was the last `.operator-actions-card` in the app — the
+    four roster pages gave theirs up across 19P.1-3 — so the class, its
+    `bottom-grid` wrapper and `.grid-right` all go with it.
+    `.grid-right` had no other caller.
+    """
+    rs = _seeded(client, db, "asn-exp-card")
+    body = _page(client, rs)
+
+    # Markup only: `base.html` names both classes in its inline CSS,
+    # in the rules' own comments recording where they went, so a bare
+    # substring over the page is true everywhere and asserts nothing —
+    # the vacuous check `test_assignments_lifecycle_gate.py` calls out.
+    markup = _markup(body)
+    assert "operator-actions-card" not in markup
+    assert "grid-right" not in markup
+    assert 'id="assignments-selected-count"' not in body
+    assert 'id="assignments-inactivate-btn"' not in body
+    assert 'id="assignments-activate-btn"' not in body
+    # The bulk form stays: the checkboxes and the injected buttons both
+    # reach the routes through it.
+    assert '<form id="assignments-bulk-form"' in body
+
+
+def test_every_row_carries_the_status_the_panel_reads(
+    client: TestClient, db: Session
+) -> None:
+    """`data-status` is `Assignment.include`, in the vocabulary
+    `spec/assignments.md` § *The status filter* already uses for
+    `?status=` (`active` = `include IS true`).
+
+    It decides which of `Inactivate` / `Activate` the panel offers, so
+    a row whose attribute disagreed with its Include cell would offer
+    the button that no-ops. Asserted against the cell rather than
+    against the database, because the cell is what the operator reads.
+    """
+    rs = _seeded(client, db, "asn-exp-status")
+    rows = db.execute(
+        select(Assignment).where(Assignment.session_id == rs.id)
+    ).scalars().all()
+    assert rows, "fixture generated no assignments"
+    # Flip one so the page is not uniform — a page where every row is
+    # `active` cannot tell a correct mapping from a hardcoded one.
+    rows[0].include = False
+    db.commit()
+
+    body = _page(client, rs)
+    for row in rows:
+        marker = f'<tr id="assignment-row-{row.id}"'
+        assert marker in body, row.id
+        fragment = body[body.index(marker) : body.index("</tr>", body.index(marker))]
+        expected = "active" if row.include else "inactive"
+        assert f'data-status="{expected}"' in fragment, (row.id, expected)
+        # The cell the operator reads, in the same fragment.
+        assert (">yes<" if row.include else ">no<") in fragment, row.id
+
+
+def test_the_panel_offers_only_the_action_the_selection_admits(
+    client: TestClient, db: Session
+) -> None:
+    """The behavior change in this rung, not a move.
+
+    The card rendered `Inactivate` **and** `Activate` whenever anything
+    was ticked, so a selection of entirely-included rows offered an
+    `Activate` that would no-op on every one of them. The roster idiom
+    renders only what is actionable, which 19P Item 1 § Semantics
+    states: *"A control that would no-op on every selected row is not
+    rendered."*
+
+    Asserted on the rule in `statusActions`, which is where the
+    decision lives; the browser check that it drives the rendered panel
+    is in the PR body.
+    """
+    rs = _seeded(client, db, "asn-exp-actions")
+    body = _page(client, rs)
+    rule = body[
+        body.index("function statusActions(sel)") : body.index(
+            "function visibleColumnCount"
+        )
+    ]
+
+    assert 'if (hasActive) out.push("Inactivate");' in rule
+    assert 'if (hasInactive) out.push("Activate");' in rule
+    # Keyed on the row attribute, not on a count or a filter value.
+    assert 'row.dataset.status === "active"' in rule
+
+    # And each label posts to its OWN route. Swapping the two branches
+    # — so `Inactivate` posts `/bulk-activate` — passed this file's
+    # first draft: both route strings were still in the builder and
+    # both conditionals still existed, and nothing tied a label to a
+    # route. `test_observers_expander.py:197-202` carries the same
+    # guard, written after the same mutation survived there.
+    builder = _builder(body)
+    assert '? "/bulk-inactivate" : "/bulk-activate"' in builder, (
+        "the status labels and their routes can disagree"
+    )
+
+
+def test_the_panel_is_removed_before_it_is_rebuilt(
+    client: TestClient, db: Session
+) -> None:
+    """`render()` runs on every tick, so without the remove the page
+    accumulates one panel per change instead of moving one.
+
+    A source assertion, and a weak one — it pins the line rather than
+    the behavior, which only a browser can show. The Chromium pass in
+    the PR body is what actually demonstrates a single panel across
+    tick, untick, mixed and select-all. It is here because the
+    mutation that deletes this line survived the whole suite.
+    """
+    rs = _seeded(client, db, "asn-exp-remove")
+    body = _page(client, rs)
+    render = body[
+        body.index("function render()") : body.index(
+            "body.addEventListener", body.index("function render()")
+        )
+    ]
+
+    assert "if (panel) { panel.remove(); panel = null; }" in render
+    # Removed FIRST, before anything reads the selection.
+    assert render.index("panel.remove()") < render.index("selectedRows()")
+
+
+def test_the_panel_spans_the_columns_that_are_actually_shown(
+    client: TestClient, db: Session
+) -> None:
+    """Nine tag columns are chip-toggled and the row-select column
+    follows `can_edit`, so a fixed `colSpan` would leave the panel
+    short or overhanging. (`Include` is *not* toggleable — it carries
+    no `col-*` class and no chip; the first draft of this docstring
+    said it was.)
+
+    Two assertions, because the builder and the counter are in
+    different scopes: `build()` must call it, and the counter must
+    count laid-out headers rather than all of them — which the first
+    draft claimed while reading only the builder's slice.
+    """
+    rs = _seeded(client, db, "asn-exp-colspan")
+    body = _page(client, rs)
+
+    assert "td.colSpan = visibleColumnCount();" in _builder(body)
+    counter = body[
+        body.index("function visibleColumnCount()") : body.index(
+            "function build(sel)"
+        )
+    ]
+    assert "th.offsetParent !== null" in counter
+    assert 'table.querySelectorAll("thead th")' in counter
+
+
+def test_the_panel_survives_a_sort(
+    client: TestClient, db: Session
+) -> None:
+    """The table declares `data-rrw-sortable`, and `_rrwApplySort`
+    slices `tbody.children` — the injected panel among them. It reads
+    `a.children[col]`, gets `undefined` for a row whose only cell is
+    the panel, sorts it null-last, and strands it at the foot of the
+    table while the selected rows keep their rails where they are.
+
+    Measured in Chromium before the guard: panel at row 30 of 31 with
+    the selection at 18. With it: 19, adjacent. All three *sortable*
+    roster pages carry the same capture-phase guard; Observers is the
+    one that does not, and the one that does not sort.
+    """
+    rs = _seeded(client, db, "asn-exp-sort")
+    body = _page(client, rs)
+
+    assert 'data-rrw-sortable="rrw-sort-assignments-' in body, (
+        "the guard below is only needed because this table sorts"
+    )
+    # Bounded by a fixed window from the guard's own first line, not
+    # by searching forward for `}, true);` — another inline script on
+    # the page ends that way, so an unbounded slice swallows it and a
+    # capture-phase mutation survives. It did.
+    start = body.index('if (!event.target.closest(".rrw-sort-btn")')
+    guard = body[start : start + 220]
+    assert "panel.remove()" in guard
+    assert "setTimeout(render, 0)" in guard
+    # Capture phase, so it runs before the header's inline handler.
+    assert "}, true);" in guard, guard
+
+
+def test_a_partial_selection_reads_as_a_dash(
+    client: TestClient, db: Session
+) -> None:
+    """`selectAll.indeterminate`, which the card script this replaced
+    never set and this file's first draft inherited the omission of.
+
+    Without it a mixed selection announces as unchecked — a box
+    claiming nothing is selected while the panel below says otherwise.
+    All four roster pages set it.
+    """
+    rs = _seeded(client, db, "asn-exp-indeterminate")
+    body = _page(client, rs)
+
+    assert "selectAll.indeterminate = (n > 0 && n < all.length);" in body
+
+
+def test_the_selection_surface_only_reaches_rows_you_can_see(
+    client: TestClient, db: Session
+) -> None:
+    """This page has a client-side filter; no roster page does.
+
+    The `Show` checkboxes in the status blocks set `style.display =
+    "none"` on rows of an unticked instrument, so a row can be in the
+    DOM, still ticked, and invisible. The roster pages filter through
+    `?status=`, where a filtered-out row is not in the DOM at all —
+    and the expander idiom assumes exactly that: select-all reaches
+    the rows, the count's denominator is the rows, and the panel
+    anchors among them.
+
+    Measured on the committed version before this guard: with the
+    owning instrument unticked the panel stayed put, anchored after a
+    hidden row, with one row hidden and still selected.
+    """
+    rs = _seeded(client, db, "asn-exp-filtered")
+    body = _page(client, rs)
+
+    # `rows()` is the visible ones; `allRows()` is the DOM's.
+    assert 'return row.style.display !== "none";' in body
+    assert "function allRows()" in body
+
+    # The filter announces, because it runs in its own IIFE outside
+    # `can_edit` and holds no reference to the expander.
+    assert 'new CustomEvent("rrw:assignment-rows-filtered")' in body
+    assert (
+        'document.addEventListener("rrw:assignment-rows-filtered"' in body
+    )
+    handler = body[
+        body.index('document.addEventListener("rrw:assignment-rows-filtered"') :
+    ][:600]
+    assert "box.checked = false" in handler, "a hidden row stays selected"
+    assert "tickOrder = tickOrder.filter" in handler, "stale anchor survives"
+    assert "render();" in handler
+
+
+def test_a_column_toggle_keeps_the_panel_the_table_s_width(
+    client: TestClient, db: Session
+) -> None:
+    """`colSpan` is counted when the panel is built, and the shared
+    chip primitive only flips `col-hidden-*` classes on the table — so
+    nothing in the expander would hear a toggle and the panel would
+    stay at its old width.
+
+    Measured on the committed version: panel `colSpan` 11 against 10
+    visible headers after one chip was unticked. With this listener,
+    10 and 10.
+    """
+    rs = _seeded(client, db, "asn-exp-colspan-live")
+    body = _page(client, rs)
+
+    start = body.index('if (!event.target.closest("[data-col-toggle]")) return;')
+    listener = body[start : start + 320]
+    assert "colSpan = visibleColumnCount()" in listener
+    # Deferred, so the primitive's class change lands first.
+    assert "setTimeout(" in listener

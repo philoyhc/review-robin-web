@@ -626,32 +626,25 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         assert group in body
 
 
-def _all_indexes(haystack: str, needle: str) -> list[int]:
-    out, i = [], haystack.find(needle)
-    while i != -1:
-        out.append(i)
-        i = haystack.find(needle, i + 1)
-    return out
-
-
-def test_the_selected_count_leads_the_action_row(
+def test_the_selected_count_leads_the_expander_panel(
     client: TestClient, db: Session
 ) -> None:
-    """The pill sits left of every button it shares a row with.
+    """The count sits left of every button it shares a row with.
 
-    It read as a control when it sat between `Clear` and
-    `Inactivate` (author, 2026-09-10, from a screenshot); it is a
-    reading, so it leads. Asserted by position within the row rather
-    than by presence, which the surrounding tests already cover.
+    It read as a control when it sat between `Clear` and `Inactivate`
+    (author, 2026-09-10, from a screenshot); it is a reading, so it
+    leads.
 
-    **19P.5 rung 1 split the row in two.** `Clear` and `Search` went
-    to the table toolbar's right pane with the filter they belong to;
-    the pill and the two bulk buttons stayed in the card, which is now
-    the selection surface. The author's rule is about what the pill is
-    read *next to*, so it survives the split intact — and the card's
-    row is the only one it is in. The query still matters: it is what
-    makes `Clear` render, and the second half of this test is that the
-    two rows really are separate.
+    **The row it used to lead is gone.** 19P.5 rung 1 sent `Clear` and
+    `Search` to the table toolbar; rung 2 sent the count and the bulk
+    buttons to the row expander, which is built client-side. So this
+    asserts the builder rather than a rendered row — the panel's HTML
+    is assembled in one string literal, and the order of that string
+    is the order on screen.
+
+    Bare text, not a pill, which is also a rule: the panel's fill and
+    `--status-info-bg` resolve to the same primitive, so a pill inside
+    it is invisible (`spec/ui_elements.md` § `.session-row-selected`).
     """
     review_session = _make_session(client, db, code="asn-pill-order")
     _seed_roster(
@@ -664,22 +657,20 @@ def test_the_selected_count_leads_the_action_row(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
+        f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    rows = [
-        body[m : body.index("</div>", m)]
-        for m in _all_indexes(body, 'class="filter-actions"')
+    builder = body[
+        body.index('tr.id = "assignments-row-expander"') : body.index(
+            "function render()"
+        )
     ]
-    assert len(rows) == 2, f"expected the selection row and the filter row, got {len(rows)}"
 
-    selection = next(r for r in rows if "assignments-selected-count" in r)
-    pill = selection.index('id="assignments-selected-count"')
-    for label in (">Inactivate<", ">Activate<"):
-        assert label in selection, label
-        assert pill < selection.index(label), label
-
-    # The halves are apart, and each holds only its own controls.
-    filter_row = next(r for r in rows if r is not selection)
-    assert ">Clear<" in filter_row and ">Search<" in filter_row
-    assert "assignments-selected-count" not in filter_row
-    assert ">Clear<" not in selection and ">Search<" not in selection
+    count = builder.index('<span class="row-expander-count">')
+    actions = builder.index('<span class="row-expander-actions">')
+    assert count < actions, "the count leads the buttons"
+    # The buttons are appended into the actions span, so their markup
+    # follows it. Not asserted by label: the builder writes the label
+    # through a variable (`statusActions` decides which), so neither
+    # word appears literally in this slice.
+    assert actions < builder.index('<button type="submit"')
+    assert "pill" not in builder[count:actions], builder[count:actions]
