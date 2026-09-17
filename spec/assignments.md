@@ -605,10 +605,11 @@ The Operations-row page at
    The card opens with the **two-pane toolbar**
    (`.table-card-toolbar.is-split`) the other six table pages carry;
    `spec/setup_pages.md` § *The table toolbar* states the shape once.
-   The left pane holds the `Show columns:` chips, the pager cluster
-   and the preview-count line; the right pane holds the filter strip
-   — `Search by:`, the search box, the status filter, `Clear` and
-   `Search`.
+   The left pane holds the column chips, the pager cluster
+   and the preview-count line; the right pane holds the filter strip,
+   in this order: **`Status:`, `Search by:`, the search box, `Clear`,
+   `Search`** — the submit last, as `spec/setup_pages.md` § *The table
+   toolbar* has it for the rosters.
 
    **There was an `Operator-actions card` here until 19P.5**, half
    width and flush right (`.grid-right` in a `bottom-grid`), carrying
@@ -619,7 +620,8 @@ The Operations-row page at
    is the only Operations page with selection**, which is why it gets
    both halves where Invitations and Responses get the toolbar alone.
 
-   The three chip groups sit on one line where they fit —
+   The three chip groups sit on one line where they fit. **This page
+   labels each group, where the other six say `Show columns:` once** —
    `Show reviewers:` / `Show reviewees:` / `Show relationships:`,
    nine slots from three sources against one
    `rrw-assignment-col-visibility` key. A slot with nothing in it
@@ -709,9 +711,16 @@ and §5 carry the state machine.
 **The selection's controls are a row injected into the table** beneath
 the selected row, not a card beside it — the roster idiom
 (`spec/setup_pages.md` § *The row expander*), taken here at 19P.5
-rung 2. It carries the selected count — `N of M selected`, where **M
-is the rendered window**, as the rosters render it and not the card's
-bare `N selected` — and **one** button.
+rung 2. It carries the selected count — `N of M selected`, as the
+rosters render it and not the card's bare `N selected` — and the
+status button the selection makes actionable.
+
+**M is the *visible* rows, not the rendered window.** The rosters'
+contract says rendered window and is right for them, because they
+filter server-side. Here `rows()` filters `allRows()` to
+`style.display !== "none"`, so the `Show` checkboxes move M as well as
+what can be ticked — which is the whole reason this page needs its own
+statement of the count.
 
 Three things differ from the rosters, and each follows from what this
 page is:

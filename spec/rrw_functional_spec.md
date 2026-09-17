@@ -1233,9 +1233,9 @@ on the Operations row of the chrome. It carries:
   Instrument column, sortable headers, column-visibility
   toggles. Its card opens with the same **two-pane toolbar**
   the roster pages carry: chips, pager and preview-count line
-  left; the filter strip — status filter, search box with
-  typeahead suggestions, a Search-by dropdown (All / Reviewers
-  / Reviewees), `Clear` and `Search` — right.
+  left; the filter strip — status filter, a Search-by dropdown
+  (All / Reviewers / Reviewees), a search box with typeahead
+  suggestions, `Clear`, `Search` — right, in that order.
 - **Row expander** — ticking rows injects a panel beneath the
   selection carrying the selected count and the
   selection-driven bulk **Inactivate** / **Activate**, only

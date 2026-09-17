@@ -1347,8 +1347,9 @@ Commands run 2026-09-17 on `origin/main` at `65f66ca`.
 
 ### Status — closed 2026-09-17
 
-**Landed as planned**, four rungs and four PRs (#2434 the plan, #2435
-rung 1, #2436 rung 2, #2437 rung 3, plus this close). All seven table
+**Landed as planned**, four rungs across five PRs — #2434 carried the
+plan and no rung, then #2435 rung 1, #2436 rung 2, #2437 rung 3, and
+this close as rung 4. All seven table
 pages carry `.table-card-toolbar.is-split`; Assignments took the
 expander too; `Apply` is `Search`; `.grid-right`,
 `.operator-actions-card` and `.filter-card` are all retired.
@@ -1390,6 +1391,22 @@ one parser. Adjacent: the blast radius's `filter-card` line was wrong
 been restated twice before anyone re-ran it, and the Responses twin of
 the count-line test passed vacuously by splitting the page at the
 first of twelve `</form>`s.
+
+**The close's own cold read found four false sentences and four
+inconsistencies**, which is the same rate every rung of this item ran
+at and worth recording as the shape of the work rather than as a
+mishap. The four: `.session-row-selected`'s funnel is named
+`render()` on **four** of the seven pages and `renderPanel()` on
+Observers, not `refreshExpander()` on six; `operator_ui_concept.md`
+claimed an `Assignments preview` `<h2>` that no template renders and
+that `spec/assignments.md` correctly denies **500 lines away in the
+same commit**; the expander carries *two* buttons on a mixed
+selection, not "one"; and its `M` is the **visible** rows, not the
+rendered window — the roster contract's phrase, borrowed onto the one
+page whose client-side filter is exactly what makes it wrong. Three
+specs also gave three different orders for one filter strip, none of
+them the DOM's (`Status:` → `Search by:` → search → `Clear` →
+`Search`).
 
 **Two left open for the author**, both pre-existing and named rather
 than fixed: Assignments' `Clear` renders on `{% if filter_q %}` while
