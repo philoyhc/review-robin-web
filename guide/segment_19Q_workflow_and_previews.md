@@ -1,16 +1,145 @@
 # Segment 19Q — Workflow and preview revamp
 
-Three items, closing independently: Prepare absorbs Create invites; the
-Previews hub retires into the Invitations drill-in; the Guide catches up.
-Item-level `Doc impact` / `Status`, so `tools/close_check.py 19Q.1` reads
-Item 1's.
+Three items, closing independently. Item-level `Doc impact` / `Status`, so
+`tools/close_check.py 19Q.1` reads Item 1's.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
 
+**Order reversed at planning time, 2026-09-17**, before any rung was cut.
+The first draft led with the Prepare/Create-invites fold on the assumption
+that it enabled the Previews retirement. It does not: the Invitations
+table's row set is `_assigned_active_reviewers`, gated on assignments, not
+invitations, so the drill-in was already reachable after Prepare with no
+invitations at all (author's dev-slot report, 2026-09-17). The two are
+independent, and the preview work leads because it is the one the author
+wants to see first.
+
 ---
 
-## Item 1 — Prepare session creates the invitations
+## Item 1 — Email previews move to the drill-in; the Previews page retires
+
+### Opportunity
+
+Two hubs reach one destination. 19P.6 made the reviewer surface reachable
+per row from Manage Invitations, which is a better picker than the hub's
+own — search, three chip-toggled tag columns, sortable headers,
+pagination, a status column — against a datalist and three buttons.
+
+**The hub hosts a second job.** `session_previews.html:31` includes
+`_email_preview_region.html`: the invitation / reminder /
+responses-received email previews. Retiring the page without a home for
+that region loses a capability, not just a door.
+
+**Retiring the hub loses reach.** `build_preview_picker_context`
+(`views/_previews.py:132`) selects every `Reviewer`, with no status and
+no assignment filter, so the hub reaches three populations the drill-in
+cannot: before Prepare (the hub's stated purpose), inactive reviewers,
+and reviewers whose assignments are all excluded. Measured in full at
+`guide/segment_19P_expander_revamp.md` § *When each door is open*.
+
+### Decision
+
+The email preview region moves onto the per-reviewer drill-in
+(`session_invitations_reviewer_detail.html`), then the Previews tab
+retires and Operations goes from six tabs to five. The author accepts the
+loss of pre-Prepare reach — previews are available for Prepared sessions
+(2026-09-17).
+
+The transplant is natural rather than forced: `build_email_preview_body`
+already takes `reviewer=` (`views/_previews.py:364`), so the drill-in
+supplies what the region needs. The region's only `picker` dependency is
+its three tab hrefs.
+
+**Rejected — keep both and cross-link.** The measured difference is
+*when*, not *what*; two tabs for one destination is what this item exists
+to remove.
+
+**Rejected — move the region to the email template editor.** It renders
+for *a named reviewer*, which the editor has no notion of.
+
+### Semantics
+
+- `_email_preview_region.html`'s required-context block changes: `picker`
+  out, `reviewer` in; the tab hrefs become the drill-in URL plus
+  `?email=<key>#email-previews`. The `#email-previews` fragment stays —
+  it exists so a tab switch does not jump the operator to the top.
+- `/preview-surface/1?reviewer_email=` returns **200 in every state
+  measured**, before Prepare included — `_pages_for_session` walks
+  *instruments*, not assignments. The route is not the gate; the doors
+  are. Retiring the hub removes a door, not a capability.
+- `GET /sessions/{id}/previews` 308s to Manage Invitations, matching the
+  19P.6 precedent for the invitation-keyed detail URL. `POST
+  /previews/random` retires outright — a POST is not a bookmark.
+- `Random` has no equivalent on the table. Dropped unless open question 2
+  says otherwise.
+- Chrome: the nav item goes from `session_top_nav.html:63`; the six-tab
+  assumption in `spec/operator_ui_concept.md` becomes five.
+
+### Judgment calls — decided
+
+- No scaffold rung. `CLAUDE.md`'s scaffold-first rule governs a *new* card; this region is built, shipped and reviewed, and the destination is decided (2026-09-17).
+- 308 rather than 404 for `/previews` — a GET hub is a plausible bookmark, and 19P.6 set the precedent (2026-09-17).
+
+### Blast radius (measured)
+
+- `grep -rln "previews" app/web/templates` → **6 templates**
+- `grep -rln "preview-surface" app/ tests/ spec/ docs/` → **16 files**
+- `grep -rln "previews\b" spec/ docs/` → **17 spec/doc files**
+- `grep -rln "previews" tests/` → **6 test files** (excluding `__pycache__`)
+
+### PR ladder
+
+1. **Transplant the region** onto the drill-in: re-point the tab hrefs,
+   swap `picker` for `reviewer` in the required context, supply the three
+   view calls from the drill-in route. Must not touch the hub — both
+   render the region for one rung.
+2. **Retire the hub** — nav item, `session_previews.html`,
+   `_preview_picker.html`, `GET /previews` → 308, `POST /previews/random`
+   deleted.
+3. **Chrome** — six tabs to five, and any layout assumption that counted on six.
+4. **The close** — the specs below, `docs/status.md`, `close_check`, `spec-writer`.
+
+### Definition of done
+
+- The drill-in renders all three email tabs for its reviewer, with a test per tab.
+- No template references `/previews`; `GET /previews` 308s to Manage Invitations.
+- Operations renders five tabs.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.1` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Do the inactive / all-excluded reviewer populations keep a door?**
+   Widening the Invitations table's row set changes a monitoring concept
+   (`per_reviewer_progress`), so the likelier answer is a link elsewhere
+   or accepted loss. Decided by the author.
+2. **Is `Random` worth keeping** anywhere? Decided by the author.
+
+### Out of scope
+
+- Changing what the Manage Invitations table lists. The row set is
+  `per_reviewer_progress`, a monitoring concept; repurposing it as a
+  roster is a larger change than this item.
+
+### Doc impact
+
+- `spec/preview_hub.md` — retired; its contract moves to the drill-in (Item 1).
+- `spec/operations_pages.md` — the drill-in absorbs the hub's two jobs (Item 1).
+- `spec/operator_ui_concept.md` — Operations goes six tabs to five (Item 1).
+- `spec/reviewer-surface.md` — "reached from the Previews hub" becomes the Invitations drill-in (Item 1).
+- `spec/email_template_editor.md` — where the rendered preview of a template now lives (Item 1).
+- `spec/operator_button_audit.md` — the picker's buttons and `Random` retire (Item 1).
+- `spec/role_navigator.md` — the Previews entry (Item 1).
+- `spec/session_home.md` — any Previews pointer (Item 1).
+- `docs/status.md` — row when Item 1 lands.
+
+---
+
+## Item 2 — Prepare session creates the invitations
 
 ### Opportunity
 
@@ -34,12 +163,13 @@ for one readiness. Author's report, 2026-09-17: it reads as make-work.
 
 `generate_invitations` runs inside `workflow_prepare`, immediately after
 `mark_validated`, on the validation-clean path only. `Create invites`
-retires from the Workflow card and the Next action card.
+retires from the Workflow card and the Next action card, and the card's
+copy is rewritten to say what Prepare now does.
 
 **Rejected — create at the Generate step, before validate.** A failed
 validation would leave invitation rows for a setup the operator is still
-fixing, which is exactly what `_require_validated_or_ready` refuses
-invitations from `draft` to prevent.
+fixing, which is what `_require_validated_or_ready` refuses invitations
+from `draft` to prevent.
 
 **Rejected — keep the button and auto-create on the schedule path only.**
 Leaves both preconditions and all four warning sites standing.
@@ -86,19 +216,19 @@ Leaves both preconditions and all four warning sites standing.
 2. **Prepare creates.** `generate_invitations` inside `workflow_prepare`
    after `mark_validated`. Must **not** retire the button — it already
    hides on `invitations_generated`, so it self-conceals for one rung.
-3. **Retire the button and collapse the duplicated preconditions** —
-   Workflow card, Next action card, the two `_invites.py` /
-   `_reminders.py` checks, the two amber captions.
-4. **The close** — the specs below, `docs/status.md`, `close_check`,
-   `spec-writer`, Status compaction.
+3. **Retire the button, rewrite the Workflow card copy, and collapse the
+   duplicated preconditions** — Workflow card, Next action card, the two
+   `_invites.py` / `_reminders.py` checks, the two amber captions.
+4. **The close** — the specs below, `docs/status.md`, `close_check`, `spec-writer`.
 
 ### Definition of done
 
 - A Prepare that validates cleanly leaves one `Invitation` per eligible reviewer; a Prepare that fails validation leaves zero.
 - `Create invites` appears in no template; `POST /invitations/generate` resolved per open question 2.
 - `invitations_send_all` emails no reviewer outside `reviewers_eligible_for_invitation`.
+- The Workflow card's Prepare copy names invitation creation.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py 19Q.1` exits 0; any warning adjudicated
+- `python3 tools/close_check.py 19Q.2` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
@@ -122,127 +252,13 @@ Leaves both preconditions and all four warning sites standing.
 
 ### Doc impact
 
-- `spec/workflow_card.md` — Prepare's contract gains invitation creation; the Create invites button row and the `invitations_not_created` skip narrative retire (Item 1).
-- `spec/lifecycle.md` — the "Auto-send invites" precondition row collapses to Prepared alone (Item 1).
-- `spec/architecture.md` — the `session.scheduled_invites_skipped` reason set drops `invitations_not_created` (Item 1).
-- `spec/operator_button_audit.md` — the Create invites row retires (Item 1).
-- `spec/operations_pages.md` — Manage Invitations' `not_created` chrome state, and Send all's row set (Item 1).
-- `spec/session_home.md` — the Next action card's create-invites state (Item 1).
-- `spec/operator_ui_concept.md` — the Workflow card's ≤4-button budget (Item 1).
-- `docs/status.md` — row when Item 1 lands.
-
----
-
-## Item 2 — Retire the Previews page
-
-### Opportunity
-
-Two hubs reach one destination. 19P.6 made the reviewer surface
-reachable per row from Manage Invitations, which is a better picker than
-the hub's own — search, three chip-toggled tag columns, sortable headers,
-pagination, a status column — against a datalist and three buttons.
-
-**Item 1 does not help this item.** The Invitations table's row set is
-`_assigned_active_reviewers`, gated on assignments, not invitations; the
-drill-in was already reachable after Prepare with no invitations at all
-(author's dev-slot report, 2026-09-17). The two items are independent.
-
-**Retiring the hub loses reach.** `build_preview_picker_context`
-(`views/_previews.py:145-151`) selects every `Reviewer`, with no status
-and no assignment filter, so the hub reaches three populations the
-drill-in cannot: before Prepare (the hub's stated purpose), inactive
-reviewers, and reviewers whose assignments are all excluded. Measured in
-full at `guide/segment_19P_expander_revamp.md` § *When each door is open*.
-
-**And the page hosts a second job.** `session_previews.html:31` includes
-`_email_preview_region.html` — the invitation / reminder /
-responses-received email previews, which the drill-in does not do.
-
-### Decision
-
-Retire the tab; Operations goes from six tabs to five. The author accepts
-the loss of pre-Prepare reach — previews are available for Prepared
-sessions (2026-09-17). Populations 2 and 3, and the email preview
-region's new home, are open questions 1 and 2 below.
-
-**Rejected — keep both and cross-link.** The measurement shows the
-surfaces differ in *when*, not *what*; two tabs for one destination is
-the thing this item exists to remove.
-
-### Semantics
-
-- `/preview-surface/1?reviewer_email=` returns **200 in every state
-  measured**, before Prepare included — `_pages_for_session` walks
-  *instruments*, not assignments. The route is not the gate; the doors
-  are. Retiring the hub removes a door, not a capability, so any
-  replacement is a link.
-- `GET /sessions/{id}/previews` and `POST /previews/random` retire.
-  `/previews` 308s to Manage Invitations, matching the 19P.6 precedent
-  for the invitation-keyed detail URL.
-- `Random` has no equivalent on the table. Dropped unless open question 3
-  says otherwise.
-- The nav item goes from `session_top_nav.html:63`; the six-tab layout
-  assumption in `spec/operator_ui_concept.md` moves to five.
-
-### Judgment calls — decided
-
-- 308 rather than 404 for `/previews` — a GET hub is a plausible
-  bookmark, and 19P.6 set the precedent (2026-09-17).
-
-### Blast radius (measured)
-
-- `grep -rln "previews" app/web/templates` → **6 templates**
-- `grep -rln "preview-surface" app/ tests/ spec/ docs/` → **16 files**
-- `grep -rln "previews\b" spec/ docs/` → **17 spec/doc files**
-- `grep -rln "previews" tests/` → **6 test files** (excluding `__pycache__`)
-
-### PR ladder
-
-1. **Scaffold the replacement door(s)** for whatever open questions 1–3
-   decide, on the Invitations page — inert if the destination needs one.
-2. **Move the email preview region** to its decided home.
-3. **Retire the hub** — nav item, route, `session_previews.html`,
-   `_preview_picker.html`, the 308.
-4. **The close** — specs, `docs/status.md`, `close_check`, `spec-writer`.
-
-### Definition of done
-
-- No template references `/previews`; `GET /previews` 308s to Manage Invitations.
-- The email preview region is reachable and tested at its new home.
-- `spec/preview_hub.md` retired or rewritten per open question 2.
-- `## Doc impact` section present and current
-- `python3 tools/close_check.py 19Q.2` exits 0; any warning adjudicated
-- `spec-writer` run against the doc-impact specs; flags adjudicated
-- `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
-
-### Open questions
-
-1. **Where does the email preview region go?** Candidates: the Invitations
-   page as its own card, or `spec/email_template_editor.md`'s editor
-   surface. Decided by the author.
-2. **Do the inactive / all-excluded reviewer populations keep a door?**
-   Widening the Invitations table's row set changes a monitoring concept
-   (`per_reviewer_progress`), so the likelier answer is a link elsewhere
-   or accepted loss. Decided by the author.
-3. **Is `Random` worth keeping** anywhere? Decided by the author.
-
-### Out of scope
-
-- Changing what the Manage Invitations table lists. The row set is
-  `per_reviewer_progress`, a monitoring concept; repurposing it as a
-  roster is a larger change than this item.
-
-### Doc impact
-
-- `spec/preview_hub.md` — retired or rewritten as the drill-in's contract per open question 2 (Item 2).
-- `spec/operator_ui_concept.md` — Operations goes six tabs to five (Item 2).
-- `spec/operations_pages.md` — the drill-in absorbs the hub's job (Item 2).
-- `spec/reviewer-surface.md` — "reached from the Previews hub" becomes the Invitations drill-in (Item 2).
-- `spec/operator_button_audit.md` — the picker's buttons and `Random` retire (Item 2).
-- `spec/email_template_editor.md` — the email preview region's new home (Item 2).
-- `spec/role_navigator.md` — the Previews entry (Item 2).
-- `spec/session_home.md` — any Previews pointer (Item 2).
+- `spec/workflow_card.md` — Prepare's contract gains invitation creation; the Create invites button row, its copy, and the `invitations_not_created` skip narrative retire (Item 2).
+- `spec/lifecycle.md` — the "Auto-send invites" precondition row collapses to Prepared alone (Item 2).
+- `spec/architecture.md` — the `session.scheduled_invites_skipped` reason set drops `invitations_not_created` (Item 2).
+- `spec/operator_button_audit.md` — the Create invites row retires (Item 2).
+- `spec/operations_pages.md` — Manage Invitations' `not_created` chrome state, and Send all's row set (Item 2).
+- `spec/session_home.md` — the Next action card's create-invites state (Item 2).
+- `spec/operator_ui_concept.md` — the Workflow card's ≤4-button budget (Item 2).
 - `docs/status.md` — row when Item 2 lands.
 
 ---
@@ -267,8 +283,8 @@ Affected, measured 2026-09-17:
 ### Decision
 
 One slice per item it follows, landing after that item merges — the Guide
-is documentation of shipped behavior, not of intent. Screencaps are
-recaptured in the agent sandbox with Chromium against a seeded session.
+documents shipped behavior, not intent. Screencaps are recaptured in the
+agent sandbox with Chromium against a seeded session.
 
 **Rejected — one Guide slice at the end.** It would sit stale on `main`
 between Item 1 and Item 2 merging, teaching a workflow that no longer
@@ -283,8 +299,7 @@ exists.
 
 ### Judgment calls — decided
 
-- Recapture rather than crop or edit existing PNGs — an edited screencap
-  is a claim about the app that nothing checks (2026-09-17).
+- Recapture rather than crop or edit existing PNGs — an edited screencap is a claim about the app that nothing checks (2026-09-17).
 
 ### Blast radius (measured)
 
@@ -293,10 +308,10 @@ exists.
 
 ### PR ladder
 
-1. **Guide for Item 1** — the Prepare narrative, the two workflow
-   screencap pairs, the validate-page alt text. Lands after 19Q.1 merges.
-2. **Guide for Item 2** — the Previews paragraph and its screencap pair
-   deleted; the drill-in documented. Lands after 19Q.2 merges.
+1. **Guide for Item 1** — the Previews paragraph and its screencap pair
+   deleted; the drill-in's two jobs documented. Lands after 19Q.1 merges.
+2. **Guide for Item 2** — the Prepare narrative, the two workflow
+   screencap pairs, the validate-page alt text. Lands after 19Q.2 merges.
 
 ### Definition of done
 
