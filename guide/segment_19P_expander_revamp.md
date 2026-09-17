@@ -1205,6 +1205,33 @@ item does not own. With them, for the rung-5 sweep:
   `.card-columns` as the roster pages' container. Rung 5 is the specs
   rung; this is its list.
 
+**Rung 5a — the page shape, and a divergence from what Doc impact
+committed to.** The bullet says each page's § *Body layout* states the
+shape *"outright rather than by reference to Reviewers (the failure mode
+19P.1 catalogued eight times)"*. Written when Reviewers was the only
+migrated page, that was right: a pointer then led to a section
+describing a **different** shape, which is what made those eight
+pointers bugs. With all four pages identical it inverts — stating ~90
+lines outright four times is four copies to drift, and the next reader
+cannot tell which differences are real.
+
+So `spec/setup_pages.md` gains one § *The roster card and the Unlock
+panel*, with a three-row table naming the only axes any page differs on
+(suppression predicate, column contents, where `Lock` sits — all three
+Observers'), and each page section keeps its own facts and points at it.
+`spec/operator_ui_concept.md`'s § *Setup pages (Reviewees /
+Relationships) — shared shape* becomes § *Setup roster pages*. The
+intent the bullet was protecting holds: **no roster page points at a
+section describing a shape it does not have.** Net −12 lines on a spec
+that gained a whole section.
+
+Also folded in, because they were the same sentences: Reviewers'
+duplicated `#### The table card's toolbar` / `#### The row expander`
+collapse into the shared § *Roster controls and their route contracts*,
+which is what `## Operator actions card` becomes — the card is retired,
+the four route contracts under it were always page-independent and stay
+put.
+
 ### PR ladder
 
 1. **The landing contract, both pages.** Four POSTs each gain `offset` and
@@ -1255,12 +1282,17 @@ item does not own. With them, for the rung-5 sweep:
 - No `.bottom-grid` on any roster page; nothing renders below any preview
   table.
 - No spec sentence defers a roster shape to a future item:
-  `grep -rn "19P\.3\|19P\.4" spec/` → 0, from **11** today — 9 matching the
-  `19P.2–.4` / `19P.3–.4` ranges plus **two naming `19P.3` without one**,
-  `spec/setup_pages.md:1170` and `:1208`. Those two sit *two lines below*
-  `:1168` and `:1207`, which read *"until 19P.1"* about a transition that
-  already happened and stay as history. The range-only grep reads the right
-  paragraphs and stops one sentence short, so it is not the check.
+  `grep -rnE "19P\.4|19P\.[0-9]–\.[0-9]" spec/` → 0, from **9** today.
+
+  **Adjudicated at rung 5a, and the check re-aimed.** The line read
+  `grep -rn "19P\.3\|19P\.4" spec/` → 0, widened past the ranges because
+  two sentences named `19P.3` without one. But it also catches every
+  sentence that *dates* the move to 19P.3 — and the rewritten prose dates
+  it exactly as it dates 19P.1's and 19P.2's, which nobody proposes
+  removing. A check that cannot tell "defers to" from "happened at"
+  measures the wrong thing. With 19P.3 shipped, a forward reference is a
+  range or a `19P.4`, and the two bare deferrals the widening was for are
+  gone with the sections that held them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19P.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1269,8 +1301,8 @@ item does not own. With them, for the rung-5 sweep:
 
 ### Open questions
 
-1. **Does the consolidating sweep land here or at 19P.4?** Proposed above:
-   here, because Item 4 may become 19Q. **Author decides** before rung 5.
+1. ~~**Does the consolidating sweep land here or at 19P.4?**~~ **Answered:
+   here.** Author's call at rung 5; the segment stays open for Item 4.
 2. ~~**Does Relationships' edit-row bar need anything Reviewers' does
    not?**~~ **Answered at rung 3: no.** See Status.
 
