@@ -715,9 +715,17 @@ def test_the_guide_tells_operators_what_order_to_work_in(
     section = " ".join(re.sub(r"<[^>]+>", " ", section[:2000]).split())
 
     assert "after the reviewer and reviewee rosters" in section, section[:400]
-    assert "deletes the relationships that referenced them" in section
-    # The honest half: the app warns and records, and neither undoes.
-    assert "nothing restores them" in section
+    # The two paths, scoped differently, and the one that costs nothing.
+    assert "replacing a roster deletes every relationship in the session" in section
+    assert "deleting rows takes the relationships that involved them" in section
+    assert "Marking someone inactive costs nothing" in section
+    # The honest half: the app warns and does not undo. It no longer
+    # points at the audit log — that page is `require_sys_admin`, so an
+    # operator following the Guide there gets a 403.
+    assert "nothing undoes it" in section
+    assert "audit log" not in section.lower(), (
+        "the Guide is operator-facing; the audit log is sys-admin-only"
+    )
 
 
 def test_the_three_cards_agree_about_what_an_upload_costs(
@@ -743,10 +751,55 @@ def test_the_three_cards_agree_about_what_an_upload_costs(
         )
 
     for page in ("reviewers", "reviewees"):
-        assert "a relationship names a pair" in bodies[page], page
-        assert "cannot outlive either side" in bodies[page], page
-        assert "Deleting rows costs the same" in bodies[page], page
+        # The replace destroys ALL of them, not only the removed
+        # people's: `_save` deletes every row and re-adds, so an
+        # identical re-upload still wipes the roster. The first draft
+        # said "every relationship involving the people it removes" and
+        # gave a reason — "a relationship names a pair, so it cannot
+        # outlive either side" — that an identical re-upload falsifies.
+        assert "every relationship in the session" in bodies[page], page
+        assert "removes and re-creates every row" in bodies[page], page
+        # And the narrower path, named rather than folded in: a
+        # selected delete takes only its own rows' relationships.
+        assert "Deleting selected rows is narrower" in bodies[page], page
 
     rel = bodies["relationships"]
     assert "This roster depends on the other two" in rel
-    assert "Set the Reviewers and Reviewees rosters first" in rel
+    assert "deletes every relationship in the session" in rel
+    assert "Deleting selected rows there is narrower" in rel
+    assert "marking someone inactive costs nothing" in rel
+    assert "nothing here brings them back" in rel
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_a_session_without_relationships_is_not_told_their_cost(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The item's own rule, applied to guidance rather than a label.
+
+    `Decision` rejects listing relationships unconditionally — *"a label
+    naming a loss that cannot happen is its own defect"* — and
+    `update_session` refuses to turn `relationships_enabled` off while
+    rows exist, so off means no relationships can exist and the cost
+    described is impossible. The page is not even in the nav.
+
+    The first draft of this rung shipped the paragraph unconditionally.
+    A cold read caught it: the rule had been reasoned about for rung 2's
+    labels and not carried across.
+    """
+    rs = _mk(client, db, f"relcc-off-{page[:4]}")
+    rs.relationships_enabled = False
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    start = body.index('<details class="card page-guidance')
+    prose = " ".join(
+        re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
+        .split()
+    )
+
+    assert "relationship" not in prose.lower(), prose
+    # The rest of the card is untouched — this is a suppressed clause,
+    # not a suppressed paragraph.
+    assert "replaces the whole roster" in prose
+    assert "clears any assignments already generated" in prose
