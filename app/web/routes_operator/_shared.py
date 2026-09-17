@@ -27,6 +27,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import (
     Instrument,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     User,
 )
@@ -916,6 +918,17 @@ async def _handle_import(
                     "delete_discards_assignments": assignment_count > 0,
                     "roster_response_count": (
                         lifecycle.session_response_count(db, review_session)
+                    ),
+                    # 19O.5 rung 2 — this path builds its own context,
+                    # so it owes the per-row counts the rows read. An
+                    # absent key raises in the `<tr>` rather than
+                    # degrading quietly; twelve tests caught it, which
+                    # is the third time this handler has taught the
+                    # lesson (19P.1, 19P.3, here).
+                    "relationships_per_row": roster_bulk.relationships_per_row(
+                        db,
+                        model=Reviewer if kind == "reviewers" else Reviewee,
+                        session_id=review_session.id,
                     ),
                     "col_data": col_data,
                     "col_readouts": col_readouts,

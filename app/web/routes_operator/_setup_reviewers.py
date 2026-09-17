@@ -26,6 +26,7 @@ from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports
 from app.services import reviewers as reviewers_service
+from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewers import ReviewerOperationError
 from app.web import breadcrumbs, views
@@ -222,6 +223,14 @@ def _render_reviewers_page(
             ),
             "roster_response_count": lifecycle.session_response_count(
                 db, review_session
+            ),
+            # 19O.5 rung 2 — per row, because the expander's
+            # confirmation names what THIS SELECTION costs and the
+            # selection lives in the browser. `data-status` is the
+            # precedent: a server fact carried on the `<tr>` and summed
+            # client-side.
+            "relationships_per_row": roster_bulk.relationships_per_row(
+                db, model=Reviewer, session_id=review_session.id
             ),
             "delete_discards_responses": (
                 lifecycle.session_has_responses(db, review_session)

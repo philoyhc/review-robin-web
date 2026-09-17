@@ -139,6 +139,33 @@ def reaches_relationships(model: type) -> bool:
     return model in _RELATIONSHIP_FK
 
 
+def relationships_per_row(
+    db: Session, *, model: type, session_id: int
+) -> dict[int, int]:
+    """``{row_id: relationships}`` for one roster, whole session.
+
+    The row-expander confirmation names the loss for **the selection**,
+    not the roster, and the selection is only known in the browser — so
+    the count travels per row on the `<tr>` and the script sums whatever
+    is ticked. `data-status` already works this way, for the same
+    reason: a fact the server knows, decided client-side.
+
+    Rows carrying none are absent from the map rather than present at 0;
+    the caller renders `0` for a miss, which is what an unreferenced row
+    means.
+    """
+    column = _RELATIONSHIP_FK.get(model)
+    if column is None:
+        return {}
+    rows = db.execute(
+        select(column, func.count())
+        .select_from(Relationship)
+        .where(Relationship.session_id == session_id)
+        .group_by(column)
+    ).all()
+    return {int(row_id): int(n) for row_id, n in rows}
+
+
 def relationship_cascade_count(
     db: Session, *, model: type, ids: list[int]
 ) -> int:
