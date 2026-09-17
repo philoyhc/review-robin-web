@@ -821,6 +821,52 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
     assert "No invitation URL has been issued yet." not in body
 
 
+def test_detail_page_links_to_the_reviewer_surface_in_a_new_tab(
+    client: TestClient, db: Session
+) -> None:
+    """The Review Progress card's `Open reviewer surface` link.
+
+    Placement, destination and target are all decided in Item 6's
+    § *Where the link goes* rather than iterated on the dev slot, so
+    they are asserted rather than left to a look:
+
+    - a `.card-action-row` at the **foot of the card** — the same
+      right-flushed row the Previews hub puts the same button in;
+    - straight at `/preview-surface`, **never through `/previews`**,
+      which is what keeps Item 7's retirement of that hub cheap;
+    - a new tab, so the drill-in stays put behind it.
+    """
+    session = _ready_session(client, db, code="drill-surface")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    ).text
+
+    card = body[body.index("Review Progress") :]
+    row = card[card.index('<div class="card-action-row">') :]
+    row = row[: row.index("</div>")]
+    assert ">\n          Open reviewer surface\n        </a>" in row
+    assert 'class="btn secondary"' in row
+    assert 'target="_blank"' in row and 'rel="noopener"' in row
+    assert (
+        f'href="/operator/sessions/{session.id}/preview-surface/1'
+        f'?reviewer_email=rae%40example.edu"' in row
+    )
+    assert "/previews" not in row
+
+    # **Last child of the card**, which is the placement decision and
+    # not an accident of where it happened to be written: after the
+    # action row closes, the only markup left before the card closes is
+    # whitespace and that closing tag.
+    after_row = card[card.index("</div>", card.index("card-action-row")) + 6:]
+    assert after_row.lstrip().startswith("</div>"), after_row[:120]
+
+    # The promise the link makes good on is gone from the note.
+    assert "will land in a future" not in card
+
+
 def test_detail_page_404s_for_a_reviewer_in_another_session(
     client: TestClient, db: Session
 ) -> None:

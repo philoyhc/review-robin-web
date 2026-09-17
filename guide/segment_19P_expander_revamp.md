@@ -1801,6 +1801,19 @@ disabled link would show a reviewer less than a working one.
    link. Probably nothing to do; author's call at Item 7.
 2. **Item 7's shape** — Item 7's stub, § *The three candidate fates*.
    Author's call, after this item is on the dev slot.
+3. **Should the preview surface stop suppressing the dropped-fields
+   notice?** `review_surface.html` renders *"Some saved responses are
+   no longer collected"* on `{% if dropped_fields and not preview_mode %}`.
+   The suppression was written (18K PR 5) when this surface was only a
+   pre-launch preview, where nothing is saved so nothing can be
+   dropped. Rung 2 gave it a second purpose — inspecting a real
+   reviewer — and dropped fields are exactly what an operator would
+   want to know there. **Same argument that justified rewriting the
+   banner**, one element down. Rung 2 qualified the copy instead
+   (*"the fields still being collected"*), which is accurate but tells
+   the operator less than the notice would. Author's call: un-suppress,
+   or keep the qualified copy and leave it to whoever grows this page.
+   Found by Codex on rung 2's PR, 2026-09-17.
 
 ### Out of scope
 

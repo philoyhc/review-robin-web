@@ -10,9 +10,11 @@ the operator: renders the same ``reviewer/review_surface.html``
 template against the same ``_surface_context`` plumbing, but bypasses
 the deadline / acceptance gates and rewrites the action-row Prev/Next
 URLs back at this operator-side route so the operator can flip pages.
-Save / Discard / Submit render as inert disabled buttons in
+Save / Cancel / Submit render as inert disabled buttons in
 ``preview_mode``; the surface ``<form>`` is replaced with a ``<div>``
-so even pressing Enter cannot drive a write.
+so even pressing Enter cannot drive a write. **Inputs stay enabled** —
+``preview_mode`` forces ``accepting=True`` — so the operator can type;
+nothing they type goes anywhere.
 
 Distinct from the iframe-based preview card on the Previews hub
 (``_operations.py`` ``previews_index``), which renders the same
@@ -146,8 +148,13 @@ def preview_surface(
         preview_mode=True,
         page_url_builder=page_url,
     )
+    # "Reviewer surface", not "Preview reviewer surface" (19P.6 rung 2).
+    # The banner dropped "Preview" because it is false of the Invitations
+    # entry point, where the operator is inspecting real responses; the
+    # breadcrumb is the same word on the same page for the same reason,
+    # and leaving it would be two labels for one surface.
     context["breadcrumbs"] = breadcrumbs.operator_session_child(
-        review_session, "Preview reviewer surface"
+        review_session, "Reviewer surface"
     )
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context

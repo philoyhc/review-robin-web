@@ -17,11 +17,20 @@ composite. The Previews hub links here from its surface card.
 
 from __future__ import annotations
 
+import datetime as _dt
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
+from app.db.models import (
+    Assignment,
+    Instrument,
+    InstrumentResponseField,
+    Response,
+    ReviewSession,
+)
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -171,21 +180,130 @@ def test_unmatched_reviewer_email_303s_back_to_previews(
 # --------------------------------------------------------------------------- #
 
 
-def test_renders_reviewer_surface_template_with_preview_banner(
+def test_renders_reviewer_surface_template_with_operator_banner(
     client: TestClient, db: Session
 ) -> None:
     """Preview reuses the same template the reviewer hits — proves
     the operator sees exactly what the reviewer will see, modulo
-    the inert action row and the preview banner."""
+    the inert action row and the operator banner.
+
+    **The banner stopped saying "Preview" at 19P.6 rung 2.** The word
+    was true of this page's first entry point, the Previews hub, where
+    nothing has been submitted yet; it is false of the second, the
+    Invitations drill-in, where the operator is inspecting a reviewer's
+    actual responses. So the copy is asserted here, and the absence of
+    the old framing with it — otherwise a revert to
+    "Preview — not visible to reviewers" passes.
+
+    The two negative assertions below are the ones worth keeping: the
+    first version of the new copy named a control the page does not
+    have and claimed a read-only-ness it does not have, and nothing
+    caught either.
+    """
     session = _make_session_with_reviewer(client, db, code="prev-s-render")
     body = client.get(
         f"/operator/sessions/{session.id}/preview-surface/1"
     ).text
-    # Preview banner from review_surface.html's preview_mode branch.
-    assert "Preview" in body and "not visible to reviewers" in body
+    # The banner's sentences wrap in the template, so prose assertions
+    # run against collapsed whitespace — matching what a reader sees
+    # rather than where the source happens to break its lines.
+    prose = re.sub(r"\s+", " ", body)
+    # Operator banner from review_surface.html's preview_mode branch.
+    assert "<strong>Operator view.</strong>" in body
+    # **Qualified, and the qualification is load-bearing.** Fields the
+    # operator has un-pinned are filtered out by `visible.is_(True)`
+    # and the dropped-fields notice is suppressed in `preview_mode`, so
+    # an unqualified "any responses they have saved" would let an
+    # operator conclude a response never existed.
+    assert "saved responses to the fields still being collected" in prose
+    assert "any responses they have saved" not in prose
+    # **Names the controls the page actually has.** The first version of
+    # this copy said "Save, Discard and Submit"; `_action_row.html`
+    # renders Save / Cancel / Submit, and `CLAUDE.md` requires prose that
+    # names a control to quote it.
+    assert "Save, Cancel and Submit are disabled" in prose
+    # **Both negatives are scoped to the banner**, not the page. Bare
+    # `"Discard" not in body` and `"read-only" not in body` fail on
+    # `base.html`'s inline CSS comments and a Jinja comment in this
+    # template, which carry both strings — the vacuity trap this
+    # segment keeps meeting, inverted: a NEGATIVE assertion matching
+    # prose *about* the thing rather than the thing.
+    banner = prose[prose.index("<strong>Operator view.</strong>") :]
+    banner = banner[: banner.index("</div>")]
+    assert "Discard" not in banner
+    # **And it does not claim read-only.** `preview_mode` forces
+    # `accepting=True`, so `disabled_attr` is empty and the inputs are
+    # typeable; what is inert is the form around them.
+    assert "read-only" not in banner
+    assert "Nothing you type here is saved" in prose
+    # The breadcrumb drops "Preview" for the same reason the banner did.
+    assert "Reviewer surface" in body
+    assert "Preview reviewer surface" not in body
+    # The old banner's own sentence, gone from `app/` entirely.
+    assert "not visible to reviewers" not in body
     # Instrument section anchors render — proves _surface_context
     # produced the instrument groups.
     assert 'data-rs-position="1"' in body
+
+
+def test_preview_surface_renders_the_reviewer_s_saved_responses(
+    client: TestClient, db: Session
+) -> None:
+    """**The thing this surface is for, and nothing asserted it.**
+
+    `preview_mode` forces `accepting=True` (`_surface_context`), which
+    makes `show_values` true, which is what prefills each cell from the
+    saved `Response` row. Five test modules touch this route and none
+    checked that a saved value comes back — so the behaviour 19P.6 links
+    the Invitations drill-in to was resting on nothing.
+
+    It also pins the `responses_visible_when_closed` bypass: `show_values`
+    is `accepting or responses_visible_when_closed`, and the preconditions
+    below assert this instrument sets neither — so only the `preview_mode`
+    override can put the value on the page. Without them the causal claim
+    rests on a shared helper this test does not own, and would go quietly
+    false the day that helper starts activating its session.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-saved")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    assert instrument is not None
+    assert instrument.accepting_responses is False, (
+        "premise: the session is not accepting, so `accepting` is false "
+        "without the preview_mode override"
+    )
+    assert instrument.responses_visible_when_closed is False, (
+        "premise: the instrument hides values when closed, so that is not "
+        "what puts the saved value on the page"
+    )
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == session.id)
+    ).scalars().first()
+    assert assignment is not None
+    field = db.execute(
+        select(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == assignment.instrument_id)
+        .order_by(InstrumentResponseField.order)
+    ).scalars().first()
+    assert field is not None, "the generated instrument has no response field"
+
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="SAVED-BY-THE-REVIEWER",
+            saved_at=_dt.datetime(2026, 9, 17, tzinfo=_dt.timezone.utc),
+            version=1,
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=rae@example.edu"
+    ).text
+    assert "SAVED-BY-THE-REVIEWER" in body
 
 
 def test_no_write_form_in_preview(
