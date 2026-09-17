@@ -204,13 +204,13 @@
         {% for row in rows %}
           <tr>
             <td data-sort-value="{{ row.reviewer.name }}">
-              {% if row.invitation %}
-                <a href="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/detail">
-                  <strong>{{ row.reviewer.name }}</strong>
-                </a><br>
-              {% else %}
-                <strong>{{ row.reviewer.name }}</strong><br>
-              {% endif %}
+              {# 19P.6 rung 1 — unconditional. The page is keyed on the
+                 reviewer now, so it exists for every row; it used to be
+                 `{% if row.invitation %}`, which left the table a list
+                 of names that went nowhere until Create invites. #}
+              <a href="/operator/sessions/{{ session.id }}/invitations/reviewers/{{ row.reviewer.id }}">
+                <strong>{{ row.reviewer.name }}</strong>
+              </a><br>
               <code>{{ row.reviewer.email }}</code>
             </td>
             {% if col_data["tag-1"] %}<td class="tag-col tag-col-1" data-sort-value="{{ row.reviewer.tag_1 or '' }}">{{ row.reviewer.tag_1 or "" }}</td>{% endif %}
