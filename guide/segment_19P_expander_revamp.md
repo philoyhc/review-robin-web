@@ -1647,10 +1647,14 @@ the Review Progress card gains a preview-surface link opening in a
 - **Old URLs 308 to the new shape** where an invitation exists, so a
   bookmark survives. `_require_invitation_in_session` stays for the
   three per-row POSTs, which are genuinely invitation-keyed.
-- **No invitation is a normal state.** `invite_url` resolves to `None`
-  and the template already renders *"No invitation URL has been issued
+- **No invitation is a normal state.** `invite_url` resolves to `None`.
+  ~~The template already renders *"No invitation URL has been issued
   yet."* — written for an unsent invitation, true unchanged for an
-  absent one.
+  absent one.~~ **Overturned at rung 2a**: it is *not* true unchanged.
+  The two states differ, and conflating them is what the author
+  reported from the dev slot. The absent case now names the action
+  instead; the URL line keeps its original meaning for an invitation
+  that exists but has never been sent.
 - **The reviewer-scoped lookup is hoisted, not copied.**
   `_require_reviewer_in_session` lives in `_setup_reviewers.py`, a
   sibling slice. Two rules push it to `_shared.py` and neither is a
@@ -1753,9 +1757,69 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - Tests asserting the preview surface renders a **saved response**:
   **0**, across all six files above.
 
+### Status
+
+**The ladder became four rungs, not three.** Rung 2a was added after the
+author found the Invitation card on the dev slot reporting
+`Email Status: not sent · Email Sent: — · Last reminder: —` for a
+reviewer with **no invitation at all**, under a chrome pill reading
+`Invitations: NOT CREATED`. Not a regression rung 1 introduced: rung 1
+made the state *reachable from the table*, and the card had always
+derived its email status from the outbox, which falls back to
+"not sent" when there is nothing to send.
+
+Decisions confirmed at build:
+
+- **Three facts, not one.** Invitation created / email sent / reminder
+  sent are separate, and the card reports all three. Author's words,
+  2026-09-17: *"Top line to report whether the Invite has been created /
+  Bottom line to report when the Email has been sent (if at all), and
+  when was the Last reminder was sent (if at all)."*
+- **The em-dash means "no date", not "no invitation"** — author's
+  correction of a first fix that hid the whole line.
+- **Both lines read `invitation`, not `row`.** `sent_at` and
+  `last_reminder_at` are columns on `Invitation`; `row` is
+  `_assigned_active_reviewers`, so reading it lost both facts for an
+  invited-then-deactivated reviewer. Found by re-reading the code after
+  the copy was settled, and the reason the card could report "not sent"
+  with nothing to send.
+- **`No invitation URL has been issued yet.` stays**, and is not
+  redundant with "not created": `generate_invitations` discards the raw
+  token, so the URL exists only once an invitation has been *sent*.
+- **Mutation testing found the dates line half-unpinned.** No test sent
+  a reminder, so two mutants survived; `test_detail_page_dates_line_reports_a_sent_reminder`
+  closes it.
+- **And one of that run's "caught" verdicts was false.** The mutant for
+  the URL region rewrote `{% elif %}` to a second `{% else %}`, which
+  is a Jinja syntax error: every render failed, so the red told us
+  nothing about the assertions. A genuine two-branch collapse left the
+  suite green. Caught by `diff-reviewer`, not by the harness that was
+  supposed to catch it — **a mutant that breaks the template is not a
+  mutant**, and a mutation run is only worth its weakest verdict.
+  `test_detail_page_url_region_has_three_states_not_two` pins all three
+  states now, and the runner gained a parse gate that reports such a
+  mutant `INVALID` instead of `CAUGHT` — which immediately exposed a
+  *second* false verdict in the same original run. The corrected run is
+  nine mutants, all parseable, all caught.
+- **The card told an ineligible reviewer's operator to press a button
+  that cannot reach them.** `generate_invitations` selects active
+  reviewers with an included assignment — the same predicate that makes
+  `row` None here — so *Create invites* would have left the card at
+  `not created` however often it was pressed. The guidance now branches
+  on eligibility. Found by Codex on rung 2a's PR; the population is the
+  one rung 1 made reachable, which is why nothing earlier caught it.
+- **Two claims in the same rung said more than the code did**, the
+  failure mode this segment keeps returning to: the template comment
+  claimed the card and the table show "one fact in two places" (false
+  for `Email sent` after a Regenerate — different sources), and a test
+  comment claimed the card reports no email status "at all" from an
+  assertion scoped to a block that could not contain one. Both
+  corrected; the regenerate divergence became open question 4.
+
 ### PR ladder
 
-**Three slices. The scaffold-first rule is set aside for this item**
+**Three slices as planned; four as built** — rung 2a was added mid-build
+(see `### Status`). **The scaffold-first rule is set aside for this item**
 (author, 2026-09-17) on the condition that the link's placement is
 decided up front rather than iterated on the dev slot — it is, in
 § *Where the link goes* above. `CLAUDE.md` asks for an inert scaffold
@@ -1780,7 +1844,7 @@ disabled link would show a reviewer less than a working one.
 
 ### Definition of done
 
-- `grep -c "{% if row.invitation %}" app/web/templates/operator/session_invitations.html` → 0, and a reviewer with no `Invitation` row reaches the page from the table and sees `No invitation URL has been issued yet.`
+- `grep -c "{% if row.invitation %}" app/web/templates/operator/session_invitations.html` → 0, and a reviewer with no `Invitation` row reaches the page from the table and sees `Invite: not created` (rung 2a; this bullet named `No invitation URL has been issued yet.` until that rung separated the two states).
 - `GET .../invitations/{invitation_id}/detail` 308s to the reviewer URL, pinned by a test.
 - The surface link carries `target="_blank"` and `rel="noopener"`, and points at `/preview-surface/1?reviewer_email=`, not `/previews`.
 - It renders as `Open reviewer surface` in a `.card-action-row` that is the **last child** of the Review Progress card, and the card's scaffold note no longer promises per-response detail as future work.
@@ -1814,6 +1878,28 @@ disabled link would show a reviewer less than a working one.
    the operator less than the notice would. Author's call: un-suppress,
    or keep the qualified copy and leave it to whoever grows this page.
    Found by Codex on rung 2's PR, 2026-09-17.
+4. **Should the app reconcile what Regenerate leaves behind?**
+   `regenerate_token` clears `Invitation.sent_at` and `opened_at` but
+   leaves `last_reminder_at` and every outbox row alone
+   (`invitations.py:221-224`). So a regenerated invitation reads
+   `Email sent: —` with a reminder date beside it, and the previous
+   URL still printed below — while the Manage Invitations table, whose
+   Sent column is the outbox row's, shows a date. **Older than this
+   card**: the chrome strip already says `NOT SENT` there. Rung 2a
+   pinned the state
+   (`test_detail_page_after_regenerate_reports_the_current_token`)
+   rather than smoothing it, because the fix is a decision about
+   `regenerate_token` — clear `last_reminder_at` too? — not about a
+   template. Author's call. Found by `diff-reviewer` on rung 2a.
+5. **Where does a failed send show on the drill-in?** The card used to
+   render `row.email_status`, whose value set
+   (`views/_invitations.py:39-42`) is documented to widen to `sending`
+   and `failed`. Rung 2a replaced it with a timestamp, which has no
+   slot for a delivery failure; only the table would show one. Not a
+   defect today — `queued` is unreachable, since `send_invitation`
+   flips the outbox to `sent` in the same call — but the rung removed
+   the place to put it. Author's call, or whoever lands the widening.
+   Found by `diff-reviewer` on rung 2a.
 
 ### Out of scope
 
@@ -1829,7 +1915,7 @@ disabled link would show a reviewer less than a working one.
 
 ### Doc impact
 
-- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, and the surface link in the Review Progress card (Item 6).
+- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, the surface link in the Review Progress card, and the Invitation card's three reported facts — `Invite: created / not created`, the two date slots, and the three-state URL region (Item 6).
 - `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, and "reached from the Previews hub picker card" becoming one entry point of two (Item 6).
 - `spec/preview_hub.md` — the preview surface gains a second entry point (Item 6).
 - `spec/operator_ui_concept.md` — `:102` and `:367`, the two passages naming the picker button as the way in. Not `:197`, which this item leaves alone (Item 6).

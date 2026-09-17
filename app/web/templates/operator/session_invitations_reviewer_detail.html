@@ -22,53 +22,115 @@
 
   <div class="card">
     <h2 style="margin-top: 0;">Invitation</h2>
-    {# 19P.6 rung 2a — **gated on the invitation, not on the row.**
-       `row.email_status` is derived from the outbox, so with no
-       invitation at all it reads "not sent", and this card said
-       "Email Status: not sent · Email Sent: — · Last reminder: —"
-       over a session whose own chrome pill said `Invitations: NOT
-       CREATED` two inches above. Rung 1 made that state reachable
-       from the table; before it, the page needed an invitation in the
-       path, so "not sent" always meant one existed. #}
-    {% if not invitation %}
+    {# 19P.6 rung 2a — two lines, in the author's words (2026-09-17):
+       "Top line to report whether the Invite has been created / Bottom
+       line to report when the Email has been sent (if at all), and when
+       was the Last reminder was sent (if at all)."
+
+       The card used to report one `Email Status` pill plus two dates,
+       which conflated whether an invitation EXISTS with whether its
+       email has been SENT: `row.email_status` derives from the outbox,
+       so with no invitation at all it fell back to "not sent" — on a
+       page whose chrome pill read `Invitations: NOT CREATED` two inches
+       above. Rung 1 made that state reachable; before it the page took
+       an invitation from the path, so the fallback could not be hit.
+
+       **Both lines read `invitation`, not `row`.** `sent_at` and
+       `last_reminder_at` are columns on `Invitation` itself, written by
+       `send_invitation` and `send_reminder`. `row` is the monitoring
+       view, whose set is `_assigned_active_reviewers`, so reading it
+       lost both facts for a reviewer who was invited and emailed and
+       then deactivated or unassigned — the population rung 1 made
+       reachable, and the one whose invite URL
+       `test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table`
+       already pins. The em-dash is not "no invitation": it is "no
+       date", which is what the author confirmed it should mean.
+
+       Timestamp-or-em-dash in `pill-count` / `pill-empty` is the Manage
+       Invitations table's own idiom for these two fields
+       (`session_invitations.html:228-262`), so the two surfaces look
+       alike.
+
+       **They are not always the same fact, and the difference shows
+       after Regenerate.** `Last reminder` is one fact — the table reads
+       `Invitation.last_reminder_at` too (`monitoring.py:149`). `Email
+       sent` is not: the table's is the outbox row's `sent_at`
+       (`views/_invitations.py:113-119`), this card's is the
+       invitation's. `regenerate_token` clears `Invitation.sent_at` and
+       leaves both the outbox rows and `last_reminder_at` alone
+       (`invitations.py:221-224`), so a regenerated invitation reads
+       "Email sent: —" here and a date on the table.
+
+       That divergence is **older than this card**: the chrome strip
+       already says `NOT SENT` after a regenerate
+       (`_INVITATION_STATES`, `views/_setup.py:175-180`) while the
+       table's Sent column shows a date. This card now sits on the
+       invitation's side of it rather than the outbox's. The state is
+       pinned by `test_detail_page_after_regenerate_reports_the_current_token`
+       so it cannot drift unnoticed; whether the app should reconcile
+       the two is Item 6 open question 4, not this rung's to decide. #}
+    <div id="invitation-facts">
+      <p>
+        Invite:
+        {% if invitation %}
+          <span class="pill pill-count">created</span>
+        {% else %}
+          <span class="pill pill-empty">not created</span>
+        {% endif %}
+      </p>
+      <p>
+        Email sent:
+        {% if invitation and invitation.sent_at %}
+          <span class="pill pill-count">{{ invitation.sent_at | format_datetime }}</span>
+        {% else %}
+          <span class="pill pill-empty">—</span>
+        {% endif %}
+        &middot;
+        Last reminder:
+        {% if invitation and invitation.last_reminder_at %}
+          <span class="pill pill-count">{{ invitation.last_reminder_at | format_datetime }}</span>
+        {% else %}
+          <span class="pill pill-empty">—</span>
+        {% endif %}
+      </p>
+    </div>
+    {# Three branches, not two. `invite_url` is recovered by regex from
+       the body of the most recent invitation EMAIL
+       (`most_recent_invitation_url`), so it is None until the invitation
+       is sent — `generate_invitations` discards the raw token
+       (`invitations.py:170`) and only the hash is stored. So "no URL"
+       and "no invitation" are different states, and "issued" is the
+       accurate verb for the middle one: the invitation exists, but no
+       link has ever been put in front of the reviewer. #}
+    {% if invite_url %}
+      <p>
+        Invitation URL (last issued):<br>
+        <code>{{ invite_url }}</code>
+      </p>
+    {% elif invitation %}
+      <p class="muted">No invitation URL has been issued yet.</p>
+    {% elif row %}
       <p class="muted">
-        No invitation has been created for this reviewer yet &mdash;
-        create them from <strong>Create invites</strong> on the
+        Create invitations from <strong>Create invites</strong> on the
         Workflow card.
       </p>
     {% else %}
-      {% if row %}
-      <p>
-        Email Status:
-        {% if row.email_status == "sent" %}
-          <span class="pill pill-count">sent</span>
-        {% elif row.email_status == "queued" %}
-          <span class="pill pill-empty">queued</span>
-        {% else %}
-          <span class="pill pill-empty">not sent</span>
-        {% endif %}
-        &middot; Email Sent:
-        {% if row.email_sent_at %}
-          {{ row.email_sent_at | format_datetime }}
-        {% else %}
-          —
-        {% endif %}
-        &middot; Last reminder:
-        {% if row.last_reminder_at %}
-          {{ row.last_reminder_at | format_datetime }}
-        {% else %}
-          —
-        {% endif %}
+      {# `row` is None exactly when this reviewer is off the Manage
+         Invitations table, and that is the same predicate
+         `generate_invitations` selects on: active, with at least one
+         included assignment (`invitations.py:131-142` and
+         `monitoring.py:_assigned_active_reviewers` are the same join
+         and the same three filters). So pointing an operator at
+         **Create invites** here would send them to a button that
+         cannot reach this reviewer — the card would stay `not created`
+         however often they pressed it. Named by Codex on rung 2a's PR;
+         the population is the one rung 1 made reachable. #}
+      <p class="muted">
+        <strong>Create invites</strong> covers active reviewers with at
+        least one included assignment, so it will skip this one.
+        Reactivate them on <strong>Reviewers</strong>, or include an
+        assignment on <strong>Assignments</strong>, first.
       </p>
-      {% endif %}
-      {% if invite_url %}
-        <p>
-          Invitation URL (last issued):<br>
-          <code>{{ invite_url }}</code>
-        </p>
-      {% else %}
-        <p class="muted">No invitation URL has been issued yet.</p>
-      {% endif %}
     {% endif %}
   </div>
 
