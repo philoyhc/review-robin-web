@@ -131,6 +131,12 @@ def test_the_counter_answers_per_model_and_per_row(
     assert roster_bulk.relationship_cascade_count(
         db, model=Observer, ids=[1, 2, 3]
     ) == 0
+    # An empty selection. **This one is behaviour-preserving**: the
+    # `not ids` short-circuit mirrors `cascade_counts`' and saves a
+    # query, but `column.in_([])` already answers 0, so removing the
+    # guard passes this assertion. Mutation-checked and recorded rather
+    # than dressed up as a behavioural claim — the reason to keep the
+    # line is symmetry with its sibling, which is a source fact.
     assert roster_bulk.relationship_cascade_count(
         db, model=Reviewer, ids=[]
     ) == 0
