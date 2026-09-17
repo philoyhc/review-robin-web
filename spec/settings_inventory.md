@@ -137,22 +137,32 @@ editor nor the allowlist, though their built-in defaults ("Name" /
 
 **Surface:**
 
-- **Edit:** Inline editor card above the data table on
-  `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots) and
-  `/operator/sessions/{id}/relationships` (3 pair-context
-  slots). On `/operator/sessions/{id}/reviewers` (3 reviewer-tag
-  slots) 19P.1 made the position **conditional rather than fixed**:
-  the same editor renders inside the roster card's **Unlock panel**
-  when that panel can render, and in its old `.card-columns` home
-  when it cannot — a locked session, or while a row is being edited.
-  One include in two positions, on exactly complementary conditions,
-  because a locked page must still let an operator *read* the labels
-  while offering no control the route would refuse. Save / Cancel pair (both Secondary, both
-  disabled-until-dirty). Gated by `is_ready`: inputs render
-  disabled when the session is active/closed; the page's
-  existing `.card.lock` already messages "revert to draft to
-  modify". The same nine slots can also be set via the roster
-  CSV header suffix (see **Round-trip** below).
+- **Edit:** One inline editor, on each of the three pages that have
+  tag slots — `/operator/sessions/{id}/reviewers` (3 reviewer-tag
+  slots), `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots)
+  and `/operator/sessions/{id}/relationships` (3 pair-context slots).
+  Observers has no slots and no editor.
+
+  **Its position is conditional rather than fixed** on all three —
+  Reviewers since 19P.1, the other two since 19P.3. The same editor
+  renders inside the roster card's **Unlock panel** when that panel
+  can render, and in its `.card-columns` fallback home when it cannot
+  — a locked session, or while a row is being edited. One include in
+  two positions, on exactly complementary conditions, because a locked
+  page must still let an operator *read* the labels while offering no
+  control the route would refuse (`spec/setup_pages.md` § *The roster
+  card and the Unlock panel*).
+
+  Save / Cancel pair (both Secondary, both disabled-until-dirty).
+  **Gated by `is_editable`**, not `is_ready` — the partial reads
+  `is_editable` and has since Segment 19H Item 7, when `is_ready`
+  (`status == "ready"` alone) left `expired` and `archived` rendering
+  live inputs above a lock card saying the roster could not be
+  modified. *(Corrected at 19P.3's close; the sentence had said
+  `is_ready` since 15A.)* Inputs render disabled in every locked
+  state, and the page's `.card.lock` messages the way out. The same
+  nine slots can also be set via the roster CSV header suffix (see
+  **Round-trip** below).
 - **Read:** Friendly label flows through every operator
   preview surface (Reviewers / Reviewees / Relationships /
   Assignments column headers + the Assignments

@@ -1076,6 +1076,22 @@ and not the table.
   `profile` readout it had always lacked would otherwise have let the
   index read `Profile (1)` above a table with no Profile column.
 
+**The `spec-writer` close pass found five, and one of them is the
+same mistake twice.** The hoist's "nothing else varies" sentence and
+the roster-index paragraph that contradicts it were written in the same
+sweep: the index can be empty on Relationships and nowhere else, which
+is a roster-card difference and not one of the panel's three axes. The
+claim now says which element it covers. `spec/lifecycle.md` §5 still
+described a `.bottom-grid` no roster page renders — a third spec the
+plan never named, added to Doc impact. `spec/settings_inventory.md`
+§2.5 still placed the labels editor at a fixed position on two pages
+and named `is_ready` as its gate, wrong since 19H Item 7. The
+`full_width` sentence named two pages where the table below it named
+four. And `operator_button_audit.md` §§6-8 described `Inactivate` /
+`Activate` as arity-gated where §8.5 has said since 19P.2 that they are
+**rendered by status** — all four pages run the identical
+`statusActions()`, so three sections under-described shipped behavior.
+
 **Owed at rung 4, all discharged at rung 5c** — the two comment
 placements, `.roster-readout-empty` (kept in four templates, decided and
 recorded), the labels editor's `<section aria-labelledby>`, and
@@ -1179,6 +1195,7 @@ pages.
 - `spec/rrw_functional_spec.md` — the roster-page description stops naming exceptions and states one shape (Item 3).
 - `spec/visual_style_rrw.md` — § *Width discipline*'s roster example and § *Danger-zone card uses* both scoped the move to Reviewers; **added at rung 5c**, found by the cold read, not named at planning time (Item 3).
 - `spec/color_tokens.md` — the `.page-guidance` token argument scopes the full-width move to Reviewers; **added at rung 5c**, same finding (Item 3).
+- `spec/lifecycle.md` — §5's *"what is hidden differs by page"* paragraph described a `.bottom-grid` no roster page renders any more; **added at the close**, found by `spec-writer`, not named at planning time (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
 
 **Rung 3 adds one, and it is a question rather than a relabel.**

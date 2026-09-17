@@ -80,9 +80,9 @@ below describe what that panel holds and what it replaced.
 
    Width comes from the column the page puts it in. **The one
    exception is the macro's only argument**, `full_width` (default
-   `false`), which Reviewers passes since 19P.1 and Observers since
-   19P.2: both left `.card-columns` and so have no column to take
-   width from. A card spanning the page and its prose being laid out
+   `false`), which **all four roster pages** pass — Reviewers since
+   19P.1, Observers 19P.2, Reviewees and Relationships 19P.3: each left
+   `.card-columns` and so has no column to take width from. A card spanning the page and its prose being laid out
    for that span are separate things — at full width one measure runs
    past 150 characters, so the argument gives the body `column-count:
    2`. Nothing
@@ -350,7 +350,7 @@ card's replace*.
   panel, as it had outside one.
 
 **Where the four pages differ, inside this section's subject.** The
-panel and the roster card differ on three axes, all of them Observers':
+**panel** differs on three axes, all of them Observers':
 
 | Axis | Reviewers / Reviewees / Relationships | Observers |
 |---|---|---|
@@ -364,8 +364,13 @@ so a reader has one place to count them: no `Show columns:` chips, no
 sortable headers, a literal-labelled index that lists its one tag slot
 even at zero, a lock card passed the matching predicate, and no
 `acknowledge_response_loss` cascade on its destructive routes (which
-Relationships also lacks). Nothing in *this* section varies beyond the
-three rows above.
+Relationships also lacks).
+
+**The roster card differs on one further axis, and it is
+Relationships'** — its index can be empty, where the other three
+always list identity columns. That is the card rather than the panel,
+so it is stated in § *The roster index* below rather than added to a
+table about the panel's tenants.
 
 ### The panel's start-open contract
 

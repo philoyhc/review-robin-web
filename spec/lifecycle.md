@@ -358,11 +358,11 @@ are hidden and a **yellow lock card** renders in its place, explaining
 that setup is locked and offering the way out that state has.
 **Observers is a stated exception**, below.
 
-**What is hidden differs by page since 19P.1; the rule does not.**
-On Reviewees and Relationships it is the `.bottom-grid` those two
-cards sit in. On Reviewers there is no such grid — the
-two cards, plus the tag-label editor, are inside the roster card's
-**Unlock panel**, and it is the whole panel that is suppressed.
+**What is hidden is the same on all four pages since 19P.3.** No
+roster page renders the `.bottom-grid` this paragraph used to describe
+— the two destructive cards, plus the tag-label editor on the three
+pages that have one, are inside the roster card's **Unlock panel**,
+and it is the whole panel that is suppressed.
 Same predicate, one gate instead of a grid, and the Unlock control
 itself goes with it: a locked page offers no way to open a panel
 whose contents its routes would refuse. The tag-label editor is the
