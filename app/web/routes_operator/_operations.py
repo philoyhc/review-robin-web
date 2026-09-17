@@ -35,7 +35,11 @@ from app.web.deps import (
     request_correlation_id,
     require_session_operator,
 )
-from app.web.routes_operator._shared import _REVERT_RETURN_TO, _templates
+from app.web.routes_operator._shared import (
+    _REVERT_RETURN_TO,
+    _require_reviewer_in_session,
+    _templates,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -574,14 +578,13 @@ def invitations_index(
 
 
 @router.get(
-    "/sessions/{session_id}/invitations/{invitation_id}/detail",
+    "/sessions/{session_id}/invitations/reviewers/{reviewer_id}",
     response_class=HTMLResponse,
 )
 def invitation_reviewer_detail(
     request: Request,
-    bundle: tuple[Invitation, ReviewSession] = Depends(
-        _require_invitation_in_session
-    ),
+    reviewer_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -592,15 +595,52 @@ def invitation_reviewer_detail(
     consolidated table renders, plus the latest invitation outbox row's
     raw token URL when available. Future segments grow this surface
     (per-assignment progress, per-response detail).
+
+    **Keyed on the reviewer since 19P.6 rung 1**, not on the invitation
+    it used to take from the path. The invitation supplied one field
+    (`invite_url`) while the reviewer looked up from it supplied the
+    row match, the heading, the email and the breadcrumb label — so
+    keying on the field made the table's link conditional on a row
+    that may not exist yet. It is resolved here instead, through the
+    row, and is simply absent before **Create invites**.
     """
-    invitation, review_session = bundle
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
-    ).scalar_one()
+    reviewer = _require_reviewer_in_session(db, review_session, reviewer_id)
     rows = views.build_invitations_rows(db, review_session)
     row = next((r for r in rows if r.reviewer.id == reviewer.id), None)
-    invite_url = invitations.most_recent_invitation_url(
-        db, invitation_id=invitation.id
+    # `row` is None for a reviewer the table does not list — inactive,
+    # or with no included assignment. **Not a new state**, though an
+    # earlier version of this comment said so: deactivating a reviewer
+    # leaves their invitation alone (`reviewers.bulk_inactivate` flips
+    # `status` only), so the old invitation-keyed URL already reached
+    # this page from a bookmark. Measured on the pre-re-key commit:
+    # 200, no Review Progress card. What changed is WHO can reach it —
+    # every reviewer in the session, including one that never had an
+    # invitation, where before only an invitation could name one.
+    #
+    # **The invitation is resolved from the reviewer, not from `row`.**
+    # Taking `row.invitation` loses it for exactly the reviewers above:
+    # a sent invitation outlives its reviewer's place on the table, and
+    # is still the live link in their inbox, so the page that shows it
+    # must keep showing it. `generate_invitations` skips reviewers who
+    # already have one and `regenerate_token` mutates in place, so
+    # there is at most one per (session, reviewer) and this is
+    # unambiguous.
+    #
+    # `session_id` in the filter is redundant by construction — the
+    # reviewer above is already session-scoped, so their invitation
+    # cannot belong to another session without corrupt data. Kept as
+    # defence in depth, and named here because no test can distinguish
+    # it: a mutation dropping it survives the suite, and should.
+    invitation = db.execute(
+        select(Invitation).where(
+            Invitation.session_id == review_session.id,
+            Invitation.reviewer_id == reviewer.id,
+        )
+    ).scalar_one_or_none()
+    invite_url = (
+        invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
+        if invitation is not None
+        else None
     )
     return _templates.TemplateResponse(
         request,
@@ -610,7 +650,6 @@ def invitation_reviewer_detail(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewer": reviewer,
-            "invitation": invitation,
             "row": row,
             "invite_url": invite_url,
             "is_ready": lifecycle.is_ready(review_session),
@@ -618,6 +657,30 @@ def invitation_reviewer_detail(
                 review_session, reviewer.name
             ),
         },
+    )
+
+
+@router.get("/sessions/{session_id}/invitations/{invitation_id}/detail")
+def invitation_reviewer_detail_legacy(
+    bundle: tuple[Invitation, ReviewSession] = Depends(
+        _require_invitation_in_session
+    ),
+) -> RedirectResponse:
+    """The pre-19P.6 invitation-keyed URL, kept for bookmarks.
+
+    **308, not 303**: the move is permanent and the method is
+    preserved, which is what `/preview` → `/preview-surface/1` already
+    does (`spec/preview_hub.md`). The two paths cannot collide — one
+    ends in the literal `detail`, the other has the literal `reviewers`
+    one segment earlier — so declaration order does not matter here.
+    """
+    invitation, review_session = bundle
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ),
+        status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 

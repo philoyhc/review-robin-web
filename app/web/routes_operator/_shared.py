@@ -704,6 +704,31 @@ def _row_action_anchor(row_ids: list[int], *, noun: str) -> str:
     return f"{noun}s-table-card"
 
 
+def _require_reviewer_in_session(
+    db: Session, review_session: ReviewSession, reviewer_id: int
+) -> Reviewer:
+    """Resolve a reviewer by id scoped to the operator's session, or
+    404. **Lifted here from ``_setup_reviewers.py`` at 19P.6 rung 1**,
+    when the Invitations drill-in was re-keyed from the invitation to
+    the reviewer and needed the same lookup: a slice may import from
+    ``_shared.py`` and from outside the package, never from a sibling
+    slice (``CLAUDE.md``; ``docs/unenforced_conventions.md`` §2.2).
+
+    A plain helper, not a dependency, unlike
+    ``_require_instrument_in_session`` below — both call sites already
+    hold the session and the id, and converting them would be a change
+    to the reviewers slice that this rung has no reason to make."""
+    reviewer = db.execute(
+        select(Reviewer).where(
+            Reviewer.id == reviewer_id,
+            Reviewer.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if reviewer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return reviewer
+
+
 def _require_instrument_in_session(
     instrument_id: int,
     review_session: ReviewSession = Depends(require_session_operator),

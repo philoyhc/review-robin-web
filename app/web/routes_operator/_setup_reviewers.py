@@ -19,7 +19,6 @@ from fastapi import (
     status,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
@@ -42,6 +41,7 @@ from app.web.routes_operator._shared import (
     _row_action_anchor,
     _require_delete_confirm,
     _require_editable,
+    _require_reviewer_in_session,
     _require_selected_response_loss_ack,
     _require_response_loss_ack,
     _save_field_labels,
@@ -362,20 +362,6 @@ def reviewers_list(
         focus_id=focus,
         selected_ids=set(selected),
     )
-
-
-def _require_reviewer_in_session(
-    db: Session, review_session: ReviewSession, reviewer_id: int
-) -> Reviewer:
-    reviewer = db.execute(
-        select(Reviewer).where(
-            Reviewer.id == reviewer_id,
-            Reviewer.session_id == review_session.id,
-        )
-    ).scalar_one_or_none()
-    if reviewer is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return reviewer
 
 
 @router.post(

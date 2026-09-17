@@ -3,17 +3,21 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import (
+    Assignment,
     AuditEvent,
     EmailOutbox,
     Invitation,
+    Reviewer,
     ReviewSession,
 )
+from app.web import views
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -663,18 +667,175 @@ def test_invitations_page_email_status_reflects_outbox_row(
 def test_invitations_page_reviewer_name_links_to_drill_in(
     client: TestClient, db: Session
 ) -> None:
+    """**The link does not wait for an invitation** (19P.6 rung 1).
+
+    It used to render on `{% if row.invitation %}`, so the table was a
+    list of names that went nowhere until Create invites — which is the
+    moment an operator most wants to open one. The page is keyed on the
+    reviewer now, so the link exists for every row.
+
+    Asserted in that order — before generate, then after — because the
+    before case is the whole point and an after-only assertion passes on
+    the old markup too.
+    """
     session = _ready_session(client, db, code="drill-link")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    href = (
+        f'href="/operator/sessions/{session.id}'
+        f'/invitations/reviewers/{reviewer.id}"'
+    )
+
+    no_invitations = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalars().all()
+    assert no_invitations == []
+    assert href in client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    assert href in client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+
+
+def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
+    client: TestClient, db: Session
+) -> None:
+    """The pre-19P.6 URL is permanent-redirected, so a bookmark or a
+    pasted link survives the re-key. 308 rather than 303: the move is
+    permanent and the method is preserved."""
+    # A throwaway session first, so this session's reviewer ids start
+    # above 1 while its invitation ids start at 1. Without it both are
+    # 1 and the Location assertion below holds whichever id the route
+    # interpolates — which is how the first version of this test
+    # survived a mutation swapping them.
+    _ready_session(client, db, code="drill-308-pad")
+    session = _ready_session(client, db, code="drill-308")
     client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
-    ).text
-    assert (
-        f'href="/operator/sessions/{session.id}/invitations/'
-        f'{invitation.id}/detail"' in body
+    assert invitation.id != invitation.reviewer_id, (
+        "vacuity: the ids coincide, so this test cannot tell them apart"
     )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail",
+        follow_redirects=False,
+    )
+    assert response.status_code == 308
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
+    )
+
+
+@pytest.mark.parametrize("how", ["inactive", "unassigned"])
+def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
+    client: TestClient, db: Session, how: str
+) -> None:
+    """The page must render when `row` is None, not 500.
+
+    The table lists `_assigned_active_reviewers` — active reviewers
+    with an included assignment — so there are **two** ways off it, and
+    both are covered here: the reviewer goes inactive, or their
+    assignments do.
+
+    **This state is not new at 19P.6**, though the first version of
+    this docstring said it was. Deactivating a reviewer leaves their
+    invitation alone, so the old invitation-keyed URL already reached
+    this page from a bookmark — measured on the pre-re-key commit:
+    200, no Review Progress card. What the re-key changes is *who* can
+    reach it: every reviewer in the session, including one that never
+    had an invitation, where before only an invitation could name one.
+    """
+    session = _ready_session(client, db, code=f"drill-norow-{how[:4]}")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    if how == "inactive":
+        reviewer.status = "inactive"
+    else:
+        for assignment in db.execute(
+            select(Assignment).where(Assignment.session_id == session.id)
+        ).scalars():
+            assignment.include = False
+    db.commit()
+
+    # Precondition: the reviewer really is off the table. Without this
+    # the assertions below pass for a reviewer who simply has no
+    # responses yet.
+    assert reviewer.id not in {
+        r.reviewer.id for r in views.build_invitations_rows(db, session)
+    }
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    )
+    assert response.status_code == 200, response.text
+    body = response.text
+    assert reviewer.email in body
+    assert "No invitation URL has been issued yet." in body
+    # The per-row cards need a row; this reviewer has none. The string
+    # appears once in the whole template tree and not in `base.html`.
+    assert "Review Progress" not in body
+
+
+def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
+    client: TestClient, db: Session
+) -> None:
+    """A sent invitation outlives its reviewer's place on the table.
+
+    `reviewers.bulk_inactivate` flips `status` only, so an invitation
+    that was already sent is still the live link in that reviewer's
+    inbox — and the page that shows it must keep showing it. Deriving
+    the invitation from `build_invitations_rows` loses it, because that
+    row set is `_assigned_active_reviewers`; the lookup is by reviewer
+    and session instead, which is what the old invitation-keyed route
+    effectively did.
+    """
+    session = _ready_session(client, db, code="drill-url-off")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    reviewer.status = "inactive"
+    db.commit()
+
+    assert reviewer.id not in {
+        r.reviewer.id for r in views.build_invitations_rows(db, session)
+    }
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    ).text
+    assert "/me/invite/" in body
+    assert "No invitation URL has been issued yet." not in body
+
+
+def test_detail_page_404s_for_a_reviewer_in_another_session(
+    client: TestClient, db: Session
+) -> None:
+    """The scoped lookup the hoisted `_require_reviewer_in_session`
+    exists for — a reviewer id is not a capability."""
+    mine = _ready_session(client, db, code="drill-scope-a")
+    theirs = _ready_session(client, db, code="drill-scope-b")
+    other_reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == theirs.id)
+    ).scalar_one()
+    response = client.get(
+        f"/operator/sessions/{mine.id}"
+        f"/invitations/reviewers/{other_reviewer.id}"
+    )
+    assert response.status_code == 404
 
 
 def test_invitation_reviewer_detail_renders(
@@ -686,7 +847,8 @@ def test_invitation_reviewer_detail_renders(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail"
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -701,7 +863,8 @@ def test_invitation_reviewer_detail_renders(
         f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
     )
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail"
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
     ).text
     assert "/me/invite/" in body
 
