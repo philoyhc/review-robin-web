@@ -16,6 +16,7 @@ rung 2.
 
 from __future__ import annotations
 
+import pathlib
 import re
 
 from fastapi.testclient import TestClient
@@ -84,8 +85,12 @@ def test_the_toolbar_is_split_and_the_filter_is_in_the_right_pane(
         ">Search</button>",
     ):
         assert marker in right, marker
-    # And not left behind in the card it came from.
-    assert '<select name="search_by">' not in _pane(body, "left")
+    # Moved, not copied. The card it came from renders ~55 lines above
+    # the toolbar and is outside `_pane(body, "left")` entirely, so a
+    # `not in` against that slice would pass with the select duplicated
+    # in the card. Counting the whole page is the check that means it.
+    assert body.count('<select name="search_by">') == 1
+    assert body.count('<input type="text" name="q"') == 1
 
 
 def test_the_chips_pager_and_count_line_are_in_the_left_pane(
@@ -93,10 +98,15 @@ def test_the_chips_pager_and_count_line_are_in_the_left_pane(
 ) -> None:
     """The count line rendered just outside the toolbar until this rung.
 
-    `spec/rrw_functional_spec.md` §1114, `spec/operator_ui_concept.md`
-    §92 and `spec/ui_elements.md` §626 all put it in the left pane,
-    under the pager — which is the order `tests/unit/test_pager.py`
-    pins for the pager and the sentence together.
+    `spec/rrw_functional_spec.md:1114` ("the preview-count line sits in
+    the toolbar's left pane") and `spec/ui_elements.md:626` ("Left
+    pane: … column chips, pager cluster, count line") both put it
+    there, under the pager — the order `tests/unit/test_pager.py` pins
+    for the pager and the sentence together.
+
+    A third citation rode along with this rung's first draft and is
+    struck: `spec/operator_ui_concept.md` describes the two-pane
+    toolbar but never mentions the count line at all.
     """
     rs = _seeded(client, db, "asn-tb-left")
     body = _page(client, rs, "?q=r0@example.edu")
@@ -159,9 +169,46 @@ def test_the_no_match_state_closes_every_div_it_opens(
     empty = _page(client, rs, "?q=nosuchterm")
 
     assert "No assignments match the search." in empty
-    assert _div_depth(empty) == _div_depth(rows)
+    # Absolute, not relative: `==` alone passes if both pages drift to
+    # the same wrong depth. 1 is what every operator page measures,
+    # this one included once it has rows.
+    assert _div_depth(rows) == 1
+    assert _div_depth(empty) == 1
     # The filter is still reachable, with the term kept, so the operator
     # can clear it — the reason the toolbar cannot be inside the branch.
     assert 'value="nosuchterm"' in empty
     assert ">Clear</a>" in empty
     assert '<div class="table-card-toolbar is-split">' in empty
+
+
+def test_no_split_toolbar_chip_row_carries_an_inline_margin() -> None:
+    """`base.html:1742` is `.toolbar-left > * { margin: 0 }`, written
+    for exactly this pane. An inline style outrules it.
+
+    Assignments carried `style="margin: 0 0 12px 0;"` on its chip row
+    from its unsplit-toolbar days and kept it through the first draft of
+    this rung, which put 12px on top of `.toolbar-left`'s 16px `gap` —
+    28px where the rosters have 16. The three roster pages that made
+    this same move all dropped the attribute; a cold read caught that
+    this one had not, and nothing was pinning it either way.
+
+    Asserted from source across every page carrying the modifier, not
+    from one render: the defect is a template attribute, and it is only
+    visible in a browser when the chip row has a sibling in the pane —
+    which needs a filter or 200+ rows.
+    """
+    offenders = {}
+    for path in sorted(
+        pathlib.Path("app/web/templates/operator").glob("session_*.html")
+    ):
+        text = path.read_text()
+        if "table-card-toolbar is-split" not in text:
+            continue
+        for line in text.splitlines():
+            if "col-chip-row" in line and "<p" in line and "style=" in line:
+                offenders[path.name] = line.strip()
+
+    assert offenders == {}, offenders
+    # And the base rule the pages rely on instead is still there.
+    base = pathlib.Path("app/web/templates/base.html").read_text()
+    assert "body.ui-v2 .toolbar-left > * { margin: 0; }" in base

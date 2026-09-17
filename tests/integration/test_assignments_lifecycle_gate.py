@@ -14,6 +14,14 @@ five** states, in both directions:
 
 The matrix asserts both halves on every state, so neither can drift
 from the other silently.
+
+**19P.5 rung 1 moved the line, and the file still holds.** The card is
+gated whole again — on `can_edit` this time, not `not is_ready` — but
+it no longer contains the search, which went to the table toolbar and
+renders unconditionally there. So the read-only half survives every
+state as Item 3 requires, and the card is now exactly the
+selection-driven half. What each test asserts moved with it; the
+predicate the file is about did not.
 """
 from __future__ import annotations
 

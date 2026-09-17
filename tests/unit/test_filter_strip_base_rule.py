@@ -42,7 +42,12 @@ KNOWN_SCOPES = {".filter-card", ".operator-actions-card", ".toolbar-right"}
 #: a deliberate act; that is the point of it being a list.
 ALLOWED_NARROWINGS = {
     ".filter-card": set(),                       # narrows nothing
-    ".operator-actions-card": {"flex"},          # status squeezed to ~1/5
+    # 19P.5 rung 1 took the filter strip out of this card and its two
+    # rules with it, so the scope narrows nothing. The entry stays
+    # rather than going, because `KNOWN_SCOPES` still lists the class
+    # and an empty set is the claim: a narrowing added back here would
+    # be a new decision, not a restoration.
+    ".operator-actions-card": set(),
     # Half-width pane: tighter gaps, smaller/subtler labels. Plus
     # `flex-direction`, which is the <=860px rule stacking the row —
     # a half-width pane runs out of room for two controls sooner than

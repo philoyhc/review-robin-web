@@ -228,7 +228,7 @@
          act on rather than a grid away.
 
          The toolbar renders in EVERY state, including the no-match
-         one. It used to open here and close inside the its `else` branch
+         one. It used to open here and close inside its `else` branch
          below, so a search matching nothing emitted an unclosed
          `<div>` — measured before this rung as a net `<div>` depth of
          2 against every other operator page's 1. The empty-state
@@ -254,7 +254,7 @@
          nothing at all — a bare "Show reviewees:" with no chips after
          it reads as a bug (rung 3). Only Assignments can reach this,
          having three groups. #}
-      <p class="col-chip-row" data-col-toggles-for="assignments-table" style="margin: 0 0 12px 0;">
+      <p class="col-chip-row" data-col-toggles-for="assignments-table">
         {% for group_label, prefix, entity in col_groups
            if col_data[prefix ~ 1] or col_data[prefix ~ 2] or col_data[prefix ~ 3] %}
           <span class="chip-group">
@@ -272,9 +272,10 @@
              19I Item 10 sited the sentence and the cluster together and
              `tests/unit/test_pager.py` pins the order. The count line
              rendered just OUTSIDE the toolbar until this rung, which is
-             not where `spec/rrw_functional_spec.md` §1114,
-             `spec/operator_ui_concept.md` §92 and `spec/ui_elements.md`
-             §626 put it. #}
+             not where `spec/rrw_functional_spec.md:1114` ("the
+             preview-count line sits in the toolbar's left pane") and
+             `spec/ui_elements.md:626` ("Left pane: … column chips,
+             pager cluster, count line") put it. #}
           {% include "operator/partials/_pager_cluster.html" %}
           {% include "operator/partials/_preview_count_line.html" %}
         {% endif %}
@@ -283,12 +284,13 @@
         <div class="toolbar-pane toolbar-right">
           {# Every control here reloads the page, so the form's action
              carries `#{{ pager_anchor }}`: a `GET` submission replaces
-             the query and leaves the fragment alone, so a search lands
-             on the table card's top edge exactly as a page turn does
-             (19J.8). Without it the reload lands at the document top
-             and throws the operator away from the rows they were
-             filtering — which is what this form did from its old home
-             in the card. #}
+             the query and leaves the fragment alone, so a search
+             scrolls to the table card exactly as a page turn does
+             (19J.8) — to its top edge on a page tall enough, and as
+             far as the document allows otherwise. Without it the
+             reload lands at the document top and throws the operator
+             away from the rows they were filtering, which is what this
+             form did from its old home in the card. #}
           <form method="get"
                 action="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}"
                 class="operator-actions-filter">
