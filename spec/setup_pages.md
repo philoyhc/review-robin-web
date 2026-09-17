@@ -361,7 +361,7 @@ card's replace*.
 **Observers differs elsewhere on the page too**, and those are not
 this table's subject — they are listed once in its own § *Body layout*
 so a reader has one place to count them: no `Show columns:` chips, no
-sortable headers, a literal-labelled index that lists its one tag slot
+sortable headers, a literal-labeled index that lists its one tag slot
 even at zero, a lock card passed the matching predicate, and no
 `acknowledge_response_loss` cascade on its destructive routes (which
 Relationships also lacks).
@@ -752,7 +752,7 @@ The strip greys out (`.is-locked`) and stops accepting clicks while a
 row is being edited or added, and `Add new` renders disabled in that
 state — the same lock the retired card's strip took.
 
-`Add` is labelled **`Add new`** on all four pages. The one-row
+`Add` is labeled **`Add new`** on all four pages. The one-row
 constraint that shortened it went with `Delete`, which is in the
 expander.
 
@@ -1326,7 +1326,7 @@ to count them:
   taxonomy*). It is also why the row-landing fallback script reaches
   **one** case here and two elsewhere — a row the filter excludes, and
   no cookie-held sort to move one.
-- **Its index is literal-labelled and lists `Tag` even at zero** —
+- **Its index is literal-labeled and lists `Tag` even at zero** —
   § *The roster index* below.
 - **No `acknowledge_response_loss` cascade**, because nothing
   references `observers`; Relationships is the same. § *Deleting the

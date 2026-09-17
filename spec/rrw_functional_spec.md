@@ -1086,18 +1086,23 @@ Up to four Setup pages share an identical chrome shape: Reviewers,
 Reviewees, **Relationships** (gated on `relationships_enabled`),
 and **Observers** (gated on `observers_enabled`).
 
-Each page offers:
+Each page offers the following. **Observers is the exception on four
+of these points**, flagged inline; `spec/setup_pages.md`
+§ *Observers page* § *Body layout* counts them in one place.
 
 - **Friendly-label editor card** — inline editors for the
   display labels of this entity's **tag slots only**:
   `field_labels.upsert` refuses an identity or photo slot, whose
   built-in default always renders (see
   [§8.5](#85-friendly-labels)). The editor answers the same
-  `is_editable` gate as the rest of the page.
+  `is_editable` gate as the rest of the page. **Not on Observers**,
+  which has one fixed tag slot and no editor.
 - **Preview table** — every row in the roster (paginated by
-  search + filter), with sortable headers, column-visibility
-  toggles for the three optional tag columns and the
-  photo-link column, and a trailing **Updated** timestamp. Its
+  search + filter), with sortable headers (**not on Observers**,
+  which orders by id), column-visibility toggles for the three
+  optional tag columns and the photo-link column (**not on
+  Observers**, whose one fixed slot has nothing to toggle), and a
+  trailing **Updated** timestamp. Its
   card opens with a **two-pane toolbar** carrying the search +
   status-filter strip, `Clear`, `Add new` and `Search`; the
   leftmost checkbox column drives an injected **row expander**
@@ -1111,8 +1116,10 @@ Each page offers:
 - **Upload card** and **Danger Zone card** — CSV file input +
   Upload submit, replacing the roster wholesale on success; and
   Delete All, confirm-gated, wiping it. Both live in the roster
-  card's **Unlock panel** above the table, with the
-  friendly-label editor. **Nothing renders below the table.**
+  card's **Unlock panel** above the table, alongside the
+  friendly-label editor on the three pages that have one; on
+  Observers the panel holds these two alone, mirrored left-to-right.
+  **Nothing renders below the table.**
 
 **One shape, arrived at over three items** — Reviewers 19P.1,
 Observers 19P.2, Reviewees and Relationships 19P.3. Before that the

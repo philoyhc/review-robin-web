@@ -968,129 +968,88 @@ differences, below, and its risk is drift rather than discovery.
 
 Commands run 2026-09-16 on `origin/main` at `907df01`.
 
-- Templates: `wc -l app/web/templates/operator/session_{reviewees,relationships}.html`
-  → **742** and **710** (against Reviewers 1,351 and Observers 1,653 — these
-  are the two simplest roster pages).
+- Templates: **742** and **710** lines (Reviewers 1,351, Observers 1,653) —
+  the two simplest roster pages.
 - Routes: nine each, eight mutating, all on `_require_editable` except
-  `field-labels`; `grep -c "_redirect_keeping_selection"` → **5** each.
-- Specs naming either Setup page: **`spec/setup_pages.md`**,
-  `spec/operator_button_audit.md`, `spec/operator_ui_concept.md`,
-  `spec/settings_inventory.md`, `spec/participant_model.md` (which names
-  the **Relationships** tab and its routes too, at `:41`, not Reviewees
-  alone), `docs/status.md` — plus **`spec/ui_elements.md`** and
-  **`spec/rrw_functional_spec.md`**, which Doc impact names and this list
-  first omitted. The latter is not optional: `rrw_functional_spec.md:1128`
-  carries a `19P.3–.4` hedge, so it is inside the sweep's target set.
-  **Eight documents, not six.**
+  `field-labels`; `_redirect_keeping_selection` → **5** call sites each.
 - Tests hitting either Setup route: **67** files for Reviewees, **16** for
-  Relationships (`grep -rln "sessions/{[^}]*}/<page>\|/<page>/import\|..."`).
-  The Reviewees figure is the one to watch — it is four times Relationships'
-  and larger than either page's own suite, because reviewees are a fixture
-  for most of the app.
-- **Shared code, which this list first omitted entirely.**
-  `_handle_import` in `app/web/routes_operator/_shared.py` carries the
-  panel-open contract as **`kind == "reviewers"` literals** at two sites
-  (`:830`, `:961`). Reviewees calls it, so **rung 4 must edit a module
-  Reviewers, Observers and other slices all read**. And **Relationships
-  does not use it at all** — `relationships_import_submit` is bespoke with
-  **two** in-place 400 re-render paths, not one: a blocked CSV, and a
-  `missing_confirm=True` replace-confirmation state Reviewees has no
-  equivalent of. 19P.1 put the import card last precisely because it
-  re-renders in place; Relationships has twice that surface and its own
-  handler, so rung 4 is **not** one change applied twice there.
+  Relationships. The Reviewees figure is larger than the page's own suite,
+  because reviewees are a fixture for most of the app.
+- **Eight spec documents, not the six first counted** — `ui_elements.md`
+  and `rrw_functional_spec.md` were omitted, and the latter is not
+  optional: it carried a `19P.3–.4` hedge, so it is inside the sweep's
+  target set.
+- **Shared code, omitted entirely from the first count.** `_handle_import`
+  (`_shared.py`) carried the panel-open contract as `kind == "reviewers"`
+  literals at two sites, so rung 4 had to edit a module three other slices
+  read — and **Relationships does not use it at all**: its import handler
+  is bespoke, with **two** in-place 400 paths where the shared one has
+  one. Rung 4 was not one change applied twice.
 
 ### Status — closed 2026-09-17
 
-**The ladder landed as planned, five rungs, no rung dropped or merged.**
-1 the landing contract, 2 the toolbar, 3 the row expander and edit-row
+**The ladder landed as planned, five rungs, none dropped or merged.** 1
+the landing contract, 2 the toolbar, 3 the row expander and edit-row
 bar, 4 the roster card and Unlock panel, 5 the specs and the close. The
 `Operator actions` card renders on no roster page; nothing renders below
 any preview table.
 
 **Decisions confirmed at build.**
 
-- **The ladder's "five POSTs" was right by accident.** `grep -c` counted
-  the import line; there are four call sites, and the fifth POST —
-  `create` — returned a bare `RedirectResponse`. It is a conversion,
-  and it also regained the filter round-trip.
-- **Both pages are sortable**, unlike Observers, so the row-landing
-  fallback carries two unresolvable-fragment cases here and one there.
+- The ladder's "five POSTs" was right by accident: four call sites, and
+  the fifth POST (`create`) returned a bare `RedirectResponse`, so it is
+  a conversion that also regains the filter round-trip.
+- Both pages are sortable, unlike Observers, so the row-landing fallback
+  carries two unresolvable-fragment cases here and one there.
 - **Open question 2, answered at rung 3: no.** Relationships' edit-row
-  bar needs nothing Reviewers' does not. Measured in Chromium — the bar
-  sits flush under its row at the same width on both pages, and the
-  identity cells being pickers changes the row's height, which the
-  bracket follows.
-- **The guidance card moved at rung 4, not rung 2.** The precedents
-  disagree on when it goes — Reviewers at its toolbar rung, Observers at
-  its `.card-columns` rung — and Observers' siting matches this ladder.
-- **`_handle_import`'s two `kind == "reviewers"` literals collapsed**
-  rather than gaining a branch: it serves exactly two kinds and both
+  bar needs nothing Reviewers' does not — measured in Chromium, the bar
+  sits flush under its row at the same width on both pages.
+- The guidance card moved at rung 4, not rung 2: the precedents disagree
+  on when it goes, and Observers' siting matches this ladder.
+- `_handle_import`'s two `kind == "reviewers"` literals **collapsed**
+  rather than gaining a branch — it serves exactly two kinds and both
   have panels now.
 
-**Two real defects, both found by a cold read rather than by a mutation
-table.**
+**Two real defects, neither in any mutation table.**
 
-- `relationship_column_state` counted `reviewer_id` / `reviewee_id`
-  through `slot_row_count`, a TEXT predicate (`column != ''`). Postgres
-  refuses `integer <> character varying`; SQLite compares across types
-  without a word, so the suite passed locally and `ci-postgres` went
-  red. The FK readouts are gone — a non-nullable column's count is the
-  roster total by construction — which makes the index's `none yet`
-  branch **reachable on Relationships and nowhere else**.
-- `_handle_import` still hardcoded `col_readouts = []` for Reviewees,
-  from when the page had no index row, so a failed import answered
-  "Populated columns: none yet" over a roster it was displaying.
+- `relationship_column_state` counted two non-nullable integer FKs
+  through `slot_row_count`, a TEXT predicate. Postgres refuses `integer
+  <> character varying`; SQLite compares across types without a word, so
+  the suite passed locally and `ci-postgres` went red. The FK readouts
+  are gone — a non-nullable column's count is the roster total by
+  construction — which makes the index's `none yet` branch reachable on
+  Relationships and nowhere else.
+- `_handle_import` still hardcoded `col_readouts = []` for Reviewees, so
+  a failed import answered "Populated columns: none yet" over a roster
+  it was displaying.
 
 **One finding recurred at every rung, and it is the item's lesson: a
 guard that proves less than it says.** Mutation survivors ran 3/10,
-12/25 and 15/24 after first rounds that caught everything chosen, and
-the cold reads found 9, 12 and 12 more on top. The survivors were rarely
-subtle — rung 4 shipped with no guard file at all and leaned on two
-pre-existing tests that happened to fail. **A mutation table proves what
-its author thought to mutate**, which is why the cold read is the gate
-and not the table.
+12/25 and 15/24 after first rounds that caught everything chosen — rung
+4 shipped with no guard file at all — and four cold reads found 9, 12,
+12 and 5 more on top, including both defects above and, at the close,
+two contradictory sentences written in the same sweep. **A mutation
+table proves what its author thought to mutate**, so the cold read is
+the gate and not the table.
 
 **Scope that moved.**
 
 - **Rung 5a diverged from Doc impact deliberately.** The bullet asked
-  for each page's § *Body layout* stated outright rather than by
-  reference to Reviewers — right when Reviewers was the only migrated
-  page, because a pointer then led to a section describing a *different*
-  shape. With all four identical it inverts: four ~90-line copies to
-  drift. `spec/setup_pages.md` gained one § *The roster card and the
-  Unlock panel* with a table of the three axes any page differs on, and
-  each page section keeps its own facts. The intent holds — no roster
-  page points at a section describing a shape it does not have.
-- **The definition-of-done grep was re-aimed**, not quietly passed: it
-  could not tell "defers to 19P.3" from "happened at 19P.3", and the
-  rewritten prose dates the move exactly as it dates 19P.1's.
-- **Two specs the plan never named** were falsified by the change and
-  added to Doc impact at rung 5c: `spec/visual_style_rrw.md` and
-  `spec/color_tokens.md`, both scoping the move to Reviewers.
-  `spec/email_template_editor.md` was on the owed list in error.
+  for each page stated outright rather than by reference to Reviewers —
+  right when a pointer led to a section describing a *different* shape.
+  With all four identical it inverts, so `spec/setup_pages.md` gained
+  one § *The roster card and the Unlock panel* and each page section
+  keeps its own facts. No roster page points at a section describing a
+  shape it does not have.
+- **Three specs the plan never named** were falsified and added to Doc
+  impact rather than fixed silently: `visual_style_rrw.md`,
+  `color_tokens.md`, `lifecycle.md`. `email_template_editor.md` was on
+  the owed list in error.
 - **Rung 5c fixed one thing the item did not cause.**
   `session_reviewers.html` decided its Profile column from the rendered
   window where Reviewees reads a whole-roster flag — the surface 19I
-  Item 12 rung 2 missed, because that sweep followed the chips and
-  Reviewers' Profile column has none. Giving `reviewer_column_state` the
-  `profile` readout it had always lacked would otherwise have let the
-  index read `Profile (1)` above a table with no Profile column.
-
-**The `spec-writer` close pass found five, and one of them is the
-same mistake twice.** The hoist's "nothing else varies" sentence and
-the roster-index paragraph that contradicts it were written in the same
-sweep: the index can be empty on Relationships and nowhere else, which
-is a roster-card difference and not one of the panel's three axes. The
-claim now says which element it covers. `spec/lifecycle.md` §5 still
-described a `.bottom-grid` no roster page renders — a third spec the
-plan never named, added to Doc impact. `spec/settings_inventory.md`
-§2.5 still placed the labels editor at a fixed position on two pages
-and named `is_ready` as its gate, wrong since 19H Item 7. The
-`full_width` sentence named two pages where the table below it named
-four. And `operator_button_audit.md` §§6-8 described `Inactivate` /
-`Activate` as arity-gated where §8.5 has said since 19P.2 that they are
-**rendered by status** — all four pages run the identical
-`statusActions()`, so three sections under-described shipped behavior.
+  Item 12 rung 2 missed, because that sweep followed the chips and this
+  column has none.
 
 **Owed at rung 4, all discharged at rung 5c** — the two comment
 placements, `.roster-readout-empty` (kept in four templates, decided and
@@ -1149,17 +1108,12 @@ pages.
 - No `.bottom-grid` on any roster page; nothing renders below any preview
   table.
 - No spec sentence defers a roster shape to a future item:
-  `grep -rnE "19P\.4|19P\.[0-9]–\.[0-9]" spec/` → 0, from **9** today.
-
-  **Adjudicated at rung 5a, and the check re-aimed.** The line read
-  `grep -rn "19P\.3\|19P\.4" spec/` → 0, widened past the ranges because
-  two sentences named `19P.3` without one. But it also catches every
-  sentence that *dates* the move to 19P.3 — and the rewritten prose dates
-  it exactly as it dates 19P.1's and 19P.2's, which nobody proposes
-  removing. A check that cannot tell "defers to" from "happened at"
-  measures the wrong thing. With 19P.3 shipped, a forward reference is a
-  range or a `19P.4`, and the two bare deferrals the widening was for are
-  gone with the sections that held them.
+  `grep -rnE "19P\.4|19P\.[0-9]–\.[0-9]" spec/` → 0, from **9**.
+  **The check was re-aimed at rung 5a**, not quietly passed: it read
+  `19P\.3\|19P\.4`, which matches every sentence *dating* the move as
+  well as every one deferring to it, and the rewritten prose dates 19P.3
+  exactly as it dates 19P.1's. With 19P.3 shipped, a forward reference is
+  a range or a `19P.4`.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19P.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1198,31 +1152,16 @@ pages.
 - `spec/lifecycle.md` — §5's *"what is hidden differs by page"* paragraph described a `.bottom-grid` no roster page renders any more; **added at the close**, found by `spec-writer`, not named at planning time (Item 3).
 - `docs/status.md` — row for Item 3 as it lands (Item 3).
 
-**Rung 3 adds one, and it is a question rather than a relabel.**
-`spec/ui_elements.md:198-201` §6 says every destructive submit's paired
-confirmation checkbox "is also `required` (belt-and-suspenders against a
-JS-off submit)". **No roster page's confirm carries `required`** — not
-the injected panel's on any of the four, and not the card markup it
-replaced. That is not an oversight to correct in the templates: the
-confirm is attached to `*-bulk-form` via `form=`, and so are `Inactivate`
-and `Activate`, so a `required` checkbox would block those two submits
-as well. The rule cannot hold as written wherever the gate shares a form
-with non-destructive submits. **Rung 5 adjudicates the sentence**, not
-the markup.
-
-**Rung 2 adds five, none of them previously named here.** A cold read
-found the first: a test comment deferred `ui_elements.md:385` to "Item 3's
-Doc impact bullet" which did not mention it, so the deferral was
-unbacked — and the sentence that comment replaced had been written to fix
-that exact error against Item 2. Listed now, as Item 2 listed its own:
-
-- `spec/ui_elements.md:385` — §6 sites the roster `Delete` *"between `Add` and `Search`"*, true on no roster page since this rung.
-- `spec/ui_elements.md:613` — `.table-card-toolbar` attributed to *"(19P.1 Reviewers, 19P.2 Observers)"*; it is all four.
-- `spec/operator_button_audit.md` — **rows 132 / 133 / 134** (Reviewees `Add` / `Search` / `Clear`) and **139** (Relationships `Add`) site their controls in `Operator actions`, spell the label `Add`, and keep the rationale *"`Add` and `Delete` must both fit this row"*. Row **125**'s closing sentence — *"Reviewees and Relationships still read `Add` … until 19P.3–.4"* — is falsified outright.
-- `spec/operator_ui_concept.md:281` — *"the Operator actions card carries the search / status filter strip"*.
-- `spec/setup_pages.md` § *Operator actions card* items 1–2 — the strip's shape *"on the two pages that carry this card"*, its `Clear` → … → `Search` order, and *"`Add` is the short label"*.
-
----
+**Added mid-build, all honoured.** Rung 2's cold read found five
+sentences this list had not named — `ui_elements.md`'s `Delete` siting
+and `.table-card-toolbar` attribution, the button audit's Reviewees /
+Relationships rows, and `operator_ui_concept.md`'s and
+`setup_pages.md`'s `Operator actions` descriptions — all inside the
+files above, and all swept at rung 5. Rung 3 added a sixth that was a
+**question rather than a relabel**: §6's *"the checkbox is also
+`required`"* is false of all four pages and forced (the expander's
+confirm shares `<noun>-bulk-form` with `Inactivate` / `Activate`), so
+rung 5b adjudicated the sentence rather than changing the markup.
 
 ## Item 4 — Invitations and Responses — a different move, not the same recipe
 
