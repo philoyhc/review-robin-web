@@ -1873,6 +1873,47 @@ skill warns about. It arrives with the plan.
 which is the whole argument for the move: a per-reviewer page is where
 per-reviewer things belong, and Item 6 builds one.
 
+### When each door is open — measured 2026-09-17
+
+The author's question, and the answer is not what it looks like: **the
+two doors do not open at the same time, and one of them never closes.**
+
+`/preview-surface/1?reviewer_email=` returns **200 in every state
+measured**, including before Prepare — pages come from
+`_pages_for_session`, which walks *instruments*, not assignments, and a
+session has one from creation. So the route is not the gate; the
+**doors** are.
+
+| | picker (Previews) | drill-in link (Invitations) |
+|---|---|---|
+| roster imported, not generated | ✓ | — |
+| after Prepare | ✓ | ✓ |
+| after Create invites | ✓ | ✓ |
+| reviewer inactive | ✓ | — |
+| active, all assignments excluded | ✓ | — |
+
+`build_preview_picker_context` (`views/_previews.py:145-151`) selects
+**every** `Reviewer` in the session — no status filter, no assignment
+filter. The Invitations table is `_assigned_active_reviewers`, so its
+link needs an **active** reviewer with an **included** assignment.
+
+**Three reviewers the hub reaches and the drill-in cannot**, and the
+first is not an edge case:
+
+1. **Before Prepare.** Roster imported, nothing generated. This is the
+   hub's stated purpose — *"spot-check what they get before activating
+   the session"* (`session_previews.html`) — and it is exactly the
+   *when*, not *what*, objection below, now with a measurement behind
+   it.
+2. **An inactive reviewer.**
+3. **An active reviewer whose assignments are all excluded.**
+
+So **retiring the hub loses reach, not just a page**, unless Item 7
+also widens the drill-in's gate — which means changing what the
+Invitations table lists, and that row set is a monitoring concept
+(`per_reviewer_progress`), not a roster. That is the real cost to
+weigh, and it was invisible until this was measured.
+
 ### The case for, and the case against
 
 **For.** The Invitations table is a **better reviewer picker than the
