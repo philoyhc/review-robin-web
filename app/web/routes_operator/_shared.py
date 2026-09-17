@@ -27,13 +27,11 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import (
     Instrument,
-    Reviewee,
     ReviewSession,
     User,
 )
 from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
-from app.services._queries import slot_has_data, tag_slot_presence
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, roster_bulk
@@ -871,22 +869,16 @@ async def _handle_import(
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
-                col_data = views.chip_slots(
-                    tag_slot_presence(
-                        db, session_id=review_session.id, model=Reviewee
-                    ),
-                    prefix="tag-",
-                ) | {
-                    "profile": slot_has_data(
-                        db,
-                        session_id=review_session.id,
-                        column=Reviewee.profile_link,
-                    )
-                }
-                # Reviewees have no roster index row yet — 19P.1 pilots on
-                # Reviewers alone. Set rather than left undefined, so the
-                # shared ``context.update`` below always carries the key.
-                col_readouts = []
+                # 19P.3 rung 4 — same as the branch above, and for the
+                # same reason. This once set ``col_readouts = []`` with
+                # a note that Reviewees had no index row yet; once it
+                # had one, the empty list stopped being a placeholder
+                # and started being a lie — a failed import rendered
+                # "Populated columns: none yet" over a roster of three.
+                # One helper answers both keys, so they cannot drift.
+                column_state = views.reviewee_column_state(db, review_session)
+                col_data = column_state.col_data
+                col_readouts = column_state.readouts
             context.update(
                 {
                     "total_row_count": len(list_items),

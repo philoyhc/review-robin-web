@@ -330,15 +330,14 @@ def test_reviewee_import_persists_with_photolink(
     assert response.status_code == 303
     # 19P.1 rung 3c made the reviewers redirect carry
     # `?unlocked=1#roster-card`, because that page grew an Unlock panel
-    # and the import card moved into it. Reviewees has no panel, so its
-    # redirect must stay bare — pinned here because the branch that
-    # decides it is a `kind == "reviewers"` check one line away from
-    # this path, and an unconditional flag would send a page a piece of
-    # UI state that means nothing on it.
-    # 19P.3 rung 4 — the panel-open suffix, as the Reviewers assertion
-    # above already carries. The upload card is inside the Unlock panel
-    # on this page too now, so a bare redirect would close the panel the
-    # operator just used.
+    # and the import card moved into it — and this assertion read bare,
+    # because Reviewees had no panel to reopen.
+    #
+    # 19P.3 rung 4 gave it one, so the suffix is unconditional now and
+    # the `kind == "reviewers"` branch that decided it is gone. Still
+    # pinned, for the opposite reason: the upload card is inside the
+    # panel on this page too, so a bare redirect would close the panel
+    # the operator just used.
     assert response.headers["location"] == (
         f"/operator/sessions/{review_session.id}/reviewees"
         "?unlocked=1#roster-card"

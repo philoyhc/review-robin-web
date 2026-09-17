@@ -351,31 +351,37 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
     assert m, "no roster readout"
     assert " ".join(m.group(1).split()) == f"3 {noun}s"
 
-    chips = re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
-    assert any("(3)" in c for c in chips), chips
-    assert "none yet" not in card
+    chips = [c.strip() for c in
+             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)]
+    if page == "reviewees":
+        # Identity columns are text and always listed, at their count.
+        assert any("(3)" in c for c in chips), chips
+        assert "none yet" not in card
+    else:
+        # Relationships lists pair-context tags only — see
+        # `relationship_column_state`. This fixture seeds none, so the
+        # list is empty and the `{% else %}` fires.
+        assert "none yet" in card, chips
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)
-def test_an_empty_roster_lists_its_identity_columns_at_zero(
+def test_an_empty_roster_reports_what_its_index_can_report(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
-    """A zero on an identity column is itself worth seeing — it is what
-    an operator who has uploaded nothing, or uploaded a CSV missing a
-    required column, needs to be told.
+    """The two pages answer differently, and the difference is the point.
 
-    **`none yet` cannot render, on any roster page.** The chip row's
-    `{% else %}` branch fires only when `col_readouts` is empty, and all
-    four `*_column_state` helpers emit their identity entries
-    unconditionally — so the list is never empty and
-    `.roster-readout-empty` is dead markup. Checked across all four
-    helpers, not inferred from these two.
+    **Reviewees** lists its identity columns at `(0)`. A zero on a
+    required column is itself worth seeing — it is what an operator who
+    uploaded a CSV missing that column needs to be told.
 
-    This test was written asserting `none yet` and failed, which is how
-    that was found. The dead branch is NOT removed here: it sits in all
-    four templates, and deleting it on the two this rung touches would
-    leave the very drift 19P.3 exists to remove. Recorded for rung 5's
-    sweep.
+    **Relationships lists nothing**, so the chip row's `{% else %}`
+    ("none yet") fires. Its identity columns are non-nullable integer
+    FKs, which `slot_row_count` cannot even be asked about — see
+    `relationship_column_state`.
+
+    That asymmetry is why this test is parametrized rather than shared:
+    an earlier version asserted `none yet` on both pages and failed on
+    both, for opposite reasons.
     """
     rs = _mk(client, db, f"up-e-{page[:4]}")
     card = _card(_get(client, rs, page), page)
@@ -389,13 +395,14 @@ def test_an_empty_roster_lists_its_identity_columns_at_zero(
 
     chips = re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
     identity = [c.strip() for c in chips if "(0)" in c]
-    assert len(identity) == 2, (
-        f"expected both identity columns listed at zero, got {chips}"
-    )
-    assert "none yet" not in card, (
-        "the dead `{% else %}` branch became reachable — if that is "
-        "deliberate, this test is the place to say so"
-    )
+    if page == "reviewees":
+        assert len(identity) == 2, (
+            f"expected both identity columns listed at zero, got {chips}"
+        )
+        assert "none yet" not in card
+    else:
+        assert identity == [], chips
+        assert "none yet" in card, "an empty index renders a bare label"
 
 
 def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
@@ -419,23 +426,48 @@ def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
     assert re.search(r"Profile \(2\)", card2), card2[:600]
 
 
-def test_the_relationships_index_chips_are_tautological_and_say_so() -> None:
-    """`reviewer_id` / `reviewee_id` are non-nullable foreign keys, so
-    this page's two identity chips can only ever equal the roster total.
+def test_the_relationships_index_omits_its_foreign_key_columns() -> None:
+    """`reviewer_id` / `reviewee_id` are non-nullable integer foreign
+    keys, and the readouts skip them for two reasons that point the same
+    way.
 
-    Rendered anyway — `ColumnReadout.count` means "rows carrying a
-    value", and giving one page's chips a different meaning would be the
-    per-page drift 19P.3 exists to remove. This pins the DECISION, so a
-    later reader who thinks the chips are broken finds the reasoning
-    rather than silently "fixing" them into something else.
+    The count would be meaningless: a row cannot be without either, so
+    the answer is the roster total by construction — which the readout
+    beside it already states.
+
+    And it is not askable. `slot_row_count` is a TEXT predicate
+    (`column != ''`), so Postgres refuses `integer <> character varying`
+    outright while SQLite compares across types happily. The first
+    version of this helper counted them, passed the whole local suite,
+    and turned the `ci-postgres` job red.
+
+    Pinned at both ends — the behaviour (no FK slots in the readouts)
+    and the reasoning (in the docstring), so a later reader who thinks
+    the page is missing chips finds why rather than re-adding them and
+    re-breaking Postgres. The behaviour half cannot be caught by this
+    suite's SQLite, which is exactly why it is written down.
     """
     import inspect
 
+    from app.db.models import Relationship
     from app.web.views import _setup
 
+    for col in (Relationship.reviewer_id, Relationship.reviewee_id):
+        assert "INTEGER" in str(col.type).upper(), col
+        assert not col.nullable, col
+
+    # `co_names` is what the compiled body reaches for, so this reads
+    # the code and not the docstring beside it — which names
+    # `slot_row_count` precisely to explain its absence.
+    assert "slot_row_count" not in (
+        _setup.relationship_column_state.__code__.co_names
+    ), (
+        "a text-predicate count is back on this page's FK columns; "
+        "Postgres will refuse it and SQLite will not tell you"
+    )
     doc = inspect.getdoc(_setup.relationship_column_state) or ""
-    assert "tautological" in doc
-    assert "non-nullable foreign keys" in doc
+    assert "non-nullable integer foreign keys" in doc
+    assert "integer <> character varying" in doc
 
 
 # ── The panel-open contract through its own controls ──────────────────
@@ -503,6 +535,50 @@ def test_a_failed_import_arrives_with_the_panel_open(
     assert "hidden" not in _panel_tag(card), (
         "a failed import shows a closed panel and no errors"
     )
+
+
+@pytest.mark.parametrize("page", ["reviewers", "reviewees"])
+def test_a_failed_import_still_reports_the_real_columns(
+    client: TestClient, db: Session, page: str
+) -> None:
+    """The shared import handler builds its own context, and for months
+    it built `col_readouts = []` for Reviewees with a comment saying the
+    page had no index row yet. Once it had one, that empty list stopped
+    being a placeholder: a failed import — the moment an operator is
+    looking hardest at which columns arrived — answered "Populated
+    columns: none yet" over a roster of three.
+
+    The 400 path is the only one that can drift this way, because it is
+    the only one that assembles the context by hand rather than through
+    the page's render helper. So it is pinned on the CONTENT of the
+    index, not on the key being present: an empty list is a present key.
+
+    **Both branches of the handler**, though only the Reviewees one was
+    wrong. Mutating the Reviewers branch to `[]` passed the whole suite,
+    so the page 19P.1 piloted the index row on was no better held — it
+    was simply correct by luck of having been written second.
+
+    Only Reviewees is checked for a `Profile` chip: `reviewer_column_state`
+    lists identity and tags and has no profile slot at all, which is a
+    19P.1 asymmetry this rung does not touch. Noted for rung 5's sweep.
+    """
+    rs = _mk(client, db, f"up-fi-{page[:4]}")
+    _seed(db, rs.id, "reviewees", profiles=2)
+
+    response = client.post(
+        f"/operator/sessions/{rs.id}/{page}/import",
+        files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
+    )
+    assert response.status_code == 400, response.status_code
+    card = _card(response.text, page)
+
+    assert "none yet" not in card, (
+        "the failed-import re-render reports an empty index over a "
+        "roster it is showing"
+    )
+    assert re.search(r"Name \(3\)", card), card[:800]
+    if page == "reviewees":
+        assert re.search(r"Profile \(2\)", card), card[:800]
 
 
 def test_the_relationships_replace_confirmation_also_arrives_open(

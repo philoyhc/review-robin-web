@@ -374,14 +374,18 @@ def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:
 ROSTER_PAGES = ("reviewers", "reviewees", "relationships")
 
 
-def test_no_roster_page_renders_the_column_container_on_a_draft(
+def test_no_roster_page_renders_the_column_container_beside_its_panel(
     client: TestClient, db: Session
 ) -> None:
     """`.card-columns` is the container every card above the preview
-    table used to share. **No roster page renders one on a draft page any
-    more** — Reviewers left at 19P.1 rung 3a, Observers at 19P.2 rung 5,
-    Reviewees and Relationships at 19P.3 rung 4 — because the Unlock
+    table used to share. **No roster page renders one where the Unlock
+    panel renders** — Reviewers left at 19P.1 rung 3a, Observers at 19P.2
+    rung 5, Reviewees and Relationships at 19P.3 rung 4 — because the
     panel took the last tenant each of them had.
+
+    Scoped to the panel and not to "a draft": a draft in edit mode
+    suppresses the panel and brings the container back, which is the
+    complement below, not a counter-example.
 
     Was `test_the_roster_pages_put_every_top_card_in_one_column_container`,
     which asserted the source order of that container's tenants. With no
@@ -398,7 +402,6 @@ def test_no_roster_page_renders_the_column_container_on_a_draft(
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
-    review_session.observers_enabled = True
     db.flush()
 
     for page in ROSTER_PAGES:
@@ -422,11 +425,14 @@ def test_the_container_comes_back_as_the_labels_editors_fallback(
     render, the tag-labels editor falls back to `.card-columns` — and
     exactly one of the two homes is used per request.
 
-    `ready` is the locked state the panel is suppressed in (a locked page
-    must carry no "Save labels", and the panel holds one), so the editor
-    renders read-only in the container instead. Observers is excluded: it
-    has no labels editor, so it has no fallback and no container in any
-    state.
+    Two states suppress the panel, and both are checked: `ready`, the
+    locked state (a locked page must carry no "Save labels", and the
+    panel holds one), and edit mode on a draft (`?add=1`), where
+    `unlock_available` is `is_editable and not edit_mode`. The second is
+    why the test above is scoped to the panel rather than to drafts.
+
+    Observers is excluded: it has no labels editor, so it has no fallback
+    and no container in any state.
     """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
@@ -447,6 +453,22 @@ def test_the_container_comes_back_as_the_labels_editors_fallback(
         )
         assert "Save labels" not in body, (
             f"{page} offers a control its route will refuse"
+        )
+
+    # Edit mode on a DRAFT: the panel is suppressed by `not edit_mode`
+    # rather than by the lifecycle, so here the editor is live and
+    # "Save labels" is expected — the container is what carries it.
+    review_session.status = "draft"
+    db.flush()
+    for page in ("reviewers", "reviewees", "relationships"):
+        body = client.get(
+            f"/operator/sessions/{session_id}/{page}?add=1"
+        ).text
+        assert body.count('class="card-columns"') == 1, (
+            f"{page} lost the fallback home in edit mode"
+        )
+        assert 'id="roster-unlock-panel"' not in body, (
+            f"{page} renders both homes in edit mode"
         )
 
 
