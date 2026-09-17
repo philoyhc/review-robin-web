@@ -17,10 +17,16 @@
 
 {% block content %}
   {% if preview_mode %}
+    {# 19P.6 rung 2 — neutral between the two ways in. "Preview" was
+       true of the Previews hub, where nothing has been submitted yet;
+       it is false of the Invitations drill-in, where the operator is
+       inspecting a reviewer's actual responses. One sentence true of
+       both beats a branch that has to be kept right. #}
     <div class="banner banner-info">
-      <strong>Preview</strong> — not visible to reviewers. This page is
-      operator-only and bypasses session-status / deadline / acceptance
-      gates.
+      <strong>Operator view &mdash; read-only.</strong> The reviewer's own
+      surface, including any responses they have saved. Save, Discard and
+      Submit are inert here, and the session-status, deadline and
+      acceptance gates do not apply.
     </div>
   {% endif %}
 

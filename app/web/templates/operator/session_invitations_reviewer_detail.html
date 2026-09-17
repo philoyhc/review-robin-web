@@ -68,11 +68,29 @@
         &middot;
         Required fields filled: {{ row.required_fields_done }} / {{ row.required_fields_total }}
       </p>
+      {# 19P.6 rung 2 — the note used to promise per-assignment and
+         per-response detail "in a future segment". The link below
+         reaches exactly that, so the promise goes with it; what is
+         still true is that the fields above are the table's columns. #}
       <p class="form-help">
-        Per-assignment and per-response detail will land in a future
-        segment. This page is a scaffold — the row-level fields above
-        match the columns on the Manage Invitations table.
+        The fields above are this reviewer's row on the Manage
+        Invitations table. Their responses themselves are on their own
+        surface &mdash; open it below.
       </p>
+      {# `.card-action-row` (`base.html`), right-flushed. The same
+         button to the same destination sits in one on the Previews
+         hub (`_preview_picker.html`), and one button in two places
+         should look like one button. Labeled `Open reviewer surface`
+         rather than that page's `Open full preview`: from here the
+         operator is inspecting rather than previewing, which is the
+         same reason the surface's own banner drops the word. #}
+      <div class="card-action-row">
+        <a class="btn secondary"
+           target="_blank" rel="noopener"
+           href="/operator/sessions/{{ session.id }}/preview-surface/1?reviewer_email={{ reviewer.email | urlencode }}">
+          Open reviewer surface
+        </a>
+      </div>
     </div>
   {% endif %}
 {% endblock %}

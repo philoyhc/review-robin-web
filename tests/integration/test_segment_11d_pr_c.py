@@ -290,9 +290,15 @@ def test_review_surface_preview_banner_is_banner_info(
     )
     assert 'class="banner banner-info"' in body
     assert 'class="warning-banner"' not in body
-    # Copy is preserved exactly so cross-tests don't churn.
-    assert "Preview" in body
-    assert "not visible to reviewers" in body
+    # This test's subject is the CLASS, not the wording. It used to
+    # pin the copy too, "so cross-tests don't churn" — which made it
+    # fail when 19P.6 rung 2 deliberately rewrote the banner to be
+    # neutral between its two entry points. The copy's contract lives
+    # in `test_operator_preview_surface.py::
+    # test_renders_reviewer_surface_template_with_operator_banner`;
+    # here it is asserted only far enough to prove the banner is the
+    # operator one and has a body.
+    assert "Operator view &mdash; read-only." in body
 
 
 # ── D7: page header ─────────────────────────────────────────────────────

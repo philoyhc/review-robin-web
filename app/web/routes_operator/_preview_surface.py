@@ -146,8 +146,13 @@ def preview_surface(
         preview_mode=True,
         page_url_builder=page_url,
     )
+    # "Reviewer surface", not "Preview reviewer surface" (19P.6 rung 2).
+    # The banner dropped "Preview" because it is false of the Invitations
+    # entry point, where the operator is inspecting real responses; the
+    # breadcrumb is the same word on the same page for the same reason,
+    # and leaving it would be two labels for one surface.
     context["breadcrumbs"] = breadcrumbs.operator_session_child(
-        review_session, "Preview reviewer surface"
+        review_session, "Reviewer surface"
     )
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context
