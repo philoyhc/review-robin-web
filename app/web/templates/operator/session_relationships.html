@@ -546,9 +546,11 @@
                    href="{{ relationships_base_url }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               {# `Add` is page-level and keeps its own inner gates. One
-                 is live and unique to this page: `can_add_relationship`,
-                 because a pair needs both a reviewer and a reviewee to
-                 exist. The other is `edit_mode`, which disables the
+                 is live and unique to this page:
+                 `relationship_prereqs.satisfied`, because a pair needs
+                 both a reviewer and a reviewee to exist. The empty
+                 state below reads the same object, so the two cannot
+                 disagree about whether a relationship can be made. The other is `edit_mode`, which disables the
                  link while a row is being edited; the locked states are
                  covered by the `is_editable` wrapper below. That one
                  read `is_ready or edit_mode` until rung 3 simplified it
@@ -579,9 +581,15 @@
                    sent to a condition that never fired. #}
                 {% if edit_mode %}
                   <a class="btn secondary disabled" aria-disabled="true">Add new</a>
-                {% elif not can_add_relationship %}
+                {% elif not relationship_prereqs.satisfied %}
+                  {# 19O.5 rung 4 — the tooltip names the roster that is
+                     actually empty. It said "Add a reviewer and a
+                     reviewee first" in every case, so an operator with
+                     a full Reviewers roster and no reviewees was told
+                     to add a reviewer. Same `relationship_prereqs` the
+                     empty state below reads. #}
                   <a class="btn secondary disabled" aria-disabled="true"
-                     title="Add a reviewer and a reviewee first — a relationship needs both.">Add new</a>
+                     title="{{ relationship_prereqs.add_disabled_title }}">Add new</a>
                 {% else %}
                   <a class="btn secondary"
                      {# 19P.3 rung 1 — the Add link carries the active filter, as
@@ -614,6 +622,31 @@
            it. #}
         {% if total_row_count > 0 %}
           <p class="muted">No relationships match the current filter.</p>
+        {% elif not relationship_prereqs.satisfied %}
+          {# 19O.5 rung 4 — the third state, and the one the page could
+             not tell from the second. Every row here names one reviewer
+             and one reviewee, so with either roster empty there is
+             nothing to pair: `Add new` is inactive and every row of an
+             uploaded CSV fails, naming whichever side is missing
+             ("Unknown reviewer — import reviewers first" or the
+             matching reviewee message). Saying "Upload a CSV or add a
+             row to get started" into that state invites both of the two
+             things that cannot work.
+
+             The fact was already on the page, in the disabled button's
+             `title=` — which is the bug the author reported, having
+             hovered nothing and seen nothing. Same source
+             (`relationship_prereqs`), so the two cannot disagree; this
+             one also names WHICH roster is missing and links to it,
+             where a tooltip on a button has room for neither. #}
+          <p class="muted">No relationships yet, and none can be added
+            until the
+            {%- for roster in relationship_prereqs.missing %}
+              {{- " and" if not loop.first }}
+              <a href="/operator/sessions/{{ session.id }}/{{ roster.slug }}">{{ roster.label }}</a>
+            {%- endfor %}
+            {{ relationship_prereqs.empty_state_clause }}. Every
+            relationship names one reviewer and one reviewee.</p>
         {% else %}
           <p class="muted">No relationships yet. Upload a CSV or add a row
             to get started.</p>

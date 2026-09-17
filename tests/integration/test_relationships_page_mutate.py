@@ -9,6 +9,8 @@ stage 3.
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -658,7 +660,13 @@ def test_add_disabled_when_a_roster_is_empty(
     db: Session, client: TestClient
 ) -> None:
     """A relationship needs both sides — Add is disabled with a hint
-    when either roster is empty."""
+    when either roster is empty.
+
+    19O.5 rung 4 made the hint name the roster that is empty. This
+    fixture is exactly the case the old copy got wrong: Ali is a
+    reviewer, and the tooltip said *"Add a reviewer and a reviewee
+    first"* anyway.
+    """
     review_session = _make_session(client, db, code="rel-m-addempty")
     _seed(
         db,
@@ -670,7 +678,18 @@ def test_add_disabled_when_a_roster_is_empty(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
-    assert "Add a reviewer and a reviewee first" in body
+    tooltip = re.search(
+        r'aria-disabled="true"\s+title="([^"]*)">Add new', body
+    )
+    assert tooltip is not None, "Add new should be disabled here"
+    # Scoped to the tooltip, not the page: the guidance card says
+    # "Replacing the Reviewers or Reviewees roster" a few hundred lines
+    # up, so a whole-page `not in` would fail on a reword there and
+    # blame this button.
+    assert "Add rows to the Reviewees roster first" in tooltip.group(1)
+    assert "Reviewers" not in tooltip.group(1), (
+        "this session HAS a reviewer; naming that roster is the old bug"
+    )
 
 
 def test_create_on_ready_session_is_409(

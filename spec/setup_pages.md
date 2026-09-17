@@ -547,7 +547,9 @@ falls through to a "No … match the current filter." message
 (`session_reviewers.html`'s `{% if reviewers or add_mode %}` …
 `{% elif total_row_count > 0 %}`, and the same shape on the other
 six). The line lives inside that gate, so there is no table for it
-to caption. This is the template's doing, not the helper's:
+to caption. **Relationships has a third branch below those two** — an
+empty roster that cannot yet be filled, § *The table toolbar*; the
+no-match branch itself is the same on all seven. This is the template's doing, not the helper's:
 `preview_count_line(shown=0, pool=0, …, is_filtered=True)` returns
 `Showing 0 reviewers.` if it is ever called.
 
@@ -755,6 +757,33 @@ state — the same lock the retired card's strip took.
 `Add` is labeled **`Add new`** on all four pages. The one-row
 constraint that shortened it went with `Delete`, which is in the
 expander.
+
+**Relationships has one more gate than the other three, and it is not a
+lifecycle gate.** A `Relationship` names one `Reviewer` and one
+`Reviewee` through non-nullable foreign keys, so with either roster
+empty there is no pair to make: `Add new` renders disabled, and an
+upload is no way round it — every row of the CSV fails validation
+naming the side that is missing (*"Unknown reviewer … import reviewers
+first"* / *"Unknown reviewee … import reviewees first"*, checked in
+that order). The page states that in
+two places and both read one answer
+(`views.relationship_prerequisites`), so they cannot disagree about
+whether a relationship can be made:
+
+- the disabled button's `title=`, which **names the roster that is
+  actually empty** rather than both — an operator with a full Reviewers
+  roster is not told to add a reviewer;
+- the empty state, which for this reason has **three** branches where
+  the other three pages have two: no match for the filter, nothing yet
+  *and nothing possible yet* (naming the missing roster and linking to
+  its page), and nothing yet (the ordinary "Upload a CSV or add a row to
+  get started"). The second branch is the state a `delete-all` on either
+  roster leaves behind, and before 19O.5 rung 4 the page rendered the
+  third one there.
+
+Both read every row, active or not: an inactive reviewer is still a
+reviewer a relationship can name, and `create_relationship` checks
+membership rather than status.
 
 ### The row expander
 

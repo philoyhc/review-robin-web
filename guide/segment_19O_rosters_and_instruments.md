@@ -110,7 +110,8 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 
 ### Status
 
-**Rungs 1–3 landed; rung 4 is the Relationships empty state.**
+**The ladder is complete: rungs 1–4 landed.** What remains is the
+close itself — the `Definition of done` chores, as their own slice.
 
 - **The blast radius was wrong twice about one line.** No
   `relationship_count` existed, it said; the service helper did
@@ -140,6 +141,11 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 - **The re-upload advice was over-broad** (found on review of rung 3's
   PR): scoped to replacing a roster, since after a selected delete the
   surviving relationships would be destroyed by the upload it advised.
+- **Rung 4 widened to the tooltip's text**, which `Judgment calls`
+  settled only as "keeps its tooltip". Once the view helper knew *which*
+  roster was empty, the old string was visibly wrong in two of its three
+  cases — it told an operator with a full Reviewers roster to add a
+  reviewer. Same source as the empty state, so they cannot drift.
 - **The definition-of-done grep was adjudicated at rung 3**, not passed:
   line-based, so two targets satisfied it by *wrapping* while still
   saying the sentence, and the third should keep saying it.
@@ -214,6 +220,10 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 - `spec/csv_contracts.md` — the replace contract for the two rosters states what a replace destroys (Item 5).
 - `spec/architecture.md` — § *Audit-event detail schema*'s `counts` envelope gains `cascaded_relationships` alongside `cascaded_assignments` / `cascaded_responses` (Item 5).
 - `spec/setup_pages.md` § *Shared body shape*'s guidance-fact table — the row each card's copy is held to; **added at rung 3**, not named at planning time, because rule 2 of the copy contract requires the row to exist for `test_every_setup_page_states_its_own_invisible_fact` to pin anything (Item 5).
+- `spec/setup_pages.md` § *The table toolbar* — the Relationships-only
+  prerequisite gate behind `Add new`, and the third empty-state branch
+  that is its twin; **added at rung 4**, not named at planning time
+  (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---

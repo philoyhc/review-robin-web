@@ -578,3 +578,100 @@ def relationship_column_state(
         readouts=readouts,
         col_data={f"tag-{n}": counts[f"tag_{n}"] > 0 for n in (1, 2, 3)},
     )
+
+
+@dataclass(frozen=True)
+class MissingRoster:
+    """One roster a relationship needs before it can exist: the Setup
+    page's URL slug and the name the session nav gives it."""
+
+    slug: str
+    label: str
+
+
+@dataclass(frozen=True)
+class RelationshipPrerequisites:
+    """Which of the two rosters a relationship depends on are empty.
+
+    A `Relationship` row names one `Reviewer` and one `Reviewee` through
+    non-nullable foreign keys, so with either roster empty there is no
+    pair to make: `Add new` is inactive and every row of an uploaded CSV
+    fails validation naming the side that is missing — *"Unknown reviewer
+    … import reviewers first"* or *"Unknown reviewee … import reviewees
+    first"*, the two branches `relationships.parse_relationship_csv`
+    checks in that order.
+
+    The page had that fact twice and stated it once, in a `title=`
+    attribute on the disabled button — invisible to anyone not hovering,
+    which is how the author came to be looking at an inactive `Add new`
+    over the words *"Upload a CSV or add a row to get started"* and
+    unable to tell why (19O.5 rung 4). `satisfied` is now the single
+    answer both surfaces read, so the button and the empty state cannot
+    disagree about whether a relationship can be made.
+    """
+
+    missing: tuple[MissingRoster, ...]
+
+    @property
+    def satisfied(self) -> bool:
+        return not self.missing
+
+    @property
+    def roster_noun(self) -> str:
+        """`roster` or `rosters`, for the number missing."""
+        return "rosters" if len(self.missing) > 1 else "roster"
+
+    @property
+    def empty_state_clause(self) -> str:
+        """The verb phrase closing the empty state's first sentence.
+
+        The template renders the roster names itself, because each is a
+        link and markup does not belong in a view module — but the
+        number agreement does, beside the tooltip's. Both were spelled
+        out separately at first, in Python and in Jinja, so the two
+        surfaces shared *which* roster was missing and not the grammar
+        for saying so; a cold read caught it.
+        """
+        return (
+            "rosters both have rows"
+            if len(self.missing) > 1
+            else "roster has rows"
+        )
+
+    @property
+    def add_disabled_title(self) -> str:
+        """The disabled `Add new`'s tooltip, naming the roster to fix.
+
+        It read *"Add a reviewer and a reviewee first — a relationship
+        needs both"* regardless of which roster was empty, so an
+        operator with two hundred reviewers and no reviewees was told to
+        add a reviewer. Derived from the same `missing` the empty state
+        renders, so the two cannot drift; empty when nothing is missing,
+        where the template renders the live button instead.
+        """
+        if not self.missing:
+            return ""
+        names = " and ".join(roster.label for roster in self.missing)
+        return (
+            f"Add rows to the {names} {self.roster_noun} first — "
+            "a relationship needs one of each."
+        )
+
+
+def relationship_prerequisites(
+    *, has_reviewers: bool, has_reviewees: bool
+) -> RelationshipPrerequisites:
+    """The two rosters a relationship depends on, in nav order.
+
+    Order is `Reviewers` then `Reviewees` because that is the order the
+    session nav and the Guide put them in, and because a relationship
+    CSV names the reviewer first. Both booleans count **every** row,
+    active or not, matching `list_reviewers` / `list_reviewees`: an
+    inactive reviewer is still a reviewer a relationship can point at.
+    """
+    missing: list[MissingRoster] = []
+    if not has_reviewers:
+        missing.append(MissingRoster(slug="reviewers", label="Reviewers"))
+    if not has_reviewees:
+        missing.append(MissingRoster(slug="reviewees", label="Reviewees"))
+    return RelationshipPrerequisites(missing=tuple(missing))
