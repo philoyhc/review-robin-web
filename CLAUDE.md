@@ -215,32 +215,37 @@ reject it.
   (`ci.yml`) on every PR, alongside `ci-postgres.yml`, which
   round-trips the Alembic chain and runs the full suite against
   Postgres 16.
-- **`pip install -e .[dev]` is the whole setup.** A sandbox whose
-  agent phase has no package index must run it in whatever earlier
-  step *does* have network; `ci.yml` runs exactly that line.
-  `requirements.txt` is the Azure deploy manifest and carries no dev
-  extras, so installing from it leaves a working `app/` and no test
-  runner. `node` is wanted too — see below.
-- **A green `ruff` is not evidence.** Several gates read no Python at
-  all, and only `pytest` runs them: `test_doc_conventions.py` (path
-  references in `spec/` and `docs/` prose, the `CLAUDE.md` / `AGENTS.md`
-  twins, lifecycle labels, retired button vocabulary),
-  `test_generated_tools_are_current.py` (`tools/*.html` against their
-  generators, which read `base.html`'s inline stylesheet),
-  `test_inline_scripts_parse.py` (`node --check` over every inline
-  `<script>`) and `test_guide_screencaps.py` (referenced-but-missing
-  *and* committed-but-unreferenced). A lint-only run passes all four by
-  not running them. **`test_inline_scripts_parse.py` is worse than a
-  hard failure when `node` is missing: it skips, so its absence reads as
-  success.** Check the skip list, not just the exit code.
-- **Deleting a template or a route can fail a doc gate immediately**,
-  in the slice that deletes it rather than the later slice that owns the
-  spec sweep — every live `spec/` pointer to the file goes dangling at
-  once (19Q Item 1 rung 2). Plan the manifest bullet for the deleting
-  rung, or expect the rung to be red.
-- **If the sandbox cannot run the suite, say so in the PR body** and
-  name what was run instead. An unverifiable push that discloses beats
-  one that implies a gate it never reached.
+- **The install belongs in whatever step has network.** A sandbox whose
+  *agent* phase has no package index must run `pip install -e .[dev]`
+  before that phase. Installing `requirements.txt` instead — it is the
+  Azure deploy manifest — yields neither `pytest` nor `httpx`, which
+  `TestClient` needs, so adding `pytest` alone does not recover. `node`
+  is wanted too, for the reason two bullets down.
+- **A green `ruff` is not evidence.** Much of what gates a merge here
+  reads no Python at all and only `pytest` runs it. A sample, not a
+  roster: `tests/unit/test_doc_conventions.py` — a dozen checks, among
+  them every anchored backticked repo path in live prose, which is
+  top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
+  file included; `tests/unit/test_guide_indexes.py`, a README row per
+  `guide/` document, so it fires on every plan and every close; and
+  `tests/unit/test_generated_tools_are_current.py` plus
+  `tests/unit/test_contrast_audit.py`, both reading `base.html`'s inline
+  stylesheet, so one CSS edit can fail either. A lint-only run passes
+  all of them by not running them.
+- **`tests/integration/test_inline_scripts_parse.py` skips when `node`
+  is absent** — the suite's only tool-gated skip, and worse than a hard
+  failure, because a sandbox without the tool reports success rather
+  than an error. Read the skip list, not just the exit code.
+- **Deleting a file can fail a doc gate in the rung that deletes it**,
+  rather than the later rung that owns the spec sweep: an anchored
+  backticked path in live prose dangles immediately. That is a manifest
+  bullet to plan forward, not the sweep pulled forward — at 19Q Item 1
+  rung 2 it was one line in one spec, while the unanchored mentions of
+  the same template stayed green and correctly deferred. Deleting a
+  whole routing module trips `tests/unit/test_spec_coverage.py` the same
+  way; deleting a single handler trips nothing.
+- **If the suite could not run at all, say so in the PR body** and name
+  what did. A disclosed gap beats an implied gate.
 - **Two cold readers, different cadences.** A slice is read cold before
   it is marked **ready for review** — not before it is pushed: a draft
   PR is not a merge, and an unpushed commit in an ephemeral container is
