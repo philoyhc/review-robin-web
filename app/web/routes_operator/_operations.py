@@ -398,10 +398,17 @@ def invitations_index(
     )
     eligible = invitations.reviewers_eligible_for_invitation(db, review_session.id)
     invited_ids = {r.invitation.reviewer_id for r in invitation_rows}
-    pending_count = sum(
-        1
-        for r in invitation_rows
-        if r.invitation.status == "pending"
+    # The **sendable** set, not every pending row (19Q Item 2 rung 1).
+    # "Pending invitations" is a nonzero-is-attention pill
+    # (`spec/operations_pages.md` — the info-card counters), so it has
+    # to count something the operator can act on. Counting every
+    # pending row once the send paths stopped sending every pending row
+    # would leave an ineligible reviewer's invitation showing amber
+    # forever, with no control on the page able to clear it — the
+    # counter inheriting exactly the disagreement this rung removed
+    # from the button. Found by a cold read of the rung that caused it.
+    pending_count = len(
+        invitations.list_sendable_invitations(db, review_session.id)
     )
     incomplete_count = sum(1 for r in all_rows if r.is_incomplete)
     # Info-card metric inventory: eight counters across the
@@ -699,10 +706,15 @@ def invitations_send_all(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     _require_validated_or_ready(review_session)
-    rows = invitations.list_invitations_for_session(db, review_session.id)
+    # `list_sendable_invitations`, not `list_invitations_for_session`
+    # (19Q Item 2 rung 1). The listing is every row, which is what the
+    # page wants; the send set is pending **and** still eligible. Before
+    # this the button emailed reviewers the page above it does not list
+    # — `build_invitations_rows` goes through
+    # `monitoring.per_reviewer_progress`, which is assigned-and-active —
+    # so an operator saw one row and sent two mails.
+    rows = invitations.list_sendable_invitations(db, review_session.id)
     for row in rows:
-        if row.invitation.status != "pending":
-            continue
         invitations.send_invitation(
             db,
             invitation=row.invitation,
@@ -780,14 +792,35 @@ def invitations_send_one(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
-    # Segment 15F — defensive status re-check. The Invitations table
-    # filters inactive reviewers out so the per-row Send button never
-    # renders for them, but a direct POST / stale tab could still
-    # reach this route. Match the bulk send-path's active-only gate.
-    if reviewer.status != "active":
+    # Segment 15F — defensive re-check. The Invitations table filters
+    # ineligible reviewers out so the per-row Send button never renders
+    # for them, but a direct POST / stale tab could still reach this
+    # route.
+    #
+    # **Eligibility, not just active status, since 19Q Item 2 rung 1.**
+    # The comment here used to say "match the bulk send-path's
+    # active-only gate", which was true when the bulk path had no gate
+    # at all. Once the bulk paths filtered on assigned-**and**-active,
+    # this one was the looser of the three: it would still mail an
+    # active reviewer with no included assignment that the other two
+    # refuse. Same helper, so all three send paths agree by
+    # construction.
+    # Eligibility only — deliberately **not**
+    # `list_sendable_invitations`, which also filters `pending`. The
+    # per-row button renders only for pending rows
+    # (`session_invitations.html:304`), so gating on that here would
+    # match the UI and still be a second, unrelated behavior change
+    # riding a rung about eligibility. A direct POST re-sending a
+    # `sent` invitation keeps rotating its token exactly as before.
+    if not invitations.is_reviewer_eligible_for_invitation(
+        db, session_id=review_session.id, reviewer_id=reviewer.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Reviewer is inactive; reactivate before sending.",
+            detail=(
+                "Reviewer is not eligible for an invitation; they must be "
+                "active with at least one included assignment."
+            ),
         )
     invitations.send_invitation(
         db,

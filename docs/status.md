@@ -832,7 +832,7 @@ suite against a `postgres:16` service container).
 | `GET /operator/sessions/{id}/invitations/reviewers/{rid}` | reviewer drill-in from a Manage Invitations row. **Keyed on the reviewer since 19P.6**, so the row's link renders whether or not an invitation exists. Invitation card reports three facts — created / email sent (with delivery state) / last reminder — plus a four-state URL region; Review Progress card carries **Open reviewer surface** to `/preview-surface/1` in a new tab |
 | `GET /operator/sessions/{id}/invitations/{iid}/detail` | the pre-19P.6 invitation-keyed drill-in (Segment 11C Part 1). **308** to the reviewer URL above, kept for bookmarks |
 | `POST /operator/sessions/{id}/invitations/generate` | bulk-create invitations for assigned active reviewers (idempotent; ready-only) |
-| `POST /operator/sessions/{id}/invitations/send-all` | write outbox row per pending invitation (ready-only) |
+| `POST /operator/sessions/{id}/invitations/send-all` | write outbox row per **sendable** invitation — `pending` and the reviewer still assigned-and-active (`invitations.list_sendable_invitations`, 19Q.2 rung 1); ready-only |
 | `POST /operator/sessions/{id}/invitations/{iid}/send` | send a single invitation (rotates token; ready-only) |
 | `POST /operator/sessions/{id}/invitations/{iid}/regenerate` | rotate token + reset to pending (ready-only) |
 | `POST /operator/sessions/{id}/invitations/{iid}/remind` | send a single reminder reusing the prior invitation URL (ready-only) |

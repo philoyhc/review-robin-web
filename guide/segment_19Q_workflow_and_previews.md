@@ -268,6 +268,119 @@ Leaves both preconditions and all four warning sites standing.
 - `grep -rln "invitations_not_created\|no_invitations" app/ tests/ spec/ docs/` → **12 files**
 - `grep -rln "workflow/prepare" tests/` → **12 test files**
 
+### Status
+
+**Rung 1 landed 2026-09-18, across two send paths rather than one.**
+
+The ladder named `invitations_send_all`. Building it found
+`_dispatch_pending_invitations`
+(`app/services/scheduled_events/_invites.py`) running its own copy of
+the same query with the same defect — and that is the **unattended**
+path, firing from a timer with no operator present. Fixed both;
+splitting them would have left a known live bug in the worse of the
+two. *The register names the instance somebody noticed, not the class.*
+
+**The bug is sharper than the Opportunity records.** The Manage
+Invitations table already filters: `views.build_invitations_rows` goes
+through `monitoring.per_reviewer_progress`, which is assigned-and-active.
+So the operator saw one row and the button emailed two people — the page
+and the button disagreed about who is in the session, and the one the
+operator could not see is the one who got the mail.
+
+**One definition, not a third spelling.** `list_sendable_invitations`
+reuses `_assigned_active_reviewer_ids`, the predicate
+`generate_invitations` already enrols on, so a row is sendable exactly
+when a fresh Prepare would have created it.
+`monitoring._assigned_active_reviewers` is a *second* spelling of the
+same idea and is how these two surfaces came to disagree in the first
+place; unifying it is not this rung's (it would touch the monitoring
+layer) but it is the root and should be recorded as such.
+
+`spec/workflow_card.md`'s *"Iterates every pending invitation"* became
+false the moment this landed, so it is corrected now rather than at
+rung 4 — the file was already in `Doc impact`.
+
+**The cold read found two residues the rung itself created**, both now
+fixed here:
+
+- The **"Pending invitations" pill** counted every pending row while
+  the button stopped sending every pending row, so an ineligible
+  reviewer's invitation would read amber forever with no control on
+  the page able to clear it. The rung had moved its own defect from
+  the button to the counter. It counts the sendable set.
+- **`invitations_send_one` was the third send path** and still gated on
+  `status == "active"` alone, so a direct POST could mail someone the
+  two bulk paths refuse. Its comment claimed to "match the bulk
+  send-path's active-only gate" — true when the bulk path had no gate,
+  a half-truth in the other direction afterwards. Gated on eligibility
+  only, deliberately not on `pending` as well: that would be a second,
+  unrelated behavior change riding this rung.
+
+**And three defects in the tests, which is the pattern this segment
+keeps meeting.** The scheduled test's identity assertion read
+`context.to_email` off `invitation.sent`, which has never carried it
+(`context={"trigger": trigger}`) — **vacuously true**, and would have
+passed if the scheduler mailed the stranded reviewer. It reads
+`EmailOutbox.to_email` now, verified by inverting it. The
+"leaves it pending" test asserted two things a total no-op satisfies.
+And `_strand_an_invitation` never checked the session came back to
+`validated`, though `workflow_prepare` answers 303 on a failed
+validation too.
+
+**The untested half of eligibility had a wrong lever, and finding out
+was worth more than the test.** Nothing covered *active reviewer, no
+included assignment*. The first attempt used
+`POST /assignments/bulk-inactivate` then re-Prepared, and failed:
+`workflow_prepare` runs `replace_assignments`, which re-materialises
+every row from the pinned rule set, so **a per-row exclusion does not
+survive the Prepare that makes the session sendable**. Measured, not
+read. In the field that state comes from a rule the regeneration
+reproduces; the test sets the column directly and says why.
+
+**Observability gap, recorded not fixed.** `counts.sent = 0` on
+`session.scheduled_invites_fired` now has two causes — all already
+sent, or all pending rows ineligible — and nothing is audited for the
+withheld rows, on either send path. A skip event means a new
+`EVENT_SCHEMAS` entry, so it belongs to a later rung or to
+`guide/deferred_consolidated.md`, not here.
+
+**`spec-writer` (pre-push, since the slice touches `spec/`) came back
+clean on this slice** and raised one phrase of mine — *"the four
+surfaces cannot drift"*, where the test actually has five call sites.
+Rewritten to name them; a count is the part that goes stale.
+
+**It also found a contradiction that predates this segment**, and it
+needs an author ruling rather than a fix here:
+`spec/operations_pages.md:127-129` and `:304` both say the Invitations
+page's per-row **Send** and **Regenerate** are *"live from `validated`
+onward"*, and `:306` adds that all three render disabled outside their
+allowed state. The template gates both on `is_ready`
+(`session_invitations.html:309,327`), which is `lifecycle.is_ready`
+alone (`_workflow_card.py:110`) — so both buttons are disabled in
+`validated`, the state the spec says they are live in. Verified at
+`file:line`. Either the template should gate on
+`is_validated or is_ready`, matching the route's own
+`_require_validated_or_ready`, or the spec was never true. Out of this
+rung's scope and not in Item 2's `Doc impact`; filed here so the
+segment can adjudicate it.
+
+**Codex's review made the same point one layer deeper, and was
+right.** The per-row gate above was first written as the *route*
+building the eligible set and testing membership — invitation policy
+in a route handler, which `AGENTS.md` §1 forbids, and a predicate the
+route owns is one the next send path can quietly disagree with. That
+is the defect this rung exists to fix, committed while fixing it.
+`invitations.is_reviewer_eligible_for_invitation` owns it now, reusing
+`_assigned_active_reviewer_ids` rather than asking in new SQL.
+
+Six mutants, all caught: route reverted to the unfiltered listing;
+eligibility filter dropped; `pending` filter dropped; scheduled path
+back to its own query; the eligibility test reduced to its status limb;
+and the scheduled identity assertion inverted. *The `pending`-filter
+mutant is caught by a pre-existing test
+(`test_scheduled_invites.py`'s second-fire `counts.sent == 0`), not by
+any of the new ones — the first write-up implied otherwise.*
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates

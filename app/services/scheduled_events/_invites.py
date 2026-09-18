@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import AuditEvent, Invitation, ReviewSession, Reviewer
+from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
@@ -260,27 +260,35 @@ def _dispatch_pending_invitations(
     build_invite_url: Callable[[str], str],
     correlation_id: str | None,
 ) -> int:
-    """Send every pending invitation on the session via the existing
+    """Send every sendable invitation on the session via the existing
     operator path, marked as a scheduled trigger.
 
-    Returns the count actually dispatched (zero when all invitations
-    have already been sent — the entry is still marked consumed so
-    the trigger doesn't keep retrying on each observer pass).
+    Returns the count actually dispatched. **Zero has two causes
+    since 19Q Item 2 rung 1** — every invitation already sent, or
+    every pending one belonging to a reviewer who is no longer
+    eligible — and the audit row cannot tell them apart; nothing is
+    written for the withheld rows. Recorded as an observability gap in
+    the segment plan rather than fixed here, since a skip event is a
+    new `EVENT_SCHEMAS` entry. Either way the entry is marked consumed,
+    so the trigger doesn't keep retrying on each observer pass.
+
+    **Sendable, not merely pending, since 19Q Item 2 rung 1.** This
+    used to run its own copy of the operator route's query and carried
+    the same defect: a reviewer inactivated after an earlier Prepare
+    keeps a `pending` row, and the timer emailed them with no operator
+    present. The set now comes from `invitations.list_sendable_invitations`,
+    so both send paths agree by construction rather than by two
+    queries happening to match.
     """
-    pending = db.execute(
-        select(Invitation, Reviewer)
-        .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
-        .where(Invitation.session_id == session.id)
-        .where(Invitation.status == "pending")
-    ).all()
+    sendable = invitations_service.list_sendable_invitations(db, session.id)
 
     sent = 0
-    for invitation, reviewer in pending:
+    for row in sendable:
         invitations_service.send_invitation(
             db,
-            invitation=invitation,
+            invitation=row.invitation,
             review_session=session,
-            reviewer=reviewer,
+            reviewer=row.reviewer,
             user=None,
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,

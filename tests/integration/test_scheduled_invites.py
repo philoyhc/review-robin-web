@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     AuditEvent,
+    EmailOutbox,
     Instrument,
     Invitation,
     Reviewee,
@@ -437,3 +438,85 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
     assert fired[0].detail["context"]["offset"] == "-P2D"
+
+
+# --------------------------------------------------------------------------- #
+# 19Q Item 2 rung 1 — eligibility applies to the unattended path too          #
+# --------------------------------------------------------------------------- #
+
+
+def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
+    db: Session,
+) -> None:
+    """The auto-send path filters on eligibility, like Send all.
+
+    `_dispatch_pending_invitations` queried every `pending` row on the
+    session and knew nothing about eligibility, so a reviewer
+    inactivated after an earlier Prepare was emailed by the scheduler.
+    **This is the worse of the two send paths**: `Send all` at least
+    happens while an operator is looking at the page, and this one
+    fires from a timer with nobody present.
+    """
+    rs = _seed_session_with_reviewers(db, "sched-elig", reviewer_count=3)
+    op = _operator(db, rs)
+    rs.status = lifecycle.SessionStatus.validated.value
+    db.flush()
+    db.commit()
+
+    _generate_invitations(db, rs, op)
+
+    # One reviewer goes inactive after the invitations exist. This is
+    # what `reviewers.bulk_inactivate` does — `status` only, the
+    # invitation row untouched.
+    stranded = db.execute(
+        select(Reviewer)
+        .where(Reviewer.session_id == rs.id)
+        .order_by(Reviewer.email)
+    ).scalars().first()
+    stranded.status = "inactive"
+    db.flush()
+    db.commit()
+
+    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.invite_offsets = ["-P2D"]
+    db.flush()
+    db.commit()
+
+    scheduled_events.observe_scheduled_events(
+        db, rs, build_invite_url=_stub_build_url
+    )
+
+    fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
+    assert len(fired) == 1
+    assert fired[0].detail["counts"]["sent"] == 2, (
+        "the count must report what was actually sent, not what was "
+        "pending — an audit row saying 3 here would be a false record"
+    )
+
+    # Read the recipient off `EmailOutbox`, not off the audit row.
+    # A first draft asserted `row.detail["context"].get("to_email")`,
+    # which `invitation.sent` has never carried — it writes
+    # `context={"trigger": trigger}` and nothing else
+    # (`app/services/invitations.py:391`), so the set was `{None}` and
+    # the assertion was **vacuously true**: it would have passed
+    # unchanged if the scheduler mailed the stranded reviewer. Caught
+    # by a cold read, which is the third time in two days an assertion
+    # in this repo proved less than it claimed.
+    mailed = {
+        row.to_email
+        for row in db.execute(
+            select(EmailOutbox).where(EmailOutbox.session_id == rs.id)
+        ).scalars()
+    }
+    assert mailed, "nothing was mailed at all; the fixture is not exercising a send"
+    assert stranded.email not in mailed
+
+    # Skipped, not consumed: the row stays available for a reactivation.
+    still_pending = db.execute(
+        select(Invitation).where(
+            Invitation.session_id == rs.id,
+            Invitation.reviewer_id == stranded.id,
+        )
+    ).scalar_one()
+    assert still_pending.status == "pending"
+    assert still_pending.sent_at is None
