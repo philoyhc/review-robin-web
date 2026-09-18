@@ -1510,3 +1510,22 @@ unifying it reaches into the monitoring layer and past the rung.
 `spec/workflow_card.md`'s Send-invites bullet names the split rather
 than claiming the surfaces cannot drift. Two copies of a query agree by
 luck; the trigger is the next change to either.
+
+### `?validated=1` mutates lifecycle state from a GET (19Q.2, 19O.7 entry 4)
+
+`build_workflow_card_context` calls `lifecycle.mark_validated` inline on
+the `?validated=1` entry path (`app/web/views/_workflow_card.py`), so a
+GET writes. It is a layering breach — a view-shape adapter performing a
+state transition — and a prefetch hazard, since anything that follows
+the link speculatively promotes the session.
+
+**The author's ruling is to keep the backend** (2026-09-18). Removing it
+fails **208 tests across ~30 files**, measured at 19Q Item 2 rung 2, and
+that measurement is the reason: the entry path is load-bearing for a
+third of the suite's session fixtures, so this is a fixture migration
+wearing a layering fix's clothes.
+
+Recorded here rather than left in a closed item's judgment calls, which
+is where it sat until the 19O Item 7 register found it. Nothing is
+scheduled. If it is ever taken up, the size to plan against is the
+fixture count, not the two-line call site.
