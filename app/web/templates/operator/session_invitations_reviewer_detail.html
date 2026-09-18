@@ -82,8 +82,57 @@
         Email sent:
         {% if invitation and invitation.sent_at %}
           <span class="pill pill-count">{{ invitation.sent_at | format_datetime }}</span>
+          {# 19P.6 rung 2b — delivery state beside the send time (Item 6
+             open question 5). `sent_at` says a send was attempted on the
+             **current** token; this says what became of it. The pill
+             appears only when the state is something other than plain
+             `sent`, so the ordinary case stays two facts rather than
+             three.
+
+             **The value is rendered, not listed.** The set is the
+             model's `EMAIL_OUTBOX_STATUSES` — `queued` / `sending` /
+             `sent` / `failed` — and Segment 14B Part A widens which of
+             them real transport can produce; a new one renders here
+             untouched (`constitution.md` II). The `!= "sent"` is still a
+             judgement about one member: it names `sent` the only state
+             not worth a pill. If 14B's dispatch is asynchronous, every
+             card will wear an amber pill while a send is in flight, and
+             that is the line to revisit — not the render.
+
+             **The chrome strip reading `NOT SENT` beside a failed send
+             is correct, not a contradiction to fix.** That pill counts
+             outbox rows with `status == "sent"` (`views/_setup.py:204`),
+             and a failed row is not one. So chrome says nothing was
+             delivered while the card says a send was attempted and
+             failed — two true readings of one event, and this pill is
+             what explains the other. #}
         {% else %}
           <span class="pill pill-empty">—</span>
+        {% endif %}
+        {# **Gated on `invitation.status`, not on `sent_at`** — the two
+           pills render independently, which is what Codex asked for on
+           the PR, but not by removing the gate.
+
+           `sent_at` was the first gate and it fails both ways. Removing
+           it entirely is worse: measured on today's code, a send whose
+           outbox row reads `failed` followed by a **Regenerate** leaves
+           `sent_at` NULL while `most_recent_invitation_status` still
+           returns `failed` — a stale state for a token that was rotated
+           and never sent. Keeping it is also wrong, and that was
+           Codex's point: today `send_invitation` writes `sent_at` and
+           `status="sent"` in one breath, but a 14B async dispatch could
+           leave `sent_at` NULL while the row is `queued` / `sending` /
+           `failed`, hiding exactly what this pill exists to show.
+
+           `invitation.status` separates them. `regenerate_token` resets
+           it to `pending` (`invitations.py:223`), so a rotated token
+           shows nothing, while a sent one keeps its delivery state
+           whatever happens to the timestamp. Both an em-dash and a pill
+           can now render together — the honest reading of "no delivery
+           date, and here is why". #}
+        {% if invitation and invitation.status != "pending"
+              and delivery_status and delivery_status != "sent" %}
+          <span class="pill pill-empty">{{ delivery_status }}</span>
         {% endif %}
         &middot;
         Last reminder:
