@@ -153,7 +153,7 @@ That spec is the canonical source for the ten-state cascade
 (States 1 / 2 / 3 / 4 / 4W / 4Err / 5 / 6 / 7 / 8 / 9 / 10),
 the single-row button layout (≤ 4 visible buttons per state,
 each at 25% column width, inactive hidden), the **Prepare
-session** button (runs Generate + Validate in sequence with
+session** button (runs Generate + Validate + Invite in sequence with
 per-step rollback and a saved-response reconcile-detour), the
 standalone **Activate session** button (live from `validated`,
 with a warnings-detour link to `/validate?activate=1` when the
@@ -172,9 +172,11 @@ Notes specific to Session Home:
   Setup links (Reviewers / Reviewees / Relationships), which stay
   reachable while this state shows.
 - **Workflow card in `ready`.** The forward action depends on
-  invitation state: Create invites (Primary) until invites
-  exist, Send invites (Primary) until they're sent, then Send
-  reminders (Primary). Close session is always Secondary when
+  invitation state: Send invites (Primary) until they're sent, then
+  Send reminders (Primary). **With no invitations at all there is no
+  forward action here** — Prepare creates them and a `ready` session
+  cannot run Prepare, so the card's copy names Revert to draft
+  instead (19Q Item 2 rung 3). Close session is always Secondary when
   live; Revert to draft is always Secondary when live — the
   layout never promotes either to Primary. Pause carries **no
   confirmation checkbox**; the lifecycle service's `confirm` gate is
@@ -451,10 +453,10 @@ page reuses the same class without further design work.
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
 | `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + per-issue list | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `validated` / Validated | States 4 / 4W / 4Err / 5 / 6: Activate session live (Primary; 4W detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Create / Send invites surface based on invitation state | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `ready` / Activated | States 7 / 8 / 9: Create invites / Send invites / Send reminders forward stages (whichever is next renders Primary); Close session + Release responses live (Secondary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
+| `validated` / Validated | States 4 / 4W / 4Err / 5 / 6: Activate session live (Primary; 4W detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 

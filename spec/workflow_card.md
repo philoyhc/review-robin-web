@@ -34,7 +34,7 @@ Each host page sets `next_action_return_to` to its Operations-row
 slug so that every POST the card emits — `/workflow/prepare`,
 `/workflow/activate`, `/workflow/close`,
 `/workflow/release-responses`, `/workflow/stop-release`,
-`/workflow/archive`, `/revert`, `/invitations/generate`,
+`/workflow/archive`, `/revert`,
 `/invitations/send-all`, `/invitations/remind-incomplete` —
 303s back to the page that rendered the card (except Archive,
 which 303s to `/operator/sessions/archived`). Allowed slugs:
@@ -76,8 +76,8 @@ returns:
   row exists for the session.
 - `invitations_sent` — `True` iff at least one `Invitation` row
   has a non-NULL `sent_at`.
-- Ten `*_visible` flags — one per button slot (`revert_visible`,
-  `prepare_visible`, `create_invites_visible`,
+- Nine `*_visible` flags — one per button slot (`revert_visible`,
+  `prepare_visible`,
   `send_invites_visible`, `activate_visible`,
   `send_reminders_visible`, `close_visible`,
   `release_responses_visible`, `stop_release_visible`,
@@ -185,12 +185,12 @@ missed).
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." |
-| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses." |
+| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
 | **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to receive responses." |
-| **7** | `is_ready`, no Invitation rows yet | "Session is open for responses. Create invites and send them so reviewers know they can start." |
+| **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
 | **10** | `is_expired` (post-Close-session) | "Session is closed. No further responses are being accepted. Revert to draft to reopen for editing — responses are preserved." |
@@ -266,12 +266,12 @@ The body div above the buttons carries a `min-height` so the card
 height stays stable when the visible-button count drops from 4 to 0,
 and the buttons land at the same Y position in every state.
 
-The 10 conceptual button slots, in prep-then-run order, are:
+The 9 conceptual button slots, in prep-then-run order, are:
 
 ```
-1. Revert to draft   2. Prepare session   3. Create invites   4. Send invites
-5. Activate session  6. Send reminders   7. Close session     8. Release responses
-9. Stop releasing                        10. Archive session
+1. Revert to draft   2. Prepare session   3. Send invites
+4. Activate session  5. Send reminders  6. Close session     7. Release responses
+8. Stop releasing                       9. Archive session
 ```
 
 ### Visibility gates
@@ -283,7 +283,6 @@ one boolean per slot. Inactive buttons are hidden:
 |---|---|
 | Revert to draft | `is_validated or is_ready or is_expired` |
 | Prepare session | `(is_draft and not is_setup_empty) or is_validated` |
-| Create invites | `(is_validated or is_ready) and not invitations_generated` |
 | Send invites | `(is_validated or is_ready) and invitations_generated and not invitations_sent` |
 | Activate session | `is_validated` (warnings-detour link when `validation_summary.needs_acknowledge`) |
 | Send reminders | `is_ready and invitations_sent` |
@@ -293,8 +292,8 @@ one boolean per slot. Inactive buttons are hidden:
 | Archive session | `is_expired` |
 
 Two slot pairs are mutually exclusive by construction so they
-never co-render: Create invites disappears once invites exist
-and Send invites disappears once they're sent; Release responses
+never co-render: Send invites disappears once they're sent;
+Release responses
 and Stop releasing share a slot, flipping on
 `is_response_release_window_open`, and both stay hidden until
 the session has **closed (expired)** — the operator only takes
@@ -311,21 +310,39 @@ gaps.
 | --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | --- |
 | Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
 | Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | |
-| Create invites | | | | Pri | Pri | | | | Pri | | | | |
-| Send invites | | | | | | | Pri | | | Pri | | | |
-| Activate session | | | | Pri | Pri (→detour) | | Pri | Pri | | | | | |
+| Send invites | | | | | | Pri† | Pri | | | Pri | | | |
+| Activate session | | | | Pri | Pri (→detour) | Pri | Pri | Pri | | | | | |
 | Send reminders | | | | | | | | | | | Pri | | |
 | Close session | | | | | | | | | Sec | Sec | Sec | | |
 | Release responses | | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | | Sec |
 | Archive session | | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **3** | **3** | **3** | **3** | **3** |
+| **Visible total** | **0** | **1** | **1** | **3** | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+
+**4Err renders Activate**, which the matrix omitted until 19Q Item 2
+rung 4's close pass recomputed the totals and found the column short.
+`activate_visible` is `is_validated` alone (`_workflow_card.py`), and
+4Err *is* `is_validated` — so the button ships in a state whose own
+copy says to re-run Prepare first. Measured, not inferred. Whether it
+should is a design question this item did not open; the spec describes
+what ships.
+
+† **4Err is the one column that varies with invitation state.** Every
+other state's definition fixes it — State 4 is *"no invitations"*,
+State 5 is *"invites drafted"* — but 4Err is defined by
+`is_validated` and `not can_activate` alone, so a session that was
+Prepared (creating invitations) and then broken renders **Send
+invites** as well: four buttons, not three. Measured. The ≤4 contract
+still holds, with 4Err joining State 5 at the cap. *Named by Codex on
+the close PR, after this file's own first correction read the column
+as a fixed 3 — the probe that established Activate renders here
+printed `send_invites_visible` in the same line, and it was read past.*
 
 ‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
 Each state caps at 4 visible buttons; today's worst case is 4
-(states 4 / 4W / 5). The pruning rules above (drop Create invites
-once generated, drop Send invites once sent, hide Archive
+(state 5). The pruning rules above (drop Send invites
+once sent, hide Archive
 outside `expired`, hide Release/Stop outside `expired`,
 Release/Stop share a slot when both eligible) are what keep
 the total within budget — without them states 5 / 8 / 9 would
@@ -333,7 +350,7 @@ surface 5+ buttons.
 
 `Generate assignments` and `Validate setup` don't render as their
 own slots — they live inside **Prepare session**, which runs
-Generate + Validate in sequence (see below).
+Generate + Validate + Invite in sequence (see below).
 
 ### Prepare session
 
@@ -516,13 +533,16 @@ Pre-flight gates:
 
 ### Other button slots
 
-- **Create invites** posts to
-  `/operator/sessions/{id}/invitations/generate` via
-  `next-action-generate-invites-form`. Calls
-  `invitations.generate_invitations`, which idempotently creates
-  one `Invitation` row per assigned active reviewer (skipping
-  reviewers with no `include=True` assignment and reviewers
-  already invited).
+**Create invites retired at 19Q Item 2 rung 3.** It posted to
+`POST /invitations/generate`, which now 404s. The work moved into
+Prepare's third step (above): `generate_invitations` idempotently
+creates one `Invitation` row per assigned active reviewer, skipping
+reviewers with no `include=True` assignment and reviewers already
+invited. **The step is unreachable from `ready`** — `prepare_visible`
+excludes it and the route refuses on `is_editable` — so a session that
+reaches `ready` with no invitations has no forward action here, and
+States 7's copy names Revert to draft.
+
 - **Send invites** posts to
   `/operator/sessions/{id}/invitations/send-all` via
   `next-action-send-invites-form`. Iterates
@@ -559,8 +579,6 @@ Pre-flight gates:
   assignments aren't complete.
 
 Each invitation form is rendered alongside its visible button —
-Create invites renders only when `create_invites_visible` is True
-(`(is_validated or is_ready) and not invitations_generated`),
 Send invites only when `send_invites_visible` is True
 (generated but not sent), Send reminders only when
 `send_reminders_visible` is True (`is_ready and invitations_sent`).
@@ -826,7 +844,6 @@ routes:
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `validated` or `ready` (via `_require_validated_or_ready`) | unchanged | `invitations.generated` |
 | `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per row of `invitations.list_sendable_invitations` — `pending` **and** still eligible) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
 

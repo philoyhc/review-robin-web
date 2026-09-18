@@ -76,7 +76,7 @@ single audit event and commit atomically.
 Called by `GET /operator/sessions/{id}/validate?activate=*`, the
 validate-now path on Session Home, and
 `POST /operator/sessions/{id}/workflow/prepare` — the Workflow
-card's Prepare button runs Generate + Validate and flips
+card's Prepare button runs Generate + Validate + Invite and flips
 `draft → validated` on a clean report. Idempotent (no-op when
 already `validated`). Raises `LifecycleError(code="has_errors")`
 when the readiness report carries blocking errors.
@@ -273,10 +273,12 @@ tick 'acknowledge response loss' to proceed"`.
 Raises **HTTP 409 Conflict** when the session is `draft`
 (invitation actions need at least the assignment pairs to be
 settled). Every invitation route in
-`app/web/routes_operator/_operations.py` calls it —
-`POST /invitations/generate`, `send-all`, `regenerate-all`,
-per-row `regenerate` / `send` / `remind`, and the bulk
-`remind-incomplete`. It is deliberately looser than "ready
+`app/web/routes_operator/_operations.py` calls it — `send-all`,
+`regenerate-all`, per-row `regenerate` / `send` / `remind`, and the
+bulk `remind-incomplete`. (`POST /invitations/generate` was in this
+list until 19Q Item 2 rung 3 retired it; Prepare creates the
+invitations now, gated by its own `is_editable` precondition rather
+than this one.) It is deliberately looser than "ready
 only" so an operator can notify reviewers **before** activation
 (the Prepared / pre-open scenario); **Send reminders** and the
 reviewer write-path gates stay `ready`-only.
@@ -676,7 +678,7 @@ without retrying. Per-event preconditions:
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
 | Scheduled activation | `session.status == "validated"` | `not_validated` |
-| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (the operator ran "Create invitations") | `not_prepared` / `invitations_not_created` |
+| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them; before 19Q Item 2 rung 3 the operator ran Create invites) | `not_prepared` / `invitations_not_created` |
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 | Auto-archive | `session.status == "draft"` | `not_draft` |
 | Auto-delete after archive | `session.status == "archived"` | `not_archived` |
