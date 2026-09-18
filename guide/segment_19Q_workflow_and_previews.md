@@ -261,6 +261,24 @@ Leaves both preconditions and all four warning sites standing.
 - Create after `mark_validated`, not before — a failed validation creates nothing (2026-09-17).
 - `generate_invitations` stays a service function — the scheduled path and 7 test files call it (2026-09-17).
 - The `has_invitations` skip reasons stay until open question 1 resolves; still reachable in the zero-eligible case (2026-09-17).
+- **`?validated=1` keeps its inline `draft -> validated` flip**
+  (author, 2026-09-18). Rung 2 escalated it: `build_workflow_card_context`
+  performs a lifecycle mutation on a GET, which is both a layering
+  breach and a prefetch hazard, and rung 3 retires the button that
+  state used to rely on. Removing it fails **208 tests** across ~30
+  files that use the GET as their standard route to `validated`
+  (measured). The author's call was to keep the backend — the Workflow
+  revamp is about operator experience, and the migration is its own
+  piece of work, now filed. *It is also load-bearing for this item's
+  tests*: `_ready_session_without_invitations` builds
+  "assignments, no invitations" through it, and five tests would be
+  vacuous without that state.
+- **Prepare stays live from `validated`, so retiring the button opens
+  no hole there** (2026-09-18). `prepare_visible` is
+  `(is_draft and not is_setup_empty) or is_validated`, so a session
+  promoted by any route still has a one-click path to invitations —
+  **but not from `ready`**, which is what rung 3's copy got wrong; see
+  `### Status`.
 
 ### Blast radius (measured)
 
@@ -485,6 +503,106 @@ session can reach `validated` without Prepare — **worth settling
 before rung 3 retires the button**, since after that such a session
 would have no way to get invitations.
 
+**Rung 3 landed 2026-09-18 — the button, its card branch and
+`POST /invitations/generate` are gone.** The `has_invitations` gates
+and both amber captions stay, per open question 1.
+
+**The captions' *copy* did not stay, and that is the rung's job.**
+Both said "create invitations before then or these will skip",
+naming a button that no longer exists. The branches are still
+reachable — a clean Prepare leaves `has_invitations` False when
+nobody is eligible — so the copy now names what the operator can
+actually do: include an assignment for an active reviewer and run
+Prepare again. Same for the two Next-action body strings and the
+reviewer drill-in's two prompts.
+
+**46 tests broke, and the fixtures were the finding.** Most called
+`POST /invitations/generate` after reaching `ready` through
+`?validated=1` — a promotion that never runs Prepare, so it never
+created invitations, which is *why* they called the route. Switched
+to `POST /workflow/prepare`, which validates and creates in one step,
+and the explicit calls dropped out.
+
+- **Four tests were about the retired route** (one-per-reviewer +
+  idempotent, 409 from draft, live from validated). Every property is
+  Prepare's now and rung 2 already asserts each one, so they are
+  deleted rather than re-aimed — re-aiming would have duplicated rung
+  2's tests under names describing a button nobody can press. What
+  replaces them is the one thing they could not say: the route 404s.
+- **Five needed "assignments but no invitations"**, which
+  `_ready_session` can no longer produce. A new fixture builds it the
+  way it stays reachable — the `?validated=1` promotion the author
+  ruled we keep. *Without it those five would have gone vacuous: a
+  table where every row always has an invitation cannot exercise the
+  row that does not.*
+- **An anti-vacuity control fired and was right.** The 308 test pads
+  with a throwaway session so invitation and reviewer ids diverge;
+  since rung 2 each padding session advances **both** sequences, so
+  they coincided again. The pad now creates reviewers without
+  invitations.
+
+**One test had been skipping itself green for a long time.**
+`test_sys_admin_outbox_child.py`'s fixture imported rosters but never
+pinned a rule, so nobody was eligible, the generate call created
+nothing, and a `pytest.skip` guard took over — reporting success.
+Retiring the route forced the call out; making the fixture real
+exposed the actual defect: its docstring claims creating an invitation
+"populates email_outbox", and it never has — only a *send* writes an
+outbox row. With a send added it passes, and the suite's skip count
+drops 17 → 16. Pre-existing, found because this rung had to touch it.
+
+**Deferred to rung 4, uniformly:** **seven `spec/` files plus
+`docs/status.md`** still describe the button — the first write-up said
+"seven `spec/` and `docs/`", which undercounts by one. The plan's ladder assigns them to the close
+and they are left whole rather than half-corrected — rung 2's cold
+read named a split rule inside one file as the thing a reader trips
+on, so the rule here is all or nothing.
+
+**The item's cumulative cold read (the first under the per-item
+cadence) returned eleven findings. One was serious and mine.**
+
+**Rung 3's new copy named two remedies that both fail in the state
+where it renders.** In `ready` with no invitations — reachable by
+`?validated=1` → Activate, and by open question 1's *supported* clean
+Prepare with nobody eligible → Activate — the copy said "include an
+assignment for an active reviewer and run Prepare session again".
+Measured: the Prepare button is not rendered (`prepare_visible`
+excludes `ready`), `POST /workflow/prepare` 303s to
+`super_step=precondition`, and every roster mutator 409s. *Rung 2's
+own Status had escalated exactly this and rung 3 did not settle it.*
+The captions and both card strings are state-aware now: `validated`
+names Prepare, `ready` names Revert — and says Revert stops responses,
+because it closes every accepting instrument. A test pins the premise,
+so if Prepare ever becomes reachable from `ready` the copy fails
+rather than rots.
+
+**Three of the new strings also asserted a false cause.** "No reviewer
+was eligible when Prepare last ran" is wrong on the `?validated=1`
+path, where Prepare never ran and everyone is eligible. The copy
+states the condition and the fix, and diagnoses nothing.
+
+**Smaller, all verified before acting:** three calls to the retired
+route survived in a file rung 3 had open, passing as dead 404s; the
+rung-1 spec sentence claimed five surfaces "cannot drift apart" when
+the table is a second copy of the query — *the root cause of the bug
+rung 1 fixed*, now named rather than claimed away; four re-fixtured
+`_activate` helpers asserted only `303`, which rung 1 had already
+written a guard against in the same file; two test names still said
+"create"; and the `?validated=1` ruling existed only in a test
+docstring — it is a judgment call now, with the 208-test measurement.
+
+**Three "recorded in `guide/deferred_consolidated.md`" claims were
+false** — nothing was there. All three are entries now: the pruning
+deferral, the unaudited withheld send, and the
+`monitoring._assigned_active_reviewers` duplicate. Without that, the
+close would have archived this plan and orphaned all three.
+
+**Reads this item took: four.** Rung 1 and rung 2 each took one under
+the old per-slice cadence (ten findings and eight); rung 2 also took a
+`spec-writer` pass; rung 3 took this cumulative one under the new
+cadence, at eleven. *The per-item read found more than either
+per-slice read, and found the one defect that spanned rungs.*
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates
@@ -546,6 +664,8 @@ Both answered, 2026-09-18.
 - `spec/architecture.md` — the `session.scheduled_invites_skipped` reason set drops `invitations_not_created` (Item 2).
 - `spec/operator_button_audit.md` — the Create invites row retires (Item 2).
 - `spec/operations_pages.md` — Manage Invitations' `not_created` chrome state, and Send all's row set (Item 2).
+- `spec/operations_pages.md` — the info-card counters: **Pending invitations** counts the *sendable* set since rung 1 while **Invitations created** still counts every row, so with a stranded invitation the row reads `created 2 · sent 1 · pending 0` and the arithmetic no longer closes. The spec lists the eight counters without defining any of them, so nothing there is false — but the meaning changed and the bullet above would not have prompted a sweep of it (Item 2).
+- `spec/operations_pages.md` — the per-row **Send** 409 gate, which moved from `reviewer.status != "active"` to full eligibility at rung 1, with new operator-visible detail text. The spec documents the button's allowed states and has never described the gate at all (Item 2).
 - `spec/session_home.md` — the Next action card's create-invites state (Item 2).
 - `spec/operator_ui_concept.md` — the Workflow card's ≤4-button budget (Item 2).
 - `docs/status.md` — row when Item 2 lands.

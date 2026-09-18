@@ -234,7 +234,7 @@
               {# 19P.6 rung 1 — unconditional. The page is keyed on the
                  reviewer now, so it exists for every row; it used to be
                  `{% if row.invitation %}`, which left the table a list
-                 of names that went nowhere until Create invites. #}
+                 of names that went nowhere until Prepare ran. #}
               <a href="/operator/sessions/{{ session.id }}/invitations/reviewers/{{ row.reviewer.id }}">
                 <strong>{{ row.reviewer.name }}</strong>
               </a><br>

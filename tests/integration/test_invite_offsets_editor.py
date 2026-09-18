@@ -385,7 +385,15 @@ def test_caption_amber_when_validated_but_no_invitations(
     db: Session,
 ) -> None:
     """Session Prepared (validated) but no invitations created →
-    amber-warning with the "create invitations" prompt."""
+    amber-warning naming the roster fix.
+
+    **The branch survives 19Q Item 2 rung 3 and the copy does not.**
+    Prepare creates one invitation per eligible reviewer, so this
+    state now means nobody was eligible when it last ran — the
+    previous prompt, "create invitations before then", pointed at a
+    button that no longer exists. What the operator can actually do is
+    include an assignment for an active reviewer and Prepare again.
+    """
     from app.db.models import User
     from app.schemas.sessions import SessionCreate
     from app.services import sessions as sessions_service, session_lifecycle as lifecycle
@@ -409,7 +417,18 @@ def test_caption_amber_when_validated_but_no_invitations(
     caption = build_auto_send_invites_caption(db, rs)
     assert caption is not None
     assert caption["tone"] == "amber-warning"
-    assert "create invitations" in caption["text"]
+    # `validated`, so Prepare is available and the copy names it
+    # plainly. The `ready` sibling names Revert instead, because there
+    # Prepare is neither rendered nor accepted — see
+    # `test_reminder_offsets_editor.py`'s counterpart.
+    assert "run Prepare session before then" in caption["text"]
+    assert "create invitations" not in caption["text"], (
+        "the caption still points at the retired Create invites button"
+    )
+    assert "revert to draft" not in caption["text"], (
+        "this is the validated branch; Prepare works here and Revert "
+        "would cost the operator their instruments for nothing"
+    )
 
 
 def test_caption_green_when_invitations_exist(db: Session) -> None:

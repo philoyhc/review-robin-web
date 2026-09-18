@@ -11,7 +11,6 @@
    ``views.build_workflow_card_context`` per the gating rules in
    ``spec/workflow_card.md`` "Single-row button layout":
 
-   - Create invites hides once invitations exist.
    - Send invites hides once invitations are sent.
    - Release responses / Stop releasing share a slot,
      mutually exclusive on ``is_response_release_window_open``.
@@ -27,7 +26,7 @@
    - ``is_draft`` / ``is_validated`` / ``is_ready`` / ``is_expired`` /
      ``is_archived`` (bool flags)
    - ``revert_visible`` / ``prepare_visible`` /
-     ``create_invites_visible`` / ``send_invites_visible`` /
+     ``send_invites_visible`` /
      ``activate_visible`` / ``send_reminders_visible`` /
      ``close_visible`` / ``release_responses_visible`` /
      ``stop_release_visible`` / ``archive_visible`` (bool flags
@@ -129,7 +128,7 @@
           <p>Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards.</p>
         {% else %}
           {# State 4 / 4W — Prepared, no invites yet. #}
-          <p>Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses.</p>
+          <p>Setup is prepared and the reviewer surface is previewable, but there are no invitations. <strong>Prepare session</strong> creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses.</p>
         {% endif %}
         {% if validation_summary.needs_acknowledge %}
           <p class="form-help" style="margin: 0;">
@@ -145,7 +144,7 @@
     {% elif is_ready %}
       {% if not invitations_generated %}
         {# State 7 #}
-        <p>Session is open for responses. Create invites and send them so reviewers know they can start.</p>
+        <p>Session is open for responses, but no invitations exist — nobody has been told they can start. Only <strong>Prepare session</strong> creates them and an open session cannot run it: <strong>Revert to draft</strong> first, which stops responses, then fix the roster, Prepare, and activate again.</p>
       {% elif not invitations_sent %}
         {# State 8 #}
         <p>Session is open. Send the prepared invitations so reviewers know they can start.</p>
@@ -235,14 +234,6 @@
         {% endif %}
       </form>
     {% endif %}
-    {% if create_invites_visible %}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/invitations/generate"
-            id="next-action-generate-invites-form">
-        <input type="hidden" name="return_to"
-               value="{{ _next_action_return_to or 'home' }}">
-      </form>
-    {% endif %}
     {% if send_invites_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/send-all"
@@ -309,11 +300,6 @@
         <button class="btn" type="submit"
                 form="next-action-prepare-form">Prepare<br>session</button>
       {% endif %}
-    {% endif %}
-
-    {% if create_invites_visible %}
-      <button class="btn" type="submit"
-              form="next-action-generate-invites-form">Create<br>invites</button>
     {% endif %}
 
     {% if send_invites_visible %}

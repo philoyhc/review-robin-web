@@ -1163,30 +1163,24 @@ def test_the_invite_step_names_itself_in_the_failure_banner(
     assert "Prepare session failed at the Create invitations." in body
 
 
-def test_prepare_does_not_retire_the_create_invites_button(
+def test_the_create_invites_route_is_gone(
     client: TestClient, db: Session
 ) -> None:
-    """Rung 2's explicit constraint: the button stays for one rung.
+    """Rung 2's constraint, inverted by rung 3.
 
-    It already self-conceals once invitations exist
-    (`invitations_generated`), so on a prepared session it is hidden
-    rather than gone — retiring the route and the markup is rung 3.
-    This asserts the route is still live, which is the half a template
-    check would miss.
+    One rung ago this asserted the opposite —
+    `test_prepare_does_not_retire_the_create_invites_button`, pinning
+    that `POST /invitations/generate` still answered while Prepare
+    quietly took over creation. That was the point: the button
+    self-conceals on `invitations_generated`, so rung 2 could land
+    without touching it, and rung 3 could retire it deliberately
+    rather than by accident. This is the same guard pointing the other
+    way.
     """
     review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-btn")
     client.post(
         f"/operator/sessions/{review_session.id}/workflow/prepare",
         follow_redirects=False,
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/invitations/generate",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, (
-        "POST /invitations/generate must still answer in rung 2; "
-        "retiring it is rung 3"
     )
     rows = list(
         db.execute(
@@ -1195,4 +1189,12 @@ def test_prepare_does_not_retire_the_create_invites_button(
             )
         ).scalars()
     )
-    assert len(rows) == 1, "the still-live button double-created"
+    assert len(rows) == 1, "Prepare is the creator now; it made nothing"
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    assert response.status_code == 404, (
+        "the Create invites route still answers after rung 3 retired it"
+    )

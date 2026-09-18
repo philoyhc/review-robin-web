@@ -59,7 +59,17 @@ def _operator_creates_session_with_pair(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    # Prepare rather than the `?validated=1` promotion: since 19Q.2
+    # rung 2 it is what creates the invitations, and rung 3 retired the
+    # `POST /invitations/generate` this file used to call below.
+    response = operator_client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
+    )
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -228,9 +238,6 @@ def test_invite_mismatch_renders_banner_warning(
     # Find the invitation token.
     from app.db.models import EmailOutbox, Invitation
 
-    operator.post(
-        f"/operator/sessions/{review_session.id}/invitations/generate"
-    )
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one()

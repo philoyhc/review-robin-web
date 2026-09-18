@@ -15,6 +15,10 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import Invitation, ReviewSession
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(
@@ -102,10 +106,30 @@ def test_outbox_child_page_lists_seeded_rows(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-rows")
     _seed_invite_targets(client, review_session.id)
-    client.post(
-        f"/operator/sessions/{review_session.id}/invitations/generate",
+    # This test skipped itself green until 19Q.2 rung 3. The fixture
+    # imported rosters but never pinned a rule or generated
+    # assignments, so nobody was eligible, `POST /invitations/generate`
+    # created nothing, and the guard below took the skip — for years,
+    # reporting success. Rung 3 retired that route, which forced the
+    # call out; the three lines that make the fixture real cost less
+    # than leaving a dead test behind.
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
         follow_redirects=False,
     )
+    assert response.status_code == 303, response.text
+    # **And a send**, which is the defect the skip was hiding. The
+    # docstring says "seed an invitation that populates email_outbox";
+    # creating one never did that — `generate_invitations` discards the
+    # raw token and writes no email. Only a send writes an
+    # `EmailOutbox` row, which is what this page renders.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one_or_none()

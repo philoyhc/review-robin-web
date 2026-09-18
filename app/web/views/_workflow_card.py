@@ -184,8 +184,6 @@ def build_workflow_card_context(
     # rendered as disabled greys. Each visible button fills 25%
     # of the row's width via the grid layout in base.html. Pruning
     # rules:
-    # - Create invites hides once invitations exist (no
-    #   regenerate-from-the-card affordance);
     # - Send invites hides once invitations are sent;
     # - Release / Stop share a slot, mutually exclusive on
     #   ``is_response_release_window_open``;
@@ -198,9 +196,11 @@ def build_workflow_card_context(
     )
     revert_visible = is_validated or is_ready or is_expired
     prepare_visible = (is_draft and not is_setup_empty) or is_validated
-    create_invites_visible = (
-        is_validated or is_ready
-    ) and not invitations_generated
+    # `create_invites_visible` retired at 19Q Item 2 rung 3 — Prepare
+    # creates the invitations now, so there is no separate button to
+    # show or hide. `invitations_generated` stays: it still gates
+    # Send invites below, and a clean Prepare can leave it False when
+    # no reviewer is eligible.
     send_invites_visible = (
         (is_validated or is_ready)
         and invitations_generated
@@ -237,7 +237,6 @@ def build_workflow_card_context(
         "is_archived": is_archived,
         "revert_visible": revert_visible,
         "prepare_visible": prepare_visible,
-        "create_invites_visible": create_invites_visible,
         "send_invites_visible": send_invites_visible,
         "activate_visible": activate_visible,
         "send_reminders_visible": send_reminders_visible,
@@ -555,9 +554,14 @@ def build_auto_send_invites_caption(
       operator-route gate ``_require_validated_or_ready``.
     - ``invite_offsets`` set + Start set + Prepared (``validated``
       or ``ready``) + invitations not yet created → amber
-      warning ("create invitations before then or these will
-      skip"). The trigger skips with
+      warning naming the roster fix. The trigger skips with
       ``reason="invitations_not_created"`` in this case.
+      **Still reachable after 19Q Item 2 rung 3**, which is why the
+      branch survives the button's retirement: Prepare creates one
+      invitation per *eligible* reviewer, so a session that validates
+      with none eligible is Prepared with no invitations. The copy
+      names the roster fix rather than a Create invites button,
+      because there is no longer a button that would help.
     - ``invite_offsets`` set + Start set + Prepared + invitations
       created → green calm caption ("System will dispatch
       automatically; you can also Send all now").
@@ -607,12 +611,36 @@ def build_auto_send_invites_caption(
             ),
         }
     if not invitations.has_invitations(db, review_session.id):
+        # **The remedy differs by state, and naming the wrong one is
+        # worse than naming none.** Prepare is the only creator since
+        # 19Q Item 2 rung 2, and `prepare_visible` is
+        # `(is_draft and not is_setup_empty) or is_validated` — so in
+        # `ready` the button is not rendered, `POST /workflow/prepare`
+        # fails its `is_editable` precondition, and every roster
+        # mutator 409s. A cold read of the item caught rung 3's first
+        # copy telling a `ready` operator to do two things that both
+        # fail. From `ready` the only route back is Revert, which
+        # closes every accepting instrument — a real cost, so the copy
+        # says so rather than making it a surprise.
+        if lifecycle.is_ready(review_session):
+            return {
+                "tone": "amber-warning",
+                "text": (
+                    f"Auto-send scheduled at {earliest_text} — "
+                    f"currently inactive: there are no invitations to "
+                    f"send. Creating them needs Prepare, which an open "
+                    f"session cannot run — revert to draft (this stops "
+                    f"responses), fix the roster, then Prepare and "
+                    f"activate again before then, or these will skip."
+                ),
+            }
         return {
             "tone": "amber-warning",
             "text": (
                 f"Auto-send scheduled at {earliest_text} — currently "
-                f"inactive: create invitations before then or these "
-                f"will skip."
+                f"inactive: there are no invitations to send. Prepare "
+                f"creates one per eligible reviewer — run Prepare "
+                f"session before then, or these will skip."
             ),
         }
     return {
@@ -703,8 +731,12 @@ def build_auto_send_reminders_caption(
             "tone": "amber-warning",
             "text": (
                 f"Auto-send reminders scheduled at {earliest_text} — "
-                f"currently inactive: create invitations before then "
-                f"or these will skip."
+                f"currently inactive: there are no invitations, so "
+                f"there is nobody to remind. This caption renders only "
+                f"once the session is open, and an open session cannot "
+                f"run Prepare — revert to draft (this stops "
+                f"responses), fix the roster, then Prepare and "
+                f"activate again before then, or these will skip."
             ),
         }
     return {

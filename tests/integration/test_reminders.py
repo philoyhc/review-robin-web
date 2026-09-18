@@ -64,7 +64,22 @@ def _populate(client: TestClient, db: Session, session_id: int, *, reviewers: li
 
 
 def _activate(client: TestClient, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    # Prepare, not the `?validated=1` promotion: since 19Q.2 rung 2
+    # Prepare is what creates the invitations, and every test below
+    # that used to call `POST /invitations/generate` now relies on it.
+    response = client.post(
+        f"/operator/sessions/{session_id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    # 303 alone says nothing: `workflow_prepare` also 303s on a failed
+    # validation, on the response-loss detour and on the `is_editable`
+    # precondition. 19Q.2 rung 1 wrote that guard for
+    # `_strand_an_invitation` and rung 3 re-fixtured 46 tests without
+    # it — named by the item's cumulative cold read.
+    assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
+    )
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -131,7 +146,6 @@ def test_send_reminder_reuses_invitation_url_without_rotating_token(
     session = _ready_session(
         client, db, "rem-reuse", reviewers=["rae@example.edu"]
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -173,7 +187,6 @@ def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     session = _ready_session(
         client, db, "rem-fallback", reviewers=["rae@example.edu"]
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -208,7 +221,6 @@ def test_remind_incomplete_targets_only_incomplete(
         "rem-bulk",
         reviewers=["rae@example.edu", "sam@example.edu"],
     )
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     rae_inv = db.execute(
         select(Invitation, Reviewer)
         .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
@@ -272,7 +284,6 @@ def test_remind_incomplete_writes_single_batch_audit_event(
     session = _ready_session(
         client, db, "rem-audit", reviewers=["rae@example.edu", "sam@example.edu"]
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitations_rows = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalars().all()
@@ -303,7 +314,6 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
     session = _ready_session(
         client, db, "rem-stamp", reviewers=["rae@example.edu"]
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -369,7 +379,6 @@ def test_submitted_with_warn_override_classified_incomplete(
     session = _ready_session(
         operator, db, "rem-override", reviewers=["rae@example.edu"]
     )
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -420,7 +429,6 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
     session = _ready_session(
         operator, db, "rem-empty", reviewers=["rae@example.edu"]
     )
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()

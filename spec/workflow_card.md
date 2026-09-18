@@ -538,12 +538,20 @@ Pre-flight gates:
   The *sets* differ, and only the test is shared: the table lists
   eligible reviewers whether or not they have an invitation and
   whatever its status, while the send set is the `pending` subset of
-  those. Every surface that decides whether a reviewer is in the
-  session applies that one test — the table, `generate_invitations`,
-  this button, the scheduled auto-send and the per-row **Send** — so
-  they cannot drift apart. Naming them rather than counting them is
-  deliberate: a count is the part that goes stale when a sixth
-  arrives.
+  those. Four surfaces share one helper,
+  `invitations._assigned_active_reviewer_ids`:
+  `generate_invitations`, this button, the scheduled auto-send and the
+  per-row **Send**. Those four cannot drift apart, because there is
+  one query.
+
+  **The Manage Invitations table is a fifth surface and a second
+  copy.** It reaches the same predicate through
+  `monitoring._assigned_active_reviewers`, a separate `select` with
+  the same three filters — which is how the table and the Send all
+  button came to disagree about who was in the session in the first
+  place. Two copies of a query agree by luck, not by construction.
+  Unifying them is recorded as open; until it lands, this paragraph
+  says four and names the fifth rather than claiming five.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls

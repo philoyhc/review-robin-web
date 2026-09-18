@@ -75,7 +75,6 @@ _EXPECTED_KEYS = {
     "is_archived",
     "revert_visible",
     "prepare_visible",
-    "create_invites_visible",
     "send_invites_visible",
     "activate_visible",
     "send_reminders_visible",
@@ -285,7 +284,6 @@ def test_archive_visible_gates_on_expired_only(
 _VISIBLE_KEYS = (
     "revert_visible",
     "prepare_visible",
-    "create_invites_visible",
     "send_invites_visible",
     "activate_visible",
     "send_reminders_visible",
@@ -310,7 +308,7 @@ def test_draft_empty_state_surfaces_nothing(
     assert _visible_set(ctx) == set()
 
 
-def test_validated_no_invites_surfaces_revert_prepare_create_activate(
+def test_validated_no_invites_surfaces_revert_prepare_activate(
     client: TestClient, db: Session
 ) -> None:
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-4")
@@ -320,21 +318,21 @@ def test_validated_no_invites_surfaces_revert_prepare_create_activate(
         db, sess, return_to="home"
     )
     visible = _visible_set(ctx)
+    # `create_invites_visible` retired at 19Q.2 rung 3 — Prepare creates
+    # the invitations, so this state surfaces three buttons, not four.
     assert visible == {
         "revert_visible",
         "prepare_visible",
-        "create_invites_visible",
         "activate_visible",
     }
     assert len(visible) <= 4
 
 
-def test_ready_no_invites_surfaces_revert_create_close(
+def test_ready_no_invites_surfaces_revert_close(
     client: TestClient, db: Session
 ) -> None:
-    """Ready state surfaces ≤ 3 buttons: revert + create-invites
-    (or send-invites / send-reminders depending on invitation
-    progression) + close. **Release responses + Stop releasing
+    """Ready state surfaces ≤ 3 buttons: revert + close, plus
+    send-invites or send-reminders once invitations exist. **Release responses + Stop releasing
     stay hidden until the session has closed/expired** — the
     operator only takes the manual release shortcut post-deadline."""
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")
@@ -344,9 +342,12 @@ def test_ready_no_invites_surfaces_revert_create_close(
         db, sess, return_to="home"
     )
     visible = _visible_set(ctx)
+    # Two buttons since 19Q.2 rung 3. A `ready` session with no
+    # invitations means nobody was eligible when Prepare last ran, and
+    # the only fix is on the roster — there is no button here that
+    # would create them.
     assert visible == {
         "revert_visible",
-        "create_invites_visible",
         "close_visible",
     }
     assert ctx["release_responses_visible"] is False

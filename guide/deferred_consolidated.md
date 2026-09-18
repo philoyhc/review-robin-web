@@ -1471,3 +1471,42 @@ functions. Writing the full contract now means transcribing ship-state
 from the code and calling it a spec — the shape `spec/` exists not to be.
 The trigger is unchanged: the next change to purge behaviour writes the
 section.
+
+### Three carried out of 19Q Item 2
+
+The item's cumulative cold read found all three cited as "recorded
+here" by the plan while no entry existed. They are entries now, so the
+plan can archive without orphaning them.
+
+**1. Pruning stale invitation rows on re-Prepare.** `generate_invitations`
+is additive and never deletes, so a reviewer invited at an earlier
+Prepare and since made ineligible keeps a `pending` row forever. 19Q.2
+rung 1 made that harmless — every send path filters on eligibility —
+but the row still counts toward `Invitations created` on the Manage
+Invitations info row (see 3). Deleting one is the risk: a *sent*
+invitation is live in a reviewer's inbox, and a prune that cannot tell
+the two apart destroys a working link. The trigger is a decision about
+what `Invitations created` should count; until then, filtered-not-pruned
+stands.
+
+**2. A withheld send is not audited.** `counts.sent = 0` on
+`session.scheduled_invites_fired` has two causes since 19Q.2 rung 1 —
+every invitation already sent, or every pending one belonging to an
+ineligible reviewer — and nothing distinguishes them. A timer fires,
+the log says `dispatched 0`, pending rows sit there, and no event says
+why. Neither send path audits the withheld rows. A skip event means a
+new `EVENT_SCHEMAS` entry, which is why rung 1 did not add one
+mid-slice. `app/services/scheduled_events/_invites.py`'s
+`_dispatch_pending_invitations` docstring points here.
+
+**3. `monitoring._assigned_active_reviewers` duplicates
+`invitations._assigned_active_reviewer_ids`.** Same join, same three
+filters, two `select`s — and **this is the root cause of the bug 19Q.2
+rung 1 fixed**: the Manage Invitations table filtered on one copy while
+Send all did not filter at all, so the page and the button disagreed
+about who was in the session. Rung 1 unified the four *invitation*
+surfaces on one helper and left the table's copy alone, because
+unifying it reaches into the monitoring layer and past the rung.
+`spec/workflow_card.md`'s Send-invites bullet names the split rather
+than claiming the surfaces cannot drift. Two copies of a query agree by
+luck; the trigger is the next change to either.

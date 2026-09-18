@@ -71,7 +71,22 @@ def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_emai
 
 
 def _activate(client: TestClient, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    # Prepare, not the `?validated=1` promotion: since 19Q.2 rung 2
+    # Prepare is what creates the invitations, and every test below
+    # that used to call `POST /invitations/generate` now relies on it.
+    response = client.post(
+        f"/operator/sessions/{session_id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    # 303 alone says nothing: `workflow_prepare` also 303s on a failed
+    # validation, on the response-loss detour and on the `is_editable`
+    # precondition. 19Q.2 rung 1 wrote that guard for
+    # `_strand_an_invitation` and rung 3 re-fixtured 46 tests without
+    # it — named by the item's cumulative cold read.
+    assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
+    )
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -112,48 +127,76 @@ def test_invitations_page_renders_workflow_card(
     assert 'value="invitations"' in body
 
 
-def test_generate_creates_one_per_assigned_reviewer_and_is_idempotent(
-    client: TestClient, db: Session
-) -> None:
-    session = _ready_session(client, db, code="gen-1")
+def test_the_generate_route_is_gone(client: TestClient, db: Session) -> None:
+    """`POST /invitations/generate` retired at 19Q Item 2 rung 3.
 
-    first = client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
-    assert first.status_code == 303
+    Three tests used to live here — one per assigned reviewer and
+    idempotent, 409 from `draft`, live from `validated`. Every one of
+    those properties is now Prepare's and is asserted against Prepare
+    in `test_workflow_super_button.py`
+    (`test_prepare_creates_one_invitation_per_eligible_reviewer`,
+    `test_a_failed_validation_creates_no_invitations`,
+    `test_re_prepare_is_additive_and_preserves_existing_tokens`), so
+    they are deleted rather than re-aimed: re-aiming them at Prepare
+    would have duplicated those three under names that describe a
+    button nobody can press.
 
-    rows = db.execute(
-        select(Invitation).where(Invitation.session_id == session.id)
-    ).scalars().all()
-    assert len(rows) == 1
-    assert rows[0].status == "pending"
-    assert rows[0].token_hash  # hash stored
-    assert rows[0].sent_at is None and rows[0].opened_at is None
-
-    second = client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
-    assert second.status_code == 303
-    rows_after = db.execute(
-        select(Invitation).where(Invitation.session_id == session.id)
-    ).scalars().all()
-    assert len(rows_after) == 1  # still 1, no duplicate
-
-
-def test_generate_409_while_session_draft(
-    client: TestClient, db: Session
-) -> None:
-    """The invitation gate still rejects ``draft`` sessions (per
-    18F Part 2's relaxation: validated or ready, not draft)."""
-    session = _create_session(client, db, "draft-1")
-    _populate(client, db, session.id, reviewer_email="rae@example.edu")
+    What is left is the one thing those tests cannot say — that the
+    route itself is gone. A POST is not a bookmark (Item 2, open
+    question 2), so it 404s rather than redirecting.
+    """
+    session = _ready_session(client, db, code="gen-gone")
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/generate",
         follow_redirects=False,
     )
-    assert response.status_code == 409
+    assert response.status_code == 404, (
+        "the Create invites route answered; Prepare is the only "
+        "creator since rung 2 and the button retired at rung 3"
+    )
+
+
+def _ready_session_without_invitations(
+    client: TestClient,
+    db: Session,
+    code: str,
+    reviewer_email: str = "rae@example.edu",
+) -> ReviewSession:
+    """A `ready` session with assignments and **no** invitations.
+
+    Since 19Q.2 rung 2, Prepare creates one invitation per eligible
+    reviewer, so `_ready_session` — which goes through Prepare — can no
+    longer produce this state. It is still reachable, by the
+    `?validated=1` promotion that `build_workflow_card_context`
+    performs inline: that path runs validation and flips
+    `draft -> validated` without running Prepare, so nothing creates
+    invitations. The author's ruling (2026-09-18) was to keep that
+    backend rather than migrate ~200 tests off it, so the state this
+    fixture builds is one an operator can still reach.
+
+    The tests below are the ones that guard what the page does when a
+    listed reviewer has no invitation row. Pointing them at
+    `_ready_session` after rung 3 would have made every one of them
+    vacuous — a table where every row always has an invitation cannot
+    exercise the row that does not.
+    """
+    session = _create_session(client, db, code)
+    _populate(client, db, session.id, reviewer_email=reviewer_email)
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    response = client.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(session)
+    assert (
+        db.execute(
+            select(Invitation).where(Invitation.session_id == session.id)
+        ).first()
+        is None
+    ), "this fixture exists to have no invitations; something created one"
+    return session
 
 
 def _validated_session(
@@ -175,29 +218,12 @@ def _validated_session(
     return session
 
 
-def test_generate_works_from_validated_session(
-    client: TestClient, db: Session
-) -> None:
-    """18F Part 2 — Create invites is live from Validated (the
-    Prepared state), not only from Ready."""
-    session = _validated_session(client, db, "val-gen")
-    response = client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
-
-
 def test_send_all_works_from_validated_session(
     client: TestClient, db: Session
 ) -> None:
     """18F Part 2 — Send invites is live from Validated too, so an
     operator can notify reviewers ahead of activation."""
     session = _validated_session(client, db, "val-send")
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/send-all",
         follow_redirects=False,
@@ -233,7 +259,6 @@ def test_send_writes_outbox_and_flips_to_sent(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="send-1")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -262,7 +287,6 @@ def test_send_all_writes_one_outbox_per_pending(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="sendall-1")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
 
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/send-all",
@@ -290,7 +314,6 @@ def test_regenerate_rotates_token_and_resets_status(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="regen-1")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -327,7 +350,6 @@ def test_token_url_with_matching_email_stamps_opened_and_redirects(
 ) -> None:
     operator = make_client(alice)
     session = _ready_session(operator, db, code="open-1")
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -360,7 +382,6 @@ def test_token_url_repeat_visit_does_not_restamp(
 ) -> None:
     operator = make_client(alice)
     session = _ready_session(operator, db, code="repeat-1")
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -392,7 +413,6 @@ def test_token_url_with_mismatched_email_returns_403(
 ) -> None:
     operator = make_client(alice)
     session = _ready_session(operator, db, code="mismatch-1")
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -425,7 +445,6 @@ def test_revert_then_reactivate_keeps_existing_invitations_idempotent(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="reactivate-1")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -439,12 +458,10 @@ def test_revert_then_reactivate_keeps_existing_invitations_idempotent(
     )
     _activate(client, session.id)
 
-    # Generating again is a no-op: same row, same token.
-    response = client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The re-Prepare inside `_activate` is a no-op for invitations:
+    # same row, same token. It used to be a `POST /invitations/generate`
+    # here; since 19Q.2 rung 3 that route is gone and Prepare is the
+    # only creator, so this asserts the same idempotence one layer up.
     rows = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalars().all()
@@ -479,7 +496,6 @@ def test_audit_events_written_for_lifecycle(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="audit-inv")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -514,7 +530,6 @@ def test_record_open_audit_event_written(
 ) -> None:
     operator = make_client(alice)
     session = _ready_session(operator, db, code="open-audit")
-    operator.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -547,7 +562,6 @@ def test_invitations_page_renders_consolidated_column_headers(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="cols-1")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
 
     body = client.get(
         f"/operator/sessions/{session.id}/invitations"
@@ -585,7 +599,6 @@ def test_invitations_page_renders_review_progress_and_required_fields_format(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="prog-fmt")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
 
     body = client.get(
         f"/operator/sessions/{session.id}/invitations"
@@ -604,7 +617,6 @@ def test_invitations_data_cells_render_in_pills(
     ``<span class="pill ...">`` so the table reads as a sparkline of
     state at a glance."""
     session = _ready_session(client, db, code="pill-cells")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -645,7 +657,6 @@ def test_invitations_page_email_status_reflects_outbox_row(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="email-status")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     body = client.get(
         f"/operator/sessions/{session.id}/invitations"
     ).text
@@ -680,7 +691,7 @@ def test_invitations_page_reviewer_name_links_to_drill_in(
     before case is the whole point and an after-only assertion passes on
     the old markup too.
     """
-    session = _ready_session(client, db, code="drill-link")
+    session = _ready_session_without_invitations(client, db, "drill-link")
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
@@ -697,7 +708,6 @@ def test_invitations_page_reviewer_name_links_to_drill_in(
         f"/operator/sessions/{session.id}/invitations"
     ).text
 
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     assert href in client.get(
         f"/operator/sessions/{session.id}/invitations"
     ).text
@@ -714,9 +724,16 @@ def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
     # 1 and the Location assertion below holds whichever id the route
     # interpolates — which is how the first version of this test
     # survived a mutation swapping them.
-    _ready_session(client, db, code="drill-308-pad")
+    #
+    # **The pad has to create reviewers without creating invitations**,
+    # or the two sequences advance in lockstep and the ids coincide
+    # again. They did, briefly, at 19Q.2 rung 3: the pad was a
+    # `_ready_session`, which since rung 2 mints one invitation per
+    # reviewer, so padding by one advanced both by one. The assertion
+    # below caught it, which is the whole reason it is written down
+    # rather than left to the fixture.
+    _ready_session_without_invitations(client, db, "drill-308-pad")
     session = _ready_session(client, db, code="drill-308")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -797,7 +814,13 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     reach it: every reviewer in the session, including one that never
     had an invitation, where before only an invitation could name one.
     """
-    session = _ready_session(client, db, code=f"drill-norow-{how[:4]}")
+    # No invitations at all, then make the reviewer ineligible — the
+    # test needs *both* facts and since 19Q.2 rung 2 a Prepared
+    # session has an invitation for everyone who was eligible at
+    # Prepare time, including this reviewer before the edit below.
+    session = _ready_session_without_invitations(
+        client, db, f"drill-norow-{how[:4]}"
+    )
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
@@ -836,7 +859,7 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     # operator to press it.
     card = _invitation_card(body)
     assert "will skip this one" in card
-    assert "Create invitations from" not in card
+    assert "Prepare session</strong> on the" not in card
     # The per-row cards need a row; this reviewer has none. The string
     # appears once in the whole template tree and not in `base.html`.
     assert "Review Progress" not in body
@@ -856,7 +879,6 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
     effectively did.
     """
     session = _ready_session(client, db, code="drill-url-off")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -908,7 +930,7 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     before it, the page needed an invitation in the path, so "not
     sent" always meant one existed.
     """
-    session = _ready_session(client, db, code="drill-noinv")
+    session = _ready_session_without_invitations(client, db, "drill-noinv")
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
@@ -1014,7 +1036,6 @@ def test_invitation_reviewer_detail_renders(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="drill-detail")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1114,7 +1135,6 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
     for a reminder that demonstrably went out.
     """
     session = _ready_session(client, db, code="drill-remind")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1169,7 +1189,11 @@ def test_detail_page_url_region_distinguishes_its_states(
     no URL ever issued; an absent invitation is a different state, and
     the third branch names the action that fixes it.
     """
-    session = _ready_session(client, db, code="drill-3way")
+    # The three states have to be walked in order, and since 19Q.2
+    # rung 3 the middle one is reached by Prepare rather than by a
+    # `POST /invitations/generate`. Start with the fixture that has no
+    # invitations at all, then revert and Prepare to create one.
+    session = _ready_session_without_invitations(client, db, "drill-3way")
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
@@ -1177,14 +1201,24 @@ def test_detail_page_url_region_distinguishes_its_states(
 
     # No invitation: the card names the action, not the missing URL.
     card = _invitation_card(client.get(url).text)
-    assert "Create invitations from" in card
+    assert "creates one invitation per eligible reviewer" in card
     assert "No invitation URL has been issued yet." not in card
 
+    client.post(
+        f"/operator/sessions/{session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
     # Invitation created, never sent: now it IS the missing URL.
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     card = _invitation_card(client.get(url).text)
     assert "No invitation URL has been issued yet." in card
-    assert "Create invitations from" not in card
+    assert "creates one invitation per eligible reviewer" not in card
 
     # Sent: the URL itself, and neither fallback.
     invitation = db.execute(
@@ -1196,7 +1230,7 @@ def test_detail_page_url_region_distinguishes_its_states(
     card = _invitation_card(client.get(url).text)
     assert "/me/invite/" in card
     assert "No invitation URL has been issued yet." not in card
-    assert "Create invitations from" not in card
+    assert "creates one invitation per eligible reviewer" not in card
 
 
 def test_detail_page_after_regenerate_reports_the_current_token(
@@ -1218,7 +1252,6 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     (Item 6 open question 4).
     """
     session = _ready_session(client, db, code="drill-regen")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1271,7 +1304,6 @@ def test_detail_page_reports_a_failed_delivery(
     and the card must not wait for the producer to exist.
     """
     session = _ready_session(client, db, code="drill-failed")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1309,7 +1341,6 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
     status unconditionally would pass there and clutter every card.
     """
     session = _ready_session(client, db, code="drill-sent-ok")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1345,7 +1376,6 @@ def test_table_and_card_agree_on_a_failed_delivery(
     genre of contradiction this item exists to close.
     """
     session = _ready_session(client, db, code="tbl-card-agree")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1391,7 +1421,6 @@ def test_delivery_pill_does_not_need_a_send_timestamp(
     `status` is back to `pending`, and no pill renders.
     """
     session = _ready_session(client, db, code="drill-nodate")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1439,7 +1468,6 @@ def test_regenerate_clears_a_stale_delivery_pill(
     pill under any gate, so removing the gate entirely still passed.
     """
     session = _ready_session(client, db, code="drill-stale-pill")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1478,7 +1506,6 @@ def test_per_row_remind_redirects_to_invitations_page(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="remind-redir")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1499,7 +1526,6 @@ def test_invitations_remind_incomplete_bulk_endpoint(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="bulk-remind")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1549,7 +1575,6 @@ def test_send_invitation_populates_cc_bcc_from_override_json(
     }
     db.commit()
 
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1574,7 +1599,6 @@ def test_send_reminder_populates_cc_bcc_from_override_json(
     }
     db.commit()
 
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1600,7 +1624,6 @@ def test_send_omits_cc_bcc_when_overrides_blank(
 ) -> None:
     session = _ready_session(client, db, code="cc-bcc-blank")
     # No overrides set at all.
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -1736,7 +1759,6 @@ def test_invitations_filter_status_narrows_rows(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "filt-status")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     # Send invitation for Rae only — Ren stays "not sent".
     invitation_rae = db.execute(
         select(Invitation)
@@ -1765,7 +1787,6 @@ def test_invitations_filter_search_narrows_rows(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "filt-search")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     # Search by partial email.
     body = _strip_datalist(client.get(
         f"/operator/sessions/{session.id}/invitations?q=rae"
@@ -1783,7 +1804,6 @@ def test_invitations_filter_no_match_shows_empty_message(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "filt-empty")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     body = client.get(
         f"/operator/sessions/{session.id}/invitations?q=nobody"
     ).text
@@ -1799,7 +1819,6 @@ def test_regenerate_all_rotates_every_token_and_resets_status(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "regen-all-rot")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     # Send Rae's invitation so its status is "sent" and we can confirm
     # regenerate-all flips it back to "pending".
     rae_invitation = db.execute(
@@ -1840,7 +1859,6 @@ def test_regenerate_all_writes_single_batch_audit_event(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "regen-all-audit")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     client.post(
         f"/operator/sessions/{session.id}/invitations/regenerate-all"
     )
@@ -1873,7 +1891,7 @@ def test_regenerate_all_409_while_session_draft(
 def test_regenerate_all_with_zero_invitations_writes_no_audit(
     client: TestClient, db: Session
 ) -> None:
-    session = _ready_session(client, db, code="regen-all-empty")
+    session = _ready_session_without_invitations(client, db, "regen-all-empty")
     # Don't generate invitations.
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/regenerate-all",
@@ -1985,10 +2003,6 @@ def _strand_an_invitation(
     `monitoring.per_reviewer_progress` (assigned **and** active), while
     their `pending` row is still in the send set.
     """
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
     assert _pending_count(db, session.id) == 2
 
     stranded = db.execute(
@@ -2138,10 +2152,6 @@ def test_send_all_skips_an_active_reviewer_with_no_included_assignment(
     the rule engine would test the rule engine.
     """
     session = _two_reviewer_validated_session(db=db, client=client, code="sa-unassigned")
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        follow_redirects=False,
-    )
     assert _pending_count(db, session.id) == 2
 
     stranded = db.execute(
@@ -2256,3 +2266,44 @@ def test_send_one_refuses_a_reviewer_the_bulk_paths_would_skip(
     assert db.execute(
         select(EmailOutbox).where(EmailOutbox.to_email == stranded.email)
     ).first() is None
+
+
+def test_an_open_session_with_no_invitations_is_told_a_remedy_it_can_reach(
+    client: TestClient, db: Session
+) -> None:
+    """The copy must name an action the state actually offers.
+
+    19Q Item 2 rung 3's first attempt told a `ready` operator to
+    "include an assignment for an active reviewer and run Prepare
+    session again". Measured in that state: the Prepare button is not
+    rendered (`prepare_visible` is `(is_draft and not is_setup_empty)
+    or is_validated`), `POST /workflow/prepare` 303s to
+    `super_step=precondition`, and every roster mutator 409s on
+    `_require_editable`. **Both named remedies were unreachable in the
+    only state where the copy renders** — found by the item's
+    cumulative cold read, not by any test, which is why this exists.
+
+    Revert is the way back, and it is not free: it closes every
+    accepting instrument (`session_lifecycle.py`), so the copy says
+    that rather than letting the operator discover it.
+    """
+    session = _ready_session_without_invitations(client, db, "open-noinv")
+
+    # The premise, asserted rather than assumed — if Prepare ever
+    # becomes reachable from `ready`, this test should fail and the
+    # copy should go back to naming it.
+    assert (
+        client.post(
+            f"/operator/sessions/{session.id}/workflow/prepare",
+            follow_redirects=False,
+        ).headers["location"].find("super_step=precondition")
+        != -1
+    ), "Prepare is reachable from `ready` now; the copy below is stale"
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert "no invitations exist" in body
+    assert "Revert to draft" in body
+    assert "stops responses" in body
+    assert "next-action-prepare-form" not in body, (
+        "the Prepare button renders here after all"
+    )
