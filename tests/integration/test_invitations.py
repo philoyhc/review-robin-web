@@ -18,6 +18,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.db.models.email_outbox import EMAIL_OUTBOX_STATUSES
+from app.services import invitations as inv_service
 from app.web import views
 from ._full_matrix import (
     generate_via_page_button,
@@ -1201,6 +1202,11 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     # Exactly one em-dash: Email sent is empty for the new token, Last
     # reminder still carries the old stamp.
     assert facts.count(_NO_DATE) == 1
+    # No delivery pill — but note this test cannot prove the gate: its
+    # outbox row is `sent`, which renders nothing under any gate.
+    # `test_regenerate_clears_a_stale_delivery_pill` is the one that
+    # discriminates.
+    assert _DELIVERY("sent") not in facts
 
 
 def test_detail_page_reports_a_failed_delivery(
@@ -1320,6 +1326,108 @@ def test_table_and_card_agree_on_a_failed_delivery(
         ).text
     )
     assert _DELIVERY("failed") in facts
+
+
+def test_delivery_pill_does_not_need_a_send_timestamp(
+    client: TestClient, db: Session
+) -> None:
+    """A failed send shows its state even with no delivery date.
+
+    Codex, on 19P.6 rung 3's PR: the pill was gated on
+    `invitation.sent_at`, so a `queued` / `sending` / `failed` row whose
+    timestamp is still NULL rendered an em-dash and nothing else —
+    hiding exactly what the pill exists to show. Unreachable today,
+    because `send_invitation` writes `sent_at` and `status="sent"` in
+    one breath, but the shape a 14B async dispatch would produce.
+
+    Simulated by clearing `sent_at` while leaving `status` alone, which
+    is precisely the divergence at issue. The counterpart —
+    `test_detail_page_after_regenerate_reports_the_current_token` —
+    pins the case that stops this from being a plain ungating: there
+    `status` is back to `pending`, and no pill renders.
+    """
+    session = _ready_session(client, db, code="drill-nodate")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    outbox.status = "failed"
+    invitation.sent_at = None
+    db.commit()
+    assert invitation.status != "pending", (
+        "premise: the current token has been sent, only the date is absent"
+    )
+
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ).text
+    )
+    assert _DELIVERY("failed") in facts, (
+        "the state must not depend on the timestamp being populated"
+    )
+    # The date slot is honestly empty — two facts, not one standing in
+    # for the other.
+    assert facts.count(_NO_DATE) == 2
+
+
+def test_regenerate_clears_a_stale_delivery_pill(
+    client: TestClient, db: Session
+) -> None:
+    """A rotated token reports nothing about the old token's delivery.
+
+    This is the test that stops the pill from simply being ungated.
+    Measured: after a send whose outbox row reads `failed`, a
+    **Regenerate** leaves `invitation.sent_at` NULL and `status` back at
+    `pending`, while `most_recent_invitation_status` still returns
+    `failed` — the previous token's fate, for a token that has been
+    rotated and never sent.
+
+    Written after a mutation run showed the sibling regenerate test
+    could not catch this: its outbox row is `sent`, which renders no
+    pill under any gate, so removing the gate entirely still passed.
+    """
+    session = _ready_session(client, db, code="drill-stale-pill")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    outbox.status = "failed"
+    db.commit()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate"
+    )
+    db.refresh(invitation)
+    assert invitation.status == "pending", "premise: the token was rotated"
+    assert (
+        inv_service.most_recent_invitation_status(
+            db, invitation_id=invitation.id
+        )
+        == "failed"
+    ), "premise: the stale status is still what the outbox reports"
+
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ).text
+    )
+    assert _DELIVERY("failed") not in facts, (
+        "the previous token's delivery must not be reported for this one"
+    )
 
 
 def test_per_row_remind_redirects_to_invitations_page(
