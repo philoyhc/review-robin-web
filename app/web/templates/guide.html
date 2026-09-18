@@ -357,32 +357,44 @@
   <div class="card" id="guide-prepare_and_launch">
     <h2>Prepare and activate</h2>
     <p>
-      Generate the assignment pairs using the <strong>Prepare session</strong>
-      button in the Workflow card:
+      <strong>Prepare session</strong> in the Workflow card does three things
+      at once: it generates the assignment pairs, creates an invitation for
+      every active reviewer with at least one assignment, and validates the
+      setup. Nothing is sent and nothing opens &mdash; that is what Activate
+      is for. The checklist on the right of the card tells you when the three
+      Setup pages are ready for it.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/workflow-prepare-session.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Workflow card offering the Prepare session button.">
+           alt="The Workflow card on a draft session, offering the Prepare
+                session button beside an all-ticked setup checklist.">
       <img src="/static/guide/workflow-prepare-session-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Workflow card offering the Prepare session button.">
+           alt="The Workflow card on a draft session, offering the Prepare
+                session button beside an all-ticked setup checklist.">
     </figure>
     <p>
-      If validation passed, the Workflow card will allow you to create the
-      invites and activate the session. Warnings and blocking issues will be
-      shown on the right side of the Workflow card; more details can also be
-      found on the <strong>Validate</strong> page.
+      If validation passed, the card becomes the launch controls:
+      <strong>Send invites</strong> notifies reviewers ahead of time, and
+      <strong>Activate session</strong> opens the session for responses &mdash;
+      you can send before or after activating, in either order.
+      <strong>Revert to draft</strong> goes back, and Prepare can be re-run
+      after a roster change. Warnings and blocking issues are listed on the
+      right of the card, with the detail on the <strong>Validate</strong>
+      page.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/workflow-after-validation.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Workflow card after a successful validation, listing
-                warnings alongside the create-invites and activate actions.">
+           alt="The Workflow card after a successful validation, listing a
+                warning beside the revert, prepare, send-invites and activate
+                actions.">
       <img src="/static/guide/workflow-after-validation-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Workflow card after a successful validation, listing
-                warnings alongside the create-invites and activate actions.">
+           alt="The Workflow card after a successful validation, listing a
+                warning beside the revert, prepare, send-invites and activate
+                actions.">
     </figure>
     <p>
       You can use the <strong>Assignments</strong> page to inspect the
@@ -635,11 +647,15 @@
         disposable.</li>
       <li>In <strong>Quick Setup</strong>, attach all four files and submit.</li>
       <li><strong>Prepare session</strong> from the Workflow card. The session
-        reaches <strong>Validated</strong> with assignments generated — enough
-        of them that the Assignments page, the Responses grid and observer
-        collation all have something to show.</li>
+        reaches <strong>Validated</strong>, with assignments generated and an
+        invitation waiting for each reviewer — enough of them that the
+        Assignments page, the Responses grid and observer collation all have
+        something to show.</li>
       <li>Activate it and look around. Every page is populated, so you can see
-        what your reviewers, reviewees and observers will see.</li>
+        what your reviewers, reviewees and observers will see. Worth a detour
+        along the way: on <strong>Invitations</strong>, click a
+        reviewer&rsquo;s name and use <strong>Open reviewer surface</strong> to
+        read the session from their side.</li>
     </ol>
     <p class="muted">
       Everyone in it is fictional and every address is

@@ -445,11 +445,10 @@ agent sandbox with Chromium against a seeded session.
 between Item 1 and Item 2 merging, teaching a workflow that no longer
 exists.
 
-**2026-09-18** — the same rule decides where the card-copy fix goes. It is
-app copy, so it lands on its own rung **ahead** of the Guide rung rather
-than inside it: bundling them would have the Guide describing a sentence
-that ships in the same merge, which is exactly the intent-not-behavior
-case this Decision rejects.
+**2026-09-18** — the same rule places the card-copy fix: it is app copy,
+so it lands on its own rung **ahead** of the Guide rung. Bundling them
+would have the Guide describing a sentence shipping in the same merge,
+the intent-not-behavior case this Decision rejects.
 
 ### Semantics
 
@@ -470,18 +469,21 @@ case this Decision rejects.
 
 ### Status
 
-**Open.** Rung 1 landed 2026-09-18 (#2464), with a corrective push in the
-same PR: two parity claims in its prose were false — the reviewer surface
-drops a response field unpinned after the reviewer answered it, and two
-of the three preview tabs substitute send-time values. Codex's read
-caught both; nothing in the suite could have.
+**Rungs 1, 1a and 2 landed 2026-09-18**; the close remains. Rung 1 took a
+corrective push for two false parity claims in its new prose (#2464).
 
 **The ladder grew rung 1a**, the card copy, folded in by the author. Its
 finding is the instrument rather than the copy: `ready for prime time`
 was quoted verbatim in `spec/workflow_card.md` and asserted in **no
 test**, so the sentence 19Q Item 2 rung 2 left incomplete had no way to
-go red. Each state's copy grepped against `tests/` — States 7, 3 and 1
-are pinned by 3, 2 and 1 files; States 2 and 5 by none.
+go red. Grepped against `tests/`, States 7/3/1 are pinned by 3/2/1
+files; States 2 and 5 by none.
+
+**Rung 2's recapture needed a seeded warning**: the demo data validates
+with one info issue and none, so a clean shot would not have shown the
+strip the prose beside it describes. One reviewee under an anonymous
+identifier — supported, for analysis-only sessions — puts one there, and
+the capture frames the card alone, so the roster is not in shot.
 
 ### PR ladder
 
@@ -502,8 +504,7 @@ written; this is a third, not a rewrite of either.
 
 - `pytest tests/integration/test_guide_screencaps.py` passes.
 - No Guide prose names `Create invites` or the Previews page.
-- The State 2 Workflow-card copy names invitation creation, pinned by a
-  test that also proves Prepare creates them from that state.
+- State 2's card copy names invitation creation, pinned by a test that also proves the effect.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -512,11 +513,10 @@ written; this is a third, not a rewrite of either.
 
 ### Open questions
 
-1. Does the demo walkthrough (`:628-640`) gain a "look at a reviewer's
-   surface" step now that the drill-in is the door? **Yes**, but framed
-   as an **optional affordance rather than an operational step** — the
-   walkthrough's numbered sequence stays the operator's path, and this
-   is something to look at along the way (author, 2026-09-18).
+1. Does the demo walkthrough gain a "look at a reviewer's surface" step?
+   **Yes, as an optional affordance and not a numbered step** (author,
+   2026-09-18) — it rides inside step 4's "look around" rather than
+   extending the sequence.
 
 ### Out of scope
 
@@ -526,5 +526,5 @@ written; this is a third, not a rewrite of either.
 ### Doc impact
 
 - `docs/status.md` — row when Item 3 lands (Item 3).
-- `spec/rrw_functional_spec.md` — the Guide's own contract, if the walkthrough gains a step per open question 1 (Item 3).
+- `spec/rrw_functional_spec.md` — the Guide's own contract, if the walkthrough gains a step per open question 1 (Item 3). <!-- doc-impact-waived: both conditions failed. That spec documents no Guide page at all — its only "guide" mentions are its own reading-guide section and pointers to plan files — and the walkthrough gained a sentence inside step 4 rather than a step. The Sample session card's contract lives in `spec/operator_ui_concept.md` and `spec/csv_contracts.md` §5a, and the four-step summary there is still accurate. --> <!-- cites: spec/operator_ui_concept.md, spec/csv_contracts.md -->
 - `spec/workflow_card.md` — the State 2 row quotes the card copy verbatim, so it changes with rung 1a (Item 3).
