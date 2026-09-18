@@ -18,6 +18,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.db.models.email_outbox import EMAIL_OUTBOX_STATUSES
+from app.services import email_send
 from app.services import invitations as inv_service
 from app.web import views
 from ._full_matrix import (
@@ -2366,3 +2367,44 @@ def test_the_copy_that_prompts_prepare_names_what_prepare_does(
     assert response.status_code == 303, response.text
     assert "super_status=failed" not in response.headers["location"]
     assert inv_service.has_invitations(db, session.id)
+
+
+def test_state_6_copy_does_not_claim_reviewers_were_told(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """State 6 — invitations sent — used to read "Reviewers have been
+    notified that the review will open."
+
+    Nothing notifies. `generate_invitations`' send path writes an
+    `EmailOutbox` row and flips it `queued` → `sent` in one transaction;
+    `app/services/email_send.py` says "Nothing in the app calls this
+    yet." The claim reached the Guide by being copied out of this card
+    (19Q Item 3 rung 2's cold read), so the card is where it had to be
+    fixed.
+
+    **Pinned by the fact that makes the copy true, not by the copy.**
+    The transport is asserted unreachable during a real send, so the
+    day someone wires it this test fails and the sentence gets revisited
+    rather than quietly becoming wrong in the other direction.
+    """
+    called: list[object] = []
+    monkeypatch.setattr(
+        email_send,
+        "transport_for",
+        lambda *a, **k: called.append(a) or (_ for _ in ()).throw(
+            AssertionError("transport_for was called")
+        ),
+    )
+    session = _validated_session(client, db, "state6-copy")
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    assert not called, "a transport was constructed; the copy below is now wrong"
+    assert inv_service.has_sent_invitations(db, session.id)
+
+    card = _next_action_body(client.get(f"/operator/sessions/{session.id}").text)
+    assert "no mail leaves the app" in card
+    assert "have been notified" not in card

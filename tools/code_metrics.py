@@ -38,6 +38,19 @@ deterministically in ~76s. A metric an assessment quotes and the next
 assessment compares against has to be reproducible, and 76s once per
 snapshot is the right trade.
 
+**Churn refuses to run on a shallow clone**, because there it cannot
+fail. `git blame` cannot see past the graft, so every deleted line the
+walk can attribute is attributed to a commit inside the shallow window
+and both halves of the ratio are forced to the same figure: the
+2026-09-18 assessment measured `100.0% / 100.0%, ratio 1.0x` in a
+six-day sandbox clone against `72.7% / 69.6%, ratio 1.0x` over the real
+2,452 merges. The agreement is arithmetic, not corroboration — the
+numerator and denominator are the same forced number — and the tool
+also printed "all 130 merges" when 130 was 130 of 2,452. A number that
+cannot come out wrong is not a measurement, so this exits non-zero
+rather than reporting one. Duplication reads the worktree and is
+unaffected, so it still runs.
+
 `--churn-sample N` remains for a quick look while iterating on the tool. It
 warns, and its output must not be compared against the action thresholds in
 `guide/README.md` or against a previous snapshot.
@@ -115,6 +128,17 @@ def duplication(root: pathlib.Path) -> None:
         for f, lines in worst_at_10:
             own = len(per_file[f])
             print(f"        {str(f.relative_to(REPO)):<52} {len(lines):>5}/{own:<5} ({len(lines) / own * 100:3.0f}%)")
+
+
+def is_shallow_repository() -> bool:
+    """True when this checkout has a grafted history.
+
+    Agent sandboxes and most CI checkouts clone shallow, and nothing in
+    this repository's workflows sets `fetch-depth`, so a sandbox is the
+    only place `--churn-only` is ever run — which is exactly where it
+    is least able to answer.
+    """
+    return _git("rev-parse", "--is-shallow-repository").strip() == "true"
 
 
 def churn(days: int, sample: int) -> None:
@@ -229,6 +253,16 @@ def main() -> int:
             duplication(REPO / name)
         print()
     if not args.dup_only:
+        if is_shallow_repository():
+            print(
+                "CHURN: refusing to run on a shallow clone.\n"
+                "  `git blame` cannot see past the graft, so both halves of the\n"
+                "  ratio are forced to the same figure and it reports 1.0x\n"
+                "  whatever the truth is. Deepen the checkout first:\n"
+                "      git fetch --unshallow origin main\n"
+                "  (one fetch; the walk then takes a couple of minutes)."
+            )
+            return 1
         print(f"CHURN (lines deleted within {args.churn_days} days of being written)")
         churn(args.churn_days, args.churn_sample)
     return 0

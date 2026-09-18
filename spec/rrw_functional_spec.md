@@ -228,8 +228,8 @@ operator can:
 - **Monitor** invitation and response activity on sessions they
   own.
 - **Download all per-session extracts** for sessions they own.
-- **Pause** an activated session (revert to draft), edit, then
-  re-activate.
+- **Revert to draft** on an activated session — the transition other
+  operator copy still calls *Pause* — then edit and re-activate.
 - **Archive and unarchive** sessions they own.
 - **Purge and archive** a session they own (operator-triggered
   hard delete of responses + rosters + audit log).
@@ -668,9 +668,15 @@ treats the session in lobby and extract surfaces.
   Activate). If warnings exist, the operator must explicitly
   acknowledge them; if blocking errors exist, the transition is
   refused.
-- **`ready → draft`** (pause / revert): Operator clicks Pause
-  Session. The operator must tick a confirmation checkbox; the
-  reviewer surface closes; responses are preserved.
+- **`ready → draft`** (revert): Operator clicks **Revert to draft**.
+  The operator must tick a confirmation checkbox; the reviewer surface
+  closes; responses are preserved. The **Workflow card button** for this
+  is labelled *Revert to draft*, not *Pause Session*. The word *Pause*
+  does still ship elsewhere — `session_detail.html` and the Quick Setup
+  lock both tell the operator to "Pause the session" for this same
+  transition — and six other specs use it as live terminology. That
+  split is recorded in `guide/segment_19O_rosters_and_instruments.md`
+  Item 7; this section describes the button.
 - **`ready → expired`** (Close session): Operator clicks the
   Workflow card's **Close session** button. Every instrument is
   closed and all responses are preserved. From `expired` the
@@ -1280,32 +1286,41 @@ preserves.
 ### 9.8 Validation and activation
 
 The Workflow card on Session Home (and on every Operations-row
-page as chrome) drives the lifecycle. Its ten states are
-spelled out in `spec/workflow_card.md`; functionally they
-cascade:
+page as chrome) drives the lifecycle. **Its state machine is
+`spec/workflow_card.md`'s to state, and is not restated here** —
+twelve states over ten numbers, each with its own body copy and
+button set, which this section carried as a parallel list until it
+went six segments stale. Functionally, what a reader needs from here
+is the shape:
 
-1. **Draft, rosters empty** — short-circuit state. Body explains
-   the next step (populate rosters); no Primary action.
-2. **Draft, populated, pre-generate** — Activate-Session super-
-   button runs Generate → Validate → Activate in one click.
-3. **Draft, generated, no errors** — Primary action is Activate
-   Session (no detour). The Secondary action opens validation details.
-4. **Draft, generated, blocking errors** — Primary action is See
-   validation details (promoted because the operator must look
-   at the errors before they can proceed).
-5. **Validated, no errors, no warnings** — Activate Session is
-   live; Revert to draft is a Secondary action.
-6. **Validated, warnings only** — Activate Session detours
-   through `/validate?activate=1` for warning acknowledgement.
-7. **Activated, pre-invitations** — Invitations is the
-   Primary action; the second body section carries the Pause
-   Session affordance with its own confirm checkbox.
-8. **Activated, mid-cycle** — Monitor Responses is the
-   Primary; Pause stays available.
-9. **Activated, post-deadline** — visible-but-disabled controls;
-   reviewer surface read-only.
-10. **Closed / archived** — terminal; surfaces remain readable;
-    Edit and most destructive actions are inert.
+- The card **short-circuits on an empty setup**. Past that it carries
+  **Revert to draft** as the standing way back from every state that has
+  one, and **one or two** Primary actions depending on state: States 4Err
+  and 5 offer Send invites and Activate session together, and States 7
+  and 10 offer none at all. The per-state matrix is
+  `spec/workflow_card.md`'s.
+- Its **right-hand column** is a setup checklist in State 1 only; a
+  validation issue list wherever validation has findings to show
+  (3, 4W, 4Err); a one-line `Status` in the settled validated states;
+  and nothing in States 2 and 7.
+- **Prepare session** is the only compound action: it generates the
+  assignment pairs, validates, and — only on a clean validation —
+  creates an invitation for every active reviewer with at least one
+  included assignment. A validation error stops it before that last
+  step, so a prepared session can legitimately have no invitations.
+- **Activate** opens the session for responses. Warnings do not block
+  it but must be acknowledged on the Validate page; blocking errors
+  refuse it.
+- **Revert to draft** is the way back from both `ready` and `expired`,
+  and **Close session** is the end-of-cycle transition.
+- The card holds **at most four buttons** in any state
+  (`spec/operator_ui_concept.md`).
+
+Superseded by 18F and 19Q: there is no *Activate-Session
+super-button* running Generate → Validate → Activate in one click, and
+no separate *Create invites* step — Prepare absorbed both. The **card
+button** formerly called *Pause Session* is labelled **Revert to
+draft**; the word survives in other operator copy, per §6.1.
 
 The **Validate page** (`/operator/sessions/{id}/validate`) is the
 read-only deep-dive: setup-coverage grid (per section, per
@@ -2147,8 +2162,8 @@ Operator-driven, reversible. From `ready`, the Workflow card's
 **Close session** button moves the session to `expired`
 (display label "Closed"): every instrument closes, all responses
 are preserved, and the operator can Revert to draft to reopen for
-editing. Distinct from Pause (`ready → draft`) — Close is the
-end-of-cycle transition; Pause is a mid-cycle setup edit.
+editing. Distinct from Revert to draft (`ready → draft`) — Close is
+the end-of-cycle transition; Revert is a mid-cycle setup edit.
 
 ### 16.2 Archive
 

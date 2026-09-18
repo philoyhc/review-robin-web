@@ -142,9 +142,12 @@ def workflow_prepare(
         correlation_id=correlation_id,
     )
 
-    step: str | None = None
+    # Assigned before every call that can raise, so the handler below
+    # always has the real step. There is no "unknown" case: the only
+    # returns that carry no step are the precondition ones above, which
+    # redirect with ``super_step`` and never reach this event.
+    step = "generate"
     try:
-        step = "generate"
         assignments.replace_assignments(
             db,
             review_session=review_session,
@@ -180,6 +183,10 @@ def workflow_prepare(
                 },
                 correlation_id=correlation_id,
             )
+            # `write_event` flushes; nothing downstream commits on a
+            # failure return, so without this the row dies with the
+            # connection. 19O Item 7 entry 7.
+            db.commit()
             return RedirectResponse(
                 url=_redirect_url(
                     review_session.id,
@@ -256,11 +263,15 @@ def workflow_prepare(
             session=review_session,
             context={
                 "button": "prepare_session",
-                "step": step or "unknown",
+                "step": step,
                 "error_message": message,
             },
             correlation_id=correlation_id,
         )
+        # `write_event` flushes; nothing downstream commits on a
+        # failure return, so without this the row dies with the
+        # connection. 19O Item 7 entry 7.
+        db.commit()
         return RedirectResponse(
             url=_redirect_url(
                 review_session.id,
@@ -388,6 +399,10 @@ def workflow_activate(
             },
             correlation_id=correlation_id,
         )
+        # `write_event` flushes; nothing downstream commits on a
+        # failure return, so without this the row dies with the
+        # connection. 19O Item 7 entry 7.
+        db.commit()
         return RedirectResponse(
             url=_redirect_url(
                 review_session.id,
