@@ -444,7 +444,33 @@ test file already renders that banner for two other steps via
 `_failure_banner`. A disclosed gap that is not a gap costs the reader
 trust in the disclaimers that are real. Now covered by a test.
 
+**`spec-writer` verified all five rewritten passages and the enum
+addition as true**, and caught one naming slip in my own new
+sentence: it said `leaves has_invitations false`, the service
+function's name, where this spec's established name for that fact is
+`invitations_generated` (defined in its own context-builder list and
+used three times elsewhere). A reader who has just read that list has
+no reason to expect a second name for it three hundred lines later.
+Fixed.
+
+**Three sentences rung 4 must sweep, which the `Doc impact` bullets
+do not literally name.** `spec/session_home.md` twice and
+`spec/operator_ui_concept.md` once say Prepare *"runs Generate +
+Validate in sequence"*. Falsified by this rung, legitimately deferred
+— but the bullets that cover those files name the Next action card's
+create-invites state and the button budget, not the step count, so
+the closing rung should grep the phrase rather than trust the
+bullets.
+
 **Recorded, not fixed** (all pre-existing or out of rung):
+`spec/lifecycle.md`'s `context.step` enum lists `precondition`, which
+is **never emitted** — every precondition return happens before
+`session.workflow_run_started` is written, so no
+`workflow_run_failed` exists for that click at all; the same row's
+`step or "unknown"` fallback is dead, since `step` is set on the
+first line of the `try`. `spec/rrw_functional_spec.md` §9.8 and §6.1
+still describe the pre-18F single super-button and a retired Pause
+flow — false since before this segment, and not in Item 2's manifest.
 `generate_invitations` can raise `sqlalchemy.exc.*` outside the
 route's `except` tuple, giving a framework 500 rather than the
 failure banner — but `replace_assignments` and `mark_validated` have

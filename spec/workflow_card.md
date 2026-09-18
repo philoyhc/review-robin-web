@@ -366,8 +366,8 @@ which runs three steps in sequence:
    returns above this line and creates nothing, so no invitation
    exists for a setup the operator is still fixing. A session
    that validates with zero eligible reviewers creates none and
-   leaves `has_invitations` false, which is a supported outcome
-   rather than a failure.
+   leaves `invitations_generated` false, which is a supported
+   outcome rather than a failure.
 
 Pre-flight: Prepare runs only while the session is editable
 (`draft` / `validated`). A `ready` session must be reverted first.
