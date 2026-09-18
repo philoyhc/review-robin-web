@@ -139,8 +139,21 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 
 ### Status
 
-**The ladder is complete: rungs 1–4 landed.** What remains is the
-close itself — the `Definition of done` chores, as their own slice.
+**Closed 2026-09-18.** Rungs 1–4 landed 2026-09-17; the close followed
+as its own slice.
+
+**Two manifest bullets outlived the code by a day** —
+`spec/csv_contracts.md` and `spec/architecture.md` were named at
+planning time and never written, so `close_check` failed C3 on both
+while every rung had shipped. `csv_contracts` states the roster cascade
+under *Wipe-and-replace* (Relationships' own replace is the leaf);
+`architecture` documents the `counts` envelope's cascade slots.
+
+**The architecture paragraph took three drafts**, and the shape of the
+failure is the keeper: the fact is a matrix — which slot rides which
+event — and both prose drafts got it wrong in opposite directions, once
+implying every event carries all three slots and once implying the bulk
+delete carries only `cascaded_responses`. It is a three-row table now.
 
 - **The blast radius was wrong twice about one line.** No
   `relationship_count` existed, it said; the service helper did
@@ -379,10 +392,57 @@ it would leave a dispatched event with nothing listening.
 
 ### Open questions
 
-1. **Does `sessions_archived.html` need the listener too?** It injects
-   (`grep -c insertAdjacentElement` → 2) and sorts, so on the measurement it
-   does. Confirm its script's entry point is shaped like the lobby's before
-   assuming one line covers it.
+1. **Does `sessions_archived.html` need the listener too?** **Yes**, and
+   one line covered it: its script carries the same `refreshExpander()`
+   entry point as `sessions_list.html`, so both pages take the identical
+   listener.
+
+### Status
+
+**Closed 2026-09-18, one slice as planned.** `_rrwApplySort` drops every
+`.session-expander` before it collects rows or stamps `rrwOriginalIndex`,
+then dispatches `rrw:sorted` after the rows land; three of the seven
+injecting pages re-anchor from it, and 19P.1's workaround on Reviewers —
+the only page that had one — is gone in the same commit.
+
+**Decisions confirmed at build.** Warn rather than preserve the node on
+an unsaved lobby edit, and narrow the claims rather than migrate the
+remaining three pages here (author, 2026-09-18). The rest of the
+migration is 19O Item 6.
+
+**Divergences from the plan, all measured:**
+
+- The ladder said *three* injecting pages, measured at `820d5d6`. At
+  build time it was **seven**, six of them sortable — 19P.2-3 and 19P.5
+  had taken the expander further. *A measurement carries its commit for
+  exactly this reason.*
+- `spec/ui_elements.md` has no `[data-rrw-sortable]` entry to put the
+  rule beside, and the `sessions_overview` waiver reasoned from the
+  panel entry when the **Sortable columns** bullet was what needed the
+  line. Waiver replaced with a bullet.
+- Two files joined the manifest at the close: `spec/sort_by_reviewee.md`,
+  which `spec/README.md` says owns sort UX, and `spec/sessions_overview.md`
+  again for the confirm gate, which post-dated the manifest's revision.
+- **The lobby's panel is the only editable expander in the app** — five
+  `[data-expander-field]` inputs plus purge and confirm checkboxes — so
+  the rebuild this item decided on discarded unsaved work. The gate runs
+  on the capture phase ahead of the inline sort handler, and declining
+  cancels the sort.
+
+**What the item cost, and why it is worth a line.** Three readers found
+three faults of one shape: a check that is silent about what its author
+did not think to include. The guard indexed the panel's *selector*
+rather than its removal, so a split-statement mutant passed. The dirty
+check scanned an opt-in attribute list, so it missed the bulk tag box,
+then the purge checkboxes. Each fix was aimed at the instance; the third
+was aimed at the class, and now reads every control in the panel.
+Verification pointers: `tests/unit/test_sort_drops_injected_panel.py`
+and `guide/segment_19O_rosters_and_instruments.md` Item 4's Doc impact.
+
+**Browser half unverified.** No JS runtime in the suite, so the shipped
+source is asserted as mechanism; the confirm dialog, the sort badges
+after a cancel, and the panel's visible position after an accepted sort
+all need the dev slot.
 
 ### Out of scope
 
@@ -395,9 +455,11 @@ it would leave a dispatched event with nothing listening.
 ### Doc impact
 
 - `spec/ui_elements.md` — the `.session-row-selected` entry describes the injected panel's placement ("**The panel closes the bracket**") without stating what a client-side sort does to it; add the rule that a sort drops and re-anchors it, beside the `[data-rrw-sortable]` entry that owns the sort primitive (Item 4).
+- `spec/sort_by_reviewee.md` — § *Shared sort primitive* gains the panel removal and the `rrw:sorted` dispatch; **added at the close**, not named at planning time, and the file `spec/README.md` says owns sort UX (Item 4).
+- `spec/sessions_overview.md` — the **Sortable columns** bullet also carries the *"Discard unsaved changes?"* gate, since the lobby's panel is editable and a sort can now be cancelled; **added after the gate was built**, which post-dated this manifest's first revision (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
 
-- `spec/sessions_overview.md` — its panel description is behavioral ("the panel renders no pills") and does not state a sort interaction, so nothing there goes stale (Item 4). <!-- doc-impact-waived: deliberate exclusion — the entry describes panel behavior, not sort interaction, so nothing stated there becomes wrong -->
+- `spec/sessions_overview.md` — the **Sortable columns** bullet gains the sort-drops-and-re-anchors line, pointing at `ui_elements` for the mechanism (Item 4). *The plan waived this file on the grounds that its **panel** description states no sort interaction. True of the panel entry, and beside the point: the lobby's own sortable-columns bullet is where a reader meets sorting, and it said nothing about a selection surviving one.*
 
 ---
 

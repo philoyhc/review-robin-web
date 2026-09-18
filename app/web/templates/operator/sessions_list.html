@@ -451,6 +451,19 @@
             function (input) {
               var key = input.getAttribute("data-expander-field");
               input.value = fields[key] || "";
+              // The baseline `expanderIsDirty()` compares against
+              // (19O Item 4). Written here because this is the one
+              // place a single-selection field is seeded.
+              //
+              // Reads back `input.value`, NOT `fields[key]`, and the
+              // order is load-bearing: assigning to a `datetime-local`
+              // runs the browser's value sanitizer, so
+              // `2026-01-01T10:00:00` becomes `2026-01-01T10:00` and an
+              // unparseable value becomes `""`. Seeding the baseline
+              // from the raw dict would leave every deadline field
+              // permanently unequal to itself, and every sort on a
+              // lobby with a selection would prompt.
+              input.setAttribute("data-seeded-value", input.value);
               // Name / Code / Deadline edit in draft only; Tags always.
               if (key !== "tags" && !isDraft) input.disabled = true;
             }
@@ -522,6 +535,12 @@
           );
           if (tagsInput) {
             tagsInput.value = Object.keys(union).sort().join(", ");
+            // Same baseline `fillSingle` writes (19O Item 4). Missed on
+            // the first pass, which guarded four single-selection fields
+            // and left this one unguarded — so a typed bulk tag list was
+            // still discarded by a sort, which is the defect the gate
+            // exists to prevent, one function over.
+            tagsInput.setAttribute("data-seeded-value", tagsInput.value);
           }
           var clearAll = node.querySelector("[data-expander-clear-all]");
           var clearOthers = node.querySelector("[data-expander-clear-others]");
@@ -575,6 +594,91 @@
             var row = cb.closest("tr");
             if (row) row.classList.add("session-row-selected");
           });
+        }
+
+        // `_rrwApplySort` (`base.html`) drops the injected panel before
+        // it stamps `rrwOriginalIndex` and sorts, then fires `rrw:sorted`
+        // once the rows have landed (19O Item 4). Re-anchoring here is
+        // what keeps the panel with its row across a sort, and what keeps
+        // the unsorted restore order the server's.
+        //
+        // **This lobby's panel is the one editable expander in the app**
+        // — five `[data-expander-field]` inputs, four on the
+        // single-selection panel and one on the bulk one, against
+        // read-only panels everywhere else — so the rebuild is not free
+        // here the way it is on Reviewers. `refreshExpander()` re-clones from the template
+        // and re-seeds from the row's rendered cells, which silently
+        // reverts a name the operator has typed but not saved. A stranded
+        // panel is a layout bug; a discarded rename is data loss, and
+        // trading up to the second is not a fix.
+        //
+        // So the gate runs BEFORE the sort, on the capture phase, ahead
+        // of the header's inline `rrwSortHeaderClick`. Declining stops
+        // the sort entirely, which leaves the panel, the edit and the
+        // row order exactly as they were. Same idiom and the same
+        // sentence as Instruments (18R Item 2) and the Observers cohort
+        // editor (19P.2 rung 5a): an operator meets this wording on
+        // three pages and should not have to read it three times.
+        var _rrwSortedTable = document.querySelector("[data-rrw-sortable]");
+        if (_rrwSortedTable) {
+          // NOTE for 19O Item 6: this `closest(".rrw-sort-btn")` is the
+          // dirty gate, NOT 19P.1's panel-removal workaround, which this
+          // page never had. `test_the_per_page_workaround_is_gone` uses
+          // that string as the workaround's signature, so extending it
+          // across the migrated pages must exempt this one.
+          _rrwSortedTable.addEventListener("click", function (event) {
+            if (!event.target.closest) return;
+            if (!event.target.closest(".rrw-sort-btn")) return;
+            if (expanderIsDirty()) {
+              if (!window.confirm("Discard unsaved changes?")) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }
+          }, true);
+          _rrwSortedTable.addEventListener("rrw:sorted", refreshExpander);
+        }
+
+        // Dirty is asked of the DOM rather than mirrored in a flag.
+        // Instruments does the same and cannot go stale; the Observers
+        // editor mirrors a flag and it went stale once.
+        //
+        // **Every control in the panel, not an opt-in list.** The first
+        // two drafts scanned `[data-expander-field]` and missed, in
+        // turn, the bulk tag box (seeded without a baseline) and the
+        // three `name="purge"` checkboxes plus the confirm box (which
+        // carry no such attribute at all). Two misses of the same shape
+        // is a design fault, not two oversights: an opt-in scan is
+        // silent about exactly the control nobody remembered to opt in,
+        // and the cost of that silence here is an operator's "Purge and
+        // archive" quietly dropping the rosters or audit-log purge they
+        // ticked.
+        //
+        // Checkables compare `checked` against `defaultChecked`, which
+        // the DOM maintains for free: cloning a `<template>` carries the
+        // markup's `checked` attribute into `defaultChecked`, and
+        // clicking moves only `checked`. Text inputs need
+        // `data-seeded-value` because `fillSingle` assigns `.value`
+        // imperatively, which never touches `defaultValue`.
+        function expanderIsDirty() {
+          var panel = document.querySelector(".session-expander");
+          if (!panel) return false;
+          var controls = panel.querySelectorAll("input, select, textarea");
+          for (var i = 0; i < controls.length; i++) {
+            var el = controls[i];
+            var type = (el.type || "").toLowerCase();
+            if (type === "checkbox" || type === "radio") {
+              if (el.checked !== el.defaultChecked) return true;
+              continue;
+            }
+            var seeded = el.getAttribute("data-seeded-value");
+            if (seeded !== null) {
+              if (el.value !== seeded) return true;
+            } else if (el.value !== el.defaultValue) {
+              return true;
+            }
+          }
+          return false;
         }
 
         function refreshExpander() {

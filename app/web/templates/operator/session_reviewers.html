@@ -1388,18 +1388,20 @@
             "#reviewer-row-" + encodeURIComponent(editId);
         });
 
-        // Sorting reorders `tbody`'s children. The panel carries no sort
-        // cells, so it compares null and strands at the bottom, away from
-        // the row it belongs to — and being present when base.html stamps
-        // `rrwOriginalIndex` would shift every index after it, corrupting
-        // the unsorted restore order too. Capture phase, so this runs
-        // before the header's own inline handler: take the panel out
-        // first, put it back against its anchor after.
-        table.addEventListener("click", function (event) {
-          if (!event.target.closest(".rrw-sort-btn")) return;
-          if (panel) { panel.remove(); panel = null; }
-          setTimeout(render, 0);
-        }, true);
+        // Sorting reorders `tbody`'s children and `_rrwApplySort`
+        // (`base.html`) now drops the panel before it stamps or sorts,
+        // then fires `rrw:sorted` once the rows have landed. Re-anchor
+        // against the final order. 19O Item 4 removed this page's own
+        // capture-phase workaround: one mechanism per page, never two.
+        // Reviewees, Relationships and Assignments still carry theirs —
+        // correct today, since it runs before the inline sort handler —
+        // and migrating them is 19O Item 6. Do not delete one of those
+        // without adding this listener in the same commit, or that page
+        // ends up with neither.
+        table.addEventListener("rrw:sorted", function () {
+          panel = null;
+          render();
+        });
 
         // A selection can arrive already made: the bulk routes redirect
         // through `_redirect_keeping_selection`, which carries the acted-on

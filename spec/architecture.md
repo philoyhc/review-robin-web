@@ -602,6 +602,31 @@ For bulk operations — `assignments.generated`,
 `responses.deleted_all`, `responses.cleared`. All values are
 non-negative integers.
 
+**Cascade slots.** A roster replace, delete-all or bulk delete
+destroys rows in other tables, and each destroyed kind gets its own
+count. The slots are **not the same on every event**:
+
+| Event | Slots |
+|---|---|
+| `reviewers.imported` / `reviewees.imported` | `new`, `replaced`, `cascaded_assignments`, `cascaded_relationships` |
+| `reviewers.deleted_all` / `reviewees.deleted_all` | `deleted`, `cascaded_assignments`, `cascaded_relationships` |
+| `reviewer.bulk_deleted` / `reviewee.bulk_deleted` | `deleted`, `cascaded_assignments`, `cascaded_responses`, `cascaded_relationships` |
+
+`cascaded_responses` rides the **bulk delete alone**
+(`app/services/roster_bulk.py`) — a roster import or delete-all
+(`app/services/csv_imports.py`) does not carry it. Note the event names
+differ in number as well as in suffix: the import and delete-all events
+are plural (`reviewers.`), the bulk-delete ones singular
+(`reviewer.`); `app/services/audit.py` is the list.
+`spec/setup_pages.md` states the contract per page.
+
+`cascaded_relationships` arrived at 19O Item 5, because
+`relationships.reviewer_id` / `reviewee_id` are `ondelete="CASCADE"`
+and a roster replace takes every pair with it. It is **omitted rather
+than zero** on the rosters that reach no relationship — all three
+emitters splat an empty dict — so its absence means "not a roster this
+cascade reaches" and `0` means "reached, and there were none".
+
 #### `set_changes` — collection mutations
 
 ```jsonc

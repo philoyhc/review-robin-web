@@ -4647,6 +4647,21 @@
             keyToType[k] = allHeads[i].getAttribute('data-sort-type') || '';
           }
         }
+        // Drop any injected selection panel BEFORE collecting rows
+        // (19O Item 4). The panel is a `tbody` child with one `colspan`
+        // cell and no `data-sort-value`, so `_rrwCellValue` returns null
+        // for every column and the null-last rule parks it at the bottom,
+        // detached from the row it brackets. Worse and quieter: present
+        // at stamp time it occupies an `rrwOriginalIndex`, shifting every
+        // row after it by one, so "unsorted" stops restoring the server's
+        // order. Removal, not hiding — a hidden row still takes an index.
+        // Its owner rebuilds it from the `rrw:sorted` event below;
+        // rebuilding beats moving the node, because the panel's content
+        // depends on the selection rather than on row order.
+        var panels = tbody.querySelectorAll(".session-expander");
+        for (var p = 0; p < panels.length; p++) {
+          panels[p].parentNode.removeChild(panels[p]);
+        }
         var rows = Array.prototype.slice.call(tbody.children);
         // Stamp the server-render insertion order ONCE per row so
         // ``state.length === 0`` (unsorted) restores the operator
@@ -4690,6 +4705,14 @@
           });
         }
         rows.forEach(function (r) { tbody.appendChild(r); });
+        // Signal after the rows land, so a listener that re-anchors
+        // against a row finds the final order. Fires on every pass,
+        // the clear-to-unsorted one included, because that pass
+        // reorders rows too. A page that injects no panel has no
+        // listener and is unaffected.
+        table.dispatchEvent(
+          new CustomEvent("rrw:sorted", { bubbles: true })
+        );
       }
 
       function _rrwCellValue(td) {

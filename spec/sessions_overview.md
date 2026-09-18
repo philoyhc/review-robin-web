@@ -351,6 +351,15 @@ The lobby carries all three:
   `rrw-sortable` primitive with the Setup preview tables), decoded
   server-side by `views.decode_cookie_sort_spec` /
   `apply_cookie_sort`. Default order is still `created_at DESC`.
+  A sort with rows selected drops the injected panel and re-anchors
+  it from the shared `rrw:sorted` signal (19O Item 4); the mechanism
+  is in `spec/ui_elements.md` under `.session-row-selected`. Because
+  the re-anchor rebuilds the panel from the row's rendered cells, and
+  **this panel is editable**, a sort with an unsaved edit in it first
+  asks *"Discard unsaved changes?"* — the same string Instruments and
+  the Observers cohort editor use (`spec/setup_pages.md`
+  § *The cohort rule builder*). Declining cancels the sort outright, so
+  the panel, the edit and the row order are all left as they were.
 - **Tag filter.** A `sessions-tag-filter` chip strip ("Show
   sessions tagged with:") with one `tag-chip` per tag in the
   lobby tag vocabulary, an AND/OR mode chip, and a clear chip.

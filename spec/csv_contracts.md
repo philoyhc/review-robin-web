@@ -707,6 +707,18 @@ while creating the session.
    audit; replace is cleaner and matches the operator's mental
    model ("re-upload the file = re-set the state").
 
+   **A roster replace destroys more than the roster** (19O Item 5).
+   `relationships` holds `ondelete="CASCADE"` foreign keys to both
+   rosters, so re-uploading Reviewers or Reviewees deletes every pair
+   naming a removed row, alongside the assignments and responses that
+   already cascaded. The operator is told **before** the upload, not
+   after: the confirmation names each kind it will destroy, and the
+   `reviewers.imported` / `reviewees.imported` audit event counts them
+   in `cascaded_relationships` beside `cascaded_assignments`
+   (`spec/architecture.md` § *Audit-event detail schema*).
+   Relationships' own replace has no further cascade — it *is* the
+   leaf.
+
 3. **Two-phase parse + apply (Settings).** Parse everything,
    collect every error, then apply or rollback. The operator
    sees the full validation report on a single submit rather

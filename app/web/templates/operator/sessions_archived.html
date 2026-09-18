@@ -386,6 +386,16 @@
           });
         }
 
+        // `_rrwApplySort` (`base.html`) drops the injected panel before
+        // it stamps `rrwOriginalIndex` and sorts, then fires this once the
+        // rows have landed (19O Item 4). Re-anchoring here is what keeps
+        // the panel with its row across a sort, and what keeps the
+        // unsorted restore order the server's.
+        var _rrwSortedTable = document.querySelector("[data-rrw-sortable]");
+        if (_rrwSortedTable) {
+          _rrwSortedTable.addEventListener("rrw:sorted", refreshExpander);
+        }
+
         function refreshExpander() {
           removeExpander();
           var selected = selectedCheckboxes();
