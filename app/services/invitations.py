@@ -471,6 +471,25 @@ def list_invitations_for_session(
     return [InvitationRow(invitation=r[0], reviewer=r[1]) for r in rows]
 
 
+def is_reviewer_eligible_for_invitation(
+    db: Session, *, session_id: int, reviewer_id: int
+) -> bool:
+    """Would a Prepare enrol this reviewer for an invitation?
+
+    The single-reviewer form of the rule `list_sendable_invitations`
+    applies in bulk, for the per-row **Send**. It lives here rather
+    than in the route because deciding who may be invited is an
+    invitation policy, not request parsing — and because a predicate
+    the route owns is a predicate the next send path can quietly
+    disagree with, which is the defect 19Q Item 2 rung 1 exists to fix.
+
+    Reuses `_assigned_active_reviewer_ids` rather than asking the same
+    question in new SQL: one definition of "assigned and active", so
+    a caller cannot be subtly out of step with the bulk paths.
+    """
+    return reviewer_id in _assigned_active_reviewer_ids(db, session_id)
+
+
 def list_sendable_invitations(
     db: Session, session_id: int
 ) -> list[InvitationRow]:
@@ -796,6 +815,7 @@ __all__ = [
     "lookup_invitation_by_token",
     "record_open",
     "list_invitations_for_session",
+    "is_reviewer_eligible_for_invitation",
     "list_sendable_invitations",
     "list_outbox_for_session",
     "reviewers_eligible_for_invitation",

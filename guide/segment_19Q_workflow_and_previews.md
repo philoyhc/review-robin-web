@@ -364,6 +364,15 @@ alone (`_workflow_card.py:110`) — so both buttons are disabled in
 rung's scope and not in Item 2's `Doc impact`; filed here so the
 segment can adjudicate it.
 
+**Codex's review made the same point one layer deeper, and was
+right.** The per-row gate above was first written as the *route*
+building the eligible set and testing membership — invitation policy
+in a route handler, which `AGENTS.md` §1 forbids, and a predicate the
+route owns is one the next send path can quietly disagree with. That
+is the defect this rung exists to fix, committed while fixing it.
+`invitations.is_reviewer_eligible_for_invitation` owns it now, reusing
+`_assigned_active_reviewer_ids` rather than asking in new SQL.
+
 Six mutants, all caught: route reverted to the unfiltered listing;
 eligibility filter dropped; `pending` filter dropped; scheduled path
 back to its own query; the eligibility test reduced to its status limb;

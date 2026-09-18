@@ -812,13 +812,9 @@ def invitations_send_one(
     # match the UI and still be a second, unrelated behavior change
     # riding a rung about eligibility. A direct POST re-sending a
     # `sent` invitation keeps rotating its token exactly as before.
-    eligible_ids = {
-        reviewer.id
-        for reviewer in invitations.reviewers_eligible_for_invitation(
-            db, review_session.id
-        )
-    }
-    if reviewer.id not in eligible_ids:
+    if not invitations.is_reviewer_eligible_for_invitation(
+        db, session_id=review_session.id, reviewer_id=reviewer.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
