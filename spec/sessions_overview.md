@@ -351,6 +351,9 @@ The lobby carries all three:
   `rrw-sortable` primitive with the Setup preview tables), decoded
   server-side by `views.decode_cookie_sort_spec` /
   `apply_cookie_sort`. Default order is still `created_at DESC`.
+  A sort with rows selected drops the injected panel and re-anchors
+  it from the shared `rrw:sorted` signal (19O Item 4); the mechanism
+  is in `spec/ui_elements.md` under `.session-row-selected`.
 - **Tag filter.** A `sessions-tag-filter` chip strip ("Show
   sessions tagged with:") with one `tag-chip` per tag in the
   lobby tag vocabulary, an AND/OR mode chip, and a clear chip.

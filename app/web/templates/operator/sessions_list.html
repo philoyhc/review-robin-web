@@ -451,6 +451,10 @@
             function (input) {
               var key = input.getAttribute("data-expander-field");
               input.value = fields[key] || "";
+              // The baseline `expanderIsDirty()` compares against
+              // (19O Item 4). Written here because this is the one
+              // place a single-selection field is seeded.
+              input.setAttribute("data-seeded-value", input.value);
               // Name / Code / Deadline edit in draft only; Tags always.
               if (key !== "tags" && !isDraft) input.disabled = true;
             }
@@ -575,6 +579,60 @@
             var row = cb.closest("tr");
             if (row) row.classList.add("session-row-selected");
           });
+        }
+
+        // `_rrwApplySort` (`base.html`) drops the injected panel before
+        // it stamps `rrwOriginalIndex` and sorts, then fires `rrw:sorted`
+        // once the rows have landed (19O Item 4). Re-anchoring here is
+        // what keeps the panel with its row across a sort, and what keeps
+        // the unsorted restore order the server's.
+        //
+        // **This lobby's panel is the one editable expander in the app**
+        // — nine `[data-expander-field]` inputs against read-only panels
+        // everywhere else — so the rebuild is not free here the way it is
+        // on Reviewers. `refreshExpander()` re-clones from the template
+        // and re-seeds from the row's rendered cells, which silently
+        // reverts a name the operator has typed but not saved. A stranded
+        // panel is a layout bug; a discarded rename is data loss, and
+        // trading up to the second is not a fix.
+        //
+        // So the gate runs BEFORE the sort, on the capture phase, ahead
+        // of the header's inline `rrwSortHeaderClick`. Declining stops
+        // the sort entirely, which leaves the panel, the edit and the
+        // row order exactly as they were. Same idiom and the same
+        // sentence as Instruments (18R Item 2) and the Observers cohort
+        // editor (19P.2 rung 5a): an operator meets this wording on
+        // three pages and should not have to read it three times.
+        var _rrwSortedTable = document.querySelector("[data-rrw-sortable]");
+        if (_rrwSortedTable) {
+          _rrwSortedTable.addEventListener("click", function (event) {
+            if (!event.target.closest) return;
+            if (!event.target.closest(".rrw-sort-btn")) return;
+            if (expanderIsDirty()) {
+              if (!window.confirm("Discard unsaved changes?")) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }
+          }, true);
+          _rrwSortedTable.addEventListener("rrw:sorted", refreshExpander);
+        }
+
+        // Dirty is asked of the DOM rather than mirrored in a flag.
+        // Instruments does the same and cannot go stale; the Observers
+        // editor mirrors a flag and it went stale once. Here the
+        // baseline is on the node itself, written when the input was
+        // seeded, so the comparison is local and needs no bookkeeping.
+        function expanderIsDirty() {
+          var panel = document.querySelector(".session-expander");
+          if (!panel) return false;
+          var fields = panel.querySelectorAll("[data-expander-field]");
+          for (var i = 0; i < fields.length; i++) {
+            var seeded = fields[i].getAttribute("data-seeded-value");
+            if (seeded === null) continue;
+            if (fields[i].value !== seeded) return true;
+          }
+          return false;
         }
 
         function refreshExpander() {

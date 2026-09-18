@@ -139,8 +139,32 @@ Commands run 2026-09-17 on `origin/main` at `7b65fda`.
 
 ### Status
 
-**The ladder is complete: rungs 1–4 landed.** What remains is the
-close itself — the `Definition of done` chores, as their own slice.
+**Closed 2026-09-18.** Rungs 1–4 landed on 2026-09-17; the close
+followed as its own slice, which is what the last line below was
+waiting for.
+
+**Two manifest bullets outlived the code by a day.**
+`spec/csv_contracts.md` and `spec/architecture.md` were named at
+planning time and never written, so `close_check 19O.5` failed C3 on
+both — last modified 2026-09-13, outside the window — while every
+rung's code was already shipped. `csv_contracts` § *Implementation
+principles* now states the roster cascade under **Wipe-and-replace**,
+including that Relationships' own replace *is* the leaf;
+`architecture` § *Audit-event detail schema* documents the `counts`
+envelope's cascade slots.
+
+**The architecture paragraph was wrong on its first draft and the cold
+read caught it.** It listed `cascaded_responses` beside
+`cascaded_assignments` and `cascaded_relationships` as though all three
+ride the same events. They do not: the first two are
+`csv_imports`' (`{roster}.imported` / `.deleted_all`), while
+`cascaded_responses` is `roster_bulk.bulk_delete`'s alone. A reader
+querying audit rows on that sentence would have hunted a key that is
+never there. Now stated per event, pointing at `spec/setup_pages.md`
+for the per-event contract it already carries.
+
+The prose went into the existing numbered principle rather than a new
+one: inserting an item renumbered every principle after it.
 
 - **The blast radius was wrong twice about one line.** No
   `relationship_count` existed, it said; the service helper did
@@ -379,10 +403,97 @@ it would leave a dispatched event with nothing listening.
 
 ### Open questions
 
-1. **Does `sessions_archived.html` need the listener too?** It injects
-   (`grep -c insertAdjacentElement` → 2) and sorts, so on the measurement it
-   does. Confirm its script's entry point is shaped like the lobby's before
-   assuming one line covers it.
+1. **Does `sessions_archived.html` need the listener too?** **Yes**, and
+   one line covered it: its script carries the same `refreshExpander()`
+   entry point as `sessions_list.html`, so both pages take the identical
+   listener.
+
+### Status
+
+**Closed 2026-09-18, one slice as planned.** `_rrwApplySort` drops every
+`.session-expander` child before it collects rows or stamps
+`rrwOriginalIndex`, then dispatches `rrw:sorted` after the rows land;
+the three injecting pages re-anchor from it, and 19P.1's capture-phase
+workaround on Reviewers is gone in the same commit.
+
+**The item sat open for three days looking closed.** `close_check
+19O.4` passed throughout — its manifest names `spec/ui_elements.md` and
+`docs/status.md`, both edited inside the window by 19P and 19Q — so C3
+was satisfied by other items' commits while nothing here had shipped.
+*A manifest of files other work also touches cannot tell a closed item
+from an open one*, and the exit code was read as evidence before the
+code was checked. The same shape is live on 19Q.3 today.
+
+**Two plan claims were wrong, both about where things live.** The Doc
+impact bullet sent the new rule "beside the `[data-rrw-sortable]` entry
+that owns the sort primitive" in `spec/ui_elements.md` — there is no
+such entry; that file specifies `.session-row-selected` and the sort
+primitive is described in `sessions_overview`, `setup_pages` and
+`operations_pages` instead. And the `sessions_overview` waiver reasoned
+from the panel entry while the file's **Sortable columns** bullet was
+the one that needed the line. Waiver replaced with a bullet.
+
+**The guard failed its first run on its own comment.** The ordering
+assertion — the load-bearing one, since a removal *after* the stamp
+looks right in a grep and leaves the index corruption live — matched
+`rrwOriginalIndex` inside the comment explaining the fix, 400 characters
+ahead of the code. It now blanks `//` comments before indexing.
+Six mutants, all caught: removal deleted, removal moved after the stamp,
+hide-instead-of-remove, dispatch before the rows land, and each of two
+owners losing its listener.
+
+**One pre-existing test was re-aimed, not deleted.**
+`test_the_panel_survives_a_sort` pinned the workaround this item
+removes, so it now asserts the listener and the workaround's absence.
+
+**Browser half unverified here.** No JS runtime in the suite, so the
+shipped source is asserted as mechanism; that a panel visibly stays with
+its row across a sort needs the dev slot.
+
+**The cold read found three things the build had wrong, and one it had
+not thought about.**
+
+*The blast radius was measured at `820d5d6` and the item was built
+against `56f6521`.* Between those, 19P.2-3 and 19P.5 took the expander
+to four more pages, so "three injecting pages" became **seven inject,
+six of them sortable** — and three still carry 19P.1's per-page handler.
+No live regression: those handlers run before the inline sort handler,
+so the shared removal finds nothing. But the spec sentence said every
+injecting page rebuilds from the event, which was false of four of the
+seven the same table row names. Narrowed to what shipped, with the
+remaining migration filed as 19O Item 6, and the guard now pins that an
+unmigrated page keeps **exactly one** mechanism and never zero — the
+mistake worth failing a test is deleting a workaround without adding a
+listener. *A measurement carries its commit for exactly this reason.*
+
+*The guard passed a broken implementation.* It indexed
+`.session-expander`, which pins where the panel is selected and says
+nothing about where it leaves the DOM. Splitting the two statements —
+selector early, `removeChild` after the stamp — passed every assertion
+while leaving the index corruption live and re-appending the panel at
+the bottom from the stale `rows` array. The original six mutants moved
+both statements together, which is not the mutation that matters. Now
+indexed on `removeChild`, and the split mutant fails.
+
+*`spec/sort_by_reviewee.md` owns the sort primitive* per `spec/README.md`
+and was neither updated nor waived. The Status claim that the primitive
+"is described in `sessions_overview`, `setup_pages` and
+`operations_pages`" was incomplete for the same reason.
+
+**And the one the build had not considered: the lobby's panel is the
+only editable expander in the app.** Nine `[data-expander-field]`
+inputs, against read-only panels everywhere else. `refreshExpander()`
+re-clones from the template and re-seeds from the row's cells, so a sort
+mid-edit silently reverted a typed session name — trading a layout bug
+for data loss, which is the defect 19P.2 rung 5a gave its own rung to
+prevent. The gate now runs **before** the sort, on the capture phase,
+and declining stops the sort so panel, edit and row order are all left
+alone. Wording is Instruments' and Observers' verbatim. Dirty is asked
+of the DOM against a `data-seeded-value` baseline rather than mirrored
+in a flag — Observers mirrors one and it went stale once.
+
+**Author's ruling, 2026-09-18:** warn rather than preserve the node, and
+narrow the claims rather than migrate the remaining three pages here.
 
 ### Out of scope
 
@@ -395,9 +506,10 @@ it would leave a dispatched event with nothing listening.
 ### Doc impact
 
 - `spec/ui_elements.md` — the `.session-row-selected` entry describes the injected panel's placement ("**The panel closes the bracket**") without stating what a client-side sort does to it; add the rule that a sort drops and re-anchors it, beside the `[data-rrw-sortable]` entry that owns the sort primitive (Item 4).
+- `spec/sort_by_reviewee.md` — § *Shared sort primitive* gains the panel removal and the `rrw:sorted` dispatch; **added at the close**, not named at planning time, and the file `spec/README.md` says owns sort UX (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
 
-- `spec/sessions_overview.md` — its panel description is behavioral ("the panel renders no pills") and does not state a sort interaction, so nothing there goes stale (Item 4). <!-- doc-impact-waived: deliberate exclusion — the entry describes panel behavior, not sort interaction, so nothing stated there becomes wrong -->
+- `spec/sessions_overview.md` — the **Sortable columns** bullet gains the sort-drops-and-re-anchors line, pointing at `ui_elements` for the mechanism (Item 4). *The plan waived this file on the grounds that its **panel** description states no sort interaction. True of the panel entry, and beside the point: the lobby's own sortable-columns bullet is where a reader meets sorting, and it said nothing about a selection surviving one.*
 
 ---
 

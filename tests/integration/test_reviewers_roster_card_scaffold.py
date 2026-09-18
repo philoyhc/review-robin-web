@@ -592,15 +592,26 @@ def test_the_panel_survives_a_sort(client, db):
     """`_rrwApplySort` reorders every child of `tbody.rrw-rows`. The panel
     has no sort cells, so it compares null and strands at the bottom —
     and its presence when `rrwOriginalIndex` is first stamped would shift
-    every index after it. It is removed before the sort and re-anchored
-    after, on the capture phase so it runs first."""
+    every index after it.
+
+    **Re-aimed at 19O Item 4.** This page used to defend itself with a
+    capture-phase click handler on `.rrw-sort-btn`, landed by 19P.1 rung
+    1 and deliberately local so that slice would not change lobby
+    behavior. The fix now lives in `_rrwApplySort` itself, which drops
+    the panel before stamping and fires `rrw:sorted` once the rows have
+    landed — so what this page owes is a listener, and the old mechanism
+    is gone rather than kept alongside. The shared half is pinned by
+    `tests/unit/test_sort_drops_injected_panel.py`.
+    """
     html = _page(client, _with_reviewers(client, db, "rc15"))
     assert '.rrw-sort-btn' in html, "no sort hook"
-    match = re.search(
-        r'table\.addEventListener\("click".*?\}, true\);', html, re.S
+    assert 'table.addEventListener("rrw:sorted"' in html, (
+        "the page must re-anchor its panel on the shared sort signal"
     )
-    assert match, "sort handler is not on the capture phase"
-    assert "panel.remove()" in match.group(0), match.group(0)
+    assert 'closest(".rrw-sort-btn")' not in html, (
+        "19P.1's local workaround is superseded by the shared fix; "
+        "two mechanisms for one bug is how one of them rots"
+    )
 
 
 def test_a_server_restored_selection_renders_its_panel(client, db):

@@ -259,7 +259,12 @@ Key landmarks in the codebase:
   `rrwSortHeaderClick` + `_rrwApplySort` + cookie-I/O JS;
   every sortable table gains a tiny `↕` button next to
   the column label (the click target) via the
-  `rrw-sort-btn` class.
+  `rrw-sort-btn` class. Since 19O Item 4 the primitive also
+  **removes any injected `.session-expander` panel** before it
+  collects or stamps rows, and **dispatches `rrw:sorted`** on
+  the table once the rows have landed, for pages that re-anchor
+  a panel. Mechanism and the per-page migration state are in
+  `spec/ui_elements.md` under `.session-row-selected`.
 - **Reviewer template** (`review_surface.html`) +
   **operator tables** — Reviewers / Reviewees / Relationships
   (Setup) and Assignments / Invitations / Responses (Operations),
