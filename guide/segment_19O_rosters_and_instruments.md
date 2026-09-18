@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18, nine worked 2026-09-18
+## Item 7 — Loose ends, recorded 2026-09-18; nine worked, one added
 
 ### Opportunity
 
@@ -22,11 +22,11 @@ compaction at its close, which is how a finding with no home
 disappears. Recorded as a register, not planned.
 
 **Audited, then worked, 2026-09-18.** The audit confirmed entries 1–7,
-grew 8 and added 9–12; the pass that followed closed nine of the twelve.
-**Three stay open:** 3, which is a behavior question and the author's;
-8, which is the author's to do on the dev slot; and the
-`docs/status.md` compaction half of 12, which is a judgment call about
-what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+grew 8 and added 9–12; the pass that followed closed nine and the
+`spec-writer` check on it added 13. **Four stay open:** 3 and 13, both
+behavior or naming decisions that are the author's; 8, the dev-slot
+verification only the author can do; and the `docs/status.md`
+compaction half of 12, a judgment call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -107,6 +107,18 @@ its treatment when the author takes it up, as Item 6's did.
     days stale at the top and is 1,264 lines long. Its `**As of:** 2026-09-12` header sits above rows dated
     through 18 September. Named in the same §4, with the file's size as
     a compaction target; filed nowhere either.
+
+13. **"Pause" and "Revert to draft" name one transition in two
+    vocabularies.** The Workflow card's button is *Revert to draft*, but
+    `session_detail.html:486,515` and `app/web/views/_quick_setup.py:338`
+    still tell the operator to "Pause the session" for the same
+    `ready → draft` move, and six specs use *Pause* as live terminology
+    — among them `spec/lifecycle.md`, `spec/quick_setup_card_spec.md`
+    and `spec/session_home.md`, the last of which describes them as two
+    *different* buttons. Which name wins is a decision, and the sweep
+    that follows it is not a correction. Found by the `spec-writer` pass
+    on the entry 6 rewrite, which had asserted the split away rather
+    than finding it.
 
 ### Doc impact
 

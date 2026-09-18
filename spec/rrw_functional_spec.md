@@ -228,8 +228,8 @@ operator can:
 - **Monitor** invitation and response activity on sessions they
   own.
 - **Download all per-session extracts** for sessions they own.
-- **Revert to draft** on an activated session (the transition earlier
-  drafts called *Pause*), edit, then re-activate.
+- **Revert to draft** on an activated session — the transition other
+  operator copy still calls *Pause* — then edit and re-activate.
 - **Archive and unarchive** sessions they own.
 - **Purge and archive** a session they own (operator-triggered
   hard delete of responses + rosters + audit log).
@@ -670,8 +670,13 @@ treats the session in lobby and extract surfaces.
   refused.
 - **`ready → draft`** (revert): Operator clicks **Revert to draft**.
   The operator must tick a confirmation checkbox; the reviewer surface
-  closes; responses are preserved. Earlier drafts called this button
-  *Pause Session*; nothing ships under that name.
+  closes; responses are preserved. The **Workflow card button** for this
+  is labelled *Revert to draft*, not *Pause Session*. The word *Pause*
+  does still ship elsewhere — `session_detail.html` and the Quick Setup
+  lock both tell the operator to "Pause the session" for this same
+  transition — and six other specs use it as live terminology. That
+  split is recorded in `guide/segment_19O_rosters_and_instruments.md`
+  Item 7; this section describes the button.
 - **`ready → expired`** (Close session): Operator clicks the
   Workflow card's **Close session** button. Every instrument is
   closed and all responses are preserved. From `expired` the
@@ -1288,10 +1293,16 @@ button set, which this section carried as a parallel list until it
 went six segments stale. Functionally, what a reader needs from here
 is the shape:
 
-- The card **short-circuits on an empty setup** and otherwise offers
-  exactly one forward move per state, with a right-hand column that is
-  a setup checklist while the session is draft and a validation report
-  once it has been prepared.
+- The card **short-circuits on an empty setup**. Past that it carries
+  **Revert to draft** as the standing way back from every state that has
+  one, and **one or two** Primary actions depending on state: States 4Err
+  and 5 offer Send invites and Activate session together, and States 7
+  and 10 offer none at all. The per-state matrix is
+  `spec/workflow_card.md`'s.
+- Its **right-hand column** is a setup checklist in State 1 only; a
+  validation issue list wherever validation has findings to show
+  (3, 4W, 4Err); a one-line `Status` in the settled validated states;
+  and nothing in States 2 and 7.
 - **Prepare session** is the only compound action: it generates the
   assignment pairs, validates, and — only on a clean validation —
   creates an invitation for every active reviewer with at least one
@@ -1307,8 +1318,9 @@ is the shape:
 
 Superseded by 18F and 19Q: there is no *Activate-Session
 super-button* running Generate → Validate → Activate in one click, and
-no separate *Create invites* step — Prepare absorbed both. The button
-formerly called **Pause** ships as **Revert to draft**.
+no separate *Create invites* step — Prepare absorbed both. The **card
+button** formerly called *Pause Session* is labelled **Revert to
+draft**; the word survives in other operator copy, per §6.1.
 
 The **Validate page** (`/operator/sessions/{id}/validate`) is the
 read-only deep-dive: setup-coverage grid (per section, per
