@@ -471,6 +471,44 @@ def list_invitations_for_session(
     return [InvitationRow(invitation=r[0], reviewer=r[1]) for r in rows]
 
 
+def list_sendable_invitations(
+    db: Session, session_id: int
+) -> list[InvitationRow]:
+    """Pending invitations whose reviewer is still eligible to receive one.
+
+    **The send set, as distinct from the listing.**
+    ``list_invitations_for_session`` returns every row, which is right
+    for a page that must keep showing a *sent* invitation to a reviewer
+    who has since left the roster — that URL is live in their inbox. It
+    is wrong for a send, and both send paths used it (or their own copy
+    of its query) until 19Q Item 2 rung 1.
+
+    Eligibility is `_assigned_active_reviewer_ids`, the same predicate
+    `generate_invitations` enrols on, so a row is sendable exactly when
+    a fresh Prepare would have created it. Deliberately *not* a fourth
+    spelling of "assigned and active": `monitoring._assigned_active_reviewers`
+    is already a second, which is how the Manage Invitations table and
+    the Send all button came to disagree about who is in the session.
+
+    Rows are filtered, never deleted. A reviewer reactivated later finds
+    their invitation still ``pending`` with its token intact.
+    """
+    eligible = sorted(_assigned_active_reviewer_ids(db, session_id))
+    if not eligible:
+        return []
+    rows = db.execute(
+        select(Invitation, Reviewer)
+        .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
+        .where(
+            Invitation.session_id == session_id,
+            Invitation.status == "pending",
+            Invitation.reviewer_id.in_(eligible),
+        )
+        .order_by(Reviewer.email)
+    ).all()
+    return [InvitationRow(invitation=r[0], reviewer=r[1]) for r in rows]
+
+
 def list_outbox_for_session(db: Session, session_id: int) -> list[EmailOutbox]:
     return list(
         db.execute(
@@ -752,6 +790,7 @@ __all__ = [
     "lookup_invitation_by_token",
     "record_open",
     "list_invitations_for_session",
+    "list_sendable_invitations",
     "list_outbox_for_session",
     "reviewers_eligible_for_invitation",
 ]

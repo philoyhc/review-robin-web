@@ -699,10 +699,15 @@ def invitations_send_all(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     _require_validated_or_ready(review_session)
-    rows = invitations.list_invitations_for_session(db, review_session.id)
+    # `list_sendable_invitations`, not `list_invitations_for_session`
+    # (19Q Item 2 rung 1). The listing is every row, which is what the
+    # page wants; the send set is pending **and** still eligible. Before
+    # this the button emailed reviewers the page above it does not list
+    # — `build_invitations_rows` goes through
+    # `monitoring.per_reviewer_progress`, which is assigned-and-active —
+    # so an operator saw one row and sent two mails.
+    rows = invitations.list_sendable_invitations(db, review_session.id)
     for row in rows:
-        if row.invitation.status != "pending":
-            continue
         invitations.send_invitation(
             db,
             invitation=row.invitation,

@@ -1923,3 +1923,167 @@ def test_invitations_info_card_omits_bulk_action_buttons(
         "Incomplete reviews",
     ):
         assert f">{label}\n" in body or label in body, label
+
+
+# --------------------------------------------------------------------------- #
+# 19Q Item 2 rung 1 — Send all respects eligibility
+# --------------------------------------------------------------------------- #
+
+
+def _two_reviewer_validated_session(
+    client: TestClient, db: Session, code: str
+) -> ReviewSession:
+    """A prepared session with two assigned, active reviewers."""
+    session = _create_session(client, db, code)
+    client.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\n"
+                b"Rae,rae@example.edu\nSam,sam@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, session.id)
+    generate_via_page_button(client, session.id)
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(session)
+    return session
+
+
+def _strand_an_invitation(
+    client: TestClient, db: Session, session: ReviewSession, email: str
+) -> Reviewer:
+    """Invite both reviewers, then make one ineligible and re-Prepare.
+
+    This is the live sequence, not a contrived one. `bulk_inactivate`
+    flips `Reviewer.status` and leaves the invitation alone — stated at
+    `app/web/routes_operator/_operations.py:561` — and lifecycle never
+    deletes invitation rows (`invitations.py:166`), so the row survives
+    the round trip to `draft` and back. The reviewer is then off the
+    Manage Invitations table, which lists
+    `monitoring.per_reviewer_progress` (assigned **and** active), while
+    their `pending` row is still in the send set.
+    """
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    assert _pending_count(db, session.id) == 2
+
+    stranded = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == session.id, Reviewer.email == email
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [stranded.id]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    # The edit invalidated the session; Prepare again so Send all is live.
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    db.refresh(stranded)
+    assert stranded.status != "active"
+    assert _pending_count(db, session.id) == 2, (
+        "the stranded invitation must survive — if lifecycle started "
+        "deleting these rows this test would pass for the wrong reason"
+    )
+    return stranded
+
+
+def _pending_count(db: Session, session_id: int) -> int:
+    return len(
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == session_id,
+                Invitation.status == "pending",
+            )
+        ).scalars().all()
+    )
+
+
+def test_send_all_skips_a_reviewer_who_is_no_longer_eligible(
+    client: TestClient, db: Session
+) -> None:
+    """19Q Item 2 rung 1 — the operator Send all button.
+
+    The Manage Invitations table lists only assigned, active reviewers,
+    so before this fix the operator saw one row and the button emailed
+    two people. **The page and the button disagreed about who is in
+    the session**, and the one the operator could not see is the one
+    who got the mail.
+    """
+    session = _two_reviewer_validated_session(db=db, client=client, code="sa-elig")
+    stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    recipients = {
+        row.to_email
+        for row in db.execute(
+            select(EmailOutbox).where(EmailOutbox.session_id == session.id)
+        ).scalars()
+    }
+    assert recipients == {"rae@example.edu"}, (
+        f"Send all emailed {sorted(recipients)}; `{stranded.email}` is "
+        "inactive and off the Manage Invitations table"
+    )
+
+
+def test_send_all_leaves_the_ineligible_invitation_pending(
+    client: TestClient, db: Session
+) -> None:
+    """Skipped, not consumed.
+
+    Rung 1 filters the send set; it does not prune rows — that is
+    explicitly out of scope, because deleting one risks removing a
+    *sent* invitation still live in a reviewer's inbox. So the row must
+    still be `pending` afterwards, ready to send if the reviewer is
+    reactivated.
+    """
+    session = _two_reviewer_validated_session(db=db, client=client, code="sa-keep")
+    stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
+
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+
+    row = db.execute(
+        select(Invitation).where(
+            Invitation.session_id == session.id,
+            Invitation.reviewer_id == stranded.id,
+        )
+    ).scalar_one()
+    assert row.status == "pending"
+    assert row.sent_at is None

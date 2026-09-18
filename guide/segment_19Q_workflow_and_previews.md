@@ -268,6 +268,42 @@ Leaves both preconditions and all four warning sites standing.
 - `grep -rln "invitations_not_created\|no_invitations" app/ tests/ spec/ docs/` → **12 files**
 - `grep -rln "workflow/prepare" tests/` → **12 test files**
 
+### Status
+
+**Rung 1 landed 2026-09-18, across two send paths rather than one.**
+
+The ladder named `invitations_send_all`. Building it found
+`_dispatch_pending_invitations`
+(`app/services/scheduled_events/_invites.py`) running its own copy of
+the same query with the same defect — and that is the **unattended**
+path, firing from a timer with no operator present. Fixed both;
+splitting them would have left a known live bug in the worse of the
+two. *The register names the instance somebody noticed, not the class.*
+
+**The bug is sharper than the Opportunity records.** The Manage
+Invitations table already filters: `views.build_invitations_rows` goes
+through `monitoring.per_reviewer_progress`, which is assigned-and-active.
+So the operator saw one row and the button emailed two people — the page
+and the button disagreed about who is in the session, and the one the
+operator could not see is the one who got the mail.
+
+**One definition, not a third spelling.** `list_sendable_invitations`
+reuses `_assigned_active_reviewer_ids`, the predicate
+`generate_invitations` already enrols on, so a row is sendable exactly
+when a fresh Prepare would have created it.
+`monitoring._assigned_active_reviewers` is a *second* spelling of the
+same idea and is how these two surfaces came to disagree in the first
+place; unifying it is not this rung's (it would touch the monitoring
+layer) but it is the root and should be recorded as such.
+
+`spec/workflow_card.md`'s *"Iterates every pending invitation"* became
+false the moment this landed, so it is corrected now rather than at
+rung 4 — the file was already in `Doc impact`.
+
+Four mutants, all caught: route reverted to the unfiltered listing;
+eligibility filter dropped; `pending` filter dropped; scheduled path
+back to its own query.
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates

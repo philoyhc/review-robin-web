@@ -504,8 +504,15 @@ Pre-flight gates:
   already invited).
 - **Send invites** posts to
   `/operator/sessions/{id}/invitations/send-all` via
-  `next-action-send-invites-form`. Iterates every pending
-  invitation and dispatches via `invitations.send_invitation`.
+  `next-action-send-invites-form`. Iterates
+  `invitations.list_sendable_invitations` — every `pending`
+  invitation whose reviewer is **still** assigned and active — and
+  dispatches via `invitations.send_invitation`. A reviewer
+  inactivated or dropped from every included assignment after being
+  invited keeps their row and is skipped, not deleted: the same set
+  the Manage Invitations table lists, and the same set a fresh
+  `generate_invitations` would enrol. The scheduled auto-send path
+  uses the same helper, so the two cannot drift.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
