@@ -14,11 +14,19 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ### Opportunity
 
-Eight things found during 19O Item 6, 19P's close and 19Q Items 1–2,
-each living only in a conversation or in a closed item's judgment
-calls. None is in a live segment; three were dropped from 19Q Item 2's
-plan by the `### Status` compaction at its close, which is how a
-finding with no home disappears. Recorded as a register, not planned.
+Twelve things found during 19O Item 6, 19P's close, 19Q Items 1–3 and
+the 18sep assessment, each living only in a conversation, a closed
+item's judgment calls or a dated record. None is in a live segment;
+three were dropped from 19Q Item 2's plan by the `### Status`
+compaction at its close, which is how a finding with no home
+disappears. Recorded as a register, not planned.
+
+**Audited 2026-09-18** against the code: entries 1–7 all still stand,
+8 has grown, and 9–12 were added. One candidate was checked and
+**rejected** — `next_action_card.html`'s context comment reads "`None`
+outside the `?validated=1` entry path **and outside `is_validated`**",
+which is exactly `_workflow_card.py:121`'s `validated_just_ran or
+is_validated`. Quoting only its first clause makes it look wrong.
 
 ### Decision
 
@@ -65,10 +73,37 @@ its treatment when the author takes it up, as Item 6's did.
    nothing commits after it on the failure paths — the route returns a
    redirect. The test suite's `get_db` override commits, so every test
    asserting the event passes regardless.
-8. **Dev-slot verification owed on three merged changes**, none of
+8. **Dev-slot verification owed on five merged changes**, none of
    which the suite can exercise: 19O.6's sort panel on Reviewees /
    Relationships / Assignments, 19Q.2 rung 1's Manage Invitations
-   counter, and 19Q.2 rung 3's six rewritten copy strings.
+   counter, 19Q.2 rung 3's six rewritten copy strings, 19Q.3 rung 1a's
+   State 2 card copy, and 19Q.3 rung 2's four recaptured Guide
+   screencaps with the prose around them. The last blocks the 19Q close
+   by the author's ruling, 2026-09-18; the rest do not block anything.
+9. **The Workflow card's State 6 copy says reviewers have been
+   notified.** "Reviewers have been notified that the review will open"
+   (`next_action_card.html:125`, quoted verbatim at
+   `spec/workflow_card.md:192`) — but no transport is wired
+   (`app/services/email_send.py`: "Nothing in the app calls this yet"),
+   so nothing has told anyone anything. Same family as the false
+   notification claim 19Q.3 rung 2 removed from the Guide, and the
+   place that one was copied from.
+10. **`spec/workflow_card.md:872-874` points at a retired handler.**
+    Its source-of-truth list names `invitations_generate`, which 19Q
+    Item 2 rung 3 deleted — `grep -rn "def invitations_generate" app/`
+    exits 1, while the same search for its surviving sibling
+    `invitations_send_all` finds `_operations.py:681`, so the empty
+    result is absence and not a broken search. Unanchored prose, so no
+    doc gate catches it.
+11. **`tools/code_metrics.py` still answers on a shallow clone.**
+    `guide/codebase_assessment_18sep.md` §4 proposes the
+    `--is-shallow-repository` guard that would make it refuse rather
+    than report a ratio pinned at 1.0x by arithmetic. Proposed in a
+    dated record, filed in no plan.
+12. **`docs/status.md` is six days stale at the top and 1,264 lines
+    long.** Its `**As of:** 2026-09-12` header sits above rows dated
+    through 18 September. Named in the same §4, with the file's size as
+    a compaction target; filed nowhere either.
 
 ### Doc impact
 
