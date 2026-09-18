@@ -1,6 +1,6 @@
 # Segment 19P — the expander revamp
 
-**Opened:** 2026-09-14 · **Theme:** re-house selection-driven controls into the
+**Opened:** 2026-09-14 · **Closed:** 2026-09-18 · **Theme:** re-house selection-driven controls into the
 Session Lobby's row-expander idiom, page by page · **Related:**
 `guide/roster_expander_revamp_handoff.md`, `guide/new_ux_ideas.md` §1,
 `spec/setup_pages.md`
@@ -14,11 +14,10 @@ revamp.
 `### Status`, and there is **no segment-level `## Doc impact`**.
 `python3 tools/close_check.py 19P.1` reads Item 1's manifest.
 
-**Item 4 is a stub.** It records the sequence and why, not a plan; it is
-planned in full when it is taken up. Items 1-3 are closed; **Item 5 is planned
-and open** (2026-09-17) and is not Item 4's work — it moves existing controls
-into the toolbar and the expander, where Item 4 is a redesign that would add
-selection where there is none.
+**Closed at seven items — five built (1, 2, 3, 5, 6), two retired unbuilt
+(4, 7).** Each retired item keeps its stub, its answered questions and a
+`### Status` saying why it never became work; Item 7's question became
+19Q Item 1.
 
 ---
 
@@ -2089,10 +2088,34 @@ when this item is planned, not before.
 
 ### Open questions
 
-1. **Which fate**, per above. Author's, after Item 6 is on the dev slot.
-2. **Does Responses get the symmetric treatment?** Its detail page is
-   already reviewee-keyed, so it needs no re-key, and a reviewee has
-   no surface of their own — so the symmetry may be nominal. Answer
-   after 1.
-3. **Naming.** If the tab retires, does *"Invitations"* still describe
-   a page you use before any invitation exists? Only live under fate 1.
+All three answered by the author, 2026-09-17/18, and none is this
+segment's to build.
+
+1. **Which fate** — **fate 1, retire the tab.** Planned as 19Q Item 1.
+2. **Does Responses get the symmetric treatment?** No — its detail page
+   is already reviewee-keyed and a reviewee has no surface of their own.
+   (Item 6's open question 1 reached the same answer independently.)
+3. **Naming** — carried into 19Q Item 1, where the tab actually retires.
+
+### Doc impact
+
+- `spec/preview_hub.md` — the hub's fate, had this item planned it. <!-- doc-impact-waived: Item 7 retired unplanned 2026-09-18; the question it held is answered and the work is 19Q Item 1, which carries its own manifest. Nothing shipped under this item, so there is nothing for it to document -->
+
+### Status — retired 2026-09-18, unplanned
+
+**This item never became work, and that was its purpose.** It opened as
+a stub to hold decisions a conversation had already reached, so Item 6's
+references to "Item 7" resolved to something and the reasoning was not
+re-derived. It did that job: the door measurement below is cited by
+19Q Item 1, and the three candidate fates are what 19Q was planned
+against.
+
+**What it got wrong, and 19Q caught.** The stub framed the choice as
+*where the reviewer surface is reached from*, and missed that the hub
+also hosts the **email previews** — so retiring it needs a home for
+them, which 19Q Item 1 gives to the Invitations per-reviewer drill-in.
+A stub is not a plan, and this is the shape of the difference.
+
+**Retired rather than left open**, because an answered question that
+still reads as open is a reader acting on a dead decision — the failure
+this segment spent Item 6 learning to avoid one level down, in prose.
