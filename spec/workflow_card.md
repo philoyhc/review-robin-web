@@ -690,10 +690,10 @@ spelled as its button renders it: `prepare` → "Prepare session",
 generic **"Action failed"** rather than any named button, so a
 sixth value added to the vocabulary reads vague instead of wrong.
 The step maps via `_step_label_map` (`generate` → "Generate
-assignments", `validate` → "Validate setup", `activate` →
-"Activate session", `close` → "Close session", `precondition` →
-"pre-flight check"), and **the step phrase is suppressed when it
-repeats the button label** — "Close session failed at the Close
+assignments", `validate` → "Validate setup", `invite` → "Create
+invitations", `activate` → "Activate session", `close` → "Close
+session", `precondition` → "pre-flight check"), and **the step
+phrase is suppressed when it repeats the button label** — "Close session failed at the Close
 session." says nothing twice. The error detail (when
 present) renders inline below the headline. State 3 / 4Err
 issue lists continue to render in the per-state detail block —

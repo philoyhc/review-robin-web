@@ -18,6 +18,7 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     InstrumentResponseField,
+    Invitation,
     Response,
     Reviewee,
     Reviewer,
@@ -69,6 +70,41 @@ def _seed_pair_plus_pinned(
     )
     # Wave 5 PR 5.2 — the auto-seeded "Full Matrix" SessionRuleSet
     # retired; lazily materialise one via the shared helper.
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    db.refresh(review_session)
+    return review_session
+
+
+def _seed_two_reviewers_plus_pinned(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    """`_seed_pair_plus_pinned` with a second reviewer, for the cases
+    that need one reviewer to change eligibility while another holds
+    an invitation."""
+    review_session = _make_session(client, db, code=code)
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\n"
+                b"Alice,alice@example.edu\nBob,bob@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
     return review_session
@@ -895,3 +931,245 @@ def test_a_distinct_step_still_renders(
         client, review_session.id, button="close", step="precondition"
     )
     assert "at the pre-flight check" in body
+
+
+# --------------------------------------------------------------------------- #
+# 19Q Item 2 rung 2 — Prepare creates the invitations                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_prepare_creates_one_invitation_per_eligible_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """The rung's whole claim, on the clean path."""
+    review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-1")
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert lifecycle.is_validated(review_session)
+
+    rows = list(
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    assert len(rows) == 1
+    assert rows[0].status == "pending"
+    assert rows[0].token_hash
+    assert rows[0].sent_at is None
+
+    # The event joins Prepare's run rather than reading as a separate
+    # operator action — the plan states this, so it is asserted rather
+    # than assumed.
+    events = list(
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == review_session.id)
+            .order_by(AuditEvent.id)
+        ).scalars()
+    )
+    generated = [e for e in events if e.event_type == "invitations.generated"]
+    started = [
+        e for e in events if e.event_type == "session.workflow_run_started"
+    ]
+    assert len(generated) == 1
+    assert len(started) == 1
+    assert generated[0].correlation_id is not None
+    assert generated[0].correlation_id == started[0].correlation_id, (
+        "the invitations.generated event carries its own correlation id, "
+        "so the audit log reads as two unrelated actions"
+    )
+
+
+def test_a_failed_validation_creates_no_invitations(
+    client: TestClient, db: Session
+) -> None:
+    """The reason creation sits *after* `mark_validated`.
+
+    Minting rows for a setup the operator is still fixing is what
+    `_require_validated_or_ready` refuses invitations from `draft` to
+    prevent, and it is why the plan rejected creating at the Generate
+    step, before validate.
+
+    **The roster has to be otherwise good, or this proves nothing.**
+    A first draft used an empty session: validation failed, no
+    invitations appeared — and a mutant that moved the creation ahead
+    of validate passed it, because with no reviewers there was nobody
+    eligible to invite either. The duplicate reviewee below fails
+    validation *while* the reviewer is fully eligible, so the two
+    orderings give different answers: after validate, zero rows;
+    before it, one.
+    """
+    review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-fail")
+
+    # `reviewees.duplicate_id` is an error, and the import route
+    # rejects duplicates, so the row goes in directly — the state is
+    # reachable by other means (a CSV that differs only in case, a
+    # bundle import) and the point here is the validation branch, not
+    # how the roster got there.
+    existing = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Carol Again",
+            email_or_identifier=existing.email_or_identifier,
+        )
+    )
+    db.flush()
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "super_step=validate" in response.headers["location"]
+
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+    # The reviewer is eligible at this point — assignments were
+    # generated before validate ran — so a creation step placed ahead
+    # of validate would have minted a row here.
+    assert (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.include.is_(True),
+            )
+        ).first()
+        is not None
+    ), "no included assignment, so this test cannot tell the orderings apart"
+
+    assert (
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == review_session.id
+            )
+        ).first()
+        is None
+    )
+    assert "invitations.generated" not in _audit_event_types(
+        db, review_session.id
+    )
+
+
+def test_re_prepare_is_additive_and_preserves_existing_tokens(
+    client: TestClient, db: Session
+) -> None:
+    """A second Prepare catches up without disturbing what exists.
+
+    `generate_invitations` skips reviewers who already have a row, so
+    a re-Prepare must leave every token and state alone while picking
+    up anyone newly eligible. Asserted on the **token hash**, not just
+    the row count: a regeneration that rotated tokens would keep the
+    count identical and silently invalidate every URL already in a
+    reviewer's inbox.
+
+    *Reactivation is the lever because importing is not.* A first
+    draft added a second reviewer by importing another CSV, and the
+    import answered **400** — a roster with rows is not re-importable
+    without going through the Unlock panel (19O Item 3). Reactivating
+    an inactive reviewer reaches the same state through a route an
+    operator actually has.
+    """
+    review_session = _seed_two_reviewers_plus_pinned(
+        client, db, code="prep-inv-again"
+    )
+    latecomer = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id,
+            Reviewer.email == "bob@example.edu",
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [latecomer.id]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    first = db.execute(
+        select(Invitation).where(Invitation.session_id == review_session.id)
+    ).scalar_one()
+    original_hash = first.token_hash
+    original_id = first.id
+    assert first.reviewer_id != latecomer.id
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-reactivate",
+        data={"reviewer_ids": [latecomer.id]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert lifecycle.is_validated(review_session)
+
+    rows = list(
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    assert len(rows) == 2, "the newly eligible reviewer was not picked up"
+
+    kept = next(r for r in rows if r.id == original_id)
+    assert kept.token_hash == original_hash, (
+        "the re-Prepare rotated an existing token; every invitation URL "
+        "already sent would be dead"
+    )
+    assert kept.status == "pending"
+
+
+def test_prepare_does_not_retire_the_create_invites_button(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 2's explicit constraint: the button stays for one rung.
+
+    It already self-conceals once invitations exist
+    (`invitations_generated`), so on a prepared session it is hidden
+    rather than gone — retiring the route and the markup is rung 3.
+    This asserts the route is still live, which is the half a template
+    check would miss.
+    """
+    review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-btn")
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, (
+        "POST /invitations/generate must still answer in rung 2; "
+        "retiring it is rung 3"
+    )
+    rows = list(
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    assert len(rows) == 1, "the still-live button double-created"

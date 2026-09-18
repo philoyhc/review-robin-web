@@ -381,6 +381,47 @@ mutant is caught by a pre-existing test
 (`test_scheduled_invites.py`'s second-fire `counts.sent == 0`), not by
 any of the new ones — the first write-up implied otherwise.*
 
+**Rung 2 landed 2026-09-18.** `generate_invitations` runs inside
+`workflow_prepare` after `mark_validated`, on the clean path only. The
+button is untouched, per the rung.
+
+**Two of the four mutants survived, and both were tests of mine that
+proved nothing.**
+
+- *Moving the call inside the `is_draft` guard* passed everything —
+  because the state it distinguishes is unreachable.
+  `replace_assignments` calls `invalidate_if_validated`, so by the
+  time control reaches the guard the session has **always** been
+  through `draft`. Measured: a second Prepare with nothing edited
+  emits `session.invalidated`, then a second `session.validated`. The
+  comment claiming this placement exists for "a session already
+  validated" was wrong and now says what is true — it is a refusal to
+  couple invitation creation to a lifecycle transition that happens
+  one step earlier, not a reachable catch-up.
+- *Moving the call ahead of `validate`* — **this plan's central
+  rejected alternative** — also passed, because
+  `test_a_failed_validation_creates_no_invitations` used an empty
+  session. Validation failed and no invitations appeared, but there
+  was nobody eligible to invite either, so both orderings gave the
+  same answer. Rebuilt on a good roster with a duplicate reviewee: the
+  reviewer is fully eligible when validation fails, so after-validate
+  gives zero rows and before-validate gives one. The mutant now fails.
+  The test asserts an included assignment exists first, so it cannot
+  quietly decay back into the vacuous version.
+
+**One test re-aimed rather than deleted.**
+`test_invitations_pill_not_created_when_no_invitation_rows` seeded a
+roster and Prepared, which now yields `Not sent`. The `Not created`
+state is still reachable exactly where open question 1 said it was —
+zero eligible reviewers — so the test reaches it that way (every
+reviewer inactive; `reviewers.empty` counts rows regardless of
+status). **Nothing pinned that answer with a test before**, and rung
+3 keeps the `has_invitations` skip reasons on the strength of it.
+
+`_step_label_map` gains `invite` → "Create invitations", and
+`spec/workflow_card.md` enumerates that map, so the spec gains the
+entry in the same commit.
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates
