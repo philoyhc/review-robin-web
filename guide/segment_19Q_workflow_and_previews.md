@@ -430,11 +430,10 @@ Workflow card's own State 2 copy is stale in the same way the Guide is.
 `next_action_card.html:119` — the only card copy an operator reads
 *before* pressing Prepare — names two of Prepare's three effects, the
 assignment pairs and the validation, but not the invitations 19Q Item 2
-rung 2 moved into `workflow_prepare`. States 4 and 7 both name it, so the
-card explains it only to someone who has already run the thing. Item 2's
-definition of done required "the Workflow card's Prepare copy names
-invitation creation"; that was met in the states after Prepare and not in
-the one before it.
+rung 2 moved into `workflow_prepare`. Item 2's definition of done
+required "the Workflow card's Prepare copy names invitation creation";
+States 4 and 7 meet it, so the card explained it only to an operator who
+had already run the thing.
 
 ### Decision
 
@@ -471,28 +470,18 @@ case this Decision rejects.
 
 ### Status
 
-**Open.** Rung 1 landed 2026-09-18 (#2464).
+**Open.** Rung 1 landed 2026-09-18 (#2464), with a corrective push in the
+same PR: two parity claims in its prose were false — the reviewer surface
+drops a response field unpinned after the reviewer answered it, and two
+of the three preview tabs substitute send-time values. Codex's read
+caught both; nothing in the suite could have.
 
-**Rung 1's new prose carried two overclaims, both found by Codex on the
-PR, both real, both fixed in the same PR.** "whatever they have already
-saved" is false once a response field is unpinned — the surface filters
-on `visible.is_(True)` and the saved value reaches the page only as a
-label in the dropped-fields banner. "What you see is what that reviewer
-gets" is false on all three preview tabs: two render
-`PREVIEW_INVITE_URL_PLACEHOLDER`, and the third can print
-`"(not yet submitted)"`, which no live send ever carries. *I had read the
-invitation placeholder before writing that sentence and concluded it
-describes itself. It does, and that protects the operator from copying
-it; it does not make the sentence true.*
-
-**The ladder grew rung 1a** — the card copy, folded in by the author.
-Its finding is the instrument rather than the copy: `ready for prime
-time` was quoted verbatim in `spec/workflow_card.md` and asserted in
-**no test**, so the sentence 19Q Item 2 rung 2 left incomplete had no way
-to go red. Coverage across the card's states is uneven — measured by
-grepping each state's copy against `tests/`: `no invitations exist` 3
-files, `Validation didn't pass` 2, `Session not fully set up` 1, State 2
-and `Invitations are ready to send` none.
+**The ladder grew rung 1a**, the card copy, folded in by the author. Its
+finding is the instrument rather than the copy: `ready for prime time`
+was quoted verbatim in `spec/workflow_card.md` and asserted in **no
+test**, so the sentence 19Q Item 2 rung 2 left incomplete had no way to
+go red. Each state's copy grepped against `tests/` — States 7, 3 and 1
+are pinned by 3, 2 and 1 files; States 2 and 5 by none.
 
 ### PR ladder
 
@@ -501,9 +490,8 @@ and `Invitations are ready to send` none.
 2. **Guide for Item 2** — the Prepare narrative, the two workflow
    screencap pairs, the validate-page alt text. Lands after 19Q.2 merges.
 
-**Inserted 2026-09-18 between 1 and 2**, after rung 1's build found it
-and the author folded it in. The original two rungs stand as written;
-this is a third, not a rewrite of either.
+**Inserted 2026-09-18 between 1 and 2.** The original two rungs stand as
+written; this is a third, not a rewrite of either.
 
 1a. **The Workflow card's State 2 copy names invitation creation.**
     `next_action_card.html` State 2, the `spec/workflow_card.md` state
