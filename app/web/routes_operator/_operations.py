@@ -284,6 +284,7 @@ def previews_index(
     )
     active_email_tab = views.resolve_email_preview_tab(email)
     email_body: views.EmailBody | None = None
+    reviewer_obj: Reviewer | None = None
     if picker.current is not None:
         reviewer_obj = db.execute(
             select(Reviewer).where(
@@ -318,6 +319,7 @@ def previews_index(
                 review_session, "Previews"
             ),
             "picker": picker,
+            "reviewer": reviewer_obj,
             "email_tabs": views.EMAIL_PREVIEW_TABS,
             "active_email_tab": active_email_tab,
             "email_body": email_body,
@@ -584,6 +586,7 @@ def invitations_index(
 def invitation_reviewer_detail(
     request: Request,
     reviewer_id: int,
+    email: str = "invitation",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -664,6 +667,13 @@ def invitation_reviewer_detail(
         if invitation is not None
         else None
     )
+    active_email_tab = views.resolve_email_preview_tab(email)
+    email_body = views.build_email_preview_body(
+        tab=active_email_tab,
+        review_session=review_session,
+        reviewer=reviewer,
+        from_display=views.email_preview_from_display(user),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations_reviewer_detail.html",
@@ -680,6 +690,9 @@ def invitation_reviewer_detail(
             "row": row,
             "invite_url": invite_url,
             "delivery_status": delivery_status,
+            "email_tabs": views.EMAIL_PREVIEW_TABS,
+            "active_email_tab": active_email_tab,
+            "email_body": email_body,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_invitations_reviewer(
                 review_session, reviewer.name

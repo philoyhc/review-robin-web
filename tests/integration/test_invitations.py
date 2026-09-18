@@ -1053,6 +1053,51 @@ def test_invitation_reviewer_detail_renders(
     assert "/me/invite/" in body
 
 
+@pytest.mark.parametrize(
+    ("email_tab", "active_label", "expected_body"),
+    (
+        ("invitation", "Invitation", "Invitation to review:"),
+        ("reminder", "Reminder", "Reminder: review for"),
+        (
+            "responses_received",
+            "Responses received",
+            "Responses received:",
+        ),
+    ),
+)
+def test_invitation_reviewer_detail_renders_email_preview_tab(
+    client: TestClient,
+    db: Session,
+    email_tab: str,
+    active_label: str,
+    expected_body: str,
+) -> None:
+    session = _ready_session(client, db, code=f"drill-email-{email_tab}")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+
+    response = client.get(
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{reviewer.id}",
+        params={"email": email_tab},
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert (
+        f'<span class="nav-tab active" aria-current="page">'
+        f"{active_label}</span>"
+    ) in body
+    assert expected_body in body
+    assert f"<strong>To:</strong> {reviewer.email}" in body
+    assert 'id="email-previews"' in body
+    assert (
+        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        in body
+    )
+
+
 def test_detail_page_dates_line_reports_a_sent_reminder(
     client: TestClient, db: Session
 ) -> None:
