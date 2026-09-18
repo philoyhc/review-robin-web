@@ -183,7 +183,7 @@ missed).
 | State | Trigger | Body |
 | --- | --- | --- |
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
-| **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate." |
+| **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." |
 | **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |

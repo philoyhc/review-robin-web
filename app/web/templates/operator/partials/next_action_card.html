@@ -116,7 +116,7 @@
       <p>Resolve the errors and re-run <strong>Prepare session</strong>.</p>
     {% elif is_draft %}
       {# State 2 — setup populated, no validation summary yet. #}
-      <p>Run <strong>Prepare session</strong> to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate.</p>
+      <p>Run <strong>Prepare session</strong> to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate.</p>
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
         {% if invitations_sent %}
