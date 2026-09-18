@@ -463,9 +463,9 @@ The affordances a reader may be looking for here are on the drill-in:
 **Open reviewer surface** (§13 row 87b, which replaces row 75a's
 `Open full preview`) and the email preview tab strip, whose rows keep
 their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
-retired with the picker and have no successor — see
-`guide/segment_19Q_workflow_and_previews.md` Item 1 open question 2 for
-whose Status records why `Random` was not rehomed.
+retired with the picker and have no successor — `Random` gets no
+replacement; see `guide/segment_19Q_workflow_and_previews.md` Item 1's
+Status.
 
 ### 12a — Previewing-as picker — **retired 19Q Item 1**
 
