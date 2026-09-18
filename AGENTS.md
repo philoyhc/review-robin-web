@@ -249,16 +249,44 @@ reject it.
 - **Two cold readers, different cadences.** A slice is read cold before
   it is marked **ready for review** — not before it is pushed: a draft
   PR is not a merge, and an unpushed commit in an ephemeral container is
-  a loss risk. `diff-reviewer` does that read on **every** slice; it is
-  the maker ≠ checker gate (`constitution.md` III) and is not
-  conditional. `spec-writer` runs **at the close** (`segment-plan`,
-  "Closing a segment" step 3), and earlier only when the slice touches
-  `spec/`, touches a path its plan's `Doc impact` names, or is the
-  closing slice. **A slice with no plan meets none of those** and takes
-  `diff-reviewer` alone. Outside a close `spec-writer` may not re-align
-  a spec to the code, so a deferred slice loses a report, not an
-  alignment — and a later slice can falsify what an earlier pass
-  verified.
+  a loss risk. The gates that run inside `pytest` are cheap and are not
+  what this bullet rations: `ruff check .` and `pytest -n auto` green in
+  the sandbox, with `node` present so
+  `tests/integration/test_inline_scripts_parse.py` runs rather than
+  skips, are owed on **every** push regardless of what follows.
+
+  `diff-reviewer`'s cadence is **per item, not per slice** (author's
+  ruling, 2026-09-18, on a merge-history audit: the read catches real
+  defects on code rungs, overclaimed only prose on plan and close rungs,
+  and roughly doubles a slice's elapsed time). Four rules:
+
+  - **Prose-only slices take no read.** A slice is prose-only when its
+    diff touches nothing under `app/`, `tests/` or `alembic/` — plan
+    opens, rung closes, `Status` compaction, `docs/status.md` rows,
+    README rows, registers, spec sweeps. Push, CI, merge. The
+    doc-convention tests cover the pointers and `spec-writer` at the
+    close covers the spec prose.
+  - **Code slices inside an item ladder are read once per item.** Mark
+    the rung you expect to be the item's last build rung; at that rung,
+    before marking it ready for review, run `diff-reviewer` on the
+    item's **cumulative** diff rather than the rung's —
+    `git diff <main SHA before the item's rung 1 merged>..HEAD`. Record
+    that base SHA in the rung-1 PR body so the last rung can cite it.
+    Act on the findings in that PR. If a later rung reopens `app/` or
+    `tests/` after the read, that rung takes its own read.
+  - **A code slice outside any ladder** — a one-off fix, a CI repair, a
+    scaffold — still takes a read on its own diff.
+  - **Say what the reads found.** At each item close, the `Status` block
+    records how many reads the item took and what they turned up, so the
+    next practice audit can re-measure `constitution.md` III's "when
+    run" against this cadence rather than the one it replaced.
+
+  `spec-writer` is unchanged: **at the close** (`segment-plan`, "Closing
+  a segment" step 3), and earlier only when the slice touches `spec/`,
+  touches a path its plan's `Doc impact` names, or is the closing slice.
+  Outside a close `spec-writer` may not re-align a spec to the code, so
+  a deferred slice loses a report, not an alignment — and a later slice
+  can falsify what an earlier pass verified.
 - End-to-end verification happens on the Azure dev slot after deploy,
   not in the agent's sandbox. When a change touches UI or anything
   the test suite can't exercise (templates, redirects, real auth),
