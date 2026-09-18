@@ -10,6 +10,87 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 7 — Loose ends, recorded 2026-09-18
+
+### Opportunity
+
+Eight things found during 19O Item 6, 19P's close and 19Q Items 1–2,
+each living only in a conversation or in a closed item's judgment
+calls. None is in a live segment; three were dropped from 19Q Item 2's
+plan by the `### Status` compaction at its close, which is how a
+finding with no home disappears. Recorded as a register, not planned.
+
+### Decision
+
+List only. Nothing here is scheduled, scoped or sized — an entry gets
+its treatment when the author takes it up, as Item 6's did.
+
+### The register
+
+1. **`spec/operations_pages.md:129-135` describes neither layer's
+   invitation gate.** It says the per-row **Send** and **Regenerate**
+   buttons are "live from `validated` onward" — `session_invitations.html:310,328`
+   disables both unless `is_ready`. In the same paragraph it says
+   **Send reminders** "keeps the stricter `ready`-only requirement" —
+   `invitations_remind_one` and `invitations_remind_incomplete`
+   (`_operations.py:1047,1083`) both gate on `_require_validated_or_ready`,
+   the button alone being `ready`-only. One paragraph, two errors, in
+   opposite directions. *Dropped from 19Q.2 by compaction.*
+2. **`docs/status.md:836-840` annotates five invitation routes
+   "ready-only"** when all five gate on `_require_validated_or_ready`.
+   Stale since 18F Part 2. *Dropped from 19Q.2 by compaction.*
+3. **State 4Err renders Activate** though its own body copy tells the
+   operator to re-run Prepare first (`spec/workflow_card.md:322-336`).
+   The spec now describes the behavior; whether it *should* behave that
+   way was never opened. *Dropped from 19Q.2 by compaction.*
+4. **`?validated=1` mutates lifecycle state from a GET.**
+   `build_workflow_card_context` calls `mark_validated` inline — a
+   layering breach and a prefetch hazard. Removing it fails **208 tests**
+   across ~30 files (measured, 19Q.2 rung 2); the author's ruling was to
+   keep the backend. Recorded there as a judgment call, filed nowhere.
+5. **`spec/lifecycle.md:550` lists `precondition` in the
+   `session.workflow_run_failed` `context.step` enum**, which nothing
+   emits — every precondition return in `_workflow.py` precedes the
+   `workflow_run_started` write and redirects with `super_step` instead.
+   The same handler's `step or "unknown"` fallback (`_workflow.py:259`)
+   is dead for the same reason: `step` is assigned before the `try`.
+6. **`spec/rrw_functional_spec.md` §9.8 and §6.1 are pre-18F.** §9.8
+   describes "ten states" and an "Activate-Session super-button"
+   running Generate → Validate → Activate; the card has twelve states
+   over ten numbers (`spec/workflow_card.md:152`) and the button is
+   **Prepare session**. §6.1 and §9.8 both still name **Pause**, which
+   ships as **Revert to draft**.
+7. **`session.workflow_run_failed` may never persist in production.**
+   `audit.write_event` flushes without committing (`audit.py:217`) and
+   nothing commits after it on the failure paths — the route returns a
+   redirect. The test suite's `get_db` override commits, so every test
+   asserting the event passes regardless.
+8. **Dev-slot verification owed on three merged changes**, none of
+   which the suite can exercise: 19O.6's sort panel on Reviewees /
+   Relationships / Assignments, 19Q.2 rung 1's Manage Invitations
+   counter, and 19Q.2 rung 3's six rewritten copy strings.
+
+### Doc impact
+
+- `docs/status.md` — a row when entries are worked. Which specs change
+  is not knowable until each is taken up; the register sizes nothing on
+  purpose, so its manifest grows an entry at a time rather than
+  committing now to the specs the eight would touch.
+
+### Open questions
+
+- Which entries are worth doing at all is the author's, one at a time.
+  Entry 3 is the only one carrying a behavior question rather than a
+  correction.
+
+### Out of scope
+
+- Planning, sizing or ordering any entry. That is the point of a
+  register: Item 6 proved that a finding survives a close only if it is
+  written down somewhere a close does not compact.
+
+---
+
 ## Item 6 — Loose ends, recorded 2026-09-18, settled 2026-09-18
 
 ### Opportunity
