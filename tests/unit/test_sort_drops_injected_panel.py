@@ -154,11 +154,19 @@ def test_the_panel_is_removed_rather_than_hidden() -> None:
     anything at all.
     """
     body = _apply_sort_body()
-    selector = body.index(".session-expander")
-    removal = body.index("removeChild")
-    assert removal - selector < 200, (
-        "the `removeChild` must act on the panels this function just "
-        "selected; a distant one is removing something else"
+
+    # Ordering, not distance. A first draft asserted the `removeChild`
+    # sat within 200 characters of the selector, which was a number
+    # picked from the current 102 rather than derived from anything —
+    # and `_strip_line_comments` pads comments with spaces, so three
+    # explanatory lines inserted between the two would have failed the
+    # test with a message about "removing something else" that was not
+    # true. What actually matters is that the selector precedes the
+    # removal and the removal precedes the stamp; the sibling test
+    # above owns the second half.
+    assert body.index(".session-expander") < body.index("removeChild"), (
+        "the `removeChild` must act on the panels this function "
+        "selected, so the selector comes first"
     )
     assert "style.display" not in body, (
         "the panel must leave the DOM; hiding it keeps its index"
@@ -190,13 +198,17 @@ def test_every_migrated_page_listens(page: str) -> None:
 
 @pytest.mark.parametrize("page", UNMIGRATED_PAGES)
 def test_every_unmigrated_page_still_defends_itself(page: str) -> None:
-    """Exactly one mechanism per page, and never zero.
+    """Never zero mechanisms — which is the half that matters.
 
     This is the assertion that makes the split safe to ship. Deleting a
     page's capture-phase handler without giving it a listener leaves it
-    with neither — the panel is dropped by `_rrwApplySort` and nothing
+    with neither: the panel is dropped by `_rrwApplySort` and nothing
     puts it back. Pinning the workaround's *presence* here means that
     mistake fails a test instead of shipping.
+
+    Deliberately `or`, not `!=`. A page carrying both during a
+    migration is redundant rather than broken, and failing it would
+    force the two halves of a move into one commit.
     """
     src = (OPERATOR / page).read_text(encoding="utf-8")
     has_workaround = 'closest(".rrw-sort-btn")' in src

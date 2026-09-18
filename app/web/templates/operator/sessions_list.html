@@ -454,6 +454,15 @@
               // The baseline `expanderIsDirty()` compares against
               // (19O Item 4). Written here because this is the one
               // place a single-selection field is seeded.
+              //
+              // Reads back `input.value`, NOT `fields[key]`, and the
+              // order is load-bearing: assigning to a `datetime-local`
+              // runs the browser's value sanitizer, so
+              // `2026-01-01T10:00:00` becomes `2026-01-01T10:00` and an
+              // unparseable value becomes `""`. Seeding the baseline
+              // from the raw dict would leave every deadline field
+              // permanently unequal to itself, and every sort on a
+              // lobby with a selection would prompt.
               input.setAttribute("data-seeded-value", input.value);
               // Name / Code / Deadline edit in draft only; Tags always.
               if (key !== "tags" && !isDraft) input.disabled = true;
@@ -526,6 +535,12 @@
           );
           if (tagsInput) {
             tagsInput.value = Object.keys(union).sort().join(", ");
+            // Same baseline `fillSingle` writes (19O Item 4). Missed on
+            // the first pass, which guarded four single-selection fields
+            // and left this one unguarded — so a typed bulk tag list was
+            // still discarded by a sort, which is the defect the gate
+            // exists to prevent, one function over.
+            tagsInput.setAttribute("data-seeded-value", tagsInput.value);
           }
           var clearAll = node.querySelector("[data-expander-clear-all]");
           var clearOthers = node.querySelector("[data-expander-clear-others]");
@@ -588,9 +603,10 @@
         // the unsorted restore order the server's.
         //
         // **This lobby's panel is the one editable expander in the app**
-        // — nine `[data-expander-field]` inputs against read-only panels
-        // everywhere else — so the rebuild is not free here the way it is
-        // on Reviewers. `refreshExpander()` re-clones from the template
+        // — five `[data-expander-field]` inputs, four on the
+        // single-selection panel and one on the bulk one, against
+        // read-only panels everywhere else — so the rebuild is not free
+        // here the way it is on Reviewers. `refreshExpander()` re-clones from the template
         // and re-seeds from the row's rendered cells, which silently
         // reverts a name the operator has typed but not saved. A stranded
         // panel is a layout bug; a discarded rename is data loss, and
@@ -605,6 +621,11 @@
         // three pages and should not have to read it three times.
         var _rrwSortedTable = document.querySelector("[data-rrw-sortable]");
         if (_rrwSortedTable) {
+          // NOTE for 19O Item 6: this `closest(".rrw-sort-btn")` is the
+          // dirty gate, NOT 19P.1's panel-removal workaround, which this
+          // page never had. `test_the_per_page_workaround_is_gone` uses
+          // that string as the workaround's signature, so extending it
+          // across the migrated pages must exempt this one.
           _rrwSortedTable.addEventListener("click", function (event) {
             if (!event.target.closest) return;
             if (!event.target.closest(".rrw-sort-btn")) return;

@@ -481,8 +481,9 @@ and was neither updated nor waived. The Status claim that the primitive
 `operations_pages`" was incomplete for the same reason.
 
 **And the one the build had not considered: the lobby's panel is the
-only editable expander in the app.** Nine `[data-expander-field]`
-inputs, against read-only panels everywhere else. `refreshExpander()`
+only editable expander in the app.** Five `[data-expander-field]`
+inputs — four on the single-selection panel, one on the bulk one —
+against read-only panels everywhere else. `refreshExpander()`
 re-clones from the template and re-seeds from the row's cells, so a sort
 mid-edit silently reverted a typed session name — trading a layout bug
 for data loss, which is the defect 19P.2 rung 5a gave its own rung to
@@ -494,6 +495,32 @@ in a flag — Observers mirrors one and it went stale once.
 
 **Author's ruling, 2026-09-18:** warn rather than preserve the node, and
 narrow the claims rather than migrate the remaining three pages here.
+
+**A second cold read, on the gate the first one caused.** It answered
+the question the suite cannot: `stopPropagation()` on the capture phase
+*does* stop the header button's inline `onclick`, because dispatch
+checks the stop flag before the target phase — so the gate cancels the
+sort rather than merely asking about it. Then it found the gate
+incomplete in the same way the original fix was: `fillSingle` seeds four
+fields with a `data-seeded-value` baseline and `fillBulk` seeded its one
+field with none, so `expanderIsDirty()` skipped it and a typed bulk tag
+list was still discarded without a word. *The defect the gate exists to
+prevent, one function over.*
+
+**And the fix for `spec/architecture.md` was wrong in the mirror
+direction.** The first draft implied all three cascade slots ride every
+event. The correction said `cascaded_responses` is the bulk delete's
+*alone* — true — in a contrast that implied the bulk delete carries only
+that, where `roster_bulk.py` emits all four. Two drafts, two opposite
+wrong answers to "which key do I query for". It is a three-row table
+now: the prose form kept failing because the fact is a matrix.
+
+Four claims were also corrected against the tree: 19P.1's workaround
+existed on **one** migrated page rather than three, the lobby has
+**five** editable fields rather than nine, the guard asserts *at least*
+one mechanism rather than exactly one, and the proximity check that
+replaced the mutant-defeated one used a distance picked from the
+current value — now an ordering assertion, which is what was meant.
 
 ### Out of scope
 
@@ -507,6 +534,7 @@ narrow the claims rather than migrate the remaining three pages here.
 
 - `spec/ui_elements.md` — the `.session-row-selected` entry describes the injected panel's placement ("**The panel closes the bracket**") without stating what a client-side sort does to it; add the rule that a sort drops and re-anchors it, beside the `[data-rrw-sortable]` entry that owns the sort primitive (Item 4).
 - `spec/sort_by_reviewee.md` — § *Shared sort primitive* gains the panel removal and the `rrw:sorted` dispatch; **added at the close**, not named at planning time, and the file `spec/README.md` says owns sort UX (Item 4).
+- `spec/sessions_overview.md` — the **Sortable columns** bullet also carries the *"Discard unsaved changes?"* gate, since the lobby's panel is editable and a sort can now be cancelled; **added after the gate was built**, which post-dated this manifest's first revision (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
 
 - `spec/sessions_overview.md` — the **Sortable columns** bullet gains the sort-drops-and-re-anchors line, pointing at `ui_elements` for the mechanism (Item 4). *The plan waived this file on the grounds that its **panel** description states no sort interaction. True of the panel entry, and beside the point: the lobby's own sortable-columns bullet is where a reader meets sorting, and it said nothing about a selection surviving one.*
