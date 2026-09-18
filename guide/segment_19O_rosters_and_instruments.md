@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18
+## Item 7 — Loose ends, recorded 2026-09-18, nine worked 2026-09-18
 
 ### Opportunity
 
@@ -21,9 +21,12 @@ three were dropped from 19Q Item 2's plan by the `### Status`
 compaction at its close, which is how a finding with no home
 disappears. Recorded as a register, not planned.
 
-**Audited 2026-09-18** against the code: entries 1–7 all still stand,
-8 has grown, and 9–12 were added. One candidate was checked and
-**rejected** — `next_action_card.html`'s context comment reads "`None`
+**Audited, then worked, 2026-09-18.** The audit confirmed entries 1–7,
+grew 8 and added 9–12; the pass that followed closed nine of the twelve.
+**Three stay open:** 3, which is a behavior question and the author's;
+8, which is the author's to do on the dev slot; and the
+`docs/status.md` compaction half of 12, which is a judgment call about
+what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -35,7 +38,7 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-1. **`spec/operations_pages.md:129-135` describes neither layer's
+1. **Done.** **`spec/operations_pages.md:129-135` describes neither layer's
    invitation gate.** It says the per-row **Send** and **Regenerate**
    buttons are "live from `validated` onward" — `session_invitations.html:310,328`
    disables both unless `is_ready`. In the same paragraph it says
@@ -44,31 +47,31 @@ its treatment when the author takes it up, as Item 6's did.
    (`_operations.py:1047,1083`) both gate on `_require_validated_or_ready`,
    the button alone being `ready`-only. One paragraph, two errors, in
    opposite directions. *Dropped from 19Q.2 by compaction.*
-2. **`docs/status.md:836-840` annotates five invitation routes
+2. **Done.** **`docs/status.md:836-840` annotates five invitation routes
    "ready-only"** when all five gate on `_require_validated_or_ready`.
    Stale since 18F Part 2. *Dropped from 19Q.2 by compaction.*
 3. **State 4Err renders Activate** though its own body copy tells the
    operator to re-run Prepare first (`spec/workflow_card.md:322-336`).
    The spec now describes the behavior; whether it *should* behave that
    way was never opened. *Dropped from 19Q.2 by compaction.*
-4. **`?validated=1` mutates lifecycle state from a GET.**
+4. **Done — filed, not changed.** **`?validated=1` mutates lifecycle state from a GET.**
    `build_workflow_card_context` calls `mark_validated` inline — a
    layering breach and a prefetch hazard. Removing it fails **208 tests**
    across ~30 files (measured, 19Q.2 rung 2); the author's ruling was to
    keep the backend. Recorded there as a judgment call, filed nowhere.
-5. **`spec/lifecycle.md:550` lists `precondition` in the
+5. **Done.** **`spec/lifecycle.md:550` lists `precondition` in the
    `session.workflow_run_failed` `context.step` enum**, which nothing
    emits — every precondition return in `_workflow.py` precedes the
    `workflow_run_started` write and redirects with `super_step` instead.
    The same handler's `step or "unknown"` fallback (`_workflow.py:259`)
    is dead for the same reason: `step` is assigned before the `try`.
-6. **`spec/rrw_functional_spec.md` §9.8 and §6.1 are pre-18F.** §9.8
+6. **Done.** **`spec/rrw_functional_spec.md` §9.8 and §6.1 are pre-18F.** §9.8
    describes "ten states" and an "Activate-Session super-button"
    running Generate → Validate → Activate; the card has twelve states
    over ten numbers (`spec/workflow_card.md:152`) and the button is
    **Prepare session**. §6.1 and §9.8 both still name **Pause**, which
    ships as **Revert to draft**.
-7. **`session.workflow_run_failed` may never persist in production.**
+7. **Done — it never did.** **`session.workflow_run_failed` may never persist in production.**
    `audit.write_event` flushes without committing (`audit.py:217`) and
    nothing commits after it on the failure paths — the route returns a
    redirect. The test suite's `get_db` override commits, so every test
@@ -80,7 +83,7 @@ its treatment when the author takes it up, as Item 6's did.
    State 2 card copy, and 19Q.3 rung 2's four recaptured Guide
    screencaps with the prose around them. The last blocks the 19Q close
    by the author's ruling, 2026-09-18; the rest do not block anything.
-9. **The Workflow card's State 6 copy says reviewers have been
+9. **Done.** **The Workflow card's State 6 copy says reviewers have been
    notified.** "Reviewers have been notified that the review will open"
    (`next_action_card.html:125`, quoted verbatim at
    `spec/workflow_card.md:192`) — but no transport is wired
@@ -88,29 +91,36 @@ its treatment when the author takes it up, as Item 6's did.
    so nothing has told anyone anything. Same family as the false
    notification claim 19Q.3 rung 2 removed from the Guide, and the
    place that one was copied from.
-10. **`spec/workflow_card.md:872-874` points at a retired handler.**
+10. **Done.** **`spec/workflow_card.md:872-874` points at a retired handler.**
     Its source-of-truth list names `invitations_generate`, which 19Q
     Item 2 rung 3 deleted — `grep -rn "def invitations_generate" app/`
     exits 1, while the same search for its surviving sibling
     `invitations_send_all` finds `_operations.py:681`, so the empty
     result is absence and not a broken search. Unanchored prose, so no
     doc gate catches it.
-11. **`tools/code_metrics.py` still answers on a shallow clone.**
+11. **Done.** **`tools/code_metrics.py` still answers on a shallow clone.**
     `guide/codebase_assessment_18sep.md` §4 proposes the
     `--is-shallow-repository` guard that would make it refuse rather
     than report a ratio pinned at 1.0x by arithmetic. Proposed in a
     dated record, filed in no plan.
-12. **`docs/status.md` is six days stale at the top and 1,264 lines
-    long.** Its `**As of:** 2026-09-12` header sits above rows dated
+12. **Header done; the compaction is not.** `docs/status.md` was six
+    days stale at the top and is 1,264 lines long. Its `**As of:** 2026-09-12` header sits above rows dated
     through 18 September. Named in the same §4, with the file's size as
     a compaction target; filed nowhere either.
 
 ### Doc impact
 
-- `docs/status.md` — a row when entries are worked. Which specs change
-  is not knowable until each is taken up; the register sizes nothing on
-  purpose, so its manifest grows an entry at a time rather than
-  committing now to the specs the eight would touch.
+- `docs/status.md` — a row when entries are worked, and its own stale
+  header (entry 12). Which specs change is not knowable until each is
+  taken up; the register sizes nothing on purpose, so its manifest grows
+  an entry at a time rather than committing up front to the specs the
+  entries would touch. The bullets below are that growth, added
+  2026-09-18 as nine entries were worked.
+- `spec/operations_pages.md` — the invitation gate stated at both layers (entry 1).
+- `spec/lifecycle.md` — `precondition` named as a `super_step` value rather than a `context.step` one (entry 5).
+- `spec/rrw_functional_spec.md` — §9.8's parallel state machine replaced by a pointer; the Pause naming in §6.1 and §16.2 (entry 6).
+- `spec/workflow_card.md` — State 6's copy, and the retired `invitations_generate` pointer (entries 9, 10).
+- `guide/deferred_consolidated.md` — the `?validated=1` deferral, recorded where deferrals live (entry 4).
 
 ### Open questions
 
