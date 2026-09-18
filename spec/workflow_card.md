@@ -76,7 +76,7 @@ returns:
   row exists for the session.
 - `invitations_sent` — `True` iff at least one `Invitation` row
   has a non-NULL `sent_at`.
-- Ten `*_visible` flags — one per button slot (`revert_visible`,
+- Nine `*_visible` flags — one per button slot (`revert_visible`,
   `prepare_visible`,
   `send_invites_visible`, `activate_visible`,
   `send_reminders_visible`, `close_visible`,
@@ -266,7 +266,7 @@ The body div above the buttons carries a `min-height` so the card
 height stays stable when the visible-button count drops from 4 to 0,
 and the buttons land at the same Y position in every state.
 
-The 10 conceptual button slots, in prep-then-run order, are:
+The 9 conceptual button slots, in prep-then-run order, are:
 
 ```
 1. Revert to draft   2. Prepare session   3. Send invites
@@ -311,18 +311,26 @@ gaps.
 | Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
 | Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | |
 | Send invites | | | | | | | Pri | | | Pri | | | |
-| Activate session | | | | Pri | Pri (→detour) | | Pri | Pri | | | | | |
+| Activate session | | | | Pri | Pri (→detour) | Pri | Pri | Pri | | | | | |
 | Send reminders | | | | | | | | | | | Pri | | |
 | Close session | | | | | | | | | Sec | Sec | Sec | | |
 | Release responses | | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | | Sec |
 | Archive session | | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **3** | **3** | **3** | **3** | **3** |
+| **Visible total** | **0** | **1** | **1** | **3** | **3** | **3** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+
+**4Err renders Activate**, which the matrix omitted until 19Q Item 2
+rung 4's close pass recomputed the totals and found the column two
+short. `activate_visible` is `is_validated` alone
+(`_workflow_card.py`), and 4Err *is* `is_validated` — so the button
+ships in a state whose own copy says to re-run Prepare first. Measured,
+not inferred. Whether it should is a design question this item did not
+open; the spec now describes what ships.
 
 ‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
 Each state caps at 4 visible buttons; today's worst case is 4
-(states 4 / 4W / 5). The pruning rules above (drop Send invites
+(state 5). The pruning rules above (drop Send invites
 once sent, hide Archive
 outside `expired`, hide Release/Stop outside `expired`,
 Release/Stop share a slot when both eligible) are what keep

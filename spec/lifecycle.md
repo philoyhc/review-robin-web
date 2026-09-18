@@ -678,7 +678,7 @@ without retrying. Per-event preconditions:
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
 | Scheduled activation | `session.status == "validated"` | `not_validated` |
-| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (the operator ran "Create invitations") | `not_prepared` / `invitations_not_created` |
+| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them; before 19Q Item 2 rung 3 the operator ran Create invites) | `not_prepared` / `invitations_not_created` |
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 | Auto-archive | `session.status == "draft"` | `not_draft` |
 | Auto-delete after archive | `session.status == "archived"` | `not_archived` |

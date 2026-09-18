@@ -350,6 +350,24 @@ pruning stale invitation rows; the unaudited withheld send
 bug rung 1 fixed, left unfixed because unifying it reaches into the
 monitoring layer.
 
+**The close pass found the sweep's own class of miss: deleting a table
+row without recomputing what depended on it.** Retiring Create invites
+left `spec/workflow_card.md` saying "ten `*_visible` flags" (nine),
+"10 conceptual button slots" above a nine-item list, a **Visible
+total** row still carrying the old per-state counts, and a "worst case
+is 4 (states 4 / 4W / 5)" that had stopped being true. Two sibling
+rows were swept in one file and not the other
+(`spec/session_home.md`'s `validated` row, `spec/operations_pages.md`'s
+caller list).
+
+*Recomputing the totals then surfaced a **pre-existing** error the
+retirement had nothing to do with*: the matrix omitted Activate in
+state 4Err, though `activate_visible` is `is_validated` alone and 4Err
+is `is_validated`. Measured — the button ships in a state whose own
+copy says to re-run Prepare first. The spec describes what ships;
+whether it should is a design question this item did not open. The
+matrix is now arithmetically self-consistent, checked by parsing it.
+
 **Still owed:** dev-slot verification of the Workflow card with one
 fewer button and the six rewritten copy strings. The copy is exactly
 what the cumulative read caught, so it is the part most worth seeing
@@ -413,9 +431,9 @@ Both answered, 2026-09-18.
 
 ### Doc impact
 
-- `spec/workflow_card.md` — Prepare's contract gains invitation creation; the Create invites button row, its copy, and the `invitations_not_created` skip narrative retire (Item 2).
+- `spec/workflow_card.md` — Prepare's contract gains invitation creation; the Create invites button row and its copy retire (Item 2). *The `invitations_not_created` skip narrative was promised here too and **stays**: open question 1, answered after this bullet was written, established that a clean Prepare can leave `has_invitations` false.*
 - `spec/lifecycle.md` — the "Auto-send invites" precondition row collapses to Prepared alone (Item 2).
-- `spec/architecture.md` — the `session.scheduled_invites_skipped` reason set drops `invitations_not_created` (Item 2).
+- `spec/architecture.md` — the `session.scheduled_invites_skipped` reason set drops `invitations_not_created` (Item 2). <!-- doc-impact-waived: open question 1 reversed this. The reason is still emitted, so the set does not drop it and the spec is correct unchanged. -->
 - `spec/operator_button_audit.md` — the Create invites row retires (Item 2).
 - `spec/operations_pages.md` — Manage Invitations' `not_created` chrome state, and Send all's row set (Item 2).
 - `spec/operations_pages.md` — the info-card counters: **Pending invitations** counts the *sendable* set since rung 1 while **Invitations created** still counts every row, so with a stranded invitation the row reads `created 2 · sent 1 · pending 0` and the arithmetic no longer closes. The spec lists the eight counters without defining any of them, so nothing there is false — but the meaning changed and the bullet above would not have prompted a sweep of it (Item 2).

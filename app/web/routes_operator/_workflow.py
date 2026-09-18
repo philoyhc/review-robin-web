@@ -3,7 +3,8 @@
 Splits the previous super-button (Generate + Validate + Activate as
 one click) into two deliberate steps:
 
-- ``POST /workflow/prepare`` — runs Generate + Validate. Lands the
+- ``POST /workflow/prepare`` — runs Generate + Validate + Invite
+  (the third step added at 19Q Item 2 rung 2). Lands the
   session in ``validated`` on a clean report, stays in ``draft`` on
   validation errors (the assignment pairs survive — the reconcile
   has run). Owns the saved-response confirmation detour that fires
@@ -80,7 +81,9 @@ def workflow_prepare(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Run Generate + Validate as one click — the new "Prepare" button.
+    """Run Generate + Validate + Invite as one click — the "Prepare"
+    button. The Invite step landed at 19Q Item 2 rung 2 and is why
+    `Create invites` could retire at rung 3.
 
     On a clean validation report the session flips ``draft →
     validated``; on validation errors the route stays in ``draft``

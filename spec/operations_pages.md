@@ -127,7 +127,7 @@ lifecycle explanation on the same page is redundant (see
 `spec/operator_ui_concept.md` P4).
 
 **The invitation gate is `validated` or `ready`, not `ready` alone.**
-Create / Send invites and the Invitations page's per-row action
+Send invites and the Invitations page's per-row action
 buttons are live from `validated` onward; the route-layer gate
 (`_require_validated_or_ready` in
 `app/web/routes_operator/_operations.py`) is the source of truth.
