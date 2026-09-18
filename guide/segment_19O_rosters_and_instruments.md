@@ -153,6 +153,13 @@ scope from the day it was filed. It is a line now, and it closed here:
   survived — a bare `expander = null` with no call, which removes
   nothing and re-renders nothing.
 
+### Open questions
+
+- **Does 19O archive now that Item 6 closes?** **No** — author's
+  ruling, 2026-09-18. Emptying the segment is not closing it: 19O is a
+  standing home for operator-facing gaps on these surfaces, so the plan
+  stays in `guide/` and the next gap becomes Item 7.
+
 ### Out of scope
 
 - ~~The sort-workaround migration above, by the author's ruling.~~ Taken up 2026-09-18 once the rest had landed.
