@@ -1,4 +1,5 @@
-{# Email previews region for the Previews page (segment 11F PR B).
+{# Email previews region for the reviewer drill-in and, temporarily, the
+   Previews page (segment 19Q Item 1 rung 1).
 
    Renders a single full-width card with a `.btn-pair` tab strip
    (Invitation / Reminder / Responses-received), then the active
@@ -15,7 +16,7 @@
 
    Required context:
      - session: ReviewSession
-     - picker: views.PreviewPickerContext
+     - reviewer: Reviewer
      - email_tabs: tuple[views.EmailPreviewTab, ...]
      - active_email_tab: views.EmailPreviewTab
      - email_body: views.EmailBody | None
@@ -32,7 +33,7 @@
         <span class="nav-tab active" aria-current="page">{{ tab.label }}</span>
       {% elif tab.is_shipped %}
         <a class="nav-tab"
-           href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.current.email | urlencode }}&email={{ tab.key }}#email-previews">{{ tab.label }}</a>
+           href="/operator/sessions/{{ session.id }}/invitations/reviewers/{{ reviewer.id }}?email={{ tab.key }}#email-previews">{{ tab.label }}</a>
       {% else %}
         <span class="nav-tab disabled" aria-disabled="true">{{ tab.label }} (coming soon)</span>
       {% endif %}
