@@ -602,6 +602,21 @@ For bulk operations — `assignments.generated`,
 `responses.deleted_all`, `responses.cleared`. All values are
 non-negative integers.
 
+**Cascade slots.** A roster replace, delete-all or bulk delete
+destroys rows in other tables, and each destroyed kind gets its own
+count. The slots are **not the same on every event**:
+`cascaded_assignments` and — since 19O Item 5 —
+`cascaded_relationships` ride `{roster}.imported` and
+`{roster}.deleted_all` (`app/services/csv_imports.py`), while
+`cascaded_responses` is `{roster}.bulk_deleted`'s alone
+(`app/services/roster_bulk.py`); the contract is stated per event in
+`spec/setup_pages.md`. `cascaded_relationships` exists because
+`relationships.reviewer_id` / `reviewee_id` are `ondelete="CASCADE"`,
+so a roster replace takes every pair with it. It is **omitted rather
+than zero** when the roster does not reach relationships — both
+emitters splat an empty dict — so its absence means "not a roster this
+cascade reaches" and `0` means "reached, and there were none".
+
 #### `set_changes` — collection mutations
 
 ```jsonc
