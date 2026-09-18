@@ -1840,7 +1840,23 @@ disabled link would show a reviewer less than a working one.
    `.card-action-row` and its anchor; the scaffold note reworded; the
    neutral banner on the preview surface; and the test that saved
    responses render there. **Does not touch the Previews hub.**
+2b. **The three answered open questions' surfaces.** Un-suppress the
+   dropped-fields notice on the preview surface (OQ3), and give the
+   Invitation card a delivery-state slot whose values derive from
+   `EMAIL_OUTBOX_STATUSES` (OQ5) rather than a hardcoded set —
+   `constitution.md` II. **Does not touch `regenerate_token`**: that is
+   OQ4, and bundling an invitation-lifecycle fix into a page slice is
+   what `CLAUDE.md` "Don't bundle independent changes" names.
 3. **The close.** Docs per the manifest at the end of this item.
+
+**OQ4 ships outside this item.** `regenerate_token` clearing
+`last_reminder_at` changes the Manage Invitations Reminder column and
+the reminder scheduler's view, neither of which this item owns. It also
+needs a second half the card cannot supply: after a regenerate the
+outbox still holds the previous URL, so `invite_url` is a **dead link**
+until the new token is sent, and the card should fall back to *"No
+invitation URL has been issued yet."* Both halves belong with invitation
+lifecycle — 19Q Item 2, or its own slice. Author's call on placement.
 
 ### Definition of done
 
@@ -1859,47 +1875,25 @@ disabled link would show a reviewer less than a working one.
 
 ### Open questions
 
-1. **Does the Responses detail page get the same treatment?** It is
-   already reviewee-keyed (`/responses/{reviewee_id}/detail`) so it
-   needs no re-key, and a reviewee has no surface of their own to
-   link. Probably nothing to do; author's call at Item 7.
-2. **Item 7's shape** — Item 7's stub, § *The three candidate fates*.
-   Author's call, after this item is on the dev slot.
+All five answered by the author, 2026-09-17/18; collapsed to their
+answers. Three created work — see rung 2b and the note beneath it.
+
+1. **Does the Responses detail page get the same treatment?** No —
+   already reviewee-keyed, and a reviewee has no surface to link to.
+2. **Item 7's shape** — retire the Previews hub. Became 19Q Item 1.
 3. **Should the preview surface stop suppressing the dropped-fields
-   notice?** `review_surface.html` renders *"Some saved responses are
-   no longer collected"* on `{% if dropped_fields and not preview_mode %}`.
-   The suppression was written (18K PR 5) when this surface was only a
-   pre-launch preview, where nothing is saved so nothing can be
-   dropped. Rung 2 gave it a second purpose — inspecting a real
-   reviewer — and dropped fields are exactly what an operator would
-   want to know there. **Same argument that justified rewriting the
-   banner**, one element down. Rung 2 qualified the copy instead
-   (*"the fields still being collected"*), which is accurate but tells
-   the operator less than the notice would. Author's call: un-suppress,
-   or keep the qualified copy and leave it to whoever grows this page.
-   Found by Codex on rung 2's PR, 2026-09-17.
+   notice?** **Un-suppress.** Same argument that justified rewriting
+   the banner, one element down: 18K PR 5 suppressed it when this
+   surface was pre-launch-only, and rung 2 gave it a second purpose.
+   Rung 2b.
 4. **Should the app reconcile what Regenerate leaves behind?**
-   `regenerate_token` clears `Invitation.sent_at` and `opened_at` but
-   leaves `last_reminder_at` and every outbox row alone
-   (`invitations.py:221-224`). So a regenerated invitation reads
-   `Email sent: —` with a reminder date beside it, and the previous
-   URL still printed below — while the Manage Invitations table, whose
-   Sent column is the outbox row's, shows a date. **Older than this
-   card**: the chrome strip already says `NOT SENT` there. Rung 2a
-   pinned the state
-   (`test_detail_page_after_regenerate_reports_the_current_token`)
-   rather than smoothing it, because the fix is a decision about
-   `regenerate_token` — clear `last_reminder_at` too? — not about a
-   template. Author's call. Found by `diff-reviewer` on rung 2a.
-5. **Where does a failed send show on the drill-in?** The card used to
-   render `row.email_status`, whose value set
-   (`views/_invitations.py:39-42`) is documented to widen to `sending`
-   and `failed`. Rung 2a replaced it with a timestamp, which has no
-   slot for a delivery failure; only the table would show one. Not a
-   defect today — `queued` is unreachable, since `send_invitation`
-   flips the outbox to `sent` in the same call — but the rung removed
-   the place to put it. Author's call, or whoever lands the widening.
-   Found by `diff-reviewer` on rung 2a.
+   **Yes — `regenerate_token` clears `last_reminder_at` too.** It
+   already clears `sent_at` and `opened_at`; the third stamp was an
+   oversight, not a decision. An invitation-lifecycle fix rather than
+   a card fix, so it ships on its own (see the note below).
+5. **Where does a failed send show on the drill-in?** **On the
+   Invitation card**, which reports email delivery state with `failed`
+   among its values. Rung 2b.
 
 ### Out of scope
 
