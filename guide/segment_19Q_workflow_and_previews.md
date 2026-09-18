@@ -1,7 +1,8 @@
 # Segment 19Q — Workflow and preview revamp
 
-Three items, closing independently. Item-level `Doc impact` / `Status`, so
-`tools/close_check.py 19Q.1` reads Item 1's.
+Four items, closing independently. Item-level `Doc impact` / `Status`, so
+`tools/close_check.py 19Q.1` reads Item 1's. Item 4 was added 2026-09-18,
+after Item 3's own recapture showed the defect.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -529,3 +530,122 @@ written; this is a third, not a rewrite of either.
 - `docs/status.md` — row when Item 3 lands (Item 3).
 - `spec/rrw_functional_spec.md` — the Guide's own contract, if the walkthrough gains a step per open question 1 (Item 3). <!-- doc-impact-waived: both conditions failed. That spec documents no Guide page at all — its only "guide" mentions are its own reading-guide section and pointers to plan files — and the walkthrough gained a sentence inside step 4 rather than a step. The Sample session card's contract lives in `spec/operator_ui_concept.md` and `spec/csv_contracts.md` §5a, and the four-step summary there is still accurate. --> <!-- cites: spec/operator_ui_concept.md, spec/csv_contracts.md -->
 - `spec/workflow_card.md` — the State 2 row quotes the card copy verbatim, so it changes with rung 1a (Item 3).
+
+---
+
+## Item 4 — Four button slots, and the one that is not
+
+### Opportunity
+
+Reported from the author's reading of Item 3 rung 2's recaptured
+screencap: the Workflow card's buttons "go haywire when the RHS column
+is populated". There should be up to four equal-width slots on the left.
+
+**The grid is not the problem.** Measured in Chromium at a 957px
+viewport, `.next-action-buttons-row` (`base.html:3494`) computes four
+equal tracks of **103.188px**, and three of the four buttons measure
+exactly 103.2px. The fourth measures **137.2px** and overflows its own
+track:
+
+```
+['BUTTON 103.2', 'BUTTON 103.2', 'BUTTON 103.2', 'A 137.2']
+```
+
+**The difference is the element.** `<button>` inherits
+`box-sizing: border-box` from the UA stylesheet; `<a>` does not, and
+this sheet has no global reset — its own comment says so at
+`base.html:1645` ("sheet has no global box-sizing reset; five other
+rules set it"). The `.btn` rule (`base.html:2591-2593`) sets 16px
+horizontal padding and a 1px border and **no** `box-sizing`, so
+`width: 100%` on a grid item means the border box for a `<button>` and
+the *content* box for an `<a>`:
+
+```
+103.188 + 16 + 16 + 1 + 1 = 137.2   ← the measurement, exactly
+```
+
+**Why it correlates with the right-hand column, which is the part worth
+recording.** Activate renders as an anchor only on the
+warnings-acknowledgement detour
+(`next_action_card.html:312`) — States 4W and 5-with-warnings. Warnings
+are also what fills the right column with count pills and the issue
+list. One cause, two symptoms; the columns never interact. The
+report's correlation is real and its obvious explanation is wrong,
+which is why this is an Opportunity and not a one-line fix.
+
+### Decision
+
+*Not yet decided — see Open questions.* The fix is known and the
+**blast radius is the question**: `box-sizing: border-box` on the `.btn`
+rule takes the fourth button to 103.2px and all four then match, probed
+in Chromium. But 80 `<a class="btn">` across 31 templates currently size
+as content boxes, and any that carry an explicit width would move.
+
+### Semantics
+
+- A `.btn` with no width set is unaffected either way: with no `width`,
+  content-box and border-box shrink-to-fit identically.
+- Only a `.btn` given an explicit `width` / `min-width` / `max-width`,
+  or stretched by a grid or flex track, can change. That set is what
+  the blast radius has to enumerate.
+- The four-slot contract is `spec/operator_ui_concept.md`'s ≤4-button
+  budget; this item does not change the budget, only whether the slots
+  are honoured.
+
+### Judgment calls — decided
+
+- Recorded as an item rather than fixed in place when found (2026-09-18, author): the one-line fix is tempting and the 80-occurrence blast radius is exactly the kind of thing a drive-by does not measure.
+
+### Blast radius (measured)
+
+At `a08b4750`:
+
+- `grep -rn '<a class="btn' app/web/templates/ | wc -l` → **80**
+- `grep -rln '<a class="btn' app/web/templates/ | wc -l` → **31 templates**
+- `grep -c "box-sizing" base.html` within the `.btn` rule → **0**
+- Rules already setting `box-sizing: border-box` by hand → **the comment
+  at `base.html:1645` counts five**
+
+### PR ladder
+
+1. **Enumerate, then fix.** Measure which of the 80 anchors are sized by
+   anything other than shrink-to-fit, decide base-rule versus scoped per
+   open question 1, land it with the enumeration in the PR body.
+2. **The close** — specs below, `docs/status.md`, `close_check`,
+   `spec-writer`.
+
+### Definition of done
+
+- All four buttons measure one track width in State 5-with-warnings, verified in Chromium.
+- The enumeration of width-sized `a.btn` is in the PR body, not asserted to be empty.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Base rule or scoped?** `box-sizing` on `.btn` fixes every `a.btn`
+   the codebase will ever stretch; scoping to
+   `.next-action-buttons-row > a.btn` fixes this card and leaves the
+   same trap set for the next author. A third option is the global reset
+   the sheet has declined so far — `base.html:1645` already counts five
+   rules setting it by hand, which is an argument either way. Author's.
+2. Does anything in `spec/ui_elements.md` §6 need to state the box model
+   for `.btn`, or is it an implementation detail? Only worth asking
+   because a contract nobody wrote down is what produced this.
+
+### Out of scope
+
+- The `≤4` budget itself, and the right column's content. Both are
+  correct here; only the slot width is wrong.
+- The empty left-column gap visible in the same capture, where the issue
+  list makes the aside taller than the button row. That is the grid
+  behaving as specified, and a separate question if the author wants it
+  raised.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 4 lands (Item 4).
+- `spec/ui_elements.md` — the `.btn` box model, if open question 2 says it belongs in the contract (Item 4).
