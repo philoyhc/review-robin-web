@@ -128,7 +128,7 @@
           <p>Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards.</p>
         {% else %}
           {# State 4 / 4W — Prepared, no invites yet. #}
-          <p>Setup is prepared and the reviewer surface is previewable. No reviewer is eligible for an invitation yet, so Prepare created none — add an included assignment for at least one active reviewer and run <strong>Prepare session</strong> again, or Activate to receive responses.</p>
+          <p>Setup is prepared and the reviewer surface is previewable, but there are no invitations. <strong>Prepare session</strong> creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses.</p>
         {% endif %}
         {% if validation_summary.needs_acknowledge %}
           <p class="form-help" style="margin: 0;">
@@ -144,7 +144,7 @@
     {% elif is_ready %}
       {% if not invitations_generated %}
         {# State 7 #}
-        <p>Session is open for responses, but no invitations exist — Prepare creates one per eligible reviewer, and none was eligible. Add an included assignment for at least one active reviewer, then run <strong>Prepare session</strong> again.</p>
+        <p>Session is open for responses, but no invitations exist — nobody has been told they can start. Only <strong>Prepare session</strong> creates them and an open session cannot run it: <strong>Revert to draft</strong> first, which stops responses, then fix the roster, Prepare, and activate again.</p>
       {% elif not invitations_sent %}
         {# State 8 #}
         <p>Session is open. Send the prepared invitations so reviewers know they can start.</p>

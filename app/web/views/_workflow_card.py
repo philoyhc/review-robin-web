@@ -611,14 +611,36 @@ def build_auto_send_invites_caption(
             ),
         }
     if not invitations.has_invitations(db, review_session.id):
+        # **The remedy differs by state, and naming the wrong one is
+        # worse than naming none.** Prepare is the only creator since
+        # 19Q Item 2 rung 2, and `prepare_visible` is
+        # `(is_draft and not is_setup_empty) or is_validated` — so in
+        # `ready` the button is not rendered, `POST /workflow/prepare`
+        # fails its `is_editable` precondition, and every roster
+        # mutator 409s. A cold read of the item caught rung 3's first
+        # copy telling a `ready` operator to do two things that both
+        # fail. From `ready` the only route back is Revert, which
+        # closes every accepting instrument — a real cost, so the copy
+        # says so rather than making it a surprise.
+        if lifecycle.is_ready(review_session):
+            return {
+                "tone": "amber-warning",
+                "text": (
+                    f"Auto-send scheduled at {earliest_text} — "
+                    f"currently inactive: there are no invitations to "
+                    f"send. Creating them needs Prepare, which an open "
+                    f"session cannot run — revert to draft (this stops "
+                    f"responses), fix the roster, then Prepare and "
+                    f"activate again before then, or these will skip."
+                ),
+            }
         return {
             "tone": "amber-warning",
             "text": (
                 f"Auto-send scheduled at {earliest_text} — currently "
-                f"inactive: no reviewer was eligible when Prepare last "
-                f"ran, so there is nothing to send. Include an "
-                f"assignment for an active reviewer and run Prepare "
-                f"session again before then, or these will skip."
+                f"inactive: there are no invitations to send. Prepare "
+                f"creates one per eligible reviewer — run Prepare "
+                f"session before then, or these will skip."
             ),
         }
     return {
@@ -709,11 +731,12 @@ def build_auto_send_reminders_caption(
             "tone": "amber-warning",
             "text": (
                 f"Auto-send reminders scheduled at {earliest_text} — "
-                f"currently inactive: no reviewer was eligible when "
-                f"Prepare last ran, so there is nobody to remind. "
-                f"Include an assignment for an active reviewer and run "
-                f"Prepare session again before then, or these will "
-                f"skip."
+                f"currently inactive: there are no invitations, so "
+                f"there is nobody to remind. This caption renders only "
+                f"once the session is open, and an open session cannot "
+                f"run Prepare — revert to draft (this stops "
+                f"responses), fix the roster, then Prepare and "
+                f"activate again before then, or these will skip."
             ),
         }
     return {

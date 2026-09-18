@@ -78,7 +78,15 @@ def _activate(client: TestClient, session_id: int) -> None:
         f"/operator/sessions/{session_id}/workflow/prepare",
         follow_redirects=False,
     )
+    # 303 alone says nothing: `workflow_prepare` also 303s on a failed
+    # validation, on the response-loss detour and on the `is_editable`
+    # precondition. 19Q.2 rung 1 wrote that guard for
+    # `_strand_an_invitation` and rung 3 re-fixtured 46 tests without
+    # it — named by the item's cumulative cold read.
     assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
+    )
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -2258,3 +2266,44 @@ def test_send_one_refuses_a_reviewer_the_bulk_paths_would_skip(
     assert db.execute(
         select(EmailOutbox).where(EmailOutbox.to_email == stranded.email)
     ).first() is None
+
+
+def test_an_open_session_with_no_invitations_is_told_a_remedy_it_can_reach(
+    client: TestClient, db: Session
+) -> None:
+    """The copy must name an action the state actually offers.
+
+    19Q Item 2 rung 3's first attempt told a `ready` operator to
+    "include an assignment for an active reviewer and run Prepare
+    session again". Measured in that state: the Prepare button is not
+    rendered (`prepare_visible` is `(is_draft and not is_setup_empty)
+    or is_validated`), `POST /workflow/prepare` 303s to
+    `super_step=precondition`, and every roster mutator 409s on
+    `_require_editable`. **Both named remedies were unreachable in the
+    only state where the copy renders** — found by the item's
+    cumulative cold read, not by any test, which is why this exists.
+
+    Revert is the way back, and it is not free: it closes every
+    accepting instrument (`session_lifecycle.py`), so the copy says
+    that rather than letting the operator discover it.
+    """
+    session = _ready_session_without_invitations(client, db, "open-noinv")
+
+    # The premise, asserted rather than assumed — if Prepare ever
+    # becomes reachable from `ready`, this test should fail and the
+    # copy should go back to naming it.
+    assert (
+        client.post(
+            f"/operator/sessions/{session.id}/workflow/prepare",
+            follow_redirects=False,
+        ).headers["location"].find("super_step=precondition")
+        != -1
+    ), "Prepare is reachable from `ready` now; the copy below is stale"
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert "no invitations exist" in body
+    assert "Revert to draft" in body
+    assert "stops responses" in body
+    assert "next-action-prepare-form" not in body, (
+        "the Prepare button renders here after all"
+    )

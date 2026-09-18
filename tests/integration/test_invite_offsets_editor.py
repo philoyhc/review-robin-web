@@ -417,9 +417,17 @@ def test_caption_amber_when_validated_but_no_invitations(
     caption = build_auto_send_invites_caption(db, rs)
     assert caption is not None
     assert caption["tone"] == "amber-warning"
-    assert "run Prepare session again" in caption["text"]
+    # `validated`, so Prepare is available and the copy names it
+    # plainly. The `ready` sibling names Revert instead, because there
+    # Prepare is neither rendered nor accepted — see
+    # `test_reminder_offsets_editor.py`'s counterpart.
+    assert "run Prepare session before then" in caption["text"]
     assert "create invitations" not in caption["text"], (
         "the caption still points at the retired Create invites button"
+    )
+    assert "revert to draft" not in caption["text"], (
+        "this is the validated branch; Prepare works here and Revert "
+        "would cost the operator their instruments for nothing"
     )
 
 

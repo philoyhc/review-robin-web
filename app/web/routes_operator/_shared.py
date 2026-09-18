@@ -146,8 +146,9 @@ _templates.env.globals["instrument_label"] = (
 
 # Operations-row pages whose forms can override the default
 # "redirect back to Session Home" behaviour after a workflow-card
-# action (Activate / Revert / Send invites / Send
-# reminders). Form posts include a hidden ``return_to`` field carrying
+# action (Activate / Revert / Send invites / Send reminders; Create
+# invites retired at 19Q Item 2 rung 3). Form posts include a hidden
+# ``return_to`` field carrying
 # one of these slugs; the route honours the override only when it
 # matches.
 #

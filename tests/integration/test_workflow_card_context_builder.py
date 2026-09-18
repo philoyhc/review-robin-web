@@ -308,7 +308,7 @@ def test_draft_empty_state_surfaces_nothing(
     assert _visible_set(ctx) == set()
 
 
-def test_validated_no_invites_surfaces_revert_prepare_create_activate(
+def test_validated_no_invites_surfaces_revert_prepare_activate(
     client: TestClient, db: Session
 ) -> None:
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-4")
@@ -328,12 +328,11 @@ def test_validated_no_invites_surfaces_revert_prepare_create_activate(
     assert len(visible) <= 4
 
 
-def test_ready_no_invites_surfaces_revert_create_close(
+def test_ready_no_invites_surfaces_revert_close(
     client: TestClient, db: Session
 ) -> None:
-    """Ready state surfaces ≤ 3 buttons: revert + create-invites
-    (or send-invites / send-reminders depending on invitation
-    progression) + close. **Release responses + Stop releasing
+    """Ready state surfaces ≤ 3 buttons: revert + close, plus
+    send-invites or send-reminders once invitations exist. **Release responses + Stop releasing
     stay hidden until the session has closed/expired** — the
     operator only takes the manual release shortcut post-deadline."""
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")

@@ -437,7 +437,14 @@ def test_caption_amber_warning_when_ready_but_no_invitations(
     # 19Q.2 rung 3 — the branch stays (a clean Prepare can leave
     # `has_invitations` False when nobody is eligible); the copy
     # stops naming a button that no longer exists.
-    assert "run Prepare session again" in caption["text"]
+    # This caption renders only once the session is `ready`, and a
+    # `ready` session cannot run Prepare — `prepare_visible` is false
+    # and the route refuses on `is_editable`. A cold read of the item
+    # caught rung 3's first copy telling the operator to run it
+    # anyway. Revert is the only route back, and it stops responses,
+    # so the copy says so.
+    assert "revert to draft" in caption["text"]
+    assert "stops responses" in caption["text"]
     assert "create invitations" not in caption["text"]
 
 

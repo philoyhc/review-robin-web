@@ -160,8 +160,10 @@
       <p class="muted">No invitation URL has been issued yet.</p>
     {% elif row %}
       <p class="muted">
-        Run <strong>Prepare session</strong> on the Workflow card —
-        it creates one invitation per eligible reviewer.
+        Run <strong>Prepare session</strong> on the Workflow card — it
+        creates one invitation per eligible reviewer. An open session
+        cannot run it, so revert to draft first if this one is already
+        accepting responses.
       </p>
     {% else %}
       {# `row` is None exactly when this reviewer is off the Manage

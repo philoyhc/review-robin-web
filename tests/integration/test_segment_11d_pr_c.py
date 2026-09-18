@@ -62,9 +62,13 @@ def _operator_creates_session_with_pair(
     # Prepare rather than the `?validated=1` promotion: since 19Q.2
     # rung 2 it is what creates the invitations, and rung 3 retired the
     # `POST /invitations/generate` this file used to call below.
-    operator_client.post(
+    response = operator_client.post(
         f"/operator/sessions/{review_session.id}/workflow/prepare",
         follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
     )
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",

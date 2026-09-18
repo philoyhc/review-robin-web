@@ -82,7 +82,15 @@ def _activate(client: TestClient, session_id: int) -> None:
         f"/operator/sessions/{session_id}/workflow/prepare",
         follow_redirects=False,
     )
+    # 303 alone says nothing: `workflow_prepare` also 303s on a failed
+    # validation, on the response-loss detour and on the `is_editable`
+    # precondition. 19Q.2 rung 1 wrote that guard for
+    # `_strand_an_invitation` and rung 3 re-fixtured 46 tests without
+    # it — named by the item's cumulative cold read.
     assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"], (
+        f"Prepare did not succeed: {response.headers['location']}"
+    )
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},

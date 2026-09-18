@@ -142,13 +142,12 @@ def test_invitations_pill_not_created_when_no_invitation_rows(
     ), "expected the chrome-strip Invitations pill to read 'Not created'"
 
 
-def test_invitations_pill_not_sent_after_generate_before_send(
+def test_invitations_pill_not_sent_after_prepare_before_send(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, "chrome-inv-pending")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert (
@@ -162,7 +161,6 @@ def test_invitations_pill_partially_sent_when_some_reviewers_sent(
     session = _create_session(client, db, "chrome-inv-partial")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
 
     # Send invitation for Rae only — Ren stays pending.
     rae = db.execute(
@@ -195,7 +193,6 @@ def test_invitations_pill_all_sent_when_every_reviewer_sent(
     session = _create_session(client, db, "chrome-inv-all")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/send-all",
         follow_redirects=False,
