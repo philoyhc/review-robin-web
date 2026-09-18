@@ -139,7 +139,6 @@ each button site carries, and that no site carries an inline style.
 | # | Label | Element | CSS class | Canonical |
 |---|---|---|---|---|
 | 144 | Prepare session | `<button type="submit">` | `btn` / `btn secondary` | Primary / Secondary — rendered in both, per state |
-| 145 | Create invites | `<button type="submit">` | `btn` | Primary |
 | 146 | Send invites | `<button type="submit">` | `btn` | Primary |
 | 147 | Activate session | `<a>` or `<button type="submit">` | `btn` | Primary — anchor to `/validate?activate=1` when warnings need acknowledging, otherwise a direct POST |
 | 148 | Send reminders | `<button type="submit">` | `btn` | Primary |
@@ -507,10 +506,12 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
 | 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, the shape the Previews hub's button used for the same destination (§12a row 75a, retired with the hub at 19Q Item 1); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
 
-**The page body carries no bulk-action bar.** Create invites, Send
-invites and Send reminders belong to the Workflow card's stepper
-(§5a), and the outbox is reached from Sessions Diagnostics (§21), not
-from here — `spec/operations_pages.md`.
+**The page body carries no bulk-action bar.** Send invites and Send
+reminders belong to the Workflow card's stepper (§5a), and the outbox
+is reached from Sessions Diagnostics (§21), not from here —
+`spec/operations_pages.md`. Create invites was a third until 19Q Item
+2 rung 3 retired it: Prepare creates one invitation per eligible
+reviewer, so the step has no button.
 
 ---
 
@@ -720,7 +721,10 @@ operator never left the page, so there is nowhere to go back to.
 Any button that **actually sends email** is Primary; a button that
 prepares or rebuilds local state without sending is Secondary. Both
 apply wherever the pair appears — today the Workflow card's stepper
-(§5a), where Create invites and Send invites are Primary.
+(§5a), where Send invites is Primary and Prepare session is
+Secondary in the states that also offer Activate. *Prepare is the
+interesting case for this rule*: since 19Q Item 2 rung 2 it creates
+the invitations, but it does not send them, so it stays Secondary.
 
 Per-row Send / Send reminder (#86, #87) stay **Secondary**: per-row
 context overrides the role-based convention, because a table of
@@ -729,7 +733,10 @@ Primary buttons has no primary action at all.
 ### 3. Which action earns Primary in an activated session
 
 In `ready` the Primary is the next forward stage of the invitation
-flow — Create invites, then Send invites, then Send reminders. Close
+flow — Send invites, then Send reminders. **With no invitations at
+all there is no forward stage**: Prepare creates them and a `ready`
+session cannot run Prepare, so State 7 offers Revert and Close only,
+and the body copy names Revert. Close
 session and Revert to draft stay **Secondary** however consequential
 they are: gravity belongs to the surrounding context, not to promoting
 a supporting action. `spec/workflow_card.md`'s per-state table is the

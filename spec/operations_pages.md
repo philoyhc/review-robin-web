@@ -13,9 +13,11 @@ Both render the same overall chrome shape: the **Workflow card** at
 the top (per `spec/workflow_card.md`), then a full-width info card
 with inline counters, then a table whose card opens with a two-pane
 toolbar carrying the filter. Bulk-actions
-(Create invites · Send invites · Send reminders) live on the
+(Send invites · Send reminders) live on the
 Workflow card's stepper — neither page body carries its own bulk
-action bar.
+action bar. **Create invites** was a third until 19Q Item 2 rung 3:
+Prepare creates one invitation per eligible reviewer, so the step
+has no button of its own.
 
 ## Page identity
 
@@ -72,7 +74,7 @@ Manage Invitations only, a conditional notice between 2 and 3 when
 2. **Workflow card** — full-width, per `spec/workflow_card.md`. Same
    ten-state cascade and five-stage stepper as on every other
    session-scoped page. The stepper carries the bulk-action
-   affordances (Create invites · Send invites · Send reminders) so
+   affordances (Send invites · Send reminders) so
    the page bodies stay focused on per-row inspection + targeted
    intervention.
 3. **Info card** — full width, an inline middle-dot prose row of
@@ -170,6 +172,22 @@ Each counter renders as a `.pill.pill-count` (or `.pill.pill-empty`
 when the variant is "zero-is-good / nonzero-is-attention" and the
 value is nonzero — applied to Pending invitations, Pending
 reminders, and Incomplete reviews).
+
+**Two of these count different populations, and the row's arithmetic
+does not close.** `Invitations created` counts **every** `Invitation`
+row on the session; `Pending invitations` counts only the **sendable**
+ones — `pending`, and the reviewer still assigned-and-active
+(19Q Item 2 rung 1). A reviewer invited at an earlier Prepare and
+since made ineligible keeps a row that the first counts, the second
+does not, and the table below does not list. So `created 2 · sent 1 ·
+pending 0` is a correct reading, not a bug.
+
+`Pending invitations` was aligned with the send buttons deliberately:
+it is a nonzero-is-attention pill, so a count the operator cannot act
+on is worse than no count. `Invitations created` was left counting
+every row because pruning stale invitations is deliberately deferred
+(`guide/deferred_consolidated.md`) — a *sent* invitation is live in a
+reviewer's inbox, and nothing yet distinguishes one safe to delete.
 
 ### The table toolbar
 
@@ -306,6 +324,18 @@ row exists:
 response window opens, not before. All three render `disabled`
 outside their allowed state.
 
+**Send also has a server-side eligibility gate**, which the button's
+visibility rule does not express. Since 19Q Item 2 rung 1 the route
+refuses with **409** when the reviewer is not
+`invitations.is_reviewer_eligible_for_invitation` — active, with at
+least one `include=True` assignment — the same test the two bulk send
+paths apply, so all three agree by construction rather than by three
+queries happening to match. The gate is reachable only by a direct
+POST or a stale tab, because the table renders the button only for
+rows it lists and it lists only eligible reviewers. It checks
+eligibility **and not** `pending`: a direct POST re-sending an
+already-sent invitation still rotates its token, as it always has.
+
 ### Per-row drill-in
 
 The reviewer name is a link to a per-**reviewer** detail page,
@@ -353,13 +383,19 @@ Below them, a **four-state** URL region:
 |---|---|
 | A URL was issued | `Invitation URL (last issued):` + the URL |
 | Invitation exists, never sent | `No invitation URL has been issued yet.` |
-| No invitation, reviewer eligible | Points at **Create invites** on the Workflow card |
-| No invitation, reviewer **not** eligible | Says **Create invites** will skip them, and names the two remedies |
+| No invitation, reviewer eligible | Points at **Prepare session** on the Workflow card, and says an open session must revert to draft first |
+| No invitation, reviewer **not** eligible | Says **Prepare session** will skip them, and names the two remedies |
 
 The last two are distinct because `generate_invitations` selects active
 reviewers with at least one included assignment: telling an ineligible
-reviewer's operator to press **Create invites** sends them to a button
-that cannot reach that reviewer.
+reviewer's operator to re-run the creator sends them to something that
+cannot reach that reviewer — the card would stay `not created` however
+often they ran it.
+
+The creator has been **Prepare** since 19Q Item 2 rung 2, and the
+eligible row carries the revert caveat because `prepare_visible` is
+`(is_draft and not is_setup_empty) or is_validated`: an open session
+cannot run it.
 
 "Issued" is the accurate verb for the second row: `generate_invitations`
 discards the raw token, so a URL exists only once an invitation has been

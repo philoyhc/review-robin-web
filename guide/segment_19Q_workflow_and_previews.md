@@ -288,320 +288,72 @@ Leaves both preconditions and all four warning sites standing.
 
 ### Status
 
-**Rung 1 landed 2026-09-18, across two send paths rather than one.**
+**Closed 2026-09-18. Four rungs as planned; rung 1 was the only one
+that grew.**
 
-The ladder named `invitations_send_all`. Building it found
-`_dispatch_pending_invitations`
-(`app/services/scheduled_events/_invites.py`) running its own copy of
-the same query with the same defect — and that is the **unattended**
-path, firing from a timer with no operator present. Fixed both;
-splitting them would have left a known live bug in the worse of the
-two. *The register names the instance somebody noticed, not the class.*
+**What the ladder became.** Rung 1's ladder line named
+`invitations_send_all`; building it found the scheduled
+`_dispatch_pending_invitations` running its own copy of the same
+query with the same defect, and a cold read then found
+`invitations_send_one` with a third, looser predicate. All three
+share `invitations.list_sendable_invitations` /
+`is_reviewer_eligible_for_invitation` now. Fixing one would have left
+the unattended half of a live bug standing. Rungs 2–4 landed as
+written.
 
-**The bug is sharper than the Opportunity records.** The Manage
-Invitations table already filters: `views.build_invitations_rows` goes
-through `monitoring.per_reviewer_progress`, which is assigned-and-active.
-So the operator saw one row and the button emailed two people — the page
-and the button disagreed about who is in the session, and the one the
-operator could not see is the one who got the mail.
+**The bug was sharper than the Opportunity recorded.** The Manage
+Invitations table already filtered — `build_invitations_rows` →
+`monitoring.per_reviewer_progress`, assigned-and-active — so the
+operator saw one row and Send all emailed two people. The page and
+the button disagreed, and the one the operator could not see is the
+one who got the mail.
 
-**One definition, not a third spelling.** `list_sendable_invitations`
-reuses `_assigned_active_reviewer_ids`, the predicate
-`generate_invitations` already enrols on, so a row is sendable exactly
-when a fresh Prepare would have created it.
-`monitoring._assigned_active_reviewers` is a *second* spelling of the
-same idea and is how these two surfaces came to disagree in the first
-place; unifying it is not this rung's (it would touch the monitoring
-layer) but it is the root and should be recorded as such.
+**Decisions confirmed at build.**
+- Create after `mark_validated`, clean path only. The rejected
+  alternative (create at Generate, before validate) is now genuinely
+  caught by a test; the first version of that test used an empty
+  session, where both orderings agree because nobody is eligible.
+- `generate_invitations` stays a service function.
+- The `has_invitations` skip reasons and both amber captions stay —
+  open question 1 holds. Their *copy* did not: rung 3's first attempt
+  named remedies that 409 in the state where they render.
+- `?validated=1` keeps its inline flip (author, and see
+  `### Judgment calls`).
 
-`spec/workflow_card.md`'s *"Iterates every pending invitation"* became
-false the moment this landed, so it is corrected now rather than at
-rung 4 — the file was already in `Doc impact`.
+**The finding worth carrying forward is about the instruments, not
+the code.** Every rung, something asserted less than it claimed: a
+vacuous identity check reading a key `invitation.sent` has never
+carried; a mutant that survived because the test's session had nobody
+eligible; five tests that would have gone vacuous when `_ready_session`
+started creating invitations; an anti-vacuity control that fired
+because two id sequences began advancing in lockstep; a test that had
+been skipping itself green for years, whose docstring claimed
+creating an invitation "populates email_outbox" when only a *send*
+ever has. **None was caught by the suite. All were caught by a
+reader.**
 
-**The cold read found two residues the rung itself created**, both now
-fixed here:
+**Reads: four.** Rung 1 and rung 2 each took a `diff-reviewer` under
+the old per-slice cadence — ten findings and eight — plus a
+`spec-writer` pass on rung 2. Rung 3 took the first **per-item
+cumulative** read under the cadence introduced mid-item (#2459), at
+eleven findings, and it found the one defect that spanned rungs: copy
+written in rung 3 that was unreachable because of a state rung 2 had
+escalated and rung 3 had not settled. *Recorded per the cadence's own
+rule 7, for the next practice audit to weigh.*
 
-- The **"Pending invitations" pill** counted every pending row while
-  the button stopped sending every pending row, so an ineligible
-  reviewer's invitation would read amber forever with no control on
-  the page able to clear it. The rung had moved its own defect from
-  the button to the counter. It counts the sendable set.
-- **`invitations_send_one` was the third send path** and still gated on
-  `status == "active"` alone, so a direct POST could mail someone the
-  two bulk paths refuse. Its comment claimed to "match the bulk
-  send-path's active-only gate" — true when the bulk path had no gate,
-  a half-truth in the other direction afterwards. Gated on eligibility
-  only, deliberately not on `pending` as well: that would be a second,
-  unrelated behavior change riding this rung.
+**Carried out**, all three now real entries in
+`guide/deferred_consolidated.md` rather than claims that they were:
+pruning stale invitation rows; the unaudited withheld send
+(`counts.sent = 0` has two causes); and
+`monitoring._assigned_active_reviewers` duplicating
+`invitations._assigned_active_reviewer_ids` — the root cause of the
+bug rung 1 fixed, left unfixed because unifying it reaches into the
+monitoring layer.
 
-**And three defects in the tests, which is the pattern this segment
-keeps meeting.** The scheduled test's identity assertion read
-`context.to_email` off `invitation.sent`, which has never carried it
-(`context={"trigger": trigger}`) — **vacuously true**, and would have
-passed if the scheduler mailed the stranded reviewer. It reads
-`EmailOutbox.to_email` now, verified by inverting it. The
-"leaves it pending" test asserted two things a total no-op satisfies.
-And `_strand_an_invitation` never checked the session came back to
-`validated`, though `workflow_prepare` answers 303 on a failed
-validation too.
-
-**The untested half of eligibility had a wrong lever, and finding out
-was worth more than the test.** Nothing covered *active reviewer, no
-included assignment*. The first attempt used
-`POST /assignments/bulk-inactivate` then re-Prepared, and failed:
-`workflow_prepare` runs `replace_assignments`, which re-materialises
-every row from the pinned rule set, so **a per-row exclusion does not
-survive the Prepare that makes the session sendable**. Measured, not
-read. In the field that state comes from a rule the regeneration
-reproduces; the test sets the column directly and says why.
-
-**Observability gap, recorded not fixed.** `counts.sent = 0` on
-`session.scheduled_invites_fired` now has two causes — all already
-sent, or all pending rows ineligible — and nothing is audited for the
-withheld rows, on either send path. A skip event means a new
-`EVENT_SCHEMAS` entry, so it belongs to a later rung or to
-`guide/deferred_consolidated.md`, not here.
-
-**`spec-writer` (pre-push, since the slice touches `spec/`) came back
-clean on this slice** and raised one phrase of mine — *"the four
-surfaces cannot drift"*, where the test actually has five call sites.
-Rewritten to name them; a count is the part that goes stale.
-
-**It also found a contradiction that predates this segment**, and it
-needs an author ruling rather than a fix here:
-`spec/operations_pages.md:127-129` and `:304` both say the Invitations
-page's per-row **Send** and **Regenerate** are *"live from `validated`
-onward"*, and `:306` adds that all three render disabled outside their
-allowed state. The template gates both on `is_ready`
-(`session_invitations.html:309,327`), which is `lifecycle.is_ready`
-alone (`_workflow_card.py:110`) — so both buttons are disabled in
-`validated`, the state the spec says they are live in. Verified at
-`file:line`. Either the template should gate on
-`is_validated or is_ready`, matching the route's own
-`_require_validated_or_ready`, or the spec was never true. Out of this
-rung's scope and not in Item 2's `Doc impact`; filed here so the
-segment can adjudicate it.
-
-**Codex's review made the same point one layer deeper, and was
-right.** The per-row gate above was first written as the *route*
-building the eligible set and testing membership — invitation policy
-in a route handler, which `AGENTS.md` §1 forbids, and a predicate the
-route owns is one the next send path can quietly disagree with. That
-is the defect this rung exists to fix, committed while fixing it.
-`invitations.is_reviewer_eligible_for_invitation` owns it now, reusing
-`_assigned_active_reviewer_ids` rather than asking in new SQL.
-
-Six mutants, all caught: route reverted to the unfiltered listing;
-eligibility filter dropped; `pending` filter dropped; scheduled path
-back to its own query; the eligibility test reduced to its status limb;
-and the scheduled identity assertion inverted. *The `pending`-filter
-mutant is caught by a pre-existing test
-(`test_scheduled_invites.py`'s second-fire `counts.sent == 0`), not by
-any of the new ones — the first write-up implied otherwise.*
-
-**Rung 2 landed 2026-09-18.** `generate_invitations` runs inside
-`workflow_prepare` after `mark_validated`, on the clean path only. The
-button is untouched, per the rung.
-
-**Two of the four mutants survived, and both were tests of mine that
-proved nothing.**
-
-- *Moving the call inside the `is_draft` guard* passed everything —
-  because the state it distinguishes is unreachable.
-  `replace_assignments` calls `invalidate_if_validated`, so by the
-  time control reaches the guard the session has **always** been
-  through `draft`. Measured: a second Prepare with nothing edited
-  emits `session.invalidated`, then a second `session.validated`. The
-  comment claiming this placement exists for "a session already
-  validated" was wrong and now says what is true — it is a refusal to
-  couple invitation creation to a lifecycle transition that happens
-  one step earlier, not a reachable catch-up.
-- *Moving the call ahead of `validate`* — **this plan's central
-  rejected alternative** — also passed, because
-  `test_a_failed_validation_creates_no_invitations` used an empty
-  session. Validation failed and no invitations appeared, but there
-  was nobody eligible to invite either, so both orderings gave the
-  same answer. Rebuilt on a good roster with a duplicate reviewee: the
-  reviewer is fully eligible when validation fails, so after-validate
-  gives zero rows and before-validate gives one. The mutant now fails.
-  The test asserts an included assignment exists first, so it cannot
-  quietly decay back into the vacuous version.
-
-**One test re-aimed rather than deleted, and the cold read found my
-description of it wrong in a way that matters.**
-`test_invitations_pill_not_created_when_no_invitation_rows` seeded a
-roster and Prepared, which now yields `Not sent`. It reaches
-`Not created` by inactivating every reviewer instead — and I called
-that *"exactly where open question 1 said it was"*, which it is not.
-
-**Open question 1's own measured state is not reachable through
-Prepare.** OQ1 recorded "a full roster with every assignment
-excluded" — 0 included pairs, two warnings. Rung 1 established that
-`replace_assignments` re-materialises every row from the pinned rule
-set, so that exclusion is gone by the time the invite step runs. The
-all-inactive lever measures differently: **2 included assignments,
-zero warnings** — a completely clean Prepare that creates no
-invitations. *Stronger evidence for the same conclusion, by a
-different route.* Said plainly because rung 3 retires the button on
-this answer: anyone re-deriving OQ1 first will try the exclusion
-lever, watch it regenerate away, and could conclude a clean Prepare
-always creates invitations.
-
-**`spec/lifecycle.md`'s `context.step` enum was stale too**, and this
-rung made it so — the same class of edit as the `_step_label_map`
-enumeration, applied to one file and not the other. Both carry
-`invite` now. Likewise `spec/workflow_card.md` still said Prepare
-"runs two lifecycle steps", enumerated two failure modes and two
-success events: all four now describe three. *The deferral rule was
-right; applying it to one paragraph of a file and not to the
-paragraph 350 lines above is what a reader trips on.*
-
-**The PR body's non-verification disclaimer was false.** It said the
-new step label was "template copy the suite cannot render"; the same
-test file already renders that banner for two other steps via
-`_failure_banner`. A disclosed gap that is not a gap costs the reader
-trust in the disclaimers that are real. Now covered by a test.
-
-**`spec-writer` verified all five rewritten passages and the enum
-addition as true**, and caught one naming slip in my own new
-sentence: it said `leaves has_invitations false`, the service
-function's name, where this spec's established name for that fact is
-`invitations_generated` (defined in its own context-builder list and
-used three times elsewhere). A reader who has just read that list has
-no reason to expect a second name for it three hundred lines later.
-Fixed.
-
-**Three sentences rung 4 must sweep, which the `Doc impact` bullets
-do not literally name.** `spec/session_home.md` twice and
-`spec/operator_ui_concept.md` once say Prepare *"runs Generate +
-Validate in sequence"*. Falsified by this rung, legitimately deferred
-— but the bullets that cover those files name the Next action card's
-create-invites state and the button budget, not the step count, so
-the closing rung should grep the phrase rather than trust the
-bullets.
-
-**Recorded, not fixed** (all pre-existing or out of rung):
-`spec/lifecycle.md`'s `context.step` enum lists `precondition`, which
-is **never emitted** — every precondition return happens before
-`session.workflow_run_started` is written, so no
-`workflow_run_failed` exists for that click at all; the same row's
-`step or "unknown"` fallback is dead, since `step` is set on the
-first line of the `try`. `spec/rrw_functional_spec.md` §9.8 and §6.1
-still describe the pre-18F single super-button and a retired Pause
-flow — false since before this segment, and not in Item 2's manifest.
-`generate_invitations` can raise `sqlalchemy.exc.*` outside the
-route's `except` tuple, giving a framework 500 rather than the
-failure banner — but `replace_assignments` and `mark_validated` have
-the identical exposure, so widening it here would be inconsistent
-with its siblings. `audit.write_event` flushes without committing and
-nothing commits after it on the failure paths, so
-`session.workflow_run_failed` may never persist in production; the
-suite cannot see it because the test `get_db` override yields a
-long-lived session. And `views/_workflow_card.py` flips
-`draft → validated` inline on the `?validated=1` entry path, so a
-session can reach `validated` without Prepare — **worth settling
-before rung 3 retires the button**, since after that such a session
-would have no way to get invitations.
-
-**Rung 3 landed 2026-09-18 — the button, its card branch and
-`POST /invitations/generate` are gone.** The `has_invitations` gates
-and both amber captions stay, per open question 1.
-
-**The captions' *copy* did not stay, and that is the rung's job.**
-Both said "create invitations before then or these will skip",
-naming a button that no longer exists. The branches are still
-reachable — a clean Prepare leaves `has_invitations` False when
-nobody is eligible — so the copy now names what the operator can
-actually do: include an assignment for an active reviewer and run
-Prepare again. Same for the two Next-action body strings and the
-reviewer drill-in's two prompts.
-
-**46 tests broke, and the fixtures were the finding.** Most called
-`POST /invitations/generate` after reaching `ready` through
-`?validated=1` — a promotion that never runs Prepare, so it never
-created invitations, which is *why* they called the route. Switched
-to `POST /workflow/prepare`, which validates and creates in one step,
-and the explicit calls dropped out.
-
-- **Four tests were about the retired route** (one-per-reviewer +
-  idempotent, 409 from draft, live from validated). Every property is
-  Prepare's now and rung 2 already asserts each one, so they are
-  deleted rather than re-aimed — re-aiming would have duplicated rung
-  2's tests under names describing a button nobody can press. What
-  replaces them is the one thing they could not say: the route 404s.
-- **Five needed "assignments but no invitations"**, which
-  `_ready_session` can no longer produce. A new fixture builds it the
-  way it stays reachable — the `?validated=1` promotion the author
-  ruled we keep. *Without it those five would have gone vacuous: a
-  table where every row always has an invitation cannot exercise the
-  row that does not.*
-- **An anti-vacuity control fired and was right.** The 308 test pads
-  with a throwaway session so invitation and reviewer ids diverge;
-  since rung 2 each padding session advances **both** sequences, so
-  they coincided again. The pad now creates reviewers without
-  invitations.
-
-**One test had been skipping itself green for a long time.**
-`test_sys_admin_outbox_child.py`'s fixture imported rosters but never
-pinned a rule, so nobody was eligible, the generate call created
-nothing, and a `pytest.skip` guard took over — reporting success.
-Retiring the route forced the call out; making the fixture real
-exposed the actual defect: its docstring claims creating an invitation
-"populates email_outbox", and it never has — only a *send* writes an
-outbox row. With a send added it passes, and the suite's skip count
-drops 17 → 16. Pre-existing, found because this rung had to touch it.
-
-**Deferred to rung 4, uniformly:** **seven `spec/` files plus
-`docs/status.md`** still describe the button — the first write-up said
-"seven `spec/` and `docs/`", which undercounts by one. The plan's ladder assigns them to the close
-and they are left whole rather than half-corrected — rung 2's cold
-read named a split rule inside one file as the thing a reader trips
-on, so the rule here is all or nothing.
-
-**The item's cumulative cold read (the first under the per-item
-cadence) returned eleven findings. One was serious and mine.**
-
-**Rung 3's new copy named two remedies that both fail in the state
-where it renders.** In `ready` with no invitations — reachable by
-`?validated=1` → Activate, and by open question 1's *supported* clean
-Prepare with nobody eligible → Activate — the copy said "include an
-assignment for an active reviewer and run Prepare session again".
-Measured: the Prepare button is not rendered (`prepare_visible`
-excludes `ready`), `POST /workflow/prepare` 303s to
-`super_step=precondition`, and every roster mutator 409s. *Rung 2's
-own Status had escalated exactly this and rung 3 did not settle it.*
-The captions and both card strings are state-aware now: `validated`
-names Prepare, `ready` names Revert — and says Revert stops responses,
-because it closes every accepting instrument. A test pins the premise,
-so if Prepare ever becomes reachable from `ready` the copy fails
-rather than rots.
-
-**Three of the new strings also asserted a false cause.** "No reviewer
-was eligible when Prepare last ran" is wrong on the `?validated=1`
-path, where Prepare never ran and everyone is eligible. The copy
-states the condition and the fix, and diagnoses nothing.
-
-**Smaller, all verified before acting:** three calls to the retired
-route survived in a file rung 3 had open, passing as dead 404s; the
-rung-1 spec sentence claimed five surfaces "cannot drift apart" when
-the table is a second copy of the query — *the root cause of the bug
-rung 1 fixed*, now named rather than claimed away; four re-fixtured
-`_activate` helpers asserted only `303`, which rung 1 had already
-written a guard against in the same file; two test names still said
-"create"; and the `?validated=1` ruling existed only in a test
-docstring — it is a judgment call now, with the 208-test measurement.
-
-**Three "recorded in `guide/deferred_consolidated.md`" claims were
-false** — nothing was there. All three are entries now: the pruning
-deferral, the unaudited withheld send, and the
-`monitoring._assigned_active_reviewers` duplicate. Without that, the
-close would have archived this plan and orphaned all three.
-
-**Reads this item took: four.** Rung 1 and rung 2 each took one under
-the old per-slice cadence (ten findings and eight); rung 2 also took a
-`spec-writer` pass; rung 3 took this cumulative one under the new
-cadence, at eleven. *The per-item read found more than either
-per-slice read, and found the one defect that spanned rungs.*
+**Still owed:** dev-slot verification of the Workflow card with one
+fewer button and the six rewritten copy strings. The copy is exactly
+what the cumulative read caught, so it is the part most worth seeing
+rendered.
 
 ### PR ladder
 
@@ -635,18 +387,20 @@ per-slice read, and found the one defect that spanned rungs.*
 
 Both answered, 2026-09-18.
 
-1. Can a session validate with **zero** eligible reviewers? **Yes** —
-   measured: a full roster with every assignment excluded gives 0
-   eligible reviewers, **0 blocking errors** and `can_activate: True`,
-   on two warnings (`assignments.no_included_pairs`,
-   `instruments.zero_included`). `reviewers.empty` is an error, but
-   `assignments.no_included_pairs` is only a warning. Author: *"warning
-   is enough; the session is set up, just that there are no eligible
-   invites."* **So rung 3 keeps the `has_invitations` skip reasons and
-   both amber captions** — a clean Prepare can still leave
-   `has_invitations` false.
-2. Does `POST /invitations/generate` 308 to Prepare, or is it deleted?
-   **Deleted.** A POST is not a bookmark.
+1. **Can a session validate with zero eligible reviewers? Yes** — so
+   the `has_invitations` skip reasons and both amber captions stay.
+   *The measurement that answered it is not the one that pins it.* OQ1
+   measured a roster with every assignment excluded; rung 1 then
+   established that `replace_assignments` re-materialises every row
+   from the pinned rule set, so **that state cannot survive the
+   Prepare that would create the invitations**. The reachable case is
+   every reviewer inactive — `reviewers.empty` counts rows regardless
+   of status — which validates with *2 included assignments and zero
+   warnings*. Pinned by
+   `test_invitations_pill_not_created_when_no_invitation_rows`.
+2. **Does `POST /invitations/generate` 308 to Prepare, or is it
+   deleted? Deleted** — a POST is not a bookmark. It 404s, guarded by
+   two tests.
 
 ### Out of scope
 
