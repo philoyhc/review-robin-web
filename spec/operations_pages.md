@@ -260,7 +260,7 @@ excluded nothing is worth saying.
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
-| 5 | Email Status | — | `email_status` | Pill: `sent` / `queued` / `not sent` |
+| 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none. **Rendered, not enumerated** (19P.6 rung 3), so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
 | 6 | Sent | — | `email_sent_at` | Timestamp pill, or `—` |
 | 7 | Progress | — | `review_progress` | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
 | 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
@@ -342,7 +342,7 @@ Both timestamps read the `Invitation` row rather than the outbox, so
 they survive a reviewer leaving the table. The em-dash means *no date*,
 not *no invitation* — the top line already answers that.
 
-Below them, a three-state URL region:
+Below them, a **four-state** URL region:
 
 | State | Copy |
 |---|---|

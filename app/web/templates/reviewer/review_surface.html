@@ -24,14 +24,18 @@
        both beats a branch that has to be kept right.
 
        "**the fields still being collected**" is load-bearing, not
-       hedging. `_surface_context` filters response fields on
-       `visible.is_(True)`, and the dropped-fields notice below is
-       suppressed in `preview_mode` — so an answer saved before its
-       Band 2 chip was un-pinned renders nowhere on THIS surface and is
-       flagged nowhere either. Saying "any responses they have saved"
-       would let an operator conclude a response never existed.
-       Whether the notice should stop being suppressed here is Item 6's
-       open question 3. #}
+       hedging: `_surface_context` filters response fields on
+       `visible.is_(True)`, so an answer saved before its Band 2 chip
+       was un-pinned does not render here. Saying "any responses they
+       have saved" would let an operator conclude it never existed.
+
+       **Rung 2b changed the other half of that argument.** This
+       comment used to add "and the notice below is suppressed in
+       `preview_mode`, so it is flagged nowhere either" — true when it
+       was written, false since open question 3 was answered. The
+       notice now renders here, so the phrase and the notice divide the
+       work: this describes what the form shows, that names what is
+       missing. #}
     <div class="banner banner-info">
       <strong>Operator view.</strong> The reviewer's own surface, showing
       their saved responses to the fields still being collected.
@@ -64,7 +68,13 @@
         <em>{{ field_label }}</em>
         <span class="muted">({{ inst_label }})</span>{% if not loop.last %}, {% endif %}
       {% endfor %}.
-      Your previous answers stay in the record but no longer appear
+      {# Voiceless on purpose since 19P.6 rung 2b. This read "Your
+         previous answers" while it was reviewer-only; un-suppressing it
+         in `preview_mode` gave it a second reader for whom "Your" names
+         the wrong person — the same objection that got the banner above
+         rewritten, and the same answer: one sentence true from both
+         doors beats a branch. #}
+      Previous answers stay in the record but no longer appear
       on this page, the summary, or the reviewer-record CSV.
     </div>
   {% endif %}

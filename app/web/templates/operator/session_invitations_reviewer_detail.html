@@ -89,16 +89,25 @@
              `sent`, so the ordinary case stays two facts rather than
              three.
 
-             **The value is rendered, never enumerated.** The set is the
+             **The value is rendered, not listed.** The set is the
              model's `EMAIL_OUTBOX_STATUSES` — `queued` / `sending` /
              `sent` / `failed` — and Segment 14B Part A widens which of
-             them real transport can produce. A template that listed them
-             would need a second edit then; this one will not
-             (`constitution.md` II).
+             them real transport can produce; a new one renders here
+             untouched (`constitution.md` II). The `!= "sent"` is still a
+             judgement about one member: it names `sent` the only state
+             not worth a pill. If 14B's dispatch is asynchronous, every
+             card will wear an amber pill while a send is in flight, and
+             that is the line to revisit — not the render.
 
              Gated on `sent_at` so it stays scoped to the current token:
              after a Regenerate the outbox row survives but `sent_at`
              does not, and a stale delivery state is worse than none.
+             **This assumes `sent_at` marks an attempt.** Today it marks
+             a success — `send_invitation` writes it in the same breath
+             as `status="sent"` — so a future `failed` row whose
+             `sent_at` is NULL would show no pill at all. Nothing
+             enforces the reading; 14B either keeps it or this gate
+             moves. Both flagged by `diff-reviewer` at the close.
 
              **The chrome strip reading `NOT SENT` beside a failed send
              is correct, not a contradiction to fix.** That pill counts

@@ -1815,6 +1815,24 @@ the card and the table show "one fact in two places", false for `Email
 sent` after a Regenerate; and a test comment claiming the card reports
 no email status "at all" from an assertion that could not have seen one.
 
+**The two close passes found six things, and four were mine claiming
+more than the code did** — the failure mode this item kept returning to,
+now including the close itself. `diff-reviewer`: a rung-2 comment still
+argued from the suppression rung 2b had just removed, and still called
+open question 3 open; "rendered, never enumerated" was true of the
+drill-in template and **false of the page**, because the Manage
+Invitations table branched on `sent` / `queued` and relabelled everything
+else `not sent` — so a failed row read `not sent` there and `failed` one
+click away; the route comment gave a motive (one query cannot disagree
+with itself) that is only half true, since it keys on `invitation_id`
+where the view keys on `reviewer_id`; and the un-suppressed notice still
+said "**Your** previous answers" to an operator, the exact objection that
+got the banner above it rewritten. `spec-writer`: the new prose said
+"three-state" directly above a four-row table, and row 87b cited
+"§16 row 96" — **a section and row that do not exist**, which also
+surfaced that the Previews hub's own *Open full preview* had never been
+in the button audit at all, since 11F. All six fixed at rung 3.
+
 **Two `close_check` notes adjudicated.** `_operations.py` is named
 against `spec/validate_page.md` and `_setup_reviewers.py` against
 `spec/setup_pages.md`, because both files were touched. Neither needs an
@@ -1920,8 +1938,8 @@ answers. Three created work — see rung 2b and the note beneath it.
 
 ### Doc impact
 
-- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, the surface link in the Review Progress card, and the Invitation card's three reported facts — `Invite: created / not created`, the two date slots, and the three-state URL region (Item 6).
-- `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, and "reached from the Previews hub picker card" becoming one entry point of two (Item 6).
+- `spec/operations_pages.md` — the **Invitations** § *Per-row drill-in* (`:307`, not the Responses one at `:385`): the new URL, the unconditional link, the surface link in the Review Progress card, the Invitation card's three reported facts (`Invite: created / not created`, the two date slots with the delivery state beside the send time) and the **four**-state URL region; plus the Email Status column's pill row, which stopped enumerating the status set at rung 3 (Item 6).
+- `spec/reviewer-surface.md` — § *Operator preview mode*: the banner copy it quotes verbatim, "reached from the Previews hub picker card" becoming one entry point of two, and the dropped-fields notice no longer being suppressed in `preview_mode` (Item 6).
 - `spec/preview_hub.md` — the preview surface gains a second entry point (Item 6).
 - `spec/operator_ui_concept.md` — `:102` and `:367`, the two passages naming the picker button as the way in. Not `:197`, which this item leaves alone (Item 6).
 - `spec/operator_button_audit.md` — the surface link's row, label `Open reviewer surface`, role Secondary. **Which section is an open question**: §13's `Source:` is `session_invitations.html` and this button ships on the drill-in page, which the audit does not cover (Item 6).

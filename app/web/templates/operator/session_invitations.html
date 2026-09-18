@@ -217,12 +217,24 @@
             {% if col_data["tag-2"] %}<td class="tag-col tag-col-2" data-sort-value="{{ row.reviewer.tag_2 or '' }}">{{ row.reviewer.tag_2 or "" }}</td>{% endif %}
             {% if col_data["tag-3"] %}<td class="tag-col tag-col-3" data-sort-value="{{ row.reviewer.tag_3 or '' }}">{{ row.reviewer.tag_3 or "" }}</td>{% endif %}
             <td data-sort-value="{{ row.email_status }}">
+              {# 19P.6 rung 3 — renders the status rather than branching
+                 on each value. The old three-way branch sent everything
+                 that was not `sent` or `queued` down an `{% else %}` that
+                 printed the literal `not sent`, so a **failed** row read
+                 `not sent` here while the drill-in one click away read
+                 `failed`. `row.email_status` is already the literal
+                 "not sent" when there is no outbox row
+                 (`views/_invitations.py:115`), so the fallback was
+                 re-deriving a string it had been handed.
+
+                 Found by `diff-reviewer` at the close: rung 2b claimed
+                 the delivery state was "rendered, never enumerated", and
+                 that was true of the drill-in template and false of this
+                 page. #}
               {% if row.email_status == "sent" %}
-                <span class="pill pill-count">sent</span>
-              {% elif row.email_status == "queued" %}
-                <span class="pill pill-empty">queued</span>
+                <span class="pill pill-count">{{ row.email_status }}</span>
               {% else %}
-                <span class="pill pill-empty">not sent</span>
+                <span class="pill pill-empty">{{ row.email_status }}</span>
               {% endif %}
             </td>
             <td data-sort-value="{{ row.email_sent_at.isoformat() if row.email_sent_at else '' }}">

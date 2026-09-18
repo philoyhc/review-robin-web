@@ -1106,7 +1106,7 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
     assert "Last reminder:" in facts
 
 
-def test_detail_page_url_region_has_three_states_not_two(
+def test_detail_page_url_region_distinguishes_its_states(
     client: TestClient, db: Session
 ) -> None:
     """`no URL` and `no invitation` are different, and say different things.
@@ -1279,6 +1279,47 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
         "an ordinary send shows its timestamp, not a redundant pill"
     )
     assert "Email sent:" in facts, "premise: the label is there to be confused with"
+
+
+def test_table_and_card_agree_on_a_failed_delivery(
+    client: TestClient, db: Session
+) -> None:
+    """One fact, one reading, on both surfaces.
+
+    19P.6 rung 3, after a cold read. Rung 2b gave the drill-in card a
+    delivery-state pill and claimed the value was "rendered, never
+    enumerated" — true of that template, false of this page: the table
+    branched on `sent` / `queued` and sent everything else to an
+    `{% else %}` printing the literal `not sent`. So a failed row read
+    `not sent` in the table and `failed` one click away, which is the
+    genre of contradiction this item exists to close.
+    """
+    session = _ready_session(client, db, code="tbl-card-agree")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    outbox.status = "failed"
+    db.commit()
+
+    table = client.get(f"/operator/sessions/{session.id}/invitations").text
+    assert _DELIVERY("failed") in table
+    assert _DELIVERY("not sent") not in table, (
+        "the table must not relabel a failed delivery as never sent"
+    )
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ).text
+    )
+    assert _DELIVERY("failed") in facts
 
 
 def test_per_row_remind_redirects_to_invitations_page(

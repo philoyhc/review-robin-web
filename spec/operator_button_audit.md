@@ -463,6 +463,7 @@ partials.
 | 73 | Previewing as (nav row) | ← Previous | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
 | 74 | Previewing as (nav row) | Next → | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
 | 75 | Previewing as (nav row) | Random | `<button type="submit">` | `btn secondary` | Secondary | Posts `/previews/random` |
+| 75a | Previewing as | Open full preview | `<a>` | `btn secondary` | Secondary (Disabled when the session has no reviewers) | **Missing from this table until 19P.6 rung 3**, though it has shipped since 11F — found by `spec-writer` at the close, when row 87b tried to cite it. In a `.card-action-row` at the card's foot; `target="_blank"` + `rel="noopener"`; targets `/preview-surface/1?reviewer_email=…`. Row 87b is the same button to the same destination from the Invitations drill-in |
 
 ### 12b — Email preview tabs (partial)
 
@@ -485,7 +486,7 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row; visible while the invitation is `pending` |
 | 87 | Invitations table (per row) | Send reminder | `<button type="submit">` | `btn secondary` | Secondary (Disabled when row is complete or session not ready) | One per row; visible once the invitation is past `pending` |
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
-| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, matching the Previews hub's button to the same destination (§16 row 96); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
+| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, matching the Previews hub's button to the same destination (§12a row 75a); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
 
 **The page body carries no bulk-action bar.** Create invites, Send
 invites and Send reminders belong to the Workflow card's stepper
