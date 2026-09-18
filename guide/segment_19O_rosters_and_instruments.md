@@ -24,7 +24,10 @@ instruction.
 Settle all seven. One carried a behavior choice, one a scope choice,
 both the author's: the lost *"no reviewer matched"* hint is **restored**
 rather than specced as an accepted loss, and the per-page sort-workaround
-migration **stays filed** rather than riding this pass.
+migration **stays filed** rather than riding this pass. *(Annotated
+2026-09-18: the author took the migration up after the other seven had
+landed, so it rode a later slice of this item rather than a later item.
+See `### Status`.)*
 
 ### Doc impact
 
@@ -40,12 +43,17 @@ migration **stays filed** rather than riding this pass.
 - `spec/workflow_card.md` — its copy of the return-to allowlist carried the dead `previews` slug too; **added at the close** (Item 6).
 - `spec/instruments.md` — the page-layout and status-card sections, which §9.6 delegates to and which carried the same four errors; **added at the second close pass** (Item 6).
 - `spec/visual_style_rrw.md` — the card cited as the worked example of legitimate full-width is half-width; **added at the second close pass** (Item 6).
+- `spec/ui_elements.md` — the `.session-row-selected` row, whose per-page
+  note listed which pages had migrated off 19P.1's handler; **added at the
+  close**, the sort migration having been outside this item when the
+  manifest was written (Item 6).
 - `docs/status.md` — the 11F attribution on `GET .../preview`, the corrected status-card description, and the row when this lands (Item 6).
 
 ### Status
 
-**Settled 2026-09-18, all seven.** Two touched behavior, five were
-prose.
+**Settled 2026-09-18 — all seven, then an eighth.** Two touched
+behavior, five were prose, and the register's own missing line (the
+sort migration) was taken up after them.
 
 - **`app/web/spec_registry.py`** pointed `_preview_surface` at
   `spec/preview_hub.md` alone — a file that, since 19Q Item 1,
@@ -106,7 +114,7 @@ fixed badly rather than the entries themselves.**
 **One line the register should have had and did not.** Item 4's own
 `Status` says the remaining sort-workaround migration is Item 6's, and
 nobody wrote it down here — so the register was incomplete about its own
-scope from the day it was filed. It is a line now, and stays open:
+scope from the day it was filed. It is a line now, and it closed here:
 
 - ~~**Migrate `session_reviewees`, `session_relationships` and
   `session_assignments`** off 19P.1's per-page capture-phase handler
@@ -115,19 +123,35 @@ scope from the day it was filed. It is a line now, and stays open:
   was three lines per page and identical on each, every `render()`
   already opening with the same panel cleanup. `MIGRATED_PAGES` is all
   six, and the guard that permitted *either* mechanism during the
-  migration now forbids **both**: a page keeping its old handler beside
-  the listener removes the panel twice and re-renders twice per sort.
+  migration now **requires the listener and forbids the old handler
+  beside it**: a page keeping both removes the panel twice and
+  re-renders twice per sort.
 
-  *The inverted assertion took two attempts.* It first matched
-  `setTimeout(render, 0)`, which every one of these pages also uses in
-  its select-all handler, so it failed on `session_reviewers` — migrated
-  days earlier and carrying no workaround at all. It matches the
-  workaround's **shape** now, a `.rrw-sort-btn` guard immediately
-  followed by a panel removal, which also leaves `sessions_list`'s
-  unrelated `.rrw-sort-btn` guard alone: that one gates the unsaved-edit
-  confirm from Item 4, and its next line is `expanderIsDirty()`. Four
-  mutants, three caught and one a negative control that correctly
-  survived.
+  *The inverted assertion took three attempts, and the first two are
+  the same mistake.* It first matched `setTimeout(render, 0)`, which
+  every one of these pages also uses in its select-all handler, so it
+  failed on `session_reviewers` — migrated days earlier and carrying no
+  workaround at all. It then matched the historical handler's **exact
+  byte-shape**, which a cold read ran against nine plausible
+  re-introductions: **one caught, eight through**, including a guard
+  that only calls `render()`, which is the double-render the test names
+  in its own failure message.
+
+  Both drafts were guessing how a future handler would be spelled. The
+  guard asserts a **property** now — these pages touch `rrw-sort-btn`
+  in markup only, there being no legitimate script-side reason to look
+  at a sort button on a page that listens for `rrw:sorted`. The lobby
+  is the one exception, and gets a whitelist rather than an exemption:
+  the first thing called after its guard returns must be
+  `expanderIsDirty`. *That test's own blacklist draft was defeated by
+  `refreshExpander()` in the mutation run* — the third instance of the
+  same lesson in one item. The page census is derived from the
+  templates too, and pinned against a list a human last read, which
+  caught the derivation pulling in `session_observers` (it names
+  `data-rrw-sortable` in a comment saying it has none). Thirteen
+  mutants: twelve caught, one a negative control that correctly
+  survived — a bare `expander = null` with no call, which removes
+  nothing and re-renders nothing.
 
 ### Out of scope
 

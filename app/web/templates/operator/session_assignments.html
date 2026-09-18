@@ -505,9 +505,11 @@
          with no `?selected=`, and no checkbox renders `checked`, so
          there is never a selection to restore.
 
-       Everything else is the roster shape and must stay it — the sort
-       guard and `selectAll.indeterminate` in particular. A cold read
-       found both missing from this file's first draft.
+       Everything else is the roster shape and must stay it — the
+       `rrw:sorted` listener and `selectAll.indeterminate` in
+       particular. A cold read found both missing from this file's
+       first draft, when the first of the two was still this page's own
+       capture-phase sort guard (migrated at 19O Item 6).
 
        **`Inactivate` and `Activate` now render only where they act.**
        The card rendered both whenever anything was ticked, so a
