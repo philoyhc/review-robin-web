@@ -20,7 +20,10 @@ The bare ``GET /sessions/{id}/preview-surface`` 303s to ``/preview-
 surface/1``. Optional ``?reviewer_email=`` selects which reviewer to
 preview as; when blank the route falls back to the first reviewer in
 the session. When no reviewer resolves, the route 303s to Manage
-Invitations.
+Invitations, carrying the unmatched address as ``?no_match=`` so that
+page can say which lookup failed (19O Item 6). Blank means the session
+has no reviewers rather than that the operator mistyped, so it carries
+nothing.
 """
 
 from __future__ import annotations
@@ -125,9 +128,16 @@ def preview_surface(
         # Only when the operator supplied one: a blank `reviewer_email`
         # that resolves to nothing means the session has no reviewers
         # at all, which is not a typo to report back.
+        #
+        # `.strip()`, because `build_preview_picker_context` strips
+        # before it resolves and this gate did not: `?reviewer_email=%20`
+        # on an empty roster took the truthy branch and produced
+        # "no reviewer has the email <nothing>". Two gates on one value
+        # have to agree about what counts as blank.
+        typo = reviewer_email.strip()
         url = f"/operator/sessions/{review_session.id}/invitations"
-        if reviewer_email:
-            url = f"{url}?{urlencode({'no_match': reviewer_email})}"
+        if typo:
+            url = f"{url}?{urlencode({'no_match': typo})}"
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     pages = _pages_for_session(db, review_session.id)

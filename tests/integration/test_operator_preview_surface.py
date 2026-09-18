@@ -185,6 +185,53 @@ def test_unmatched_reviewer_email_303s_to_invitations(
     )
 
 
+def test_a_whitespace_email_on_an_empty_roster_carries_no_hint(
+    client: TestClient, db: Session
+) -> None:
+    """Two gates on one value have to agree about what counts as blank.
+
+    `build_preview_picker_context` strips before it resolves; the
+    redirect gate did not, so `?reviewer_email=%20` on an empty roster
+    took the truthy branch and the page announced that no reviewer has
+    the email — followed by nothing. Found by a cold read after the
+    invariant had been asserted in four places.
+    """
+    client.post(
+        "/operator/sessions",
+        data={"name": "Empty", "code": "prev-s-ws"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "prev-s-ws")
+    ).scalar_one()
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=%20%20%20",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "no_match" not in response.headers["location"]
+
+
+def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
+    client: TestClient, db: Session
+) -> None:
+    """The card states a fact about the roster, so the page checks it.
+
+    `no_match` is a query parameter, so anything can put anything in
+    it. Echoed unverified, `?no_match=rae@example.edu` had the page
+    assert that no reviewer has that address while Rae sat in the table
+    below. Folded through `normalize_email`, so a case variant is
+    caught as the same person.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-liar")
+    html = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+        "?no_match=RAE@example.edu"
+    ).text
+    assert "No reviewer matched" not in html
+
+
 def test_the_landing_page_names_the_address_that_did_not_match(
     client: TestClient, db: Session
 ) -> None:

@@ -28,14 +28,17 @@ migration **stays filed** rather than riding this pass.
 
 ### Doc impact
 
-- `spec/rrw_functional_spec.md` — §9.1's All Instrument Status card is read-only; the bulk actions retired at 18R Item 3 (Item 6).
+- `spec/rrw_functional_spec.md` — **§9.6**'s session status card described against the shipped template: half-width, no bulk controls, and the two that went at 18R Item 3 went for different reasons (Item 6).
 - `spec/lifecycle.md` — the `_REVERT_RETURN_TO` allowlist loses the dead `previews` slug (Item 6).
 - `spec/preview_hub.md` — **Open reviewer surface** opens page 1, not `{page_n}` (Item 6).
 - `spec/operations_pages.md` — the drill-in's email region sits below two cards or three, depending on the Review Progress card (Item 6).
-- `spec/reviewer-surface.md` — named as `_preview_surface`'s governing spec in `app/web/spec_registry.py`, which pointed only at the retirement note (Item 6). <!-- cites: spec/reviewer-surface.md -->
+- `app/web/spec_registry.py` — `_preview_surface`'s governing spec, which pointed only at the retirement note (Item 6).
 - `README.md` — the `previews` route row is a redirect, not an Operations row (Item 6).
 - `guide/new_ux_ideas.md` — entry 2 no longer proposes folding in a retired page (Item 6).
-- `docs/status.md` — the 11F attribution on `GET .../preview`, the corrected bulk-actions claim, and the row when this lands (Item 6).
+- `spec/reviewer-surface.md` — the redirect now carries the unmatched address, and the landing page re-checks it; **added at the close**, having been marked `cites:` on the registry half alone (Item 6).
+- `spec/operations_pages.md` — the shared page shape gains a conditional fifth region between the Workflow card and the info card; **added at the close** (Item 6).
+- `spec/workflow_card.md` — its copy of the return-to allowlist carried the dead `previews` slug too; **added at the close** (Item 6).
+- `docs/status.md` — the 11F attribution on `GET .../preview`, the corrected status-card description, and the row when this lands (Item 6).
 
 ### Status
 
@@ -65,8 +68,36 @@ prose.
   copied from it along with the defect. `test_preview_pager.py`, which
   looked like a third, already ordered. Both fixed. *A register entry
   names the instance somebody noticed, not the class.*
-- Four documentary corrections and two cosmetic ones, listed in
-  `Doc impact` above.
+- Seven documentary corrections, listed in `Doc impact` above.
+
+**The cold read found five faults, and two of them were the entries
+fixed badly rather than the entries themselves.**
+
+- *The invariant was asserted in four places and was false.* "A blank
+  email means an empty roster, so no hint" holds of the resolver, which
+  strips; the redirect gate read the raw string, so `?reviewer_email=%20`
+  on an empty roster produced "no reviewer has the email" followed by
+  nothing. **Two gates on one value have to agree about what counts as
+  blank.**
+- *The hint stated a fact it never checked.* `no_match` came straight
+  off the query string, so a hand-typed one had the page assert that a
+  reviewer sitting in the table below did not exist. The route now
+  re-checks it against the roster, folded through `normalize_email`.
+- *The dead-slug fix was half done.* `spec/workflow_card.md` carries
+  the same allowlist as `spec/lifecycle.md` and kept `previews` —
+  leaving two live specs disagreeing, which is the defect the entry was
+  filed for.
+- *The §9.6 correction cited §9.1, and fixed one wrong clause inside a
+  sentence wrong in four more.* The card is half-width, not full-width;
+  has an accepting **count**, not a per-instrument pill row; has no
+  visibility pill row at all; and holds two buttons, so "read-only" was
+  the wrong word. And the two bulk controls went **differently** at 18R
+  Item 3 — the accepting one was never wired, the *Show all when closed*
+  toggle was on the page and was removed. Rewritten against the
+  template.
+- *The new card ignored the repo's notice idiom* — no `role="alert"`,
+  no `banner-scroll-target`, and a `.pill-empty` used as a message
+  label where every other surface uses it for a counter.
 
 **One line the register should have had and did not.** Item 4's own
 `Status` says the remaining sort-workaround migration is Item 6's, and

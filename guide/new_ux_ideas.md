@@ -23,8 +23,10 @@ deleted without ceremony.
 ## 1. One Rosters page, replacing four
 
 **Proposed 2026-09-12 by the author.** The **first move of a two-move
-consolidation** — entry 2 is the second, folding Invitations
-and Responses into Monitoring on the same structure. Assignments is
+consolidation** — **entry 3** is the second, folding Invitations
+and Responses into Monitoring on the same structure. (This said *entry 2* until 19O
+Item 6; entry 2 is the archived page's lone-row selection, and the
+collision was flagged in entry 3 itself when it was filed.) Assignments is
 deliberately in neither.
 
 Consolidate the four roster Setup pages — **Reviewers**, **Reviewees**,

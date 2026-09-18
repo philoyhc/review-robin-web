@@ -63,7 +63,9 @@ sides of the running-session conversation.
 
 ## Shared page shape
 
-Both pages render the same four stacked regions, in order:
+Both pages render the same four stacked regions, in order — plus, on
+Manage Invitations only, a conditional notice between 2 and 3 when
+`?no_match=` names an address no reviewer holds (19O Item 6):
 
 1. **Chrome** — two-row session chrome (top-nav with the active tab
    highlighted) + setup-status row.
