@@ -36,7 +36,7 @@ that region loses a capability, not just a door.
 no assignment filter, so the hub reaches three populations the drill-in
 cannot: before Prepare (the hub's stated purpose), inactive reviewers,
 and reviewers whose assignments are all excluded. Measured in full at
-`guide/segment_19P_expander_revamp.md` § *When each door is open*.
+`guide/archive/segment_19P_expander_revamp.md` § *When each door is open*.
 
 ### Decision
 
