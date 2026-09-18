@@ -567,11 +567,22 @@ the *content* box for an `<a>`:
 **Why it correlates with the right-hand column, which is the part worth
 recording.** Activate renders as an anchor only on the
 warnings-acknowledgement detour
-(`next_action_card.html:312`) — States 4W and 5-with-warnings. Warnings
-are also what fills the right column with count pills and the issue
-list. One cause, two symptoms; the columns never interact. The
-report's correlation is real and its obvious explanation is wrong,
-which is why this is an Opportunity and not a one-line fix.
+(`next_action_card.html:312`). Warnings are also what fills the right
+column with count pills and the issue list. One cause, two symptoms; the
+columns never interact. The report's correlation is real and its obvious
+explanation is wrong, which is why this is an Opportunity and not a
+one-line fix.
+
+**The four-button case, by precondition rather than by number:**
+`is_validated` + `can_activate` + `needs_acknowledge`, with invitations
+generated and not sent. The canonical cascade (`spec/workflow_card.md`)
+tests `needs_acknowledge` *before* invitation state, so it numbers this
+**4W**; there is no "State 5 with warnings". Worth a second's care when
+building the fixture, because the body copy that renders is State 5's
+("Invitations are ready to send") above 4W's help-line — the template's
+body cascade tests invitations first. Which of the two the spec's tables
+should describe is not this item's question; it is noted so the fixture
+is built from the preconditions and not from a number.
 
 ### Decision
 
@@ -590,7 +601,7 @@ as content boxes, and any that carry an explicit width would move.
   the blast radius has to enumerate.
 - The four-slot contract is `spec/operator_ui_concept.md`'s ≤4-button
   budget; this item does not change the budget, only whether the slots
-  are honoured.
+  are honored.
 
 ### Judgment calls — decided
 
@@ -603,8 +614,12 @@ At `a08b4750`:
 - `grep -rn '<a class="btn' app/web/templates/ | wc -l` → **80**
 - `grep -rln '<a class="btn' app/web/templates/ | wc -l` → **31 templates**
 - `grep -c "box-sizing" base.html` within the `.btn` rule → **0**
-- Rules already setting `box-sizing: border-box` by hand → **the comment
-  at `base.html:1645` counts five**
+- `grep -c "box-sizing:" app/web/templates/base.html` → **10** rules set
+  it by hand. The comment at `base.html:1645` says "five other rules",
+  which was true when it was written and is not now — nine others hold
+  today. *Counted here rather than quoted, because the first draft of
+  this bullet quoted it: a stale comment inside a section headed
+  **measured** is the failure this repository keeps finding.*
 
 ### PR ladder
 
@@ -616,7 +631,7 @@ At `a08b4750`:
 
 ### Definition of done
 
-- All four buttons measure one track width in State 5-with-warnings, verified in Chromium.
+- All four buttons measure one track width in the 4W-with-generated-invitations case above, verified in Chromium.
 - The enumeration of width-sized `a.btn` is in the PR body, not asserted to be empty.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.4` exits 0; any warning adjudicated
@@ -630,8 +645,9 @@ At `a08b4750`:
    the codebase will ever stretch; scoping to
    `.next-action-buttons-row > a.btn` fixes this card and leaves the
    same trap set for the next author. A third option is the global reset
-   the sheet has declined so far — `base.html:1645` already counts five
-   rules setting it by hand, which is an argument either way. Author's.
+   the sheet has declined so far — **10** rules now set it by hand
+   (measured; the comment at `base.html:1645` still says five), which is
+   an argument either way. Author's.
 2. Does anything in `spec/ui_elements.md` §6 need to state the box model
    for `.btn`, or is it an implementation detail? Only worth asking
    because a contract nobody wrote down is what produced this.
