@@ -16,16 +16,11 @@ so even pressing Enter cannot drive a write. **Inputs stay enabled** —
 ``preview_mode`` forces ``accepting=True`` — so the operator can type;
 nothing they type goes anywhere.
 
-Distinct from the iframe-based preview card on the Previews hub
-(``_operations.py`` ``previews_index``), which renders the same
-template but inside a sandboxed iframe and shows synthetic placeholder
-rows. The Previews hub now links here from its surface card.
-
 The bare ``GET /sessions/{id}/preview-surface`` 303s to ``/preview-
 surface/1``. Optional ``?reviewer_email=`` selects which reviewer to
 preview as; when blank the route falls back to the first reviewer in
-the session. When the session has zero reviewers the route 303s back
-to the Previews hub, which renders the empty-state message.
+the session. When no reviewer resolves, the route 303s to Manage
+Invitations.
 """
 
 from __future__ import annotations
@@ -63,9 +58,7 @@ def _resolve_preview_reviewer(
     when blank, falls back to the first reviewer in the session
     (alphabetical-by-email, matching the picker's option order) so
     the surface still renders. An unmatched non-empty email returns
-    ``None`` — caller 303s back to the Previews hub where the
-    picker's "No reviewer matched" hint renders. Returns ``None``
-    too when the session has zero reviewers."""
+    ``None``. Returns ``None`` too when the session has zero reviewers."""
     picker = views.build_preview_picker_context(
         db, review_session, reviewer_email
     )
@@ -122,13 +115,8 @@ def preview_surface(
 ) -> HTMLResponse | RedirectResponse:
     reviewer = _resolve_preview_reviewer(db, review_session, reviewer_email)
     if reviewer is None:
-        previews_url = f"/operator/sessions/{review_session.id}/previews"
-        if reviewer_email:
-            previews_url = (
-                f"{previews_url}?{urlencode({'reviewer_email': reviewer_email})}"
-            )
         return RedirectResponse(
-            url=previews_url,
+            url=f"/operator/sessions/{review_session.id}/invitations",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 

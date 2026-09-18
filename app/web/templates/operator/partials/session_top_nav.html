@@ -9,7 +9,7 @@
      - current_page: one of "Home" / "Reviewers" / "Reviewees" /
                      "Relationships" / "Observers" / "Assignments" /
                      "Instruments" / "Email Template" / "Validate" /
-                     "Previews" / "Invitations" / "Responses" /
+                     "Invitations" / "Responses" /
                      "Extract data".
                      The Outbox view retired from this chrome in 16A
                      and now lives inline on the Admin Sessions
@@ -19,7 +19,7 @@
                      sub-pages).
 #}
 {% set _setup_pages = ["Reviewers", "Reviewees", "Relationships", "Observers", "Instruments", "Email Template"] %}
-{% set _ops_pages = ["Assignments", "Validate", "Previews", "Invitations", "Responses", "Extract data"] %}
+{% set _ops_pages = ["Assignments", "Validate", "Invitations", "Responses", "Extract data"] %}
 {% set _setup_active = current_page in _setup_pages %}
 {% set _ops_active = current_page in _ops_pages %}
 <div class="session-nav-grid">
@@ -59,8 +59,6 @@
        href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
     <a class="nav-tab{% if current_page == 'Validate' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/validate">Validate</a>
-    <a class="nav-tab{% if current_page == 'Previews' %} active{% endif %}"
-       href="/operator/sessions/{{ session.id }}/previews">Previews</a>
     <a class="nav-tab{% if current_page == 'Invitations' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/invitations">Invitations</a>
     <a class="nav-tab{% if current_page == 'Responses' %} active{% endif %}"

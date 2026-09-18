@@ -449,13 +449,28 @@ citations.
 
 ---
 
-## Section 12 — Previews (`/operator/sessions/{id}/previews`)
+## Section 12 — Previews — no page, no picker
 
-Source: `app/web/templates/operator/session_previews.html` +
-included `_preview_picker.html` and `_email_preview_region.html`
-partials.
+**There is no Previews hub.** It retired at **19Q Item 1**, when its two
+jobs moved to the Manage Invitations per-reviewer drill-in: the reviewer
+surface was already reachable per row from 19P.6, and the email preview
+region transplanted at rung 1. `GET /operator/sessions/{id}/previews` is
+a **308 permanent redirect** to `/operator/sessions/{id}/invitations`,
+and `POST /previews/random` is gone outright — a POST is not a bookmark.
+`session_previews.html` and `_preview_picker.html` are deleted.
 
-### 12a — Previewing-as picker (partial)
+The affordances a reader may be looking for here are on the drill-in:
+**Open reviewer surface** (§13 row 87b, which replaces row 75a's
+`Open full preview`) and the email preview tab strip, whose rows keep
+their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
+retired with the picker and have no successor — see
+`guide/segment_19Q_workflow_and_previews.md` Item 1 open question 2 for
+why `Random` was not rehomed.
+
+### 12a — Previewing-as picker — **retired 19Q Item 1**
+
+Rows kept because other documents cite these numbers; none of these
+buttons renders anywhere today.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -463,9 +478,13 @@ partials.
 | 73 | Previewing as (nav row) | ← Previous | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
 | 74 | Previewing as (nav row) | Next → | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
 | 75 | Previewing as (nav row) | Random | `<button type="submit">` | `btn secondary` | Secondary | Posts `/previews/random` |
-| 75a | Previewing as | Open full preview | `<a>` | `btn secondary` | Secondary (Disabled when the session has no reviewers) | **Missing from this table until 19P.6 rung 3**, though it has shipped since 11F — found by `spec-writer` at the close, when row 87b tried to cite it. In a `.card-action-row` at the card's foot; `target="_blank"` + `rel="noopener"`; targets `/preview-surface/1?reviewer_email=…`. Row 87b is the same button to the same destination from the Invitations drill-in |
+| 75a | Previewing as | Open full preview | `<a>` | `btn secondary` | Secondary (Disabled when the session has no reviewers) | **Missing from this table until 19P.6 rung 3**, though it shipped at 11F — found by `spec-writer` at the close, when row 87b tried to cite it, and retired at 19Q Item 1 three days later. Row 87b is the same button to the same destination from the Invitations drill-in, and is the one that survives |
 
-### 12b — Email preview tabs (partial)
+### 12b — Email preview tabs (partial) — **moved to the drill-in**
+
+`_email_preview_region.html` survived the hub. It renders on
+`session_invitations_reviewer_detail.html` since 19Q Item 1 rung 1, for
+a named reviewer rather than a picked one; the rows are unchanged.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -486,7 +505,7 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row; visible while the invitation is `pending` |
 | 87 | Invitations table (per row) | Send reminder | `<button type="submit">` | `btn secondary` | Secondary (Disabled when row is complete or session not ready) | One per row; visible once the invitation is past `pending` |
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
-| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, matching the Previews hub's button to the same destination (§12a row 75a); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
+| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, the shape the Previews hub's button used for the same destination (§12a row 75a, retired with the hub at 19Q Item 1); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
 
 **The page body carries no bulk-action bar.** Create invites, Send
 invites and Send reminders belong to the Workflow card's stepper
