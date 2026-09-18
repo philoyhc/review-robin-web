@@ -485,10 +485,16 @@ def list_sendable_invitations(
 
     Eligibility is `_assigned_active_reviewer_ids`, the same predicate
     `generate_invitations` enrols on, so a row is sendable exactly when
-    a fresh Prepare would have created it. Deliberately *not* a fourth
-    spelling of "assigned and active": `monitoring._assigned_active_reviewers`
-    is already a second, which is how the Manage Invitations table and
-    the Send all button came to disagree about who is in the session.
+    that reviewer is one `generate_invitations` would enrol today.
+    (Not the same as "a row a fresh run would create" — it skips
+    reviewers who already have one, so on a generated session it
+    creates nothing while the send set is non-empty. The shared thing
+    is the **test**, not the set.)
+
+    Deliberately *not* a third spelling of "assigned and active":
+    `monitoring._assigned_active_reviewers` is already a second, which
+    is how the Manage Invitations table and the Send all button came
+    to disagree about who is in the session.
 
     Rows are filtered, never deleted. A reviewer reactivated later finds
     their invitation still ``pending`` with its token intact.

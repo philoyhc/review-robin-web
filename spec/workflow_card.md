@@ -509,10 +509,16 @@ Pre-flight gates:
   invitation whose reviewer is **still** assigned and active — and
   dispatches via `invitations.send_invitation`. A reviewer
   inactivated or dropped from every included assignment after being
-  invited keeps their row and is skipped, not deleted: the same set
-  the Manage Invitations table lists, and the same set a fresh
-  `generate_invitations` would enrol. The scheduled auto-send path
-  uses the same helper, so the two cannot drift.
+  invited keeps their row and is skipped, not deleted.
+
+  The **eligibility test** is the one the Manage Invitations table
+  filters its rows by and the one `generate_invitations` enrols on —
+  assigned (at least one `include=True`) and `status == "active"`.
+  The *sets* differ, and only the test is shared: the table lists
+  eligible reviewers whether or not they have an invitation and
+  whatever its status, while the send set is the `pending` subset of
+  those. The scheduled auto-send path and the per-row **Send** both
+  apply the same test, so the four surfaces cannot drift.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
@@ -788,7 +794,7 @@ routes:
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
 | `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `validated` or `ready` (via `_require_validated_or_ready`) | unchanged | `invitations.generated` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `validated` or `ready` | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per row of `invitations.list_sendable_invitations` — `pending` **and** still eligible) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
 
 **The per-step `/assignments/generate` and `/activate` routes stay

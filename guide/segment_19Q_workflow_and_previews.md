@@ -300,9 +300,57 @@ layer) but it is the root and should be recorded as such.
 false the moment this landed, so it is corrected now rather than at
 rung 4 — the file was already in `Doc impact`.
 
-Four mutants, all caught: route reverted to the unfiltered listing;
+**The cold read found two residues the rung itself created**, both now
+fixed here:
+
+- The **"Pending invitations" pill** counted every pending row while
+  the button stopped sending every pending row, so an ineligible
+  reviewer's invitation would read amber forever with no control on
+  the page able to clear it. The rung had moved its own defect from
+  the button to the counter. It counts the sendable set.
+- **`invitations_send_one` was the third send path** and still gated on
+  `status == "active"` alone, so a direct POST could mail someone the
+  two bulk paths refuse. Its comment claimed to "match the bulk
+  send-path's active-only gate" — true when the bulk path had no gate,
+  a half-truth in the other direction afterwards. Gated on eligibility
+  only, deliberately not on `pending` as well: that would be a second,
+  unrelated behavior change riding this rung.
+
+**And three defects in the tests, which is the pattern this segment
+keeps meeting.** The scheduled test's identity assertion read
+`context.to_email` off `invitation.sent`, which has never carried it
+(`context={"trigger": trigger}`) — **vacuously true**, and would have
+passed if the scheduler mailed the stranded reviewer. It reads
+`EmailOutbox.to_email` now, verified by inverting it. The
+"leaves it pending" test asserted two things a total no-op satisfies.
+And `_strand_an_invitation` never checked the session came back to
+`validated`, though `workflow_prepare` answers 303 on a failed
+validation too.
+
+**The untested half of eligibility had a wrong lever, and finding out
+was worth more than the test.** Nothing covered *active reviewer, no
+included assignment*. The first attempt used
+`POST /assignments/bulk-inactivate` then re-Prepared, and failed:
+`workflow_prepare` runs `replace_assignments`, which re-materialises
+every row from the pinned rule set, so **a per-row exclusion does not
+survive the Prepare that makes the session sendable**. Measured, not
+read. In the field that state comes from a rule the regeneration
+reproduces; the test sets the column directly and says why.
+
+**Observability gap, recorded not fixed.** `counts.sent = 0` on
+`session.scheduled_invites_fired` now has two causes — all already
+sent, or all pending rows ineligible — and nothing is audited for the
+withheld rows, on either send path. A skip event means a new
+`EVENT_SCHEMAS` entry, so it belongs to a later rung or to
+`guide/deferred_consolidated.md`, not here.
+
+Six mutants, all caught: route reverted to the unfiltered listing;
 eligibility filter dropped; `pending` filter dropped; scheduled path
-back to its own query.
+back to its own query; the eligibility test reduced to its status limb;
+and the scheduled identity assertion inverted. *The `pending`-filter
+mutant is caught by a pre-existing test
+(`test_scheduled_invites.py`'s second-fire `counts.sent == 0`), not by
+any of the new ones — the first write-up implied otherwise.*
 
 ### PR ladder
 

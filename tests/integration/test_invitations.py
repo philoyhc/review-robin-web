@@ -1977,7 +1977,9 @@ def _strand_an_invitation(
     This is the live sequence, not a contrived one. `bulk_inactivate`
     flips `Reviewer.status` and leaves the invitation alone — stated at
     `app/web/routes_operator/_operations.py:561` — and lifecycle never
-    deletes invitation rows (`invitations.py:166`), so the row survives
+    deletes invitation rows (`scheduled_events/_invites.py:167-171`
+    states the invariant; the only `delete(Invitation)` in the tree is
+    `app/services/session_purge.py`), so the row survives
     the round trip to `draft` and back. The reviewer is then off the
     Manage Invitations table, which lists
     `monitoring.per_reviewer_progress` (assigned **and** active), while
@@ -2009,7 +2011,16 @@ def _strand_an_invitation(
     assert response.status_code == 303, response.text
 
     db.refresh(stranded)
+    db.refresh(session)
     assert stranded.status != "active"
+    # `workflow_prepare` answers 303 on a *failed* validation too, so
+    # the status code above says nothing about the state we are in.
+    # Without this the send-all tests could be exercising a 409 rather
+    # than a filtered send.
+    assert session.status in {"validated", "ready"}, (
+        f"session is {session.status}; the re-Prepare did not validate, "
+        "so Send all would 409 and these tests would prove nothing"
+    )
     assert _pending_count(db, session.id) == 2, (
         "the stranded invitation must survive — if lifecycle started "
         "deleting these rows this test would pass for the wrong reason"
@@ -2074,10 +2085,23 @@ def test_send_all_leaves_the_ineligible_invitation_pending(
     session = _two_reviewer_validated_session(db=db, client=client, code="sa-keep")
     stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
 
-    client.post(
+    response = client.post(
         f"/operator/sessions/{session.id}/invitations/send-all",
         follow_redirects=False,
     )
+    # Both assertions below are satisfied by a send that never
+    # happened — a 409 from `_require_validated_or_ready`, a 500, or a
+    # Send all that became a total no-op would all leave the row
+    # `pending` with a null `sent_at`. So prove a send *did* happen
+    # first, and that the eligible reviewer got theirs.
+    assert response.status_code == 303, response.text
+    mailed = {
+        row.to_email
+        for row in db.execute(
+            select(EmailOutbox).where(EmailOutbox.session_id == session.id)
+        ).scalars()
+    }
+    assert mailed == {"rae@example.edu"}
 
     row = db.execute(
         select(Invitation).where(
@@ -2087,3 +2111,148 @@ def test_send_all_leaves_the_ineligible_invitation_pending(
     ).scalar_one()
     assert row.status == "pending"
     assert row.sent_at is None
+
+
+def test_send_all_skips_an_active_reviewer_with_no_included_assignment(
+    client: TestClient, db: Session
+) -> None:
+    """The other half of ineligibility, which had no test.
+
+    `bulk_inactivate` was the only path exercised, and it moves
+    `Reviewer.status`. Eligibility has a second limb — at least one
+    `include=True` assignment — and a filter checking only the status
+    would pass every other test in this file.
+
+    **The exclusion is set directly, and the first draft of this test
+    proved why.** It used `POST /assignments/bulk-inactivate` and then
+    re-Prepared, and failed: Sam was mailed anyway. `workflow_prepare`
+    runs `assignments.replace_assignments`
+    (`app/web/routes_operator/_workflow.py:145`), which re-materialises
+    every row from the instrument's pinned rule set
+    (`app/services/assignments/_generate.py:826`), so a per-row
+    exclusion is gone by the time Send all is reachable — the session
+    has to pass through Prepare to be sendable at all. In the field
+    this state comes from a **rule** that excludes the reviewer's
+    pairs, which regeneration reproduces rather than undoes. Writing
+    the column is the honest short-cut to that state; going through
+    the rule engine would test the rule engine.
+    """
+    session = _two_reviewer_validated_session(db=db, client=client, code="sa-unassigned")
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    assert _pending_count(db, session.id) == 2
+
+    stranded = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == session.id,
+            Reviewer.email == "sam@example.edu",
+        )
+    ).scalar_one()
+    rows = list(
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == session.id,
+                Assignment.reviewer_id == stranded.id,
+            )
+        ).scalars()
+    )
+    assert rows, "fixture produced no assignments to exclude"
+    for assignment in rows:
+        assignment.include = False
+    db.flush()
+    db.commit()
+
+    db.refresh(stranded)
+    db.refresh(session)
+    assert stranded.status == "active", (
+        "this test is about the assignment limb; if the reviewer went "
+        "inactive it collapses into the sibling test"
+    )
+    assert session.status in {"validated", "ready"}
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    mailed = {
+        row.to_email
+        for row in db.execute(
+            select(EmailOutbox).where(EmailOutbox.session_id == session.id)
+        ).scalars()
+    }
+    assert mailed == {"rae@example.edu"}
+
+
+def test_pending_counter_counts_what_send_all_can_actually_send(
+    client: TestClient, db: Session
+) -> None:
+    """The info-card pill and the button must agree.
+
+    "Pending invitations" is a nonzero-is-attention pill
+    (`spec/operations_pages.md`), so a count the operator cannot clear
+    is worse than no count. Filtering the send set without filtering
+    this counter would have left an ineligible reviewer's row showing
+    amber permanently, with no control on the page able to act on it —
+    the rung moving its own defect from the button to the counter
+    rather than removing it.
+    """
+    session = _two_reviewer_validated_session(db=db, client=client, code="sa-pill")
+    _strand_an_invitation(client, db, session, "sam@example.edu")
+
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+
+    rows = invitations_view_rows = inv_service.list_sendable_invitations(
+        db, session.id
+    )
+    assert rows == [], "the eligible invitation was sent, so nothing is sendable"
+    assert invitations_view_rows == []
+
+    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    assert "Pending invitations" in body
+    # The stranded row is still `pending` in the table, and must not be
+    # counted here — the counter is about what can still be sent.
+    assert _pending_count(db, session.id) == 1
+    marker = body.split("Pending invitations", 1)[1][:200]
+    assert 'pill-count">0<' in marker, (
+        "the Pending invitations pill still counts the unsendable row; "
+        f"saw: {marker!r}"
+    )
+
+
+def test_send_one_refuses_a_reviewer_the_bulk_paths_would_skip(
+    client: TestClient, db: Session
+) -> None:
+    """All three send paths agree, not two of three.
+
+    The per-row Send button renders only for rows the table lists, so
+    this is reachable by a direct POST or a stale tab. Before rung 1
+    the route's own comment said it matched "the bulk send-path's
+    active-only gate" — true when the bulk path had no gate at all,
+    and a half-truth in the other direction once the bulk paths
+    filtered on assigned-and-active.
+    """
+    session = _two_reviewer_validated_session(db=db, client=client, code="sa-one")
+    stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
+
+    invitation = db.execute(
+        select(Invitation).where(
+            Invitation.session_id == session.id,
+            Invitation.reviewer_id == stranded.id,
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409, response.text
+
+    assert db.execute(
+        select(EmailOutbox).where(EmailOutbox.to_email == stranded.email)
+    ).first() is None

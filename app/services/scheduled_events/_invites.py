@@ -263,9 +263,14 @@ def _dispatch_pending_invitations(
     """Send every sendable invitation on the session via the existing
     operator path, marked as a scheduled trigger.
 
-    Returns the count actually dispatched (zero when all invitations
-    have already been sent — the entry is still marked consumed so
-    the trigger doesn't keep retrying on each observer pass).
+    Returns the count actually dispatched. **Zero has two causes
+    since 19Q Item 2 rung 1** — every invitation already sent, or
+    every pending one belonging to a reviewer who is no longer
+    eligible — and the audit row cannot tell them apart; nothing is
+    written for the withheld rows. Recorded as an observability gap in
+    the segment plan rather than fixed here, since a skip event is a
+    new `EVENT_SCHEMAS` entry. Either way the entry is marked consumed,
+    so the trigger doesn't keep retrying on each observer pass.
 
     **Sendable, not merely pending, since 19Q Item 2 rung 1.** This
     used to run its own copy of the operator route's query and carried

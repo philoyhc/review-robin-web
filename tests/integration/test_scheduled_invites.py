@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     AuditEvent,
+    EmailOutbox,
     Instrument,
     Invitation,
     Reviewee,
@@ -492,11 +493,23 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
         "pending — an audit row saying 3 here would be a false record"
     )
 
-    sent_to = {
-        row.detail["context"].get("to_email")
-        for row in _audit_rows(db, rs, "invitation.sent")
+    # Read the recipient off `EmailOutbox`, not off the audit row.
+    # A first draft asserted `row.detail["context"].get("to_email")`,
+    # which `invitation.sent` has never carried — it writes
+    # `context={"trigger": trigger}` and nothing else
+    # (`app/services/invitations.py:391`), so the set was `{None}` and
+    # the assertion was **vacuously true**: it would have passed
+    # unchanged if the scheduler mailed the stranded reviewer. Caught
+    # by a cold read, which is the third time in two days an assertion
+    # in this repo proved less than it claimed.
+    mailed = {
+        row.to_email
+        for row in db.execute(
+            select(EmailOutbox).where(EmailOutbox.session_id == rs.id)
+        ).scalars()
     }
-    assert stranded.email not in sent_to
+    assert mailed, "nothing was mailed at all; the fixture is not exercising a send"
+    assert stranded.email not in mailed
 
     # Skipped, not consumed: the row stays available for a reactivation.
     still_pending = db.execute(
