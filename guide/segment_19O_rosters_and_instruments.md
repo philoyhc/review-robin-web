@@ -10,6 +10,35 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
+## Item 6 — Loose ends, recorded 2026-09-18
+
+**A register, not a plan.** Each line is a thing found and left, none of
+them in a live ladder. No `### Doc impact` until one is taken up, so
+`close_check.py 19O.6` fails C1 by design.
+
+- `app/web/spec_registry.py:106-107` maps `_preview_surface` and
+  `_operations`' redirects to `spec/preview_hub.md`, which disclaims the
+  contract. Precondition for ever deleting that file.
+- `spec/rrw_functional_spec.md` §9.1 and `docs/status.md:803` claim an
+  All Instrument Status card with bulk Open/Close; retired at 18R Item 3.
+- `app/web/routes_operator/_shared.py:170` and
+  `app/web/views/_workflow_card.py:73` still carry the dead `previews`
+  return-to slug.
+- `/preview-surface` with an unmatched `?reviewer_email=` 303s to
+  Invitations with no "no reviewer matched" hint. Dropped by consequence
+  at 19Q.1, not by decision.
+- `tests/integration/test_reviewers_page_mutate.py:669-671` indexes an
+  unordered `select`. One-line `.order_by(Reviewer.id)`; raised on #2444,
+  unapplied.
+- `guide/new_ux_ideas.md:26` proposes folding the retired Previews page
+  into Monitoring.
+- Cosmetic: `spec/preview_hub.md:7` `{page_n}` where the button is page 1;
+  `spec/operations_pages.md:377` "two detail cards" where a listed
+  reviewer has three; `docs/status.md:816` dropped the 11F attribution;
+  `README.md`'s `previews` row puts `Redirect` in a `Row` column.
+
+---
+
 ## Item 5 — A roster delete destroys relationships and says nothing
 
 ### Opportunity
