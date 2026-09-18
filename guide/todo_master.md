@@ -3322,8 +3322,8 @@ dep chains called out at the bottom of this file.
 
 - **Does *Invitations* still name a page you use before any invitation
   exists?** *(filed 2026-09-18 at Segment 19P's close; raised as Item 7's
-  open question 3, live only if the Previews hub retired — which it is
-  doing, as 19Q Item 1)*. The page is reviewer-keyed since 19P.6 and its
+  open question 3, live only if the Previews hub retired — which it did,
+  at 19Q Item 1 on 2026-09-18)*. The page is reviewer-keyed since 19P.6 and its
   rows render with no invitation at all, so the tab name now describes
   the artefact rather than the job. 19Q Item 1 retires the **Previews**
   tab and does not touch this one, so nothing there holds the question.

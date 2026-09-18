@@ -251,7 +251,6 @@ Used when a page or section is reachable but its actions are disabled because th
 
 - **On Setup pages** when session is `ready`: lock card explains that setup is locked and offers a "Revert to draft" action where appropriate.
 - **On Operations pages** when session is `draft` or `validated`: lock card explains that operations are unavailable until the session is activated, and links to Home where the Activate action lives.
-- **On the send-test affordance** within the Reviewer Experience Preview when session is no longer accepting responses: same pattern.
 
 The lock card pattern is consistent across all of these. Its prominence and explanatory copy adapt to the specific case, but its visual treatment does not.
 

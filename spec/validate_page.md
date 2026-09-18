@@ -36,7 +36,7 @@ Cross-references:
 | Page name | Validate |
 | URL | `GET /operator/sessions/{id}/validate` |
 | Template | `app/web/templates/operator/session_validate.html` |
-| Operations row position | #2 — after Assignments, before Previews. |
+| Operations row position | #2 — after Assignments, before Invitations. (Previews sat between them until it retired at 19Q Item 1.) |
 | Audience | Operator (`require_session_operator`). |
 
 The page is reachable in every lifecycle state. It's read-only
