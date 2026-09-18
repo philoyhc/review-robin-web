@@ -399,27 +399,30 @@ def test_the_panel_survives_a_sort(
     the panel, sorts it null-last, and strands it at the foot of the
     table while the selected rows keep their rails where they are.
 
-    Measured in Chromium before the guard: panel at row 30 of 31 with
-    the selection at 18. With it: 19, adjacent. All three *sortable*
-    roster pages carry the same capture-phase guard; Observers is the
-    one that does not, and the one that does not sort.
+    Measured in Chromium before any guard: panel at row 30 of 31 with
+    the selection at 18. With one: 19, adjacent.
+
+    **Re-aimed at 19O Item 6.** This asserted the capture-phase guard
+    19P.1 gave each sortable roster page — and after 19O Item 4 moved
+    the fix into `_rrwApplySort`, it was one of two tests in this repo
+    with this name asserting *opposite* architectures, which a cold read
+    caught. The shared function now drops every panel before it collects
+    or stamps rows and fires `rrw:sorted` once they land, so this page
+    owes a listener and nothing else.
     """
     rs = _seeded(client, db, "asn-exp-sort")
     body = _page(client, rs)
 
     assert 'data-rrw-sortable="rrw-sort-assignments-' in body, (
-        "the guard below is only needed because this table sorts"
+        "the listener below is only needed because this table sorts"
     )
-    # Bounded by a fixed window from the guard's own first line, not
-    # by searching forward for `}, true);` — another inline script on
-    # the page ends that way, so an unbounded slice swallows it and a
-    # capture-phase mutation survives. It did.
-    start = body.index('if (!event.target.closest(".rrw-sort-btn")')
-    guard = body[start : start + 220]
-    assert "panel.remove()" in guard
-    assert "setTimeout(render, 0)" in guard
-    # Capture phase, so it runs before the header's inline handler.
-    assert "}, true);" in guard, guard
+    assert 'addEventListener("rrw:sorted"' in body, (
+        "the page does not re-anchor its panel on the shared sort signal"
+    )
+    assert 'closest(".rrw-sort-btn")) return;\n' not in body, (
+        "19P.1's per-page handler is superseded by the shared fix; "
+        "keeping both removes the panel twice per sort"
+    )
 
 
 def test_a_partial_selection_reads_as_a_dash(

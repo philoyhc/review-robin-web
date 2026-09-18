@@ -731,16 +731,19 @@
         // the panel at the foot of the table while the selected rows
         // keep their rails where they are. Capture phase, so this runs
         // before the header's own inline handler: take the panel out
-        // first, put it back against its anchor after.
         //
-        // This page declares `data-rrw-sortable` (see the table tag),
-        // which is why it needs the guard. Observers is the one roster
-        // page without it, and the one roster page that does not sort.
-        table.addEventListener("click", function (event) {
-          if (!event.target.closest(".rrw-sort-btn")) return;
-          if (panel) { panel.remove(); panel = null; }
-          setTimeout(render, 0);
-        }, true);
+        // **Migrated at 19O Item 6.** The fix lives in `_rrwApplySort`
+        // now: it drops every `.session-expander` before it collects or
+        // stamps rows, then fires `rrw:sorted` once they have landed, so
+        // this page re-anchors instead of defending itself. `panel = null`
+        // rather than `panel.remove()` because base.html has already taken
+        // the node out. This page declares `data-rrw-sortable` (see the
+        // table tag), which is why it listens at all; Observers injects a
+        // panel and does not sort, so it needs neither half.
+        table.addEventListener("rrw:sorted", function () {
+          panel = null;
+          render();
+        });
 
         render();
       })();

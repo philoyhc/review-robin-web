@@ -1169,14 +1169,20 @@
         // cells, so it compares null and strands at the bottom, away from
         // the row it belongs to — and being present when base.html stamps
         // `rrwOriginalIndex` would shift every index after it, corrupting
-        // the unsorted restore order too. Capture phase, so this runs
-        // before the header's own inline handler: take the panel out
-        // first, put it back against its anchor after.
-        table.addEventListener("click", function (event) {
-          if (!event.target.closest(".rrw-sort-btn")) return;
-          if (panel) { panel.remove(); panel = null; }
-          setTimeout(render, 0);
-        }, true);
+        // the unsorted restore order too.
+        //
+        // **Migrated at 19O Item 6.** The fix lives in `_rrwApplySort`
+        // now: it drops every `.session-expander` before it collects or
+        // stamps rows, then fires `rrw:sorted` once they have landed, so
+        // this page re-anchors instead of defending itself. `panel = null`
+        // rather than `panel.remove()` because base.html has already taken
+        // the node out — `render()`'s own cleanup would find a detached
+        // element. With this the repo carries one mechanism for this bug
+        // rather than two.
+        table.addEventListener("rrw:sorted", function () {
+          panel = null;
+          render();
+        });
 
         // A selection can arrive already made: the bulk routes redirect
         // through `_redirect_keeping_selection`, which carries the

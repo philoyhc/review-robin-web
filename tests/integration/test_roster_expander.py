@@ -709,24 +709,34 @@ def test_sorting_takes_the_panel_out_and_puts_it_back(
     `rrwOriginalIndex` would shift every index after it, corrupting the
     unsorted restore order too.
 
-    **The mechanism is measured, not assumed.** With this binding removed
+    **The mechanism is measured, not assumed.** With no binding at all
     and one row selected, a header click moved the panel from index 2 of
-    9 to index 8 of 9 — last child, stranded. With it, the panel stays at
-    index 2, still anchored to its row.
+    9 to index 8 of 9 — last child, stranded. With one, the panel stays
+    at index 2, still anchored to its row.
 
-    Capture phase matters: the header's own inline `onclick` does the
-    sorting, so this has to run first to take the panel out before the
-    reorder sees it.
+    **Re-aimed at 19O Item 6**, which completed the migration these
+    pages were the last holdouts of. 19P.1 gave each page a
+    capture-phase click handler that took the panel out ahead of the
+    header's inline `onclick`; the work now lives in `_rrwApplySort`,
+    which drops every panel before it collects or stamps rows and fires
+    `rrw:sorted` once they have landed. So what each page owes is a
+    listener, and the old handler is gone rather than kept alongside —
+    two mechanisms for one bug is how one of them rots. The shared half
+    is pinned by `tests/unit/test_sort_drops_injected_panel.py`.
     """
     rs = _make_session(client, db, f"ex-so-{page[:4]}")
     _seed(db, rs.id, page)
     body = client.get(_base(rs.id, page)).text
     script = _script(body, page)
 
-    assert 'if (!event.target.closest(".rrw-sort-btn")) return;' in script
-    assert "}, true);" in script, "the sort binding is not capture-phase"
+    assert 'addEventListener("rrw:sorted"' in script, (
+        "the page does not re-anchor its panel on the shared sort signal"
+    )
+    assert 'closest(".rrw-sort-btn")) return;\n' not in script, (
+        "19P.1's per-page handler is superseded by the shared fix"
+    )
     # Vacuity guard: a page that stopped shipping sortable headers would
-    # make the binding unreachable and this test meaningless.
+    # make the listener unreachable and this test meaningless.
     assert "rrw-sort-btn" in _markup(body), "the table is no longer sortable"
 
 

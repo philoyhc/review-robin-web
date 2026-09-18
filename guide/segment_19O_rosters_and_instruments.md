@@ -108,18 +108,30 @@ fixed badly rather than the entries themselves.**
 nobody wrote it down here — so the register was incomplete about its own
 scope from the day it was filed. It is a line now, and stays open:
 
-- **Migrate `session_reviewees`, `session_relationships` and
+- ~~**Migrate `session_reviewees`, `session_relationships` and
   `session_assignments`** off 19P.1's per-page capture-phase handler
-  onto the shared `rrw:sorted` listener, and widen
-  `MIGRATED_PAGES` in `tests/unit/test_sort_drops_injected_panel.py`
-  to all six. Author deferred it from this pass (2026-09-18); the three
-  pages are correct meanwhile, their handler running ahead of the
-  inline sort handler. Until it lands, the repo carries two mechanisms
-  for one job and `spec/ui_elements.md` says so explicitly.
+  onto the shared `rrw:sorted` listener.~~ **Done 2026-09-18**, as its
+  own slice after the author deferred it from the first pass. The port
+  was three lines per page and identical on each, every `render()`
+  already opening with the same panel cleanup. `MIGRATED_PAGES` is all
+  six, and the guard that permitted *either* mechanism during the
+  migration now forbids **both**: a page keeping its old handler beside
+  the listener removes the panel twice and re-renders twice per sort.
+
+  *The inverted assertion took two attempts.* It first matched
+  `setTimeout(render, 0)`, which every one of these pages also uses in
+  its select-all handler, so it failed on `session_reviewers` — migrated
+  days earlier and carrying no workaround at all. It matches the
+  workaround's **shape** now, a `.rrw-sort-btn` guard immediately
+  followed by a panel removal, which also leaves `sessions_list`'s
+  unrelated `.rrw-sort-btn` guard alone: that one gates the unsaved-edit
+  confirm from Item 4, and its next line is `expanderIsDirty()`. Four
+  mutants, three caught and one a negative control that correctly
+  survived.
 
 ### Out of scope
 
-- The sort-workaround migration above, by the author's ruling.
+- ~~The sort-workaround migration above, by the author's ruling.~~ Taken up 2026-09-18 once the rest had landed.
 - `guide/new_ux_ideas.md:143`'s mention of Previews, which is a dated
   measurement (`453546c4`) and correct on its date.
 

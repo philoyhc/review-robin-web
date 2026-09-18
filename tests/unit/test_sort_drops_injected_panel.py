@@ -26,6 +26,8 @@ having to re-aim: one that proves less than it claims.
 """
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 import pytest
@@ -34,30 +36,24 @@ TEMPLATES = Path(__file__).resolve().parents[2] / "app" / "web" / "templates"
 BASE = TEMPLATES / "base.html"
 OPERATOR = TEMPLATES / "operator"
 
-#: The pages migrated to the shared signal — **not** the set that
-#: injects a panel. Measured at HEAD: seven templates inject a
-#: `.session-expander`, six of them also sort, and three still carry
-#: 19P.1's per-page capture-phase handler (`session_reviewees`,
-#: `session_relationships`, `session_assignments`). They are correct
-#: today — their handler runs before the inline sort handler, so
-#: `_rrwApplySort` finds nothing to remove — and migrating them is
-#: filed as 19O Item 6.
+#: Every page that injects a `.session-expander` **and** sorts. All six
+#: listen for `rrw:sorted` since 19O Item 6 completed the migration;
+#: before it, three of them carried 19P.1's per-page capture-phase
+#: handler instead and this list held only the other three.
+#:
+#: `session_observers.html` injects a panel and declares no
+#: `data-rrw-sortable`, so it needs neither half and is deliberately
+#: absent. It is the whole difference between "seven templates inject"
+#: and "six sort".
 #:
 #: The plan's own blast radius said *three* injecting pages, measured
-#: at `820d5d6`, which is not this branch's base: 19P.2-3 and 19P.5
-#: added four more between that measurement and this item being built.
-#: A measurement carries its commit for exactly this reason.
+#: at `820d5d6`: 19P.2-3 and 19P.5 added four more between that
+#: measurement and the item being built. *A measurement carries its
+#: commit for exactly this reason.*
 MIGRATED_PAGES = [
     "sessions_list.html",
     "sessions_archived.html",
     "session_reviewers.html",
-]
-
-#: Still on the per-page handler. Listed so this file states the whole
-#: picture rather than the part it checks — a reader who deletes one of
-#: these workarounds on the strength of the shared fix gets a panel
-#: that vanishes on sort, because these pages have no listener.
-UNMIGRATED_PAGES = [
     "session_reviewees.html",
     "session_relationships.html",
     "session_assignments.html",
@@ -196,27 +192,38 @@ def test_every_migrated_page_listens(page: str) -> None:
     )
 
 
-@pytest.mark.parametrize("page", UNMIGRATED_PAGES)
-def test_every_unmigrated_page_still_defends_itself(page: str) -> None:
-    """Never zero mechanisms — which is the half that matters.
+@pytest.mark.parametrize("page", MIGRATED_PAGES)
+def test_no_page_keeps_a_second_mechanism(page: str) -> None:
+    """One mechanism, now that the migration is complete.
 
-    This is the assertion that makes the split safe to ship. Deleting a
-    page's capture-phase handler without giving it a listener leaves it
-    with neither: the panel is dropped by `_rrwApplySort` and nothing
-    puts it back. Pinning the workaround's *presence* here means that
-    mistake fails a test instead of shipping.
+    While it was in flight this asserted *at least* one, because a page
+    carrying both is redundant rather than broken and failing it would
+    have forced the two halves of a move into one commit. With all six
+    migrated the weaker form has nothing left to permit, and the
+    stronger one catches the real risk: a page that keeps its old
+    capture-phase handler alongside the listener removes the panel
+    twice and re-renders twice per sort.
 
-    Deliberately `or`, not `!=`. A page carrying both during a
-    migration is redundant rather than broken, and failing it would
-    force the two halves of a move into one commit.
+    Matched on the workaround's own **shape** — a `.rrw-sort-btn` guard
+    immediately followed by a panel removal — not on either half alone.
+    A first draft used `setTimeout(render, 0)`, which every one of these
+    pages also uses in its select-all handler, so it failed on
+    `session_reviewers.html`, migrated days earlier. And
+    `sessions_list.html` legitimately keeps a `.rrw-sort-btn` guard for
+    an unrelated job: the unsaved-edit confirm from 19O Item 4, whose
+    next line is `expanderIsDirty()` rather than a removal.
     """
     src = (OPERATOR / page).read_text(encoding="utf-8")
-    has_workaround = 'closest(".rrw-sort-btn")' in src
-    has_listener = 'addEventListener("rrw:sorted"' in src
-    assert has_workaround or has_listener, (
-        f"{page} injects a selection panel into a sortable table and "
-        "has neither the per-page handler nor the shared listener, so "
-        "its panel disappears on sort"
+    assert 'addEventListener("rrw:sorted"' in src, f"{page} lost its listener"
+
+    workaround = re.search(
+        r'closest\("\.rrw-sort-btn"\)\) return;\s*\n\s*if \(panel\)',
+        src,
+    )
+    assert workaround is None, (
+        f"{page} still carries 19P.1's per-page panel-removal handler "
+        "alongside the shared listener; the panel is removed twice and "
+        "the page re-renders twice per sort"
     )
 
 
