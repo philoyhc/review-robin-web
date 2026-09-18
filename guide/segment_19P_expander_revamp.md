@@ -1757,79 +1757,75 @@ Commands run 2026-09-17 on `origin/main` at `0587ca8`.
 - Tests asserting the preview surface renders a **saved response**:
   **0**, across all six files above.
 
-### Status
+### Status — closed 2026-09-18
 
-**The ladder became four rungs, not three.** Rung 2a was added after the
-author found the Invitation card on the dev slot reporting
-`Email Status: not sent · Email Sent: — · Last reminder: —` for a
-reviewer with **no invitation at all**, under a chrome pill reading
-`Invitations: NOT CREATED`. Not a regression rung 1 introduced: rung 1
-made the state *reachable from the table*, and the card had always
-derived its email status from the outbox, which falls back to
-"not sent" when there is nothing to send.
+**Intended three rungs; built five.** Rung 2a was added after the author
+found the Invitation card on the dev slot reporting `Email Status: not
+sent · Email Sent: — · Last reminder: —` for a reviewer with **no
+invitation at all**, under a chrome pill reading `Invitations: NOT
+CREATED` — not a regression rung 1 introduced, but a state rung 1 made
+*reachable*, since `email_status` derives from the outbox and falls back
+to "not sent" when there is nothing to send. Rung 2b followed from the
+author's answers to open questions 3 and 5. Rung 2a itself spanned two
+PRs: #2443 carried an over-correction that hid the dates line, which
+#2444 replaced.
 
 Decisions confirmed at build:
 
-- **Three facts, not one.** Invitation created / email sent / reminder
-  sent are separate, and the card reports all three. Author's words,
-  2026-09-17: *"Top line to report whether the Invite has been created /
-  Bottom line to report when the Email has been sent (if at all), and
-  when was the Last reminder was sent (if at all)."*
-- **The em-dash means "no date", not "no invitation"** — author's
-  correction of a first fix that hid the whole line.
-- **Both lines read `invitation`, not `row`.** `sent_at` and
-  `last_reminder_at` are columns on `Invitation`; `row` is
-  `_assigned_active_reviewers`, so reading it lost both facts for an
-  invited-then-deactivated reviewer. Found by re-reading the code after
-  the copy was settled, and the reason the card could report "not sent"
-  with nothing to send.
-- **`No invitation URL has been issued yet.` stays**, and is not
-  redundant with "not created": `generate_invitations` discards the raw
-  token, so the URL exists only once an invitation has been *sent*.
-- **Mutation testing found the dates line half-unpinned.** No test sent
-  a reminder, so two mutants survived; `test_detail_page_dates_line_reports_a_sent_reminder`
-  closes it.
-- **And one of that run's "caught" verdicts was false.** The mutant for
-  the URL region rewrote `{% elif %}` to a second `{% else %}`, which
-  is a Jinja syntax error: every render failed, so the red told us
-  nothing about the assertions. A genuine two-branch collapse left the
-  suite green. Caught by `diff-reviewer`, not by the harness that was
-  supposed to catch it — **a mutant that breaks the template is not a
-  mutant**, and a mutation run is only worth its weakest verdict.
-  `test_detail_page_url_region_has_three_states_not_two` pins all three
-  states now, and the runner gained a parse gate that reports such a
-  mutant `INVALID` instead of `CAUGHT` — which immediately exposed a
-  *second* false verdict in the same original run. The corrected run is
-  nine mutants, all parseable, all caught.
-- **The card told an ineligible reviewer's operator to press a button
-  that cannot reach them.** `generate_invitations` selects active
-  reviewers with an included assignment — the same predicate that makes
-  `row` None here — so *Create invites* would have left the card at
-  `not created` however often it was pressed. The guidance now branches
-  on eligibility. Found by Codex on rung 2a's PR; the population is the
+- **Three independent facts**, not one conflated status, and **both
+  dates read `Invitation`, not `row`** — `row` is
+  `_assigned_active_reviewers`, so reading it lost both for an
+  invited-then-deactivated reviewer. The em-dash means *no date*, not
+  *no invitation*; the top line already answers that.
+- **The URL region has four states, not two.** "No URL issued yet" is
+  not redundant with "not created" (`generate_invitations` discards the
+  raw token, so a URL exists only once an invitation is *sent*), and the
+  two no-invitation cases differ: *Create invites* cannot reach an
+  ineligible reviewer, so telling their operator to press it sends them
+  to a button that does nothing. Found by Codex; the population is the
   one rung 1 made reachable, which is why nothing earlier caught it.
-- **Rung 2b, built 2026-09-18.** OQ3 and OQ5 landed as planned. Two
-  things worth keeping:
-  - **The chrome pill and the card do not disagree after a failed
-    send.** Chrome counts outbox rows with `status == "sent"`
-    (`views/_setup.py:204`), so a failed row leaves it `NOT SENT` while
-    the card reads `Email sent: <time> · failed`. Two true readings of
-    one event; the card's pill is what explains the chrome's. Recorded
-    in the template so it is not "fixed" later.
-  - **The mutation runner stranded a mutant again**, this time because
-    it was piped through `head -3`: stdout closed, the next print
-    raised, the loop died mid-iteration, and the surviving mutant then
-    failed the full suite as though the change were broken. The runner
-    now snapshots every target up front and restores in `finally` with
-    a tree-clean assertion. Second time this segment a tree-mutating
-    runner has cost a diagnosis — the first was a 120s timeout.
-- **Two claims in the same rung said more than the code did**, the
-  failure mode this segment keeps returning to: the template comment
-  claimed the card and the table show "one fact in two places" (false
-  for `Email sent` after a Regenerate — different sources), and a test
-  comment claimed the card reports no email status "at all" from an
-  assertion scoped to a block that could not contain one. Both
-  corrected; the regenerate divergence became open question 4.
+- **Delivery state is rendered, never enumerated** (rung 2b), so
+  widening `EMAIL_OUTBOX_STATUSES` needs no second edit. The chrome
+  reading `NOT SENT` beside a failed send is correct rather than a
+  contradiction — chrome counts rows with `status == "sent"` — and the
+  card's pill is what explains it. Recorded in the template so it is
+  not "fixed" later.
+
+**The item's lesson is that a mutation run is worth only its weakest
+verdict.** Two of one rung's seven `CAUGHT` results were false: both
+mutants were Jinja syntax errors, so every render failed and the red
+said nothing about any assertion. A genuine two-branch collapse left the
+suite green — the URL region that rung's commit message headlined was
+**entirely unpinned**. `diff-reviewer` caught it, not the harness meant
+to. The runner now parses each mutant first and reports `INVALID`, which
+immediately exposed the second false verdict and a third when the set
+was re-aimed; it later stranded a mutant when piped through `head -3`,
+so it now snapshots every target and restores in `finally`. Twice this
+segment a tree-mutating runner has cost a diagnosis.
+
+**The vacuity trap ran in both directions**, which is new: an assertion
+scoped to `#invitation-facts` proved little when denying a string that
+block cannot contain, while an unscoped `"sent" not in facts` would have
+failed on the label `Email sent:`. Scope is not a substitute for
+choosing the right region.
+
+**Prose that claimed more than the code did, three times**: a banner
+naming `Discard`, a control the page lacks; a template comment claiming
+the card and the table show "one fact in two places", false for `Email
+sent` after a Regenerate; and a test comment claiming the card reports
+no email status "at all" from an assertion that could not have seen one.
+
+**Two `close_check` notes adjudicated.** `_operations.py` is named
+against `spec/validate_page.md` and `_setup_reviewers.py` against
+`spec/setup_pages.md`, because both files were touched. Neither needs an
+edit: the Validate route is untouched, and the `_require_reviewer_in_session`
+hoist moved code without changing what either page does.
+
+**Scope that moved out.** Open question 4 — `regenerate_token` clearing
+`last_reminder_at`, plus the dead-URL fallback after a regenerate — was
+answered *yes* but ships elsewhere: it changes the Manage Invitations
+Reminder column and the reminder scheduler, neither of which this item
+owns.
 
 ### PR ladder
 
@@ -1938,7 +1934,18 @@ so the hoist changes nothing it says. <!-- cites: spec/architecture.md -->
 
 ---
 
-## Item 7 — Should the Previews hub become the reviewer page? — **stub, author's call**
+## Item 7 — Should the Previews hub become the reviewer page? — **answered; the work moved to 19Q**
+
+> **Resolved 2026-09-18.** The author's answer is *retire the hub*, and
+> the work is planned as **19Q Item 1**
+> (`guide/segment_19Q_workflow_and_previews.md`) — which also found the
+> thing this stub had not: the hub hosts the **email previews**, so
+> retiring it needs a home for them, and they go to the Invitations
+> per-reviewer drill-in. The measurement below stands and 19Q cites it;
+> everything after it is the record of how the question was framed, kept
+> because the framing is what 19Q was planned against. **Nothing here is
+> open.**
+
 
 **Not planned. Sequenced behind Item 6 by the author, 2026-09-17**:
 *"Item 6 first, then Item 7 after I've seen it. If we do 7, it will
