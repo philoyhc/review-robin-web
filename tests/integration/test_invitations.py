@@ -957,8 +957,7 @@ def test_detail_page_links_to_the_reviewer_surface_in_a_new_tab(
     § *Where the link goes* rather than iterated on the dev slot, so
     they are asserted rather than left to a look:
 
-    - a `.card-action-row` at the **foot of the card** — the same
-      right-flushed row the Previews hub puts the same button in;
+    - a `.card-action-row` at the **foot of the card**;
     - straight at `/preview-surface`, **never through `/previews`**,
       which is what keeps Item 7's retirement of that hub cheap;
     - a new tab, so the drill-in stays put behind it.

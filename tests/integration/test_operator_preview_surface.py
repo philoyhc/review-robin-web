@@ -10,9 +10,7 @@ ever leaving preview. Save / Discard / Submit render as inert
 disabled buttons in ``preview_mode``; the surface ``<form>`` is
 replaced by a ``<div>`` so the action row cannot drive any write.
 
-Distinct from the iframe-based preview card on the Previews hub
-(``_operations.py``), which renders a synthetic single-page
-composite. The Previews hub links here from its surface card.
+The surface is reached from a reviewer's Manage Invitations drill-in.
 """
 
 from __future__ import annotations
@@ -132,11 +130,10 @@ def test_out_of_range_page_returns_404(
     assert response.status_code == 404
 
 
-def test_session_without_reviewers_303s_to_previews_hub(
+def test_session_without_reviewers_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """Empty roster → no reviewer to preview as → redirect to the
-    Previews hub where the empty-state message renders."""
+    """Empty roster means the reviewer surface has no subject."""
     client.post(
         "/operator/sessions",
         data={"name": "Empty", "code": "prev-s-empty"},
@@ -151,17 +148,14 @@ def test_session_without_reviewers_303s_to_previews_hub(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/previews"
+        f"/operator/sessions/{session.id}/invitations"
     )
 
 
-def test_unmatched_reviewer_email_303s_back_to_previews(
+def test_unmatched_reviewer_email_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """A non-empty ``?reviewer_email=`` that doesn't match any
-    reviewer falls back to the Previews hub (preserving the bad
-    query) so the picker's "No reviewer matched" hint renders —
-    rather than silently swapping in the first reviewer."""
+    """An unknown reviewer does not silently select another reviewer."""
     session = _make_session_with_reviewer(client, db, code="prev-s-bad")
     response = client.get(
         f"/operator/sessions/{session.id}/preview-surface/1"
@@ -170,8 +164,7 @@ def test_unmatched_reviewer_email_303s_back_to_previews(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/previews"
-        "?reviewer_email=ghost%40example.edu"
+        f"/operator/sessions/{session.id}/invitations"
     )
 
 
@@ -476,28 +469,3 @@ def test_preview_works_on_draft_session(
     # Action row rendered (the inert form chrome).
     assert 'class="rs-action-row' in body
     assert ">Save</button>" in body
-
-
-# --------------------------------------------------------------------------- #
-# Previews-hub link
-# --------------------------------------------------------------------------- #
-
-
-def test_previews_hub_links_to_full_preview(
-    client: TestClient, db: Session
-) -> None:
-    """The Previews hub picker card carries an "Open full preview"
-    link that targets the operator-side full preview route (with the
-    picker's selected reviewer in the query string)."""
-    session = _make_session_with_reviewer(client, db, code="prev-s-link")
-    body = client.get(
-        f"/operator/sessions/{session.id}/previews"
-        "?reviewer_email=rae@example.edu"
-    ).text
-    expected = (
-        f"/operator/sessions/{session.id}/preview-surface/1"
-        "?reviewer_email=rae%40example.edu"
-    )
-    assert f'href="{expected}"' in body
-    # Picker card carries the "Open full preview" anchor text.
-    assert "Open full preview" in body

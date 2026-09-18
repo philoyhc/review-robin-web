@@ -1,4 +1,4 @@
-"""Operations row — Validate / Previews / Manage Invitations /
+"""Operations row — Validate / Manage Invitations /
 Outbox / Responses, plus the reminder dispatch endpoints.
 Slice 9 of the major refactor.
 
@@ -9,9 +9,6 @@ monitoring redirect).
 """
 
 from __future__ import annotations
-
-import secrets
-from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -250,113 +247,12 @@ def validate_session(
 
 @router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)
 def previews_index(
-    request: Request,
-    reviewer_email: str = "",
-    email: str = "invitation",
-    super_status: str | None = None,
-    super_button: str | None = None,
-    super_step: str | None = None,
-    super_error: str | None = None,
-    prepare_confirm: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    """Operations-row Previews tab — pre-flight reviewer experience hub.
-
-    Renders the picker, the email previews region, and an "Open full
-    preview" link to the operator-side full reviewer-surface preview
-    (``_preview_surface.py``). The iframe-embedded surface card on
-    this page was retired in the Segment 11F preview-surface follow-on
-    (2026-05-28): the picker-row
-    button now opens the full preview in a new tab. URL state:
-
-    - ``?reviewer_email=…`` selects the picker's current reviewer; an
-      unmatched value renders an inline "No reviewer matched" note
-      rather than 404 or fall back to first.
-    - ``?email=invitation|reminder|responses_received`` selects the
-      active email-preview tab. PR B ships only the invitation render;
-      unknown / unshipped values fall through to invitation so the
-      page never blanks out.
-    """
-    picker = views.build_preview_picker_context(
-        db, review_session, reviewer_email
-    )
-    active_email_tab = views.resolve_email_preview_tab(email)
-    email_body: views.EmailBody | None = None
-    reviewer_obj: Reviewer | None = None
-    if picker.current is not None:
-        reviewer_obj = db.execute(
-            select(Reviewer).where(
-                Reviewer.session_id == review_session.id,
-                Reviewer.id == picker.current.reviewer_id,
-            )
-        ).scalar_one()
-        from_display = views.email_preview_from_display(user)
-        email_body = views.build_email_preview_body(
-            tab=active_email_tab,
-            review_session=review_session,
-            reviewer=reviewer_obj,
-            from_display=from_display,
-        )
-    workflow_ctx = views.build_workflow_card_context(
-        db,
-        review_session,
-        return_to="previews",
-        super_failure=views.parse_super_failure(
-            super_status, super_step, super_error, super_button
-        ),
-        prepare_confirm=prepare_confirm,
-    )
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_previews.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Previews"
-            ),
-            "picker": picker,
-            "reviewer": reviewer_obj,
-            "email_tabs": views.EMAIL_PREVIEW_TABS,
-            "active_email_tab": active_email_tab,
-            "email_body": email_body,
-            **workflow_ctx,
-        },
-    )
-
-
-@router.post("/sessions/{session_id}/previews/random")
-def previews_random(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Pick a random reviewer and 303 to the previews page.
-
-    Random selection happens server-side via ``secrets.choice`` so no
-    list of reviewer emails has to leak into client-side JS. Empty
-    sessions 303 back without a ``?reviewer_email=`` param so the
-    picker stays in its disabled empty state.
-    """
-    reviewers = list(
-        db.execute(
-            select(Reviewer)
-            .where(Reviewer.session_id == review_session.id)
-            .order_by(Reviewer.email)
-        ).scalars()
-    )
-    base_url = f"/operator/sessions/{review_session.id}/previews"
-    if not reviewers:
-        return RedirectResponse(
-            url=base_url, status_code=status.HTTP_303_SEE_OTHER
-        )
-    selected = secrets.choice(reviewers)
+    """Keep old Previews bookmarks useful after the hub's retirement."""
     return RedirectResponse(
-        url=f"{base_url}?reviewer_email={quote(selected.email)}",
-        status_code=status.HTTP_303_SEE_OTHER,
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 
