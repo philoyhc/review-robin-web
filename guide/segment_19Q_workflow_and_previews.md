@@ -425,6 +425,17 @@ Affected, measured 2026-09-17:
 - `previews-page{,-dark}.png` delete; `workflow-prepare-session{,-dark}.png`,
   `workflow-after-validation{,-dark}.png` recapture.
 
+**Added 2026-09-18, author's call**, found while building rung 1: the
+Workflow card's own State 2 copy is stale in the same way the Guide is.
+`next_action_card.html:119` — the only card copy an operator reads
+*before* pressing Prepare — names two of Prepare's three effects, the
+assignment pairs and the validation, but not the invitations 19Q Item 2
+rung 2 moved into `workflow_prepare`. States 4 and 7 both name it, so the
+card explains it only to someone who has already run the thing. Item 2's
+definition of done required "the Workflow card's Prepare copy names
+invitation creation"; that was met in the states after Prepare and not in
+the one before it.
+
 ### Decision
 
 One slice per item it follows, landing after that item merges — the Guide
@@ -434,6 +445,12 @@ agent sandbox with Chromium against a seeded session.
 **Rejected — one Guide slice at the end.** It would sit stale on `main`
 between Item 1 and Item 2 merging, teaching a workflow that no longer
 exists.
+
+**2026-09-18** — the same rule decides where the card-copy fix goes. It is
+app copy, so it lands on its own rung **ahead** of the Guide rung rather
+than inside it: bundling them would have the Guide describing a sentence
+that ships in the same merge, which is exactly the intent-not-behavior
+case this Decision rejects.
 
 ### Semantics
 
@@ -445,11 +462,37 @@ exists.
 ### Judgment calls — decided
 
 - Recapture rather than crop or edit existing PNGs — an edited screencap is a claim about the app that nothing checks (2026-09-17).
+- Pin the State 2 copy **by effect, not by sentence** (2026-09-18): the test names the three claims and then proves the third, so a rewrite that keeps them passes and a Prepare that stops creating invitations fails. Grepping the sentence would have pinned the wrong thing — the sentence was never the problem, its silence was.
 
 ### Blast radius (measured)
 
 - `ls app/web/static/guide/ | wc -l` → **40 files** (20 light/dark pairs)
 - `grep -n "previews\|Create invites\|create-invites" app/web/templates/guide.html` → **7 lines**
+
+### Status
+
+**Open.** Rung 1 landed 2026-09-18 (#2464).
+
+**Rung 1's new prose carried two overclaims, both found by Codex on the
+PR, both real, both fixed in the same PR.** "whatever they have already
+saved" is false once a response field is unpinned — the surface filters
+on `visible.is_(True)` and the saved value reaches the page only as a
+label in the dropped-fields banner. "What you see is what that reviewer
+gets" is false on all three preview tabs: two render
+`PREVIEW_INVITE_URL_PLACEHOLDER`, and the third can print
+`"(not yet submitted)"`, which no live send ever carries. *I had read the
+invitation placeholder before writing that sentence and concluded it
+describes itself. It does, and that protects the operator from copying
+it; it does not make the sentence true.*
+
+**The ladder grew rung 1a** — the card copy, folded in by the author.
+Its finding is the instrument rather than the copy: `ready for prime
+time` was quoted verbatim in `spec/workflow_card.md` and asserted in
+**no test**, so the sentence 19Q Item 2 rung 2 left incomplete had no way
+to go red. Coverage across the card's states is uneven — measured by
+grepping each state's copy against `tests/`: `no invitations exist` 3
+files, `Validation didn't pass` 2, `Session not fully set up` 1, State 2
+and `Invitations are ready to send` none.
 
 ### PR ladder
 
@@ -458,10 +501,21 @@ exists.
 2. **Guide for Item 2** — the Prepare narrative, the two workflow
    screencap pairs, the validate-page alt text. Lands after 19Q.2 merges.
 
+**Inserted 2026-09-18 between 1 and 2**, after rung 1's build found it
+and the author folded it in. The original two rungs stand as written;
+this is a third, not a rewrite of either.
+
+1a. **The Workflow card's State 2 copy names invitation creation.**
+    `next_action_card.html` State 2, the `spec/workflow_card.md` state
+    table row that quotes it verbatim, and a test. Must not touch the
+    Guide — rung 2 describes what this one ships.
+
 ### Definition of done
 
 - `pytest tests/integration/test_guide_screencaps.py` passes.
 - No Guide prose names `Create invites` or the Previews page.
+- The State 2 Workflow-card copy names invitation creation, pinned by a
+  test that also proves Prepare creates them from that state.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -485,3 +539,4 @@ exists.
 
 - `docs/status.md` — row when Item 3 lands (Item 3).
 - `spec/rrw_functional_spec.md` — the Guide's own contract, if the walkthrough gains a step per open question 1 (Item 3).
+- `spec/workflow_card.md` — the State 2 row quotes the card copy verbatim, so it changes with rung 1a (Item 3).

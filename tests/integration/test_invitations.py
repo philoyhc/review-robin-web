@@ -2307,3 +2307,58 @@ def test_an_open_session_with_no_invitations_is_told_a_remedy_it_can_reach(
     assert "next-action-prepare-form" not in body, (
         "the Prepare button renders here after all"
     )
+
+
+def _next_action_body(page: str) -> str:
+    """The Workflow card's prose block, without its button row.
+
+    Sliced rather than searched, because several of the strings below
+    also appear in the Setup-checklist aside and in the session pill
+    row; a whole-page `in` would pass on the wrong element.
+    """
+    start = page.index('<div class="next-action-body">')
+    return page[start : page.index("</div>", start)]
+
+
+def test_the_copy_that_prompts_prepare_names_what_prepare_does(
+    client: TestClient, db: Session
+) -> None:
+    """State 2 is the only Workflow-card copy an operator reads
+    *before* pressing Prepare, and until 19Q Item 3 it named two of
+    Prepare's three effects — the assignment pairs and the validation,
+    but not the invitations 19Q Item 2 rung 2 moved into
+    ``workflow_prepare``. States 4 and 7 both name invitation creation,
+    so the card explained it only to an operator who had already run
+    the thing, or who had reached a state where running it was the
+    remedy.
+
+    Nothing asserted this string, which is how it stayed stale through
+    the rung that made it wrong: ``ready for prime time`` appeared in
+    ``spec/workflow_card.md`` and in no test at all.
+
+    Pinned by **effect**, not by sentence. The three claims must be
+    named, and the third must also be true — a copy test that only
+    greps for the word would still pass on the day Prepare stopped
+    creating invitations, which is the failure worth catching.
+    """
+    session = _create_session(client, db, "state2-copy")
+    _populate(client, db, session.id, reviewer_email="rae@example.edu")
+
+    card = _next_action_body(client.get(f"/operator/sessions/{session.id}").text)
+
+    # The premise: this is State 2 — Prepare is offered, and it has not
+    # run, so no invitations exist yet.
+    assert "next-action-prepare-form" in card
+    assert not inv_service.has_invitations(db, session.id)
+
+    for claim in ("assignment pairs", "invitation", "validate"):
+        assert claim in card, f"State 2 copy does not name {claim!r}: {card}"
+
+    # And the claim the copy gained is true from exactly this state.
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "super_status=failed" not in response.headers["location"]
+    assert inv_service.has_invitations(db, session.id)
