@@ -528,15 +528,15 @@ REMINDER_KIND = "reminder"
 _INVITE_URL_PATTERN = re.compile(r"https?://\S+/me/invite/[A-Za-z0-9_\-]+")
 
 
-def most_recent_invitation_url(
-    db: Session, *, invitation_id: int
-) -> str | None:
-    """Pull the raw token URL from the most recent invitation outbox row.
+def _most_recent_invitation_outbox(
+    db: Session, invitation_id: int
+) -> EmailOutbox | None:
+    """The latest ``kind="invitation"`` outbox row for this invitation.
 
-    Reminders reuse the existing URL so the previously-sent link keeps
-    working. Returns None if the invitation has never been sent.
+    Hoisted at 19P.6 rung 2b so the URL and the delivery status come
+    from the same row rather than two queries that could disagree.
     """
-    row = db.execute(
+    return db.execute(
         select(EmailOutbox)
         .where(
             EmailOutbox.invitation_id == invitation_id,
@@ -545,10 +545,40 @@ def most_recent_invitation_url(
         .order_by(EmailOutbox.created_at.desc(), EmailOutbox.id.desc())
         .limit(1)
     ).scalar_one_or_none()
+
+
+def most_recent_invitation_url(
+    db: Session, *, invitation_id: int
+) -> str | None:
+    """Pull the raw token URL from the most recent invitation outbox row.
+
+    Reminders reuse the existing URL so the previously-sent link keeps
+    working. Returns None if the invitation has never been sent.
+    """
+    row = _most_recent_invitation_outbox(db, invitation_id)
     if row is None:
         return None
     match = _INVITE_URL_PATTERN.search(row.body)
     return match.group(0) if match else None
+
+
+def most_recent_invitation_status(
+    db: Session, *, invitation_id: int
+) -> str | None:
+    """The latest invitation email's delivery status, or None if unsent.
+
+    The value set is the model's ``EMAIL_OUTBOX_STATUSES`` —
+    ``queued`` / ``sending`` / ``sent`` / ``failed``. Only ``queued``
+    and ``sent`` are written today: ``send_invitation`` flips the row
+    to ``sent`` in the same call, so nothing yet produces ``sending``
+    or ``failed``. Segment 14B Part A lights up the real transport
+    that will (`app/db/models/email_outbox.py`).
+
+    Callers must not enumerate the values — render what comes back, so
+    the widened set needs no second edit (`constitution.md` II).
+    """
+    row = _most_recent_invitation_outbox(db, invitation_id)
+    return row.status if row is not None else None
 
 
 # ``_reminder_body`` retired in Segment 11E PR 1 alongside ``_email_body``.

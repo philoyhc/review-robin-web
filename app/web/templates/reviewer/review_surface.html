@@ -44,10 +44,20 @@
   {# Segment 18K PR 5 — informational banner naming response fields
      the reviewer has previously saved an answer on but whose Band 2
      chip the operator has since un-pinned. No action required; the
-     values stay in the DB for the audit path. Suppressed in
-     preview_mode (the preview surface is operator-only and bypasses
-     this contract). #}
-  {% if dropped_fields and not preview_mode %}
+     values stay in the DB for the audit path.
+
+     19P.6 rung 2b — **no longer suppressed in `preview_mode`** (Item 6
+     open question 3, author 2026-09-18). 18K PR 5 suppressed it when
+     this surface was only a pre-launch preview, where nothing is saved
+     and so nothing can be dropped. Rung 2 gave it a second purpose —
+     an operator inspecting a real reviewer — and there a dropped field
+     is exactly what they would want to know. Same argument that
+     justified rewriting the banner above, one element down.
+
+     The banner's "the fields still being collected" stays as it is:
+     it describes what the form shows, and this names what is missing,
+     so the two are complementary rather than redundant. #}
+  {% if dropped_fields %}
     <div class="banner banner-info">
       <strong>Some saved responses are no longer collected:</strong>
       {% for inst_label, field_label in dropped_fields %}

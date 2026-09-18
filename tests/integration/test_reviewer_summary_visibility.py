@@ -603,6 +603,50 @@ def test_reviewer_surface_banner_names_dropped_field(
     assert "Instrument" in body
 
 
+def test_operator_view_also_names_the_dropped_field(
+    client: TestClient,
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """19P.6 rung 2b — the notice is no longer suppressed in preview_mode.
+
+    Item 6 open question 3, author 2026-09-18. 18K PR 5 gated the banner
+    on `not preview_mode` because that surface was then a pre-launch
+    preview only: nothing is saved there, so nothing can be dropped.
+    19P.6 rung 2 gave it a second purpose — an operator inspecting a
+    *real* reviewer — and there a dropped field is exactly what the
+    operator would want to know, since the form silently omits it.
+
+    Same reviewer, same un-pinned field, same session as
+    `test_reviewer_surface_banner_names_dropped_field` above; the only
+    difference is who is looking and through which door.
+    """
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="vis-banner-op", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+    _hide_field(db, review_session, "comments")
+
+    # `client` is itself an override — the fixture signs it in as alice
+    # — and `_submit` above re-points `get_current_user` at the
+    # reviewer. Both earlier drafts of this line got it wrong: leaving
+    # the override in place bounced the operator route to the
+    # reviewer's own surface, and popping it outright left the request
+    # unauthenticated. Put alice back explicitly.
+    app.dependency_overrides[get_current_user] = lambda: alice
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/preview-surface/1"
+        f"?reviewer_email={rae.email}"
+    ).text
+    assert "Operator view." in body, "premise: this is the preview surface"
+    assert "Some saved responses are no longer collected" in body
+    assert "<em>Comments</em>" in body
+
+
 def test_reviewer_surface_no_banner_when_no_dropped_fields(
     client: TestClient,
     db: Session,

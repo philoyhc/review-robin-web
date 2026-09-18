@@ -642,6 +642,18 @@ def invitation_reviewer_detail(
         if invitation is not None
         else None
     )
+    # 19P.6 rung 2b — the Invitation card's delivery slot (Item 6 open
+    # question 5). `invitation.sent_at` says a send was attempted on the
+    # current token; this says what became of it. Different facts from
+    # different tables, which is the distinction rung 2a drew — so the
+    # card carries both rather than picking one.
+    delivery_status = (
+        invitations.most_recent_invitation_status(
+            db, invitation_id=invitation.id
+        )
+        if invitation is not None
+        else None
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations_reviewer_detail.html",
@@ -657,6 +669,7 @@ def invitation_reviewer_detail(
             "invitation": invitation,
             "row": row,
             "invite_url": invite_url,
+            "delivery_status": delivery_status,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_invitations_reviewer(
                 review_session, reviewer.name

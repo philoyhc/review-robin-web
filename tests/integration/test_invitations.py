@@ -17,6 +17,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.db.models.email_outbox import EMAIL_OUTBOX_STATUSES
 from app.web import views
 from ._full_matrix import (
     generate_via_page_button,
@@ -752,6 +753,11 @@ _NOT_CREATED = '<span class="pill pill-empty">not created</span>'
 _NO_DATE = '<span class="pill pill-empty">\u2014</span>'
 
 
+def _DELIVERY(status: str) -> str:
+    """The delivery-state pill's exact markup for one status."""
+    return f'<span class="pill pill-empty">{status}</span>'
+
+
 def _invitation_facts(body: str) -> str:
     """The `#invitation-facts` block: the Invite line and the dates line."""
     start = body.index('<div id="invitation-facts">')
@@ -1195,6 +1201,84 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     # Exactly one em-dash: Email sent is empty for the new token, Last
     # reminder still carries the old stamp.
     assert facts.count(_NO_DATE) == 1
+
+
+def test_detail_page_reports_a_failed_delivery(
+    client: TestClient, db: Session
+) -> None:
+    """The Invitation card carries delivery state, `failed` included.
+
+    Item 6 open question 5. `invitation.sent_at` says a send was
+    attempted on the current token; the outbox row says what became of
+    it. Rung 2a moved the card off the outbox for the *dates*, which
+    was right — these are different facts — so the card now carries
+    both rather than picking one.
+
+    Nothing writes `failed` yet: `send_invitation` flips the row to
+    `sent` in the same call, and Segment 14B Part A lights up the real
+    transport that will. The status is set directly here because the
+    column already accepts the model's full `EMAIL_OUTBOX_STATUSES`
+    and the card must not wait for the producer to exist.
+    """
+    session = _ready_session(client, db, code="drill-failed")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    assert "failed" in EMAIL_OUTBOX_STATUSES, "premise: the model allows it"
+    outbox.status = "failed"
+    db.commit()
+
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ).text
+    )
+    # The send time stays — the attempt happened — and the state joins it.
+    assert _CREATED in facts
+    assert _DELIVERY("failed") in facts
+    # One em-dash only, and it is Last reminder's: the send attempt
+    # happened, so Email sent keeps its timestamp and gains the state
+    # beside it rather than being replaced by it.
+    assert facts.count(_NO_DATE) == 1
+
+
+def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
+    client: TestClient, db: Session
+) -> None:
+    """`sent` is the ordinary case and earns no pill of its own.
+
+    The counterpart to the test above: without this, rendering the
+    status unconditionally would pass there and clutter every card.
+    """
+    session = _ready_session(client, db, code="drill-sent-ok")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    facts = _invitation_facts(
+        client.get(
+            f"/operator/sessions/{session.id}"
+            f"/invitations/reviewers/{invitation.reviewer_id}"
+        ).text
+    )
+    # Asserted as whole pill markup, not as the word: "sent" is a
+    # substring of the label "Email sent:", so a bare `not in` here
+    # would fail on the label and prove nothing about the pill.
+    assert _DELIVERY("sent") not in facts, (
+        "an ordinary send shows its timestamp, not a redundant pill"
+    )
+    assert "Email sent:" in facts, "premise: the label is there to be confused with"
 
 
 def test_per_row_remind_redirects_to_invitations_page(

@@ -1808,6 +1808,21 @@ Decisions confirmed at build:
   `not created` however often it was pressed. The guidance now branches
   on eligibility. Found by Codex on rung 2a's PR; the population is the
   one rung 1 made reachable, which is why nothing earlier caught it.
+- **Rung 2b, built 2026-09-18.** OQ3 and OQ5 landed as planned. Two
+  things worth keeping:
+  - **The chrome pill and the card do not disagree after a failed
+    send.** Chrome counts outbox rows with `status == "sent"`
+    (`views/_setup.py:204`), so a failed row leaves it `NOT SENT` while
+    the card reads `Email sent: <time> · failed`. Two true readings of
+    one event; the card's pill is what explains the chrome's. Recorded
+    in the template so it is not "fixed" later.
+  - **The mutation runner stranded a mutant again**, this time because
+    it was piped through `head -3`: stdout closed, the next print
+    raised, the loop died mid-iteration, and the surviving mutant then
+    failed the full suite as though the change were broken. The runner
+    now snapshots every target up front and restores in `finally` with
+    a tree-clean assertion. Second time this segment a tree-mutating
+    runner has cost a diagnosis — the first was a 120s timeout.
 - **Two claims in the same rung said more than the code did**, the
   failure mode this segment keeps returning to: the template comment
   claimed the card and the table show "one fact in two places" (false
