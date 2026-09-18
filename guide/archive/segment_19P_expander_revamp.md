@@ -15,9 +15,10 @@ revamp.
 `python3 tools/close_check.py 19P.1` reads Item 1's manifest.
 
 **Closed at seven items — five built (1, 2, 3, 5, 6), two retired unbuilt
-(4, 7).** Each retired item keeps its stub, its answered questions and a
-`### Status` saying why it never became work; Item 7's question became
-19Q Item 1.
+(4, 7).** Each retired item keeps its stub unchanged and gains a
+`### Status` saying why it never became work; Item 7, which had open
+questions where Item 4 had none, keeps them collapsed to their answers.
+Its first question became 19Q Item 1.
 
 ---
 
@@ -1214,7 +1215,7 @@ idiom does not carry.
 ### Status — retired 2026-09-17, unbuilt
 
 **The spec had already decided this.** `spec/operations_pages.md` §
-*Out of scope for both pages* says, and said before this segment
+*What these pages do not do* says, and said before this segment
 opened: *"**Bulk-select rows for batch action.** Bulk send / remind
 happens via the Workflow card's super-buttons (which act on every
 eligible row session-wide); per-row buttons handle targeted
@@ -1571,7 +1572,7 @@ a no-match search shows, which is more than this item's move.
 
 - **Selection on Invitations and Responses** — was Item 4's question;
   Item 4 retired 2026-09-17 having answered it *no*, and
-  `spec/operations_pages.md` § *Out of scope for both pages* had
+  `spec/operations_pages.md` § *What these pages do not do* had
   already said so. Out of scope here either way.
 - **The thin 11C detail pages themselves.** Growing
   `session_invitations_reviewer_detail.html` past its scaffold is its
@@ -1951,7 +1952,7 @@ so the hoist changes nothing it says. <!-- cites: spec/architecture.md -->
 
 ---
 
-## Item 7 — Should the Previews hub become the reviewer page? — **answered; the work moved to 19Q**
+## Item 7 — Should the Previews hub become the reviewer page? — ~~answered; the work moved to 19Q~~ **retired 2026-09-18**
 
 > **Resolved 2026-09-18.** The author's answer is *retire the hub*, and
 > the work is planned as **19Q Item 1**
@@ -1974,6 +1975,13 @@ the decisions that conversation reached, so Item 6's references to
 to change until the item is planned, and a pre-waived bullet written
 to satisfy `close_check.py` is the failure mode `segment-plan`'s own
 skill warns about. It arrives with the plan.
+
+> **Superseded 2026-09-18** — the item retired unbuilt instead of being
+> planned, so the plan this paragraph was waiting for never came and a
+> waived bullet is what a retirement leaves. `### Doc impact` below
+> carries it, on Item 4's precedent. The appeal to `segment-plan` was
+> also unfounded: the skill warns that a *dropped* bullet must carry a
+> reason, and says nothing against a pre-waived one.
 
 ### What is on the Previews hub, measured 2026-09-17
 
@@ -2095,7 +2103,11 @@ segment's to build.
 2. **Does Responses get the symmetric treatment?** No — its detail page
    is already reviewee-keyed and a reviewee has no surface of their own.
    (Item 6's open question 1 reached the same answer independently.)
-3. **Naming** — carried into 19Q Item 1, where the tab actually retires.
+3. **Naming** — still open, and now recorded where it can be acted on:
+   `guide/todo_master.md` (Upcoming → Stubs). It was written as live
+   "only under fate 1", fate 1 was chosen, and 19Q Item 1 retires the
+   tab without touching the Invitations page's own name — so nothing
+   in 19Q holds it.
 
 ### Doc impact
 
@@ -2106,7 +2118,7 @@ segment's to build.
 **This item never became work, and that was its purpose.** It opened as
 a stub to hold decisions a conversation had already reached, so Item 6's
 references to "Item 7" resolved to something and the reasoning was not
-re-derived. It did that job: the door measurement below is cited by
+re-derived. It did that job: the door measurement above is cited by
 19Q Item 1, and the three candidate fates are what 19Q was planned
 against.
 

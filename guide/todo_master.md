@@ -3293,6 +3293,43 @@ dep chains called out at the bottom of this file.
   setting the technical-support address 19C Item 8 introduces.
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
+- **`regenerate_token` leaves `last_reminder_at` standing** *(filed
+  2026-09-18 at Segment 19P's close; **answered yes** by the author at
+  19P.6 OQ4, placement still open)*. `regenerate_token`
+  (`app/services/invitations.py`) clears `token_hash`, `status`,
+  `sent_at` and `opened_at`, and leaves `last_reminder_at` and every
+  outbox row alone — so a freshly-reissued invitation still reports a
+  reminder sent against the dead token. The author answered *yes, clear
+  it* alongside the dead-URL fallback, but it moves the Invitations
+  **Reminder** column and the reminder scheduler, neither of which 19P.6
+  owned, so it ships in its own slice or inside 19Q Item 2. **Author's
+  call on placement.** Reasoning in full at
+  `guide/archive/segment_19P_expander_revamp.md` Item 6 OQ4.
+
+- **Assignments' `Clear` renders on `{% if filter_q %}`** *(filed
+  2026-09-17 at Segment 19P Item 5's close)*. A status-only filter leaves
+  the page filtered with no control to clear it —
+  `app/web/templates/operator/session_assignments.html`. The six sibling
+  surfaces gate `Clear` on any active filter; this one gates on the text
+  box alone. One PR, no plan doc needed.
+
+- **The three Operations pages gate their whole left pane on a has-rows
+  conditional** *(filed 2026-09-17 at Segment 19P Item 5's close)* where
+  the four roster pages let the partials self-guard. The divergence is
+  invisible until a search matches nothing, which is exactly when the
+  toolbar has to stay reachable — 19P.5 fixed the table card for that
+  reason and left the pane. One PR, no plan doc needed.
+
+- **Does *Invitations* still name a page you use before any invitation
+  exists?** *(filed 2026-09-18 at Segment 19P's close; raised as Item 7's
+  open question 3, live only if the Previews hub retired — which it is
+  doing, as 19Q Item 1)*. The page is reviewer-keyed since 19P.6 and its
+  rows render with no invitation at all, so the tab name now describes
+  the artefact rather than the job. 19Q Item 1 retires the **Previews**
+  tab and does not touch this one, so nothing there holds the question.
+  Naming only — no behaviour. **Author's call**, and cheap to leave
+  alone.
+
 ### Sequencing notes
 
 - **11C Part 2 → 14B Part A** is the email pipeline: the
