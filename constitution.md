@@ -64,6 +64,20 @@ separate cadences, stated in `CLAUDE.md` "Where work runs". The open item
 is answered by *naming* a cadence, not by demonstrating it holds; the next
 audit re-measures it.*)
 
+*(Annotated 2026-09-18.* The cadence named above was measured rather
+than assumed, and **halved**. A merge-history audit found the cold read
+catching real defects on code rungs while overclaiming only prose on
+plan and close rungs — and costing roughly **2× a slice's elapsed
+time**, which is the "cheap enough to stay routine" constraint above
+failing in the direction the trade-off warned about. So the read is now
+**per item** rather than per slice, with prose-only slices exempt and
+one-off code slices unchanged; the rules are in `CLAUDE.md` "Where work
+runs". The maker ≠ checker principle is untouched — what changed is the
+unit a reading covers, from a rung's diff to an item's cumulative one.
+Each item close now records how many reads it took and what they found,
+so the next audit re-measures against this cadence instead of naming a
+third.*)
+
 ## IV. The human is the verifier of last resort, and nothing runs unattended
 
 Anything the suite and the reader cannot see — layout, rendering,
