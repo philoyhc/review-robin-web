@@ -409,18 +409,55 @@ proved nothing.**
   The test asserts an included assignment exists first, so it cannot
   quietly decay back into the vacuous version.
 
-**One test re-aimed rather than deleted.**
+**One test re-aimed rather than deleted, and the cold read found my
+description of it wrong in a way that matters.**
 `test_invitations_pill_not_created_when_no_invitation_rows` seeded a
-roster and Prepared, which now yields `Not sent`. The `Not created`
-state is still reachable exactly where open question 1 said it was —
-zero eligible reviewers — so the test reaches it that way (every
-reviewer inactive; `reviewers.empty` counts rows regardless of
-status). **Nothing pinned that answer with a test before**, and rung
-3 keeps the `has_invitations` skip reasons on the strength of it.
+roster and Prepared, which now yields `Not sent`. It reaches
+`Not created` by inactivating every reviewer instead — and I called
+that *"exactly where open question 1 said it was"*, which it is not.
 
-`_step_label_map` gains `invite` → "Create invitations", and
-`spec/workflow_card.md` enumerates that map, so the spec gains the
-entry in the same commit.
+**Open question 1's own measured state is not reachable through
+Prepare.** OQ1 recorded "a full roster with every assignment
+excluded" — 0 included pairs, two warnings. Rung 1 established that
+`replace_assignments` re-materialises every row from the pinned rule
+set, so that exclusion is gone by the time the invite step runs. The
+all-inactive lever measures differently: **2 included assignments,
+zero warnings** — a completely clean Prepare that creates no
+invitations. *Stronger evidence for the same conclusion, by a
+different route.* Said plainly because rung 3 retires the button on
+this answer: anyone re-deriving OQ1 first will try the exclusion
+lever, watch it regenerate away, and could conclude a clean Prepare
+always creates invitations.
+
+**`spec/lifecycle.md`'s `context.step` enum was stale too**, and this
+rung made it so — the same class of edit as the `_step_label_map`
+enumeration, applied to one file and not the other. Both carry
+`invite` now. Likewise `spec/workflow_card.md` still said Prepare
+"runs two lifecycle steps", enumerated two failure modes and two
+success events: all four now describe three. *The deferral rule was
+right; applying it to one paragraph of a file and not to the
+paragraph 350 lines above is what a reader trips on.*
+
+**The PR body's non-verification disclaimer was false.** It said the
+new step label was "template copy the suite cannot render"; the same
+test file already renders that banner for two other steps via
+`_failure_banner`. A disclosed gap that is not a gap costs the reader
+trust in the disclaimers that are real. Now covered by a test.
+
+**Recorded, not fixed** (all pre-existing or out of rung):
+`generate_invitations` can raise `sqlalchemy.exc.*` outside the
+route's `except` tuple, giving a framework 500 rather than the
+failure banner — but `replace_assignments` and `mark_validated` have
+the identical exposure, so widening it here would be inconsistent
+with its siblings. `audit.write_event` flushes without committing and
+nothing commits after it on the failure paths, so
+`session.workflow_run_failed` may never persist in production; the
+suite cannot see it because the test `get_db` override yields a
+long-lived session. And `views/_workflow_card.py` flips
+`draft → validated` inline on the `?validated=1` entry path, so a
+session can reach `validated` without Prepare — **worth settling
+before rung 3 retires the button**, since after that such a session
+would have no way to get invitations.
 
 ### PR ladder
 

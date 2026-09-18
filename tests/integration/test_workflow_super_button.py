@@ -1140,6 +1140,29 @@ def test_re_prepare_is_additive_and_preserves_existing_tokens(
     assert kept.status == "pending"
 
 
+def test_the_invite_step_names_itself_in_the_failure_banner(
+    client: TestClient, db: Session
+) -> None:
+    """The new `_step_label_map` entry, rendered.
+
+    The PR body for this rung disclaimed this as "template copy the
+    suite cannot render" — wrong, and a cold read caught it.
+    `_failure_banner` below already renders this exact banner for
+    `validate` and `precondition`, a hundred lines up. A disclosed gap
+    that is not a gap costs the reader trust in the disclaimers that
+    are real.
+
+    Without the map entry the headline degrades to a bare "Prepare
+    session failed." — not wrong, but it stops naming which of the
+    three steps went down, which is the whole reason the map exists.
+    """
+    review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-banner")
+    body = _failure_banner(
+        client, review_session.id, button="prepare", step="invite"
+    )
+    assert "Prepare session failed at the Create invitations." in body
+
+
 def test_prepare_does_not_retire_the_create_invites_button(
     client: TestClient, db: Session
 ) -> None:

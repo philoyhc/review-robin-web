@@ -83,15 +83,28 @@ def test_invitations_pill_not_created_when_no_invitation_rows(
     **Create invites**. Prepare creates them itself now, so that
     fixture produces `Not sent`.
 
-    **The state is still reachable, and the plan depends on it being
-    so:** Item 2's open question 1 established that a session can
-    validate with *zero eligible reviewers*, which is why rung 3 keeps
-    the `has_invitations` skip reasons and both amber captions. Every
-    reviewer inactive is that case — `reviewers.empty` counts rows
-    regardless of status, so validation still passes, while
-    `_assigned_active_reviewer_ids` returns nothing and Prepare mints
-    no invitations. Nothing pinned that answer with a test before;
-    this does.
+    **A clean Prepare can still leave `has_invitations` false, and
+    rung 3 keeps the skip reasons and both amber captions on that.**
+    Every reviewer inactive is the case here: `reviewers.empty` counts
+    rows regardless of status so validation passes, the rule engine
+    materialises included assignments for them anyway
+    (`assignments/_coverage.py`'s `list_reviewers` does not filter on
+    status), and only `_assigned_active_reviewer_ids` excludes them —
+    so Prepare mints nothing.
+
+    **This is not the state open question 1 measured, and the
+    difference matters.** OQ1 recorded *"a full roster with every
+    assignment excluded"* — 0 included pairs, `can_activate: True` on
+    two warnings. That state is **not reachable through Prepare**:
+    rung 1 established that `replace_assignments` re-materialises
+    every row from the pinned rule set, so a per-row exclusion is gone
+    by the time the invite step runs. Measured here instead: **2
+    included assignments and zero warnings** — a completely clean
+    Prepare that creates no invitations. Stronger evidence for the
+    same conclusion, reached by a different route, and worth saying so
+    plainly: anyone re-deriving OQ1 before retiring the button will
+    try the exclusion lever, watch it regenerate away, and could
+    conclude a clean Prepare always creates invitations.
     """
     session = _create_session(client, db, "chrome-inv-none")
     _seed_two_reviewers(client, db, session.id)
