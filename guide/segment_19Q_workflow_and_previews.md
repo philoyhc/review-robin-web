@@ -729,7 +729,10 @@ words can stand unchanged inverts which of the two is evidence.
 - `app/` ships wholesale, so a replaced capture keeps its filename or
   loses every reference in the same commit.
 - The narrow family goes **6 → 3**, still satisfying
-  `test_both_capture_families_are_present`.
+  `test_both_capture_families_are_present` — which only asserts each
+  family is non-empty, so it cannot notice the change. The counts were
+  retired from that file's comment rather than restated (they had gone
+  stale twice), so nothing there needs updating as pairs land.
 
 ### Judgment calls — decided
 
@@ -742,7 +745,7 @@ At `ac6d0832`:
 - `ls app/web/static/guide/ | grep -v dark | wc -l` → **19** pairs today; **18** after, since pair 2 absorbs two
 - `grep -c '<figure class="guide-figure' app/web/templates/guide.html` → **19** figures, going to 18
 - narrow-family pairs → **6** today, 3 after (measured by PNG width < 1000)
-- `pytest tests/integration/test_guide_screencaps.py --collect-only` → **161** cases, parametrised per file
+- `pytest tests/integration/test_guide_screencaps.py --collect-only` → **161** cases, parametrized per file
 
 ### PR ladder
 
