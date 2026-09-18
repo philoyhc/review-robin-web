@@ -32,7 +32,7 @@ Cross-references:
    ┌─────────────────────→  ┌───────────────────────→  ┌──────────────→
 draft                    validated                    ready           expired
    ←─────────────────────┘  ←───────────────────────┐  ←──────────────┘
-   ↑    invalidate                Pause Session         Revert to draft
+   ↑    invalidate              Revert to draft       Revert to draft
    │    (any setup mutation)     (with confirm)
    │
    └──── unarchive ──── archived ←──── archive (from any non-archived state)
@@ -168,7 +168,7 @@ Audit event: `session.activated` with `counts={"warnings": N,
 
 ### 2.5 `ready`/`expired → draft` — `revert_session_to_draft(...)`
 
-The "Pause Session" path. Called by `POST
+The **Revert to draft** path (legacy internal name: *Pause*). Called by `POST
 /operator/sessions/{id}/revert`. Flips to `draft` and sets
 `accepting_responses=false` on every instrument in the same
 transaction. **Existing `Response` rows are preserved untouched**

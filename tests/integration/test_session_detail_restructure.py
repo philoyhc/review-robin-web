@@ -617,7 +617,7 @@ def test_delete_data_rejected_when_ready(
     Activated. Session Home renders the confirm checkbox disabled with a lock
     note, and a direct POST (bypassing the disabled attribute) is rejected by
     the route's ``_require_editable`` gate; the responses are left intact.
-    Pause the session first to delete data."""
+    Revert the session to draft first to delete data."""
     operator = make_client(alice)
     review_session, count_before = _seed_responses(operator, db)
     db.refresh(review_session)
@@ -819,7 +819,7 @@ def test_delete_session_visible_but_disabled_when_ready(
     assert 'disabled aria-disabled="true"' in body
     # Explanatory note present.
     assert "Session deletion is locked while status is Activated" in body
-    assert "Pause the session" in body
+    assert "Revert the session to draft" in body
 
 
 def test_delete_session_post_still_rejected_when_ready(

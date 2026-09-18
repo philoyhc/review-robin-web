@@ -318,7 +318,9 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
       message points the operator at the per-entity Setup page where
       the per-row error feedback lives.
     - ``"lifecycle"`` — the submit hit ``_require_editable`` on a
-      ``ready`` session. The message names the next move (Pause).
+      ``ready`` session. The message names the next move (Revert to
+      draft — the operator-facing name for this transition; *Pause* is
+      the legacy internal one, per 19O Item 7 entry 13).
     - ``"needs_confirm"`` — the form was submitted without ticking
       the card-level replacement-confirmation checkbox at the top
       of Quick Setup.
@@ -335,7 +337,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     if reason == "lifecycle":
         return (
             "Setup edits are paused while the session is Activated. "
-            "Pause the session before applying setup changes."
+            "Revert the session to draft before applying setup changes."
         )
     if reason == "needs_confirm":
         return (
