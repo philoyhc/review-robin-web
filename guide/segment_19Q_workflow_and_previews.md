@@ -426,14 +426,12 @@ Affected, measured 2026-09-17:
   `workflow-after-validation{,-dark}.png` recapture.
 
 **Added 2026-09-18, author's call**, found while building rung 1: the
-Workflow card's own State 2 copy is stale in the same way the Guide is.
-`next_action_card.html:119` — the only card copy an operator reads
-*before* pressing Prepare — names two of Prepare's three effects, the
-assignment pairs and the validation, but not the invitations 19Q Item 2
-rung 2 moved into `workflow_prepare`. Item 2's definition of done
-required "the Workflow card's Prepare copy names invitation creation";
-States 4 and 7 meet it, so the card explained it only to an operator who
-had already run the thing.
+Workflow card's State 2 copy is stale the same way the Guide is.
+`next_action_card.html:119` — the only card copy read *before* pressing
+Prepare — omits the invitations 19Q Item 2 rung 2 moved into
+`workflow_prepare`. That item's definition of done required the Prepare
+copy to name invitation creation; States 4 and 7 met it, and the one
+state read before Prepare did not.
 
 ### Decision
 
@@ -445,10 +443,9 @@ agent sandbox with Chromium against a seeded session.
 between Item 1 and Item 2 merging, teaching a workflow that no longer
 exists.
 
-**2026-09-18** — the same rule places the card-copy fix: it is app copy,
-so it lands on its own rung **ahead** of the Guide rung. Bundling them
-would have the Guide describing a sentence shipping in the same merge,
-the intent-not-behavior case this Decision rejects.
+**2026-09-18** — the same rule places the card-copy fix: app copy, so its
+own rung **ahead** of the Guide rung. Bundling them would have the Guide
+describing a sentence shipping in the same merge.
 
 ### Semantics
 
@@ -460,6 +457,7 @@ the intent-not-behavior case this Decision rejects.
 ### Judgment calls — decided
 
 - Recapture rather than crop or edit existing PNGs — an edited screencap is a claim about the app that nothing checks (2026-09-17).
+- Seed a warning for the `workflow-after-validation` recapture (2026-09-18): the demo data validates clean but for one info issue, so the shot would not have shown the strip the prose beside it describes. One reviewee under an anonymous identifier supplies one, and the capture frames the card alone.
 - Pin the State 2 copy **by effect, not by sentence** (2026-09-18): the test names the three claims and then proves the third, so a rewrite that keeps them passes and a Prepare that stops creating invitations fails. Grepping the sentence would have pinned the wrong thing — the sentence was never the problem, its silence was.
 
 ### Blast radius (measured)
@@ -469,21 +467,24 @@ the intent-not-behavior case this Decision rejects.
 
 ### Status
 
-**Rungs 1, 1a and 2 landed 2026-09-18**; the close remains. Rung 1 took a
-corrective push for two false parity claims in its new prose (#2464).
+**Rungs 1, 1a and 2 landed 2026-09-18**; the close remains. Rung 1 needed
+a corrective push for two false parity claims (#2464).
 
 **The ladder grew rung 1a**, the card copy, folded in by the author. Its
 finding is the instrument rather than the copy: `ready for prime time`
 was quoted verbatim in `spec/workflow_card.md` and asserted in **no
-test**, so the sentence 19Q Item 2 rung 2 left incomplete had no way to
-go red. Grepped against `tests/`, States 7/3/1 are pinned by 3/2/1
-files; States 2 and 5 by none.
+test**, so the sentence 19Q Item 2 rung 2 left incomplete could not go
+red. Grepped against `tests/`, States 7/3/1 are pinned by 3/2/1 files;
+States 2 and 5 by none.
 
-**Rung 2's recapture needed a seeded warning**: the demo data validates
-with one info issue and none, so a clean shot would not have shown the
-strip the prose beside it describes. One reviewee under an anonymous
-identifier — supported, for analysis-only sessions — puts one there, and
-the capture frames the card alone, so the roster is not in shot.
+**One cumulative cold read, and it paid.** Four defects, all in rung 2's
+prose, all claims about the app: Prepare's steps in the wrong order and
+unconditional, where invitations come last and only on a clean
+validation; the eligibility rule missing *included*; Activate credited
+with sending; and **"Send invites notifies reviewers"**, which nothing
+does — no transport is wired (`app/services/email_send.py`) and
+`guide.html` says so two cards down. All four: the card's copy read
+instead of the code.
 
 ### PR ladder
 

@@ -357,12 +357,14 @@
   <div class="card" id="guide-prepare_and_launch">
     <h2>Prepare and activate</h2>
     <p>
-      <strong>Prepare session</strong> in the Workflow card does three things
-      at once: it generates the assignment pairs, creates an invitation for
-      every active reviewer with at least one assignment, and validates the
-      setup. Nothing is sent and nothing opens &mdash; that is what Activate
-      is for. The checklist on the right of the card tells you when the three
-      Setup pages are ready for it.
+      <strong>Prepare session</strong> in the Workflow card runs three steps in
+      order: it generates the assignment pairs, validates the setup, and
+      &mdash; only if validation found no errors &mdash; creates an invitation
+      for every active reviewer who has at least one included assignment. A
+      validation error stops it before that last step, so a session can be
+      prepared with no invitations. Nothing opens to reviewers until you
+      activate. The checklist on the right of the card tells you when
+      Reviewers, Reviewees and Instruments are ready for it.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/workflow-prepare-session.png"
@@ -375,14 +377,15 @@
                 session button beside an all-ticked setup checklist.">
     </figure>
     <p>
-      If validation passed, the card becomes the launch controls:
-      <strong>Send invites</strong> notifies reviewers ahead of time, and
-      <strong>Activate session</strong> opens the session for responses &mdash;
-      you can send before or after activating, in either order.
-      <strong>Revert to draft</strong> goes back, and Prepare can be re-run
-      after a roster change. Warnings and blocking issues are listed on the
-      right of the card, with the detail on the <strong>Validate</strong>
-      page.
+      If validation passed, the card becomes the launch controls.
+      <strong>Activate session</strong> opens the session for responses.
+      <strong>Send invites</strong> stamps each invitation sent and issues that
+      reviewer&rsquo;s invite URL &mdash; but no mail leaves the app yet, so it
+      is not how anyone finds out about the session; see <em>Give reviewers
+      access</em> below. <strong>Revert to draft</strong> goes back, and
+      Prepare can be re-run after a roster change. Warnings and blocking issues
+      are listed on the right of the card, with the detail on the
+      <strong>Validate</strong> page.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/workflow-after-validation.png"
@@ -648,7 +651,7 @@
       <li>In <strong>Quick Setup</strong>, attach all four files and submit.</li>
       <li><strong>Prepare session</strong> from the Workflow card. The session
         reaches <strong>Validated</strong>, with assignments generated and an
-        invitation waiting for each reviewer — enough of them that the
+        invitation for each of the six — enough of them that the
         Assignments page, the Responses grid and observer collation all have
         something to show.</li>
       <li>Activate it and look around. Every page is populated, so you can see
