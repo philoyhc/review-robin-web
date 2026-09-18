@@ -113,11 +113,21 @@ for *a named reviewer*, which the editor has no notion of.
 
 ### Open questions
 
+Both answered by the author, 2026-09-18.
+
 1. **Do the inactive / all-excluded reviewer populations keep a door?**
-   Widening the Invitations table's row set changes a monitoring concept
-   (`per_reviewer_progress`), so the likelier answer is a link elsewhere
-   or accepted loss. Decided by the author.
-2. **Is `Random` worth keeping** anywhere? Decided by the author.
+   **No — accepted loss.** Note the mechanism, because the obvious
+   rationale is wrong: an inactive reviewer *can* still hold an
+   invitation (invited, emailed, then deactivated —
+   `test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table`
+   pins exactly that), and their drill-in renders and shows their invite
+   URL. What they lose is the **Open reviewer surface** link, because
+   the Review Progress card is gated on `row`, which is `None` off the
+   table. So the surface goes unreachable via a missing card, not a
+   missing invitation.
+2. **Is `Random` worth keeping** anywhere? **No.** If the need returns
+   it gets rebuilt on the Invitations page, against that table's
+   filters rather than the picker's datalist.
 
 ### Out of scope
 
@@ -216,9 +226,12 @@ Leaves both preconditions and all four warning sites standing.
 2. **Prepare creates.** `generate_invitations` inside `workflow_prepare`
    after `mark_validated`. Must **not** retire the button — it already
    hides on `invitations_generated`, so it self-conceals for one rung.
-3. **Retire the button, rewrite the Workflow card copy, and collapse the
-   duplicated preconditions** — Workflow card, Next action card, the two
-   `_invites.py` / `_reminders.py` checks, the two amber captions.
+3. **Retire the button and rewrite the Workflow card copy.** The
+   `Create invites` button, its Next action card branch, and
+   `POST /invitations/generate` all go. **The `has_invitations` checks
+   and both amber captions stay** — open question 1 measured a clean
+   Prepare that leaves `has_invitations` false, so they remain
+   reachable.
 4. **The close** — the specs below, `docs/status.md`, `close_check`, `spec-writer`.
 
 ### Definition of done
@@ -235,11 +248,20 @@ Leaves both preconditions and all four warning sites standing.
 
 ### Open questions
 
-1. Can a session validate with **zero** eligible reviewers? If not, the
-   `has_invitations` skip reasons are dead code and rung 3 deletes rather
-   than keeps them. Decided by a test against `validate_session_setup`.
-2. Does `POST /invitations/generate` 308 to Prepare, or is it deleted? A
-   POST is an unlikely bookmark. Decided by the author.
+Both answered, 2026-09-18.
+
+1. Can a session validate with **zero** eligible reviewers? **Yes** —
+   measured: a full roster with every assignment excluded gives 0
+   eligible reviewers, **0 blocking errors** and `can_activate: True`,
+   on two warnings (`assignments.no_included_pairs`,
+   `instruments.zero_included`). `reviewers.empty` is an error, but
+   `assignments.no_included_pairs` is only a warning. Author: *"warning
+   is enough; the session is set up, just that there are no eligible
+   invites."* **So rung 3 keeps the `has_invitations` skip reasons and
+   both amber captions** — a clean Prepare can still leave
+   `has_invitations` false.
+2. Does `POST /invitations/generate` 308 to Prepare, or is it deleted?
+   **Deleted.** A POST is not a bookmark.
 
 ### Out of scope
 
@@ -326,7 +348,10 @@ exists.
 ### Open questions
 
 1. Does the demo walkthrough (`:628-640`) gain a "look at a reviewer's
-   surface" step now that the drill-in is the door? Decided by the author.
+   surface" step now that the drill-in is the door? **Yes**, but framed
+   as an **optional affordance rather than an operational step** — the
+   walkthrough's numbered sequence stays the operator's path, and this
+   is something to look at along the way (author, 2026-09-18).
 
 ### Out of scope
 
