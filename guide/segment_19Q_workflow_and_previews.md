@@ -344,6 +344,26 @@ withheld rows, on either send path. A skip event means a new
 `EVENT_SCHEMAS` entry, so it belongs to a later rung or to
 `guide/deferred_consolidated.md`, not here.
 
+**`spec-writer` (pre-push, since the slice touches `spec/`) came back
+clean on this slice** and raised one phrase of mine — *"the four
+surfaces cannot drift"*, where the test actually has five call sites.
+Rewritten to name them; a count is the part that goes stale.
+
+**It also found a contradiction that predates this segment**, and it
+needs an author ruling rather than a fix here:
+`spec/operations_pages.md:127-129` and `:304` both say the Invitations
+page's per-row **Send** and **Regenerate** are *"live from `validated`
+onward"*, and `:306` adds that all three render disabled outside their
+allowed state. The template gates both on `is_ready`
+(`session_invitations.html:309,327`), which is `lifecycle.is_ready`
+alone (`_workflow_card.py:110`) — so both buttons are disabled in
+`validated`, the state the spec says they are live in. Verified at
+`file:line`. Either the template should gate on
+`is_validated or is_ready`, matching the route's own
+`_require_validated_or_ready`, or the spec was never true. Out of this
+rung's scope and not in Item 2's `Doc impact`; filed here so the
+segment can adjudicate it.
+
 Six mutants, all caught: route reverted to the unfiltered listing;
 eligibility filter dropped; `pending` filter dropped; scheduled path
 back to its own query; the eligibility test reduced to its status limb;

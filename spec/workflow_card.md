@@ -517,8 +517,12 @@ Pre-flight gates:
   The *sets* differ, and only the test is shared: the table lists
   eligible reviewers whether or not they have an invitation and
   whatever its status, while the send set is the `pending` subset of
-  those. The scheduled auto-send path and the per-row **Send** both
-  apply the same test, so the four surfaces cannot drift.
+  those. Every surface that decides whether a reviewer is in the
+  session applies that one test — the table, `generate_invitations`,
+  this button, the scheduled auto-send and the per-row **Send** — so
+  they cannot drift apart. Naming them rather than counting them is
+  deliberate: a count is the part that goes stale when a sixth
+  arrives.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
