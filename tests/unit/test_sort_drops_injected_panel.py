@@ -23,8 +23,19 @@ The ordering assertion is the load-bearing one. A removal that ran
 *after* the stamp would leave the index corruption in place while
 looking correct in a grep, which is exactly the class of guard 19P kept
 having to re-aim: one that proves less than it claims.
+
+Two things here are shaped by that class of failure recurring inside
+this very module. The page set is **derived** from the templates rather
+than listed, because a hand-maintained list is an un-pinned
+measurement; and the second-mechanism guard asserts a **property** —
+that these pages touch ``rrw-sort-btn`` in markup only — rather than
+the byte-shape of the handler it is hunting, because two earlier drafts
+that guessed at a spelling were both defeated by a spelling nobody had
+guessed.
 """
 from __future__ import annotations
+
+import re
 
 from pathlib import Path
 
@@ -34,34 +45,85 @@ TEMPLATES = Path(__file__).resolve().parents[2] / "app" / "web" / "templates"
 BASE = TEMPLATES / "base.html"
 OPERATOR = TEMPLATES / "operator"
 
-#: The pages migrated to the shared signal — **not** the set that
-#: injects a panel. Measured at HEAD: seven templates inject a
-#: `.session-expander`, six of them also sort, and three still carry
-#: 19P.1's per-page capture-phase handler (`session_reviewees`,
-#: `session_relationships`, `session_assignments`). They are correct
-#: today — their handler runs before the inline sort handler, so
-#: `_rrwApplySort` finds nothing to remove — and migrating them is
-#: filed as 19O Item 6.
+#: `sessions_list.html` is the one page with a *legitimate* script-side
+#: `.rrw-sort-btn` reference: Item 4's unsaved-edit confirm gates the
+#: sort click rather than removing anything. Every other sorting page
+#: that injects a panel should have no script-side reference at all, so
+#: they get the blunt assertion and this one gets the careful one.
+PAGE_WITH_A_SORT_BUTTON_HANDLER_OF_ITS_OWN = "sessions_list.html"
+
+#: The census as it stands today, pinned so that a seventh page joining
+#: it is a **test failure rather than a silent exemption**. The set the
+#: other tests run over is derived from the templates (below), not from
+#: this list; this is the assertion that the derivation still matches
+#: what a human last looked at.
 #:
-#: The plan's own blast radius said *three* injecting pages, measured
-#: at `820d5d6`, which is not this branch's base: 19P.2-3 and 19P.5
-#: added four more between that measurement and this item being built.
-#: A measurement carries its commit for exactly this reason.
-MIGRATED_PAGES = [
+#: `session_observers.html` injects a panel and declares no
+#: `data-rrw-sortable`, so it needs neither half and is deliberately
+#: absent. It is the whole difference between "seven templates inject"
+#: and "six sort".
+#:
+#: A hand-maintained list was the first version of this, and a cold read
+#: named it for what it was: an un-pinned measurement, the very thing
+#: the comment three lines below it warns about. The plan's own blast
+#: radius said *three* injecting pages, measured at `820d5d6`; 19P.2-3
+#: and 19P.5 added four more between that measurement and the item being
+#: built. *A measurement carries its commit for exactly this reason* —
+#: and a derived set carries no commit at all, which is better.
+EXPECTED_PAGES = {
     "sessions_list.html",
     "sessions_archived.html",
     "session_reviewers.html",
-]
-
-#: Still on the per-page handler. Listed so this file states the whole
-#: picture rather than the part it checks — a reader who deletes one of
-#: these workarounds on the strength of the shared fix gets a panel
-#: that vanishes on sort, because these pages have no listener.
-UNMIGRATED_PAGES = [
     "session_reviewees.html",
     "session_relationships.html",
     "session_assignments.html",
-]
+}
+
+
+def _injects_and_sorts() -> list[str]:
+    """Every operator template that injects a panel **and** sorts.
+
+    Derived rather than listed: a page added later picks up both halves
+    of this guard by existing, instead of by someone remembering to add
+    a line here.
+    """
+    found = []
+    for path in sorted(OPERATOR.glob("*.html")):
+        src = path.read_text(encoding="utf-8")
+        if "session-expander" not in src:
+            continue
+        if any(_declares_sortable(line) for line in src.splitlines()):
+            found.append(path.name)
+    return found
+
+
+def _declares_sortable(line: str) -> bool:
+    """Is this line a real `data-rrw-sortable` **attribute**?
+
+    The `=` and the comment test are both load-bearing, and this
+    function's first version had neither. `session_observers.html`
+    mentions the attribute in a comment explaining why it has none
+    (*"no `data-rrw-sortable`; `_list_observers` orders by id"*) and
+    injects a panel, so a bare substring match pulls in the one page
+    that is deliberately outside this guard — and `session_assignments`
+    names it in a comment too. The pinned census caught exactly that on
+    the first run, which is what it is for.
+    """
+    stripped = line.strip()
+    if stripped.startswith("//") or stripped.startswith("{#"):
+        return False
+    return "data-rrw-sortable=" in stripped
+
+
+def _script_text(src: str) -> str:
+    """Just the `<script>` bodies, so page markup cannot satisfy a check.
+
+    Every one of these templates renders `class="rrw-sort-btn"` on seven
+    to thirteen `<th>` buttons, so any assertion about the *string*
+    `rrw-sort-btn` over the whole file is about the header markup and
+    not about a handler.
+    """
+    return "\n".join(re.findall(r"<script[^>]*>(.*?)</script>", src, re.S))
 
 
 def _strip_line_comments(js: str) -> str:
@@ -112,6 +174,23 @@ def _apply_sort_body() -> str:
             if depth == 0:
                 return src[open_brace : i + 1]
     raise AssertionError("_rrwApplySort is not brace-balanced")
+
+
+#: `if (` looks exactly like a call to a regex and is not one. The
+#: control-flow keywords that take a parenthesis are skipped so that
+#: `if (expanderIsDirty())` reports the function rather than the `if`.
+_NOT_A_CALL = frozenset(
+    {"if", "for", "while", "switch", "catch", "return", "function", "typeof"}
+)
+
+
+def _first_call(js: str) -> str | None:
+    """The first function actually invoked in ``js``, or ``None``."""
+    for match in re.finditer(r"([A-Za-z_$][\w$.]*)\s*\(", js):
+        name = match.group(1).split(".")[-1]
+        if name not in _NOT_A_CALL:
+            return name
+    return None
 
 
 def test_the_panel_is_removed_before_the_rows_are_stamped() -> None:
@@ -186,8 +265,24 @@ def test_the_sort_signals_after_the_rows_land() -> None:
     )
 
 
-@pytest.mark.parametrize("page", MIGRATED_PAGES)
-def test_every_migrated_page_listens(page: str) -> None:
+def test_the_page_census_is_still_the_one_a_human_checked() -> None:
+    """A seventh sorting page must announce itself, not slip in.
+
+    The two guards below run over the *derived* set, so a new page is
+    covered automatically — but "covered" and "correct" are different
+    claims, and nobody has read the new page. This failing is the
+    prompt to read it and then widen `EXPECTED_PAGES`.
+    """
+    assert set(_injects_and_sorts()) == EXPECTED_PAGES, (
+        "the set of operator templates that inject a `.session-expander` "
+        "into a `data-rrw-sortable` table has changed; read the new or "
+        "departed page against this module's two guards, then update "
+        "`EXPECTED_PAGES`"
+    )
+
+
+@pytest.mark.parametrize("page", _injects_and_sorts())
+def test_every_page_that_sorts_and_injects_listens(page: str) -> None:
     """The dispatch is only half a fix without an owner on the other end."""
     src = (OPERATOR / page).read_text(encoding="utf-8")
     assert 'addEventListener("rrw:sorted"' in src, (
@@ -196,41 +291,97 @@ def test_every_migrated_page_listens(page: str) -> None:
     )
 
 
-@pytest.mark.parametrize("page", UNMIGRATED_PAGES)
-def test_every_unmigrated_page_still_defends_itself(page: str) -> None:
-    """Never zero mechanisms — which is the half that matters.
+@pytest.mark.parametrize("page", _injects_and_sorts())
+def test_no_page_keeps_a_second_mechanism(page: str) -> None:
+    """One mechanism, now that the migration is complete.
 
-    This is the assertion that makes the split safe to ship. Deleting a
-    page's capture-phase handler without giving it a listener leaves it
-    with neither: the panel is dropped by `_rrwApplySort` and nothing
-    puts it back. Pinning the workaround's *presence* here means that
-    mistake fails a test instead of shipping.
+    While the migration was in flight this asserted *at least* one,
+    because a page carrying both is redundant rather than broken and
+    failing it would have forced the two halves of a move into one
+    commit. With every page migrated the weaker form has nothing left
+    to permit, and the real risk is a page that keeps its old
+    capture-phase handler beside the listener: the panel is removed
+    twice and the page re-renders twice per sort.
 
-    Deliberately `or`, not `!=`. A page carrying both during a
-    migration is redundant rather than broken, and failing it would
-    force the two halves of a move into one commit.
+    **Aimed at the reference, not at the workaround's shape.** A draft
+    of this matched the historical handler's exact byte-shape — a
+    `.rrw-sort-btn` guard, a newline, `if (panel)`. Run against nine
+    plausible re-introductions it caught **one**: single quotes, a
+    braced `return`, both statements on one line, a comment between
+    them, a renamed variable, `panel && panel.remove()`, `panel !==
+    null`, and — worst — a guard that only calls `render()` and removes
+    nothing all walked straight past it. That last one is exactly the
+    double-render this test names in its own failure message.
+
+    So the assertion is now that these pages touch `rrw-sort-btn` in
+    **markup only**. There is no legitimate script-side reason to look
+    at a sort button on a page that listens for `rrw:sorted`, which
+    makes the absence checkable without predicting the spelling.
+    `sessions_list.html` is the single exception and is checked by its
+    own test below, because its reference is a gate rather than a
+    handler.
     """
     src = (OPERATOR / page).read_text(encoding="utf-8")
-    has_workaround = 'closest(".rrw-sort-btn")' in src
-    has_listener = 'addEventListener("rrw:sorted"' in src
-    assert has_workaround or has_listener, (
-        f"{page} injects a selection panel into a sortable table and "
-        "has neither the per-page handler nor the shared listener, so "
-        "its panel disappears on sort"
+    assert 'addEventListener("rrw:sorted"' in src, f"{page} lost its listener"
+
+    if page == PAGE_WITH_A_SORT_BUTTON_HANDLER_OF_ITS_OWN:
+        # Returning rather than skipping: the listener assertion above
+        # is real for this page too, and `CLAUDE.md` asks that skips be
+        # read rather than counted — a skip here would report as a
+        # tool-gated one and be worth nobody's attention.
+        # `test_the_lobby_gate_stays_a_gate` owns the rest.
+        return
+
+    script = _strip_line_comments(_script_text(src))
+    assert "rrw-sort-btn" not in script, (
+        f"{page} looks at a sort button from script. The shared "
+        "`rrw:sorted` listener is the whole mechanism now; a second one "
+        "removes the panel twice and re-renders twice per sort. If this "
+        "is a deliberate new gate rather than 19P.1's revived handler, "
+        "it belongs beside the lobby's in "
+        "`PAGE_WITH_A_SORT_BUTTON_HANDLER_OF_ITS_OWN`."
     )
 
 
-def test_the_per_page_workaround_is_gone() -> None:
-    """Two mechanisms for one bug is how one of them rots unnoticed.
+def test_the_lobby_gate_stays_a_gate() -> None:
+    """The lobby's `.rrw-sort-btn` reference may confirm, nothing else.
 
-    19P.1 rung 1 shipped a capture-phase click handler on Reviewers that
-    removed the panel before the inline sort handler ran. It worked, and
-    it was deliberately local so that slice would not change lobby
-    behavior — but the lobby's copy of the bug stayed live, and 19P.2-3
-    would have made it five copies against one function.
+    `sessions_list.html` gates the sort click on Item 4's unsaved-edit
+    confirm, so it cannot take the blanket assertion above — and being
+    the one page allowed to look at a sort button from script, it is
+    also the one page where 19P.1's handler could come back wearing a
+    gate's clothes.
+
+    **A whitelist, because the blacklist version failed its own mutation
+    run.** The first draft forbade `remove(`, `render(` and `= null`
+    within 240 characters. Injecting `refreshExpander();` — this page's
+    actual panel rebuild, which is neither of those spellings — walked
+    straight through it. Guessing the names a future handler will use is
+    the defect this whole module keeps re-learning, so this asserts what
+    is *allowed* instead: the first thing called after the guard returns
+    must be the dirty check. Anything else fails, whatever it is called.
     """
-    src = (OPERATOR / "session_reviewers.html").read_text(encoding="utf-8")
-    assert 'closest(".rrw-sort-btn")' not in src, (
-        "the local workaround is superseded by the shared fix in "
-        "`_rrwApplySort`; leaving both means one of them rots"
+    page = PAGE_WITH_A_SORT_BUTTON_HANDLER_OF_ITS_OWN
+    script = _strip_line_comments(
+        _script_text((OPERATOR / page).read_text(encoding="utf-8"))
     )
+
+    hits = [m.start() for m in re.finditer("rrw-sort-btn", script)]
+    assert hits, (
+        f"{page}'s unsaved-edit gate is gone; either restore it or move "
+        "this page under the blanket assertion above"
+    )
+    for at in hits:
+        rest = script[at:]
+        guard_end = re.search(r"\breturn\s*;", rest)
+        assert guard_end is not None, (
+            f"{page} references a sort button outside an early-return "
+            "guard; the only sanctioned use here is Item 4's confirm"
+        )
+        called = _first_call(rest[guard_end.end() :])
+        assert called == "expanderIsDirty", (
+            f"{page} calls `{called}` first after its sort-button guard, "
+            "where only `expanderIsDirty` belongs. `_rrwApplySort` drops "
+            "the panel and fires `rrw:sorted`; a second opinion here is "
+            "19P.1's handler by another name."
+        )

@@ -1393,11 +1393,10 @@
         // then fires `rrw:sorted` once the rows have landed. Re-anchor
         // against the final order. 19O Item 4 removed this page's own
         // capture-phase workaround: one mechanism per page, never two.
-        // Reviewees, Relationships and Assignments still carry theirs —
-        // correct today, since it runs before the inline sort handler —
-        // and migrating them is 19O Item 6. Do not delete one of those
-        // without adding this listener in the same commit, or that page
-        // ends up with neither.
+        // 19O Item 6 carried the same move to Reviewees, Relationships
+        // and Assignments, so all six sorting pages listen and none
+        // defends itself. `test_no_page_keeps_a_second_mechanism` holds
+        // that line.
         table.addEventListener("rrw:sorted", function () {
           panel = null;
           render();
