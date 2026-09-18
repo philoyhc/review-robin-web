@@ -323,9 +323,18 @@ gaps.
 rung 4's close pass recomputed the totals and found the column short.
 `activate_visible` is `is_validated` alone (`_workflow_card.py`), and
 4Err *is* `is_validated` — so the button ships in a state whose own
-copy says to re-run Prepare first. Measured, not inferred. Whether it
-should is a design question this item did not open; the spec describes
-what ships.
+copy says to re-run Prepare first. Measured, not inferred.
+
+**This is intended** (author's ruling, 2026-09-18, on 19O Item 7 entry
+3): the current behavior is correct and the spec follows it. 4Err is
+defensive — it means a fresh validate found errors in a session the
+lifecycle still calls `validated` — and Activate re-runs validation
+before it flips (`_workflow.py`), so pressing it in this state fails
+safely rather than activating a broken session. The copy steers toward
+Prepare because that is the productive move; the button stays because
+removing it would be a lifecycle gate that `activate_visible` does not
+otherwise draw. Recorded as adjudicated rather than merely observed,
+so a later reader treats it as the contract and not as a finding.
 
 † **4Err is the one column that varies with invitation state.** Every
 other state's definition fixes it — State 4 is *"no invitations"*,

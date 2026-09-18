@@ -112,7 +112,7 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 - Upload card on Reviewers / Reviewees / Relationships.
 - Quick Setup card on Session Home.
-- Next Action card on Session Home (the state-conditional Validate / Activate / Pause card).
+- Next Action card on Session Home (the state-conditional Workflow card; its transitions are Prepare / Activate / Revert to draft / Close).
 - The Rule Based Assignment card on the Operations Assignments page.
 
 **Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `--card-warning-bg` background, `--card-warning-border` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.

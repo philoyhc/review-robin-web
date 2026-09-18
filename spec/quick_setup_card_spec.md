@@ -9,7 +9,7 @@ Renders in the body of the Session Home / Control Panel page (`session_detail.ht
 Position in the Home body, top to bottom:
 
 1. **Workflow card** — the contextual lifecycle-transition action
-   (Prepare / Activate / Close / Pause), full-width.
+   (Prepare / Activate / Close / Revert to draft), full-width.
 2. **Session details card** — the consolidated config
    display ↔ edit surface (`?editing=1`), full-width. There is no
    separate Edit Session sub-page; every config field is edited in
@@ -21,7 +21,7 @@ Position in the Home body, top to bottom:
 
 The card is always rendered on Home for `draft` and `validated` sessions. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
-For `ready` and `closed` sessions, the card renders the same body-greying as the default `is_locked=True` treatment in `draft` / `validated` — the body wrapper carries `.quick-setup-body.locked`, and the Lock / Unlock toggle stays visible in every editable-conceivable state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. On `ready`, unlocking the card is purely visual — the importer rejects mutating submits at the service layer (`_require_editable`) and the rejection surfaces inline as a scoped `banner-error` carrying "Pause the session before applying setup changes" copy. Current-state indicators (counts, rule label) render in every state.
+For `ready` and `closed` sessions, the card renders the same body-greying as the default `is_locked=True` treatment in `draft` / `validated` — the body wrapper carries `.quick-setup-body.locked`, and the Lock / Unlock toggle stays visible in every editable-conceivable state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. On `ready`, unlocking the card is purely visual — the importer rejects mutating submits at the service layer (`_require_editable`) and the rejection surfaces inline as a scoped `banner-error` carrying "Revert the session to draft before applying setup changes" copy. Current-state indicators (counts, rule label) render in every state.
 
 ### Slots
 

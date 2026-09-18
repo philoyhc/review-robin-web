@@ -92,16 +92,22 @@ def test_the_guide_links_the_setup_templates_download(client: TestClient) -> Non
 
 # ── Two capture families (2026-09-07) ──────────────────────────────────
 #
-# The screencaps arrive at two scales: six 1x shots at ~830px and ten 2x
-# shots at ~1680px. (Six and six when this was written on 2026-09-07;
-# the four `instrument-card-*` captures added the next day are all wide,
-# and the sentence went stale until 19H.3's spec pass measured it.)
-# Left to fill the prose column they read at two different apparent
-# scales, so each family gets a fixed display width — 1200px for the
-# wide ten, 600px for the narrow six, which carry
+# The screencaps arrive at two scales: 1x shots at ~830px and 2x shots
+# at ~1680px. Left to fill the prose column they read at two different
+# apparent scales, so each family gets a fixed display width — 1200px
+# for the wide family, 600px for the narrow one, which carries
 # `.guide-figure-narrow`. Both numbers are the author's, set from the
 # rendered page; this file asserts only which family an image is in, not
 # the widths themselves, which are presentation and will move again.
+#
+# **The counts are deliberately not written down here.** They were, and
+# the sentence went stale twice: 6/6 at 2026-09-07, corrected to 6/10 by
+# 19H.3 when the `instrument-card-*` captures landed, and stale again by
+# 2026-09-18 at 6/13 with nothing to catch it —
+# `test_both_capture_families_are_present` only asserts each family is
+# non-empty, so every gate here passes while the explanation rots. The
+# split is measured from pixel width at run time; a reader who wants the
+# tally should run the measurement rather than trust a comment.
 #
 # The split is by the file's actual pixel width, not by a hand-kept list,
 # so a capture retaken at the other scale fails here rather than quietly

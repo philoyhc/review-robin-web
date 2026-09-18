@@ -409,7 +409,7 @@ def test_archive_card_controls_disabled_when_activated(
         ).text
     )
     # No explanatory note (removed 2026-08-18 as unnecessary).
-    assert "Pause the session before archiving" not in card
+    assert "Revert the session to draft before archiving" not in card
     # All three purge checkboxes are disabled + the whole block greyed.
     assert card.count('name="purge"') == 3
     assert card.count("disabled") >= 4  # 3 checkboxes + the button

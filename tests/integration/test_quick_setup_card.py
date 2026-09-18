@@ -364,7 +364,7 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
     assert "quick_setup_reason=lifecycle" in location
 
     body = operator.get(location).text
-    assert "Pause the session before applying setup changes." in body
+    assert "Revert the session to draft before applying setup changes." in body
 
 
 # --------------------------------------------------------------------------- #

@@ -142,7 +142,8 @@ paragraph in `.next-action-body` and skips the button row.
 **Buttons.** Primary action uses Primary styling (solid
 `--btn-primary-bg`); supporting actions use Secondary styling (white
 background, default border). Inline middle-dot links are not used
-here. POST forms (Activate, Revert to draft, Pause) declare a
+here. POST forms (Activate, and the two draft-returning transitions
+`next-action-revert-form` / `next-action-pause-form`) declare a
 hidden form id in the body and the submit button declares
 `form="next-action-{name}-form"` so the form definition stays
 near its checkbox while the button lives in the row (or, in the
@@ -178,8 +179,8 @@ Notes specific to Session Home:
   cannot run Prepare, so the card's copy names Revert to draft
   instead (19Q Item 2 rung 3). Close session is always Secondary when
   live; Revert to draft is always Secondary when live — the
-  layout never promotes either to Primary. Pause carries **no
-  confirmation checkbox**; the lifecycle service's `confirm` gate is
+  layout never promotes either to Primary. The `ready → draft` form
+  carries **no confirmation checkbox**; the lifecycle service's `confirm` gate is
   satisfied by a hidden field in the form.
 - **No "See previews" button in any state.** The card has never rendered
   one. Email and reviewer-surface previews are reached from an Invitations
@@ -276,18 +277,18 @@ Its contents:
   checkbox `disabled`, a "Data deletion is locked while status is
   Activated" note, and the `_require_editable` gate on
   `/delete-data`. Reviewer responses only exist once the session is
-  Activated, so deleting them is a pause-first workflow — Pause via
-  the Workflow card, delete the data (the revert preserves the
+  Activated, so deleting them is a revert-first workflow — Revert to
+  draft via the Workflow card, delete the data (the revert preserves the
   `Response` rows), then re-activate.
 - **Delete Session** — removes the session entirely. Confirmation
   checkbox (`required`) + Destructive button. **Visible-but-disabled
   while Activated**: the button and confirm checkbox carry the
-  `disabled` attribute, with an explanatory note ("Pause the
-  session first to enable deletion."). The server-side lifecycle
+  `disabled` attribute, with an explanatory note ("Revert the
+  session to draft first to enable deletion."). The server-side lifecycle
   gate (`_require_editable`) in `/delete` is the source of truth —
   a direct POST while Activated still 4xxs. Visible greyed-out so
   the operator always sees the affordance and the path forward
-  (Pause via the Workflow card first, then delete).
+  (Revert to draft via the Workflow card first, then delete).
 
 Description copy on the card: "Delete Data wipes every reviewer
 response while leaving session setup intact. Delete session
@@ -420,13 +421,13 @@ State-conditional copy only — the card frame is constant:
 - **Draft / Validated:** "Bulk-populate reviewers, reviewees,
   relationships, and settings from CSV files in one place."
 - **Ready / Activated:** "Setup edits are paused while the
-  session is Activated. Pause the session to re-enable bulk
-  setup." The Lock / Unlock button stays visible — unlocking
+  session is Activated. Revert the session to draft to re-enable
+  bulk setup." The Lock / Unlock button stays visible — unlocking
   is purely visual; the importer rejects mutating submits at
   the service layer (`_require_editable`) and the rejection
-  surfaces inline as a scoped `banner-error` carrying "Pause
-  the session before applying setup changes" copy. The
-  operator's actual path forward is Pause, but the cosmetic
+  surfaces inline as a scoped `banner-error` carrying "Revert the
+  session to draft before applying setup changes" copy. The
+  operator's actual path forward is Revert to draft, but the cosmetic
   unlock affordance stays consistent across states.
 
 ## Placeholder cards
@@ -456,7 +457,7 @@ page reuses the same class without further design work.
 | `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + per-issue list | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4W / 4Err / 5 / 6: Activate session live (Primary; 4W detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
+| `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Revert to draft first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
@@ -510,9 +511,11 @@ action card doing the explanatory job.
 - Reuse the existing Primary / Secondary button styling from the
   visual style spec; do not introduce new button variants for
   this page.
-- The Pause action (returning `ready` → `draft`) reuses
-  `lifecycle.revert_session_to_draft`; the validated → draft
-  "Revert to draft" supporting button reuses
+- **Both draft-returning transitions ship under one label, "Revert to
+  draft", and are two different service calls.** `ready → draft`
+  (`next-action-pause-form`, the transition legacy prose calls *Pause*)
+  reuses `lifecycle.revert_session_to_draft`; `validated → draft`
+  (`next-action-revert-form`) reuses
   `lifecycle.invalidate_session(reason="operator_revert")`. Both
   are wired via the same `POST /operator/sessions/{id}/revert`
   endpoint, which dispatches by current status.
