@@ -381,6 +381,110 @@ mutant is caught by a pre-existing test
 (`test_scheduled_invites.py`'s second-fire `counts.sent == 0`), not by
 any of the new ones — the first write-up implied otherwise.*
 
+**Rung 2 landed 2026-09-18.** `generate_invitations` runs inside
+`workflow_prepare` after `mark_validated`, on the clean path only. The
+button is untouched, per the rung.
+
+**Two of the four mutants survived, and both were tests of mine that
+proved nothing.**
+
+- *Moving the call inside the `is_draft` guard* passed everything —
+  because the state it distinguishes is unreachable.
+  `replace_assignments` calls `invalidate_if_validated`, so by the
+  time control reaches the guard the session has **always** been
+  through `draft`. Measured: a second Prepare with nothing edited
+  emits `session.invalidated`, then a second `session.validated`. The
+  comment claiming this placement exists for "a session already
+  validated" was wrong and now says what is true — it is a refusal to
+  couple invitation creation to a lifecycle transition that happens
+  one step earlier, not a reachable catch-up.
+- *Moving the call ahead of `validate`* — **this plan's central
+  rejected alternative** — also passed, because
+  `test_a_failed_validation_creates_no_invitations` used an empty
+  session. Validation failed and no invitations appeared, but there
+  was nobody eligible to invite either, so both orderings gave the
+  same answer. Rebuilt on a good roster with a duplicate reviewee: the
+  reviewer is fully eligible when validation fails, so after-validate
+  gives zero rows and before-validate gives one. The mutant now fails.
+  The test asserts an included assignment exists first, so it cannot
+  quietly decay back into the vacuous version.
+
+**One test re-aimed rather than deleted, and the cold read found my
+description of it wrong in a way that matters.**
+`test_invitations_pill_not_created_when_no_invitation_rows` seeded a
+roster and Prepared, which now yields `Not sent`. It reaches
+`Not created` by inactivating every reviewer instead — and I called
+that *"exactly where open question 1 said it was"*, which it is not.
+
+**Open question 1's own measured state is not reachable through
+Prepare.** OQ1 recorded "a full roster with every assignment
+excluded" — 0 included pairs, two warnings. Rung 1 established that
+`replace_assignments` re-materialises every row from the pinned rule
+set, so that exclusion is gone by the time the invite step runs. The
+all-inactive lever measures differently: **2 included assignments,
+zero warnings** — a completely clean Prepare that creates no
+invitations. *Stronger evidence for the same conclusion, by a
+different route.* Said plainly because rung 3 retires the button on
+this answer: anyone re-deriving OQ1 first will try the exclusion
+lever, watch it regenerate away, and could conclude a clean Prepare
+always creates invitations.
+
+**`spec/lifecycle.md`'s `context.step` enum was stale too**, and this
+rung made it so — the same class of edit as the `_step_label_map`
+enumeration, applied to one file and not the other. Both carry
+`invite` now. Likewise `spec/workflow_card.md` still said Prepare
+"runs two lifecycle steps", enumerated two failure modes and two
+success events: all four now describe three. *The deferral rule was
+right; applying it to one paragraph of a file and not to the
+paragraph 350 lines above is what a reader trips on.*
+
+**The PR body's non-verification disclaimer was false.** It said the
+new step label was "template copy the suite cannot render"; the same
+test file already renders that banner for two other steps via
+`_failure_banner`. A disclosed gap that is not a gap costs the reader
+trust in the disclaimers that are real. Now covered by a test.
+
+**`spec-writer` verified all five rewritten passages and the enum
+addition as true**, and caught one naming slip in my own new
+sentence: it said `leaves has_invitations false`, the service
+function's name, where this spec's established name for that fact is
+`invitations_generated` (defined in its own context-builder list and
+used three times elsewhere). A reader who has just read that list has
+no reason to expect a second name for it three hundred lines later.
+Fixed.
+
+**Three sentences rung 4 must sweep, which the `Doc impact` bullets
+do not literally name.** `spec/session_home.md` twice and
+`spec/operator_ui_concept.md` once say Prepare *"runs Generate +
+Validate in sequence"*. Falsified by this rung, legitimately deferred
+— but the bullets that cover those files name the Next action card's
+create-invites state and the button budget, not the step count, so
+the closing rung should grep the phrase rather than trust the
+bullets.
+
+**Recorded, not fixed** (all pre-existing or out of rung):
+`spec/lifecycle.md`'s `context.step` enum lists `precondition`, which
+is **never emitted** — every precondition return happens before
+`session.workflow_run_started` is written, so no
+`workflow_run_failed` exists for that click at all; the same row's
+`step or "unknown"` fallback is dead, since `step` is set on the
+first line of the `try`. `spec/rrw_functional_spec.md` §9.8 and §6.1
+still describe the pre-18F single super-button and a retired Pause
+flow — false since before this segment, and not in Item 2's manifest.
+`generate_invitations` can raise `sqlalchemy.exc.*` outside the
+route's `except` tuple, giving a framework 500 rather than the
+failure banner — but `replace_assignments` and `mark_validated` have
+the identical exposure, so widening it here would be inconsistent
+with its siblings. `audit.write_event` flushes without committing and
+nothing commits after it on the failure paths, so
+`session.workflow_run_failed` may never persist in production; the
+suite cannot see it because the test `get_db` override yields a
+long-lived session. And `views/_workflow_card.py` flips
+`draft → validated` inline on the `?validated=1` entry path, so a
+session can reach `validated` without Prepare — **worth settling
+before rung 3 retires the button**, since after that such a session
+would have no way to get invitations.
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates

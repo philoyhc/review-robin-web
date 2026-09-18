@@ -76,9 +76,65 @@ def _validated(client: TestClient, db: Session, session_id: int) -> None:
 def test_invitations_pill_not_created_when_no_invitation_rows(
     client: TestClient, db: Session
 ) -> None:
+    """Re-aimed at 19Q.2 rung 2 — Prepare now creates the invitations.
+
+    This used to seed a roster and Prepare, and `Not created` was the
+    state a prepared session sat in until the operator clicked
+    **Create invites**. Prepare creates them itself now, so that
+    fixture produces `Not sent`.
+
+    **A clean Prepare can still leave `has_invitations` false, and
+    rung 3 keeps the skip reasons and both amber captions on that.**
+    Every reviewer inactive is the case here: `reviewers.empty` counts
+    rows regardless of status so validation passes, the rule engine
+    materialises included assignments for them anyway
+    (`assignments/_coverage.py`'s `list_reviewers` does not filter on
+    status), and only `_assigned_active_reviewer_ids` excludes them —
+    so Prepare mints nothing.
+
+    **This is not the state open question 1 measured, and the
+    difference matters.** OQ1 recorded *"a full roster with every
+    assignment excluded"* — 0 included pairs, `can_activate: True` on
+    two warnings. That state is **not reachable through Prepare**:
+    rung 1 established that `replace_assignments` re-materialises
+    every row from the pinned rule set, so a per-row exclusion is gone
+    by the time the invite step runs. Measured here instead: **2
+    included assignments and zero warnings** — a completely clean
+    Prepare that creates no invitations. Stronger evidence for the
+    same conclusion, reached by a different route, and worth saying so
+    plainly: anyone re-deriving OQ1 before retiring the button will
+    try the exclusion lever, watch it regenerate away, and could
+    conclude a clean Prepare always creates invitations.
+    """
     session = _create_session(client, db, "chrome-inv-none")
     _seed_two_reviewers(client, db, session.id)
+
+    reviewer_ids = [
+        r.id
+        for r in db.execute(
+            select(Reviewer).where(Reviewer.session_id == session.id)
+        ).scalars()
+    ]
+    assert len(reviewer_ids) == 2
+    response = client.post(
+        f"/operator/sessions/{session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": reviewer_ids},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
     _validated(client, db, session.id)
+    db.refresh(session)
+    assert session.status == "validated", (
+        f"session is {session.status}; the zero-eligible case must still "
+        "validate or this test is asserting an unreachable state"
+    )
+    assert (
+        db.execute(
+            select(Invitation).where(Invitation.session_id == session.id)
+        ).first()
+        is None
+    ), "Prepare created an invitation for a reviewer with no active status"
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert (

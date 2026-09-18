@@ -37,7 +37,7 @@ from starlette import status
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, audit, validation
+from app.services import assignments, audit, invitations, validation
 from app.services import session_lifecycle as lifecycle
 from app.web.deps import (
     get_or_create_user,
@@ -200,6 +200,46 @@ def workflow_prepare(
                 report=report,
                 correlation_id=correlation_id,
             )
+
+        # 19Q Item 2 rung 2 — Prepare creates the invitations.
+        #
+        # **After `mark_validated`, and only on the clean path.** Every
+        # early return above leaves this unreached, which is the point:
+        # a failed validation must not mint invitation rows for a setup
+        # the operator is still fixing — the same reason
+        # `_require_validated_or_ready` refuses invitations from
+        # `draft`. Creating at the Generate step, before validate,
+        # was considered and rejected for exactly that.
+        #
+        # Additive and idempotent, so a re-Prepare catches up without
+        # disturbing anything: `generate_invitations` skips reviewers
+        # who already have a row, so every existing token and state
+        # survives while anyone newly eligible is picked up.
+        #
+        # **Outside the `is_draft` guard, though measurably nothing
+        # turns on that today.** A mutation run moved this inside the
+        # guard and the whole suite still passed, so the placement is
+        # recorded rather than claimed: `replace_assignments` above
+        # calls `invalidate_if_validated`, which means that by the time
+        # control reaches here the session has *always* been through
+        # `draft` and the guard is satisfied. Measured — a second
+        # Prepare with nothing edited emits `session.invalidated` then
+        # a second `session.validated`. The placement is therefore not
+        # a reachable catch-up case; it is a refusal to couple
+        # invitation creation to a lifecycle transition that happens to
+        # occur one step earlier. If `replace_assignments` ever stops
+        # invalidating, this still runs.
+        #
+        # Under Prepare's own `correlation_id`, so the
+        # `invitations.generated` event joins the run rather than
+        # looking like a separate operator action.
+        step = "invite"
+        invitations.generate_invitations(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
     except (_StepFailed, lifecycle.LifecycleError, ValueError) as exc:
         message = str(exc)
         audit.write_event(

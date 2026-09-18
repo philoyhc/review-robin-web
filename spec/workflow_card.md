@@ -339,7 +339,7 @@ Generate + Validate in sequence (see below).
 
 The Prepare session button POSTs to
 `/operator/sessions/{id}/workflow/prepare` in `_workflow.py`,
-which runs two lifecycle steps in sequence:
+which runs three steps in sequence:
 
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,
@@ -357,6 +357,17 @@ which runs two lifecycle steps in sequence:
    When the report has errors, the chain stops here — assignment
    pairs survive, the session stays in `draft`, and the right-
    column issue list surfaces the diagnostic.
+3. **Invite.** `invitations.generate_invitations(...)` —
+   idempotently creates one `Invitation` row per eligible
+   reviewer (assigned, with at least one `include=True`
+   assignment, and `status == "active"`), skipping reviewers who
+   already have one so existing tokens and states survive. It
+   runs **only after a clean Validate**: a failed validation
+   returns above this line and creates nothing, so no invitation
+   exists for a setup the operator is still fixing. A session
+   that validates with zero eligible reviewers creates none and
+   leaves `invitations_generated` false, which is a supported
+   outcome rather than a failure.
 
 Pre-flight: Prepare runs only while the session is editable
 (`draft` / `validated`). A `ready` session must be reverted first.
@@ -454,6 +465,12 @@ so the workflow-failure signal line adapts.
   errors populated and the card lands in State 3. Redirect
   carries `super_button=prepare&super_step=validate`. The audit
   event records the failure for observability.
+- **Invite raises.** No rollback: the fresh assignments and the
+  `validated` status both stand, and the session is left with
+  fewer invitations than it should have. Redirect carries
+  `super_button=prepare&super_step=invite`. Recoverable by
+  clicking Prepare again — the step is idempotent and picks up
+  where it stopped.
 
 **Activate failures:**
 
@@ -474,8 +491,12 @@ Each route emits two audit events bracketing the run:
   with `context.button`, `context.step`, and
   `context.error_message`. Successful runs are documented by the
   per-step events (`assignments.generated` + `session.validated`
-  for Prepare; `session.activated` for Activate) — no separate
-  "succeeded" envelope.
+  + `invitations.generated` for Prepare; `session.activated` for
+  Activate) — no separate "succeeded" envelope. All three of
+  Prepare's carry the run's `correlation_id`, so the log reads as
+  one action. `invitations.generated` is emitted only when rows
+  were actually created, so a re-Prepare that finds everyone
+  already invited leaves two events, not three.
 
 The warnings detour and the saved-response confirmation detour
 both write no `workflow_run_failed` event — the run is paused at
@@ -690,10 +711,10 @@ spelled as its button renders it: `prepare` → "Prepare session",
 generic **"Action failed"** rather than any named button, so a
 sixth value added to the vocabulary reads vague instead of wrong.
 The step maps via `_step_label_map` (`generate` → "Generate
-assignments", `validate` → "Validate setup", `activate` →
-"Activate session", `close` → "Close session", `precondition` →
-"pre-flight check"), and **the step phrase is suppressed when it
-repeats the button label** — "Close session failed at the Close
+assignments", `validate` → "Validate setup", `invite` → "Create
+invitations", `activate` → "Activate session", `close` → "Close
+session", `precondition` → "pre-flight check"), and **the step
+phrase is suppressed when it repeats the button label** — "Close session failed at the Close
 session." says nothing twice. The error detail (when
 present) renders inline below the headline. State 3 / 4Err
 issue lists continue to render in the per-state detail block —
@@ -787,7 +808,7 @@ routes:
 
 | Route | Service | Allowed prior state | Resulting state | Audit event |
 | --- | --- | --- | --- | --- |
-| `POST /operator/sessions/{id}/workflow/prepare` | `assignments.replace_assignments` → `lifecycle.mark_validated` (on clean Validate) | `draft` or `validated` (`is_editable`) | `validated` (or `draft` on Validate errors; detour to host page with `prepare_confirm=responses` in the saved-response case) | `session.workflow_run_started` with `context.button="prepare_session"` + per-step events; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/prepare` | `assignments.replace_assignments` → `lifecycle.mark_validated` (on clean Validate) → `invitations.generate_invitations` | `draft` or `validated` (`is_editable`) | `validated` (or `draft` on Validate errors; detour to host page with `prepare_confirm=responses` in the saved-response case) | `session.workflow_run_started` with `context.button="prepare_session"` + per-step events; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/workflow/activate` | `lifecycle.activate_session` (re-validates first) | `validated` | `ready` (or detour to Validate page in the warnings case) | `session.workflow_run_started` with `context.button="activate_session"`; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/workflow/close` | `lifecycle.expire_session` | `ready` | `expired` (every instrument flips `accepting_responses = False`) | `session.expired` |
 | `POST /operator/sessions/{id}/workflow/release-responses` | `lifecycle.release_responses_now` | not `archived` | unchanged (stamps `responses_release_at = now()`, clears `responses_release_until`) | `session.responses_released` |
