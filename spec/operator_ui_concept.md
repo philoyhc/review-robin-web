@@ -99,19 +99,18 @@ The **sort affordance** is the shared rrw-sort primitive. Any operator table tha
 
 Read-only renderings spun off from one or other Setup Page, showing what the configured setup will look like to its audience (reviewers today; future reviewees or other audiences once they exist).
 
-The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The reviewer-surface render lives at the satellite route `GET /operator/sessions/{id}/preview-surface/{page_n}`, reached from the picker card's "Open full preview" button **or from Open reviewer surface on the Invitations per-reviewer drill-in** (19P.6); it renders the same `reviewer/review_surface.html` template through the same `_surface_context` plumbing the live reviewer route uses. `GET /operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`, kept for stale bookmarks. The preview surface bypasses session-status / deadline / acceptance gates.
+The reviewer-surface render lives at the satellite route `GET /operator/sessions/{id}/preview-surface/{page_n}`, reached from **Open reviewer surface** on the Invitations per-reviewer drill-in. It renders the same `reviewer/review_surface.html` template through the same `_surface_context` plumbing the live reviewer route uses. `GET /operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`, kept for stale bookmarks. The preview surface bypasses session-status / deadline / acceptance gates. The former Previews hub retired in 19Q Item 1; its plural URL permanently redirects to Invitations.
 
 The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `spec/instruments.md` Section D).
 
 ### 5. Per Session Operations Pages
 
-Surfaces for running a session and intervening when needed — validating setup, generating / previewing the materialized reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage, getting the data back out. Six tabs in the chrome's Operations row, in this order:
+Surfaces for running a session and intervening when needed — validating setup, generating / previewing the materialized reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage, getting the data back out. Five tabs in the chrome's Operations row, in this order:
 
 | Page | Template | URL |
 |---|---|---|
 | Assignments | `session_assignments.html` | `/sessions/{id}/assignments` |
 | Validate | `session_validate.html` | `/sessions/{id}/validate` |
-| Previews | `session_previews.html` | `/sessions/{id}/previews` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
 | Extract data | `session_extract_data.html` | `/sessions/{id}/extract-data` |
@@ -120,7 +119,7 @@ Surfaces for running a session and intervening when needed — validating setup,
 
 When the session is `ready`, the status card remains visible (operators inspect mid-cycle), but the per-instrument Self review checkbox renders `disabled` — review is ongoing and flipping include flags would silently change live invitation eligibility. Show + Edit + the inline filter JS stay interactive.
 
-The ordering is deliberate: pre-flight (Assignments, Validate, Previews), then monitoring (Invitations, Responses), then **Extract data** last because it is an end-of-flow surface. See `spec/operations_pages.md` for the Invitations + Responses split and per-page contracts; `spec/assignments.md` covers the Assignments page and the per-instrument status table; `spec/session_home.md` §2 the Extract Setup card the Extract data tab hosts.
+The ordering is deliberate: pre-flight (Assignments, Validate), then monitoring (Invitations, Responses), then **Extract data** last because it is an end-of-flow surface. See `spec/operations_pages.md` for the Invitations + Responses split and per-page contracts; `spec/assignments.md` covers the Assignments page and the per-instrument status table; `spec/session_home.md` §2 the Extract Setup card the Extract data tab hosts.
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
@@ -170,7 +169,7 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 ```
 ┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses][Extract data]
+└────────┴─ OPERATIONS ▶ [Assignments][Validate][Invitations][Responses][Extract data]
 ```
 
 The Observers tab renders conditionally — only when
@@ -194,7 +193,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 ### Sub-pages and Preview
 
 - **A page outside the two phase rows** renders the chrome normally with no tab active, and identifies itself via H1 in the page body.
-- **Operator-side preview-surface route** (`/preview-surface/{page_n}`): renders the reviewer surface for an operator-selected reviewer in a new tab, reusing the live ``_surface_context`` plumbing. `/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`. The Previews hub carries **no** iframe surface card — the full render is a route of its own, opened in a new tab.
+- **Operator-side preview-surface route** (`/preview-surface/{page_n}`): renders the reviewer surface for the Invitations drill-in's reviewer in a new tab, reusing the live ``_surface_context`` plumbing. `/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`.
 
 ### What the chrome does not do
 
@@ -360,11 +359,11 @@ Operations row tab. Read-only deep-dive of every setup issue, intended for the o
 
 There is no standalone Activate button on this page body; activation fires from the Workflow card's Activate session button. The Validate page does still own the **warnings-detour banner** (`/validate?activate=1`) — the Activate button redirects there when the readiness report has non-blocking findings so the operator can acknowledge them before the underlying `/activate` POST fires.
 
-### `/operator/sessions/{id}/previews` — Previews hub
+### `/operator/sessions/{id}/previews` — retired hub redirect
 
-Operations row tab (label: **Previews**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer. Operator-only; bypasses session-status / deadline / acceptance gates.
+Not an Operations tab. Permanently redirects to Invitations; the drill-in owns email previews and the door to the operator-side reviewer surface. `spec/preview_hub.md` records the retirement boundary.
 
-The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}`, reachable from the hub picker card's "Open full preview" button **and from Open reviewer surface on the Invitations per-reviewer drill-in** (19P.6). `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`. The hub carries no iframe surface card and no `#reviewer-surface` anchor.
+The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}`, reachable from **Open reviewer surface** on the Invitations per-reviewer drill-in. `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`.
 
 ### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 
@@ -503,7 +502,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
-- **Two-row chrome → single row.** The two-row layout is unlikely to collapse; the Operations row carries six tabs (`spec/operations_pages.md`). Recorded for completeness; not on any roadmap.
+- **Two-row chrome → single row.** The two-row layout is unlikely to collapse; the Operations row carries five tabs (`spec/operations_pages.md`). Recorded for completeness; not on any roadmap.
 - **Cross-session System Admin** — see §6 above. Sits at Operator's Overview level (above any single session), with its own chrome distinct from the per-session two-row nav. Remaining cross-session admin (system-wide settings, multi-tenant config) is still forward-looking.
 
 ## Cross-references
@@ -515,7 +514,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including layout + lifecycle display-label mapping.
 - **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden), Prepare-then-Activate split + warnings detour.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
-- **`spec/preview_hub.md`** — Preview hub on the Operations row.
+- **`spec/preview_hub.md`** — retirement boundary for the former Preview hub.
 - **`spec/operations_pages.md`** — Invitations + Responses functional spec (reviewer-centric Invitations + reviewee-centric Responses; bulk-action affordances live on the Workflow card stepper).
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.

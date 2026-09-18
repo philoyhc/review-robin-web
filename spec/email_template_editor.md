@@ -10,8 +10,8 @@ it.
 
 Where the rest of the contract lives: `spec/settings_inventory.md` §3
 inventories the stored keys; `spec/rrw_functional_spec.md` §11 states
-the invitation-and-email subsystem in user terms; `spec/preview_hub.md`
-owns the read-only previews that render these templates;
+the invitation-and-email subsystem in user terms; `spec/operations_pages.md`
+owns the Invitations drill-in previews that render these templates;
 `spec/email_infra_options.md` and `guide/segment_14B_email_infrastructure.md`
 own the dispatch leg. The design record is
 `guide/archive/segment_11E_email_template_editor.md`.
@@ -29,7 +29,7 @@ own the dispatch leg. The design record is
   `spec/operator_ui_concept.md`) and is kept that way for link
   stability — renaming it breaks every bookmark and every
   `?template=` link in circulation.
-- Also reached from the Previews hub: each email preview card's footer
+- Also reached from the Invitations per-reviewer drill-in: each email preview card's footer
   reads "Rendered from **Email Template (Setup)** and Reviewers
   (Setup)", linking to `…/setup-invite?template=<kind>` for the kind
   being previewed.
@@ -227,7 +227,7 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 | Consumer | Uses | State |
 |---|---|---|
 | `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and flipped to `sent` in the same transaction with no transport call — the dev-mode preview state described in `spec/rrw_functional_spec.md` §11.6. Lighting the `EmailTransport` is Segment 14B. |
-| Previews hub (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the picked reviewer | Wired. |
+| Invitations per-reviewer drill-in (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the named reviewer | Wired. |
 | Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` | **No consumer exists.** The toggle is stored, round-tripped, audited and previewed, but no submit-time code path reads it; until Segment 14B wires the send, the checkbox is inert. |
 | Settings CSV export / import, clone | the JSON wholesale (§8) | Wired. |
 

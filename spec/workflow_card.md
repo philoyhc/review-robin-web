@@ -23,7 +23,8 @@ useful while the session is mid-lifecycle:
 - **Session Home** (`/operator/sessions/{id}`) — full-width, just
   below the chrome.
 - **Operations-row pages** — full-width, just below the chrome,
-  on Assignments / Validate / Previews / Invitations / Responses.
+  on Assignments / Validate / Invitations / Responses. (Previews was
+  the fifth until it retired at 19Q Item 1.)
 
 The card does not render on Setup-row pages (Reviewers / Reviewees /
 Relationships / Observers / Instruments / Email Template) or on the

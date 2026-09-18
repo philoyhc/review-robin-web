@@ -74,11 +74,11 @@ Rendered inside `.session-nav-card` on every session-scoped page.
 | 6 | Setup tab row | Email Template | `<a>` | `nav-tab` | Chrome nav | |
 | 7 | Operations tab row | Validate | `<a>` | `nav-tab` | Chrome nav | |
 | 8 | Operations tab row | Assignments | `<a>` | `nav-tab` | Chrome nav | Operations row, never Setup |
-| 9 | Operations tab row | Previews | `<a>` | `nav-tab` | Chrome nav | |
+| 9 | Operations tab row | Previews | — | — | **Retired** | Removed in 19Q Item 1; number retained because audit identifiers are stable |
 | 10 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
 | 11 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
 | 12 | Setup tab row | Observers | `<a>` | `nav-tab` | Chrome nav | Renders only when `observers_enabled`. **Numbered 12 rather than slotted after Relationships** — numbers here are stable identifiers other documents cite, so a new tab takes the next free one and the row order is not the render order |
-| 13 | Operations tab row | Extract data | `<a>` | `nav-tab` | Chrome nav | The sixth Operations tab. Render order is Assignments, Validate, Previews, Invitations, Responses, Extract data — `spec/operator_ui_concept.md` §5 carries the row contract |
+| 13 | Operations tab row | Extract data | `<a>` | `nav-tab` | Chrome nav | The fifth Operations tab. Render order is Assignments, Validate, Invitations, Responses, Extract data — `spec/operator_ui_concept.md` §5 carries the row contract |
 
 ---
 
@@ -463,9 +463,9 @@ The affordances a reader may be looking for here are on the drill-in:
 **Open reviewer surface** (§13 row 87b, which replaces row 75a's
 `Open full preview`) and the email preview tab strip, whose rows keep
 their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
-retired with the picker and have no successor — see
-`guide/segment_19Q_workflow_and_previews.md` Item 1 open question 2 for
-why `Random` was not rehomed.
+retired with the picker and have no successor — `Random` gets no
+replacement; see `guide/segment_19Q_workflow_and_previews.md` Item 1's
+Status.
 
 ### 12a — Previewing-as picker — **retired 19Q Item 1**
 

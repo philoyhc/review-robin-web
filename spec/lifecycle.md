@@ -525,8 +525,8 @@ operator is most likely reading that page in. Assignments takes
 being explained, and a third lock-card variant would add a shape
 without removing one. See `spec/assignments.md`.
 
-**Operations pages** (Validate / Assignments / Previews /
-Invitations / Responses) while session is `draft` / `validated`:
+**Operations pages** (Validate / Assignments / Invitations /
+Responses) while session is `draft` / `validated`:
 each page renders its own "session not yet activated" banner if
 the surface needs an active session; most Operations surfaces
 are read-mostly so they work in any state.

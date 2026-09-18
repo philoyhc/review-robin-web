@@ -179,10 +179,10 @@ Notes specific to Session Home:
   layout never promotes either to Primary. Pause carries **no
   confirmation checkbox**; the lifecycle service's `confirm` gate is
   satisfied by a hidden field in the form.
-- **No "See previews" button in any state.** The card has never
-  rendered one. The intent behind the rule stands — previewing is a
-  validation-time affordance, not something to offer while Activated —
-  so a button added later belongs in `validated`, not `ready`.
+- **No "See previews" button in any state.** The card has never rendered
+  one. Email and reviewer-surface previews are reached from an Invitations
+  per-reviewer drill-in once assignments exist; Home does not add a second
+  door.
 - **Status pills + per-issue list live in the right column**, not
   the body. States 3 and 5 surface the readiness pill row
   (`pill-error` / `pill-empty` / `pill-count`) and per-issue list
@@ -433,8 +433,8 @@ State-conditional copy only — the card frame is constant:
 are wired. The pattern is documented here because it is the app's one
 shape for an inert card, and any future placeholder on any page must
 match it rather than invent a second. It is a **class, not a macro**:
-a `placeholder_card` macro existed and was retired unused, so the one
-live placeholder — on the Previews page — writes the markup directly.
+a `placeholder_card` macro existed and was retired unused. No live page uses
+the placeholder class today.
 
 - **Class:** `body.ui-v2 .card.placeholder` — `--surface-muted`
   background, with `--text-subtle` on both the heading and the body,
@@ -443,9 +443,8 @@ live placeholder — on the Previews page — writes the markup directly.
 The visual signal *"this is a placeholder, not a working
 action"* is uniform across every instance. Per-card state
 distinctions live in the body copy, not in opacity flips that
-would desynchronise sibling placeholders. A future placeholder
-card on any page reuses the same macro without further design
-work.
+would desynchronize sibling placeholders. A future placeholder card on any
+page reuses the same class without further design work.
 
 ## Lifecycle behavior summary
 

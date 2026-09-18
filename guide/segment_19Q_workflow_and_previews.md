@@ -97,7 +97,7 @@ for *a named reviewer*, which the editor has no notion of.
 2. **Retire the hub** — nav item, `session_previews.html`,
    `_preview_picker.html`, `GET /previews` → 308, `POST /previews/random`
    deleted.
-3. **Chrome** — six tabs to five, and any layout assumption that counted on six.
+3. **Chrome** — six tabs to five, and any layout assumption that counted on six. **Absorbed by rung 2:** retiring the hub necessarily removed its nav item, and the flexible strip had no six-column layout rule to change.
 4. **The close** — the specs below, `docs/status.md`, `close_check`, `spec-writer`.
 
 ### Definition of done
@@ -110,24 +110,63 @@ for *a named reviewer*, which the editor has no notion of.
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
+  — *the move does not apply: `segment-plan`'s close step 5 archives on a
+  segment close or its last item, and Items 2–3 are still open, so the plan
+  stays in `guide/`. The line is kept verbatim because the skill exempts
+  these five from editing.*
+
+### Status
+
+**Closed 2026-09-18.** Rung 1 moved the three email previews onto the
+Invitations per-reviewer drill-in. Rung 2 retired the picker, Random action,
+hub template and nav tab; `GET /previews` now 308s to Invitations. That nav
+removal also completed rung 3, because the strip has no fixed six-column
+layout. The accepted losses are the pre-Prepare and off-table doors; Random
+gets no replacement.
+
+**The manifest grew twice at the close, and the second time is the finding.**
+Six bullets were added for specs the sweep turned up — `extract_data`,
+`visual_style_rrw`, `rrw_functional_spec`, `spec/README`, `README` and the
+deployed-slot checklist. Then the cold read measured what the sweep had
+actually reached: the ladder's own blast radius said **17 spec/doc files**
+and nine had been edited. Six more still described the hub as a shipping
+Operations page — `validate_page` (a page-identity table field),
+`workflow_card` and `lifecycle` (both enumerating the Operations row),
+`settings_inventory` (pointing at the hub for rendered previews, the exact
+sibling of the `email_template_editor` pointer the sweep *did* fix),
+`ui_elements` (naming the page that hosts the email-tab strip) and
+`visual_style_rrw` again, four sections below a line the same sweep edited.
+
+**None of the six was catchable.** Every one is unanchored prose, and
+`tests/unit/test_doc_conventions.py` only resolves anchored backticked
+paths — so the suite was green throughout with a reader still routed to a
+retired tab by four separate specs. *A measured blast radius is only worth
+the pass that reconciles it:* the number was in the plan from the start and
+the gap was six files wide.
+
+`spec/visual_style_rrw.md`'s third lock-card bullet was **deleted rather
+than repointed** — it described a send-test affordance that was never built
+(the retired `spec/preview_hub.md` said so) on a page that no longer exists.
+The intent survives where it belongs, in
+`guide/segment_14B_email_infrastructure.md`.
 
 ### Open questions
 
-Both answered by the author, 2026-09-18.
+Both answered by the author, 2026-09-18, and collapsed here at the close.
 
 1. **Do the inactive / all-excluded reviewer populations keep a door?**
-   **No — accepted loss.** Note the mechanism, because the obvious
-   rationale is wrong: an inactive reviewer *can* still hold an
-   invitation (invited, emailed, then deactivated —
+   **No — accepted loss.** The mechanism is worth keeping, because the
+   obvious rationale is wrong: an inactive reviewer *can* still hold an
+   invitation, and their drill-in renders with their invite URL —
    `test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table`
-   pins exactly that), and their drill-in renders and shows their invite
-   URL. What they lose is the **Open reviewer surface** link, because
+   pins exactly that. What they lose is **Open reviewer surface**, because
    the Review Progress card is gated on `row`, which is `None` off the
-   table. So the surface goes unreachable via a missing card, not a
+   table. The surface goes unreachable through a missing card, not a
    missing invitation.
-2. **Is `Random` worth keeping** anywhere? **No.** If the need returns
-   it gets rebuilt on the Invitations page, against that table's
-   filters rather than the picker's datalist.
+2. **Is `Random` worth keeping** anywhere? **No.** If the need returns it
+   gets rebuilt on the Invitations page, against that table's filters
+   rather than the picker's datalist. (`spec/operator_button_audit.md`
+   §12 cites this answer.)
 
 ### Out of scope
 
@@ -145,6 +184,17 @@ Both answered by the author, 2026-09-18.
 - `spec/operator_button_audit.md` — the picker's buttons and `Random` retire (Item 1).
 - `spec/role_navigator.md` — the Previews entry (Item 1).
 - `spec/session_home.md` — any Previews pointer (Item 1).
+- `spec/extract_data.md` — Operations-strip diagram loses Previews (Item 1).
+- `spec/visual_style_rrw.md` — chrome diagram loses Previews (Item 1).
+- `spec/rrw_functional_spec.md` — the user-level preview contract moves to the drill-in (Item 1).
+- `spec/README.md` — the spec index marks the hub contract as a retirement boundary (Item 1).
+- `README.md` — the route overview marks the hub as a redirect and names the drill-in jobs (Item 1).
+- `guide/post_azure_todo_checklist.md` — the deployed-slot hover check drops the retired page (Item 1).
+- `spec/validate_page.md` — the Operations-row position field names Previews (Item 1).
+- `spec/workflow_card.md` — the Operations-row enumeration the card renders on (Item 1).
+- `spec/lifecycle.md` — the same enumeration in the lock-card section (Item 1).
+- `spec/settings_inventory.md` — where the rendered email previews live (Item 1).
+- `spec/ui_elements.md` — the `.nav-tab` reference example names the hub page (Item 1).
 - `docs/status.md` — row when Item 1 lands.
 
 ---

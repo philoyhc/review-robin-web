@@ -1165,9 +1165,8 @@ is a consolidated per-instrument editor.
 
 **All Instrument Status card** sits at the top, full-width:
 deadline pill, accepting-responses pill row (one per
-instrument), visibility-when-closed pill row, bulk Open/Close
-and Show/Don't-show actions, and a Preview Instrument button
-linking into the Previews hub.
+instrument), visibility-when-closed pill row, and bulk Open/Close
+and Show/Don't-show actions.
 
 Below it, one **per-instrument card** per instrument, each a
 collapsible `<details>` with a locked/unlocked edit state (at
@@ -1275,8 +1274,7 @@ cascade:
 2. **Draft, populated, pre-generate** — Activate-Session super-
    button runs Generate → Validate → Activate in one click.
 3. **Draft, generated, no errors** — Primary action is Activate
-   Session (no detour). Secondary actions: See validation
-   details, See previews.
+   Session (no detour). The Secondary action opens validation details.
 4. **Draft, generated, blocking errors** — Primary action is See
    validation details (promoted because the operator must look
    at the errors before they can proceed).
@@ -1360,14 +1358,14 @@ The Responses page is monitoring-only; per-cell response
 content is not readable here — that channel is the Extract
 Data download.
 
-### 9.11 Previews
+### 9.11 Reviewer and email previews
 
-The Previews hub (`/operator/sessions/{id}/previews`) is an
-Operations-row tab carrying a per-instrument *operator's view*
-of what each reviewer will see. The page mirrors the reviewer
-surface (display columns, response columns, tag chips, photo
-links) so the operator can sanity-check the instrument before
-activating.
+The Invitations per-reviewer drill-in carries the three rendered email
+previews and an **Open reviewer surface** link. The latter opens an inert
+operator view of that reviewer's production surface in a new tab, using the
+same template and context path as the live surface. The former Operations-row
+Previews hub retired in 19Q Item 1; its GET permanently redirects to
+Invitations.
 
 ### 9.12 Extract data
 
@@ -2335,11 +2333,11 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Group-scoped instruments | `spec/instruments.md` (operator-card / model side); `spec/assignments.md` (fan-out / aggregation) |
 | Instruments page contract | `spec/instruments.md` |
 | Lifecycle states and transitions | `spec/lifecycle.md` |
-| Operations-row pages (Validate / Previews / Invitations / Responses) | `spec/operations_pages.md` |
+| Operations-row pages (Validate / Invitations / Responses) | `spec/operations_pages.md` |
 | Operator button audit (canonical styles) | `spec/operator_button_audit.md` |
 | Operator UI shell + chrome | `spec/operator_ui_concept.md` |
 | Permissions / authorization (gates, per-route matrix, role + ownership invariants) | `spec/permissions.md` |
-| Previews hub | `spec/preview_hub.md` |
+| Retired Previews hub boundary | `spec/preview_hub.md` |
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
 | Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |
 | Reviewer surface — full contract | `spec/reviewer-surface.md` |

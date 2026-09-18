@@ -21,13 +21,13 @@ action bar.
 
 | Page | Template | URL | Operations row position |
 |---|---|---|---|
-| Invitations | `session_invitations.html` | `/operator/sessions/{id}/invitations` | After Previews |
+| Invitations | `session_invitations.html` | `/operator/sessions/{id}/invitations` | After Validate |
 | Responses | `session_responses.html` | `/operator/sessions/{id}/responses` | After Invitations |
 
 Operations row order:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
+Operations  [Assignments][Validate][Invitations][Responses][Extract data]
 ```
 
 **Extract data** sits at the end of the strip because it is an
@@ -371,6 +371,17 @@ assignment. Carries the row's progress fields, and a
 (Secondary role), which opens
 `/operator/sessions/{id}/preview-surface/1?reviewer_email=…` in a **new
 tab** — the reviewer's own surface, inert, with their saved responses.
+
+#### Email previews
+
+Below the two detail cards, one full-width region renders the **Invitation**,
+**Reminder**, and **Responses received** email tabs for this reviewer. The
+active tab is selected by `?email=<kind>`; sibling links retain the reviewer
+detail URL and end in `#email-previews`, so changing tabs returns to the
+region rather than the top of the page. Each tab uses the same renderer as
+its eventual send path, with a placeholder invitation URL where previewing
+must not mint or rotate a real token. This region moved intact from the
+retired Previews hub in 19Q Item 1.
 
 ### Empty-state copy
 

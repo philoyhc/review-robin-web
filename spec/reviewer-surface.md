@@ -28,8 +28,9 @@ Cross-references:
   primitives.
 - `spec/ui_elements.md` — canonical elements (P6 hover-by-fill, P7
   recovery-action color family).
-- `spec/preview_hub.md` — operator-side preview entry-point spec; the
-  preview page reuses this surface's template.
+- `spec/operations_pages.md` — the Invitations drill-in that provides the
+  operator-side preview entry point. The preview route reuses this surface's
+  template.
 - `app/web/templates/reviewer/review_surface.html` — the template this
   spec governs. The operator-side preview route renders the same file.
 
@@ -769,23 +770,18 @@ its cross-role union query (inline in
 ## Operator preview mode
 
 The operator-side preview lives at
-`/operator/sessions/{id}/preview-surface/{page_n}` and has **two doors**
-since 19P.6: the Previews hub picker card's "Open full preview" button,
-and **Open reviewer surface** in the Review Progress card of the
-Invitations per-reviewer drill-in (`spec/operations_pages.md`
-§ *Per-row drill-in*). Both open it in a new tab and both pass
-`?reviewer_email=`; the route itself is unchanged by having two. The route
+`/operator/sessions/{id}/preview-surface/{page_n}`. Its door is **Open
+reviewer surface** in the Review Progress card of the Invitations
+per-reviewer drill-in (`spec/operations_pages.md` § *Per-row drill-in*).
+It opens in a new tab and passes `?reviewer_email=`. The route
 renders this template through the same `_surface_context` plumbing the
 live reviewer route uses, with three `preview_mode=True` adjustments:
 the deadline observer is skipped (no DB mutation on a deadline
 crossing), `accepting=True` is forced on every row so the form renders
 interactive regardless of session lifecycle, and the action-row
 Prev/Next URLs are rewritten via a callback so they point back at the
-operator-side preview route. **The hub itself carries no embedded copy
-of the surface** — a second rendering path is the one thing a
-production-parity preview cannot afford. `/preview` (singular) is a
-permanent (308) redirect to `/preview-surface/1`, never to a fragment
-on the hub.
+operator-side preview route. `/preview` (singular) is a permanent (308)
+redirect to `/preview-surface/1`.
 
 In preview mode:
 
@@ -820,12 +816,11 @@ In preview mode:
   Save/Cancel/Submit buttons are disabled.
 - The overview card renders normally — `_surface_context` builds
   the same per-page status pills the reviewer would see.
-- **Real-row rendering.** The preview shows the picker-selected
+- **Real-row rendering.** The preview shows the selected
   reviewer's real assignments (no synthetic-row padding). When
   `?reviewer_email=…` is unset, the route defaults to the first
-  reviewer in the session (alphabetical-by-email); an unmatched
-  value redirects back to the Previews hub with the bad query
-  preserved so the picker's "No reviewer matched" hint renders.
+  reviewer in the session (alphabetical-by-email); an unmatched value
+  redirects to Invitations.
 - **The dropped-fields notice renders here too** (19P.6 rung 2b).
   *"Some saved responses are no longer collected: …"* names fields the
   reviewer has an answer on whose Band 2 chip the operator has since
