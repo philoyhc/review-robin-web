@@ -621,11 +621,12 @@
         // three pages and should not have to read it three times.
         var _rrwSortedTable = document.querySelector("[data-rrw-sortable]");
         if (_rrwSortedTable) {
-          // NOTE for 19O Item 6: this `closest(".rrw-sort-btn")` is the
-          // dirty gate, NOT 19P.1's panel-removal workaround, which this
-          // page never had. `test_the_per_page_workaround_is_gone` uses
-          // that string as the workaround's signature, so extending it
-          // across the migrated pages must exempt this one.
+          // This `closest(".rrw-sort-btn")` is the dirty gate, NOT
+          // 19P.1's panel-removal workaround, which this page never had.
+          // `test_no_page_keeps_a_second_mechanism` matches the
+          // workaround's whole shape — the guard *immediately followed by
+          // a panel removal* — precisely so this page's guard, whose next
+          // line is `expanderIsDirty()`, does not read as one.
           _rrwSortedTable.addEventListener("click", function (event) {
             if (!event.target.closest) return;
             if (!event.target.closest(".rrw-sort-btn")) return;

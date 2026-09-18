@@ -729,8 +729,9 @@
         // reads `a.children[col]`, and gets `undefined` for a row whose
         // only cell is the panel — so it sorts null-last and strands
         // the panel at the foot of the table while the selected rows
-        // keep their rails where they are. Capture phase, so this runs
-        // before the header's own inline handler: take the panel out
+        // keep their rails where they are. Being present when base.html
+        // stamps `rrwOriginalIndex` corrupts the unsorted restore order
+        // on top of that.
         //
         // **Migrated at 19O Item 6.** The fix lives in `_rrwApplySort`
         // now: it drops every `.session-expander` before it collects or
