@@ -4,7 +4,7 @@
 moves — closed and archived** at ten items (nine closed, one moved out),
 PRs #2315 → #2335, suite 3,723 → **3,842**; plan now at
 `guide/archive/segment_19K_assessment_moves.md`. It opened for
-`guide/codebase_assessment_11sep.md` §8's three recommended moves and
+`guide/archive/codebase_assessment_11sep.md` §8's three recommended moves and
 admitted seven more, each from the one before it — the same shape 19J
 took. Item 3 was *to decide* and deferring was permitted; re-measuring
 made the fix cheap instead, taking the Invitations / Responses N+1 from
