@@ -23,8 +23,14 @@ deleted without ceremony.
 ## 1. One Rosters page, replacing four
 
 **Proposed 2026-09-12 by the author.** The **first move of a two-move
-consolidation** — entry 2 is the second, folding Previews, Invitations
-and Responses into Monitoring on the same structure. Assignments is
+consolidation** — the second was folding Invitations and Responses
+into Monitoring on the same structure, **and that entry is no longer in
+this file**. It was `## 3. One Monitoring page, replacing three`, filed
+2026-09-12 and removed at `f681220`; 19Q Item 1 has since retired the
+Previews page it would have folded in. Recorded here rather than
+re-pointed, because this sentence has now cited a missing entry twice —
+it said *entry 2* until 19O Item 6, when it was "corrected" to *entry 3*,
+which does not exist either. Assignments is
 deliberately in neither.
 
 Consolidate the four roster Setup pages — **Reviewers**, **Reviewees**,

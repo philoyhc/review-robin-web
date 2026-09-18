@@ -474,7 +474,7 @@ the operator lands back on the page they were trying to edit. The
 route honours it only when it matches `_REVERT_RETURN_TO`
 (`app/web/routes_operator/_shared.py`) — `reviewers`, `reviewees`,
 `relationships`, `observers`, `assignments`, `instruments`,
-`validate`, `previews`, `invitations`, `responses`,
+`validate`, `invitations`, `responses`,
 `extract-data` — and otherwise falls through to Session Home. That
 fallback is what stops a crafted slug steering the redirect, so the
 set is an allowlist rather than a hint.

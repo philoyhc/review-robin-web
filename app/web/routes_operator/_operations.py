@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -24,6 +24,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import invitations, monitoring, validation
+from app.services.email_identity import normalize_email
 from app.services._queries import tag_slot_presence
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
@@ -320,6 +321,40 @@ def _require_invitation_in_session(
     return invitation, review_session
 
 
+def _unmatched_email(
+    db: Session, review_session: ReviewSession, candidate: str
+) -> str:
+    """The candidate address, but only if no reviewer really has it.
+
+    Folds through `normalize_email` — `str.lower` since 19N Item 2,
+    and the authority is that module's own docstring plus
+    `tests/unit/test_email_identity_fold.py`, not `spec/architecture.md`,
+    which says nothing about folding. Without it `ALICE@example.edu`
+    would be reported missing while `alice@example.edu` sits in the
+    roster.
+
+    **No status filter, unlike the participant gates.** Those answer
+    "may this person act"; this one answers "does the picker's
+    population contain this address", and that population is
+    `build_preview_picker_context`'s — every `Reviewer` in the session,
+    active or not. Filtering here would suppress the card for a
+    withdrawn reviewer whose address the picker also failed to resolve,
+    landing the operator on Invitations with nothing said, which is the
+    regression this whole item exists to undo.
+    """
+    candidate = candidate.strip()
+    if not candidate:
+        return ""
+    folded = normalize_email(candidate)
+    exists = db.execute(
+        select(Reviewer.id)
+        .where(Reviewer.session_id == review_session.id)
+        .where(func.lower(Reviewer.email) == folded)
+        .limit(1)
+    ).first()
+    return "" if exists else candidate
+
+
 @router.get(
     "/sessions/{session_id}/invitations", response_class=HTMLResponse
 )
@@ -333,6 +368,7 @@ def invitations_index(
     super_step: str | None = None,
     super_error: str | None = None,
     prepare_confirm: str | None = None,
+    no_match: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -402,6 +438,19 @@ def invitations_index(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
+            # 19O Item 6 — the address `/preview-surface` could not
+            # resolve, echoed back so this page can say so. Empty on
+            # every other entry path, which is all of them but one.
+            #
+            # **Re-checked here rather than trusted.** The value is a
+            # query parameter, so anything can put anything in it, and
+            # the card states a fact about the roster: "no reviewer in
+            # this session has this email". Echoing it unverified let
+            # `?no_match=alice@example.edu` assert that about Alice
+            # while Alice sat in the table below. A page whose job is
+            # to report the roster accurately cannot take a caller's
+            # word for what the roster contains.
+            "no_match": _unmatched_email(db, review_session, no_match),
             "total_row_count": len(all_rows),
             # Segment 19I Item 10 — the shared preview-count
             # sentence, moved out of the filter row to sit with

@@ -35,7 +35,7 @@ triples actually get materialised from the Band 1 rule — see
 
 - [Concept](#concept)
 - [Page layout](#page-layout)
-- [Status + bulk-actions card](#status--bulk-actions-card)
+- [Session status card](#session-status-card)
 - [Per-instrument card](#per-instrument-card)
   - [Identity](#identity)
   - [Instrument assignment rule + Unit of review](#instrument-assignment-rule--unit-of-review)
@@ -89,12 +89,13 @@ instrument, not a card flavour of its own.
 
 ## Page layout
 
-Top → bottom, full width:
+Top → bottom:
 
 1. **Page title** — "Instruments — {session name}" + the standard
    operator session chrome (Workflow card, breadcrumbs).
-2. **Status + bulk-actions card** — one-line summary of the
-   session's instruments + a small set of bulk affordances.
+2. **Guidance card and session status card**, side by side in a
+   `.card-columns` pair — so the status card is **half-width**, not
+   full, which this section said until 19O Item 6.
 3. **Per-instrument cards** — one card per instrument, ordered
    by `instruments.order` (the operator's preferred display
    order; insertion order by default, mutable via Replicate +
@@ -110,13 +111,25 @@ card has `id="instrument-{id}"` so deep-links from other surfaces
 (Validate page Fix-on-X links, deep-link anchors) land on the
 right card.
 
-## Status + bulk-actions card
+## Session status card
 
-One-line status row, left-aligned:
+Named the **Status + bulk-actions card** until 19O Item 6, when the
+name outlived the bulk actions: it holds none, and the two it once
+described went separately at 18R Item 3 — `accepting/all-{on,off}`
+existed with no UI driving it, while the **Show all when closed /
+Don't show any when closed** toggle was on the page and was removed.
+See "No session-level bulk flip" below.
 
-> *N instruments — M accepting responses.*
+One-line pill row, left-aligned:
 
-Right-aligned bulk-action toggle stack:
+> *Session deadline (auto-close): `<deadline>` · `N accepting` ·
+> `M not accepting`*
+
+There is no instrument count and no showing-when-closed count; the
+first was in this spec and never shipped, the second follows from
+the per-instrument visibility policy having no operator control.
+
+Below it, left-aligned under the pill row:
 
 - **Expand all instruments / Collapse all instruments**:
   flip every per-instrument `<details>` open or closed.

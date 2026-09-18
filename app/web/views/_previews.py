@@ -7,7 +7,7 @@ Owns:
 
 - **Reviewer picker** — ``PreviewPickerOption`` /
   ``PreviewPickerContext`` + ``build_preview_picker_context`` /
-  ``_extract_email_from_picker_value`` /
+  ``extract_email_from_picker_value`` /
   ``_picker_assigned_reviewee_names``.
 - **Email previews region** — ``EmailBody`` / ``EmailPreviewTab`` +
   ``EMAIL_PREVIEW_TABS`` / ``PREVIEW_INVITE_URL_PLACEHOLDER`` +
@@ -111,7 +111,7 @@ class PreviewPickerContext:
 _PICKER_LABEL_EMAIL_RE = re.compile(r"\(([^()]+@[^()]+)\)\s*$")
 
 
-def _extract_email_from_picker_value(value: str) -> str:
+def extract_email_from_picker_value(value: str) -> str:
     """Parse the picker's submitted value into an email.
 
     Accepts a bare email (``"alice@x.edu"``) or a datalist label
@@ -161,7 +161,7 @@ def build_preview_picker_context(
     ]
 
     raw = reviewer_query.strip()
-    parsed_email = _extract_email_from_picker_value(reviewer_query)
+    parsed_email = extract_email_from_picker_value(reviewer_query)
 
     current: PreviewPickerOption | None = None
     current_index: int | None = None

@@ -43,7 +43,7 @@ which 303s to `/operator/sessions/archived`). Allowed slugs:
   `/operator/sessions/{id}`)
 - `reviewers` / `reviewees` / `assignments` / `instruments` (Setup
   + Assignments)
-- `validate` / `previews` / `invitations` / `responses` (the
+- `validate` / `invitations` / `responses` (the
   remaining Operations-row pages)
 
 The allowlist is `_REVERT_RETURN_TO` in

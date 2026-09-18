@@ -22,6 +22,33 @@
      card's stepper makes the lifecycle state explicit and the
      Activate session super-button is the single entry point. #}
 
+  {# 19O Item 6 — an operator sent here by `/preview-surface` with an
+     address it could not resolve. The Previews hub answered this case
+     with a "No reviewer matched" hint until it retired at 19Q Item 1;
+     without it the redirect landed them on an unasked-for page saying
+     nothing.
+
+     `card banner-scroll-target` + `role="alert"` — the shape
+     `spec/ui_elements.md` §5 gives a notice outside the `.banner`
+     family, and the one `sys_admin_users.html` and `session_detail.html`
+     already use. A first draft labelled it with a `.pill.pill-empty`,
+     which is the amber status badge every other surface uses for a
+     counter; a pill is not a message label.
+
+     The route re-checks `no_match` against the roster before this
+     renders, so the sentence below is a fact rather than an echo. #}
+  {% if no_match %}
+    <div class="card banner-scroll-target" role="alert"
+         id="invitations-no-match">
+      <p>
+        <strong>No reviewer matched.</strong>
+        No reviewer in this session has the email
+        <strong>{{ no_match }}</strong>, so there is no surface to
+        preview for it. Search the table below for the one you meant.
+      </p>
+    </div>
+  {% endif %}
+
   <div class="card" id="invitations-info-card">
     {# Info card — eight lifecycle counters. Bulk-action buttons
        (Generate invitations / Send all pending / Regenerate all /

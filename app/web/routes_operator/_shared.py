@@ -167,7 +167,6 @@ _REVERT_RETURN_TO = {
     "assignments",
     "instruments",
     "validate",
-    "previews",
     "invitations",
     "responses",
     "extract-data",

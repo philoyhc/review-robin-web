@@ -1163,10 +1163,25 @@ loads do not happen.
 The Instruments page (`/operator/sessions/{id}/instruments`)
 is a consolidated per-instrument editor.
 
-**All Instrument Status card** sits at the top, full-width:
-deadline pill, accepting-responses pill row (one per
-instrument), visibility-when-closed pill row, and bulk Open/Close
-and Show/Don't-show actions.
+**The session status card** sits at the top in a `.card-columns`
+pair beside the guidance card — **half-width**, not the full-width
+"All Instrument Status card" this section described until 19O Item
+6. It carries a one-line pill row (session deadline, `N accepting`,
+`M not accepting`) and the **Expand all / Collapse all
+instruments** buttons, which act on the page rather than on any
+instrument.
+
+It holds **no accepting or visibility control**. The two bulk
+affordances this section used to name went separately at 18R Item
+3: `POST .../instruments/accepting/all-{on,off}` existed with no
+UI driving it, while the **Show all when closed / Don't show any
+when closed** toggle *was* on the page and was removed with it
+(`docs/status.md`, the two struck route rows). Per-instrument
+Open / Close in each card's Identity row is the only accepting
+control; visibility-when-closed has no operator control at all and
+follows the per-instrument visibility policy, so the status row
+reports an accepting count and no showing-when-closed count.
+`spec/instruments.md` owns that contract and states it in full.
 
 Below it, one **per-instrument card** per instrument, each a
 collapsible `<details>` with a locked/unlocked edit state (at

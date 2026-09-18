@@ -820,7 +820,13 @@ In preview mode:
   reviewer's real assignments (no synthetic-row padding). When
   `?reviewer_email=…` is unset, the route defaults to the first
   reviewer in the session (alphabetical-by-email); an unmatched value
-  redirects to Invitations.
+  redirects to Invitations **carrying the address as `?no_match=`**,
+  which that page renders as a notice naming the lookup that failed
+  (19O Item 6). A blank or whitespace-only value carries nothing — it
+  resolves to `None` only when the session has no reviewers, which is
+  not a typo to report. Manage Invitations re-checks the address
+  against its own roster before rendering, so a hand-typed `no_match`
+  for a reviewer who exists renders nothing.
 - **The dropped-fields notice renders here too** (19P.6 rung 2b).
   *"Some saved responses are no longer collected: …"* names fields the
   reviewer has an answer on whose Band 2 chip the operator has since

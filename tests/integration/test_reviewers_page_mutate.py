@@ -666,8 +666,16 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
         "the bulk form does not carry the page it was rendered on"
     )
 
+    # `.order_by` is load-bearing (19O Item 6, raised on #2444): a
+    # `SELECT` with no `ORDER BY` has no guaranteed row order, so
+    # indexing `[210]` was asking the database for its 211th row by
+    # luck. SQLite happens to return insertion order for this shape
+    # and Postgres need not, which makes it a `ci-postgres`-only flake
+    # — the worst kind, because the suite is green where it is written.
     rid = db.execute(
-        select(Reviewer.id).where(Reviewer.session_id == review_session.id)
+        select(Reviewer.id)
+        .where(Reviewer.session_id == review_session.id)
+        .order_by(Reviewer.id)
     ).scalars().all()[210]
     edit = re.search(
         r'<form[^>]*id="reviewer-edit-form".*?</form>',

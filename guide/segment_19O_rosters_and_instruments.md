@@ -10,32 +10,118 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 6 — Loose ends, recorded 2026-09-18
+## Item 6 — Loose ends, recorded 2026-09-18, settled 2026-09-18
 
-**A register, not a plan.** Each line is a thing found and left, none of
-them in a live ladder. No `### Doc impact` until one is taken up, so
-`close_check.py 19O.6` fails C1 by design.
+### Opportunity
 
-- `app/web/spec_registry.py:106-107` maps `_preview_surface` and
-  `_operations`' redirects to `spec/preview_hub.md`, which disclaims the
-  contract. Precondition for ever deleting that file.
-- `spec/rrw_functional_spec.md` §9.1 and `docs/status.md:803` claim an
-  All Instrument Status card with bulk Open/Close; retired at 18R Item 3.
-- `app/web/routes_operator/_shared.py:170` and
-  `app/web/views/_workflow_card.py:73` still carry the dead `previews`
-  return-to slug.
-- `/preview-surface` with an unmatched `?reviewer_email=` 303s to
-  Invitations with no "no reviewer matched" hint. Dropped by consequence
-  at 19Q.1, not by decision.
-- `tests/integration/test_reviewers_page_mutate.py:669-671` indexes an
-  unordered `select`. One-line `.order_by(Reviewer.id)`; raised on #2444,
-  unapplied.
-- `guide/new_ux_ideas.md:26` proposes folding the retired Previews page
-  into Monitoring.
-- Cosmetic: `spec/preview_hub.md:7` `{page_n}` where the button is page 1;
-  `spec/operations_pages.md:377` "two detail cards" where a listed
-  reviewer has three; `docs/status.md:816` dropped the 11F attribution;
-  `README.md`'s `previews` row puts `Redirect` in a `Row` column.
+Seven things found during 19P's close and 19Q Item 1 and left where
+they were, each living only in a conversation. Recorded as a register
+rather than a plan, then worked through in one pass on the author's
+instruction.
+
+### Decision
+
+Settle all seven. One carried a behavior choice, one a scope choice,
+both the author's: the lost *"no reviewer matched"* hint is **restored**
+rather than specced as an accepted loss, and the per-page sort-workaround
+migration **stays filed** rather than riding this pass.
+
+### Doc impact
+
+- `spec/rrw_functional_spec.md` — **§9.6**'s session status card described against the shipped template: half-width, no bulk controls, and the two that went at 18R Item 3 went for different reasons (Item 6).
+- `spec/lifecycle.md` — the `_REVERT_RETURN_TO` allowlist loses the dead `previews` slug (Item 6).
+- `spec/preview_hub.md` — **Open reviewer surface** opens page 1, not `{page_n}` (Item 6).
+- `spec/operations_pages.md` — the drill-in's email region sits below two cards or three, depending on the Review Progress card (Item 6).
+- `app/web/spec_registry.py` — `_preview_surface`'s governing spec, which pointed only at the retirement note (Item 6).
+- `README.md` — the `previews` route row is a redirect, not an Operations row (Item 6).
+- `guide/new_ux_ideas.md` — entry 2 no longer proposes folding in a retired page (Item 6).
+- `spec/reviewer-surface.md` — the redirect now carries the unmatched address, and the landing page re-checks it; **added at the close**, having been marked `cites:` on the registry half alone (Item 6).
+- `spec/operations_pages.md` — the shared page shape gains a conditional fifth region between the Workflow card and the info card; **added at the close** (Item 6).
+- `spec/workflow_card.md` — its copy of the return-to allowlist carried the dead `previews` slug too; **added at the close** (Item 6).
+- `spec/instruments.md` — the page-layout and status-card sections, which §9.6 delegates to and which carried the same four errors; **added at the second close pass** (Item 6).
+- `spec/visual_style_rrw.md` — the card cited as the worked example of legitimate full-width is half-width; **added at the second close pass** (Item 6).
+- `docs/status.md` — the 11F attribution on `GET .../preview`, the corrected status-card description, and the row when this lands (Item 6).
+
+### Status
+
+**Settled 2026-09-18, all seven.** Two touched behavior, five were
+prose.
+
+- **`app/web/spec_registry.py`** pointed `_preview_surface` at
+  `spec/preview_hub.md` alone — a file that, since 19Q Item 1,
+  explicitly hands the surface contract to `spec/reviewer-surface.md`.
+  The registry named a document disclaiming the module it governed.
+  Both modules now list `reviewer-surface` first.
+- **The dead `previews` return-to slug** is out of
+  `_REVERT_RETURN_TO`, its docstring example, and `spec/lifecycle.md`'s
+  copy of the allowlist. It is an allowlist, so a stale member is a
+  redirect target nothing can reach rather than a hazard — but an
+  allowlist that lists the unreachable teaches a reader the wrong set.
+- **The lost hint is restored.** `/preview-surface` now carries an
+  unmatched address to Manage Invitations as `?no_match=`, which
+  renders a `pill-empty` notice naming it. Only when the operator
+  supplied one: a blank email resolves to `None` only on a session with
+  no reviewers, and reporting *"no reviewer matched ''"* would name a
+  mistake nobody made — the existing empty-roster test now pins that
+  the hint is absent there.
+- **The unordered `select` was one of two.** The register named
+  `test_reviewers_page_mutate.py`; `test_observers_row_landing.py`
+  carries the same `[210]` index against the same unordered query,
+  copied from it along with the defect. `test_preview_pager.py`, which
+  looked like a third, already ordered. Both fixed. *A register entry
+  names the instance somebody noticed, not the class.*
+- The documentary corrections, one bullet each in `Doc impact` above.
+  Counted rather than summarised, because two records of this item
+  disagreed on its size at the close and neither number was right.
+
+**The cold read found five faults, and two of them were the entries
+fixed badly rather than the entries themselves.**
+
+- *The invariant was asserted in four places and was false.* "A blank
+  email means an empty roster, so no hint" holds of the resolver, which
+  strips; the redirect gate read the raw string, so `?reviewer_email=%20`
+  on an empty roster produced "no reviewer has the email" followed by
+  nothing. **Two gates on one value have to agree about what counts as
+  blank.**
+- *The hint stated a fact it never checked.* `no_match` came straight
+  off the query string, so a hand-typed one had the page assert that a
+  reviewer sitting in the table below did not exist. The route now
+  re-checks it against the roster, folded through `normalize_email`.
+- *The dead-slug fix was half done.* `spec/workflow_card.md` carries
+  the same allowlist as `spec/lifecycle.md` and kept `previews` —
+  leaving two live specs disagreeing, which is the defect the entry was
+  filed for.
+- *The §9.6 correction cited §9.1, and fixed one wrong clause inside a
+  sentence wrong in four more.* The card is half-width, not full-width;
+  has an accepting **count**, not a per-instrument pill row; has no
+  visibility pill row at all; and holds two buttons, so "read-only" was
+  the wrong word. And the two bulk controls went **differently** at 18R
+  Item 3 — the accepting one was never wired, the *Show all when closed*
+  toggle was on the page and was removed. Rewritten against the
+  template.
+- *The new card ignored the repo's notice idiom* — no `role="alert"`,
+  no `banner-scroll-target`, and a `.pill-empty` used as a message
+  label where every other surface uses it for a counter.
+
+**One line the register should have had and did not.** Item 4's own
+`Status` says the remaining sort-workaround migration is Item 6's, and
+nobody wrote it down here — so the register was incomplete about its own
+scope from the day it was filed. It is a line now, and stays open:
+
+- **Migrate `session_reviewees`, `session_relationships` and
+  `session_assignments`** off 19P.1's per-page capture-phase handler
+  onto the shared `rrw:sorted` listener, and widen
+  `MIGRATED_PAGES` in `tests/unit/test_sort_drops_injected_panel.py`
+  to all six. Author deferred it from this pass (2026-09-18); the three
+  pages are correct meanwhile, their handler running ahead of the
+  inline sort handler. Until it lands, the repo carries two mechanisms
+  for one job and `spec/ui_elements.md` says so explicitly.
+
+### Out of scope
+
+- The sort-workaround migration above, by the author's ruling.
+- `guide/new_ux_ideas.md:143`'s mention of Previews, which is a dated
+  measurement (`453546c4`) and correct on its date.
 
 ---
 

@@ -133,7 +133,14 @@ def test_out_of_range_page_returns_404(
 def test_session_without_reviewers_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """Empty roster means the reviewer surface has no subject."""
+    """Empty roster means the reviewer surface has no subject.
+
+    **And lands without a hint** (19O Item 6). A blank `reviewer_email`
+    resolves to `None` only when there is nobody to resolve to, so
+    reporting "no reviewer matched ''" would name a mistake the
+    operator did not make. The `no_match` query key is for a typo,
+    not for an empty session.
+    """
     client.post(
         "/operator/sessions",
         data={"name": "Empty", "code": "prev-s-empty"},
@@ -150,12 +157,21 @@ def test_session_without_reviewers_303s_to_invitations(
     assert response.headers["location"] == (
         f"/operator/sessions/{session.id}/invitations"
     )
+    assert "no_match" not in response.headers["location"]
 
 
 def test_unmatched_reviewer_email_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """An unknown reviewer does not silently select another reviewer."""
+    """An unknown reviewer does not silently select another reviewer.
+
+    **The address rides along since 19O Item 6.** The Previews hub
+    answered this path with a "No reviewer matched" hint until it
+    retired at 19Q Item 1, which took the hint as a consequence rather
+    than a decision — leaving the operator on a page they did not ask
+    for with nothing said. Manage Invitations says it now, so the
+    redirect has to carry what to say.
+    """
     session = _make_session_with_reviewer(client, db, code="prev-s-bad")
     response = client.get(
         f"/operator/sessions/{session.id}/preview-surface/1"
@@ -165,7 +181,109 @@ def test_unmatched_reviewer_email_303s_to_invitations(
     assert response.status_code == 303
     assert response.headers["location"] == (
         f"/operator/sessions/{session.id}/invitations"
+        "?no_match=ghost%40example.edu"
     )
+
+
+def test_a_whitespace_email_on_an_empty_roster_carries_no_hint(
+    client: TestClient, db: Session
+) -> None:
+    """Two gates on one value have to agree about what counts as blank.
+
+    `build_preview_picker_context` strips before it resolves; the
+    redirect gate did not, so `?reviewer_email=%20` on an empty roster
+    took the truthy branch and the page announced that no reviewer has
+    the email — followed by nothing. Found by a cold read after the
+    invariant had been asserted in four places.
+    """
+    client.post(
+        "/operator/sessions",
+        data={"name": "Empty", "code": "prev-s-ws"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "prev-s-ws")
+    ).scalar_one()
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=%20%20%20",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/invitations"
+    )
+
+
+def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
+    client: TestClient, db: Session
+) -> None:
+    """The card states a fact about the roster, so the page checks it.
+
+    `no_match` is a query parameter, so anything can put anything in
+    it. Echoed unverified, `?no_match=rae@example.edu` had the page
+    assert that no reviewer has that address while Rae sat in the table
+    below. Folded through `normalize_email`, so a case variant is
+    caught as the same person.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-liar")
+    response = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+        "?no_match=RAE@example.edu"
+    )
+    assert response.status_code == 200
+    # Anchor the negative. Without this, a 403 from
+    # `require_session_operator`, a 404 or a 500 page would all contain
+    # no "No reviewer matched" and pass green — the vacuity shape this
+    # segment pair has met at nearly every review. Asserting Rae is on
+    # the page makes the docstring's "while Rae sat in the table below"
+    # an assertion rather than a claim.
+    assert "rae@example.edu" in response.text
+    assert "No reviewer matched" not in response.text
+
+
+def test_a_picker_label_is_reported_as_the_address_inside_it(
+    client: TestClient, db: Session
+) -> None:
+    """The two halves of the round trip read the input the same way.
+
+    The picker's datalist emits `Name (email)`, and the resolver parses
+    that with `extract_email_from_picker_value`. The redirect echoed the
+    raw string, so a stale bookmark carrying a label produced "no
+    reviewer has the email R0 (ghost@example.edu)" — a label presented
+    as an address.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-label")
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=R0 (ghost@example.edu)",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/invitations"
+        "?no_match=ghost%40example.edu"
+    )
+
+
+def test_the_landing_page_names_the_address_that_did_not_match(
+    client: TestClient, db: Session
+) -> None:
+    """The redirect is only half of it; the hint is the other half.
+
+    Follows the redirect rather than asserting on the header, because
+    a `no_match` the page ignored would pass the test above and still
+    leave the operator with no explanation.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-hint")
+    html = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=ghost@example.edu",
+        follow_redirects=True,
+    ).text
+    assert "No reviewer matched" in html
+    assert "ghost@example.edu" in html
+
 
 
 # --------------------------------------------------------------------------- #
