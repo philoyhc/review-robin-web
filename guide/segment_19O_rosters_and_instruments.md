@@ -90,8 +90,11 @@ its treatment when the author takes it up, as Item 6's did.
    place that one was copied from.
 10. **`spec/workflow_card.md:872-874` points at a retired handler.**
     Its source-of-truth list names `invitations_generate`, which 19Q
-    Item 2 rung 3 deleted — `grep "def invitations_generate" app/`
-    returns nothing. Unanchored prose, so no doc gate catches it.
+    Item 2 rung 3 deleted — `grep -rn "def invitations_generate" app/`
+    exits 1, while the same search for its surviving sibling
+    `invitations_send_all` finds `_operations.py:681`, so the empty
+    result is absence and not a broken search. Unanchored prose, so no
+    doc gate catches it.
 11. **`tools/code_metrics.py` still answers on a shallow clone.**
     `guide/codebase_assessment_18sep.md` §4 proposes the
     `--is-shallow-repository` guard that would make it refuse rather
