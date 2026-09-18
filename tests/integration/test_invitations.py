@@ -2312,9 +2312,13 @@ def test_an_open_session_with_no_invitations_is_told_a_remedy_it_can_reach(
 def _next_action_body(page: str) -> str:
     """The Workflow card's prose block, without its button row.
 
-    Sliced rather than searched, because several of the strings below
-    also appear in the Setup-checklist aside and in the session pill
-    row; a whole-page `in` would pass on the wrong element.
+    Sliced rather than searched, because two of the three strings below
+    occur elsewhere on the page. Measured on a rendered State 2 page:
+    `"validate"` appears 9 more times, almost all of them
+    `--lifecycle-validated-*` custom properties in `base.html`'s inline
+    stylesheet, and `"invitation"` once more in the Operations nav
+    tab's href. Only `"assignment pairs"` is unique to the copy, so a
+    whole-page `in` would pass vacuously on the other two.
     """
     start = page.index('<div class="next-action-body">')
     return page[start : page.index("</div>", start)]
