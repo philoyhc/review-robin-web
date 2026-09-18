@@ -210,7 +210,9 @@ def test_a_whitespace_email_on_an_empty_roster_carries_no_hint(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "no_match" not in response.headers["location"]
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/invitations"
+    )
 
 
 def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
@@ -225,11 +227,43 @@ def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
     caught as the same person.
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-liar")
-    html = client.get(
+    response = client.get(
         f"/operator/sessions/{session.id}/invitations"
         "?no_match=RAE@example.edu"
-    ).text
-    assert "No reviewer matched" not in html
+    )
+    assert response.status_code == 200
+    # Anchor the negative. Without this, a 403 from
+    # `require_session_operator`, a 404 or a 500 page would all contain
+    # no "No reviewer matched" and pass green — the vacuity shape this
+    # segment pair has met at nearly every review. Asserting Rae is on
+    # the page makes the docstring's "while Rae sat in the table below"
+    # an assertion rather than a claim.
+    assert "rae@example.edu" in response.text
+    assert "No reviewer matched" not in response.text
+
+
+def test_a_picker_label_is_reported_as_the_address_inside_it(
+    client: TestClient, db: Session
+) -> None:
+    """The two halves of the round trip read the input the same way.
+
+    The picker's datalist emits `Name (email)`, and the resolver parses
+    that with `extract_email_from_picker_value`. The redirect echoed the
+    raw string, so a stale bookmark carrying a label produced "no
+    reviewer has the email R0 (ghost@example.edu)" — a label presented
+    as an address.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-label")
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=R0 (ghost@example.edu)",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/invitations"
+        "?no_match=ghost%40example.edu"
+    )
 
 
 def test_the_landing_page_names_the_address_that_did_not_match(

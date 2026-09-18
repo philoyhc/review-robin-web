@@ -326,10 +326,21 @@ def _unmatched_email(
 ) -> str:
     """The candidate address, but only if no reviewer really has it.
 
-    Folds through `normalize_email` so the check matches every other
-    identity gate in the app (`spec/architecture.md`, and the fold is
-    `str.lower` since 19N Item 2) — otherwise `ALICE@example.edu` would
-    be reported missing while `alice@example.edu` sits in the roster.
+    Folds through `normalize_email` — `str.lower` since 19N Item 2,
+    and the authority is that module's own docstring plus
+    `tests/unit/test_email_identity_fold.py`, not `spec/architecture.md`,
+    which says nothing about folding. Without it `ALICE@example.edu`
+    would be reported missing while `alice@example.edu` sits in the
+    roster.
+
+    **No status filter, unlike the participant gates.** Those answer
+    "may this person act"; this one answers "does the picker's
+    population contain this address", and that population is
+    `build_preview_picker_context`'s — every `Reviewer` in the session,
+    active or not. Filtering here would suppress the card for a
+    withdrawn reviewer whose address the picker also failed to resolve,
+    landing the operator on Invitations with nothing said, which is the
+    regression this whole item exists to undo.
     """
     candidate = candidate.strip()
     if not candidate:

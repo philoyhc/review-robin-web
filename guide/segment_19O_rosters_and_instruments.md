@@ -38,6 +38,8 @@ migration **stays filed** rather than riding this pass.
 - `spec/reviewer-surface.md` — the redirect now carries the unmatched address, and the landing page re-checks it; **added at the close**, having been marked `cites:` on the registry half alone (Item 6).
 - `spec/operations_pages.md` — the shared page shape gains a conditional fifth region between the Workflow card and the info card; **added at the close** (Item 6).
 - `spec/workflow_card.md` — its copy of the return-to allowlist carried the dead `previews` slug too; **added at the close** (Item 6).
+- `spec/instruments.md` — the page-layout and status-card sections, which §9.6 delegates to and which carried the same four errors; **added at the second close pass** (Item 6).
+- `spec/visual_style_rrw.md` — the card cited as the worked example of legitimate full-width is half-width; **added at the second close pass** (Item 6).
 - `docs/status.md` — the 11F attribution on `GET .../preview`, the corrected status-card description, and the row when this lands (Item 6).
 
 ### Status
@@ -68,7 +70,9 @@ prose.
   copied from it along with the defect. `test_preview_pager.py`, which
   looked like a third, already ordered. Both fixed. *A register entry
   names the instance somebody noticed, not the class.*
-- Seven documentary corrections, listed in `Doc impact` above.
+- The documentary corrections, one bullet each in `Doc impact` above.
+  Counted rather than summarised, because two records of this item
+  disagreed on its size at the close and neither number was right.
 
 **The cold read found five faults, and two of them were the entries
 fixed badly rather than the entries themselves.**

@@ -82,7 +82,7 @@ Cards are either **half-width** or **full-width**:
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
   - Wide tables (Reviewers / Reviewees / Relationships / Invitations / Responses data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
-  - Top-of-page status / overview cards that span the chrome's status strip width — the "All Instrument Status" card is one such case.
+  - Top-of-page status / overview cards that span the chrome's status strip width. The Validate page's **Setup coverage** card is one such case — `.card.setup-coverage` in `session_validate.html`, on a page with no `.card-columns` at all. (The Instruments status card was the example here until 19O Item 6; it is **half-width** in a `.card-columns` pair beside that page's guidance card, so it was the wrong one — see `spec/instruments.md`.)
   - Multi-column forms whose grouping exceeds a half-width column.
 - **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the parent's affordance benefits from that arrangement. Example: each per-instrument card on the Instruments page is full-width, with Display Fields + Response Fields half-cards side-by-side inside (the `.field-builder` `.bottom-grid` pattern).
 

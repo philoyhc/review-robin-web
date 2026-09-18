@@ -134,7 +134,14 @@ def preview_surface(
         # on an empty roster took the truthy branch and produced
         # "no reviewer has the email <nothing>". Two gates on one value
         # have to agree about what counts as blank.
-        typo = reviewer_email.strip()
+        #
+        # Through the picker's own parser first: its datalist emits
+        # `Name (email)`, and echoing that raw made the card say "no
+        # reviewer has the email R0 (ghost@e.edu)" — a label presented
+        # as an address. `extract_email_from_picker_value` is what the
+        # resolver already used on the same string, so the two halves
+        # of this round trip now read the input the same way.
+        typo = views.extract_email_from_picker_value(reviewer_email).strip()
         url = f"/operator/sessions/{review_session.id}/invitations"
         if typo:
             url = f"{url}?{urlencode({'no_match': typo})}"
