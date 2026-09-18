@@ -485,6 +485,60 @@ session can reach `validated` without Prepare — **worth settling
 before rung 3 retires the button**, since after that such a session
 would have no way to get invitations.
 
+**Rung 3 landed 2026-09-18 — the button, its card branch and
+`POST /invitations/generate` are gone.** The `has_invitations` gates
+and both amber captions stay, per open question 1.
+
+**The captions' *copy* did not stay, and that is the rung's job.**
+Both said "create invitations before then or these will skip",
+naming a button that no longer exists. The branches are still
+reachable — a clean Prepare leaves `has_invitations` False when
+nobody is eligible — so the copy now names what the operator can
+actually do: include an assignment for an active reviewer and run
+Prepare again. Same for the two Next-action body strings and the
+reviewer drill-in's two prompts.
+
+**46 tests broke, and the fixtures were the finding.** Most called
+`POST /invitations/generate` after reaching `ready` through
+`?validated=1` — a promotion that never runs Prepare, so it never
+created invitations, which is *why* they called the route. Switched
+to `POST /workflow/prepare`, which validates and creates in one step,
+and the explicit calls dropped out.
+
+- **Four tests were about the retired route** (one-per-reviewer +
+  idempotent, 409 from draft, live from validated). Every property is
+  Prepare's now and rung 2 already asserts each one, so they are
+  deleted rather than re-aimed — re-aiming would have duplicated rung
+  2's tests under names describing a button nobody can press. What
+  replaces them is the one thing they could not say: the route 404s.
+- **Five needed "assignments but no invitations"**, which
+  `_ready_session` can no longer produce. A new fixture builds it the
+  way it stays reachable — the `?validated=1` promotion the author
+  ruled we keep. *Without it those five would have gone vacuous: a
+  table where every row always has an invitation cannot exercise the
+  row that does not.*
+- **An anti-vacuity control fired and was right.** The 308 test pads
+  with a throwaway session so invitation and reviewer ids diverge;
+  since rung 2 each padding session advances **both** sequences, so
+  they coincided again. The pad now creates reviewers without
+  invitations.
+
+**One test had been skipping itself green for a long time.**
+`test_sys_admin_outbox_child.py`'s fixture imported rosters but never
+pinned a rule, so nobody was eligible, the generate call created
+nothing, and a `pytest.skip` guard took over — reporting success.
+Retiring the route forced the call out; making the fixture real
+exposed the actual defect: its docstring claims creating an invitation
+"populates email_outbox", and it never has — only a *send* writes an
+outbox row. With a send added it passes, and the suite's skip count
+drops 17 → 16. Pre-existing, found because this rung had to touch it.
+
+**Deferred to rung 4, uniformly:** seven `spec/` and `docs/` files
+still describe the button. The plan's ladder assigns them to the close
+and they are left whole rather than half-corrected — rung 2's cold
+read named a split rule inside one file as the thing a reader trips
+on, so the rule here is all or nothing.
+
 ### PR ladder
 
 1. **Filter the send set.** `invitations_send_all` iterates

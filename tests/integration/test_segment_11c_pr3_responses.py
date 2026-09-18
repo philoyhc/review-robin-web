@@ -75,7 +75,14 @@ def _populate(
 
 
 def _activate(client: TestClient, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    # Prepare, not `?validated=1` — it creates the invitations these
+    # tests need (19Q.2 rung 2), and rung 3 retired the route they
+    # used to call for that.
+    response = client.post(
+        f"/operator/sessions/{session_id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -290,11 +297,6 @@ def test_responses_page_bulk_remind_form_targets_invitations_endpoint(
         "resp-bulk-form",
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
-    )
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
-        data={"return_to": "responses"},
-        follow_redirects=False,
     )
     client.post(
         f"/operator/sessions/{session.id}/invitations/send-all",

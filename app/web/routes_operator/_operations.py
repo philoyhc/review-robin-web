@@ -557,7 +557,7 @@ def invitation_reviewer_detail(
     row match, the heading, the email and the breadcrumb label — so
     keying on the field made the table's link conditional on a row
     that may not exist yet. It is resolved here instead, through the
-    row, and is simply absent before **Create invites**.
+    row, and is simply absent until Prepare creates one.
     """
     reviewer = _require_reviewer_in_session(db, review_session, reviewer_id)
     rows = views.build_invitations_rows(db, review_session)
@@ -674,26 +674,6 @@ def invitation_reviewer_detail_legacy(
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ),
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
-    )
-
-
-@router.post("/sessions/{session_id}/invitations/generate")
-def invitations_generate(
-    return_to: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _require_validated_or_ready(review_session)
-    invitations.generate_invitations(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=_invitation_redirect_url(review_session.id, return_to),
-        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

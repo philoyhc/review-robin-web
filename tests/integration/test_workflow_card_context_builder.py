@@ -75,7 +75,6 @@ _EXPECTED_KEYS = {
     "is_archived",
     "revert_visible",
     "prepare_visible",
-    "create_invites_visible",
     "send_invites_visible",
     "activate_visible",
     "send_reminders_visible",
@@ -285,7 +284,6 @@ def test_archive_visible_gates_on_expired_only(
 _VISIBLE_KEYS = (
     "revert_visible",
     "prepare_visible",
-    "create_invites_visible",
     "send_invites_visible",
     "activate_visible",
     "send_reminders_visible",
@@ -320,10 +318,11 @@ def test_validated_no_invites_surfaces_revert_prepare_create_activate(
         db, sess, return_to="home"
     )
     visible = _visible_set(ctx)
+    # `create_invites_visible` retired at 19Q.2 rung 3 — Prepare creates
+    # the invitations, so this state surfaces three buttons, not four.
     assert visible == {
         "revert_visible",
         "prepare_visible",
-        "create_invites_visible",
         "activate_visible",
     }
     assert len(visible) <= 4
@@ -344,9 +343,12 @@ def test_ready_no_invites_surfaces_revert_create_close(
         db, sess, return_to="home"
     )
     visible = _visible_set(ctx)
+    # Two buttons since 19Q.2 rung 3. A `ready` session with no
+    # invitations means nobody was eligible when Prepare last ran, and
+    # the only fix is on the roster — there is no button here that
+    # would create them.
     assert visible == {
         "revert_visible",
-        "create_invites_visible",
         "close_visible",
     }
     assert ctx["release_responses_visible"] is False

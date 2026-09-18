@@ -434,7 +434,11 @@ def test_caption_amber_warning_when_ready_but_no_invitations(
     caption = build_auto_send_reminders_caption(db, rs)
     assert caption is not None
     assert caption["tone"] == "amber-warning"
-    assert "create invitations" in caption["text"]
+    # 19Q.2 rung 3 — the branch stays (a clean Prepare can leave
+    # `has_invitations` False when nobody is eligible); the copy
+    # stops naming a button that no longer exists.
+    assert "run Prepare session again" in caption["text"]
+    assert "create invitations" not in caption["text"]
 
 
 def test_caption_green_when_ready_and_invitations_exist(
