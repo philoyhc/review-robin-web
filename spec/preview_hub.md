@@ -4,8 +4,9 @@ The Operations-row **Previews** hub retired in Segment 19Q Item 1. Its two
 jobs now live on the Invitations per-reviewer drill-in:
 
 - **Open reviewer surface** opens
-  `/operator/sessions/{id}/preview-surface/{page_n}` for that reviewer in a
-  new tab. The route renders the production reviewer template in inert
+  `/operator/sessions/{id}/preview-surface/1` for that reviewer in a
+  new tab — page 1 always, hardcoded in the drill-in's button; the
+  route takes a `{page_n}` and the surface's own pager moves it. The route renders the production reviewer template in inert
   operator-preview mode; `spec/reviewer-surface.md` owns that contract.
 - **Email previews** renders the Invitation, Reminder and Responses received
   tabs for the drill-in's named reviewer. `spec/operations_pages.md` owns the

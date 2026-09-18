@@ -70,8 +70,8 @@ def build_workflow_card_context(
     """Build the dict of context keys consumed by the Workflow card.
 
     ``return_to`` is the operations-row slug for the calling page
-    (e.g. ``"assignments"`` / ``"validate"`` / ``"previews"`` /
-    ``"invitations"`` / ``"responses"``). It flows into the partial
+    (e.g. ``"assignments"`` / ``"validate"`` / ``"invitations"`` /
+    ``"responses"``). It flows into the partial
     as ``next_action_return_to`` and drives the hidden ``return_to``
     field on every workflow-card form so the post-action redirect
     lands back on the same page.

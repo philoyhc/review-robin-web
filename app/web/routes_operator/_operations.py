@@ -333,6 +333,7 @@ def invitations_index(
     super_step: str | None = None,
     super_error: str | None = None,
     prepare_confirm: str | None = None,
+    no_match: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -402,6 +403,10 @@ def invitations_index(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
+            # 19O Item 6 — the address `/preview-surface` could not
+            # resolve, echoed back so this page can say so. Empty on
+            # every other entry path, which is all of them but one.
+            "no_match": no_match,
             "total_row_count": len(all_rows),
             # Segment 19I Item 10 — the shared preview-count
             # sentence, moved out of the filter row to sit with

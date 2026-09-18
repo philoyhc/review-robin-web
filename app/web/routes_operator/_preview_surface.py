@@ -115,10 +115,20 @@ def preview_surface(
 ) -> HTMLResponse | RedirectResponse:
     reviewer = _resolve_preview_reviewer(db, review_session, reviewer_email)
     if reviewer is None:
-        return RedirectResponse(
-            url=f"/operator/sessions/{review_session.id}/invitations",
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
+        # 19O Item 6 — carry the unmatched address so Manage
+        # Invitations can say what went wrong. The Previews hub used to
+        # render a "No reviewer matched" hint on exactly this path; the
+        # hub's retirement at 19Q Item 1 took the hint with it as a
+        # consequence rather than a decision, leaving an operator on a
+        # page they did not ask for with nothing said.
+        #
+        # Only when the operator supplied one: a blank `reviewer_email`
+        # that resolves to nothing means the session has no reviewers
+        # at all, which is not a typo to report back.
+        url = f"/operator/sessions/{review_session.id}/invitations"
+        if reviewer_email:
+            url = f"{url}?{urlencode({'no_match': reviewer_email})}"
+        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)

@@ -23,7 +23,7 @@ deleted without ceremony.
 ## 1. One Rosters page, replacing four
 
 **Proposed 2026-09-12 by the author.** The **first move of a two-move
-consolidation** — entry 2 is the second, folding Previews, Invitations
+consolidation** — entry 2 is the second, folding Invitations
 and Responses into Monitoring on the same structure. Assignments is
 deliberately in neither.
 

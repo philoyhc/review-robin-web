@@ -374,7 +374,8 @@ tab** — the reviewer's own surface, inert, with their saved responses.
 
 #### Email previews
 
-Below the two detail cards, one full-width region renders the **Invitation**,
+Below the detail cards — two for a reviewer the table does not list, three when the
+conditional Review Progress card renders — one full-width region renders the **Invitation**,
 **Reminder**, and **Responses received** email tabs for this reviewer. The
 active tab is selected by `?email=<kind>`; sibling links retain the reviewer
 detail URL and end in `#email-previews`, so changing tabs returns to the

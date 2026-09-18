@@ -150,8 +150,15 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
         "the bulk form does not carry the page it was rendered on"
     )
 
+    # `.order_by` is load-bearing — see the twin in
+    # `test_reviewers_page_mutate.py`, from which this test was copied
+    # along with the defect (19O Item 6). An unordered `SELECT` has no
+    # guaranteed row order, so `[210]` was luck; SQLite returns
+    # insertion order for this shape and Postgres need not.
     rid = db.execute(
-        select(Observer.id).where(Observer.session_id == review_session.id)
+        select(Observer.id)
+        .where(Observer.session_id == review_session.id)
+        .order_by(Observer.id)
     ).scalars().all()[210]
     edit = re.search(
         r'<form[^>]*id="observer-edit-form".*?</form>',

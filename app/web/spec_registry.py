@@ -103,9 +103,22 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     "app.web.routes_operator._operations": (
         "spec/operations_pages.md",
         "spec/validate_page.md",  # GET .../validate
+        # The two redirects left by the hub's retirement. `preview_hub`
+        # is the retirement note that documents where they now land;
+        # `reviewer-surface` owns what they land on (19O Item 6).
         "spec/preview_hub.md",  # GET .../preview, .../previews
+        "spec/reviewer-surface.md",
     ),
-    "app.web.routes_operator._preview_surface": ("spec/preview_hub.md",),
+    # Re-pointed at 19O Item 6. `preview_hub.md` was this module's only
+    # spec, and since 19Q Item 1 that file explicitly hands the surface
+    # contract to `reviewer-surface.md` — so the registry named a
+    # document that disclaims the module it governed. It stays listed
+    # second because the retired hub is still where a reader arrives
+    # from a stale bookmark.
+    "app.web.routes_operator._preview_surface": (
+        "spec/reviewer-surface.md",
+        "spec/preview_hub.md",
+    ),
     "app.web.routes_operator._extracts": ("spec/csv_contracts.md",),
     # GET /templates/starter.zip — the generic setup templates. Not
     # session-scoped, so it sits outside routes_operator.

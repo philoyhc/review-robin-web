@@ -133,7 +133,14 @@ def test_out_of_range_page_returns_404(
 def test_session_without_reviewers_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """Empty roster means the reviewer surface has no subject."""
+    """Empty roster means the reviewer surface has no subject.
+
+    **And lands without a hint** (19O Item 6). A blank `reviewer_email`
+    resolves to `None` only when there is nobody to resolve to, so
+    reporting "no reviewer matched ''" would name a mistake the
+    operator did not make. The `no_match` query key is for a typo,
+    not for an empty session.
+    """
     client.post(
         "/operator/sessions",
         data={"name": "Empty", "code": "prev-s-empty"},
@@ -150,12 +157,21 @@ def test_session_without_reviewers_303s_to_invitations(
     assert response.headers["location"] == (
         f"/operator/sessions/{session.id}/invitations"
     )
+    assert "no_match" not in response.headers["location"]
 
 
 def test_unmatched_reviewer_email_303s_to_invitations(
     client: TestClient, db: Session
 ) -> None:
-    """An unknown reviewer does not silently select another reviewer."""
+    """An unknown reviewer does not silently select another reviewer.
+
+    **The address rides along since 19O Item 6.** The Previews hub
+    answered this path with a "No reviewer matched" hint until it
+    retired at 19Q Item 1, which took the hint as a consequence rather
+    than a decision — leaving the operator on a page they did not ask
+    for with nothing said. Manage Invitations says it now, so the
+    redirect has to carry what to say.
+    """
     session = _make_session_with_reviewer(client, db, code="prev-s-bad")
     response = client.get(
         f"/operator/sessions/{session.id}/preview-surface/1"
@@ -165,7 +181,28 @@ def test_unmatched_reviewer_email_303s_to_invitations(
     assert response.status_code == 303
     assert response.headers["location"] == (
         f"/operator/sessions/{session.id}/invitations"
+        "?no_match=ghost%40example.edu"
     )
+
+
+def test_the_landing_page_names_the_address_that_did_not_match(
+    client: TestClient, db: Session
+) -> None:
+    """The redirect is only half of it; the hint is the other half.
+
+    Follows the redirect rather than asserting on the header, because
+    a `no_match` the page ignored would pass the test above and still
+    leave the operator with no explanation.
+    """
+    session = _make_session_with_reviewer(client, db, code="prev-s-hint")
+    html = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/1"
+        "?reviewer_email=ghost@example.edu",
+        follow_redirects=True,
+    ).text
+    assert "No reviewer matched" in html
+    assert "ghost@example.edu" in html
+
 
 
 # --------------------------------------------------------------------------- #

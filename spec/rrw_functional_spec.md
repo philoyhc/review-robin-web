@@ -1165,8 +1165,14 @@ is a consolidated per-instrument editor.
 
 **All Instrument Status card** sits at the top, full-width:
 deadline pill, accepting-responses pill row (one per
-instrument), visibility-when-closed pill row, and bulk Open/Close
-and Show/Don't-show actions.
+instrument), visibility-when-closed pill row. **Read-only.** The
+bulk Open/Close and Show/Don't-show actions this card once
+described retired at 18R Item 3 and were never wired into the UI
+(`docs/status.md`); per-instrument Open / Close in each card's
+Identity row is the only accepting control, and
+visibility-when-closed has none at all — it follows the
+per-instrument visibility policy. `spec/instruments.md` owns that
+contract and states it in full.
 
 Below it, one **per-instrument card** per instrument, each a
 collapsible `<details>` with a locked/unlocked edit state (at
