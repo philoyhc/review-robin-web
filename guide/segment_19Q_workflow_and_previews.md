@@ -1,8 +1,9 @@
 # Segment 19Q — Workflow and preview revamp
 
-Four items, closing independently. Item-level `Doc impact` / `Status`, so
-`tools/close_check.py 19Q.1` reads Item 1's. Item 4 was added 2026-09-18,
-after Item 3's own recapture showed the defect.
+Five items, closing independently. Item-level `Doc impact` / `Status`, so
+`tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
+2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
+the author delivered a new capture set.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -665,3 +666,129 @@ At `a08b4750`:
 
 - `docs/status.md` — row when Item 4 lands (Item 4).
 - `spec/ui_elements.md` — the `.btn` box model, if open question 2 says it belongs in the contract (Item 4).
+
+---
+
+## Item 5 — The author's capture set
+
+### Opportunity
+
+The author delivered **12 light/dark pairs** as a captionless `.docx`
+(`Guide_v2`, 2026-09-18), shot from a slot carrying 19Q Items 1–3. Each
+was identified by reading it against the page it shows:
+
+| pair | replaces |
+|---|---|
+| 1 | `session-home-chrome-and-workflow` |
+| 2 | `reviewer-tag-labels` **and** `roster-upload-card` — two figures become one |
+| 3–6 | the four `instrument-card-*` bands |
+| 7, 8 | `workflow-prepare-session`, `workflow-after-validation` |
+| 9–12 | `assignments-page`, `validate-page`, `extract-data-page`, `invitations-page` |
+
+Six stay as they are: the three `create-session-*`,
+`lobby-add-new-session`, `responses-page` and `workflow-activated`.
+
+**Three of the twelve are not like-for-like re-shoots**, and the prose
+beside them is what makes that matter:
+
+- **Pair 2 collapses two figures into one.** The Unlock panel now holds
+  what were separate tag-label and upload captures, so the Reviewers
+  prose is rewritten rather than repointed.
+- **`validate-page` is now clean** — 0 errors, 0 warnings, 1 info. 19K.8
+  shot it mid-setup on purpose, because the section's copy is about the
+  find-and-fix loop: *"if the sentence is about a loop, the image has to
+  be taken inside it"* (`docs/status.md`, 2026-09-12).
+- **`workflow-after-validation` is clean too**, so its right column reads
+  only `Status — Setup validated.` Item 3 rung 2's prose beside it says
+  warnings and blocking issues are listed there.
+
+**The session is also much larger** — 154 reviewers, 856 assignments —
+against the six-student demo behind the six pairs not re-shot.
+
+**Pair 12 arrived mismatched**, caught by a 167px height gap: the light
+half carried the info-counter card and the dark half did not — a
+different page state, not a different theme. That is 19H.3's
+`instrument-card-preview` defect, and no test in
+`test_guide_screencaps.py` can see it. Re-shot on request to 1757×975
+against the light half's 1760×972, inside 19H.3's ±4px tolerance.
+
+### Decision
+
+**The captures are the source of truth and the prose refines to match**
+(author, 2026-09-18: *"Much of the prose need refining, for sure"*).
+
+**Rejected — re-shooting to preserve the existing prose.** The author
+shot these from a real slot at real scale; asking for retakes so the
+words can stand unchanged inverts which of the two is evidence.
+
+### Semantics
+
+- A pair is light + dark of **one app state**. Comparing heights is the
+  only cheap check for that, and it is done by hand: no test compares
+  the two images' content.
+- `app/` ships wholesale, so a replaced capture keeps its filename or
+  loses every reference in the same commit.
+- The narrow family goes **6 → 3**, still satisfying
+  `test_both_capture_families_are_present`.
+
+### Judgment calls — decided
+
+- Identify each capture by reading it against the running page, not by matching file sizes to the existing set (2026-09-18): two pairs are near-identical in size to captures they do not replace.
+
+### Blast radius (measured)
+
+At `ac6d0832`:
+
+- `ls app/web/static/guide/ | grep -v dark | wc -l` → **19** pairs today; **18** after, since pair 2 absorbs two
+- `grep -c '<figure class="guide-figure' app/web/templates/guide.html` → **19** figures, going to 18
+- narrow-family pairs → **6** today, 3 after (measured by PNG width < 1000)
+- `pytest tests/integration/test_guide_screencaps.py --collect-only` → **161** cases, parametrised per file
+
+### PR ladder
+
+1. **The eight like-for-like pairs** — session home, the four instrument
+   bands, assignments, extract data, invitations. File swaps and alt-text
+   refresh, no prose restructuring.
+2. **The Reviewers panel** — pair 2, two figures to one, prose rewritten
+   around the Unlock panel.
+3. **Validate and the two Workflow states** — however open questions 1
+   and 2 are answered, prose and captures land together.
+4. **The close** — specs below, `docs/status.md`, `close_check`,
+   `spec-writer`.
+
+### Definition of done
+
+- Every pair is one app state, checked by height and by reading both halves.
+- No Guide prose describes a control or a condition its adjacent capture does not show.
+- `pytest tests/integration/test_guide_screencaps.py` passes.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does the Validate section keep its find-and-fix framing?** The new
+   capture is clean, documenting the end state rather than the activity
+   the copy describes — what 19K.8 re-shot to avoid. Either the copy
+   stops describing a loop or this capture is the wrong one. Author's.
+2. **Does the post-validation Workflow prose keep its warnings
+   sentence?** That capture has no warnings, so its right column is a
+   status line. Author's, and it meets Item 4: the four-slot defect needs
+   a warning to render, so a clean capture cannot show it either way.
+3. Is the two-session look worth resolving, or does it go on the register
+   until the remaining six are re-shot?
+
+### Out of scope
+
+- Re-shooting the six pairs the author did not supply. They are correct
+  for what they show; only their scale differs.
+- `spec/ui_elements.md`'s capture-family rules. The 6 → 3 narrowing stays
+  inside them.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 5 lands (Item 5).
+- `spec/setup_pages.md` — the Reviewers page prose, if pair 2's collapse changes what the Guide says the Unlock panel holds (Item 5).
+- `spec/ui_elements.md` — the capture-family counts, if the 6 → 3 narrowing is worth stating (Item 5).
