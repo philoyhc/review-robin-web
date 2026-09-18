@@ -183,6 +183,10 @@ def workflow_prepare(
                 },
                 correlation_id=correlation_id,
             )
+            # `write_event` flushes; nothing downstream commits on a
+            # failure return, so without this the row dies with the
+            # connection. 19O Item 7 entry 7.
+            db.commit()
             return RedirectResponse(
                 url=_redirect_url(
                     review_session.id,
@@ -264,6 +268,10 @@ def workflow_prepare(
             },
             correlation_id=correlation_id,
         )
+        # `write_event` flushes; nothing downstream commits on a
+        # failure return, so without this the row dies with the
+        # connection. 19O Item 7 entry 7.
+        db.commit()
         return RedirectResponse(
             url=_redirect_url(
                 review_session.id,
@@ -391,6 +399,10 @@ def workflow_activate(
             },
             correlation_id=correlation_id,
         )
+        # `write_event` flushes; nothing downstream commits on a
+        # failure return, so without this the row dies with the
+        # connection. 19O Item 7 entry 7.
+        db.commit()
         return RedirectResponse(
             url=_redirect_url(
                 review_session.id,
