@@ -289,89 +289,53 @@ Leaves both preconditions and all four warning sites standing.
 ### Status
 
 **Closed 2026-09-18. Four rungs as planned; rung 1 was the only one
-that grew.**
-
-**What the ladder became.** Rung 1's ladder line named
-`invitations_send_all`; building it found the scheduled
-`_dispatch_pending_invitations` running its own copy of the same
-query with the same defect, and a cold read then found
-`invitations_send_one` with a third, looser predicate. All three
-share `invitations.list_sendable_invitations` /
-`is_reviewer_eligible_for_invitation` now. Fixing one would have left
-the unattended half of a live bug standing. Rungs 2–4 landed as
-written.
+that grew** — its ladder line named `invitations_send_all`, and the
+build found the scheduled dispatcher and then the per-row Send each
+carrying their own copy of the predicate. All three share one helper.
+Fixing one would have left the unattended half of a live bug standing.
 
 **The bug was sharper than the Opportunity recorded.** The Manage
-Invitations table already filtered — `build_invitations_rows` →
-`monitoring.per_reviewer_progress`, assigned-and-active — so the
-operator saw one row and Send all emailed two people. The page and
-the button disagreed, and the one the operator could not see is the
-one who got the mail.
+Invitations table already filtered on assigned-and-active, so the
+operator saw one row while Send all emailed two people — the page and
+the button disagreed, and the invisible one got the mail.
 
-**Decisions confirmed at build.**
-- Create after `mark_validated`, clean path only. The rejected
-  alternative (create at Generate, before validate) is now genuinely
-  caught by a test; the first version of that test used an empty
-  session, where both orderings agree because nobody is eligible.
-- `generate_invitations` stays a service function.
-- The `has_invitations` skip reasons and both amber captions stay —
-  open question 1 holds. Their *copy* did not: rung 3's first attempt
-  named remedies that 409 in the state where they render.
-- `?validated=1` keeps its inline flip (author, and see
-  `### Judgment calls`).
+**Decisions confirmed at build**, beyond `Judgment calls`: creation
+sits after `mark_validated` on the clean path (the rejected
+before-validate alternative is now genuinely caught — the first test
+for it used an empty session, where both orderings agree); the
+`has_invitations` skip reasons and both amber captions stay per open
+question 1, though their *copy* did not survive rung 3's first
+attempt.
 
-**The finding worth carrying forward is about the instruments, not
-the code.** Every rung, something asserted less than it claimed: a
-vacuous identity check reading a key `invitation.sent` has never
-carried; a mutant that survived because the test's session had nobody
-eligible; five tests that would have gone vacuous when `_ready_session`
-started creating invitations; an anti-vacuity control that fired
-because two id sequences began advancing in lockstep; a test that had
-been skipping itself green for years, whose docstring claimed
-creating an invitation "populates email_outbox" when only a *send*
-ever has. **None was caught by the suite. All were caught by a
-reader.**
+**The finding worth carrying is about the instruments.** Every rung,
+something asserted less than it claimed: an identity check reading a
+key `invitation.sent` has never carried; a mutant surviving because
+the test's session had nobody eligible; five tests that would have
+gone vacuous once `_ready_session` began creating invitations; an
+anti-vacuity control firing because two id sequences began advancing
+in lockstep; a test that had been skipping itself green for years; a
+button matrix recomputed by eye and wrong twice; and a compaction
+edit that anchored on a string appearing in prose before the heading
+it meant, deleting `Blast radius` and leaving a bullet cut mid-
+sentence — caught by counting sections, not by the suite. **None of
+these was caught by a test. All were caught by a reader, or by
+measuring rather than looking.**
 
-**Reads: four.** Rung 1 and rung 2 each took a `diff-reviewer` under
-the old per-slice cadence — ten findings and eight — plus a
-`spec-writer` pass on rung 2. Rung 3 took the first **per-item
-cumulative** read under the cadence introduced mid-item (#2459), at
-eleven findings, and it found the one defect that spanned rungs: copy
-written in rung 3 that was unreachable because of a state rung 2 had
-escalated and rung 3 had not settled. *Recorded per the cadence's own
-rule 7, for the next practice audit to weigh.*
+**Reads: four `diff-reviewer` + two `spec-writer` + Codex.** Rungs 1
+and 2 took one each under the old per-slice cadence (ten findings,
+eight); rung 3 took the first **per-item cumulative** read (eleven),
+which found the only defect spanning rungs — copy written in rung 3
+that was unreachable because of a state rung 2 had escalated and rung
+3 had not settled. Codex found two more at the close, one factual.
+*Recorded per the cadence's rule 7.*
 
-**Carried out**, all three now real entries in
-`guide/deferred_consolidated.md` rather than claims that they were:
-pruning stale invitation rows; the unaudited withheld send
-(`counts.sent = 0` has two causes); and
-`monitoring._assigned_active_reviewers` duplicating
-`invitations._assigned_active_reviewer_ids` — the root cause of the
-bug rung 1 fixed, left unfixed because unifying it reaches into the
-monitoring layer.
+**Carried out** to `guide/deferred_consolidated.md` § *Three carried
+out of 19Q Item 2*: stale-row pruning, the unaudited withheld send,
+and the `monitoring`/`invitations` duplicate predicate — the root
+cause of the bug rung 1 fixed.
 
-**The close pass found the sweep's own class of miss: deleting a table
-row without recomputing what depended on it.** Retiring Create invites
-left `spec/workflow_card.md` saying "ten `*_visible` flags" (nine),
-"10 conceptual button slots" above a nine-item list, a **Visible
-total** row still carrying the old per-state counts, and a "worst case
-is 4 (states 4 / 4W / 5)" that had stopped being true. Two sibling
-rows were swept in one file and not the other
-(`spec/session_home.md`'s `validated` row, `spec/operations_pages.md`'s
-caller list).
-
-*Recomputing the totals then surfaced a **pre-existing** error the
-retirement had nothing to do with*: the matrix omitted Activate in
-state 4Err, though `activate_visible` is `is_validated` alone and 4Err
-is `is_validated`. Measured — the button ships in a state whose own
-copy says to re-run Prepare first. The spec describes what ships;
-whether it should is a design question this item did not open. The
-matrix is now arithmetically self-consistent, checked by parsing it.
-
-**Still owed:** dev-slot verification of the Workflow card with one
-fewer button and the six rewritten copy strings. The copy is exactly
-what the cumulative read caught, so it is the part most worth seeing
-rendered.
+**Still owed:** dev-slot verification of the card with one fewer
+button and rung 3's six rewritten copy strings.
 
 ### PR ladder
 

@@ -310,22 +310,33 @@ gaps.
 | --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | --- |
 | Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
 | Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | |
-| Send invites | | | | | | | Pri | | | Pri | | | |
+| Send invites | | | | | | Pri† | Pri | | | Pri | | | |
 | Activate session | | | | Pri | Pri (→detour) | Pri | Pri | Pri | | | | | |
 | Send reminders | | | | | | | | | | | Pri | | |
 | Close session | | | | | | | | | Sec | Sec | Sec | | |
 | Release responses | | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | | Sec |
 | Archive session | | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **3** | **3** | **3** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+| **Visible total** | **0** | **1** | **1** | **3** | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
 
 **4Err renders Activate**, which the matrix omitted until 19Q Item 2
-rung 4's close pass recomputed the totals and found the column two
-short. `activate_visible` is `is_validated` alone
-(`_workflow_card.py`), and 4Err *is* `is_validated` — so the button
-ships in a state whose own copy says to re-run Prepare first. Measured,
-not inferred. Whether it should is a design question this item did not
-open; the spec now describes what ships.
+rung 4's close pass recomputed the totals and found the column short.
+`activate_visible` is `is_validated` alone (`_workflow_card.py`), and
+4Err *is* `is_validated` — so the button ships in a state whose own
+copy says to re-run Prepare first. Measured, not inferred. Whether it
+should is a design question this item did not open; the spec describes
+what ships.
+
+† **4Err is the one column that varies with invitation state.** Every
+other state's definition fixes it — State 4 is *"no invitations"*,
+State 5 is *"invites drafted"* — but 4Err is defined by
+`is_validated` and `not can_activate` alone, so a session that was
+Prepared (creating invitations) and then broken renders **Send
+invites** as well: four buttons, not three. Measured. The ≤4 contract
+still holds, with 4Err joining State 5 at the cap. *Named by Codex on
+the close PR, after this file's own first correction read the column
+as a fixed 3 — the probe that established Activate renders here
+printed `send_invites_visible` in the same line, and it was read past.*
 
 ‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
