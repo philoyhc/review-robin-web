@@ -28,7 +28,7 @@ The partial is included by:
 | `GET /me/sessions/{id}/results` (reviewee) | `reviewer/results.html` | `"reviewee"` |
 | `GET /me/sessions/{id}/collation` (observer) | `reviewer/collation.html` | `"observer"` |
 
-**Suppressed in operator-preview mode.** The reviewer-surface template reuses the same partial under the operator-side preview route (`/operator/sessions/{id}/preview-surface/{page_n}`), which renders `review_surface.html` with `preview_mode = True`. `…/previews` is the preview **hub**, not the surface. The chip strip is wrapped in `{% if not preview_mode %}` so the operator preview doesn't leak a misleading "you are here" chip for an arbitrary reviewer the operator is impersonating.
+**Suppressed in operator-preview mode.** The reviewer-surface template reuses the same partial under the operator-side preview route (`/operator/sessions/{id}/preview-surface/{page_n}`), reached from the Invitations per-reviewer drill-in and rendered with `preview_mode = True`. The chip strip is wrapped in `{% if not preview_mode %}` so the operator preview doesn't leak a misleading "you are here" chip for the reviewer the operator is inspecting.
 
 ---
 

@@ -97,7 +97,7 @@ for *a named reviewer*, which the editor has no notion of.
 2. **Retire the hub** — nav item, `session_previews.html`,
    `_preview_picker.html`, `GET /previews` → 308, `POST /previews/random`
    deleted.
-3. **Chrome** — six tabs to five, and any layout assumption that counted on six.
+3. **Chrome** — six tabs to five, and any layout assumption that counted on six. **Absorbed by rung 2:** retiring the hub necessarily removed its nav item, and the flexible strip had no six-column layout rule to change.
 4. **The close** — the specs below, `docs/status.md`, `close_check`, `spec-writer`.
 
 ### Definition of done
@@ -109,25 +109,16 @@ for *a named reviewer*, which the editor has no notion of.
 - `python3 tools/close_check.py 19Q.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+- `docs/status.md` row added; the plan stays live for Items 2–3
 
-### Open questions
+### Status
 
-Both answered by the author, 2026-09-18.
-
-1. **Do the inactive / all-excluded reviewer populations keep a door?**
-   **No — accepted loss.** Note the mechanism, because the obvious
-   rationale is wrong: an inactive reviewer *can* still hold an
-   invitation (invited, emailed, then deactivated —
-   `test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table`
-   pins exactly that), and their drill-in renders and shows their invite
-   URL. What they lose is the **Open reviewer surface** link, because
-   the Review Progress card is gated on `row`, which is `None` off the
-   table. So the surface goes unreachable via a missing card, not a
-   missing invitation.
-2. **Is `Random` worth keeping** anywhere? **No.** If the need returns
-   it gets rebuilt on the Invitations page, against that table's
-   filters rather than the picker's datalist.
+**Closed 2026-09-18.** Rung 1 moved the three email previews onto the
+Invitations per-reviewer drill-in. Rung 2 retired the picker, Random action,
+hub template and nav tab; `GET /previews` now 308s to Invitations. That nav
+removal also completed rung 3, because the strip has no fixed six-column
+layout. The close aligns the doc-impact files. The accepted losses are
+the pre-Prepare and off-table doors; Random gets no replacement.
 
 ### Out of scope
 
@@ -145,6 +136,12 @@ Both answered by the author, 2026-09-18.
 - `spec/operator_button_audit.md` — the picker's buttons and `Random` retire (Item 1).
 - `spec/role_navigator.md` — the Previews entry (Item 1).
 - `spec/session_home.md` — any Previews pointer (Item 1).
+- `spec/extract_data.md` — Operations-strip diagram loses Previews (Item 1).
+- `spec/visual_style_rrw.md` — chrome diagram loses Previews (Item 1).
+- `spec/rrw_functional_spec.md` — the user-level preview contract moves to the drill-in (Item 1).
+- `spec/README.md` — the spec index marks the hub contract as a retirement boundary (Item 1).
+- `README.md` — the route overview marks the hub as a redirect and names the drill-in jobs (Item 1).
+- `guide/post_azure_todo_checklist.md` — the deployed-slot hover check drops the retired page (Item 1).
 - `docs/status.md` — row when Item 1 lands.
 
 ---

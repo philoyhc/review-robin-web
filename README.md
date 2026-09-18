@@ -65,8 +65,8 @@ session and pulling data out.
 | `setupinvite` | Setup | **Email Template** — per-template (Invitation / Reminder / Responses-received) override of subject + body + CC + BCC, with the canonical merge tags (`$reviewer_name`, `$session_name`, `$deadline`, `$help_contact`, plus `$invite_url` on Invitation / Reminder and `$submitted_at` on Responses-received). |
 | `assignments` | Operations | **Assignments** — per-instrument status table (rule selection + self-review inclusion per instrument) + Assignments preview table (12-column shape: Reviewer · R Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include). "Search by" dropdown, row-select checkboxes, bulk include / exclude buttons. |
 | `validate` | Operations | **Validate** — find-and-fix surface with severity filter chip strip + per-issue Fix-on-Setup deep links. |
-| `previews` | Operations | **Previews** — Reviewer Experience Preview hub: tabbed email previews + a full reviewer-surface preview (`/preview-surface`; the sandboxed-iframe card retired in Segment 18Q) for an operator-picked reviewer. |
-| `invitations` | Operations | **Manage Invitations** — reviewer-centric table covering both invitation status and per-reviewer review progress. |
+| `previews` | Redirect | Retired Previews hub; permanent redirect to Invitations. |
+| `invitations` | Operations | **Manage Invitations** — reviewer-centric table covering invitation status and review progress; each reviewer drill-in carries the three email previews and the door to the inert reviewer surface. |
 | `responses` | Operations | **Responses** — reviewee-centric coverage view classifying each reviewee per `monitoring.AT_RISK_THRESHOLDS`. |
 | `extract-data` | Operations | **Extract data** — response-data shaping pipeline (per-instrument lens cards + Data shaper) + Token keys deanonymization extract (`participant_tokens.csv`). |
 

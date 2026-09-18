@@ -63,7 +63,7 @@ the page is deliberately not an in-app analysis tool. Expanded at 19K.8.
 The Operations row carries the tab at the right-hand end:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
+Operations  [Assignments][Validate][Invitations][Responses][Extract data]
 ```
 
 End-of-strip placement is deliberate — the page is an
