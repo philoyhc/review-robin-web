@@ -641,17 +641,42 @@
 
         // Dirty is asked of the DOM rather than mirrored in a flag.
         // Instruments does the same and cannot go stale; the Observers
-        // editor mirrors a flag and it went stale once. Here the
-        // baseline is on the node itself, written when the input was
-        // seeded, so the comparison is local and needs no bookkeeping.
+        // editor mirrors a flag and it went stale once.
+        //
+        // **Every control in the panel, not an opt-in list.** The first
+        // two drafts scanned `[data-expander-field]` and missed, in
+        // turn, the bulk tag box (seeded without a baseline) and the
+        // three `name="purge"` checkboxes plus the confirm box (which
+        // carry no such attribute at all). Two misses of the same shape
+        // is a design fault, not two oversights: an opt-in scan is
+        // silent about exactly the control nobody remembered to opt in,
+        // and the cost of that silence here is an operator's "Purge and
+        // archive" quietly dropping the rosters or audit-log purge they
+        // ticked.
+        //
+        // Checkables compare `checked` against `defaultChecked`, which
+        // the DOM maintains for free: cloning a `<template>` carries the
+        // markup's `checked` attribute into `defaultChecked`, and
+        // clicking moves only `checked`. Text inputs need
+        // `data-seeded-value` because `fillSingle` assigns `.value`
+        // imperatively, which never touches `defaultValue`.
         function expanderIsDirty() {
           var panel = document.querySelector(".session-expander");
           if (!panel) return false;
-          var fields = panel.querySelectorAll("[data-expander-field]");
-          for (var i = 0; i < fields.length; i++) {
-            var seeded = fields[i].getAttribute("data-seeded-value");
-            if (seeded === null) continue;
-            if (fields[i].value !== seeded) return true;
+          var controls = panel.querySelectorAll("input, select, textarea");
+          for (var i = 0; i < controls.length; i++) {
+            var el = controls[i];
+            var type = (el.type || "").toLowerCase();
+            if (type === "checkbox" || type === "radio") {
+              if (el.checked !== el.defaultChecked) return true;
+              continue;
+            }
+            var seeded = el.getAttribute("data-seeded-value");
+            if (seeded !== null) {
+              if (el.value !== seeded) return true;
+            } else if (el.value !== el.defaultValue) {
+              return true;
+            }
           }
           return false;
         }
