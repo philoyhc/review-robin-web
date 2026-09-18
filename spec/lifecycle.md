@@ -547,7 +547,7 @@ are read-mostly so they work in any state.
 | `session.responses_released` | `release_responses_now` (Workflow-card **Release responses**) | `snapshot={"responses_release_at": …, "cleared_until": bool}` |
 | `session.responses_release_stopped` | `stop_responses_release` (Workflow-card **Stop releasing**) | `snapshot={"responses_release_until": …}` |
 | `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
-| `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "invite" \| "activate" \| "precondition", "error_message": …}` |
+| `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "invite" \| "activate", "error_message": …}`. **Not `precondition`** — every precondition return in `_workflow.py` happens *before* the `workflow_run_started` write and redirects with `super_step="precondition"` instead, so no audit row ever carries it. `precondition` is a `super_step` value (the redirect query param the card reads), not a `context.step` one. |
 | `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
 | `instrument.closed` | `close_instrument` or `observe_deadline` | `refs={"instrument_id": id}` + `reason=<"operator" \| "deadline">` (+ `context={"deadline": "..."} ` on the deadline path) |
 

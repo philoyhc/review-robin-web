@@ -126,13 +126,27 @@ stepper already makes lifecycle state explicit, and a second
 lifecycle explanation on the same page is redundant (see
 `spec/operator_ui_concept.md` P4).
 
-**The invitation gate is `validated` or `ready`, not `ready` alone.**
-Send invites and the Invitations page's per-row action
-buttons are live from `validated` onward; the route-layer gate
-(`_require_validated_or_ready` in
-`app/web/routes_operator/_operations.py`) is the source of truth.
-**Send reminders** keeps the stricter `ready`-only requirement —
-reminders fire after the response window opens, not before.
+**The invitation gate is `validated` or `ready` at the route layer, and
+`ready` at most of the buttons.** All six invitation routes —
+`send-all`, `regenerate-all`, `{iid}/send`, `{iid}/regenerate`,
+`{iid}/remind`, `remind-incomplete` — call
+`_require_validated_or_ready` (`app/web/routes_operator/_operations.py`),
+so none of them is `ready`-only, reminders included.
+
+The stricter rule is a **UI** convention, and that is where the
+difference between the actions lives:
+
+- The Workflow card's **Send invites** is live from `validated` onward
+  (`send_invites_visible`, `app/web/views/_workflow_card.py`).
+- Its **Send reminders** renders only when `is_ready` — reminders fire
+  after the response window opens, by button gate rather than by route
+  gate.
+- Every **per-row** button on this page — Send, Regenerate, Send
+  reminder — carries `{% if not is_ready %}disabled{% endif %}`, so all
+  three are `ready`-only in practice however permissive their routes
+  are.
+- `regenerate-all` has no UI caller at all; it is reachable only by
+  POSTing the route.
 
 ---
 

@@ -189,7 +189,7 @@ missed).
 | **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
-| **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to receive responses." |
+| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does and not what it looks like it does**: `generate_invitations` writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call (`app/services/email_send.py` — "Nothing in the app calls this yet"). Until a transport is wired, this state means *stamped*, not *delivered*. |
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
@@ -870,8 +870,9 @@ the corresponding child page; values outside the allowlist
   (`session_activate` / `session_revert_to_draft`),
   `app/web/routes_operator/_assignments.py` (`assignments_generate`)
 - Per-step invitation routes: `app/web/routes_operator/_operations.py`
-  (`invitations_generate` / `invitations_send_all` /
-  `invitations_remind_incomplete`)
+  (`invitations_send_all` / `invitations_remind_incomplete`).
+  `invitations_generate` retired with the Create invites button in 19Q
+  Item 2 rung 3; Prepare creates the invitations now.
 - Lifecycle service: `app/services/session_lifecycle.py`
 - Invitations service: `app/services/invitations.py`
 - Audit-event registry: `app/services/audit.py` (`EVENT_SCHEMAS`)
