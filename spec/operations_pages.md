@@ -306,9 +306,68 @@ outside their allowed state.
 
 ### Per-row drill-in
 
-The reviewer name is a link to a per-invitation detail page
-(`/operator/sessions/{session_id}/invitations/{invitation_id}/detail`)
-showing the reviewer's full engagement history.
+The reviewer name is a link to a per-**reviewer** detail page,
+`/operator/sessions/{session_id}/invitations/reviewers/{reviewer_id}`.
+**The link renders for every row, whether or not an invitation
+exists.** The page is keyed on the reviewer because the reviewer is its
+subject: the invitation supplies one optional field, while the reviewer
+supplies the heading, the email, the breadcrumb and the row match.
+The pre-19P.6 invitation-keyed URL
+(`.../invitations/{invitation_id}/detail`) is a permanent **308** to
+the reviewer URL, so bookmarks survive.
+
+Because the route takes a reviewer, it reaches reviewers the
+Manage Invitations table does not list — an inactive one, or one whose
+assignments are all excluded. Those pages render without the Review
+Progress card, which is correct: that card's data is the table row.
+
+#### Invitation card
+
+Reports **three facts, separately**, because they are independent and
+conflating them was a defect (an operator saw `Email Status: not sent`
+for a reviewer who had no invitation at all):
+
+- **Invite** — `created` / `not created`, from the existence of the
+  `Invitation` row.
+- **Email sent** — the send timestamp or an em-dash, from
+  `Invitation.sent_at`. Where the latest invitation outbox row carries
+  a delivery state other than `sent`, that state renders beside the
+  timestamp. The value set is the model's `EMAIL_OUTBOX_STATUSES`
+  and is **rendered, not enumerated**, so widening it needs no change
+  here.
+- **Last reminder** — the timestamp or an em-dash, from
+  `Invitation.last_reminder_at`.
+
+Both timestamps read the `Invitation` row rather than the outbox, so
+they survive a reviewer leaving the table. The em-dash means *no date*,
+not *no invitation* — the top line already answers that.
+
+Below them, a three-state URL region:
+
+| State | Copy |
+|---|---|
+| A URL was issued | `Invitation URL (last issued):` + the URL |
+| Invitation exists, never sent | `No invitation URL has been issued yet.` |
+| No invitation, reviewer eligible | Points at **Create invites** on the Workflow card |
+| No invitation, reviewer **not** eligible | Says **Create invites** will skip them, and names the two remedies |
+
+The last two are distinct because `generate_invitations` selects active
+reviewers with at least one included assignment: telling an ineligible
+reviewer's operator to press **Create invites** sends them to a button
+that cannot reach that reviewer.
+
+"Issued" is the accurate verb for the second row: `generate_invitations`
+discards the raw token, so a URL exists only once an invitation has been
+**sent**.
+
+#### Review Progress card
+
+Renders only when the reviewer has a table row with at least one
+assignment. Carries the row's progress fields, and a
+`.card-action-row` at its foot with **Open reviewer surface**
+(Secondary role), which opens
+`/operator/sessions/{id}/preview-surface/1?reviewer_email=…` in a **new
+tab** — the reviewer's own surface, inert, with their saved responses.
 
 ### Empty-state copy
 

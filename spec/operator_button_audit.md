@@ -485,6 +485,7 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row; visible while the invitation is `pending` |
 | 87 | Invitations table (per row) | Send reminder | `<button type="submit">` | `btn secondary` | Secondary (Disabled when row is complete or session not ready) | One per row; visible once the invitation is past `pending` |
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
+| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | 19P.6 rung 2. Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, matching the Previews hub's button to the same destination (§16 row 96); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
 
 **The page body carries no bulk-action bar.** Create invites, Send
 invites and Send reminders belong to the Workflow card's stepper

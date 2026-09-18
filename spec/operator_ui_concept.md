@@ -99,7 +99,7 @@ The **sort affordance** is the shared rrw-sort primitive. Any operator table tha
 
 Read-only renderings spun off from one or other Setup Page, showing what the configured setup will look like to its audience (reviewers today; future reviewees or other audiences once they exist).
 
-The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The reviewer-surface render lives at the satellite route `GET /operator/sessions/{id}/preview-surface/{page_n}`, reached from the picker card's "Open full preview" button; it renders the same `reviewer/review_surface.html` template through the same `_surface_context` plumbing the live reviewer route uses. `GET /operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`, kept for stale bookmarks. The preview surface bypasses session-status / deadline / acceptance gates.
+The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The reviewer-surface render lives at the satellite route `GET /operator/sessions/{id}/preview-surface/{page_n}`, reached from the picker card's "Open full preview" button **or from Open reviewer surface on the Invitations per-reviewer drill-in** (19P.6); it renders the same `reviewer/review_surface.html` template through the same `_surface_context` plumbing the live reviewer route uses. `GET /operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`, kept for stale bookmarks. The preview surface bypasses session-status / deadline / acceptance gates.
 
 The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `spec/instruments.md` Section D).
 
@@ -364,7 +364,7 @@ There is no standalone Activate button on this page body; activation fires from 
 
 Operations row tab (label: **Previews**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer. Operator-only; bypasses session-status / deadline / acceptance gates.
 
-The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}`, reachable from the hub picker card's "Open full preview" button. `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`. The hub carries no iframe surface card and no `#reviewer-surface` anchor.
+The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}`, reachable from the hub picker card's "Open full preview" button **and from Open reviewer surface on the Invitations per-reviewer drill-in** (19P.6). `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`. The hub carries no iframe surface card and no `#reviewer-surface` anchor.
 
 ### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 

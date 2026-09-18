@@ -1934,7 +1934,7 @@ answers. Three created work — see rung 2b and the note beneath it.
 
 **Not committed to:** `spec/architecture.md`. Its § *Three-layer split*
 already prescribes `_shared.py` for a `_require_*_in_session` helper,
-so the hoist changes nothing it says.
+so the hoist changes nothing it says. <!-- cites: spec/architecture.md -->
 
 ---
 

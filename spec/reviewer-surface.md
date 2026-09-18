@@ -769,8 +769,12 @@ its cross-role union query (inline in
 ## Operator preview mode
 
 The operator-side preview lives at
-`/operator/sessions/{id}/preview-surface/{page_n}` and is reached from
-the Previews hub picker card's "Open full preview" button. The route
+`/operator/sessions/{id}/preview-surface/{page_n}` and has **two doors**
+since 19P.6: the Previews hub picker card's "Open full preview" button,
+and **Open reviewer surface** in the Review Progress card of the
+Invitations per-reviewer drill-in (`spec/operations_pages.md`
+§ *Per-row drill-in*). Both open it in a new tab and both pass
+`?reviewer_email=`; the route itself is unchanged by having two. The route
 renders this template through the same `_surface_context` plumbing the
 live reviewer route uses, with three `preview_mode=True` adjustments:
 the deadline observer is skipped (no DB mutation on a deadline
@@ -790,9 +794,19 @@ In preview mode:
   reviewer top bar variant.
 - `body_class` drops the `reviewer` modifier (stays `body.ui-v2`).
 - The preview-mode banner (`.banner.banner-info`) renders at the top
-  of the body: "**Preview** — not visible to reviewers. This page
-  is operator-only and bypasses session-status / deadline /
-  acceptance gates."
+  of the body. Rewritten at 19P.6 rung 2, because the previous copy
+  named a control the page does not have (`Discard`) and called the
+  page read-only when its inputs render enabled:
+
+  > **Operator view.** The reviewer's own surface, showing their saved
+  > responses to the fields still being collected. **Nothing you type
+  > here is saved** — the form is inert and Save, Cancel and Submit are
+  > disabled — and the session-status, deadline and acceptance gates do
+  > not apply.
+
+  It opens with **Operator view**, not *Preview*: the surface is now
+  reached to inspect a real reviewer as well as to preview a
+  configuration, and one neutral sentence is true from both doors."
 - The reviewer write-path `<form>` wrapper is replaced by a plain
   `<div>` so no `formaction=` can re-target a write endpoint. The
   action row still renders (so the operator sees the form chrome
@@ -812,6 +826,14 @@ In preview mode:
   reviewer in the session (alphabetical-by-email); an unmatched
   value redirects back to the Previews hub with the bad query
   preserved so the picker's "No reviewer matched" hint renders.
+- **The dropped-fields notice renders here too** (19P.6 rung 2b).
+  *"Some saved responses are no longer collected: …"* names fields the
+  reviewer has an answer on whose Band 2 chip the operator has since
+  un-pinned. It was suppressed in `preview_mode` when this surface was
+  a pre-launch preview only — nothing is saved there, so nothing can be
+  dropped — and that stopped being true once the surface was also used
+  to inspect a real reviewer, where a dropped field is exactly what the
+  operator would want to know, since the form omits it silently.
 - **Read-only side-effects.** The preview GET emits no audit
   events and **does not** call `lifecycle.observe_deadline(...)`
   — opening a preview must never flip `accepting_responses=false`

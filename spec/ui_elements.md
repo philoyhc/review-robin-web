@@ -606,6 +606,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.page-grid` + placement classes (`.card-tl` / `-tr` / `-bl` / `-br`) | Equal-height two-column grid with explicit placement, for the L-shape layouts that need the stretch. `.bottom-grid` is preferred for a new pairing (see below). |
 | `.bottom-grid` + `.bottom-left` | Two-column grid at `align-items: start`, so each side keeps its natural height instead of stretching to match the taller column. `.bottom-left` is the flex column for stacking several cards on one side. |
 | `.btn-row` (equal-flex) | A row of buttons sharing the width equally. |
+| `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child**. Ships in `base.html` and had one caller from 11F until 19P.6 gave it a second; named here at that point, because a primitive with two callers is a primitive. |
 | `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. |
 | `.setup-grid` (4-col grid for the Session Setup card) | |
 | `.fill-col` (flex column whose last child grows) | |
