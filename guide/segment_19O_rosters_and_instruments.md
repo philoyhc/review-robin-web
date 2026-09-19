@@ -73,7 +73,9 @@ still live.
    Relationships / Assignments, 19Q.2 rung 1's Manage Invitations
    counter, 19Q.2 rung 3's six rewritten copy strings, 19Q.3 rung 1a's
    State 2 card copy, and 19Q.3 rung 2's four recaptured Guide
-   screencaps with the prose around them. The last blocks the 19Q close
+   screencaps with the prose around them. Grown 2026-09-19 by entry
+   13's two missed strings: the Quick Setup lifecycle banner and the
+   Danger Zone intro, both of which want a reading in place. The last blocks the 19Q close
    by the author's ruling, 2026-09-18; the rest block nothing.
 9. **Done.** The Workflow card's State 6 told the operator reviewers had
    been notified when no transport is wired — the sentence 19Q.3's cold
@@ -93,6 +95,18 @@ still live.
     draft, internal identifiers keep Pause, four specs say which is
     which. `spec/domain_assumptions.md`'s *Closed/Paused* was left
     alone: that is **instrument** status, a different Pause.
+    **Reopened and finished 2026-09-19: the sweep matched the label,
+    not the word.** Two rendered strings said it in lower case, in
+    running prose, and neither was pinned by a test. The Quick Setup
+    lifecycle banner renamed its *second* sentence and kept "Setup
+    edits are **paused**" in the first — two vocabularies inside one
+    string literal, three lines under a docstring citing this ruling.
+    The Danger Zone card read "Both are locked while the session is
+    Activated — **pause it first**", above the two per-control notes
+    the sweep did rename. Both now use the house pair the rest of the
+    app uses (`_validate.py`: "Setup is locked. Revert to draft on
+    Session Home to make changes."), and both are pinned, each
+    assertion mutation-checked against the copy it replaced.
 14. **Done — ruled and built.** `spec/workflow_card.md` tested
     `needs_acknowledge` before invitation state, so 4W was modelled as
     exclusive with 5 and 6 and its button column showed three. The
