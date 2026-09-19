@@ -23,11 +23,13 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Observer,
     Reviewee,
     Reviewer,
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
+from app.services.csv_imports import is_comparable_identity
 from app.services.email_identity import normalize_email
 from app.services.instruments import _instrument_label
 from app.services.participants import is_email_identified
@@ -130,6 +132,210 @@ def _check_reviewers_duplicate_email(
                 # First duplicate's row is the deep-link target.
                 fix_anchor=f"#reviewer-row-{dupes[0].id}",
             )
+
+
+def _check_observers_duplicate_email(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """The backstop reviewers and reviewees have had all along.
+
+    Observers carry the only DB-level uniqueness of the three rosters
+    (``uq_observer_session_email``), so a duplicate can only be a row
+    that predates the constraint or one that arrived by a path going
+    around the services. That is the point rather than an argument
+    against the rule: the Validate page's job is to report, and
+    observers were the one roster it had nothing to report with
+    (19Q Item 7).
+    """
+    observers = list(
+        db.execute(
+            select(Observer)
+            .where(Observer.session_id == review_session.id)
+            # Ordered so "the first duplicate's row" is a fact rather
+            # than whatever the dialect happened to return. Note what
+            # this does NOT buy: SQLite grants an unordered SELECT the
+            # insertion order anyway, so no test here fails if the
+            # clause is deleted, and the mutation gate says so. Where
+            # the choice reaches operator-facing copy it is made in
+            # Python instead — `csv_imports._identity_holders`.
+            .order_by(Observer.id)
+        ).scalars()
+    )
+    by_email: dict[str, list[Observer]] = {}
+    for o in observers:
+        by_email.setdefault(normalize_email(o.email), []).append(o)
+    for email, dupes in by_email.items():
+        if len(dupes) > 1:
+            yield ValidationIssue(
+                severity=Severity.error,
+                source="observers",
+                field="email",
+                message=f"Duplicate observer email '{email}' ({len(dupes)} rows)",
+                # First duplicate's row is the deep-link target.
+                fix_anchor=f"#observer-row-{dupes[0].id}",
+            )
+
+
+# --------------------------------------------------------------------------- #
+# Cross-roster identity (19Q Item 7)
+# --------------------------------------------------------------------------- #
+#
+# One mailbox under two names across two rosters. The create / edit
+# services and all three CSV importers refuse such a pair from rung 1
+# on (``csv_imports.cross_table_identity_conflict``); these rules are
+# what finds the pairs that were already in the session when they
+# started refusing.
+#
+# Three registered rules over one generator rather than one rule with
+# a session-wide source: the operator fixes the conflict on a roster
+# page, so each side of it needs that page's ``fix_url`` and its own
+# row anchor. A single rule carries one ``fix_url`` for every issue it
+# emits, which would send half of them to the wrong page.
+
+
+_CROSS_ROSTER_WHY = (
+    "The same mailbox under two different names is one person "
+    "recorded twice, and nothing downstream can tell which "
+    "spelling is right: results, collation, and the reviewer's own "
+    "surface all key on the email. Reviewer / reviewee overlap "
+    "itself is legitimate and stays so — a self-review is exactly "
+    "that — as long as the name agrees. Fix whichever row has the "
+    "name wrong."
+)
+
+# ``(source, model, identifier attribute, name attribute, anchor prefix)``
+# in the order the Validate page reads best: reviewers, reviewees,
+# observers.
+_ROSTER_IDENTITY_FIELDS: tuple[
+    tuple[str, type, str, str, str], ...
+] = (
+    ("reviewers", Reviewer, "email", "name", "reviewer-row"),
+    ("reviewees", Reviewee, "email_or_identifier", "name", "reviewee-row"),
+    ("observers", Observer, "email", "display_name", "observer-row"),
+)
+
+# Singular labels for the message; "reviewers" reads wrong inside
+# "… as a reviewers".
+_ROSTER_SINGULAR = {
+    "reviewers": "reviewer",
+    "reviewees": "reviewee",
+    "observers": "observer",
+}
+
+
+@dataclass(frozen=True)
+class _IdentityHolder:
+    """One roster row that names a mailbox."""
+
+    source: str
+    row_id: int
+    name: str
+    anchor_prefix: str
+    #: The column the conflict is in, rendered to the operator as a
+    #: `<code>` chip. Reviewees do not have an `email` column, and the
+    #: sibling `reviewees.duplicate_id` rule names `email_or_identifier`
+    #: — one rule in the same section must not name a column the roster
+    #: does not have.
+    field: str
+
+
+def _identity_holders_by_email(
+    db: Session, review_session: ReviewSession
+) -> dict[str, list[_IdentityHolder]]:
+    """Every named roster row in the session, keyed by normalized email.
+
+    Rows that cannot disagree with anything are left out by
+    ``csv_imports.is_comparable_identity`` — the same predicate the
+    write guards apply, called rather than restated, because a rule
+    with two homes is the defect this item is fixing one level up.
+    """
+    holders: dict[str, list[_IdentityHolder]] = {}
+    for source, model, id_attr, name_attr, anchor_prefix in (
+        _ROSTER_IDENTITY_FIELDS
+    ):
+        rows = (
+            db.execute(
+                select(model)
+                .where(model.session_id == review_session.id)
+                # Deterministic issue order across dialects; see
+                # ``_check_observers_duplicate_email``.
+                .order_by(model.id)
+            )
+            .scalars()
+            .all()
+        )
+        for row in rows:
+            identifier = getattr(row, id_attr) or ""
+            name = getattr(row, name_attr) or ""
+            if not is_comparable_identity(identifier, name):
+                continue
+            holders.setdefault(normalize_email(identifier), []).append(
+                _IdentityHolder(
+                    source=source,
+                    row_id=row.id,
+                    name=name,
+                    anchor_prefix=anchor_prefix,
+                    field=id_attr,
+                )
+            )
+    return holders
+
+
+def _cross_roster_identity_issues(
+    db: Session, review_session: ReviewSession, source: str
+) -> Iterable[ValidationIssue]:
+    """One issue per ``source`` row whose name another roster disagrees with.
+
+    Disagreement is exact on the stored (already-trimmed) name — the
+    comparison rung 1's guards make, chosen rather than inherited
+    (19Q Item 7, open question 2). Two rows in the *same* roster are
+    left to that roster's ``duplicate_*`` rule, so a within-roster
+    duplicate is not reported twice.
+    """
+    for email, holders in sorted(_identity_holders_by_email(db, review_session).items()):
+        for holder in holders:
+            if holder.source != source:
+                continue
+            others = [
+                other
+                for other in holders
+                if other.source != holder.source and other.name != holder.name
+            ]
+            if not others:
+                continue
+            spelled = ", ".join(
+                f"'{other.name}' as a "
+                f"{_ROSTER_SINGULAR[other.source]}"
+                for other in others
+            )
+            yield ValidationIssue(
+                severity=Severity.error,
+                source=source,
+                field=holder.field,
+                message=(
+                    f"'{email}' is '{holder.name}' here, but {spelled}. "
+                    "One mailbox, one name — fix whichever row is wrong."
+                ),
+                fix_anchor=f"#{holder.anchor_prefix}-{holder.row_id}",
+            )
+
+
+def _check_reviewers_cross_roster_identity(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    return _cross_roster_identity_issues(db, review_session, "reviewers")
+
+
+def _check_reviewees_cross_roster_identity(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    return _cross_roster_identity_issues(db, review_session, "reviewees")
+
+
+def _check_observers_cross_roster_identity(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    return _cross_roster_identity_issues(db, review_session, "observers")
 
 
 def _check_reviewees_empty(
@@ -691,6 +897,10 @@ def _reviewees_url(s: ReviewSession) -> str:
     return f"/operator/sessions/{s.id}/reviewees"
 
 
+def _observers_url(s: ReviewSession) -> str:
+    return f"/operator/sessions/{s.id}/observers"
+
+
 def _instruments_url(s: ReviewSession) -> str:
     return f"/operator/sessions/{s.id}/instruments"
 
@@ -795,6 +1005,49 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_reviewees_url,
         fix_page_label="Reviewees Setup",
         check=_check_reviewees_unreachable_for_results,
+    ),
+    ValidationRule(
+        key="observers.duplicate_email",
+        source="observers",
+        severity=Severity.error,
+        why=(
+            "Observer email is the join key the collation surface "
+            "authenticates against. Two rows sharing one mailbox make "
+            "the observer's access ambiguous, and the roster reads as "
+            "though one person were two. Required to be unique — the "
+            "database enforces it on writes, and this check reports a "
+            "row that predates that guarantee."
+        ),
+        fix_url=_observers_url,
+        fix_page_label="Observers Setup",
+        check=_check_observers_duplicate_email,
+    ),
+    ValidationRule(
+        key="reviewers.cross_roster_identity",
+        source="reviewers",
+        severity=Severity.error,
+        why=_CROSS_ROSTER_WHY,
+        fix_url=_reviewers_url,
+        fix_page_label="Reviewers Setup",
+        check=_check_reviewers_cross_roster_identity,
+    ),
+    ValidationRule(
+        key="reviewees.cross_roster_identity",
+        source="reviewees",
+        severity=Severity.error,
+        why=_CROSS_ROSTER_WHY,
+        fix_url=_reviewees_url,
+        fix_page_label="Reviewees Setup",
+        check=_check_reviewees_cross_roster_identity,
+    ),
+    ValidationRule(
+        key="observers.cross_roster_identity",
+        source="observers",
+        severity=Severity.error,
+        why=_CROSS_ROSTER_WHY,
+        fix_url=_observers_url,
+        fix_page_label="Observers Setup",
+        check=_check_observers_cross_roster_identity,
     ),
     ValidationRule(
         key="instruments.no_fields",

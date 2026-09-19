@@ -60,6 +60,10 @@ _RULE_KEY_GATE: dict[str, Gate] = {
     "reviewees.empty": "setup",
     "reviewees.duplicate_id": "setup",
     "reviewees.unreachable_for_results": "setup",
+    "observers.duplicate_email": "setup",
+    "reviewers.cross_roster_identity": "setup",
+    "reviewees.cross_roster_identity": "setup",
+    "observers.cross_roster_identity": "setup",
     "instruments.no_fields": "setup",
     "instruments.no_display_fields": "setup",
     "email_template.no_help_contact": "setup",
@@ -275,6 +279,24 @@ def _setup_coverage_rows(
             warning_count=w,
         )
     )
+    if review_session.observers_enabled:
+        # 19Q Item 7. Observers became an issue *source* when the two
+        # cross-roster rules and `observers.duplicate_email` landed, and
+        # an error source with no row badges nothing on the at-a-glance
+        # grid — `spec/validate_page.md` §7 step 5. Gated on the flag
+        # because a session with observers switched off has no roster to
+        # summarise, and a permanently blank row is one the operator
+        # learns to skip.
+        e, w = _err_warn("observers")
+        rows.append(
+            SetupCoverageRow(
+                label="Observers",
+                status=str(csv_imports.existing_observer_count(db, sid)),
+                source="observers",
+                error_count=e,
+                warning_count=w,
+            )
+        )
     e, w = _err_warn("instruments")
     rows.append(
         SetupCoverageRow(

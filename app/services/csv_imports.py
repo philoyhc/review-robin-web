@@ -583,6 +583,31 @@ def parse_observer_csv(content: bytes) -> ParseResult:
     return ParseResult(rows=parsed, issues=issues)
 
 
+def is_comparable_identity(identifier: str | None, name: str | None) -> bool:
+    """Can this ``(identifier, name)`` pair disagree with another one?
+
+    Two cannot, and both are skipped wherever the cross-roster rule is
+    applied:
+
+    * an identifier with no ``@`` — a reviewee's anonymous handle in the
+      asymmetric mode, which is not a mailbox and cannot collide with
+      one;
+    * a row whose name is unset. ``Observer.display_name`` is nullable
+      and its CSV column optional, where ``Reviewer.name`` and
+      ``Reviewee.name`` are not — so without this an unnamed observer
+      would conflict with every reviewer sharing its mailbox (19Q Item
+      7, the author's two answers interacting).
+
+    One function rather than the copy per call site the rule grew at
+    rung 1: a mutant that removed only the importer's copy survived
+    until a test went looking for it, and rung 2's Validate rule would
+    have been a third. ``app.services.validation`` imports this for
+    exactly that reason — the *membership* rule has one home even where
+    the output shapes differ.
+    """
+    return "@" in (identifier or "") and bool(name)
+
+
 #: Per roster: the model, its identity attribute, its name attribute,
 #: and the label a message uses for it. The import-row classes spell the
 #: same two fields differently, so each carries its own pair.
@@ -622,28 +647,34 @@ _IDENTITY_MODELS = {
 
 def _identity_holders(
     db: Session, *, session_id: int, exclude: str
-) -> dict[str, tuple[str, str]]:
-    """``{normalized email: (roster label, name)}`` for every roster but
-    ``exclude``, within one session.
+) -> dict[str, list[tuple[str, str]]]:
+    """``{normalized email: [(roster label, name), ...]}`` for every
+    roster but ``exclude``, within one session.
 
     Two kinds of row are skipped, for the same reason — they cannot
-    disagree with a name:
+    disagree with a name — see :func:`is_comparable_identity`.
 
-    * an identifier with no ``@`` (a reviewee's anonymous handle in the
-      asymmetric mode, which is not a mailbox and cannot collide with
-      one);
-    * a row whose name is unset. ``Observer.display_name`` is nullable
-      and its CSV column optional, where ``Reviewer.name`` and
-      ``Reviewee.name`` are not — so without this an unnamed observer
-      would conflict with every reviewer sharing its mailbox (19Q Item
-      7, the author's two answers interacting).
+    **Every holder is kept, and none is chosen.** An earlier form of
+    this collapsed each mailbox to one holder, which was wrong twice
+    over (Codex review on #2485, 19Q Item 7 rung 2):
 
-    When two rosters already hold one email they must already agree, each
-    having been checked as it was added, so keeping whichever is seen
-    last is equivalent. Legacy rows that disagree are the Validate rule's
-    to report, not this function's — it runs on the way in.
+    * Reviewers and reviewees carry no DB uniqueness on
+      ``(session_id, email)`` — that is why
+      ``reviewers.duplicate_email`` and ``reviewees.duplicate_id`` exist
+      as Validate rules — so one mailbox can already hold two names. A
+      new row matching the *chosen* holder was then accepted while the
+      other holder still disagreed with it, which is the rule this
+      module exists to enforce, failing open.
+    * The collapse picked the highest ``id``, and ids are table-local.
+      Comparing a ``Reviewer.id`` against an ``Observer.id`` says
+      nothing about which row came first, so "the most recently added
+      holder" was not what it selected.
+
+    Nothing here now depends on the order rows arrive in. Which holder a
+    message cites is decided by :func:`_first_disagreeing_holder`, from
+    the values rather than from the query.
     """
-    holders: dict[str, tuple[str, str]] = {}
+    holders: dict[str, list[tuple[str, str]]] = {}
     for roster, spec in _IDENTITY_ROSTERS.items():
         if roster == exclude:
             continue
@@ -655,10 +686,42 @@ def _identity_holders(
         ):
             identifier = getattr(row, spec["model_attr"]) or ""
             name = getattr(row, spec["name_attr"])
-            if "@" not in identifier or not name:
+            if not is_comparable_identity(identifier, name):
                 continue
-            holders[normalize_email(identifier)] = (spec["label"], name)
+            holders.setdefault(normalize_email(identifier), []).append(
+                (spec["label"], name)
+            )
     return holders
+
+
+#: Roster label -> its position in ``_IDENTITY_ROSTERS``, so a message
+#: naming one of several disagreeing holders names the same one every
+#: time, on every dialect.
+_ROSTER_ORDER = {
+    spec["label"]: index
+    for index, spec in enumerate(_IDENTITY_ROSTERS.values())
+}
+
+
+def _first_disagreeing_holder(
+    holders: list[tuple[str, str]], name: str
+) -> tuple[str, str] | None:
+    """The holder to cite when one or more disagree with ``name``.
+
+    **Any** disagreement is a conflict — the caller must not be able to
+    slip a row past by matching one holder of a mailbox that already
+    carries two names. Which one the 400 names is presentation, and is
+    picked from the values (roster order, then name) rather than from
+    the order the database returned: an assertion on a cited name is
+    otherwise a false green, since SQLite hands an unordered ``SELECT``
+    back in insertion order and Postgres does not owe it.
+    """
+    disagreeing = [held for held in holders if held[1] != name]
+    if not disagreeing:
+        return None
+    return min(
+        disagreeing, key=lambda held: (_ROSTER_ORDER[held[0]], held[1])
+    )
 
 
 def cross_table_identity_conflict(
@@ -682,14 +745,12 @@ def cross_table_identity_conflict(
             f"cross_table_identity_conflict: unknown kind {kind!r}; "
             f"expected one of {sorted(_IDENTITY_ROSTERS)}"
         )
-    if "@" not in (identifier or "") or not name:
+    if not is_comparable_identity(identifier, name):
         return None
-    held = _identity_holders(
+    holders = _identity_holders(
         db, session_id=session_id, exclude=kind
-    ).get(normalize_email(identifier))
-    if held is None or held[1] == name:
-        return None
-    return held
+    ).get(normalize_email(identifier), [])
+    return _first_disagreeing_holder(holders, name)
 
 
 def check_cross_table_identity(
@@ -739,17 +800,15 @@ def check_cross_table_identity(
     issues: list[ValidationIssue] = []
     for index, row in enumerate(rows, start=1):
         identifier = getattr(row, spec["row_attr"]) or ""
-        if "@" not in identifier:
-            continue
         name = getattr(row, spec["row_name_attr"])
-        if not name:
+        if not is_comparable_identity(identifier, name):
             continue
-        held = holders.get(normalize_email(identifier))
+        held = _first_disagreeing_holder(
+            holders.get(normalize_email(identifier), []), name
+        )
         if held is None:
             continue
         holder_label, holder_name = held
-        if holder_name == name:
-            continue
         issues.append(
             ValidationIssue(
                 severity=Severity.error,
