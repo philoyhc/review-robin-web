@@ -1270,6 +1270,24 @@ caught pair 12 cannot see a state change that does not move the layout.
 Rung 1 corrected the two alt texts that were false as a result; the
 recapture is open question 4.
 
+**The ladder ran in three rungs, not four.** Rung 1 took eleven
+like-for-like pairs rather than eight — v3a supplies more than v2 did —
+plus the two alt texts its own review turned up. Rung 2 took every
+structural change at once: the quick-setup capture absorbing
+`create-session-optional-tabs`, the roster pair renamed around the
+locked card and the Unlock panel with its prose rewritten,
+`workflow-activated` retired, **Email addresses** promoted to its own
+`<h3>`, and the author's wording for the Prepare pointer. The ladder's
+rung 3 — *Validate and the two Workflow states* — has nothing left to
+land: open question 1 withdrew the Validate recapture and question 2
+kept the warnings prose, so only the close remains. 19 pairs → **17**,
+19 figures → **17**.
+
+**The roster pair landed as supplied.** Its two halves are different
+session states (open question 4), so the alt text names the card's parts
+without quoting the counts that differ. If the recapture happens, the
+files change and the alt text can quote again.
+
 ### PR ladder
 
 1. **The eight like-for-like pairs** — session home, the four instrument
