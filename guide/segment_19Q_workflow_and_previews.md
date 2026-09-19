@@ -1,9 +1,10 @@
 # Segment 19Q — Workflow and preview revamp
 
-Five items, closing independently. Item-level `Doc impact` / `Status`, so
+Six items, closing independently. Item-level `Doc impact` / `Status`, so
 `tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
 2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
-the author delivered a new capture set.
+the author delivered a new capture set — and 6 on 2026-09-19, when a
+question about the instrument tints found them keyed workspace-wide.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -804,3 +805,126 @@ At `ac6d0832`:
 - `docs/status.md` — row when Item 5 lands (Item 5).
 - `spec/setup_pages.md` — the Reviewers page prose, if pair 2's collapse changes what the Guide says the Unlock panel holds (Item 5).
 - `spec/ui_elements.md` — the capture-family counts, if the 6 → 3 narrowing is worth stating (Item 5).
+
+---
+
+## Item 6 — The instrument tint follows the number the reviewer sees
+
+### Opportunity
+
+Three numbers describe an instrument and no two of them agree.
+
+| | scope | drives |
+|---|---|---|
+| `Instrument.id` | **workspace-wide** autoincrement PK (`app/db/models/instrument.py:25`) | the card tint |
+| `Instrument.order` | per session | display sequence (`.order_by(Instrument.order, Instrument.id)`) |
+| `loop.index` → `#N` | per session | the heading the reviewer reads |
+
+`instruments_index.html:693` keys the background on
+`instrument_palette[(instrument.id - 1) % instrument_palette | length]`,
+so the tint is a fact
+about the whole workspace shown on a per-session page. Two sessions with
+structurally identical instruments get different tint runs depending on
+when their rows were inserted, and within one session the colours do not
+run 1→6 in card order: ids 47, 48, 51 render tints 5, 6, 3.
+
+**Nothing pins any of it.** `grep -rln "surface-tint\|instrument_palette"
+tests/` returns nothing, which is why this has never gone red.
+
+`spec/instruments.md` states the id-keying deliberately — "keyed by
+**instrument id and not by loop position**, so the colour rides with the
+instrument across reorders / replicates / deletes". That reasoning is
+sound about drag stability and is what the author has now weighed
+against legibility.
+
+### Decision
+
+Key the tint on `loop.index0` — **the same ordinal
+`views.instrument_heading` already uses for `#N`** (`_instruments.py:129`,
+previewed on the operator's own card at `instruments_index.html:1808`,
+inside this same loop). Author's ruling, 2026-09-19: per-session
+ordinal.
+
+The point is not a tidy 1→6 run. It is that the tint stops being a
+fourth fact and becomes the one the reviewer's heading already states,
+so `#3` is always the third tint.
+
+**Rejected — rank of `id` within the session.** It is per-session, gives
+1..n, and keeps the drag stability `spec/instruments.md` argues for. It
+also silently disagrees with `#N` the moment anyone reorders, which
+recreates the defect this item exists to remove, one layer down where
+nothing shows it.
+
+### Semantics
+
+- **Single-instrument session:** `instrument_heading` returns no `#N`
+  prefix at all when `total_count == 1`, so there is no number to agree
+  with. Tint 1, and nothing claims otherwise.
+- **More than six:** `% 6` wraps, as today. Instrument 7 and instrument 1
+  share a tint; the palette is six colours and the ordinal is not a key.
+- **Reorder reshuffles the tints, and that is the contract now.** The
+  tint tracks position, so dragging an instrument up moves its colour
+  with the position rather than with the row. `spec/instruments.md`'s
+  paragraph is reversed, not deleted.
+- **Delete renumbers the successors**, for the same reason and by the
+  same rule as `#N`.
+- **Page-break cards do not consume an index.** They render inside the
+  instrument loop (`:668`) ahead of a successor with `starts_new_page`,
+  not as iterations of it, so `loop.index` stays the instrument ordinal.
+- **Replicate** lands the copy at a position and it takes that
+  position's tint; there is no "same colour as its source" rule to keep.
+
+### Judgment calls — decided
+
+- `loop.index0` rather than a view-layer field (2026-09-19): the value is already in scope at `:693`, the template already reads it later in the same loop for `#N`, and a context key would put the same arithmetic in two places. `spec/architecture.md`'s fourth seam covers *computed* view shape; a loop position is not that.
+- The palette itself is untouched (2026-09-19). Six tints, same order, same tokens — `spec/color_tokens.md`'s table is a record of values, and this item changes only which instrument gets which.
+
+### Blast radius (measured)
+
+Run 2026-09-19:
+
+- `grep -rn "instrument_palette" app/ | wc -l` → **2** (the list at `:422`, the use at `:693`)
+- `grep -rln "surface-tint" app/ | wc -l` → **2** (`base.html` defines the six, `instruments_index.html` uses them)
+- `grep -rn "instrument.id - 1" app/ | wc -l` → **1** — the whole behavior change
+- `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0**
+- `grep -rln "surface-tint\|instrument_palette\|Card background colour" spec/ docs/ guide/*.md` → `spec/instruments.md`, `spec/color_tokens.md`
+
+### PR ladder
+
+1. **The re-key and its guard.** `:693` moves to `loop.index0`; a test
+   renders a session whose instruments' ids are deliberately
+   non-contiguous and asserts the tints run in card order, with the
+   id-keyed order as the mutant. Must not touch the palette or
+   `base.html`.
+2. **The close.** `spec/instruments.md`'s "Card background colour"
+   paragraph reversed with its reason, `docs/status.md` row, the five
+   close lines.
+
+### Definition of done
+
+- A session whose instrument ids are non-contiguous renders tints 1, 2, 3 in card order.
+- `grep -rn "instrument.id - 1" app/` returns nothing.
+- The guard fails when the keying is restored to `instrument.id`, shown in the PR body.
+- `spec/instruments.md` states the ordinal keying and what it costs on reorder.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does this land before or after Item 5's captures?** The four
+   `instrument-card-*` pairs Item 5 replaces show the tints. Landing
+   Item 6 after them makes those four stale on the day they ship; the
+   author re-shoots either way, so the only question is when. Author's.
+
+### Out of scope
+
+- The palette's six values, its order, and the dark-mode variants. `spec/color_tokens.md` holds them and nothing here reads them.
+- Tinting anything on the reviewer surface. The palette is used in exactly one template today, and widening it is a design question this item does not open.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 6 lands (Item 6).
+- `spec/instruments.md` — the "Card background colour" paragraph: ordinal keying, and the reorder cost it now accepts (Item 6).
