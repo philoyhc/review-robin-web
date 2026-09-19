@@ -89,8 +89,30 @@ Source: `app/web/templates/operator/sessions_list.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 11 | Search | Add new session | `<a>` | `btn` | Primary | The lobby's **only** create affordance, in every state — the first-run card names this button instead of carrying a second one (`spec/sessions_overview.md` "Empty state") |
-| 12 | Search | Rehydrate / Go to Archive | `<a>` | `btn secondary` | Secondary | Always rendered; `Go to Archive` is active in every state, `Rehydrate` in every state **in which it renders at all** — it is gated behind `rehydrate_enabled`, which ships false, so by default it is absent rather than inactive (`spec/rehydrate.md`), `Cancel` only when live sessions exist |
+| 12 | Filter | Rehydrate / Go to Archive | `<a>` | `btn secondary` | Secondary | Always rendered; `Go to Archive` is active in every state, `Rehydrate` in every state **in which it renders at all** — it is gated behind `rehydrate_enabled`, which ships false, so by default it is absent rather than inactive (`spec/rehydrate.md`) |
+| 12a | Filter | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the filter box. Named `Cancel` in a card headed `Search` until 19O Item 7 entry 15 ruled the control a filter — a live filter has nothing in flight to cancel. Only when live sessions exist; inert as a `<span class="btn secondary disabled">`, not a disabled `<a>`, because `a.btn.disabled` still navigates. **Note the adjacency**: the `Sessions` card's tag strip carries its own `Clear` chip, which clears the selected tags rather than the box |
 | 13 | Row expander (single / bulk) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Lives in the row expander, not a standalone Danger Zone card; gated behind a "Yes, delete" checkbox — see `spec/sessions_overview.md` |
+
+---
+
+## Section 2a — Archived sessions (`/operator/sessions/archived`)
+
+Source: `app/web/templates/operator/sessions_archived.html`.
+
+**Added 19O Item 7 entry 15.** The page shipped at 18A Part 3 and was
+never audited; folding it in alongside the Lobby's filter is what
+surfaced the gap. Its whole body is inside `{% if sessions %}`, so on an
+empty archive none of these render at all — unlike the Lobby, which
+keeps its card and inerts the controls because that card also holds the
+ways out of an empty lobby.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 181 | Filter | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the filter box. Mirrors #12a; no inert variant, since the card is absent when there is nothing to filter |
+| 182 | Row expander (bulk) | Unselect all | `<button type="button">` | `btn secondary` | Secondary | Clears the row selection |
+| 183 | Row expander (bulk) | Unarchive | `<button type="submit">` | `btn` | Primary | Posts `/operator/sessions/bulk-unarchive`; the page's one forward action, hence Primary |
+| 184 | Row expander (bulk) | Download | `<button type="button">` | `btn secondary` | Secondary | **Ships `disabled` unconditionally** — a placeholder for an export that does not exist. A permanently inert control with no explanation beside it |
+| 185 | Row expander (bulk) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/sessions/bulk-delete-archived`; gated behind the "Yes, delete" checkbox, same shape as #13 |
 
 ---
 

@@ -1125,6 +1125,24 @@ case-insensitively:
   out: `SEARCH_TAG_OPTIONS_CAP` (200) on the tag half,
   `REVIEWERS_DATALIST_CAP` (200) on the people half.
 
+**Two more surfaces follow these rules by a different mechanism.**
+The Session Lobby and the Archived page filter *client-side* — they
+hide rows already rendered rather than re-querying — and 19O Item 7
+entry 15 brought their matching onto the per-column rules above:
+substring on the two identity columns, whole value on tags. Their
+contract is in `spec/sessions_overview.md`; two things differ and are
+worth knowing here.
+
+- **No `"Name (handle)"` label.** That form works on these seven
+  because the server exact-matches the parenthesized handle when the
+  input equals a label it offered. A client-side per-column filter
+  cannot do that, so the label would be a suggestion matching nothing.
+  Names and codes are offered as themselves.
+- **The session cap counts sessions, not strings**, each contributing
+  up to two options, so a capped session never keeps one spelling of
+  its identity and loses the other. The per-person cap here has no
+  equivalent problem: one label is one person.
+
 Relationships ships **one** merged list carrying both sides'
 people and the pair-context tag values, not one list per
 dimension. (The Edit / Add row's reviewer and reviewee pickers
