@@ -183,7 +183,7 @@ reject it.
 
 ## Where to look
 
-- **`docs/status.md`** — implementation state + segment history. Authoritative.
+- **`docs/status.md`** — implementation state + segment history from 2026-09-12. Authoritative. Older timeline rows are verbatim in `docs/status_history.md`.
 - **`spec/README.md`** / **`docs/README.md`** / **`guide/README.md`** — the full, current index of each folder. Start here when the entry below isn't specific enough.
 - **`spec/architecture.md`** — domain entities, layering, the per-package module map.
 - **`spec/operator_ui_concept.md`** — operator chrome, setup nav, cross-page conventions.

@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, two open
+## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, one open
 
 ### Opportunity
 
@@ -39,11 +39,12 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Twelve worked, one open, plus the dev-slot list.** The worked entries
-compact to their outcome: each one's evidence is in its commit and in
-`docs/status.md`, and what a later reader needs from here is what was
-found, not how. Entries 8 and 12b keep their detail because they are
-still live.
+**Thirteen worked, one open, plus the dev-slot list.** The worked
+entries compact to their outcome: each one's evidence is in its commit
+and in `docs/status.md`, and what a later reader needs from here is what
+was found, not how. Entry 8 keeps its detail because it is still live;
+entry 12 keeps its measurements because the split it records is a
+decision a later reader may want to re-apply or reverse.
 
 1. **Done.** `spec/operations_pages.md` had the invitation gate wrong in
    both directions in one paragraph — all six routes gate on
@@ -89,10 +90,25 @@ still live.
     retired with the Create invites button.
 11. **Done.** `tools/code_metrics.py --churn-only` reported a ratio
     pinned at `1.0x` by arithmetic on a shallow clone. It refuses now.
-12. **Header done; the compaction is not.** `docs/status.md`'s header
-    was six days stale and is fixed. The file is **1,264 lines**, named
-    as a compaction target by `guide/codebase_assessment_18sep.md` §4 —
-    which is a judgment call about what to drop, and is what remains.
+12. **Done — header, then the split.** `docs/status.md`'s header was six
+    days stale and is fixed. The file, **1,260 lines / 642K characters**
+    by 2026-09-19, was named a compaction target by
+    `guide/codebase_assessment_18sep.md` §4 "in §3's sense: with a
+    register to catch what falls out". Measured first: 217 dated rows
+    were **76% of the characters**, and 118 of them name an archived plan
+    that holds the real detail. **Author's call: split rather than
+    summarise.** Rows dated 2026-09-11 and earlier moved verbatim to
+    `docs/status_history.md`; `status.md` keeps its header, the live
+    capability inventory, the architectural notes and the timeline from
+    2026-09-12. **1,260 → 1,098 lines, 642K → 335K characters**, and
+    §3's rule is satisfied by construction — nothing was summarised, so
+    nothing could be lost, and the register is a file rather than a
+    paragraph. Two pre-existing defects surfaced: one 2026-05-07 timeline
+    row was inside the three-column **Segments shipped** table, where it
+    renders malformed, and the table has never been strictly newest-first
+    (six adjacent pairs, all April–May). The first is filed in date
+    order; the second is left alone and recorded, reordering a dated log
+    being churn that makes every later diff harder to read.
 13. **Done — ruled and swept.** *Pause* and *Revert to draft* named one
     transition in two vocabularies. Author's ruling, 2026-09-18:
     **Revert to draft is the external-facing canonical name; Pause is
