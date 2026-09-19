@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; nine worked, one added
+## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, three open
 
 ### Opportunity
 
@@ -23,10 +23,11 @@ disappears. Recorded as a register, not planned.
 
 **Audited, then worked, 2026-09-18.** The audit confirmed entries 1–7,
 grew 8 and added 9–12; the pass that followed closed nine and the
-`spec-writer` check on it added 13. **Four stay open:** 3 and 13, both
-behavior or naming decisions that are the author's; 8, the dev-slot
-verification only the author can do; and the `docs/status.md`
-compaction half of 12, a judgment call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+`spec-writer` check on it added 13. The author ruled 3 and 13 on
+2026-09-18 and both are swept; 19Q.3's close added 14. **Three stay
+open:** 8, the dev-slot verification only the author can do; the
+`docs/status.md` compaction half of 12, a judgment call about what to
+drop; and 14, a spec-versus-code model question that is the author's. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -88,11 +89,27 @@ still live.
 13. **Done — ruled and swept.** *Pause* and *Revert to draft* named one
     transition in two vocabularies. Author's ruling, 2026-09-18:
     **Revert to draft is the external-facing canonical name; Pause is
-    the legacy and internal equivalent.** Operator-visible copy says
-    Revert to draft; internal identifiers keep Pause; the specs say
-    which is which. **One occurrence was deliberately left alone** —
-    `spec/domain_assumptions.md`'s *Closed/Paused* is **instrument**
-    status, a different Pause that a blind sweep would have corrupted.
+    the legacy and internal equivalent.** Operator copy says Revert to
+    draft, internal identifiers keep Pause, four specs say which is
+    which. `spec/domain_assumptions.md`'s *Closed/Paused* was left
+    alone: that is **instrument** status, a different Pause.
+14. **Open — the spec's cascade is not the template's, and the gap is
+    reachable.** `spec/workflow_card.md` tests `needs_acknowledge`
+    before invitation state, so 4W is modelled as exclusive with 5 and
+    6 and its button-table column shows three. The template tests
+    invitations **first** and appends the warning line independently,
+    and `send_invites_visible` reads only invitation state. Measured:
+    validated, invitations generated, one fresh W8 warning renders
+    **State 5's body, the warning line and four button slots** — Revert
+    to draft, Prepare session, Send invites, Activate session. Nothing
+    pins it; `needs_acknowledge` and `4W` appear nowhere under
+    `tests/`. Predates 19Q; surfaced by 19Q.3's `spec-writer` pass and
+    confirmed at runtime. **Recommendation: the document is wrong, not
+    the code** — 4W is an overlay on States 4, 5 and 6, because showing
+    State 4's body instead would drop what the operator most needs to
+    know. It renames a state every table in that spec uses, so it is
+    the author's. It is also 19Q Item 4's reproduction case: four slots
+    with a populated right column.
 
 ### Doc impact
 

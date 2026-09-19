@@ -469,8 +469,9 @@ describing a sentence shipping in the same merge.
 
 ### Status
 
-**Rungs 1, 1a and 2 landed 2026-09-18**; the close remains. Rung 1 needed
-a corrective push for two false parity claims (#2464).
+**Closed 2026-09-18.** Rungs 1, 1a and 2 landed; the close waited on the
+author's dev-slot inspection of the recaptured screencaps, the one gate
+the sandbox cannot supply; 19Q Item 5 now supersedes both.
 
 **The ladder grew rung 1a**, the card copy, folded in by the author. Its
 finding is the instrument rather than the copy: `ready for prime time`
@@ -479,14 +480,17 @@ test**, so the sentence 19Q Item 2 rung 2 left incomplete could not go
 red. Grepped against `tests/`, States 7/3/1 are pinned by 3/2/1 files;
 States 2 and 5 by none.
 
-**One cumulative cold read, and it paid.** Four defects, all in rung 2's
-prose, all claims about the app: Prepare's steps in the wrong order and
-unconditional, where invitations come last and only on a clean
-validation; the eligibility rule missing *included*; Activate credited
-with sending; and **"Send invites notifies reviewers"**, which nothing
-does — no transport is wired (`app/services/email_send.py`) and
-`guide.html` says so two cards down. All four: the card's copy read
-instead of the code.
+**Three reads, and two of them found the same defect class** — prose
+written from the card's copy rather than from the code. The one
+`diff-reviewer` pass this item owed under the per-item cumulative
+cadence, at rung 2: four false claims, of which **"Send invites notifies
+reviewers"** is the type specimen, since nothing does — no transport is
+wired (`app/services/email_send.py`) and `guide.html` says so two cards
+down; `docs/status.md` names the other three. A review-bot pass at rung 1
+(#2464): two parity claims about the reviewer surface, fixed in
+`40e86bf4`. The `spec-writer` close pass found the spec truthful about
+everything this item shipped, and one divergence that predates 19Q — the
+State 4W cascade, filed as 19O.7 entry 14.
 
 ### PR ladder
 
@@ -517,9 +521,8 @@ written; this is a third, not a rewrite of either.
 ### Open questions
 
 1. Does the demo walkthrough gain a "look at a reviewer's surface" step?
-   **Yes, as an optional affordance and not a numbered step** (author,
-   2026-09-18) — it rides inside step 4's "look around" rather than
-   extending the sequence.
+   **An optional affordance inside step 4, not a numbered step** (author,
+   2026-09-18).
 
 ### Out of scope
 
