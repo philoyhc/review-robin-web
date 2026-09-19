@@ -1,11 +1,12 @@
 # Segment 19Q — Workflow and preview revamp
 
-Six items, closing independently. Item-level `Doc impact` / `Status`, so
-`tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
+Seven items, closing independently. Item-level `Doc impact` / `Status`,
+so `tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
 2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
-the author delivered a new capture set — and 6 on 2026-09-19, when a
+the author delivered a new capture set — 6 on 2026-09-19, when a
 question about the instrument tints found both the tint and the fallback
-label keyed workspace-wide. It opened as two items that day and merged
+label keyed workspace-wide, and 7 later the same day, when a screenshot
+of the Assignments table showed one mailbox carrying two names. It opened as two items that day and merged
 into one before a rung was cut; see its own note.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
@@ -823,6 +824,151 @@ of the card the operator just left (no suitable anchor id exists).
 - `spec/workflow_card.md` — **eight** passages describing the right column's per-issue list: "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, the §"`4W` is an overlay" mention, the Prepare chain's error branch, the right column's structural description, the workflow-failure signal's note on what it does not suppress, and the `## Source-of-truth pointers` entry. This bullet first said four, a cold read made it five, and the close sweep found eight — the count is recorded here as the finding it is (Item 4).
 - `spec/session_home.md` — **two** passages: the "Status pills + per-issue list live in the right column" bullet and the State 3 row of the lifecycle table. **Undeclared at planning time**, found at rung 2 (Item 4).
 - `spec/rrw_functional_spec.md` — the "right-hand column" bullet, which says the column carries "a validation issue list wherever validation has findings to show". **Undeclared at planning time**, found by the cold read at rung 2; it matters because `spec/README.md` makes this file the entry point a new reader starts from (Item 4). <!-- cites: spec/README.md -->
+
+---
+
+## Item 7 — One mailbox, two names: the check exists and the Add form skips it
+
+### Opportunity
+
+The author's screenshot of the Assignments table, 2026-09-19: a row
+pairing reviewer **Aisha Haddad** with reviewee **Aisha Haddadx**, both
+on `aisha.haddad@example.edu`. One mailbox, two names, two rosters.
+
+**The rule is already written and already correct.**
+`csv_imports.check_cross_table_identity` states it in its own docstring:
+same email + same name across tables is allowed (the person is both
+reviewer and reviewee, common in peer review), same email + different
+name is a blocking error. It is wired to **two** call sites, both CSV
+uploads (`_shared.py:799`, `_quick_setup.py:687`), and to none of the
+four create/edit services that write the same row. Measured against the
+running app, one session, one input:
+
+| path | result | rows written |
+| --- | --- | --- |
+| reviewer CSV, existing reviewee's email, different name | **400**, "names must match" | 0 |
+| the Add form, same input | **303** | 1 |
+
+Nothing catches it afterwards: Validate has no cross-roster rule, so a
+row that arrives by hand is never flagged again.
+
+**It is not cosmetic.** `assignments/_self_review.py:27` classifies a
+pair on `normalize_email` alone, so that row *is* a self-review to the
+engine — counted, filtered, excluded as one — while the table shows the
+operator two different people. The only visible signal points the wrong
+way.
+
+**A second gap, found looking for the first.** Within one roster,
+duplicate email is blocked at CSV, create and edit, and — for reviewers
+and reviewees — again at Validate. **Observers have no Validate rule**,
+the only roster without that backstop. They carry the sole DB-level
+guarantee (`uq_observer_session_email`), so a duplicate cannot persist;
+what is missing is the *report*, on the page whose job is to list what
+is wrong before activation.
+
+### Decision
+
+**Call the existing check from the services rather than write a second
+copy**, and add the two missing Validate rules. Three pieces, in the
+order a reader meets them:
+
+1. `create_reviewer` / `update_reviewer` / `create_reviewee` /
+   `update_reviewee` consult `check_cross_table_identity` the way the
+   CSV paths do, raising the roster's own `*OperationError` so the Add
+   and Edit forms re-render at 400 with the message, exactly as the
+   within-roster duplicate already does.
+2. A Validate rule for cross-roster identity, which is what catches the
+   rows already sitting in a session from before piece 1.
+3. A Validate rule for `observers.duplicate_email`, closing the one hole
+   in the within-roster table.
+
+**Rejected — a new service-layer check.** The rule would then exist
+twice and could drift, which is the defect this item is fixing one level
+up: a rule written once and reachable from only some of its callers.
+
+**Rejected — making the DB constraint the answer.** A constraint on
+`(session_id, email)` across two tables is not expressible, and the
+reviewer/reviewee overlap is legitimate whenever the names agree.
+
+### Semantics
+
+- **Same email + same name across rosters stays legal** — the
+  self-review case, which the app has machinery for. Unchanged.
+- Comparison is `normalize_email` (strip + `str.lower`, not casefold —
+  19N Item 2); name comparison is **exact**, inherited from the CSV path
+  and reopened as open question 2.
+- A reviewee identifier with no `@` is skipped, as in the CSV path:
+  anonymous handles cannot collide with a mailbox by construction.
+- Both new rules are **errors**, matching their within-roster siblings.
+- Piece 1 governs new writes only, so a session already holding a
+  conflicting pair keeps it until someone edits that row. Piece 2 is
+  what tells them it is there.
+
+### Blast radius (measured)
+
+At `81c46014`:
+
+- `grep -rn "check_cross_table_identity" app/ --include=*.py` → **3**:
+  the definition and its two CSV callers.
+- Create/edit services that can write a roster row: **6**
+  (`create_`/`update_` × reviewers / reviewees / observers). **4** are in
+  scope for piece 1; the observer pair is not, cross-table identity being
+  reviewer↔reviewee (open question 1).
+- `grep -c "ValidationRule(" app/services/validation.py` → **18** rules
+  today; this item adds 2.
+- `grep -rln "check_cross_table_identity\|duplicate_email\|duplicate_id" tests/`
+  → **8** test files, including `test_observers_crud_dedup.py`, which
+  already pins observer dedup at the CRUD layer — so piece 3 adds the
+  report, not the behaviour.
+- `spec/validate_page.md` mentions the two duplicate rules **5** times.
+
+### PR ladder
+
+1. **The services consult the existing check.** Pieces 1. Four call
+   sites, one helper each side, and the tests that prove the Add form
+   now matches the CSV path — the asymmetry measured in `Opportunity`
+   becomes a regression test.
+2. **The two Validate rules.** Pieces 2 and 3, with their `why` copy and
+   `fix_anchor` deep links.
+3. **The close** — specs below, `docs/status.md`, `close_check`,
+   `spec-writer`.
+
+### Definition of done
+
+- The Add form and the CSV path give the same verdict on the same input, asserted by one test that drives both.
+- A session holding a pre-existing conflicting pair reports it on Validate.
+- `observers.duplicate_email` reports on Validate; the DB constraint stays as the guarantee.
+- Same email + same name across rosters still creates cleanly, and still classifies as a self-review.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Do observers join the cross-roster check?** Today it is
+   reviewer↔reviewee only. An observer sharing a mailbox with a reviewer
+   under a different name is the same defect, but observers are a
+   different audience (`spec/audience_and_identity_model.md`) and may be
+   deliberately separate. Author's.
+2. **Is the name comparison exact, trimmed, or case-insensitive?** The
+   CSV path compares exactly, so `"Aisha Haddad "` and `"aisha haddad"`
+   both fail today. Inherited rather than chosen; worth choosing now
+   that a form posts into it. Author's.
+
+### Out of scope
+
+- The Assignments table's own display. Whether a self-review row should
+  be visually marked more strongly than it is belongs with that page.
+- Retrofitting existing sessions. Piece 2 reports; nothing rewrites a
+  row an operator has not touched.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 7 lands (Item 7).
+- `spec/validate_page.md` — the rule registry gains two entries; the per-rule table and the counts that quote it (Item 7).
+- `spec/setup_pages.md` — the roster create/edit contracts gain the cross-roster rejection alongside the within-roster one (Item 7).
 
 ---
 
