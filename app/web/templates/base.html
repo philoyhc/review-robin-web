@@ -1642,8 +1642,11 @@
         /* `border-box` so `min-width: 100%` means the summary's width
            and not the summary's width plus two borders — at a hairline
            the 2px overhang was invisible, and at 2px it is not. This
-           sheet has no global box-sizing reset; five other rules set it
-           the same way. */
+           sheet has no global box-sizing reset; a number of other rules
+           set it the same way, `.btn` among them. (This comment used to
+           count them — "five other rules" — and the count went stale;
+           19Q Item 4 replaced it, because a number nothing derives is a
+           number that rots.) */
         box-sizing: border-box;
         min-width: 100%;
         max-height: 16em;
@@ -2592,6 +2595,17 @@
       body.ui-v2 button.btn,
       body.ui-v2 a.btn {
         display: inline-block;
+        /* 19Q Item 4 — a `.btn` never extends past its container
+           (author's contract, 2026-09-19; `spec/ui_elements.md` §6).
+           `<button>` inherits `border-box` from the UA stylesheet and
+           `<a>` does not, so without this an `a.btn` given `width: 100%`
+           overflowed its track by its padding and border — 34px on the
+           Workflow card's four-slot button row, where the anchor form of
+           **Activate session** renders on the warnings detour. Only an
+           explicit width can overflow a content box; flex and grid
+           compute padding and border themselves, so this rule changes
+           the rendered width of exactly one selector's matches. */
+        box-sizing: border-box;
         padding: var(--space-2) var(--space-4);
         border: 1px solid var(--btn-primary-border);
         border-radius: var(--radius-button);
