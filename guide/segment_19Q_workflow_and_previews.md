@@ -652,13 +652,15 @@ page is not a fallback for a long list, it is where the list lives.
 - The four-slot contract is `spec/operator_ui_concept.md`'s ≤4-button
   budget; this item does not change the budget, only whether the slots
   are honored.
-- **A residual the box model cannot reach.** `min-width: 0` cannot take
-  a grid item below its min-content contribution, which for these labels
-  is the longest word on the first line (`Stop releasing`). Probed under
-  border-box: clean at a 440px and a 360px row, **6px of text overflow
-  at 280px**. Whether a 280px Workflow card is reachable is rung 1's to
-  establish; if it is, the fix is a wrapping rule on the label, not the
-  box model.
+- **A residual the box model cannot reach, established out of scope at
+  rung 1.** `min-width: 0` cannot take a grid item below its min-content
+  contribution — here the longest first-line word. Measured on the real
+  `5W` page: **0px overflow across 500–960px**, the whole range the sheet
+  has breakpoints for, and the first overflow at a **400px** viewport.
+  `spec/visual_style_general.md` puts narrow-viewport support in a
+  separate spec, and the sheet's narrowest breakpoint is 500px, so 400px
+  is below what the app claims. Not fixed: a wrapping rule would be
+  scope the contract has not asked for.
 - The right column with no issues is unchanged: `_has_any` already
   guards the list, and the severity pills are rendered by
   `next_action_card.html`, not by the partial — so retiring the loop
@@ -708,6 +710,39 @@ no template can widen that: **0** of the 79 anchors carry an inline
   padding + 2 × 1 border) as content-box and **0px** as border-box, all
   four children on the 104px track. Kept out of the tree: a
   measurement, not a fixture.
+
+### Status
+
+**Rung 1 landed 2026-09-19.** Two CSS lines and a unit guard; no
+template changed.
+
+- **The render test the rung owed turned out to be already written.**
+  `tests/integration/test_workflow_card_w_overlay.py` pins the `5W`
+  markup exactly — four slots, and Activate as an `<a>` on the detour —
+  so a second markup test would have duplicated it. What was unpinned
+  was the *CSS contract*, so the rung's test is
+  `tests/unit/test_btn_box_model.py` instead: the base rule carries
+  `border-box` on the selector that reaches `a.btn`, and nothing
+  anywhere returns a `.btn` to `content-box`. Together those cover every
+  width-sized `.btn` the sheet has or gains, so the file pins the
+  property and not a roster.
+- **Measured on the real page, not a probe.** The `5W` capture comes out
+  of the suite's own fixture and renders faithfully offline (the sheet is
+  inline). Before: three `<button>` at 169.6px and the `<a>` at 203.6px,
+  the row overflowing by 34px. After: all four at 169.6px, 0px overflow.
+- **Six mutants, six caught** — and two of the guard's own drafts were
+  wrong first. `min-width: 0` satisfied a "has a width" regex, so the
+  premise check passed with the row's `width: 100%` deleted; the obvious
+  repair, a negative lookahead, failed because the optional whitespace
+  around the colon backtracks to empty and the lookahead then reads the
+  space instead of the zero. The value is compared in Python now. Both
+  are the session's recurring defect — a matcher that does not match what
+  it is named for.
+- **The stale comment is gone rather than corrected.** `base.html:1645`
+  counted the sheet's `box-sizing` rules ("five other rules") and the
+  count had drifted to ten. Replaced with an uncounted statement plus the
+  reason, because a number nothing derives is a number that rots — the
+  same lesson the `Blast radius` section records about quoting it.
 
 ### PR ladder
 
