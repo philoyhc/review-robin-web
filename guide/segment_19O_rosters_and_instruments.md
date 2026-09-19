@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, three open
+## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, two open
 
 ### Opportunity
 
@@ -24,10 +24,10 @@ disappears. Recorded as a register, not planned.
 **Audited, then worked, 2026-09-18.** The audit confirmed entries 1–7,
 grew 8 and added 9–12; the pass that followed closed nine and the
 `spec-writer` check on it added 13. The author ruled 3 and 13 on
-2026-09-18 and both are swept; 19Q.3's close added 14. **Three stay
-open:** 8, the dev-slot verification only the author can do; the
-`docs/status.md` compaction half of 12, a judgment call about what to
-drop; and 14, a spec-versus-code model question that is the author's. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+2026-09-18 and both are swept; 19Q.3's close added 14, ruled and built
+2026-09-19. **Two stay open:** 8, the dev-slot verification only the
+author can do; and the `docs/status.md` compaction half of 12, a
+judgment call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -93,23 +93,22 @@ still live.
     draft, internal identifiers keep Pause, four specs say which is
     which. `spec/domain_assumptions.md`'s *Closed/Paused* was left
     alone: that is **instrument** status, a different Pause.
-14. **Open — the spec's cascade is not the template's, and the gap is
-    reachable.** `spec/workflow_card.md` tests `needs_acknowledge`
-    before invitation state, so 4W is modelled as exclusive with 5 and
-    6 and its button-table column shows three. The template tests
-    invitations **first** and appends the warning line independently,
-    and `send_invites_visible` reads only invitation state. Measured:
-    validated, invitations generated, one fresh W8 warning renders
-    **State 5's body, the warning line and four button slots** — Revert
-    to draft, Prepare session, Send invites, Activate session. Nothing
-    pins it; `needs_acknowledge` and `4W` appear nowhere under
-    `tests/`. Predates 19Q; surfaced by 19Q.3's `spec-writer` pass and
-    confirmed at runtime. **Recommendation: the document is wrong, not
-    the code** — 4W is an overlay on States 4, 5 and 6, because showing
-    State 4's body instead would drop what the operator most needs to
-    know. It renames a state every table in that spec uses, so it is
-    the author's. It is also 19Q Item 4's reproduction case: four slots
-    with a populated right column.
+14. **Done — ruled and built.** `spec/workflow_card.md` tested
+    `needs_acknowledge` before invitation state, so 4W was modelled as
+    exclusive with 5 and 6 and its button column showed three. The
+    template tests invitations **first** and appends the warning line
+    independently, and `send_invites_visible` reads invitation state
+    alone. Measured: validated, invitations generated, one fresh W8
+    warning renders **State 5's body, the warning line and four button
+    slots**. Author's ruling, 2026-09-19: **fix the spec — `W` is an
+    overlay on States 4, 5 and 6**, so `5W` and `6W` exist. Swept
+    across four documents and the template's own comments; the `4W`
+    column is gone from the button table, which changes no totals
+    because the overlay changes no button's visibility. **Nothing
+    pinned any of it** — `needs_acknowledge` and `4W` appeared nowhere
+    under `tests/` — so the overlay now has a test. Predates 19Q;
+    surfaced by 19Q.3's `spec-writer` pass. It is also 19Q Item 4's
+    reproduction case, and that plan is annotated with the name.
 
 ### Doc impact
 
@@ -121,10 +120,10 @@ still live.
   2026-09-18 as nine entries were worked.
 - `spec/operations_pages.md` — the invitation gate stated at both layers (entry 1).
 - `spec/lifecycle.md` — `precondition` named as a `super_step` value rather than a `context.step` one (entry 5).
-- `spec/rrw_functional_spec.md` — §9.8's parallel state machine replaced by a pointer; the Pause naming in §6.1 and §16.2 (entry 6).
-- `spec/workflow_card.md` — State 6's copy, and the retired `invitations_generate` pointer (entries 9, 10).
+- `spec/rrw_functional_spec.md` — §9.8's parallel state machine replaced by a pointer; the Pause naming in §6.1 and §16.2 (entry 6); the state count and the right-column list (entry 14).
+- `spec/workflow_card.md` — State 6's copy and the retired `invitations_generate` pointer (entries 9, 10); 4Err-renders-Activate recorded as intended (entry 3); the `W` overlay replacing the `4W` state in the cascade, both tables and the detour (entry 14).
 - `guide/deferred_consolidated.md` — the `?validated=1` deferral, recorded where deferrals live (entry 4).
-- `spec/session_home.md` — the two draft-returning transitions under one label (entry 13).
+- `spec/session_home.md` — the two draft-returning transitions under one label (entry 13); the state list and the validated-row button note (entry 14).
 - `spec/quick_setup_card_spec.md` — the lifecycle banner's copy (entry 13).
 - `spec/settings_inventory.md` — the lifecycle-transition action names (entry 13).
 - `spec/visual_style_rrw.md` — the Workflow card's transition list (entry 13).

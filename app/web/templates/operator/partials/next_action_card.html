@@ -68,9 +68,10 @@
   if _next_action_return_to and _next_action_return_to != "home"
   else "/operator/sessions/" ~ session.id
 ) %}
-{# 4W warnings-detour gate — Activate links to /validate?activate=1
-   when there are non-blocking warnings the operator must
-   acknowledge before activation can fire. #}
+{# W-overlay warnings-detour gate — Activate links to
+   /validate?activate=1 when there are non-blocking warnings the
+   operator must acknowledge before activation can fire. Reads no
+   invitation state, so it applies over States 4, 5 and 6 alike. #}
 {% set _activate_needs_warnings_detour = is_validated and validation_summary and validation_summary.can_activate and validation_summary.needs_acknowledge %}
 <div class="card next-action" id="next-action">
   <h2>Workflow</h2>
@@ -127,7 +128,9 @@
           {# State 5 — Prepared, invites drafted but not sent. #}
           <p>Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards.</p>
         {% else %}
-          {# State 4 / 4W — Prepared, no invites yet. #}
+          {# State 4 — Prepared, no invites yet. The W overlay's
+             help-line is appended below this branch, not instead
+             of it, so 4W is this body plus that line. #}
           <p>Setup is prepared and the reviewer surface is previewable, but there are no invitations. <strong>Prepare session</strong> creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses.</p>
         {% endif %}
         {% if validation_summary.needs_acknowledge %}
@@ -390,8 +393,9 @@
         </p>
         {% include "operator/partials/_next_action_issue_list.html" %}
       {% elif is_validated and validation_summary and validation_summary.can_activate %}
-        {# State 4 / 4W. 4W lists the warning details so the
-           operator sees what they're about to acknowledge. #}
+        {# States 4 / 5 / 6. Under the W overlay this lists the
+           warning details too, so the operator sees what they're
+           about to acknowledge. #}
         <p class="next-action-status-line">
           <strong>Status</strong> — Setup validated.
         </p>

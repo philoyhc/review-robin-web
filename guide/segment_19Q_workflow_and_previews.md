@@ -588,6 +588,12 @@ body cascade tests invitations first. Which of the two the spec's tables
 should describe is not this item's question; it is noted so the fixture
 is built from the preconditions and not from a number.
 
+**Answered 2026-09-19, after the above was written** (19O Item 7 entry
+14, the author's ruling): the spec was wrong, not the template. `W` is an
+overlay on States 4, 5 and 6, so this case is **`5W`** — State 5's body
+above the overlay's help-line, four buttons. `spec/workflow_card.md` says
+so now. The fixture is unchanged; only its name was ever in question.
+
 ### Decision
 
 *Not yet decided — see Open questions.* The fix is known and the
@@ -635,7 +641,7 @@ At `a08b4750`:
 
 ### Definition of done
 
-- All four buttons measure one track width in the 4W-with-generated-invitations case above, verified in Chromium.
+- All four buttons measure one track width in the `5W` case above, verified in Chromium.
 - The enumeration of width-sized `a.btn` is in the PR body, not asserted to be empty.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.4` exits 0; any warning adjudicated
