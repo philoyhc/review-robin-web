@@ -40,8 +40,14 @@
       <div class="card sessions-action-card">
         <h2>Filter</h2>
         <input type="text" class="archived-search-input"
+               list="archived-filter-options"
                placeholder="Filter by name, code, or tag"
                aria-label="Filter archived sessions">
+        <datalist id="archived-filter-options">
+          {% for value in filter_options %}
+            <option value="{{ value }}"></option>
+          {% endfor %}
+        </datalist>
         <div class="sessions-action-buttons">
           <button type="button" class="btn secondary"
                   data-filter-clear>Clear</button>
@@ -214,7 +220,7 @@
         });
 
         var selected = {};
-        var searchTerm = "";
+        var filterTerm = "";
 
         function load() {
           var raw;
@@ -243,19 +249,22 @@
           var tags = rowTags(row);
           return picks.some(function (t) { return tags.indexOf(t) !== -1; });
         }
-        function matchesSearch(row) {
-          if (!searchTerm) return true;
-          var hay = (
-            row.cells[0].textContent + " " +
-            row.cells[1].textContent + " " +
-            rowTags(row).join(" ")
-          ).toLowerCase();
-          return hay.indexOf(searchTerm) !== -1;
+        // The rule itself is `rrwSessionFilterMatches` in `base.html`,
+        // shared with the other of these two pages. This wrapper only
+        // reads the row: `cells[0]` is Session Name, `cells[1]` is
+        // Session Code, and `rowTags` reads the row's `data-tags` JSON.
+        function matchesFilter(row) {
+          return rrwSessionFilterMatches(
+            row.cells[0].textContent,
+            row.cells[1].textContent,
+            rowTags(row),
+            filterTerm
+          );
         }
         function apply() {
           var visible = 0;
           rows.forEach(function (row) {
-            var show = matchesTags(row) && matchesSearch(row);
+            var show = matchesTags(row) && matchesFilter(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
           });
@@ -307,14 +316,14 @@
         });
         if (searchInput) {
           searchInput.addEventListener("input", function () {
-            searchTerm = searchInput.value.trim().toLowerCase();
+            filterTerm = searchInput.value.trim().toLowerCase();
             apply();
           });
         }
         if (filterClear) {
           filterClear.addEventListener("click", function () {
             if (searchInput) searchInput.value = "";
-            searchTerm = "";
+            filterTerm = "";
             apply();
           });
         }
