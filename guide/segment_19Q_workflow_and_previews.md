@@ -723,11 +723,17 @@ what the plan assumed:
   `test_workflow_card_w_overlay.py` pins the `5W` markup, so the rung's
   test became the CSS contract instead.
 
-**Counts were short three times.** Doc impact named four specs and the
-cold read found a fifth; the `spec/workflow_card.md` bullet said four
-passages, the read made it five, the close found eight. Which is the
+**Counts were short four times, and the fourth was the correction
+itself.** Doc impact named four specs and the cold read found a fifth.
+The `spec/workflow_card.md` bullet said four passages, the read made it
+five, the close sweep found eight. The `spec/session_home.md` bullet said
+three passages where there are two. And the close's own commit message
+claimed the first of those was already fixed when it was not — caught by
+re-reading the bullet rather than trusting the message. Which is the
 lesson `base.html:1645`'s retired "five other rules" comment had just
-taught, relearned twice inside the item that taught it.
+taught, relearned three times inside the item that taught it: **a count
+nothing derives is a count that rots, and a count in prose derives from
+nothing.**
 
 **The item kept committing its own defect class**, and something other
 than the author caught it each time:
@@ -814,8 +820,8 @@ of the card the operator just left (no suitable anchor id exists).
 
 - `docs/status.md` — row when Item 4 lands (Item 4).
 - `spec/ui_elements.md` — §6 gains the no-overflow intent for `.btn` and names `box-sizing: border-box` as its mechanism (Item 4).
-- `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, the §"`4W` is an overlay" mention, and the `## Source-of-truth pointers` entry "Right-column issue list partial": **five** passages, not the four this bullet first counted (a cold read found the fifth) (Item 4).
-- `spec/session_home.md` — the two "Status pills + per-issue list live in the right column" bullets and the State 3 row of the lifecycle table, all three describing a per-issue list the card no longer renders. **Undeclared at planning time**, found at rung 2 (Item 4).
+- `spec/workflow_card.md` — **eight** passages describing the right column's per-issue list: "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, the §"`4W` is an overlay" mention, the Prepare chain's error branch, the right column's structural description, the workflow-failure signal's note on what it does not suppress, and the `## Source-of-truth pointers` entry. This bullet first said four, a cold read made it five, and the close sweep found eight — the count is recorded here as the finding it is (Item 4).
+- `spec/session_home.md` — **two** passages: the "Status pills + per-issue list live in the right column" bullet and the State 3 row of the lifecycle table. **Undeclared at planning time**, found at rung 2 (Item 4).
 - `spec/rrw_functional_spec.md` — the "right-hand column" bullet, which says the column carries "a validation issue list wherever validation has findings to show". **Undeclared at planning time**, found by the cold read at rung 2; it matters because `spec/README.md` makes this file the entry point a new reader starts from (Item 4). <!-- cites: spec/README.md -->
 
 ---
