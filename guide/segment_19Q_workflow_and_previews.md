@@ -580,6 +580,21 @@ columns never interact. The report's correlation is real and its obvious
 explanation is wrong, which is why this is an Opportunity and not a
 one-line fix.
 
+**Added 2026-09-19, author's call: the right column enumerates where it
+should point.** The same screenshot shows it listing every validation
+issue in full — each with its own per-issue *Fix* deep link, so a
+session with several assignment warnings renders "Assignments" over and
+over. The Validate page already holds the authoritative table.
+
+`_next_action_issue_list.html` renders **all** issues across all three
+severities, uncapped. Its own header comment already describes the
+intended design — *"the right column is a compact summary, not the
+authoritative diagnostic surface. Operators who want the full report
+still navigate to the Validate page"* — so this is the comment and the
+code disagreeing, not a design that was never settled. And the card
+carries **no link to Validate at all**: the comment says operators get
+there "via the chrome top-nav".
+
 **The four-button case, by precondition rather than by number:**
 `is_validated` + `can_activate` + `needs_acknowledge`, with invitations
 generated and not sent. The canonical cascade (`spec/workflow_card.md`)
@@ -599,11 +614,33 @@ so now. The fixture is unchanged; only its name was ever in question.
 
 ### Decision
 
-*Not yet decided — see Open questions.* The fix is known and the
-**blast radius is the question**: `box-sizing: border-box` on the `.btn`
-rule takes the fourth button to 103.2px and all four then match, probed
-in Chromium. But 80 `<a class="btn">` across 31 templates currently size
-as content boxes, and any that carry an explicit width would move.
+**`box-sizing: border-box` on the base `.btn` rule** (author,
+2026-09-19: *"buttons should not be going beyond their card in
+general"*). The intent is general, so the rule is general — scoping it to
+`.next-action-buttons-row > a.btn` would fix this card and leave the same
+trap set for the next author. It takes the fourth button to 103.2px and
+all four then match, probed in Chromium.
+
+The blast radius was the question and is now measured (below): the rule
+changes the rendered width of **exactly one** selector's matches, the
+overflowing one.
+
+**Rejected — the global `box-sizing` reset.** It would fix the class of
+bug rather than this instance, but it is a whole-sheet change against a
+sheet that has declined it ten times, and this item is not the place to
+settle that. Not recorded as deferred anywhere yet, deliberately: it is
+a question for a sheet-wide pass, not an owed slice.
+
+**The right column summarizes and links** (author, 2026-09-19). Counts
+by severity stay; the per-issue enumeration goes, replaced by one link
+to the Validate page, which renders the same issues in a table with the
+"Why this check?" disclosure the card deliberately omits. What the card
+keeps is the decision — *is there anything to look at* — and hands off
+the diagnosis.
+
+**Rejected — cap the list at N.** It keeps two surfaces rendering the
+same rows and adds an arbitrary constant to argue about; the Validate
+page is not a fallback for a long list, it is where the list lives.
 
 ### Semantics
 
@@ -615,6 +652,24 @@ as content boxes, and any that carry an explicit width would move.
 - The four-slot contract is `spec/operator_ui_concept.md`'s ≤4-button
   budget; this item does not change the budget, only whether the slots
   are honored.
+- **A residual the box model cannot reach.** `min-width: 0` cannot take
+  a grid item below its min-content contribution, which for these labels
+  is the longest word on the first line (`Stop releasing`). Probed under
+  border-box: clean at a 440px and a 360px row, **6px of text overflow
+  at 280px**. Whether a 280px Workflow card is reachable is rung 1's to
+  establish; if it is, the fix is a wrapping rule on the label, not the
+  box model.
+- The right column with no issues is unchanged: `_has_any` already
+  guards the list, and the severity pills are rendered by
+  `next_action_card.html`, not by the partial — so retiring the loop
+  empties the partial rather than changing any zero-issue state.
+- The Validate link renders wherever the list rendered — States 3 and
+  4Err, and the `W` overlay's inline block (`spec/workflow_card.md`
+  "Right-column content by state") — one link per block, not per
+  severity.
+- The per-issue `fix_url` / `fix_anchor` / `fix_page_label` stamps stay
+  on the rule registry; the card stops reading them. The Validate page
+  is their only consumer after this.
 
 ### Judgment calls — decided
 
@@ -634,18 +689,46 @@ At `a08b4750`:
   this bullet quoted it: a stale comment inside a section headed
   **measured** is the failure this repository keeps finding.*
 
+**The question the count above asks wrong, settled 2026-09-19 at
+`8aa30224`.** Only an *explicit* width can overflow a content box — flex
+and grid compute padding and border themselves, measured identical under
+both box models in Chromium. So the 79 anchors are not the blast radius;
+the width-setting rules are, and the sheet has two. One is
+`#danger-zone button.btn`, a `<button>`, already border-box from the UA
+sheet. The other is `.next-action-buttons-row > a.btn { width: 100% }` —
+the defect itself.
+
+**The base rule therefore changes exactly one selector's matches**, and
+no template can widen that: **0** of the 79 anchors carry an inline
+`style` attribute. Rung 1's PR body carries the enumeration in full.
+
+- The probe: every `<a …>` tag parsed for the bare `btn` class → 79 in
+  30 templates, 0 styled; the four sizing cases rendered side by side
+  under both box models → `width: 100%` overflows by **34px** (2 × 16
+  padding + 2 × 1 border) as content-box and **0px** as border-box, all
+  four children on the 104px track. Kept out of the tree: a
+  measurement, not a fixture.
+
 ### PR ladder
 
-1. **Enumerate, then fix.** Measure which of the 80 anchors are sized by
-   anything other than shrink-to-fit, decide base-rule versus scoped per
-   open question 1, land it with the enumeration in the PR body.
-2. **The close** — specs below, `docs/status.md`, `close_check`,
+1. **The base rule.** `box-sizing: border-box` on the `.btn` rule, with
+   the enumeration above in the PR body and a render test pinning the
+   four slots at one track width in the `5W` case. Retire the stale
+   "five other rules" comment at `base.html:1645` while in the file.
+2. **The right column points instead of enumerating.** Severity counts
+   stay; `_next_action_issue_list.html`'s per-issue loop retires behind
+   a single Validate link. Must not touch the button row — rung 1 owns
+   that, and the two are separable even though one screenshot found
+   both.
+3. **The close** — specs below, `docs/status.md`, `close_check`,
    `spec-writer`.
 
 ### Definition of done
 
 - All four buttons measure one track width in the `5W` case above, verified in Chromium.
 - The enumeration of width-sized `a.btn` is in the PR body, not asserted to be empty.
+- A session with several assignment warnings renders severity counts and one Validate link, not one row per issue.
+- `_next_action_issue_list.html`'s header comment and what it renders agree.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.4` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -654,21 +737,21 @@ At `a08b4750`:
 
 ### Open questions
 
-1. **Base rule or scoped?** `box-sizing` on `.btn` fixes every `a.btn`
-   the codebase will ever stretch; scoping to
-   `.next-action-buttons-row > a.btn` fixes this card and leaves the
-   same trap set for the next author. A third option is the global reset
-   the sheet has declined so far — **10** rules now set it by hand
-   (measured; the comment at `base.html:1645` still says five), which is
-   an argument either way. Author's.
-2. Does anything in `spec/ui_elements.md` §6 need to state the box model
-   for `.btn`, or is it an implementation detail? Only worth asking
-   because a contract nobody wrote down is what produced this.
+1. ~~Base rule or scoped?~~ **Base rule** — author, 2026-09-19: the
+   intended behavior is general, so the rule is. See `Decision`.
+2. ~~Does `spec/ui_elements.md` §6 need to state the box model?~~ **Yes,
+   as the intent rather than the mechanism** — §6 says a `.btn` never
+   exceeds its container, with `box-sizing: border-box` named as how.
+   Read out of the same ruling, which stated a *behavior* and not a
+   declaration; flagged to the author as a reading rather than a
+   quotation.
 
 ### Out of scope
 
-- The `≤4` budget itself, and the right column's content. Both are
-  correct here; only the slot width is wrong.
+- The `≤4` budget itself. It is correct here; only the slot width is
+  wrong.
+- ~~The right column's content.~~ Struck 2026-09-19: rung 2 changes it,
+  per the author's call in `Decision`.
 - The empty left-column gap visible in the same capture, where the issue
   list makes the aside taller than the button row. That is the grid
   behaving as specified, and a separate question if the author wants it
@@ -677,7 +760,8 @@ At `a08b4750`:
 ### Doc impact
 
 - `docs/status.md` — row when Item 4 lands (Item 4).
-- `spec/ui_elements.md` — the `.btn` box model, if open question 2 says it belongs in the contract (Item 4).
+- `spec/ui_elements.md` — §6 gains the no-overflow intent for `.btn` and names `box-sizing: border-box` as its mechanism (Item 4).
+- `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, and the §"`4W` is an overlay" mention: all four describe the per-issue list the card will stop rendering (Item 4).
 
 ---
 
