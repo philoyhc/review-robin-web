@@ -1288,9 +1288,10 @@ preserves.
 The Workflow card on Session Home (and on every Operations-row
 page as chrome) drives the lifecycle. **Its state machine is
 `spec/workflow_card.md`'s to state, and is not restated here** —
-twelve states over ten numbers, each with its own body copy and
-button set, which this section carried as a parallel list until it
-went six segments stale. Functionally, what a reader needs from here
+eleven states over ten numbers, each with its own body copy and button
+set, plus a `W` overlay that adds a help-line to three of them and
+changes no button. This section carried the states as a parallel list
+until it went six segments stale. Functionally, what a reader needs from here
 is the shape:
 
 - The card **short-circuits on an empty setup**. Past that it carries
@@ -1301,8 +1302,8 @@ is the shape:
   `spec/workflow_card.md`'s.
 - Its **right-hand column** is a setup checklist in State 1 only; a
   validation issue list wherever validation has findings to show
-  (3, 4W, 4Err); a one-line `Status` in the settled validated states;
-  and nothing in States 2 and 7.
+  (3, 4Err, and 4 / 5 / 6 under the `W` overlay); a one-line `Status`
+  in the settled validated states; and nothing in States 2 and 7.
 - **Prepare session** is the only compound action: it generates the
   assignment pairs, validates, and — only on a clean validation —
   creates an invitation for every active reviewer with at least one

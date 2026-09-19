@@ -149,11 +149,13 @@ helper falls back from the step name (`generate` / `validate` →
 
 ## State machine
 
-The card has **twelve states over ten numbers**: 1-10, with `4W` and `4Err`
-branching off 4. Prose elsewhere calls this the *ten-state cascade*, counting
-the numbers; the table below counts the rows. Both are right, and the
-difference is worth knowing before reconciling one against the other. The body
-and right column are chosen by this cascade in `next_action_card.html`:
+The card has **eleven states over ten numbers** — 1-10, with `4Err`
+branching off 4 — plus a **`W` overlay** that rides on States 4, 5 and 6
+rather than replacing them. Prose elsewhere calls this the *ten-state
+cascade*, counting the numbers; the table below counts the rows. Both are
+right, and the difference is worth knowing before reconciling one against the
+other. The body and right column are chosen by this cascade in
+`next_action_card.html`:
 
 ```
 if is_setup_empty:                              → State 1
@@ -161,16 +163,32 @@ elif is_draft and validation_summary:           → State 3
 elif is_draft:                                  → State 2
 elif is_validated:
     if not validation_summary.can_activate:     → State 4Err
-    elif needs_acknowledge:                     → State 4W
     elif invitations.none:                      → State 4
     elif invitations.generated_not_sent:        → State 5
     else (invitations.sent):                    → State 6
+    # independently of which of those three rendered:
+    if needs_acknowledge:                       → + the W overlay
 elif is_ready:
     if invitations.none:                        → State 7
     elif invitations.generated_not_sent:        → State 8
     else (invitations.sent):                    → State 9
 elif is_expired:                                → State 10
 ```
+
+**`W` is an overlay, not a state.** `needs_acknowledge` is
+`report.has_non_blocking_findings`, computed without reference to invitation
+state (`app/web/views/_workflow_card.py`), and the template appends its
+help-line *after* the body branch instead of in place of it. So `4W` is State
+4 with the overlay on, and `5W` and `6W` exist and are reachable. The overlay
+adds three things — the help-line under the body, the warning / info pill row
+and per-issue list in the right column, and the warnings detour on **Activate
+session** ("Warnings detour" below) — and changes no button's visibility,
+because `send_invites_visible` reads invitation state alone.
+
+Recorded as the contract on 2026-09-19 (author's ruling, 19O Item 7 entry
+14). Until then this section tested `needs_acknowledge` *before* invitation
+state, which made `4W` look mutually exclusive with 5 and 6; the template has
+never worked that way.
 
 State 4Err is defensive — `mark_validated` only flips
 `draft → validated` on a clean report, so re-running Validate in
@@ -185,8 +203,7 @@ missed).
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." |
-| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
-| **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
+| **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
 | **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does and not what it looks like it does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call — `generate_invitations` only creates the `Invitation` row, at `status="pending"`, and never touches the outbox (`app/services/email_send.py` — "Nothing in the app calls this yet"). Until a transport is wired, this state means *stamped*, not *delivered*. |
@@ -194,6 +211,13 @@ missed).
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
 | **10** | `is_expired` (post-Close-session) | "Session is closed. No further responses are being accepted. Revert to draft to reopen for editing — responses are preserved." |
+
+**The `W` overlay** — `is_validated` + `can_activate` +
+`needs_acknowledge`, on top of whichever of States 4 / 5 / 6 the invitation
+state selected — appends the help-line "{N} warning(s) — review on Validate
+before activating." below that state's body. Written `4W` / `5W` / `6W`. It
+does not apply in 4Err: the overlay hangs off the `can_activate` branch,
+and 4Err is that branch's `{% else %}`.
 
 ## Layout
 
@@ -306,18 +330,26 @@ style, blank = not rendered. Order preserved across the row;
 blank cells collapse so the row reads left-to-right with no
 gaps.
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 | 10‡ |
-| --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | --- |
-| Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
-| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | |
-| Send invites | | | | | | Pri† | Pri | | | Pri | | | |
-| Activate session | | | | Pri | Pri (→detour) | Pri | Pri | Pri | | | | | |
-| Send reminders | | | | | | | | | | | Pri | | |
-| Close session | | | | | | | | | Sec | Sec | Sec | | |
-| Release responses | | | | | | | | | | | | Sec | |
-| Stop releasing | | | | | | | | | | | | | Sec |
-| Archive session | | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **3** | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+| Button | 1 | 2 | 3 | 4 | 4Err | 5 | 6 | 7 | 8 | 9 | 10 | 10‡ |
+| --- | - | - | - | - | ---- | - | - | - | - | - | -- | --- |
+| Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | | | | | |
+| Send invites | | | | | Pri† | Pri | | | Pri | | | |
+| Activate session | | | | Pri | Pri | Pri | Pri | | | | | |
+| Send reminders | | | | | | | | | | Pri | | |
+| Close session | | | | | | | | Sec | Sec | Sec | | |
+| Release responses | | | | | | | | | | | Sec | |
+| Stop releasing | | | | | | | | | | | | Sec |
+| Archive session | | | | | | | | | | | Dgr | Dgr |
+| **Visible total** | **0** | **1** | **1** | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+
+**The `W` overlay has no column**, because it changes no cell's visibility:
+in States 4, 5 and 6 with `needs_acknowledge`, the same buttons render and
+**Activate session** becomes an `<a>` to the warnings detour instead of a
+form POST. So `4W` is 3 buttons, `5W` is 4 and `6W` is 3 — the same totals as
+the states they ride on, and the ≤4 cap holds. The table carried a `4W`
+column reading 3 buttons and `Pri (→detour)` until 2026-09-19, which was
+right about 4W and silent about 5W's four.
 
 **4Err renders Activate**, which the matrix omitted until 19Q Item 2
 rung 4's close pass recomputed the totals and found the column short.
@@ -468,10 +500,12 @@ warnings inline + an "Acknowledge and activate" submit; the
 operator clicks Acknowledge, and a follow-up `/workflow/activate`
 POST fires from that banner with `acknowledge_warnings=true`.
 
-In State 4W the workflow card renders the Activate session
-button as an `<a>` to the same warnings-detour URL so operators
-reach the acknowledgement step without going through the Activate
-POST in the first place.
+Under the `W` overlay — States 4, 5 or 6 with `needs_acknowledge` — the
+workflow card renders the Activate session button as an `<a>` to the same
+warnings-detour URL so operators reach the acknowledgement step without going
+through the Activate POST in the first place. The gate
+(`_activate_needs_warnings_detour`) reads `is_validated`, `can_activate` and
+`needs_acknowledge`, never invitation state.
 
 #### Failure handling
 
@@ -601,7 +635,7 @@ regardless of the form's visibility — deep-link / curl callers
 still work as defense-in-depth.
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`:
-  - States 4 / 4W / 4Err / 5 / 6 (`is_validated`): via
+  - States 4 / 4Err / 5 / 6 (`is_validated`): via
     `next-action-revert-form`. Route dispatches to
     `lifecycle.invalidate_session(reason="operator_revert")` →
     `validated → draft`, audit `session.invalidated`.
@@ -698,8 +732,7 @@ item; there's no separate heading row.
 | **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
 | **2** (draft, not yet validated) | (no detail) |
 | **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by the per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
-| **4** (validated, no warnings, no invites) | **Status** — "Setup validated." |
-| **4W** (validated + warnings) | **Status** — "Setup validated." followed by a per-warning pill row + the per-issue list inline, so the operator sees what they're about to acknowledge before clicking the detour. |
+| **4** (validated, no invites) | **Status** — "Setup validated." |
 | **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + per-issue list. |
 | **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
 | **6** (validated + invites sent) | Same as State 4 — **Status** — "Setup validated." |
@@ -708,7 +741,13 @@ item; there's no separate heading row.
 | **9** (ready, invites sent) | (no detail) |
 | **10** (expired) | (no detail) |
 
-States 5 / 6 currently share State 4's status block; an
+**Under the `W` overlay** the "Setup validated." line is followed by a
+per-warning pill row and the per-issue list inline, so the operator sees what
+they're about to acknowledge before clicking the detour. That block hangs off
+the shared `is_validated` + `can_activate` branch, so it renders over States 4,
+5 and 6 alike — not over 4Err, which takes the State 3 shape above instead.
+
+States 5 / 6 otherwise share State 4's status block; an
 invite-counter / deadline aside can land as a follow-up.
 States 7 / 8 / 9 / 10 have no detail block yet — invitation-status
 counters + a "closed at «X»" stamp are deferred.

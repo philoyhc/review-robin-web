@@ -429,7 +429,7 @@ Affected, measured 2026-09-17:
 
 **Added 2026-09-18, author's call**, found while building rung 1: the
 Workflow card's State 2 copy is stale the same way the Guide is.
-`next_action_card.html:119` — the only card copy read *before* pressing
+`next_action_card.html:120` — the only card copy read *before* pressing
 Prepare — omits the invitations 19Q Item 2 rung 2 moved into
 `workflow_prepare`. That item's definition of done required the Prepare
 copy to name invitation creation; States 4 and 7 met it, and the one
@@ -469,8 +469,9 @@ describing a sentence shipping in the same merge.
 
 ### Status
 
-**Rungs 1, 1a and 2 landed 2026-09-18**; the close remains. Rung 1 needed
-a corrective push for two false parity claims (#2464).
+**Closed 2026-09-18.** Rungs 1, 1a and 2 landed; the close waited on the
+author's dev-slot inspection of the recaptured screencaps, the one gate
+the sandbox cannot supply; 19Q Item 5 now supersedes both.
 
 **The ladder grew rung 1a**, the card copy, folded in by the author. Its
 finding is the instrument rather than the copy: `ready for prime time`
@@ -479,14 +480,17 @@ test**, so the sentence 19Q Item 2 rung 2 left incomplete could not go
 red. Grepped against `tests/`, States 7/3/1 are pinned by 3/2/1 files;
 States 2 and 5 by none.
 
-**One cumulative cold read, and it paid.** Four defects, all in rung 2's
-prose, all claims about the app: Prepare's steps in the wrong order and
-unconditional, where invitations come last and only on a clean
-validation; the eligibility rule missing *included*; Activate credited
-with sending; and **"Send invites notifies reviewers"**, which nothing
-does — no transport is wired (`app/services/email_send.py`) and
-`guide.html` says so two cards down. All four: the card's copy read
-instead of the code.
+**Three reads, and two of them found the same defect class** — prose
+written from the card's copy rather than from the code. The one
+`diff-reviewer` pass this item owed under the per-item cumulative
+cadence, at rung 2: four false claims, of which **"Send invites notifies
+reviewers"** is the type specimen, since nothing does — no transport is
+wired (`app/services/email_send.py`) and `guide.html` says so two cards
+down; `docs/status.md` names the other three. A review-bot pass at rung 1
+(#2464): two parity claims about the reviewer surface, fixed in
+`40e86bf4`. The `spec-writer` close pass found the spec truthful about
+everything this item shipped, and one divergence that predates 19Q — the
+State 4W cascade, filed as 19O.7 entry 14.
 
 ### PR ladder
 
@@ -517,9 +521,8 @@ written; this is a third, not a rewrite of either.
 ### Open questions
 
 1. Does the demo walkthrough gain a "look at a reviewer's surface" step?
-   **Yes, as an optional affordance and not a numbered step** (author,
-   2026-09-18) — it rides inside step 4's "look around" rather than
-   extending the sequence.
+   **An optional affordance inside step 4, not a numbered step** (author,
+   2026-09-18).
 
 ### Out of scope
 
@@ -568,7 +571,7 @@ the *content* box for an `<a>`:
 **Why it correlates with the right-hand column, which is the part worth
 recording.** Activate renders as an anchor only on the
 warnings-acknowledgement detour
-(`next_action_card.html:312`). Warnings are also what fills the right
+(`next_action_card.html:315`). Warnings are also what fills the right
 column with count pills and the issue list. One cause, two symptoms; the
 columns never interact. The report's correlation is real and its obvious
 explanation is wrong, which is why this is an Opportunity and not a
@@ -584,6 +587,12 @@ building the fixture, because the body copy that renders is State 5's
 body cascade tests invitations first. Which of the two the spec's tables
 should describe is not this item's question; it is noted so the fixture
 is built from the preconditions and not from a number.
+
+**Answered 2026-09-19, after the above was written** (19O Item 7 entry
+14, the author's ruling): the spec was wrong, not the template. `W` is an
+overlay on States 4, 5 and 6, so this case is **`5W`** — State 5's body
+above the overlay's help-line, four buttons. `spec/workflow_card.md` says
+so now. The fixture is unchanged; only its name was ever in question.
 
 ### Decision
 
@@ -632,7 +641,7 @@ At `a08b4750`:
 
 ### Definition of done
 
-- All four buttons measure one track width in the 4W-with-generated-invitations case above, verified in Chromium.
+- All four buttons measure one track width in the `5W` case above, verified in Chromium.
 - The enumeration of width-sized `a.btn` is in the PR body, not asserted to be empty.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.4` exits 0; any warning adjudicated
