@@ -995,18 +995,16 @@ auditing "no logic in models" will find it. `docs/database.md` is waived
 
 ### Open questions
 
-1. **A trailing delete hands the number back.** `max + 1` makes an
-   interior delete safe and the newest one not: delete the newest of
-   1, 2, 3 and the next instrument created is 3 again. Found by the
-   item's cumulative cold read, measured, and pinned as it stands. It
-   matters because the stored-label decision was made *on audit
-   stability* — a summary naming `Instrument_3` can come to name a
-   different instrument, which is the harm that rejected the
-   derive-at-read-time alternative. **Recommendation: make it
-   monotonic** with a per-session high-water mark; the cost is a second
-   column and a migration, against requirement 1. Author's.
+1. ~~**A trailing delete hands the number back** — make it monotonic?~~
+   **Accepted as it behaves** (author, 2026-09-19): a trailing slot has
+   no successor, so recycling there disturbs nobody's sense of order,
+   and monotonic would cost a column on `sessions`, a migration, and
+   undoing rung 1's column-default allocation — the residual harm is
+   only an audit summary about an instrument deleted while newest.
+   Pinned by `test_a_trailing_delete_hands_the_number_back`, whose
+   failure message tells whoever reverses this what to update.
 
-The three that existed at planning time were answered on 2026-09-19:
+The three that existed at planning time were answered the same day:
 creation order over display order, gaps accepted, clone preserves.
 
 ### Out of scope

@@ -387,8 +387,9 @@ position, which drag-and-drop moves).
   session's live rows, so deleting the *newest* of 1, 2, 3 frees 3 for
   the next instrument created. Interior deletes are safe; this one case
   is not, and a monotonic sequence would need a high-water mark the
-  column does not keep. Open on 19Q Item 6 as the author's call, and
-  pinned as it behaves by
+  column does not keep. **Accepted** (author, 2026-09-19): a trailing
+  slot has no successor, so recycling there disturbs no ordering the
+  operator can see. Pinned as it behaves by
   `test_a_trailing_delete_hands_the_number_back`.
 - **A clone preserves the source's values** — `session_clone` copies
   every mapped column, so a source reading 1, 3, 2 reproduces as
