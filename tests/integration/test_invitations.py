@@ -25,50 +25,12 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._invitation_states import _create_session, _populate
 
 
 # --------------------------------------------------------------------------- #
 # Fixture helpers
 # --------------------------------------------------------------------------- #
-
-
-def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession:
-    response = client.post(
-        "/operator/sessions",
-        data={"name": code.title(), "code": code},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
-
-
-def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_email: str) -> None:
-    client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                f"ReviewerName,ReviewerEmail\nRae,{reviewer_email}\n".encode(),
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    pin_full_matrix_on_all_instruments(db, session_id)
-    generate_via_page_button(client, session_id)
 
 
 def _activate(client: TestClient, session_id: int) -> None:

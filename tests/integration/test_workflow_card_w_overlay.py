@@ -16,18 +16,14 @@ cascade that started suppressing the invitation body would go red.
 
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
-# Relative, per the `._display_field_helpers` convention in this
-# package: `tests/` has no `__init__.py`, so `tests.integration` is
-# importable only when the repo root happens to be on `sys.path`.
-# `python -m pytest` puts it there and the `pytest` console script does
-# not — which is how an absolute import passed here and failed on
-# `ci-postgres`.
-from .test_invitations import _create_session, _populate
+from ._invitation_states import _create_session, _populate
 
 STATE_4_BODY = "there are no invitations"
 STATE_5_BODY = "Invitations are ready to send"
@@ -144,6 +140,10 @@ def test_the_overlay_changes_no_button_visibility(
         assert row.count("Prepare<br>session") == 1
         assert row.count("Send<br>invites") == 1
         assert row.count("Activate<br>session") == 1
+        # Exactly four, not at least four: asserting only the labels
+        # would pass a mutant that *added* a fifth slot under the
+        # overlay, in a test named for what the overlay does not change.
+        assert len(re.findall(r'class="[^"]*\bbtn\b', row)) == 4
 
 
 def test_the_overlay_turns_activate_into_the_warnings_detour(

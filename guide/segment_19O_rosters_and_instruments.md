@@ -106,9 +106,13 @@ still live.
     column is gone from the button table, which changes no totals
     because the overlay changes no button's visibility. **Nothing
     pinned any of it** — `needs_acknowledge` and `4W` appeared nowhere
-    under `tests/` — so the overlay now has a test. Predates 19Q;
-    surfaced by 19Q.3's `spec-writer` pass. It is also 19Q Item 4's
-    reproduction case, and that plan is annotated with the name.
+    under `tests/` — so the overlay now has a test, mutation-checked
+    four ways. Predates 19Q; surfaced by 19Q.3's `spec-writer` pass. It
+    is also 19Q Item 4's reproduction case, and that plan is annotated
+    with the name. **The slice's own defect was the gate, not the
+    model**: an absolute `from tests.…` import that `python -m pytest`
+    resolves and the `pytest` console script does not, so CI failed at
+    collection where the sandbox was green.
 
 ### Doc impact
 
@@ -1135,7 +1139,7 @@ Rejected:
   deletes each row's `Response` rows before the row (`:434-438`). This needs
   no new guard: the diff already counts `responses_deleted` (`:369-378`) and
   the Prepare confirm card already spells it out
-  (`next_action_card.html:89-97`). Rung 3 asserts it rather than adding to
+  (`next_action_card.html:90-98`). Rung 3 asserts it rather than adding to
   it.
 - **A non-email reviewee identifier is never a self-review**
   (`is_self_review` returns `False` with no `@`), so the flag cannot drop an

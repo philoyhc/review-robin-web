@@ -203,7 +203,7 @@ missed).
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." |
-| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
+| **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
 | **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does and not what it looks like it does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call — `generate_invitations` only creates the `Invitation` row, at `status="pending"`, and never touches the outbox (`app/services/email_send.py` — "Nothing in the app calls this yet"). Until a transport is wired, this state means *stamped*, not *delivered*. |
@@ -216,7 +216,8 @@ missed).
 `needs_acknowledge`, on top of whichever of States 4 / 5 / 6 the invitation
 state selected — appends the help-line "{N} warning(s) — review on Validate
 before activating." below that state's body. Written `4W` / `5W` / `6W`. It
-does not apply in 4Err, whose branch sits above the overlay in the template.
+does not apply in 4Err: the overlay hangs off the `can_activate` branch,
+and 4Err is that branch's `{% else %}`.
 
 ## Layout
 

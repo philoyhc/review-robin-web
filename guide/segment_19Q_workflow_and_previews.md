@@ -429,7 +429,7 @@ Affected, measured 2026-09-17:
 
 **Added 2026-09-18, author's call**, found while building rung 1: the
 Workflow card's State 2 copy is stale the same way the Guide is.
-`next_action_card.html:119` — the only card copy read *before* pressing
+`next_action_card.html:120` — the only card copy read *before* pressing
 Prepare — omits the invitations 19Q Item 2 rung 2 moved into
 `workflow_prepare`. That item's definition of done required the Prepare
 copy to name invitation creation; States 4 and 7 met it, and the one
@@ -571,7 +571,7 @@ the *content* box for an `<a>`:
 **Why it correlates with the right-hand column, which is the part worth
 recording.** Activate renders as an anchor only on the
 warnings-acknowledgement detour
-(`next_action_card.html:312`). Warnings are also what fills the right
+(`next_action_card.html:315`). Warnings are also what fills the right
 column with count pills and the issue list. One cause, two symptoms; the
 columns never interact. The report's correlation is real and its obvious
 explanation is wrong, which is why this is an Opportunity and not a
