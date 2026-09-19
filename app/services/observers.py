@@ -41,7 +41,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
 from app.schemas.observer_cohort_rule import CohortRuleSet
-from app.services import audit
+from app.services import audit, csv_imports
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -137,6 +137,24 @@ def create_observer(
             f"Another observer in this session already uses {clean_email!r}.",
         )
 
+    # 19Q Item 7 — observers joined the cross-roster check. A blank
+    # display_name cannot disagree with a name, so the helper skips it
+    # rather than colliding with every reviewer sharing the mailbox.
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=review_session.id,
+        kind="observers",
+        identifier=clean_email,
+        name=clean_display_name or "",
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise ObserverOperationError(
+            "cross_table_identity",
+            f"{clean_email!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
+
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -219,6 +237,24 @@ def update_observer(
                 f"Another observer in this session already uses "
                 f"{proposed['email']!r}.",
             )
+
+    # Keyed on the resulting pair, so a name-only edit is caught too.
+    final_email = proposed.get("email", observer.email)
+    final_name = proposed.get("display_name", observer.display_name)
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=observer.session_id,
+        kind="observers",
+        identifier=final_email,  # type: ignore[arg-type]
+        name=final_name or "",  # type: ignore[arg-type]
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise ObserverOperationError(
+            "cross_table_identity",
+            f"{final_email!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
 
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():

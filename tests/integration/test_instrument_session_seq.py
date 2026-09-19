@@ -166,7 +166,19 @@ def test_clone_preserves_the_source_sequence(db: Session) -> None:
 
     clone = session_clone.clone_session(db, source=source, user=op, mode="all")
     db.flush()
-    assert _seqs(db, clone.id) == [1, 3], "clone renumbered"
+    # Sorted, because the clone's *order* is not a thing this test can
+    # claim. `clone_session` iterates `source.instruments`, a relationship
+    # with no `order_by`, so the rows are inserted in whatever order the
+    # database hands them over and the copies' ids follow that. The claim
+    # is that the values survive — `[1, 3]` rather than a renumbered
+    # `[1, 2]` — and sorting still distinguishes those two.
+    #
+    # Found on Postgres at 19Q Item 7 rung 1, where an unrelated diff
+    # changed the shared database enough to reorder them: `_seqs` orders
+    # by `id` and returned `[3, 1]`. Green on SQLite for the same reason
+    # every id-keyed assertion is green there — one fresh database per
+    # test makes an arbitrary order look stable.
+    assert sorted(_seqs(db, clone.id)) == [1, 3], "clone renumbered"
 
 
 def test_the_migration_backfill_ranks_by_creation_order_per_session() -> None:

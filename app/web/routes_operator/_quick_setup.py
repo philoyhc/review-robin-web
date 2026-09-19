@@ -640,6 +640,18 @@ async def _run_quick_setup_observers(
 
     content = await file.read()
     result = csv_imports.parse_observer_csv(content)
+    # 19Q Item 7 — observers join the cross-table identity check. Run it
+    # before the error gate below, so a name conflict blocks the import
+    # the same way a parse error does.
+    if not result.is_blocked:
+        result.issues.extend(
+            csv_imports.check_cross_table_identity(
+                db,
+                session_id=review_session.id,
+                rows=result.rows,
+                kind="observers",
+            )
+        )
     if result.is_blocked or any(
         issue.severity == "error" for issue in result.issues
     ):

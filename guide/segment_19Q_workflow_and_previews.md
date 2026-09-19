@@ -906,8 +906,9 @@ inherited, and `Semantics` says so.
 - **Same email + same name across rosters stays legal** — the
   self-review case, which the app has machinery for. Unchanged.
 - Comparison is `normalize_email` (strip + `str.lower`, not casefold —
-  19N Item 2); name comparison is **exact**, inherited from the CSV path
-  and reopened as open question 2.
+  19N Item 2); name comparison is **exact on already-trimmed values** —
+  case-sensitive, never whitespace-sensitive, because both paths trim
+  first. See open question 2, whose premise this corrects.
 - A reviewee identifier with no `@` is skipped, as in the CSV path:
   anonymous handles cannot collide with a mailbox by construction.
 - **A missing name cannot disagree with one.** `Observer.display_name`
@@ -989,8 +990,14 @@ joining costs more than a third branch:
 1. ~~Do observers join the cross-roster check?~~ **Yes** — author,
    2026-09-19. The check goes three-way; see `Decision`.
 2. ~~Is the name comparison exact, trimmed, or case-insensitive?~~
-   **Exact**, as the CSV path already does it — author, 2026-09-19.
-   Inherited becomes chosen; no code changes for this answer.
+   **Exact** — author, 2026-09-19. Inherited becomes chosen. **The
+   question was posed on a false premise**: it offered "trimmed" as an
+   alternative to "exact", but every path already trims a name before
+   comparing (`_cell`; each service's `_normalised_name`), so the live
+   rule was *exact on trimmed values* all along. Exact means
+   case-sensitive; surrounding whitespace was never a difference and the
+   plan's claim that `"Aisha Haddad "` fails today was wrong. Found at
+   rung 1 by the test written to pin it.
 
 ### Out of scope
 

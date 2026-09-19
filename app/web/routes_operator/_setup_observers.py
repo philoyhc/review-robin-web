@@ -719,13 +719,28 @@ async def observers_import_submit(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     """Observers CSV import. Mirrors ``_handle_import`` for the
-    reviewer / reviewee path but skips the cross-table identity
-    check (observers don't conflict with reviewers / reviewees —
-    a person can be both an observer and a reviewer / reviewee
-    by design)."""
+    reviewer / reviewee path, cross-table identity check included.
+
+    **It skipped that check until 19Q Item 7**, and said why: *a person
+    can be both an observer and a reviewer / reviewee by design*. True,
+    and it never argued for the exclusion — the check has always allowed
+    one person to hold two roles, and blocks only holding them under two
+    different **names**. Exactly as much is true of reviewer↔reviewee,
+    which it did cover. So the premise was sound and the conclusion did
+    not follow from it (author's ruling, 2026-09-19).
+    """
     _require_not_archived(review_session)
     content = await file.read()
     result = csv_imports.parse_observer_csv(content)
+    if not result.is_blocked:
+        result.issues.extend(
+            csv_imports.check_cross_table_identity(
+                db,
+                session_id=review_session.id,
+                rows=result.rows,
+                kind="observers",
+            )
+        )
     existing = csv_imports.existing_observer_count(db, review_session.id)
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
