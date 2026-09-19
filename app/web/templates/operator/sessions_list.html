@@ -6,14 +6,22 @@
 
 {% block content %}
   <h1>Sessions Lobby</h1>
-  {# The Sessions + Search cards render in every lobby state, so the page
+  {# The Sessions + Filter cards render in every lobby state, so the page
      has one shape an operator can learn rather than two. What varies is
-     which Search controls are live:
+     which Filter controls are live:
 
      - **Live sessions** — everything active, as before.
-     - **No live sessions** — Search and Cancel go inert (there is nothing
-       to search), while `Add new session` and `Rehydrate` stay active
-       because both are how an operator gets *out* of an empty lobby.
+     - **No live sessions** — the filter box and Clear go inert (there is
+       nothing to filter), while `Add new session` and `Rehydrate` stay
+       active because both are how an operator gets *out* of an empty
+       lobby.
+
+     **It is a filter, not a search** (author's ruling, 2026-09-19;
+     19O Item 7 entry 15). It hides rows already rendered, live on every
+     keystroke, and never queries or navigates — so there is nothing to
+     submit and no Search button is missing. The card was headed
+     `Search` until then, which is why `Cancel` sat beside it with
+     nothing to cancel.
      - **Go to Archive is always active**, in every state, including a
        lobby holding nothing at all — an empty archive page is a better
        answer than a dead control, and it is one fewer rule to reason
@@ -55,17 +63,17 @@
     </div>
 
     <div class="card sessions-action-card">
-      <h2>Search</h2>
+      <h2>Filter</h2>
       <input type="text" class="sessions-search-input"
-             placeholder="Search by name, code, or tag"
-             aria-label="Search sessions"
+             placeholder="Filter by name, code, or tag"
+             aria-label="Filter sessions"
              {% if not has_live %}disabled{% endif %}>
       <div class="sessions-action-buttons">
         {% if has_live %}
           <button type="button" class="btn secondary"
-                  data-search-cancel>Cancel</button>
+                  data-filter-clear>Clear</button>
         {% else %}
-          <span class="btn secondary disabled" aria-disabled="true">Cancel</span>
+          <span class="btn secondary disabled" aria-disabled="true">Clear</span>
         {% endif %}
         <a class="btn" href="/operator/sessions/new">Add new session</a>
         {# Rehydrate is gated off by default (Segment 19N) — the route
@@ -170,8 +178,18 @@
               </td>
             </tr>
           {% endfor %}
+          {# A filter reports on the rows it was given, and this page is
+             given non-archived sessions only (`_lobby.py`). So an empty
+             result is ambiguous between "no such session" and "it is
+             archived", and the Archive is the one place the operator
+             would not think to look. Naming it is all a *filter* owes —
+             a search would have owed the matching rows themselves
+             (19O Item 7 entry 15). #}
           <tr class="sessions-no-match" style="display: none;">
-            <td colspan="9">No sessions match.</td>
+            <td colspan="9">
+              No sessions match. Archived sessions are not listed here —
+              <a href="/operator/sessions/archived">check the Archive</a>.
+            </td>
           </tr>
           </tbody>
         </table>
@@ -727,7 +745,7 @@
 
         var strip = document.getElementById("sessions-tag-filter");
         var searchInput = document.querySelector(".sessions-search-input");
-        var searchCancel = document.querySelector("[data-search-cancel]");
+        var filterClear = document.querySelector("[data-filter-clear]");
         var rows = Array.prototype.slice.call(
           table.querySelectorAll("tr[data-tags]")
         );
@@ -867,8 +885,8 @@
             apply();
           });
         }
-        if (searchCancel) {
-          searchCancel.addEventListener("click", function () {
+        if (filterClear) {
+          filterClear.addEventListener("click", function () {
             if (searchInput) searchInput.value = "";
             searchTerm = "";
             apply();

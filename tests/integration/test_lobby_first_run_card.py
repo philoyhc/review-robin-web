@@ -87,7 +87,7 @@ def test_the_populated_lobby_still_renders_its_table_and_search(
     body = client.get("/operator/sessions").text
 
     assert 'data-rrw-sortable="rrw-sort-lobby"' in body
-    assert "Search by name, code, or tag" in body
+    assert "Filter by name, code, or tag" in body
     assert "Spring Reviews" in body
 
 
@@ -126,7 +126,7 @@ def test_archiving_every_session_brings_the_card_back(
 
 
 def test_the_empty_lobby_still_shows_both_cards(client: TestClient) -> None:
-    """Standardized 2026-09-07: Sessions + Search render in every state, so
+    """Standardized 2026-09-07: Sessions + Filter render in every state, so
     the lobby has one shape an operator learns rather than two. Before this
     the whole row lived inside the populated branch and simply disappeared."""
     body = client.get("/operator/sessions").text
@@ -140,7 +140,8 @@ def test_the_empty_lobby_still_shows_both_cards(client: TestClient) -> None:
 def test_the_empty_lobby_leaves_only_the_two_ways_out_active(
     client: TestClient,
 ) -> None:
-    """Search and Cancel have nothing to act on, so they go inert. The three
+    """The filter box and Clear have nothing to act on, so they go inert.
+    The three
     navigations stay live: `Add new session` and `Rehydrate` are how an
     operator gets *out* of an empty lobby, and `Go to Archive` is always
     active — an empty archive page beats a dead control, and it is one
@@ -161,9 +162,9 @@ def test_the_empty_lobby_leaves_only_the_two_ways_out_active(
     flat = " ".join(body.split())
     assert (
         '<span class="btn secondary disabled" aria-disabled="true">'
-        "Cancel</span>" in flat
+        "Clear</span>" in flat
     )
-    assert 'aria-label="Search sessions" disabled>' in flat
+    assert 'aria-label="Filter sessions" disabled>' in flat
 
 
 def test_the_card_lays_its_four_steps_out_as_sub_cards(
@@ -270,7 +271,7 @@ def test_an_all_archived_lobby_keeps_the_route_to_the_archive(
     inside the populated branch, so archiving the last session took away
     both the `N archived` count and the only in-app route to
     `/operator/sessions/archived` — the operator's sessions were still
-    there and unreachable. Search and Cancel stay inert (there is nothing
+    there and unreachable. The filter box and Clear stay inert (there is nothing
     live to search), but the way back to the archive does not.
     """
     _create_session(client, "Only One", "only-1")
@@ -291,6 +292,6 @@ def test_an_all_archived_lobby_keeps_the_route_to_the_archive(
     # Still nothing live to search.
     assert (
         '<span class="btn secondary disabled" aria-disabled="true">'
-        "Cancel</span>" in flat
+        "Clear</span>" in flat
     )
-    assert 'aria-label="Search sessions" disabled>' in flat
+    assert 'aria-label="Filter sessions" disabled>' in flat

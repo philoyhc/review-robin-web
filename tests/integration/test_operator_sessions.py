@@ -713,9 +713,12 @@ def test_bulk_tags_rejects_unknown_op(client: TestClient, db: Session) -> None:
     assert response.status_code == 400
 
 
-def test_lobby_search_box_is_wired(client: TestClient) -> None:
-    """The Search card ships a live search box and a Cancel hook; the
-    retired Apply button is gone."""
+def test_lobby_filter_box_is_wired(client: TestClient) -> None:
+    """The Filter card ships a live filter box and a Clear hook; the
+    retired Apply button is gone.
+
+    Renamed from `..._search_box_is_wired` at 19O Item 7 entry 15: the
+    control never searched. The wiring it asserts is unchanged."""
     client.post(
         "/operator/sessions",
         data={"name": "Searchable", "code": "search-1"},
@@ -724,7 +727,7 @@ def test_lobby_search_box_is_wired(client: TestClient) -> None:
 
     body = client.get("/operator/sessions").text
     assert 'class="sessions-search-input"' in body
-    assert "data-search-cancel" in body
+    assert "data-filter-clear" in body
     assert ">Apply<" not in body
 
 
