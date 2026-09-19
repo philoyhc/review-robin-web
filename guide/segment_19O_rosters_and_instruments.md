@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; fourteen entries, one open
+## Item 7 — Loose ends, recorded 2026-09-18; fifteen entries, two open
 
 ### Opportunity
 
@@ -25,9 +25,11 @@ disappears. Recorded as a register, not planned.
 grew 8 and added 9–12; the pass that followed closed nine and the
 `spec-writer` check on it added 13. The author ruled 3 and 13 on
 2026-09-18 and both are swept; 19Q.3's close added 14, ruled and built
-2026-09-19. **Two stay open:** 8, the dev-slot verification only the
-author can do; and the `docs/status.md` compaction half of 12, a
-judgment call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+2026-09-19. **15 was added 2026-09-19** from the author's question about
+the lobby's search box, and is ruled but not built. **Three stay open:**
+8, the dev-slot verification only the author can do; the
+`docs/status.md` compaction half of 12, a judgment call about what to
+drop; and 15. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -39,12 +41,14 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Thirteen worked, one open, plus the dev-slot list.** The worked
+**Thirteen worked, two open, plus the dev-slot list.** The worked
 entries compact to their outcome: each one's evidence is in its commit
 and in `docs/status.md`, and what a later reader needs from here is what
 was found, not how. Entry 8 keeps its detail because it is still live;
 entry 12 keeps its measurements because the split it records is a
-decision a later reader may want to re-apply or reverse.
+decision a later reader may want to re-apply or reverse; entry 15 keeps
+its because it is ruled but unbuilt, and the measurements are what a
+treatment starts from.
 
 1. **Done.** `spec/operations_pages.md` had the invitation gate wrong in
    both directions in one paragraph — all six routes gate on
@@ -148,6 +152,65 @@ decision a later reader may want to re-apply or reverse.
     model**: an absolute `from tests.…` import that `python -m pytest`
     resolves and the `pytest` console script does not, so CI failed at
     collection where the sandbox was green.
+
+15. **Open — ruled, not built.** *"There's no search button for the
+    search box?"* (author, 2026-09-19). There is not, and the reason is
+    that **it is not a search box.** The Session Lobby's control hides
+    rows already rendered, live on every keystroke
+    (`sessions_list.html:865`), and never queries or navigates; the
+    Archive page carries a copy of it
+    (`sessions_archived.html:299`). **Author's ruling: it is a filter,
+    name it one, and fold the Archive in.**
+
+    The ruling settles the opening question by dissolving it — a filter
+    that applies live has nothing to submit, so the missing button is
+    correct and the **Cancel** beside it is the odd one. It also
+    settles the vocabulary the rest of the app got wrong the other way:
+    the seven roster and operations boxes are server-side filters
+    (`?q=` re-renders the same table) labelled *Search*, and
+    `session_reviewers.html:771` says both at once — `<label
+    class="filter-search">` wrapping the copy `Search:` and a `Search`
+    submit button.
+
+    **Also wanted, same ruling:** typeahead over **name, code and tag**.
+    Matching already covers those three, so the ask is suggestions, not
+    reach. Half the work exists — `lobby_tags` / `archived_tags` are
+    already in context, and `app/web/views/_filters.py` has the
+    seven-surface `<datalist>` helpers, caps
+    (`SEARCH_TAG_OPTIONS_CAP`, `REVIEWERS_DATALIST_CAP`) and per-column
+    rules to copy from.
+
+    **What a treatment has to settle, found while measuring:**
+
+    - **The two copies have drifted three ways.** Lobby tag chips carry
+      AND/OR pills and branch `.every()` / `.some()`; the Archive has no
+      mode pills and is hardcoded OR, with nothing saying so. Empty
+      state: the lobby renders its card and sets `disabled` on the input
+      and Cancel (`has_live`), the Archive omits the whole page body
+      (`{% if sessions %}`, line 10) — same intent, different mechanism,
+      different thing seen. And the lobby's card also holds `Add new
+      session` / `Rehydrate` / `Go to Archive`, where the Archive's
+      holds Cancel alone.
+    - **`matchesSearch` is byte-identical on both** and concatenates
+      before matching — `cells[0] + " " + cells[1] + " " +
+      tags.join(" ")`, then `indexOf`. Two consequences: a term
+      spanning the name→code boundary matches (a session *Spring
+      Review* with code *2026-A* is found by `review 2026`), and tags
+      match by **substring** where `spec/setup_pages.md` specifies
+      whole-value precisely so `Team A` cannot drag in `Team A2`. The
+      lobby and Archive are the only two surfaces where it does.
+    - **Neither can see the other's half.** The lobby renders
+      non-archived only (`_lobby.py:91`), the Archive archived only. An
+      operator filtering the lobby for an archived session gets an empty
+      table and no signal it exists one click away — while the empty
+      Archive's own copy does the opposite favour (*"Sessions you
+      archive from the lobby appear here"*). Whether a filter owes that
+      pointer is the open design question; a **search** would have owed
+      results.
+
+    Folding the Archive in is the ruling because there are two copies
+    that have already drifted three ways: treating one alone guarantees
+    a fourth.
 
 ### Doc impact
 
