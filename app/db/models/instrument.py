@@ -41,11 +41,10 @@ def _next_session_seq(context: Any) -> int:
     **a trailing delete does hand the number back**: delete the newest
     of 1, 2, 3 and the next instrument is 3 again. A monotonic sequence
     needs a high-water mark this column does not keep. Measured, not
-    inferred; pinned by
-    ``test_a_trailing_delete_hands_the_number_back``, and put to the
-    author as open question 1 on 19Q Item 6, because the stored-label
-    decision was made on audit stability and this is the one case that
-    does not deliver it.
+    inferred, and **accepted** (author, 2026-09-19): a trailing slot has
+    no successor, so recycling there disturbs no ordering the operator
+    can see. Pinned by
+    ``test_a_trailing_delete_hands_the_number_back``.
 
     The clone path does not reach here — ``session_clone`` copies every
     mapped column, so an explicit ``session_seq`` is already in the

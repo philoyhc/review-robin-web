@@ -107,6 +107,17 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `sqlalchemy.dialects.postgresql` imports here** — Postgres-specific
    column types are deferred infrastructure.
 
+   **One column default queries** (`Instrument.session_seq`, 19Q Item
+   6): a context-sensitive default reading `max(session_seq) + 1`
+   within the row's session. Recorded rather than hidden, because a
+   reader auditing "no logic in models" will find it. It sits here
+   instead of in a service so that *no* creation path can forget it —
+   the alternative was the same arithmetic repeated at every creation
+   path, including every test fixture that constructs `Instrument(...)`
+   directly rather than through a creation service.
+   `app/db/models/instrument.py` is the only model that does this; the
+   rule otherwise holds.
+
 A fourth seam — **`app/web/views/`** — holds view-shape adapters that
 translate domain objects into the dataclasses / row tuples templates
 iterate over (`_setup.py`, `_instruments.py`, `_validate.py`,

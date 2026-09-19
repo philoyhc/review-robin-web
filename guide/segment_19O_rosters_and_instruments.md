@@ -75,8 +75,13 @@ still live.
    State 2 card copy, and 19Q.3 rung 2's four recaptured Guide
    screencaps with the prose around them. Grown 2026-09-19 by entry
    13's two missed strings: the Quick Setup lifecycle banner and the
-   Danger Zone intro, both of which want a reading in place. The last blocks the 19Q close
-   by the author's ruling, 2026-09-18; the rest block nothing.
+   Danger Zone intro, both of which want a reading in place, and again
+   by 19Q Item 6's three: the instrument card **title**, the **delete
+   confirmation** beneath it, and **every card's tint**, which now runs
+   1..6 by creation order rather than arbitrarily. That last one is the
+   only entry here a screenshot answers better than prose. The
+   screencaps block the 19Q close by the author's ruling, 2026-09-18;
+   the rest block nothing.
 9. **Done.** The Workflow card's State 6 told the operator reviewers had
    been notified when no transport is wired — the sentence 19Q.3's cold
    read found copied into the Guide.
