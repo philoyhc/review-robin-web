@@ -79,32 +79,30 @@
                 and end date/time fields.">
     </figure>
     <p>
-      Indicate whether you will need the Relationships and Observers tabs
-      and pages. Note that sessions do not need these to run (optional).
-    </p>
-    <figure class="guide-figure guide-figure-narrow">
-      <img src="/static/guide/create-session-optional-tabs.png"
-           data-theme-variant="light" loading="lazy"
-           alt="Toggles for the optional Relationships and Observers tabs.">
-      <img src="/static/guide/create-session-optional-tabs-dark.png"
-           data-theme-variant="dark" loading="lazy"
-           alt="Toggles for the optional Relationships and Observers tabs.">
-    </figure>
-    <p>
       If you already have the CSV files for the reviewers and reviewees (or
       Relationships, Observers, and Session settings), you may upload them in
       advance using Quick setup.
     </p>
-    <figure class="guide-figure guide-figure-narrow">
+    <figure class="guide-figure">
       <img src="/static/guide/create-session-quick-setup.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Quick setup card on the Create session page, with a file
-                input for each roster CSV.">
+           alt="The foot of the Create session page: the Quick setup
+                (optional) card with a file input for reviewers, reviewees,
+                relationships, observers and session settings, beside the User
+                interface settings card and its two toggles for the optional
+                Relationships and Observers tabs.">
       <img src="/static/guide/create-session-quick-setup-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Quick setup card on the Create session page, with a file
-                input for each roster CSV.">
+           alt="The foot of the Create session page: the Quick setup
+                (optional) card with a file input for reviewers, reviewees,
+                relationships, observers and session settings, beside the User
+                interface settings card and its two toggles for the optional
+                Relationships and Observers tabs.">
     </figure>
+    <p>
+      Indicate whether you will need the Relationships and Observers tabs
+      and pages. Note that sessions do not need these to run (optional).
+    </p>
     <p>
       Click on <strong>Create Session</strong> to create the session.
     </p>
@@ -142,25 +140,46 @@
     <p>
       Every session must have at least one reviewer and at least one reviewee;
       relationships and observers are optional. You can populate a session
-      using CSV uploads or add them individually on the relevant pages. Use
-      CSV uploads for anything beyond a handful of people.
+      using CSV uploads or add them individually on the relevant pages.
     </p>
     <p>
-      CSV rosters can be uploaded via the <strong>Quick Setup</strong> card
-      (when creating the session or on the Session home page) or via the
-      individual upload cards on each of the Reviewers, Reviewees,
-      Relationships, and Observers pages. The files should be in UTF-8 with
-      max 5000 rows.
+      Use CSV uploads for anything beyond a handful of people. CSV rosters can
+      be uploaded via the <strong>Quick Setup</strong> card (when creating the
+      session or on the Session home page) or using the upload cards on each
+      of the Reviewers, Reviewees, Relationships, and Observers pages. The
+      files should be in UTF-8 with max 5000 rows. Click on
+      <strong>Unlock</strong>:
     </p>
-    <figure class="guide-figure guide-figure-narrow">
-      <img src="/static/guide/roster-upload-card.png"
+    <figure class="guide-figure">
+      <img src="/static/guide/roster-card-locked.png"
            data-theme-variant="light" loading="lazy"
-           alt="A roster Upload card listing the required and optional CSV
-                columns above a file input.">
-      <img src="/static/guide/roster-upload-card-dark.png"
+           alt="The roster card at the top of the Reviewers page, locked: the
+                reviewer count and a pill per roster column carrying its
+                filled-in count, with the Unlock button at the right.">
+      <img src="/static/guide/roster-card-locked-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="A roster Upload card listing the required and optional CSV
-                columns above a file input.">
+           alt="The roster card at the top of the Reviewers page, locked: the
+                reviewer count and a pill per roster column carrying its
+                filled-in count, with the Unlock button at the right.">
+    </figure>
+    <p>
+      To access the facilities:
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/roster-card-unlocked.png"
+           data-theme-variant="light" loading="lazy"
+           alt="The same card unlocked: the Reviewer tag labels editor with
+                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team, the
+                Danger Zone card with its delete-all confirmation, the Upload
+                Reviewers card listing the required and optional CSV columns
+                above a file input, and the Lock button.">
+      <img src="/static/guide/roster-card-unlocked-dark.png"
+           data-theme-variant="dark" loading="lazy"
+           alt="The same card unlocked: the Reviewer tag labels editor with
+                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team, the
+                Danger Zone card with its delete-all confirmation, the Upload
+                Reviewers card listing the required and optional CSV columns
+                above a file input, and the Lock button.">
     </figure>
     {# 19E rung 4 — the starter templates. This is the "downloaded here"
        sentence from the author's draft, with the link resolved to the route
@@ -174,21 +193,10 @@
       rows to replace.
     </p>
     <p>
-      Apart from the CSV upload, you can also add or edit the friendly tag
-      labels on the Reviewers, Reviewees and Relationships pages. They
-      live behind <strong>Unlock</strong> on the roster card at the top
-      of each page, with that page's upload and delete controls:
+      You can also add or edit the friendly tag labels on the Reviewers,
+      Reviewees and Relationships pages, or delete the current roster outright
+      using the <strong>Danger Zone</strong> card.
     </p>
-    <figure class="guide-figure guide-figure-narrow">
-      <img src="/static/guide/reviewer-tag-labels.png"
-           data-theme-variant="light" loading="lazy"
-           alt="The Reviewer tag labels editor, with Tag 1, Tag 2 and Tag 3
-                renamed to Tutor, Group and Team.">
-      <img src="/static/guide/reviewer-tag-labels-dark.png"
-           data-theme-variant="dark" loading="lazy"
-           alt="The Reviewer tag labels editor, with Tag 1, Tag 2 and Tag 3
-                renamed to Tutor, Group and Team.">
-    </figure>
     <p class="muted">
       Note that uploading a template with a bare tag header will clear the
       existing friendly tag label. The labels travel in the CSV header after a
@@ -196,6 +204,7 @@
       column — so the header is the one place a label is carried, in both
       directions.
     </p>
+    <h3>Email addresses</h3>
     <p>
       The app uses email addresses to identify persons in the session. This
       means that each person (reviewer, reviewee, observer) should be uniquely
@@ -270,7 +279,8 @@
       as a group.
     </p>
     <p>
-      Pairs are not generated here — that happens when you Prepare the session.
+      The assignment pairs are not generated here: that happens when you
+      Prepare the session.
     </p>
     <p>
       The second part is a <strong>preview of what the reviewer will see</strong>.
@@ -442,16 +452,6 @@
       option to revert the session to draft mode, or to close the session
       manually (when the responses have been collected).
     </p>
-    <figure class="guide-figure">
-      <img src="/static/guide/workflow-activated.png"
-           data-theme-variant="light" loading="lazy"
-           alt="The Workflow card on an activated session, offering revert to
-                draft and close.">
-      <img src="/static/guide/workflow-activated-dark.png"
-           data-theme-variant="dark" loading="lazy"
-           alt="The Workflow card on an activated session, offering revert to
-                draft and close.">
-    </figure>
     <p>
       If you set a Start and End date/time when setting up the session, the
       app will prepare and activate the session at Start and close the session

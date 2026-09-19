@@ -1191,6 +1191,8 @@ words can stand unchanged inverts which of the two is evidence.
 ### Judgment calls — decided
 
 - Identify each capture by reading it against the running page, not by matching file sizes to the existing set (2026-09-18): two pairs are near-identical in size to captures they do not replace.
+- The quick-setup figure sits **above** the toggle sentence it illustrates, alone in the file (2026-09-19). Every other figure trails its prose; this is v3a's own order and the capture carries both cards, so the sentence reads as a gloss on the picture rather than as a lead-in to the next thing.
+- "Don't forget to save any edits" stays beside a **locked** card (2026-09-19). It is the author's v3a wording against the author's v3a capture, the section already opens with "Unlock the card to make any edits", and the `R` and `≡` buttons it names do render on a locked card. Same shape as open question 2's warnings sentence, and the same answer.
 
 ### Blast radius (measured)
 
@@ -1205,70 +1207,82 @@ At `ac6d0832`:
 
 **The capture set grew twice.** `Opportunity` and `Blast radius` describe
 **Guide_v2** — 12 pairs, 2026-09-18. The author delivered **Guide_v3**
-(17 pairs) and then **Guide_v3a** on 2026-09-19. v3a is v3 with exactly
-one pair replaced, and the reason is recorded below. Intent is unchanged
-— the captures are the source of truth and the prose refines to match —
-but the mapping and the counts in `Opportunity` are superseded by this
-block.
+(17 pairs) and then **Guide_v3a** on 2026-09-19. Intent is unchanged —
+the captures are the source of truth and the prose refines to match —
+but v3a's mapping supersedes `Opportunity`'s: against the 19 committed
+pairs, **4 re-supplied byte-identical** (`create-session-details`,
+`instrument-card-assignment-rule`, `instrument-card-preview`,
+`validate-page`), **11 replaced** like-for-like, **2 renamed** because
+the states changed (`roster-upload-card` and `reviewer-tag-labels` →
+`roster-card-locked`, `roster-card-unlocked`), **2 retired**. 19 → **17**.
 
-**v3a against the 19 committed pairs:**
+**The author's rulings, 2026-09-19.** `workflow-activated` — drop the
+figure, keep the prose: its committed capture showed the **Create
+invites** button 19Q Item 2 retired, so "leave it as is" was not
+available. `create-session-optional-tabs` — absorbed, not dropped, the
+v3a quick-setup capture carrying the `User interface settings` card
+beside it. Open question 4 — accept the set as supplied.
 
-- **4 re-supplied byte-identical**, so not replaced at all:
-  `create-session-details`, `instrument-card-assignment-rule`,
-  `instrument-card-preview`, `validate-page`.
-- **11 replaced** like-for-like.
-- **2 replaced with a rename**, because the states changed: the roster
-  section's `roster-upload-card` and `reviewer-tag-labels` become a
-  locked-card capture and an unlocked-panel capture.
-- **2 retired**: `create-session-optional-tabs` and
-  `workflow-activated`.
+**The ladder ran three rungs, not four.** Rung 1 took eleven
+like-for-like pairs rather than eight — v3a supplies more than v2 did.
+Rung 2 took every structural change at once: the quick-setup absorb, the
+roster pair and its rewritten prose, `workflow-activated` retired,
+**Email addresses** promoted to its own `<h3>`. Rung 3 — *Validate and
+the two Workflow states* — had nothing left to land, open question 1
+having withdrawn the Validate recapture and question 2 kept the warnings
+prose, so it became the close.
 
-19 → **17**, which is v3a's own count.
+**What the item is worth remembering for: a pair's two files are checked
+and its two pictures never are.** `test_guide_screencaps.py` asserts the
+files exist, share a scale, sit in one `<figure>` and carry one `alt`.
+All four hold for a pair showing two different screens, and for an `alt`
+describing neither. Both shipped, repeatedly:
 
-**The author's rulings, 2026-09-19:**
+- **Seven alt texts were false after a swap** across the two rungs —
+  a retired card name, a list where the capture is a status card, rows
+  claimed submitted in a table that is entirely NOT STARTED, a two-card
+  stack that is a two-by-two grid, a warning the capture does not have,
+  and `Save`/`Cancel`/`Lock` promised by a capture showing `Unlock`.
+- **Four pairs are two app states.** `assignments-page` renames its
+  instrument between themes; `invitations-page` reads `(0/6)` against
+  `(0/1)`; `extract-data-page` `SELF-REVIEW: INCLUDE` against `BOTH`;
+  `roster-card-locked` an empty roster against a populated one.
+  `roster-card-unlocked` is a fifth of a milder kind — populated in
+  both, but shot after Prepare in dark, so its Danger Zone also names
+  `884 ASSIGNMENTS`. Comparing heights, the only cheap check the plan
+  had, sees none of them: they do not move the layout.
 
-- `workflow-activated` — **drop the figure, keep the prose**. Its
-  committed capture shows the **Create invites** button that 19Q Item 2
-  retired (`grep -rn "Create invites" app/web/templates/` → nothing), so
-  "leave it as is" was not available: it depicted a control the app no
-  longer has.
-- `create-session-optional-tabs` — **absorbed, not dropped**. The v3a
-  quick-setup capture carries the `User interface settings` card with
-  both toggles on its right, so one figure now shows what two did.
+`spec/ui_elements.md` now carries this at the `.guide-figure` contract,
+because no test can. The close pass caught that first draft writing the
+narrow family's tally into the sentence that says not to write tallies
+down, and restating `test_a_pair_is_shot_at_one_scale` as "the widths
+match" when it compares scale *families* and passes on halves hundreds
+of pixels apart. Both are the item's own failure mode — a claim about a
+measurement, made without the measurement — in the document written to
+warn against it.
 
-**A mapping error, caught by opening the picture.** v3a's pair 25/26 was
-read as `workflow-activated` from the paragraph above it. It shows
-**Revert to draft · Prepare session · Send invites · Activate session**
-and `Status — Setup validated` — the *post-validation* state. So the
-supplied pair is `workflow-after-validation` and the one with no
-replacement is `workflow-activated`, which inverted a ruling already
-given on the wrong premise. `Judgment calls` already says to identify a
-capture by reading it against the running page; this is the first time
-that was tested by caption position and lost. Every remaining pair was
-then confirmed by sight rather than by position.
+**Two reads, and what they found.** Codex read rung 1; `diff-reviewer`
+read the item's cumulative diff at rung 2, per `CLAUDE.md`'s per-item
+cadence. Between them: two false alt texts, four two-state pairs, and
+**two wrong claims of my own** — a `Status` sentence that flattened the
+two roster pairs into one kind of mismatch, and a commit body's "narrow
+family goes 6 → 2" where the measurement says **one** pair
+(`lobby-add-new-session`, 867/870px); `Semantics`'s "6 → 3" was v2's
+arithmetic. Rung 1's commit body likewise states the item's totals as
+that rung's. Four of the reads' hypotheses did **not** survive opening
+the files: `instrument-card-collapsed`, `workflow-prepare-session` and
+`responses-page` carried their alt text across a re-shoot and all three
+are still true, and the two pairs outside the ±4px height tolerance are
+identical in content, so 5px is line-height. Both directions make the
+same point — **a claim about a capture is worth what opening it is
+worth**, and nothing else.
 
-**Five alt texts were false after the swap** and no gate can see it —
-`test_every_screencap_carries_alt_text` checks length, and
-`test_a_pair_carries_one_alt_text` checks the two halves agree. The
-lobby's still said *Search card* (today's rename), Assignments described
-a list of pairs where the capture is the per-instrument status card,
-Invitations claimed submitted and in-progress rows in a table that is
-entirely NOT STARTED, Extract data described a two-card stack that is
-now a two-by-two grid of four, and after-validation listed a warning the
-new capture does not have.
-
-**Four v3a pairs are two app states, not two themes** — found by Codex
-on rung 1 (#2491) and confirmed by opening all eight halves.
-`assignments-page` names the instrument *Team Peer Review* in light and
-*Group Peer Review* in dark; `invitations-page` reads `(0/6)` against
-`(0/1)`; `extract-data-page` reads `SELF-REVIEW: INCLUDE` against
-`BOTH`; the new roster pair is shot on an empty session in light and a
-populated one in dark. This is pair 12's defect again, one rung later
-and four times over — and the same blind spot `Semantics` already names:
-no test compares the two halves' content, and the height check that
-caught pair 12 cannot see a state change that does not move the layout.
-Rung 1 corrected the two alt texts that were false as a result; the
-recapture is open question 4.
+**Item 5 closes segment 19Q**, so the file moves to `guide/archive/`.
+That dangles two backticked pointers to it in live spec prose —
+`spec/operator_button_audit.md` and `spec/preview_hub.md`, both from
+Item 1 — which is `CLAUDE.md`'s "deleting a file can fail a doc gate in
+the rung that deletes it". Both re-anchored here and added to
+`Doc impact`.
 
 ### PR ladder
 
@@ -1322,8 +1336,9 @@ recapture is open question 4.
 ### Doc impact
 
 - `docs/status.md` — row when Item 5 lands (Item 5).
-- `spec/setup_pages.md` — the Reviewers page prose, if pair 2's collapse changes what the Guide says the Unlock panel holds (Item 5).
-- `spec/ui_elements.md` — the capture-family counts, if the 6 → 3 narrowing is worth stating (Item 5).
+- `spec/operator_button_audit.md`, `spec/preview_hub.md` — both carry a backticked pointer to this plan; archiving it dangles them in the same change, so both are re-anchored to `guide/archive/` (Item 5, added at close).
+- `spec/setup_pages.md` — the Reviewers page prose, if pair 2's collapse changes what the Guide says the Unlock panel holds (Item 5). <!-- doc-impact-waived: verified at close, no change needed. The rewritten Reviewers prose and the `roster-card-unlocked` alt describe the panel exactly as § *The roster card and the Unlock panel* already specifies it — label editor over Danger Zone left, Upload right, Lock beneath Upload -->
+- `spec/ui_elements.md` — **not** the capture-family counts, which the file deliberately does not carry: the `.guide-figure` section instead says that the two-scale split is a display rule rather than a promise about the mix, and that nothing checks a pair's two halves show the same app state (Item 5).
 
 ---
 

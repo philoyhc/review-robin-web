@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; fifteen entries, one open
+## Item 7 — Loose ends, recorded 2026-09-18; sixteen entries, two open
 
 ### Opportunity
 
@@ -42,7 +42,7 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Fourteen worked, one open, plus the dev-slot list.** The worked
+**Fourteen worked, two open, plus the dev-slot list.** The worked
 entries compact to their outcome: each one's evidence is in its commit
 and in `docs/status.md`, and what a later reader needs from here is what
 was found, not how. Entry 8 keeps its detail because it is still live;
@@ -220,6 +220,22 @@ reader cannot reconstruct from the diff.
     tag strip's `Clear` chip and the filter box's `Clear` button side
     by side, clearing different things. `Clear` is the app-wide word
     for both, so the rename is right and the adjacency is what is new.
+
+16. **Open.** Entry 15's rename left the old value in three files —
+    four lines. `spec/sessions_overview.md` was swept, but
+    `spec/operator_ui_concept.md` ("the **Add new session** button sits
+    in the Search card above the table"),
+    `spec/visual_style_rrw.md` ("a single Primary button labeled
+    \"Add new session\", in the Search card") and two comments in
+    `app/web/templates/base.html` still name a card the app no longer
+    has. Found by 19Q.5's cold read, which noticed the Guide's new
+    *Filter card* alt text disagreeing with them. The blast-radius
+    recipe in `.claude/skills/segment-plan/SKILL.md` prescribes exactly
+    the grep that would have caught this —
+    `grep -rn "<old term>" spec/ docs/ app/web/templates` — and entry 15
+    ran it over the templates it was changing rather than over the
+    whole tree. Four one-line edits; no test sees them, because
+    `Search card` is prose rather than a constant-derived label.
 
 ### Doc impact
 
