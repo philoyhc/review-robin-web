@@ -1201,6 +1201,75 @@ At `ac6d0832`:
 - narrow-family pairs → **6** today, 3 after (measured by PNG width < 1000)
 - `pytest tests/integration/test_guide_screencaps.py --collect-only` → **161** cases, parametrized per file
 
+### Status
+
+**The capture set grew twice.** `Opportunity` and `Blast radius` describe
+**Guide_v2** — 12 pairs, 2026-09-18. The author delivered **Guide_v3**
+(17 pairs) and then **Guide_v3a** on 2026-09-19. v3a is v3 with exactly
+one pair replaced, and the reason is recorded below. Intent is unchanged
+— the captures are the source of truth and the prose refines to match —
+but the mapping and the counts in `Opportunity` are superseded by this
+block.
+
+**v3a against the 19 committed pairs:**
+
+- **4 re-supplied byte-identical**, so not replaced at all:
+  `create-session-details`, `instrument-card-assignment-rule`,
+  `instrument-card-preview`, `validate-page`.
+- **11 replaced** like-for-like.
+- **2 replaced with a rename**, because the states changed: the roster
+  section's `roster-upload-card` and `reviewer-tag-labels` become a
+  locked-card capture and an unlocked-panel capture.
+- **2 retired**: `create-session-optional-tabs` and
+  `workflow-activated`.
+
+19 → **17**, which is v3a's own count.
+
+**The author's rulings, 2026-09-19:**
+
+- `workflow-activated` — **drop the figure, keep the prose**. Its
+  committed capture shows the **Create invites** button that 19Q Item 2
+  retired (`grep -rn "Create invites" app/web/templates/` → nothing), so
+  "leave it as is" was not available: it depicted a control the app no
+  longer has.
+- `create-session-optional-tabs` — **absorbed, not dropped**. The v3a
+  quick-setup capture carries the `User interface settings` card with
+  both toggles on its right, so one figure now shows what two did.
+
+**A mapping error, caught by opening the picture.** v3a's pair 25/26 was
+read as `workflow-activated` from the paragraph above it. It shows
+**Revert to draft · Prepare session · Send invites · Activate session**
+and `Status — Setup validated` — the *post-validation* state. So the
+supplied pair is `workflow-after-validation` and the one with no
+replacement is `workflow-activated`, which inverted a ruling already
+given on the wrong premise. `Judgment calls` already says to identify a
+capture by reading it against the running page; this is the first time
+that was tested by caption position and lost. Every remaining pair was
+then confirmed by sight rather than by position.
+
+**Five alt texts were false after the swap** and no gate can see it —
+`test_every_screencap_carries_alt_text` checks length, and
+`test_a_pair_carries_one_alt_text` checks the two halves agree. The
+lobby's still said *Search card* (today's rename), Assignments described
+a list of pairs where the capture is the per-instrument status card,
+Invitations claimed submitted and in-progress rows in a table that is
+entirely NOT STARTED, Extract data described a two-card stack that is
+now a two-by-two grid of four, and after-validation listed a warning the
+new capture does not have.
+
+**Four v3a pairs are two app states, not two themes** — found by Codex
+on rung 1 (#2491) and confirmed by opening all eight halves.
+`assignments-page` names the instrument *Team Peer Review* in light and
+*Group Peer Review* in dark; `invitations-page` reads `(0/6)` against
+`(0/1)`; `extract-data-page` reads `SELF-REVIEW: INCLUDE` against
+`BOTH`; the new roster pair is shot on an empty session in light and a
+populated one in dark. This is pair 12's defect again, one rung later
+and four times over — and the same blind spot `Semantics` already names:
+no test compares the two halves' content, and the height check that
+caught pair 12 cannot see a state change that does not move the layout.
+Rung 1 corrected the two alt texts that were false as a result; the
+recapture is open question 4.
+
 ### PR ladder
 
 1. **The eight like-for-like pairs** — session home, the four instrument
@@ -1226,16 +1295,22 @@ At `ac6d0832`:
 
 ### Open questions
 
-1. **Does the Validate section keep its find-and-fix framing?** The new
-   capture is clean, documenting the end state rather than the activity
-   the copy describes — what 19K.8 re-shot to avoid. Either the copy
-   stops describing a loop or this capture is the wrong one. Author's.
-2. **Does the post-validation Workflow prose keep its warnings
-   sentence?** That capture has no warnings, so its right column is a
-   status line. Author's, and it meets Item 4: the four-slot defect needs
-   a warning to render, so a clean capture cannot show it either way.
-3. Is the two-session look worth resolving, or does it go on the register
-   until the remaining six are re-shot?
+1. **Answered by the set.** v3a re-supplies `validate-page`
+   byte-identical, so 19K.8's deliberate mid-setup shot stands and the
+   find-and-fix framing keeps its evidence.
+2. **Answered, author 2026-09-19** — keep the warnings sentence, accept
+   the clean capture. The sentence describes what the column does; the
+   capture shows a session with nothing to report. The *alt text*
+   changed instead, because alt text describes the picture rather than
+   the contract.
+3. **Answered by the set.** Both remaining six-student-demo captures are
+   retired, so the two-session look resolves rather than going on the
+   register.
+4. **Open — are the four mismatched pairs recaptured, and by whom?**
+   Named in `Status` above. Re-shooting the light half of each against
+   the dark half's state is the fix; it changes the provenance of half
+   the set from the author's slot to the agent's sandbox, which is why
+   it is the author's call. Rung 2 lands them either way.
 
 ### Out of scope
 
