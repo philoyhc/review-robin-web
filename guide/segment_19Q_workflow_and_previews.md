@@ -744,6 +744,31 @@ template changed.
   reason, because a number nothing derives is a number that rots — the
   same lesson the `Blast radius` section records about quoting it.
 
+**Rung 2 landed 2026-09-19.** The partial rewritten, four CSS rules
+retired for one, a seven-mutant guard.
+
+- **`spec/session_home.md` was undeclared.** The plan's `Doc impact`
+  named `spec/workflow_card.md` and missed that Session Home's own spec
+  describes the same right column in three places. Bullet added above;
+  the prose lands at rung 3 with the close.
+- **The control was vacuous, and a mutant said so.** A page-level
+  "clean session renders no link" case passes because States 4 / 5 / 6
+  do not *include* the partial — not because the guard inside it works.
+  Deleting `_has_any` outright survived. The guard is now exercised by
+  rendering the partial directly with an empty issue set, with a
+  non-empty render beside it so an empty result means the guard fired
+  rather than the partial being inert.
+- **Coverage is stated, not implied.** Three include sites, one
+  deterministic fixture (`W`). The `W` case stands in for States 3 and
+  4Err, and a structural test pins that there are exactly three
+  includes of identical content — so if that stops being true, the
+  claim fails rather than quietly weakening.
+- **A dead token, found on the way past.** The retired
+  `.next-action-issue-fix` rule asked for `var(--font-size-sm)`, which
+  this sheet has never defined — the only use of that name in the file,
+  so the fix links rendered at inherited size all along. The
+  replacement rule uses `--fs-small`.
+
 ### PR ladder
 
 1. **The base rule.** `box-sizing: border-box` on the `.btn` rule, with
@@ -797,6 +822,7 @@ template changed.
 - `docs/status.md` — row when Item 4 lands (Item 4).
 - `spec/ui_elements.md` — §6 gains the no-overflow intent for `.btn` and names `box-sizing: border-box` as its mechanism (Item 4).
 - `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, and the §"`4W` is an overlay" mention: all four describe the per-issue list the card will stop rendering (Item 4).
+- `spec/session_home.md` — the two "Status pills + per-issue list live in the right column" bullets and the State 3 row of the lifecycle table, all three describing a per-issue list the card no longer renders. **Undeclared at planning time**, found at rung 2 (Item 4).
 
 ---
 

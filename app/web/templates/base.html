@@ -3573,27 +3573,21 @@
         column-gap: var(--space-3);
         row-gap: var(--space-2);
       }
-      body.ui-v2 .card.next-action .next-action-issue-list {
-        list-style: none;
-        padding: 0;
+      /* 19Q Item 4 — the right column points at Validate instead of
+         reproducing its table, so the four rules that laid out the
+         per-issue list (``.next-action-issue-list``, its ``> li``,
+         ``.next-action-issue-message``, ``.next-action-issue-fix``)
+         are gone rather than left dead. Nothing else in the app used
+         them; this is the whole of what the column now renders below
+         its count pills. */
+      body.ui-v2 .card.next-action .next-action-issue-pointer {
         margin: var(--space-2) 0 0 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-2);
-      }
-      body.ui-v2 .card.next-action .next-action-issue-list > li {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: var(--space-2);
-      }
-      body.ui-v2 .card.next-action .next-action-issue-message {
-        flex: 1 1 auto;
-        min-width: 0;
-      }
-      body.ui-v2 .card.next-action .next-action-issue-fix {
-        font-size: var(--font-size-sm);
-        white-space: nowrap;
+        /* ``--fs-small``, not ``--font-size-sm``: the retired
+           ``.next-action-issue-fix`` rule asked for the latter, which
+           this sheet has never defined, so that declaration resolved
+           to nothing and the fix links rendered at inherited size.
+           Carried over as the token that exists. */
+        font-size: var(--fs-small);
       }
       @media (max-width: 720px) {
         body.ui-v2 .card.next-action .next-action-grid {
