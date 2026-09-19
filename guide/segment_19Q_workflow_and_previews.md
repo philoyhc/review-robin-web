@@ -711,104 +711,56 @@ no template can widen that: **0** of the 79 anchors carry an inline
   four children on the 104px track. Kept out of the tree: a
   measurement, not a fixture.
 
-### Status
+### Status — intended vs done
 
-**Rung 1 landed 2026-09-19.** One declaration, two comments and a unit
-guard, all inside `base.html`; no *page* template changed. (The first
-draft of this line said "no template changed", which a cold read caught:
-`base.html` is a template.)
+**Three rungs as planned, in order, none struck.** Two divergences from
+what the plan assumed:
 
-- **The render test the rung owed turned out to be already written.**
-  `tests/integration/test_workflow_card_w_overlay.py` pins the `5W`
-  markup exactly — four slots, and Activate as an `<a>` on the detour —
-  so a second markup test would have duplicated it. What was unpinned
-  was the *CSS contract*, so the rung's test is
-  `tests/unit/test_btn_box_model.py` instead: the base rule carries
-  `border-box` on the selector that reaches `a.btn`, and nothing
-  anywhere returns a `.btn` to `content-box`. Together those cover every
-  width-sized `.btn` the sheet has or gains, so the file pins the
-  property and not a roster.
-- **Measured on the real page, not a probe.** The `5W` capture comes out
-  of the suite's own fixture and renders faithfully offline (the sheet is
-  inline). Before: three `<button>` at 169.6px and the `<a>` at 203.6px,
-  the row overflowing by 34px. After: all four at 169.6px, 0px overflow.
-  **These are not the 103.2px / 137.2px of `Opportunity` above** — same
-  defect, same 34px delta, wider container: that probe was the author's
-  capture, this one a 1440px viewport. The invariant is the delta, not
-  the track.
-- **Six mutants, six caught** — and two of the guard's own drafts were
-  wrong first. `min-width: 0` satisfied a "has a width" regex, so the
-  premise check passed with the row's `width: 100%` deleted; the obvious
-  repair, a negative lookahead, failed because the optional whitespace
-  around the colon backtracks to empty and the lookahead then reads the
-  space instead of the zero. The value is compared in Python now. Both
-  are the session's recurring defect — a matcher that does not match what
-  it is named for.
-- **The stale comment is gone rather than corrected.** `base.html:1645`
-  counted the sheet's `box-sizing` rules ("five other rules") and the
-  count had drifted to ten. Replaced with an uncounted statement plus the
-  reason, because a number nothing derives is a number that rots — the
-  same lesson the `Blast radius` section records about quoting it.
+- **The blast-radius question was asked wrong** — the 79 anchors were
+  never the blast radius. Corrected in `Blast radius` above, which owns
+  it; the wrong question is the finding.
+- **Rung 1's render test was already written.**
+  `test_workflow_card_w_overlay.py` pins the `5W` markup, so the rung's
+  test became the CSS contract instead.
 
-**Rung 2 landed 2026-09-19.** The partial rewritten, four CSS rules
-retired for one, a seven-mutant guard.
+**Counts were short three times.** Doc impact named four specs and the
+cold read found a fifth; the `spec/workflow_card.md` bullet said four
+passages, the read made it five, the close found eight. Which is the
+lesson `base.html:1645`'s retired "five other rules" comment had just
+taught, relearned twice inside the item that taught it.
 
-- **`spec/session_home.md` was undeclared.** The plan's `Doc impact`
-  named `spec/workflow_card.md` and missed that Session Home's own spec
-  describes the same right column in three places. Bullet added above;
-  the prose lands at rung 3 with the close.
-- **The control was vacuous, and a mutant said so.** A page-level
-  "clean session renders no link" case passes because States 4 / 5 / 6
-  do not *include* the partial — not because the guard inside it works.
-  Deleting `_has_any` outright survived. The guard is now exercised by
-  rendering the partial directly with an empty issue set, with a
-  non-empty render beside it so an empty result means the guard fired
-  rather than the partial being inert.
-- **Coverage is stated, not implied.** Three include sites, one
-  deterministic fixture (`W`). The `W` case stands in for States 3 and
-  4Err, and a structural test pins that there are exactly three
-  includes of identical content — so if that stops being true, the
-  claim fails rather than quietly weakening.
-- **A dead token, found on the way past.** The retired
-  `.next-action-issue-fix` rule asked for `var(--font-size-sm)`, which
-  this sheet has never defined — the only use of that name in the file,
-  so the fix links rendered at inherited size all along. The
-  replacement rule uses `--fs-small`.
+**The item kept committing its own defect class**, and something other
+than the author caught it each time:
 
-**The cold read, at rung 2 (the item's last build rung).** One read over
-the cumulative diff from `ddf640d8`, per `CLAUDE.md`'s per-item cadence.
-It reported five findings; all five were real and all five are fixed in
-rung 2:
+- Two guards passed for the wrong reason — a `min-width: 0` that
+  satisfied a "has a width" regex, and a "clean session" control that
+  exercised the *absence of the include* rather than the guard inside it.
+  Both found by mutants. The negative-lookahead repair for the first
+  failed too, the whitespace around the colon backtracking to empty.
+- **Rung 2 rewrote the partial's misleading comment and created three
+  fresh ones one file up**, one flatly false, in a file its own test
+  opens and reads. Found by the cold read.
+- The `content-box` guard scanned only `.btn`-subject rules, so a `> *`
+  selector would have reopened the defect.
 
-1. **`spec/rrw_functional_spec.md` was a second undeclared spec** — and
-   the one `spec/README.md` sends a new reader to first. Bullet added.
-2. **The `spec/workflow_card.md` bullet under-counted its own file** —
-   "all four" passages were five; the `## Source-of-truth pointers` entry
-   names the partial. Corrected.
-3. **Three comments in `next_action_card.html` contradicted the code**,
-   one of them flatly ("Under the W overlay this lists the warning
-   details too"). *This is the item's own defect class, committed by the
-   rung that set out to close it*: rung 2 fixed the partial's comment and
-   created three fresh instances one file up. Fixed.
-4. "No template changed" in the rung-1 entry above — `base.html` is a
-   template. Corrected in place.
-5. **103.2px and 169.6px, unreconciled** in one document. Annotated: same
-   delta, different container.
+**Reads: one `diff-reviewer`** (rung 2, the last build rung, cumulative
+from `ddf640d8`) **and one `spec-writer`** at this close. The cold read
+returned five findings, all real, all fixed; it falsified nothing in the
+blast-radius claim and extended it — no `.btn` carries a height or
+explicit `flex-basis`, and the one `<span class="btn">` in the tree is
+reached by no width rule. **Fifteen mutants, fifteen caught**, including
+the one the read predicted would survive.
 
-It also falsified nothing in the rung-1 blast-radius claim, and extended
-it: no `.btn` carries a `height`/`min-height`/`max-height` or an explicit
-`flex-basis` either, and the one non-`<a>`/non-`<button>` `.btn` carrier
-(a `<span>` on the lobby) is reached by no width rule. And it found the
-`content-box` guard claiming more than it checked — a rule whose subject
-is not a `.btn` can still reach one. Widened, and the mutant it predicted
-would survive now fails.
+**Found on the way past:** `var(--font-size-sm)`, the sheet's only use of
+a token it has never defined, so the retired fix links rendered at
+inherited size all along.
 
-**Two things it raised that are the author's, not mine** (recorded here,
-not acted on): under the `W` overlay the card now says the same thing in
-both columns — left "N warnings — review on Validate before activating",
-right "Review on Validate"; and the pointer carries no fragment, so it
-lands at the top of Validate, above a second copy of the Workflow card.
-Neither is a defect against the call; both want a look on the dev slot.
+**Carried out of the item**, both needing the dev slot and neither a
+defect against the call: the `W` overlay now names Validate in both
+columns, and the pointer has no fragment, so it lands above a second copy
+of the card the operator just left (no suitable anchor id exists).
+
+**Not verified end-to-end** — both rungs are UI-visible.
 
 ### PR ladder
 
