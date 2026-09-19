@@ -27,14 +27,24 @@
         {% endif %}
       </div>
 
+      {# The lobby's filter card, carried here (19O Item 7 entry 15).
+         **It is a filter, not a search** — it hides rows already
+         rendered, live on every keystroke, so there is nothing to
+         submit. Headed `Search` with a `Cancel` beside it until the
+         author's ruling of 2026-09-19.
+
+         Unlike the lobby's, this card does not gate on an empty roster:
+         the whole page body is inside `{% raw %}{% if sessions %}{% endraw %}`, so an
+         empty archive never renders it at all. Same intent, different
+         mechanism — left as it is, because each is right for its page. #}
       <div class="card sessions-action-card">
-        <h2>Search</h2>
+        <h2>Filter</h2>
         <input type="text" class="archived-search-input"
-               placeholder="Search by name, code, or tag"
-               aria-label="Search archived sessions">
+               placeholder="Filter by name, code, or tag"
+               aria-label="Filter archived sessions">
         <div class="sessions-action-buttons">
           <button type="button" class="btn secondary"
-                  data-search-cancel>Cancel</button>
+                  data-filter-clear>Clear</button>
         </div>
       </div>
     </div>
@@ -188,7 +198,7 @@
         if (!table) return;
         var strip = document.getElementById("archived-tag-filter");
         var searchInput = document.querySelector(".archived-search-input");
-        var searchCancel = document.querySelector("[data-search-cancel]");
+        var filterClear = document.querySelector("[data-filter-clear]");
         var rows = Array.prototype.slice.call(
           table.querySelectorAll("tr[data-tags]")
         );
@@ -301,8 +311,8 @@
             apply();
           });
         }
-        if (searchCancel) {
-          searchCancel.addEventListener("click", function () {
+        if (filterClear) {
+          filterClear.addEventListener("click", function () {
             if (searchInput) searchInput.value = "";
             searchTerm = "";
             apply();
