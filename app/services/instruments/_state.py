@@ -45,7 +45,7 @@ def _instrument_label(instrument: Instrument) -> str:
     validation error messages, and operator-page UI sites that need a
     stable human-readable handle for an instrument.
 
-    **Per-session since 19Q Item 6.** It was ``Instrument_{session_seq}``, and
+    **Per-session since 19Q Item 6.** It was ``Instrument_{id}``, and
     ``id`` is a workspace-wide autoincrement, so one session could hold
     ``Instrument_1`` and ``Instrument_7``. ``session_seq`` is assigned
     once at creation and never updated, so the handle is stable in the
