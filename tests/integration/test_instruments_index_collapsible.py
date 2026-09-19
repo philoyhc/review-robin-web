@@ -56,13 +56,20 @@ def test_summary_holds_title_and_both_status_pills(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # The <summary> carries the title (keyed off instrument.id) and
-    # the per-instrument Set up / Not set up pill (matches the
-    # workflow card's is_configured predicate). A fresh instrument
-    # has no Band 1 touched links, so it renders "Not set up".
-    assert '<summary class="instrument-card-summary">' in body
-    assert "Instrument #1" in body
-    assert ">Not set up</span>" in body
+    # The <summary> carries the title and the per-instrument
+    # Set up / Not set up pill (matches the workflow card's
+    # is_configured predicate). A fresh instrument has no Band 1
+    # touched links, so it renders "Not set up".
+    #
+    # Scoped to the summary since 19Q Item 6 rung 2. It used to assert
+    # ``"Instrument #1" in body`` — a string that lives in the delete
+    # confirmation four thousand lines below, so the assertion passed
+    # without the summary carrying a title at all. The comment claimed
+    # more than the assert proved.
+    start = body.index('<summary class="instrument-card-summary">')
+    summary = body[start : body.index("</summary>", start)]
+    assert "Instrument_1" in summary
+    assert ">Not set up</span>" in summary
 
 
 def test_summary_carries_drag_handle_and_chevron(

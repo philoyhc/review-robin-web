@@ -268,7 +268,7 @@ def test_summary_single_instrument_heading_uses_operator_label_not_name(
 ) -> None:
     """Single-instrument session with no ``short_label`` and no
     description: the heading uses the canonical operator label
-    (``Instrument_{id}``) — the same ``instrument_heading`` the
+    (``Instrument_{session_seq}``) — the same ``instrument_heading`` the
     reviewer surface + observer collation use — and **never** the
     internal ``instrument.name`` (audit V1 / the 2026-05-28
     identifier policy that retired ``name`` as a display label)."""
@@ -301,7 +301,12 @@ def test_summary_single_instrument_heading_uses_operator_label_not_name(
     body = rae_client.get(
         f"/me/sessions/{review_session.id}/summary"
     ).text
-    assert f"Instrument_{instrument.id}</h2>" in body
+    # 19Q Item 6 rung 2 — derived from ``session_seq``, not ``id``.
+    # The ``id`` form passed on SQLite only because each test gets a
+    # fresh in-memory DB where the two coincide; on Postgres the run
+    # shares one database and ids climb into the hundreds, which is
+    # how `ci-postgres` caught it and the sandbox did not.
+    assert f"Instrument_{instrument.session_seq}</h2>" in body
     assert "Custom instrument name" not in body
 
 

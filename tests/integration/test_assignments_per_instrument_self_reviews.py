@@ -319,10 +319,19 @@ def test_status_block_uses_short_label_when_available(
     ctx = build_assignments_page_context(db, review_session)
     by_id = {b.instrument_id: b for b in ctx.status_blocks}
 
-    # inst_a has no short_label → falls back to ``Instrument_{id}``
+    # inst_a has no short_label → falls back to
+    # ``Instrument_{session_seq}``
     # per the 2026-05-28 operator-identifier policy
     # (``app/services/instruments/_state.py::_instrument_label``).
-    assert by_id[inst_a.id].instrument_label == f"Instrument_{inst_a.id}"
+    # 19Q Item 6 rung 2 — derived from ``session_seq``, not ``id``.
+    # The ``id`` form passed on SQLite only because each test gets a
+    # fresh in-memory DB where the two coincide; on Postgres the run
+    # shares one database and ids climb into the hundreds, which is
+    # how `ci-postgres` caught it and the sandbox did not.
+    assert (
+        by_id[inst_a.id].instrument_label
+        == f"Instrument_{inst_a.session_seq}"
+    )
     # inst_b's short_label wins.
     assert by_id[inst_b.id].instrument_label == "peer"
 
@@ -398,7 +407,12 @@ def test_self_review_pill_class_tracks_checkbox_state(
     # an Alice→Alice self-review pair, then exercise the per-
     # instrument toggle to flip include states and re-fetch the
     # rendered page.
-    from tests.integration.test_assignments_operations_page import (
+    # Relative, per the convention `_assignment_states.py` documents:
+    # the `pytest` console script puts nothing on `sys.path`, so an
+    # absolute `from tests.…` fails. Function-scoped here, so it
+    # broke only this test rather than collection — which is how it
+    # survived. Named by 19O.7 entry 14's cold read.
+    from .test_assignments_operations_page import (
         _generate_with_self_reviews,
         _make_session,
         _seed_population_with_self_review,

@@ -797,6 +797,16 @@ def build_instruments_context(
         "session": review_session,
         "status_pills": session_status_pills(db, review_session),
         "instruments": instruments,
+        # 19Q Item 6 rung 2 — the operator-facing handle, computed
+        # once here rather than spelled again in Jinja. The template
+        # had its own copy of the ``short_label or Instrument_{…}``
+        # rule, which agreed with the service only by coincidence;
+        # two implementations of one rule is how the card title and
+        # the delete confirmation came to show different numbers.
+        "instrument_labels": {
+            inst.id: instruments_service._instrument_label(inst)
+            for inst in instruments
+        },
         "is_ready": is_ready,
         "can_edit": can_edit,
         "lock_action": lock_action,
