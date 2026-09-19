@@ -112,8 +112,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    within the row's session. Recorded rather than hidden, because a
    reader auditing "no logic in models" will find it. It sits here
    instead of in a service so that *no* creation path can forget it —
-   the alternative was the same arithmetic at four call sites and in
-   the 75 test fixtures that construct `Instrument(...)` directly.
+   the alternative was the same arithmetic repeated at every creation
+   path, including every test fixture that constructs `Instrument(...)`
+   directly rather than through a creation service.
    `app/db/models/instrument.py` is the only model that does this; the
    rule otherwise holds.
 

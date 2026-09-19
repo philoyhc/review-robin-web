@@ -273,7 +273,7 @@ The `<summary>` carries, in document order:
   doesn't co-fire the parent `<summary>`'s native toggle.
 - **Title (operator-facing short label).** Renders
   `{instrument.short_label}` when the operator has set
-  one, else the ugly fallback `"Instrument_{instrument.id}"`
+  one, else the ugly fallback `"Instrument_{session_seq}"`
   in muted italic so it reads as a placeholder rather than
   a chosen name. Per the operator-identifier policy: the
   `#` prefix is reserved for the reviewer-
@@ -1040,8 +1040,7 @@ Bottom row of the card, right-aligned, in this order:
 - Side effects: creates a new `Instrument` row with default
   `name="instrument_{n}"` (the count of existing instruments plus
   one — an internal handle, never rendered; **not** zero-padded and
-  **not** `#`-prefixed, which the spec claimed until 19Q Item 6
-  found it), no display
+  **not** `#`-prefixed), no display
   fields, no response fields, NULL `rule_set_id`, NULL
   `group_kind`. Lifecycle-aware:
   - `is_draft` → succeeds, no invalidation.
