@@ -890,6 +890,17 @@ up: a rule written once and reachable from only some of its callers.
 `(session_id, email)` across two tables is not expressible, and the
 reviewer/reviewee overlap is legitimate whenever the names agree.
 
+**Three-way, not two-way** (author, 2026-09-19, answering open question
+1). `check_cross_table_identity` dispatches on `kind` and compares
+against the *one* other table; observers join, so each kind compares
+against the other **two**. That is a wider change than piece 1 first
+looked, and the measurements below are revised for it — most of the cost
+is that the observer CSV import never called the check at all.
+
+**Name comparison stays exact** (open question 2). No code moves for
+that answer; what it buys is that the rule is now chosen rather than
+inherited, and `Semantics` says so.
+
 ### Semantics
 
 - **Same email + same name across rosters stays legal** — the
@@ -899,6 +910,12 @@ reviewer/reviewee overlap is legitimate whenever the names agree.
   and reopened as open question 2.
 - A reviewee identifier with no `@` is skipped, as in the CSV path:
   anonymous handles cannot collide with a mailbox by construction.
+- **A missing name cannot disagree with one.** `Observer.display_name`
+  is nullable and its CSV column optional, where `Reviewer.name` and
+  `Reviewee.name` are not — so a comparison involving an observer with
+  no name is skipped rather than counted as a conflict. Exact comparison
+  makes this explicit: without the rule, every unnamed observer would
+  collide with the reviewer sharing its mailbox.
 - Both new rules are **errors**, matching their within-roster siblings.
 - Piece 1 governs new writes only, so a session already holding a
   conflicting pair keeps it until someone edits that row. Piece 2 is
@@ -911,9 +928,28 @@ At `81c46014`:
 - `grep -rn "check_cross_table_identity" app/ --include=*.py` → **3**:
   the definition and its two CSV callers.
 - Create/edit services that can write a roster row: **6**
-  (`create_`/`update_` × reviewers / reviewees / observers). **4** are in
-  scope for piece 1; the observer pair is not, cross-table identity being
-  reviewer↔reviewee (open question 1).
+  (`create_`/`update_` × reviewers / reviewees / observers) — **all six**
+  in scope once observers joined. The first draft of this bullet said
+  four.
+
+**Re-measured 2026-09-19 after open question 1 was answered.** Observers
+joining costs more than a third branch:
+
+- `check_cross_table_identity` compares against the *one* other table,
+  dispatched on `kind`; three-way means each kind compares against the
+  other two, and the signature
+  (`rows: list[ReviewerImportRow] | list[RevieweeImportRow]`) has to
+  admit `ObserverImportRow`.
+- **The observer CSV import never called the check at all.** Reviewers
+  and reviewees share `_shared.py`'s helper, whose own docstring says
+  `kind` is `"reviewers"` or `"reviewees"`; observers import through
+  `_setup_observers.py:728` and `_quick_setup.py:642`, neither of which
+  calls it. Two call sites to add, not zero.
+- A consequence worth stating because it is invisible: the function
+  returns `[]` for an unrecognised `kind` rather than raising, so had an
+  observer CSV reached the shared path it would have been checked, found
+  nothing, and reported success. Piece 1 should make an unknown `kind`
+  loud.
 - `grep -c "ValidationRule(" app/services/validation.py` → **18** rules
   today; this item adds 2.
 - `grep -rln "check_cross_table_identity\|duplicate_email\|duplicate_id" tests/`
@@ -924,10 +960,11 @@ At `81c46014`:
 
 ### PR ladder
 
-1. **The services consult the existing check.** Pieces 1. Four call
-   sites, one helper each side, and the tests that prove the Add form
-   now matches the CSV path — the asymmetry measured in `Opportunity`
-   becomes a regression test.
+1. **Widen the check, then call it everywhere.** Piece 1: the function
+   goes three-way and admits `ObserverImportRow`; the two observer CSV
+   sites start calling it; all six create/edit services consult it. The
+   asymmetry measured in `Opportunity` becomes a regression test, and an
+   unknown `kind` stops being a silent empty list.
 2. **The two Validate rules.** Pieces 2 and 3, with their `why` copy and
    `fix_anchor` deep links.
 3. **The close** — specs below, `docs/status.md`, `close_check`,
@@ -935,7 +972,9 @@ At `81c46014`:
 
 ### Definition of done
 
-- The Add form and the CSV path give the same verdict on the same input, asserted by one test that drives both.
+- The Add form and the CSV path give the same verdict on the same input, asserted by one test that drives both — for all three rosters.
+- An unnamed observer sharing a mailbox with a named reviewer creates cleanly; a *named* one with a different name does not.
+- An unknown `kind` reaching the check fails loudly rather than returning an empty list.
 - A session holding a pre-existing conflicting pair reports it on Validate.
 - `observers.duplicate_email` reports on Validate; the DB constraint stays as the guarantee.
 - Same email + same name across rosters still creates cleanly, and still classifies as a self-review.
@@ -947,15 +986,11 @@ At `81c46014`:
 
 ### Open questions
 
-1. **Do observers join the cross-roster check?** Today it is
-   reviewer↔reviewee only. An observer sharing a mailbox with a reviewer
-   under a different name is the same defect, but observers are a
-   different audience (`spec/audience_and_identity_model.md`) and may be
-   deliberately separate. Author's.
-2. **Is the name comparison exact, trimmed, or case-insensitive?** The
-   CSV path compares exactly, so `"Aisha Haddad "` and `"aisha haddad"`
-   both fail today. Inherited rather than chosen; worth choosing now
-   that a form posts into it. Author's.
+1. ~~Do observers join the cross-roster check?~~ **Yes** — author,
+   2026-09-19. The check goes three-way; see `Decision`.
+2. ~~Is the name comparison exact, trimmed, or case-insensitive?~~
+   **Exact**, as the CSV path already does it — author, 2026-09-19.
+   Inherited becomes chosen; no code changes for this answer.
 
 ### Out of scope
 
