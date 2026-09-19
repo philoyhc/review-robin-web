@@ -727,6 +727,9 @@ def relationships_search_options(
 # separate from the tag half for the reason ``SEARCH_TAG_OPTIONS_CAP``
 # gives (19O Item 7 entry 15). Sessions accumulate where a roster is
 # bounded by one review, so this is the half that grows.
+#
+# Counted in **sessions**, each of which contributes up to two options
+# (its name and its code) — so the rendered half is at most twice this.
 SESSIONS_DATALIST_CAP: int = 200
 
 
@@ -752,18 +755,32 @@ def sessions_filter_options(
     hide every row. Two plain options, each of which matches the
     column it came from, is what a per-column filter can honour.
 
-    Names and codes share one cap because they are two spellings of one
-    session's identity rather than two kinds of thing; tags keep their
-    own because they are a partition. Duplicates collapse — a session
-    whose name and code are the same string offers one option.
+    **The cap counts sessions, not strings.** A first version merged the
+    names and codes into one sorted list and sliced that, which is not
+    what its own rationale claimed: with 150 sessions named
+    ``Session NNNN`` and coded ``zz-NNNN``, every name sorts above every
+    code, so the slice offered 150 names and 50 codes — the sessions
+    past the 50th suggestible by one spelling of their identity and not
+    the other. ``relationships_search_options`` caps *labels*, where one
+    label is one person; this caps *sessions*, where one session is two
+    strings. Found by the cold read at 19O Item 7 entry 15.
+
+    Tags keep their own cap because they are a partition rather than an
+    identity. A value offered as a tag is not offered again as a name or
+    a code: the two halves are de-duplicated against each other, which
+    the roster surfaces get for free from their ``"Name (handle)"`` form
+    and this one has to do explicitly, having dropped that form.
     """
     tag_options = _distinct_tag_options(tags)
-    handles = {
-        value.strip()
-        for row in rows
-        for value in (row.name, row.code)
-        if value and value.strip()
-    }
-    return tag_options + sorted(handles, key=str.casefold)[
-        :SESSIONS_DATALIST_CAP
-    ]
+    already = {value.casefold() for value in tag_options}
+    handles: list[str] = []
+    for row in sorted(rows, key=lambda r: (r.name or "").casefold()):
+        if len(handles) >= SESSIONS_DATALIST_CAP * 2:
+            break
+        for value in (row.name, row.code):
+            value = (value or "").strip()
+            if not value or value.casefold() in already:
+                continue
+            already.add(value.casefold())
+            handles.append(value)
+    return tag_options + sorted(handles, key=str.casefold)

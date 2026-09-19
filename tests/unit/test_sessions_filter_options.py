@@ -84,14 +84,82 @@ def test_values_are_offered_trimmed() -> None:
     assert options == ["p-1", "Padded"]
 
 
-def test_the_session_half_is_capped() -> None:
-    """Sessions accumulate where a roster is bounded by one review, so
-    this is the half that grows."""
-    rows = [_s(f"Session {i:04d}", f"code-{i:04d}") for i in range(300)]
+def test_the_cap_counts_sessions_not_strings() -> None:
+    """The cap's subject, and the finding that made this test worth
+    writing.
+
+    A first version merged names and codes into one sorted list and
+    sliced that. `len(options) == 200` was true then and is true under
+    any other slicing, so the assertion could not tell the versions
+    apart — the cold read caught it. What distinguishes them is *which*
+    values survive.
+
+    Here every name sorts above every code, so a string-wise cap offered
+    150 names and 50 codes: the sessions past the 50th suggestible by
+    one spelling of their identity and not the other.
+    """
+    rows = [_s(f"Session {i:04d}", f"zz-{i:04d}") for i in range(150)]
 
     options = sessions_filter_options(rows, [])
 
-    assert len(options) == SESSIONS_DATALIST_CAP
+    names = [o for o in options if o.startswith("Session ")]
+    codes = [o for o in options if o.startswith("zz-")]
+    assert len(names) == 150
+    assert len(codes) == 150, "a session kept its name and lost its code"
+
+
+def test_a_capped_session_keeps_both_of_its_spellings() -> None:
+    """The cap truncates the session list; it never halves a session."""
+    rows = [_s(f"Session {i:04d}", f"code-{i:04d}") for i in range(300)]
+
+    options = sessions_filter_options(rows, [])
+    offered = set(options)
+
+    assert len(options) == SESSIONS_DATALIST_CAP * 2
+    for i in range(SESSIONS_DATALIST_CAP):
+        assert f"Session {i:04d}" in offered
+        assert f"code-{i:04d}" in offered
+    assert f"Session {SESSIONS_DATALIST_CAP:04d}" not in offered
+    assert f"code-{SESSIONS_DATALIST_CAP:04d}" not in offered
+
+
+def test_which_sessions_survive_the_cap_does_not_follow_the_input_order() -> None:
+    """The route hands rows over in whatever order the operator's table
+    sort produced (`_lobby.py` applies the cookie sort before calling
+    this). Without an explicit sort here, re-sorting the table would
+    silently change *which* sessions the typeahead offers.
+
+    The case that caught this: the cap test above feeds rows already in
+    name order, so `sorted()` is a no-op in it and a mutant removing the
+    sort survived. Here the input is reversed, so the two orders
+    disagree about which session falls off the end.
+    """
+    rows = [_s(f"Session {i:04d}", f"code-{i:04d}") for i in range(201)]
+    offered = set(sessions_filter_options(list(reversed(rows)), []))
+
+    assert "Session 0000" in offered, "the cap followed the input order"
+    assert "Session 0200" not in offered
+
+
+def test_a_tag_equal_to_a_name_or_code_is_offered_once() -> None:
+    """New with this helper's divergence, and found by the cold read.
+
+    The seven roster surfaces cannot collide here: their handle half is
+    `"Name (handle)"` and their tag half is bare, so the two shapes
+    cannot be equal. Dropping the parenthesized form — necessary,
+    because a per-column filter cannot match it — took that structural
+    guard with it. Tags are lowercased on write and codes are commonly
+    lowercase slugs, so the collision is reachable.
+    """
+    options = sessions_filter_options(
+        [_s("cohort a", "c-1"), _s("Other", "cohort b")], ["cohort a", "cohort b"]
+    )
+
+    assert options.count("cohort a") == 1
+    assert options.count("cohort b") == 1
+    # The tag half still leads, and the session half loses the duplicate
+    # rather than the tag half losing its place.
+    assert options[:2] == ["cohort a", "cohort b"]
 
 
 def test_the_tag_half_has_its_own_cap_so_sessions_cannot_crowd_it_out() -> None:
@@ -102,4 +170,4 @@ def test_the_tag_half_has_its_own_cap_so_sessions_cannot_crowd_it_out() -> None:
     options = sessions_filter_options(rows, ["Cohort A", "Cohort B"])
 
     assert options[:2] == ["Cohort A", "Cohort B"]
-    assert len(options) == SESSIONS_DATALIST_CAP + 2
+    assert len(options) == SESSIONS_DATALIST_CAP * 2 + 2

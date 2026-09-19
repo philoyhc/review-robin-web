@@ -4448,6 +4448,42 @@
       // memory keyed by the table's ``data-rrw-sortable``
       // attribute. PR 5 layers cookie persistence on top so the
       // sort survives reloads on the same browser.
+      // ---------------------------------------------------------------
+      // Session list filtering (19O Item 7 entry 15)
+      // ---------------------------------------------------------------
+      //
+      // The Lobby and the Archive carry the same filter control over the
+      // same table shape, so the rule lives here once rather than in two
+      // page scripts. Entry 15's argument for folding the Archive in was
+      // that two copies had already drifted three ways; answering it by
+      // making the copies identical again would have set up the fourth.
+      //
+      // Per column and unioned, the rule `spec/setup_pages.md` states
+      // for the seven server-side filters: substring on name and code,
+      // **whole value** on tags. Substring on a name is what makes a
+      // partial name useful; whole value on a tag is what keeps `team a`
+      // from dragging in `team a2` — a collision these two pages were
+      // the only surfaces to have.
+      //
+      // Taking the three values rather than the row keeps this testable
+      // without a DOM: `tests/integration/test_session_filter_rule.py`
+      // runs it under node.
+      function rrwSessionFilterMatches(name, code, tags, term) {
+        // The term is normalised here rather than assumed normalised.
+        // The callers happen to lower-case it already, so this is a
+        // no-op for them — but a function whose contract is "pass me a
+        // pre-lowered string" is a landmine for the next caller, and the
+        // node test that executes this found the precondition by
+        // failing on a capitalised term.
+        var needle = String(term == null ? "" : term).trim().toLowerCase();
+        if (!needle) return true;
+        if (String(name).trim().toLowerCase().indexOf(needle) !== -1) return true;
+        if (String(code).trim().toLowerCase().indexOf(needle) !== -1) return true;
+        return (tags || []).some(function (tag) {
+          return String(tag).trim().toLowerCase() === needle;
+        });
+      }
+
       var _RRW_SORT_MAX_KEYS = 3;
       var _rrwSortState = {};
 

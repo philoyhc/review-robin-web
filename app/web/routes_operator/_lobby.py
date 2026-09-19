@@ -123,9 +123,14 @@ def archived_sessions(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """The archived-sessions child page (Segment 18A Part 3) — a
-    stub: lists the operator's archived sessions. The full surface
-    (Filter card, tag-chip info card, bulk-only expander) follows."""
+    """The archived-sessions child page (Segment 18A Part 3).
+
+    Opened as a stub whose docstring said the full surface — filter
+    card, tag-chip info card, bulk-only expander — was still to come.
+    All three shipped; the sentence outlived them and was still being
+    edited as late as 19O Item 7 entry 15, which changed `Search` to
+    `Filter` in it and left the promise standing.
+    """
     archived = [
         s
         for s in sessions.list_for_user(db, user)

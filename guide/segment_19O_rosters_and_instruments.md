@@ -214,16 +214,39 @@ treatment starts from.
       as one measured true.
     - **Neither can see the other's half.** The lobby renders
       non-archived only (`_lobby.py:91`), the Archive archived only. An
-      operator filtering the lobby for an archived session gets an empty
-      table and no signal it exists one click away — while the empty
+      operator filtering the lobby for an empty result had no signal
+      that the session exists one click away — while the empty
       Archive's own copy does the opposite favour (*"Sessions you
-      archive from the lobby appear here"*). Whether a filter owes that
-      pointer is the open design question; a **search** would have owed
-      results.
+      archive from the lobby appear here"*).
+
+      **Settled at rung 1, not by the author's ruling.** The ruling
+      covered naming and folding the Archive in; this was the open
+      design question beside it, and the minimal reading was taken —
+      the lobby's empty-filter row names the Archive and links to it,
+      which is all a *filter* owes where a *search* would have owed the
+      matching rows. The Archive does not reciprocate: its operator
+      arrived from the lobby and its empty-page copy already says so.
+      Both halves are pinned by tests, and the whole of it is one
+      `<tr>`'s copy to reverse. Recorded here because the cold read
+      found this bullet still calling it open while the code shipped an
+      answer.
 
     Folding the Archive in is the ruling because there are two copies
     that have already drifted three ways: treating one alone guarantees
     a fourth.
+
+    **Rung 2 answered that by making it one copy, after a first pass
+    made the two identical again.** The matching rule is
+    `rrwSessionFilterMatches` in `base.html`, beside the sort primitive
+    the same two pages already share; each page keeps only the three
+    property reads that turn a `<tr>` into the three values. Identical
+    copies are how the fourth drift starts, and nothing in the suite
+    would have caught them parting — `test_inline_scripts_parse.py`
+    runs `node --check` and nothing else. Which is also why the rule
+    now has `tests/integration/test_session_filter_rule.py`: node was
+    already in CI for the parse gate, so *executing* one pure function
+    costs nothing new, and the `<datalist>` cases written beside it
+    would all have passed with the matching reverted.
 
 ### Doc impact
 
@@ -242,6 +265,9 @@ treatment starts from.
 - `spec/quick_setup_card_spec.md` — the lifecycle banner's copy (entry 13).
 - `spec/settings_inventory.md` — the lifecycle-transition action names (entry 13).
 - `spec/visual_style_rrw.md` — the Workflow card's transition list (entry 13).
+- `spec/sessions_overview.md` — the card is a **Filter**, not a Search: its drawing, its control table and its prose all name a `Search` card carrying `Cancel`, where the shipped card is headed `Filter` and carries `Clear`. Also the matching rule, which is per column and whole-value on tags now, and the typeahead (entry 15).
+- `spec/operator_button_audit.md` — Section 2 row 12's card name and the `Cancel` it lists; the Archived page has **no section at all**, so its filter card's `Clear` is unaudited along with the rest of its buttons (entry 15).
+- `spec/setup_pages.md` — its "Search matching and suggestions" section states the per-column rules for seven surfaces; the Lobby and Archive are now an eighth and ninth that follow them by a different mechanism, and the one deliberate divergence (no `"Name (handle)"` label, because a per-column filter cannot match it) belongs beside that rule (entry 15). <!-- cites: spec/setup_pages.md -->
 
 ### Open questions
 
