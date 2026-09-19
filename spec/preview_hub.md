@@ -21,4 +21,4 @@ The accepted consequence is that previews no longer have a door before
 Prepare, for inactive reviewers, or for reviewers with no included
 assignments. The Invitations table is the only picker. The historical hub
 design remains in `guide/archive/segment_11F_previews_page.md`; the retirement
-decision is `guide/segment_19Q_workflow_and_previews.md` Item 1.
+decision is `guide/archive/segment_19Q_workflow_and_previews.md` Item 1.

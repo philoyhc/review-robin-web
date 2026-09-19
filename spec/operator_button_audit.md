@@ -485,7 +485,7 @@ The affordances a reader may be looking for here are on the drill-in:
 `Open full preview`) and the email preview tab strip, whose rows keep
 their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
 retired with the picker and have no successor — `Random` gets no
-replacement; see `guide/segment_19Q_workflow_and_previews.md` Item 1's
+replacement; see `guide/archive/segment_19Q_workflow_and_previews.md` Item 1's
 Status.
 
 ### 12a — Previewing-as picker — **retired 19Q Item 1**
