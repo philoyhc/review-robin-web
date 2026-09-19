@@ -1201,6 +1201,75 @@ At `ac6d0832`:
 - narrow-family pairs → **6** today, 3 after (measured by PNG width < 1000)
 - `pytest tests/integration/test_guide_screencaps.py --collect-only` → **161** cases, parametrized per file
 
+### Status
+
+**The capture set grew twice.** `Opportunity` and `Blast radius` describe
+**Guide_v2** — 12 pairs, 2026-09-18. The author delivered **Guide_v3**
+(17 pairs) and then **Guide_v3a** on 2026-09-19. v3a is v3 with exactly
+one pair replaced, and the reason is recorded below. Intent is unchanged
+— the captures are the source of truth and the prose refines to match —
+but the mapping and the counts in `Opportunity` are superseded by this
+block.
+
+**v3a against the 19 committed pairs:**
+
+- **4 re-supplied byte-identical**, so not replaced at all:
+  `create-session-details`, `instrument-card-assignment-rule`,
+  `instrument-card-preview`, `validate-page`.
+- **11 replaced** like-for-like.
+- **2 replaced with a rename**, because the states changed: the roster
+  section's `roster-upload-card` and `reviewer-tag-labels` become a
+  locked-card capture and an unlocked-panel capture.
+- **2 retired**: `create-session-optional-tabs` and
+  `workflow-activated`.
+
+19 → **17**, which is v3a's own count.
+
+**Two of the three open questions are answered by the set itself.**
+Question 1 — v3a re-supplies `validate-page` *byte-identical*, so the
+clean v2 capture is withdrawn and 19K.8's deliberate mid-setup shot
+stands. The find-and-fix framing keeps its evidence and no prose moves.
+Question 3 — after v3a only two committed captures came from the old
+six-student demo, and both are now retired, so the two-session look
+resolves rather than going on the register.
+
+**The author's rulings, 2026-09-19:**
+
+- `workflow-activated` — **drop the figure, keep the prose**. Its
+  committed capture shows the **Create invites** button that 19Q Item 2
+  retired (`grep -rn "Create invites" app/web/templates/` → nothing), so
+  "leave it as is" was not available: it depicted a control the app no
+  longer has.
+- `create-session-optional-tabs` — **absorbed, not dropped**. The v3a
+  quick-setup capture carries the `User interface settings` card with
+  both toggles on its right, so one figure now shows what two did.
+- Open question 2 — **keep the warnings sentence, accept the clean
+  capture**. The sentence describes what the column does; the capture
+  shows a session with nothing to report, which is what the sentence
+  predicts. The figure's *alt text* changed, because alt text describes
+  the picture rather than the contract.
+
+**A mapping error, caught by opening the picture.** v3a's pair 25/26 was
+read as `workflow-activated` from the paragraph above it. It shows
+**Revert to draft · Prepare session · Send invites · Activate session**
+and `Status — Setup validated` — the *post-validation* state. So the
+supplied pair is `workflow-after-validation` and the one with no
+replacement is `workflow-activated`, which inverted a ruling already
+given on the wrong premise. `Judgment calls` already says to identify a
+capture by reading it against the running page; this is the first time
+that was tested by caption position and lost. Every remaining pair was
+then confirmed by sight rather than by position.
+
+**Five alt texts were false after the swap** and no gate can see it —
+`test_every_screencap_carries_alt_text` checks length, and
+`test_a_pair_carries_one_alt_text` checks the two halves agree. The
+lobby's still said *Search card* (today's rename), Assignments described
+a list of pairs where the capture is the per-instrument status card,
+Invitations claimed submitted and in-progress rows in a table that is
+entirely NOT STARTED, Extract data described a two-card stack that is
+now a two-by-two grid of four, and after-validation listed a warning the
+new capture does not have.
+
 ### PR ladder
 
 1. **The eight like-for-like pairs** — session home, the four instrument
