@@ -314,3 +314,191 @@ def test_an_unnamed_observer_row_in_a_csv_does_not_collide(
         "an unnamed observer row was blocked by the reviewer sharing its "
         "mailbox; a missing name cannot disagree with one"
     )
+
+
+# --------------------------------------------------------------------------- #
+# The Validate rules (19Q Item 7 rung 2)
+# --------------------------------------------------------------------------- #
+#
+# Every test below seeds its rows through the ORM rather than a route,
+# because the guards above now refuse exactly the input these rules
+# exist to report. That is not a shortcut around the services: it *is*
+# the scenario — a session that already held the pair when the services
+# started refusing it.
+
+
+def _seed(db: Session, model, **fields):
+    row = model(**fields)
+    db.add(row)
+    db.flush()
+    return row
+
+
+def _issues(db: Session, review_session, rule_key: str) -> list:
+    from app.services.validation import validate_session_setup
+
+    return [
+        i for i in validate_session_setup(db, review_session)
+        if i.rule_key == rule_key
+    ]
+
+
+def test_a_pre_existing_cross_roster_pair_is_reported_on_both_sides(
+    client: TestClient, db: Session
+) -> None:
+    """The rows piece 1 cannot reach, which is why piece 2 exists.
+
+    Both rows are wrong-or-right together and the operator does not yet
+    know which, so the finding lands under each roster with that
+    roster's own deep link — not once, session-wide, pointing at one of
+    them.
+    """
+    session = _session(client, db, "xr-val-pair")
+    reviewer = _seed(db, Reviewer, session_id=session.id,
+                     name="Aisha Haddad", email=EMAIL)
+    reviewee = _seed(db, Reviewee, session_id=session.id,
+                     name="Aisha Hadad", email_or_identifier=EMAIL)
+
+    on_reviewers = _issues(db, session, "reviewers.cross_roster_identity")
+    on_reviewees = _issues(db, session, "reviewees.cross_roster_identity")
+
+    assert len(on_reviewers) == 1 and len(on_reviewees) == 1
+    assert on_reviewers[0].fix_anchor == f"#reviewer-row-{reviewer.id}"
+    assert on_reviewees[0].fix_anchor == f"#reviewee-row-{reviewee.id}"
+    assert on_reviewers[0].fix_url.endswith(f"/{session.id}/reviewers")
+    assert on_reviewees[0].fix_url.endswith(f"/{session.id}/reviewees")
+    # Each side names its own spelling first and the other's second, so
+    # the operator can tell the two findings apart at a glance.
+    assert "'Aisha Haddad' here" in on_reviewers[0].message
+    assert "'Aisha Hadad' as a reviewee" in on_reviewers[0].message
+    assert "'Aisha Hadad' here" in on_reviewees[0].message
+    assert "'Aisha Haddad' as a reviewer" in on_reviewees[0].message
+
+
+def test_the_same_name_across_rosters_is_not_a_finding(
+    client: TestClient, db: Session
+) -> None:
+    """The self-review case, which the app has machinery for."""
+    session = _session(client, db, "xr-val-self")
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+    _seed(db, Reviewee, session_id=session.id,
+          name="Aisha Haddad", email_or_identifier=EMAIL)
+
+    assert _issues(db, session, "reviewers.cross_roster_identity") == []
+    assert _issues(db, session, "reviewees.cross_roster_identity") == []
+
+
+def test_an_observer_joins_the_report(client: TestClient, db: Session) -> None:
+    """Three-way on Validate too, not just on the write paths."""
+    session = _session(client, db, "xr-val-obs")
+    observer = _seed(db, Observer, session_id=session.id,
+                     display_name="A. Haddad", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+
+    found = _issues(db, session, "observers.cross_roster_identity")
+    assert len(found) == 1
+    assert found[0].fix_anchor == f"#observer-row-{observer.id}"
+    assert "'Aisha Haddad' as a reviewer" in found[0].message
+
+
+def test_an_unnamed_observer_is_not_a_finding(
+    client: TestClient, db: Session
+) -> None:
+    """A missing name cannot disagree with one — the answer exact
+    comparison forced (`Semantics`). Without the skip, every unnamed
+    observer would collide with the reviewer sharing its mailbox."""
+    session = _session(client, db, "xr-val-unnamed")
+    _seed(db, Observer, session_id=session.id, display_name=None, email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+
+    assert _issues(db, session, "observers.cross_roster_identity") == []
+    assert _issues(db, session, "reviewers.cross_roster_identity") == []
+
+
+def test_a_non_email_reviewee_identifier_cannot_collide(
+    client: TestClient, db: Session
+) -> None:
+    """An anonymous handle is not a mailbox, so it is skipped here for
+    the same reason the write guards skip it."""
+    session = _session(client, db, "xr-val-anon")
+    _seed(db, Reviewee, session_id=session.id,
+          name="Subject 14", email_or_identifier="subject-14")
+    _seed(db, Reviewer, session_id=session.id,
+          name="Aisha Haddad", email="subject-14")
+
+    assert _issues(db, session, "reviewees.cross_roster_identity") == []
+    assert _issues(db, session, "reviewers.cross_roster_identity") == []
+
+
+def test_the_email_match_is_case_insensitive_and_the_name_match_is_not(
+    client: TestClient, db: Session
+) -> None:
+    """`normalize_email` lowercases; the name comparison is exact
+    (open question 2). A capitalisation difference in the name is
+    therefore a finding, and one in the email is not a miss."""
+    session = _session(client, db, "xr-val-case")
+    _seed(db, Reviewer, session_id=session.id,
+          name="Aisha Haddad", email=EMAIL.upper())
+    _seed(db, Reviewee, session_id=session.id,
+          name="aisha haddad", email_or_identifier=EMAIL)
+
+    found = _issues(db, session, "reviewers.cross_roster_identity")
+    assert len(found) == 1, "the upper-case mailbox still matched"
+    assert "'aisha haddad' as a reviewee" in found[0].message
+
+
+def test_a_within_roster_duplicate_is_left_to_its_own_rule(
+    client: TestClient, db: Session
+) -> None:
+    """Two reviewers, one mailbox, two names is
+    `reviewers.duplicate_email`'s finding and only that one. Reporting
+    it twice under one heading would read as two problems."""
+    session = _session(client, db, "xr-val-within")
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Hadad", email=EMAIL)
+
+    assert len(_issues(db, session, "reviewers.duplicate_email")) == 1
+    assert _issues(db, session, "reviewers.cross_roster_identity") == []
+
+
+def test_observers_duplicate_email_is_reported(
+    client: TestClient, db: Session
+) -> None:
+    """Piece 3. The database refuses a second row today, so the only
+    way to hold one is to be older than the constraint — seeded here by
+    writing the pair the services would reject."""
+    session = _session(client, db, "xr-val-obs-dup")
+    first = _seed(db, Observer, session_id=session.id,
+                  display_name="A. Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id,
+          display_name="A. Haddad", email=EMAIL.upper())
+
+    found = _issues(db, session, "observers.duplicate_email")
+    assert len(found) == 1
+    assert found[0].severity.value == "error"
+    assert found[0].fix_anchor == f"#observer-row-{first.id}"
+    assert found[0].fix_url.endswith(f"/{session.id}/observers")
+    assert "(2 rows)" in found[0].message
+
+
+def test_a_clean_session_raises_neither_new_rule(
+    client: TestClient, db: Session
+) -> None:
+    """The control. A reviewer, a reviewee and an observer who agree —
+    including one person holding all three — raise nothing."""
+    session = _session(client, db, "xr-val-clean")
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+    _seed(db, Reviewee, session_id=session.id,
+          name="Aisha Haddad", email_or_identifier=EMAIL)
+    _seed(db, Observer, session_id=session.id,
+          display_name="Aisha Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id,
+          display_name="Bo Lin", email="bo.lin@example.edu")
+
+    for key in (
+        "reviewers.cross_roster_identity",
+        "reviewees.cross_roster_identity",
+        "observers.cross_roster_identity",
+        "observers.duplicate_email",
+    ):
+        assert _issues(db, session, key) == [], key

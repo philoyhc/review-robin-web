@@ -959,6 +959,34 @@ joining costs more than a third branch:
   report, not the behaviour.
 - `spec/validate_page.md` mentions the two duplicate rules **5** times.
 
+### Status
+
+**Rung 1** (#2484) landed piece 1 as planned. Two findings worth
+carrying:
+
+- Open question 2's premise was false, and the test written to pin the
+  answer is what found it — see the struck question.
+- The rung's diff perturbed `ci-postgres` into failing a *pre-existing*
+  false green: `test_clone_preserves_the_source_sequence` asserted an
+  order `clone_session` never guaranteed, which SQLite grants an
+  unordered `SELECT` and Postgres does not. Fixed in the same PR
+  (`sorted()`), and the lesson applied forward — rung 2's two new
+  queries carry an explicit `ORDER BY` so "the first duplicate's row"
+  is a fact rather than a dialect's habit.
+
+**Rung 2 landed four rules, not two.** The blast radius counted the
+*pieces* (cross-roster, observer duplicates) and assumed one rule each.
+Cross-roster identity needs three, one per roster, because a rule
+carries a single `fix_url` for every issue it emits: a session-wide rule
+would send two of every three findings to the wrong page, and would
+badge the Setup-coverage matrix's "Session name" row with a roster
+problem. One generator, three thin registrations — the registry goes
+18 → 22. Nothing about intent moved; only the count did.
+
+Both sides of a conflict are reported, each under its own roster with
+its own row anchor, because neither row is known to be the wrong one.
+A within-roster pair stays `*.duplicate_email`'s finding alone.
+
 ### PR ladder
 
 1. **Widen the check, then call it everywhere.** Piece 1: the function
