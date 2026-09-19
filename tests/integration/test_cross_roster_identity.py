@@ -569,33 +569,72 @@ def test_the_coverage_grid_omits_observers_when_the_flag_is_off(
     assert [r for r in context.setup_coverage if r.label == "Observers"] == []
 
 
-def test_the_write_guard_cites_a_holder_deterministically(
+def test_a_matching_name_does_not_slip_past_a_second_disagreeing_holder(
     client: TestClient, db: Session
 ) -> None:
-    """Two reviewers on one mailbox under two names is a state a session
-    can hold — neither roster has DB uniqueness on `(session_id, email)`,
-    which is why `reviewers.duplicate_email` exists. Adding an observer
-    then 400s citing *a* holder, and which one must not be the dialect's
-    choice.
+    """The defect Codex found on #2485, and the reason no holder is
+    chosen any more.
 
-    This assertion is only worth its line because `_identity_holders`
-    picks the highest `id` in Python, against a query ordered the other
-    way. Pinned by an ascending `ORDER BY` it would pass either way:
-    SQLite hands an unordered `SELECT` back in insertion order, so the
-    mutant deleting the clause survives while the test looks green.
+    Two reviewers on one mailbox under two names is a state a session
+    can hold — neither roster has DB uniqueness on `(session_id, email)`,
+    which is why `reviewers.duplicate_email` exists. Collapsing that
+    mailbox to one holder let an observer matching *that* name through
+    while the other reviewer still disagreed: the rule failing open, on
+    exactly the legacy sessions this item exists for.
+    """
+    session = _session(client, db, "xr-two-holders")
+    _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
+
+    matching = _add(client, session.id, "observers/create",
+                    display_name="Zed Name", email=EMAIL)
+    assert matching.status_code == 400, (
+        "matching one holder is not agreeing with the mailbox"
+    )
+    assert "Alpha Name" in matching.text, "the 400 cites the row that disagrees"
+    assert _rows(db, Observer, session.id) == []
+
+
+def test_the_cited_holder_is_picked_from_the_values_not_the_query(
+    client: TestClient, db: Session
+) -> None:
+    """Which disagreeing holder a 400 names is roster order, then name —
+    never the order the database returned.
+
+    The seeding here is deliberately the reverse: `Zed Name` has the
+    lower `id`, so an assertion satisfied by iteration order would name
+    it. Pinned any other way this test is a false green, since SQLite
+    hands an unordered `SELECT` back in insertion order and Postgres
+    does not owe it.
     """
     session = _session(client, db, "xr-order")
-    _seed(db, Reviewer, session_id=session.id, name="First Name", email=EMAIL)
-    _seed(db, Reviewer, session_id=session.id, name="Second Name", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
 
     refused = _add(client, session.id, "observers/create",
                    display_name="Third Name", email=EMAIL)
     assert refused.status_code == 400
-    assert "Second Name" in refused.text, (
-        "the later row by id is the holder kept; unordered, either could "
-        "be cited and SQLite would hide it"
-    )
-    assert _rows(db, Observer, session.id) == []
+    assert "Alpha Name" in refused.text
+    assert "Zed Name" not in refused.text
+
+
+def test_a_reviewee_holder_is_cited_after_a_reviewer_one(
+    client: TestClient, db: Session
+) -> None:
+    """Roster order beats name order: `_IDENTITY_ROSTERS` runs reviewers,
+    reviewees, observers, and the message follows it."""
+    session = _session(client, db, "xr-order-roster")
+    _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
+    _seed(db, Reviewee, session_id=session.id,
+          name="Alpha Name", email_or_identifier=EMAIL)
+
+    refused = _add(client, session.id, "observers/create",
+                   display_name="Third Name", email=EMAIL)
+    assert refused.status_code == 400
+    # Jinja escapes the quotes the message puts round a name, so the
+    # roster label and the name are matched apart rather than together.
+    assert "reviewer" in refused.text and "Zed Name" in refused.text
+    assert "Alpha Name" not in refused.text
 
 
 def test_one_predicate_decides_membership_on_every_path(

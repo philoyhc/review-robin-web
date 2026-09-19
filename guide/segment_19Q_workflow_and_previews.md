@@ -1010,12 +1010,26 @@ beyond their fix:
   deleting the clause changed nothing, because SQLite hands an
   unordered `SELECT` back in insertion order. A clause the suite cannot
   see the absence of is a guarantee on Postgres and a decoration here.
-  The pick is now made in Python — highest `id` wins — against a query
-  ordered *descending*, so that a "keep whatever came last" regression
-  differs from the rule under the order the tests actually run. Both
-  mutants are caught. Where the same clause buys only issue ordering
-  (`validation._identity_holders_by_email`) it stays, with a comment
-  saying plainly that no test covers it.
+  The second was to pick in Python — highest `id` wins — against a
+  query ordered *descending*, so the regression differed from the rule
+  under the order the tests run.
+
+  **Codex then found that picking at all was the bug** (#2485, P2).
+  Collapsing a mailbox to one holder let a new row matching *that*
+  holder through while another still disagreed — the rule failing open,
+  on exactly the legacy sessions this item exists for. And the pick
+  compared a `Reviewer.id` against an `Observer.id`, which are
+  table-local and say nothing about which row came first, so it was not
+  selecting what its docstring claimed. Every holder is kept now and
+  **any** disagreement is a conflict; which one the 400 cites is
+  presentation, decided from the values (roster order, then name).
+  Nothing depends on query order any more.
+
+  Three attempts, and the useful shape is that each was a smaller
+  version of the same error — reaching for the database to settle a
+  question the values already answer. Where the clause buys only issue
+  ordering (`validation._identity_holders_by_email`) it stays, with a
+  comment saying plainly that no test covers it.
 
 Also fixed: the reviewees finding named an `email` column reviewees do
 not have; the `observers` issue source had no Setup-coverage row, so an
