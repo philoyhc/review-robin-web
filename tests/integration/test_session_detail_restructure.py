@@ -820,6 +820,10 @@ def test_delete_session_visible_but_disabled_when_ready(
     # Explanatory note present.
     assert "Session deletion is locked while status is Activated" in body
     assert "Revert the session to draft" in body
+    # The card-level intro above both notes, unpinned until 2026-09-19
+    # and still telling the operator to "pause it first".
+    assert "Revert to draft first." in body
+    assert "pause it first" not in body
 
 
 def test_delete_session_post_still_rejected_when_ready(

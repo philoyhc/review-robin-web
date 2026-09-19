@@ -364,7 +364,14 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
     assert "quick_setup_reason=lifecycle" in location
 
     body = operator.get(location).text
-    assert "Revert the session to draft before applying setup changes." in body
+    # Both sentences. 19O Item 7 entry 13 renamed the second and left
+    # the first saying "paused" — two vocabularies in one banner, which
+    # survived because only the second half was ever asserted.
+    assert (
+        "Setup edits are locked while the session is Activated. "
+        "Revert the session to draft before applying setup changes." in body
+    )
+    assert "paused" not in body
 
 
 # --------------------------------------------------------------------------- #

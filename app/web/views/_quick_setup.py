@@ -336,7 +336,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     label = label_for.get(slot_key, slot_key)
     if reason == "lifecycle":
         return (
-            "Setup edits are paused while the session is Activated. "
+            "Setup edits are locked while the session is Activated. "
             "Revert the session to draft before applying setup changes."
         )
     if reason == "needs_confirm":
