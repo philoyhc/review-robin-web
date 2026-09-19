@@ -502,3 +502,112 @@ def test_a_clean_session_raises_neither_new_rule(
         "observers.duplicate_email",
     ):
         assert _issues(db, session, key) == [], key
+
+
+# --------------------------------------------------------------------------- #
+# What the item's cold read found (19Q Item 7 rung 2)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_reviewee_finding_names_the_column_reviewees_have(
+    client: TestClient, db: Session
+) -> None:
+    """`issue.field` is rendered to the operator as a `<code>` chip, and
+    the sibling `reviewees.duplicate_id` names `email_or_identifier`.
+    One rule in the same section must not name a column the roster does
+    not have."""
+    session = _session(client, db, "xr-field")
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+    _seed(db, Reviewee, session_id=session.id,
+          name="Aisha Hadad", email_or_identifier=EMAIL)
+
+    on_reviewees = _issues(db, session, "reviewees.cross_roster_identity")
+    on_reviewers = _issues(db, session, "reviewers.cross_roster_identity")
+    assert on_reviewees[0].field == "email_or_identifier"
+    assert on_reviewers[0].field == "email"
+
+
+def test_the_coverage_grid_badges_an_observer_error(
+    client: TestClient, db: Session
+) -> None:
+    """An error source with no coverage row badges nothing on the
+    at-a-glance grid (`spec/validate_page.md` §7 step 5). Observers
+    became a source with these rules and had no row."""
+    from app.services.validation import validate_session_setup
+    from app.web.views._validate import build_validate_context
+
+    session = _session(client, db, "xr-grid")
+    _seed(db, Observer, session_id=session.id,
+          display_name="A. Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id,
+          display_name="A. Haddad", email=EMAIL.upper())
+
+    context = build_validate_context(
+        db, session, validate_session_setup(db, session)
+    )
+    row = next(r for r in context.setup_coverage if r.label == "Observers")
+    assert row.source == "observers", "the anchor link must reach the group"
+    assert row.status == "2"
+    assert row.error_count >= 1
+
+
+def test_the_coverage_grid_omits_observers_when_the_flag_is_off(
+    client: TestClient, db: Session
+) -> None:
+    """A session with observers switched off has no roster to summarise,
+    and a permanently blank row is one the operator learns to skip."""
+    from app.services.validation import validate_session_setup
+    from app.web.views._validate import build_validate_context
+
+    session = _session(client, db, "xr-grid-off")
+    session.observers_enabled = False
+    db.flush()
+
+    context = build_validate_context(
+        db, session, validate_session_setup(db, session)
+    )
+    assert [r for r in context.setup_coverage if r.label == "Observers"] == []
+
+
+def test_the_write_guard_cites_a_holder_deterministically(
+    client: TestClient, db: Session
+) -> None:
+    """Two reviewers on one mailbox under two names is a state a session
+    can hold — neither roster has DB uniqueness on `(session_id, email)`,
+    which is why `reviewers.duplicate_email` exists. Adding an observer
+    then 400s citing *a* holder, and which one must not be the dialect's
+    choice.
+
+    This assertion is only worth its line because `_identity_holders`
+    picks the highest `id` in Python, against a query ordered the other
+    way. Pinned by an ascending `ORDER BY` it would pass either way:
+    SQLite hands an unordered `SELECT` back in insertion order, so the
+    mutant deleting the clause survives while the test looks green.
+    """
+    session = _session(client, db, "xr-order")
+    _seed(db, Reviewer, session_id=session.id, name="First Name", email=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Second Name", email=EMAIL)
+
+    refused = _add(client, session.id, "observers/create",
+                   display_name="Third Name", email=EMAIL)
+    assert refused.status_code == 400
+    assert "Second Name" in refused.text, (
+        "the later row by id is the holder kept; unordered, either could "
+        "be cited and SQLite would hide it"
+    )
+    assert _rows(db, Observer, session.id) == []
+
+
+def test_one_predicate_decides_membership_on_every_path(
+    client: TestClient, db: Session
+) -> None:
+    """`is_comparable_identity` is called by the single-row guard, the
+    CSV row loop and the Validate rule. A mutant that removed only one
+    copy survived at rung 1; there is now one copy to remove."""
+    from app.services.csv_imports import is_comparable_identity
+
+    assert is_comparable_identity("a@b.example", "A") is True
+    assert is_comparable_identity("subject-14", "A") is False
+    assert is_comparable_identity("a@b.example", None) is False
+    assert is_comparable_identity("a@b.example", "") is False
+    assert is_comparable_identity(None, "A") is False

@@ -29,6 +29,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
+from app.services.csv_imports import is_comparable_identity
 from app.services.email_identity import normalize_email
 from app.services.instruments import _instrument_label
 from app.services.participants import is_email_identified
@@ -151,9 +152,12 @@ def _check_observers_duplicate_email(
             select(Observer)
             .where(Observer.session_id == review_session.id)
             # Ordered so "the first duplicate's row" is a fact rather
-            # than whatever the dialect happened to return: Postgres
-            # does not owe an unordered SELECT the insertion order, and
-            # SQLite's habit of granting it anyway hides that in tests.
+            # than whatever the dialect happened to return. Note what
+            # this does NOT buy: SQLite grants an unordered SELECT the
+            # insertion order anyway, so no test here fails if the
+            # clause is deleted, and the mutation gate says so. Where
+            # the choice reaches operator-facing copy it is made in
+            # Python instead — `csv_imports._identity_holders`.
             .order_by(Observer.id)
         ).scalars()
     )
@@ -227,6 +231,12 @@ class _IdentityHolder:
     row_id: int
     name: str
     anchor_prefix: str
+    #: The column the conflict is in, rendered to the operator as a
+    #: `<code>` chip. Reviewees do not have an `email` column, and the
+    #: sibling `reviewees.duplicate_id` rule names `email_or_identifier`
+    #: — one rule in the same section must not name a column the roster
+    #: does not have.
+    field: str
 
 
 def _identity_holders_by_email(
@@ -234,11 +244,10 @@ def _identity_holders_by_email(
 ) -> dict[str, list[_IdentityHolder]]:
     """Every named roster row in the session, keyed by normalized email.
 
-    Rows that cannot disagree with anything are left out, matching what
-    ``csv_imports.cross_table_identity_conflict`` skips: an identifier
-    with no ``@`` (an anonymous reviewee handle cannot collide with a
-    mailbox by construction) and a row with no name (``display_name``
-    is nullable, and a missing name is not a different one).
+    Rows that cannot disagree with anything are left out by
+    ``csv_imports.is_comparable_identity`` — the same predicate the
+    write guards apply, called rather than restated, because a rule
+    with two homes is the defect this item is fixing one level up.
     """
     holders: dict[str, list[_IdentityHolder]] = {}
     for source, model, id_attr, name_attr, anchor_prefix in (
@@ -258,7 +267,7 @@ def _identity_holders_by_email(
         for row in rows:
             identifier = getattr(row, id_attr) or ""
             name = getattr(row, name_attr) or ""
-            if "@" not in identifier or not name:
+            if not is_comparable_identity(identifier, name):
                 continue
             holders.setdefault(normalize_email(identifier), []).append(
                 _IdentityHolder(
@@ -266,6 +275,7 @@ def _identity_holders_by_email(
                     row_id=row.id,
                     name=name,
                     anchor_prefix=anchor_prefix,
+                    field=id_attr,
                 )
             )
     return holders
@@ -301,7 +311,7 @@ def _cross_roster_identity_issues(
             yield ValidationIssue(
                 severity=Severity.error,
                 source=source,
-                field="email",
+                field=holder.field,
                 message=(
                     f"'{email}' is '{holder.name}' here, but {spelled}. "
                     "One mailbox, one name — fix whichever row is wrong."

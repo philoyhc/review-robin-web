@@ -583,6 +583,31 @@ def parse_observer_csv(content: bytes) -> ParseResult:
     return ParseResult(rows=parsed, issues=issues)
 
 
+def is_comparable_identity(identifier: str | None, name: str | None) -> bool:
+    """Can this ``(identifier, name)`` pair disagree with another one?
+
+    Two cannot, and both are skipped wherever the cross-roster rule is
+    applied:
+
+    * an identifier with no ``@`` — a reviewee's anonymous handle in the
+      asymmetric mode, which is not a mailbox and cannot collide with
+      one;
+    * a row whose name is unset. ``Observer.display_name`` is nullable
+      and its CSV column optional, where ``Reviewer.name`` and
+      ``Reviewee.name`` are not — so without this an unnamed observer
+      would conflict with every reviewer sharing its mailbox (19Q Item
+      7, the author's two answers interacting).
+
+    One function rather than the copy per call site the rule grew at
+    rung 1: a mutant that removed only the importer's copy survived
+    until a test went looking for it, and rung 2's Validate rule would
+    have been a third. ``app.services.validation`` imports this for
+    exactly that reason — the *membership* rule has one home even where
+    the output shapes differ.
+    """
+    return "@" in (identifier or "") and bool(name)
+
+
 #: Per roster: the model, its identity attribute, its name attribute,
 #: and the label a message uses for it. The import-row classes spell the
 #: same two fields differently, so each carries its own pair.
@@ -627,38 +652,60 @@ def _identity_holders(
     ``exclude``, within one session.
 
     Two kinds of row are skipped, for the same reason — they cannot
-    disagree with a name:
-
-    * an identifier with no ``@`` (a reviewee's anonymous handle in the
-      asymmetric mode, which is not a mailbox and cannot collide with
-      one);
-    * a row whose name is unset. ``Observer.display_name`` is nullable
-      and its CSV column optional, where ``Reviewer.name`` and
-      ``Reviewee.name`` are not — so without this an unnamed observer
-      would conflict with every reviewer sharing its mailbox (19Q Item
-      7, the author's two answers interacting).
+    disagree with a name — see :func:`is_comparable_identity`.
 
     When two rosters already hold one email they must already agree, each
-    having been checked as it was added, so keeping whichever is seen
-    last is equivalent. Legacy rows that disagree are the Validate rule's
-    to report, not this function's — it runs on the way in.
+    having been checked as it was added, so keeping either is equivalent
+    — *across* rosters. Within one it is not: reviewers and reviewees
+    carry no DB uniqueness on ``(session_id, email)``, which is why
+    ``reviewers.duplicate_email`` and ``reviewees.duplicate_id`` exist as
+    Validate rules, so two rows on one mailbox under two names is a state
+    a session can hold, and the 400 has to cite one of them.
+
+    **Which one is decided here, in Python, rather than by an ``ORDER
+    BY``.** Both would be deterministic; only this one can be tested.
+    SQLite hands an unordered ``SELECT`` back in insertion order and
+    Postgres does not owe it, so a test pinning the cited name passes
+    either way in the sandbox — a mutant deleting the clause survived
+    the gate that found this. The highest ``id`` wins: the most recently
+    added row is the one an operator was last looking at.
+
+    Legacy rows that disagree are the Validate rule's to report, not
+    this function's — it runs on the way in.
     """
-    holders: dict[str, tuple[str, str]] = {}
+    # ``(row id, label, name)`` while picking; the id is dropped on the
+    # way out, it exists only to decide ties deterministically.
+    holders: dict[str, tuple[int, str, str]] = {}
     for roster, spec in _IDENTITY_ROSTERS.items():
         if roster == exclude:
             continue
         model = _IDENTITY_MODELS[roster]
         for row in (
-            db.execute(select(model).where(model.session_id == session_id))
+            db.execute(
+                select(model)
+                .where(model.session_id == session_id)
+                # Descending on purpose. The pick below must not depend
+                # on the order it is handed, and descending is the order
+                # under which a "keep whatever came last" regression
+                # differs from the rule. Ascending — which is what
+                # SQLite hands back unordered — makes that regression
+                # invisible to every test here.
+                .order_by(model.id.desc())
+            )
             .scalars()
             .all()
         ):
             identifier = getattr(row, spec["model_attr"]) or ""
             name = getattr(row, spec["name_attr"])
-            if "@" not in identifier or not name:
+            if not is_comparable_identity(identifier, name):
                 continue
-            holders[normalize_email(identifier)] = (spec["label"], name)
-    return holders
+            key = normalize_email(identifier)
+            held = holders.get(key)
+            if held is None or row.id > held[0]:
+                holders[key] = (row.id, spec["label"], name)
+    return {
+        key: (label, name) for key, (_, label, name) in holders.items()
+    }
 
 
 def cross_table_identity_conflict(
@@ -682,7 +729,7 @@ def cross_table_identity_conflict(
             f"cross_table_identity_conflict: unknown kind {kind!r}; "
             f"expected one of {sorted(_IDENTITY_ROSTERS)}"
         )
-    if "@" not in (identifier or "") or not name:
+    if not is_comparable_identity(identifier, name):
         return None
     held = _identity_holders(
         db, session_id=session_id, exclude=kind
@@ -739,10 +786,8 @@ def check_cross_table_identity(
     issues: list[ValidationIssue] = []
     for index, row in enumerate(rows, start=1):
         identifier = getattr(row, spec["row_attr"]) or ""
-        if "@" not in identifier:
-            continue
         name = getattr(row, spec["row_name_attr"])
-        if not name:
+        if not is_comparable_identity(identifier, name):
             continue
         held = holders.get(normalize_email(identifier))
         if held is None:

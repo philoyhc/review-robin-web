@@ -631,9 +631,13 @@ async def _run_quick_setup_observers(
     route and the consolidated ``submit-all`` handler. Returns the
     ``quick_setup_reason`` token on failure, ``None`` on success.
 
-    No cross-table identity check (observers don't share an
-    identity space with reviewers / reviewees) and no
-    response-loss ack (no cascade)."""
+    **The cross-table identity check was skipped here until 19Q Item
+    7**, on the same reasoning the standalone importer gave — *a person
+    can be both an observer and a reviewer / reviewee by design*. True,
+    and never an argument for the exclusion: the check has always
+    allowed one person to hold two roles, and blocks only holding them
+    under two different **names** (author's ruling, 2026-09-19). No
+    response-loss ack, though — observers cascade nothing."""
 
     if not lifecycle.is_editable(review_session):
         return "lifecycle"

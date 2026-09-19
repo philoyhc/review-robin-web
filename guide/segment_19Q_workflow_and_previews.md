@@ -987,6 +987,62 @@ Both sides of a conflict are reported, each under its own roster with
 its own row anchor, because neither row is known to be the wrong one.
 A within-roster pair stays `*.duplicate_email`'s finding alone.
 
+**The item's cold read** (cumulative, base `a699432a`) returned ten
+findings; eight were real and six are fixed in rung 2. Two are notable
+beyond their fix:
+
+- **The rung-1 docstring reversal reached one of its two copies.**
+  `_setup_observers.py` was rewritten at length; `_quick_setup.py` kept
+  the sentence saying observers are excluded, five lines above the call
+  that includes them. The rung-1 commit message said "the docstring",
+  singular, and was right about the file it had edited. Same short-count
+  shape as Item 4's, and the same lesson: a claim about "the" copy of
+  anything is a claim nothing derives.
+- **`_identity_holders` kept whichever holder it saw last, unordered.**
+  Its docstring defended that on the ground that two rosters holding one
+  email must already agree — true across rosters, false within one,
+  since reviewers and reviewees carry no DB uniqueness on
+  `(session_id, email)`. So which name a 400 cited was the dialect's
+  choice, in operator-facing copy — the *same* lesson rung 1's CI
+  failure taught, applied at rung 2 only to its own new queries.
+
+  The first fix was `ORDER BY id`, and the mutation gate rejected it:
+  deleting the clause changed nothing, because SQLite hands an
+  unordered `SELECT` back in insertion order. A clause the suite cannot
+  see the absence of is a guarantee on Postgres and a decoration here.
+  The pick is now made in Python — highest `id` wins — against a query
+  ordered *descending*, so that a "keep whatever came last" regression
+  differs from the rule under the order the tests actually run. Both
+  mutants are caught. Where the same clause buys only issue ordering
+  (`validation._identity_holders_by_email`) it stays, with a comment
+  saying plainly that no test covers it.
+
+Also fixed: the reviewees finding named an `email` column reviewees do
+not have; the `observers` issue source had no Setup-coverage row, so an
+error badged nothing on the at-a-glance grid (`spec/validate_page.md`
+§7 step 5) — added, gated on `observers_enabled`; and the membership
+predicate, which rung 1 left in two copies and rung 2 would have made
+three, is now one `csv_imports.is_comparable_identity` that the Validate
+rule imports. Two spec files the diff governs were missing from
+`Doc impact` and have been added.
+
+### Judgment calls — decided
+
+- **The write guard fires on any edit to a conflicting row, not only on
+  edits to its identity** (2026-09-19, from the cold read). On a session
+  holding a legacy conflicting pair, editing a reviewer's `tag_1` 400s
+  about a field the operator did not touch. Left as is: `Semantics` says
+  the pair "keeps it until someone edits that row", the Validate rules
+  now say the conflict is there, and gating the guard on whether the
+  identity changed would let a row be edited around its own unresolved
+  conflict indefinitely. Reversible in rung 3 if the friction reads
+  worse on the dev slot than it does here.
+- **Rehydrate is not in scope** (2026-09-19). It calls
+  `csv_imports.save_*` directly and reaches no route, so the check does
+  not run there — before this item or after it. `spec/rehydrate.md`
+  claims otherwise; that is the doc-impact bullet, not a code change
+  this rung makes.
+
 ### PR ladder
 
 1. **Widen the check, then call it everywhere.** Piece 1: the function
@@ -1037,8 +1093,10 @@ A within-roster pair stays `*.duplicate_email`'s finding alone.
 ### Doc impact
 
 - `docs/status.md` — row when Item 7 lands (Item 7).
-- `spec/validate_page.md` — the rule registry gains two entries; the per-rule table and the counts that quote it (Item 7).
+- `spec/validate_page.md` — the rule registry gains four entries; the §3.2 per-rule table, the §6 anchor table, the §2.2 coverage-row order (which gains Observers), and the counts that quote them (Item 7).
 - `spec/setup_pages.md` — the roster create/edit contracts gain the cross-roster rejection alongside the within-roster one (Item 7).
+- `spec/csv_contracts.md` — §3.2b Observers per-row validation gains the cross-table identity row; §3.2 and the §9 helper table describe the check as two-way, name its parameter `side` where it is `kind`, and gloss it as rejecting a shared email where it rejects a shared email under *different names* (Item 7).
+- `spec/rehydrate.md` — §7 claims rehydrate applies the cross-table identity rules; it calls `csv_imports.save_*` directly and reaches no route, so the check never runs there. Either the sentence goes or the gap is named as deferred (Item 7).
 
 ---
 
