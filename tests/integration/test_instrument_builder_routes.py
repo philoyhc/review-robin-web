@@ -6735,7 +6735,7 @@ def test_card_title_falls_back_to_instrument_underscore_id_when_no_short_label(
     client: TestClient, db: Session
 ) -> None:
     """With no short_label set, the title shows the ugly
-    ``Instrument_{id}`` fallback inside a ``.card-title-fallback``
+    ``Instrument_{session_seq}`` fallback inside a ``.card-title-fallback``
     span (styled muted + italic via the inline stylesheet) so it
     reads as a placeholder nudging the operator to set a proper
     short label."""
@@ -6752,7 +6752,12 @@ def test_card_title_falls_back_to_instrument_underscore_id_when_no_short_label(
     block_start = body.find(marker)
     block_end = body.find("</h2>", block_start)
     block = body[block_start:block_end]
-    assert f"Instrument_{new_model.id}" in block
+    # 19Q Item 6 rung 2 — derived from ``session_seq``, not ``id``.
+    # The ``id`` form passed on SQLite only because each test gets a
+    # fresh in-memory DB where the two coincide; on Postgres the run
+    # shares one database and ids climb into the hundreds, which is
+    # how `ci-postgres` caught it and the sandbox did not.
+    assert f"Instrument_{new_model.session_seq}" in block
     assert 'class="card-title-fallback"' in block
 
 
@@ -6761,7 +6766,7 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
 ) -> None:
     """The hidden ``<input>`` that swaps in on ✎ click is pre-
     populated with the **current** short_label (empty when none
-    set) — NOT the ``Instrument_{id}`` fallback. So an operator
+    set) — NOT the ``Instrument_{session_seq}`` fallback. So an operator
     opening the edit on an unnamed card starts from a blank slate
     rather than having to delete the placeholder text."""
     review_session, new_model = _new_model_with_tags(
@@ -6779,7 +6784,7 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
     # Input present with empty value (NOT the fallback string).
     assert 'data-card-title-input' in block
     assert 'value=""' in block
-    assert f'value="Instrument_{new_model.id}"' not in block
+    assert f'value="Instrument_{new_model.session_seq}"' not in block
 
 
 def test_card_title_is_lock_driven_swap(
