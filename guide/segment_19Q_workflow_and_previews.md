@@ -864,7 +864,7 @@ Neither is a defect against the call; both want a look on the dev slot.
 - `spec/ui_elements.md` — §6 gains the no-overflow intent for `.btn` and names `box-sizing: border-box` as its mechanism (Item 4).
 - `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, the §"`4W` is an overlay" mention, and the `## Source-of-truth pointers` entry "Right-column issue list partial": **five** passages, not the four this bullet first counted (a cold read found the fifth) (Item 4).
 - `spec/session_home.md` — the two "Status pills + per-issue list live in the right column" bullets and the State 3 row of the lifecycle table, all three describing a per-issue list the card no longer renders. **Undeclared at planning time**, found at rung 2 (Item 4).
-- `spec/rrw_functional_spec.md` — the "right-hand column" bullet, which says the column carries "a validation issue list wherever validation has findings to show". **Undeclared at planning time**, found by the cold read at rung 2; it matters because `spec/README.md` makes this file the entry point a new reader starts from (Item 4).
+- `spec/rrw_functional_spec.md` — the "right-hand column" bullet, which says the column carries "a validation issue list wherever validation has findings to show". **Undeclared at planning time**, found by the cold read at rung 2; it matters because `spec/README.md` makes this file the entry point a new reader starts from (Item 4). <!-- cites: spec/README.md -->
 
 ---
 
