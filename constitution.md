@@ -76,7 +76,9 @@ runs". The maker ≠ checker principle is untouched — what changed is the
 unit a reading covers, from a rung's diff to an item's cumulative one.
 Each item close now records how many reads it took and what they found,
 so the next audit re-measures against this cadence instead of naming a
-third.*)
+third. The measurement, and its first re-take under the new cadence,
+are in `rrw_sdd_in_practice.md` §6.4 (2026-09-19); `tools/pace_audit.py`
+reproduces both.*)
 
 ## IV. The human is the verifier of last resort, and nothing runs unattended
 
