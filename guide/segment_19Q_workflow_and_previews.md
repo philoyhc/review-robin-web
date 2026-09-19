@@ -835,6 +835,18 @@ autoincrement PK, and shown on a per-session page. It surfaces twice:
   `instrument_palette[(instrument.id - 1) % instrument_palette | length]`,
   so ids 47, 48, 51 render tints 5, 6, 3 and two sessions with identical
   instruments differ by insertion date.
+- **The delete confirmation** (`:4779`), author's screenshot: "Yes,
+  delete **Instrument #1** and its associated assignments…". A third
+  spelling: it keys on `loop.index` so it moves under the drag, it
+  ignores `short_label` so a named instrument is confirmed under a name
+  nobody chose, and its `#` is the prefix the operator-identifier policy
+  reserves for reviewer-facing headings.
+
+**The rule has two implementations.** `_state.py::_instrument_label` is
+the Python copy; `:780` inlines `short_label or "Instrument_" ~ id` for
+the card title the screenshots show. They agree only because both read
+`id`. Measuring the function rather than the rendered text is how 19O.7
+entry 13's sweep missed two strings, and nearly did again here.
 
 Three numbers already describe an instrument and none is a per-session
 identity: `Instrument.id` is workspace-wide, and `Instrument.order` and
@@ -859,10 +871,8 @@ the number moves on delete instead of on drag, and it moves
 persisted `String(500)` with the label baked in at emit time, so a
 summary naming `Instrument_3` would come to mean another instrument.
 
-**Rejected — display position (`loop.index0` / `Instrument.order`).**
-This plan's own first draft. Reorder ships, so the number would move
-whenever the operator drags, which is the thing requirement 3 exists to
-prevent.
+**Rejected — display position**, this plan's first draft: reorder ships,
+so the number moves whenever the operator drags.
 
 ### Semantics
 
@@ -871,12 +881,10 @@ prevent.
   that never moves costs, and closing the gap is renumbering.
 - **Reorder never touches `session_seq`.** Display order stays
   `Instrument.order`; the two are independent by construction.
-- **Clone preserves the source's sequence** (author, 2026-09-19): a
-  session whose instruments read 1, 3, 2 down the page clones to 1, 3, 2,
-  not 1, 2, 3. This needs **no code** — `session_clone.py:167` builds
-  the row with `**_column_values(instrument, skip=…)`, which copies every
-  mapped column except `id` / `created_at` / `updated_at`, so a new
-  column rides along. The rung asserts it rather than implementing it.
+- **Clone preserves the source's sequence** (author, 2026-09-19): 1, 3, 2
+  clones to 1, 3, 2. Needs **no code** — `session_clone.py:167` builds the
+  row with `**_column_values(instrument, skip=…)`, copying every mapped
+  column but `id` / `created_at` / `updated_at`. The rung asserts it.
 - **Config import mints a fresh sequence**: the payload keys instruments
   by `short_label` and carries no ordinal, and adding one to the CSV
   contract is wider than requirement 1 allows. Recorded so the
@@ -886,6 +894,11 @@ prevent.
   where you are in the form, `session_seq` is which instrument this is.
 - `short_label` still wins, still muted italic so the fallback reads as
   a placeholder (`spec/instruments.md:274-284`); tints still wrap at six.
+- **The delete confirmation says what the card title says** — the
+  `short_label` when there is one, `Instrument_{session_seq}` otherwise —
+  so the operator confirms the thing they recognise. Its `#` retires
+  with the change, which is the operator-identifier policy applied
+  rather than a new rule.
 
 ### Judgment calls — decided
 
@@ -900,6 +913,7 @@ Run 2026-09-19:
 - `grep -rn "_instrument_label(" app/ --include=*.py | grep -v "def " | wc -l` → **44** across **18** files — **all unchanged**
 - of those, `grep -ci "summary="` → **6** audit summaries; three are reviewer-facing
 - `grep -rn "Instrument_" tests/ --include=*.py | wc -l` → **13** assertions to update
+- `grep -rn 'Instrument_" ~\|Instrument #' app/web/templates/` → **2** rendered spellings outside `_instrument_label` (`:780` the card title, `:4779` the delete confirm) plus one comment
 - `grep -rn "instrument.id - 1" app/ | wc -l` → **1** — the tint
 - `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0** — the tint is unpinned
 - creation paths needing a line: **4** — `_instrument_crud.py` (`ensure_default_instrument`, `create_instrument`, `replicate_instrument`) and `session_config_io/_apply_instrument.py:296`. `session_clone.py` needs none, per Semantics.
@@ -909,8 +923,11 @@ Run 2026-09-19:
 1. **The column.** `session_seq` on the model, the migration with its
    backfill, the four creation paths, and a test that the clone carries
    the source's values. Nothing visible changes yet.
-2. **The label.** `_instrument_label` reads `session_seq`; the 13 test
-   assertions move with it. Must not touch the tint.
+2. **The label, in all three places it is spelled.**
+   `_instrument_label` reads `session_seq`; `:780`'s inline copy follows
+   it; `:4779`'s confirm drops `loop.index` and the `#` and says what
+   the title says. The 13 test assertions move with them. Must not touch
+   the tint.
 3. **The tint.** `:693` keys on `session_seq`, with the id-keyed order
    as its mutant — the first guard this palette has ever had.
 4. **The close.**
@@ -918,7 +935,8 @@ Run 2026-09-19:
 ### Definition of done
 
 - A two-instrument session labels them 1 and 2, whatever their ids.
-- Dragging either one changes neither its label nor its tint.
+- Dragging either one changes neither its label, its tint, nor its delete confirmation.
+- No template spells the fallback independently of `_instrument_label`.
 - Deleting the first leaves the second reading 2.
 - Cloning a session whose sequence reads 1, 3, 2 reproduces 1, 3, 2.
 - `grep -rn "instrument.id - 1" app/` returns nothing.
