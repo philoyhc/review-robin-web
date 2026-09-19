@@ -918,6 +918,52 @@ Run 2026-09-19:
 - `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0** — the tint is unpinned
 - creation paths needing a line: **4** — `_instrument_crud.py` (`ensure_default_instrument`, `create_instrument`, `replicate_instrument`) and `session_config_io/_apply_instrument.py:296`. `session_clone.py` needs none, per Semantics.
 
+### Status
+
+**Built 2026-09-19, four rungs as planned** (#2474 → #2475 → #2476 and
+the close). The ladder held; one rung's *method* did not.
+
+**Rung 1 replaced the plan's approach within a minute of trying it.**
+Wiring `session_seq` at the four creation paths left **417 tests
+failing**, because 75 of them construct `Instrument(...)` directly.
+Editing 75 fixtures to satisfy a requirement reading *as little code
+change as possible* is backwards, so a context-sensitive column default
+took over: zero creation paths edited, zero fixtures edited, one file
+changed, and no path *can* forget it. The clone needed no code at all —
+`session_clone` copies every mapped column — so that rung asserts the
+behaviour rather than implementing it.
+
+**Three defects were found by something other than me, and each names
+what my own gate cannot see.**
+
+- `ci-postgres` caught three tests keyed on `instrument.id`. They were
+  green on SQLite, where every test gets a fresh id space, and red on a
+  shared one — *the item's own defect, wearing a test's clothes*. Any
+  assertion keyed on a primary key is a false green in this sandbox.
+- The cumulative cold read caught a **fifth implementation of the label,
+  in SQL**: `_coverage.py::_instrument_label_sql` is the Assignments
+  page's sort key and stayed on `id` when rung 2 moved the Python form,
+  so the server sorted by a string the page no longer displayed. Its
+  docstring claimed a test pinned the two together; that file has never
+  contained the word *instrument*. The measurement that missed it —
+  "44 call sites, all unchanged" — was true and beside the point,
+  because a SQL expression is not a call site.
+- The same read caught **a false claim of mine**: `max + 1` reuses the
+  number after a *trailing* delete. The sibling test pinned the interior
+  case and passed while that one was unwritten. Now open question 1.
+
+**Four reads**: one `diff-reviewer` cumulative pass (13 findings), one
+`spec-writer` close pass, and review-bot passes on the PRs. The
+cumulative read is the one that paid — it found the only defect that
+spanned rungs, which is the cadence's whole argument.
+
+**Scope that moved.** `spec/assignments.md` and `spec/architecture.md`
+joined the manifest at the close, neither anticipated: the first because
+the SQL sort key turned out to be a documented surface, the second
+because the column default puts a query in the model layer and a reader
+auditing "no logic in models" will find it. `docs/database.md` is waived
+— it documents constraints, not column lists.
+
 ### PR ladder
 
 1. **The column.** `session_seq` on the model, the migration with its
@@ -975,4 +1021,6 @@ creation order over display order, gaps accepted, clone preserves.
 - `spec/instruments.md` — the Title bullet's fallback (`:274-284`), the operator-identifier restatement (`:722`), and the "Card background colour" paragraph, whose id-keying rationale this item reverses (Item 6).
 - `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 6).
 - `spec/setup_pages.md` — the delete-confirmation pattern it holds up as the exemplar for four other pages' copy, which still quotes the retired `Instrument #1` (Item 6).
-- `docs/database.md` — the new column (Item 6).
+- `docs/database.md` — the new column (Item 6). <!-- doc-impact-waived: that file documents constraints and indexes, not per-table column lists — `grep -in instrument docs/database.md` finds one composite-key mention and no instruments column table, so there is nothing there to add a row to. The column's semantics went to `spec/instruments.md` "The per-session ordinal" instead. -->
+- `spec/assignments.md` — the Instrument column's label and its server-side sort key, which the cold read found drifted from it (Item 6).
+- `spec/architecture.md` — the model layer's one querying column default, recorded rather than hidden (Item 6).

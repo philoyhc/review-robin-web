@@ -665,7 +665,7 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{id}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md` "Identifiers") — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. |
+| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py` after 19Q Item 6 found them drifted: the Python form moved to `session_seq` and the SQL stayed on `id`, so the page sorted by a string it no longer displayed. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |

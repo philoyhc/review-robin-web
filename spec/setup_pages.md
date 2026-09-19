@@ -864,8 +864,9 @@ their strip never offers the acknowledgement. A page that offered it
 would be describing a loss that cannot happen.
 
 **The confirmation names what goes**, on the pattern of the
-Instruments page's *"Yes, delete Instrument #1 and its associated
-assignments and reviewer responses."* Three states, because a roster
+Instruments page's *"Yes, delete Instrument_1 and its associated
+assignments and reviewer responses."* — where the name is that
+instrument's operator-facing handle, per `spec/instruments.md`. Three states, because a roster
 whose rows carry assignments loses them even when nothing has been
 answered:
 

@@ -313,8 +313,8 @@ Each per-instrument card is
 wrapped in a native `<details>` so cards collapse to a
 single-row `<summary>` carrying a left-edge grip-dot drag
 handle, the title (operator-facing short label with the
-muted-italic `Instrument_{id}` fallback when no short label
-is set — see `spec/instruments.md` "Title" and its
+muted-italic `Instrument_{session_seq}` fallback when no short
+label is set — see `spec/instruments.md` "Title" and its
 operator-identifier policy), which is a
 lock-driven view/edit swap — a
 read-only span when the card is locked, an inline rename
