@@ -18,6 +18,11 @@ they cover every width-sized ``.btn`` the sheet has or gains, which is
 why this file pins the property rather than a roster of rules that would
 need editing every time one was added.
 
+"Nothing takes it away" needs two tests, not one, and the first draft of
+this file had only the narrow one: a rule whose *subject* is not a
+``.btn`` can still reach one. See
+``test_the_sheet_declares_content_box_nowhere_at_all``.
+
 The layout measurement itself is not here. A Chromium-gated test would
 *skip* where the tool is absent, and per ``CLAUDE.md`` a skip that
 reports success is worse than a hard failure; the pixel numbers live in
@@ -71,6 +76,10 @@ def _sizes_the_box(body: str) -> bool:
     return False
 
 
+#: Selectors permitted to declare ``content-box`` — see the test below.
+_CONTENT_BOX_ALLOWED: frozenset[str] = frozenset()
+
+
 def _btn_subject_rules() -> list[tuple[str, str]]:
     """Every rule whose selector list has a ``.btn`` as some subject."""
     out = []
@@ -107,14 +116,43 @@ def test_the_base_btn_rule_is_border_box() -> None:
         )
 
 
-def test_no_rule_returns_a_btn_to_content_box() -> None:
-    """The other half. The base rule is worthless if a later rule,
-    or a responsive override inside an ``@media``, undoes it."""
+def test_no_btn_subject_rule_returns_a_btn_to_content_box() -> None:
+    """The direct half: no rule whose subject is a ``.btn`` undoes it,
+    a responsive override inside an ``@media`` included."""
     for selector, body in _btn_subject_rules():
         assert "content-box" not in body, (
             f"`{selector}` returns a .btn to content-box, which reopens "
             f"19Q Item 4's overflow: {' '.join(body.split())}"
         )
+
+
+def test_the_sheet_declares_content_box_nowhere_at_all() -> None:
+    """The indirect half, and why it is this blunt.
+
+    A cold read of 19Q Item 4 caught the case above claiming more than
+    it checked: scanning only ``.btn``-subject rules, a
+    ``.next-action-buttons-row > * { box-sizing: content-box }`` would
+    pass it and reopen the defect, because the subject is ``*``.
+    Enumerating every selector that could reach a ``.btn`` is not
+    something a regex over a stylesheet can do honestly.
+
+    So this asserts the blunt thing instead, which happens to be true:
+    the sheet declares ``content-box`` **nowhere**. It has never needed
+    to — the sheet has no global ``border-box`` reset, so content-box is
+    already every element's default and saying so explicitly is
+    redundant. A rule that genuinely wants it should add its selector to
+    ``_CONTENT_BOX_ALLOWED`` below, having first checked it cannot match
+    a ``.btn`` — which is the thought this test exists to force.
+    """
+    offenders = [
+        selector
+        for selector, body in rules(css())
+        if "content-box" in body and selector not in _CONTENT_BOX_ALLOWED
+    ]
+    assert not offenders, (
+        "the sheet now declares content-box; check each of these cannot "
+        f"match a .btn, then allowlist it: {offenders}"
+    )
 
 
 def test_the_workflow_cards_width_sized_row_is_still_there() -> None:

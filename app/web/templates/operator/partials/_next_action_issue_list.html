@@ -1,39 +1,38 @@
-{# Compact per-issue list for the Workflow card's right column.
-   Renders the issues currently in ``validation_issues_by_severity``
-   grouped by severity (errors → warnings → info), each item
-   showing the issue's summary text + an optional fix-page deep
-   link (``fix_url`` + ``fix_page_label``, stamped by the
-   validate-session-setup rule registry; see Segment 11G PR B).
+{# The Workflow card's right column points at the Validate page
+   rather than reproducing its table.
 
-   The full per-issue ``<details>`` "Why this check?" disclosure
-   that the Validate page renders is intentionally NOT included
-   here — the right column is a compact summary, not the
-   authoritative diagnostic surface. Operators who want the
-   full report still navigate to the Validate page via the
-   chrome top-nav. #}
-{% set _issue_groups = [
-  ("error", validation_issues_by_severity.get("errors", []), "pill-error"),
-  ("warning", validation_issues_by_severity.get("warnings", []), "pill-empty"),
-  ("info", validation_issues_by_severity.get("info", []), "pill-count"),
-] %}
+   Author's call, 2026-09-19 (19Q Item 4): "Don't put the complete
+   list of Assignments related validation items in the workflow
+   card. Rather, link to Validate page, which has the full list in
+   its table anyway."
+
+   Until then this partial rendered every issue across all three
+   severities, uncapped, each with its own ``fix_url`` deep link —
+   so a session with several assignment warnings repeated
+   "Assignments" down the column. The header comment already
+   described the design that now ships ("a compact summary, not the
+   authoritative diagnostic surface"), which is why this was a
+   comment and its code disagreeing rather than a design never
+   settled.
+
+   The card keeps the decision — *is there anything to look at* —
+   in the severity count pills that ``next_action_card.html``
+   renders above this include, and hands off the diagnosis. The
+   rule registry still stamps ``fix_url`` / ``fix_anchor`` /
+   ``fix_page_label`` on each issue; the Validate page is their
+   only consumer now.
+
+   Included at three sites — State 3, State 4Err, and the ``W``
+   overlay's inline block — so the guard below is what keeps a
+   session with nothing to report from growing a link to an empty
+   report. #}
 {% set _has_any = (
   validation_issues_by_severity.get("errors", []) | length
   + validation_issues_by_severity.get("warnings", []) | length
   + validation_issues_by_severity.get("info", []) | length
 ) > 0 %}
 {% if _has_any %}
-  <ul class="next-action-issue-list">
-    {% for severity, group, pill_class in _issue_groups %}
-      {% for issue in group %}
-        <li>
-          <span class="pill {{ pill_class }}">{{ severity }}</span>
-          <span class="next-action-issue-message">{{ issue.message }}</span>
-          {% if issue.fix_url %}
-            <a class="next-action-issue-fix"
-               href="{{ issue.fix_url }}{% if issue.fix_anchor %}#{{ issue.fix_anchor }}{% endif %}">{{ issue.fix_page_label or "Fix" }}</a>
-          {% endif %}
-        </li>
-      {% endfor %}
-    {% endfor %}
-  </ul>
+  <p class="next-action-issue-pointer">
+    <a href="/operator/sessions/{{ session.id }}/validate">Review on Validate</a>
+  </p>
 {% endif %}
