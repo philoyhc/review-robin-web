@@ -332,3 +332,110 @@ def test_no_template_spells_the_fallback_itself() -> None:
         if re.search(r'"Instrument_"\s*~|Instrument_\{\{|Instrument #\{\{', line)
     ]
     assert offenders == [], offenders
+
+
+# --------------------------------------------------------------------------- #
+# Rung 3 — the card tint
+# --------------------------------------------------------------------------- #
+
+
+def _rendered_tints(body: str) -> list[int]:
+    """The tint number of each instrument card, in render order.
+
+    ``base.html`` declares the tokens as ``--surface-tint-N:`` and only a
+    card's inline ``background`` *uses* one as ``var(--surface-tint-N)``,
+    so this matches cards and nothing else.
+    """
+    import re
+
+    return [int(n) for n in re.findall(r"var\(--surface-tint-(\d)\)", body)]
+
+
+def test_the_tint_follows_the_number_on_the_card(
+    client: TestClient, db: Session
+) -> None:
+    """Keyed on ``session_seq``, so the tint runs 1, 2, 3 down the page
+    whatever the ids are — and means the number the title shows.
+
+    Before rung 3 it was ``(instrument.id - 1) % 6``: a workspace-wide
+    autoincrement, so ids 47, 48, 51 rendered tints 5, 6, 3.
+    """
+    review_session = _client_session(client, db, "tint-a")
+    other = _client_session(client, db, "tint-b")
+    op = db.execute(select(User)).scalars().first()
+    crud.ensure_default_instrument(db, review_session)
+    crud.ensure_default_instrument(db, other)
+    # Interleaved, so the first session's ids are not contiguous.
+    crud.create_instrument(db, review_session=other, actor=op)
+    crud.create_instrument(db, review_session=review_session, actor=op)
+    crud.create_instrument(db, review_session=other, actor=op)
+    crud.create_instrument(db, review_session=review_session, actor=op)
+    db.commit()
+
+    ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.id)
+        ).scalars()
+    )
+    assert ids != list(range(ids[0], ids[0] + len(ids))), (
+        "ids came out contiguous — the test would pass on the old keying too"
+    )
+
+    response = client.get(f"/operator/sessions/{review_session.id}/instruments")
+    assert response.status_code == 200
+    assert _rendered_tints(response.text) == [1, 2, 3]
+
+
+def test_the_tint_does_not_move_when_the_operator_reorders(
+    client: TestClient, db: Session
+) -> None:
+    """The property the display-position alternative could not give:
+    dragging a card changes where it sits, not what colour it is."""
+    from app.services import instruments as instruments_service
+
+    review_session = _client_session(client, db, "tint-reorder")
+    op = db.execute(select(User)).scalars().first()
+    crud.ensure_default_instrument(db, review_session)
+    crud.create_instrument(db, review_session=review_session, actor=op)
+    db.commit()
+
+    rows = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    instruments_service.reorder_instruments(
+        db,
+        review_session=review_session,
+        items=[r.id for r in reversed(rows)],
+        actor=op,
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Render order is display order, so the tints arrive reversed —
+    # each card kept its own colour rather than inheriting the slot's.
+    assert _rendered_tints(body) == [2, 1]
+
+
+def test_the_palette_wraps_past_six(client: TestClient, db: Session) -> None:
+    """Six tints and an unbounded ordinal: instrument 7 shares
+    instrument 1's colour, which is the documented cost of a palette
+    rather than a key."""
+    review_session = _client_session(client, db, "tint-wrap")
+    op = db.execute(select(User)).scalars().first()
+    crud.ensure_default_instrument(db, review_session)
+    for _ in range(6):
+        crud.create_instrument(db, review_session=review_session, actor=op)
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert _rendered_tints(body) == [1, 2, 3, 4, 5, 6, 1]

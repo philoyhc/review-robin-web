@@ -690,7 +690,14 @@
          data-instrument-card="{{ instrument.id }}"
          data-instrument-locked="{{ 'false' if is_editing else 'true' }}"
          {% if is_editing %}data-instrument-editing="true"{% endif %}
-         style="background: {{ instrument_palette[(instrument.id - 1) % instrument_palette | length] }};">
+         {# 19Q Item 6 rung 3 — keyed on ``session_seq``, the same
+            number the card title shows, so the tint means something
+            the operator can read. It was ``instrument.id - 1``, a
+            workspace-wide autoincrement, which made the run arbitrary
+            within a session and different between two sessions
+            holding identical instruments. Not the display position:
+            drag-and-drop ships, and the tint must not move under it. #}
+         style="background: {{ instrument_palette[(instrument.session_seq - 1) % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
       {# New-model card — concept-test layout for the Instrument
          Builder (guide/instrument_builder.md). Identity at the
