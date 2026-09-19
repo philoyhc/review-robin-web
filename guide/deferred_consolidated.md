@@ -794,6 +794,32 @@ database).
 
 ---
 
+#### Rehydrate does not run the cross-roster identity check (19Q Item 7)
+
+> Found by the cold read at 19Q Item 7 rung 2, 2026-09-19.
+> `spec/rehydrate.md` §6.3 claimed it did; the sentence was
+> corrected at the item's close rather than the gap being
+> filled.
+
+`csv_imports.check_cross_table_identity` is called from the five
+import **routes**. Rehydrate calls `csv_imports.save_reviewers` /
+`save_reviewees` / `save_observers` directly, so it reaches no
+route and the check has never run on that path — before 19Q
+Item 7 or after it.
+
+**Why it is deferred rather than a defect to fix now.** A
+rehydrate replays an extract of a session that already passed the
+check on its way in, so the only way to import a conflicting pair
+is to hand-edit the extract between the two. The Validate rules
+that shipped in the same item report such a pair on the rebuilt
+session, so it is visible rather than silent.
+
+**Ships when taken up.** A call to `check_cross_table_identity`
+per roster inside the rehydrate step, with the whole rehydrate
+rolling back on a finding — the transaction shape §6.3 already
+uses for its other per-row failures. Roughly a fourth call site,
+no new rule.
+
 #### Codex Slice E — Carve down the three large templates
 
 > Carved from

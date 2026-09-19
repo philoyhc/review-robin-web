@@ -1202,6 +1202,38 @@ separate mechanism on a different flow: `?add=1` renders a blank row
 *as an edit state*, and the landing script focuses that row's first
 field. After a create there is no input to focus.)
 
+**What a create or an edit refuses.** Two identity guards, on
+every roster, at both entry points:
+
+1. **Within the roster** — the mailbox is already on another row
+   of the same roster (`reviewers` / `reviewees` by
+   `email_or_identifier` / `observers`). Long-standing.
+2. **Across the rosters** — the mailbox is held in *another*
+   roster under a **different name**
+   (`csv_imports.cross_table_identity_conflict`). Same email +
+   same name stays legal, and is the self-review case. **The Add
+   and Edit forms did not consult this until 19Q Item 7**, so
+   they wrote the row the CSV importer refused; the rule had one
+   home and only the import path could reach it.
+
+Either raises the roster's `*OperationError`, and the form
+re-renders at **400** in place with the message — the same shape
+the within-roster duplicate has always had.
+
+An **edit** keys on the *resulting* pair rather than on what
+changed, so renaming a row into disagreement with its mailbox's
+other holder is caught. A consequence worth stating: on a session
+that already holds a conflicting pair, editing any field of
+either row — a tag, say — answers 400 about the identity the
+operator did not touch. That is deliberate. The conflict is
+reported on Validate, the fix is a rename either way, and a guard
+that ignored untouched identities would let a row be edited
+around its own unresolved conflict indefinitely.
+
+Rows already in the session when these guards landed are not
+rewritten. The three `*.cross_roster_identity` Validate rules
+report them (`spec/validate_page.md` §3.2).
+
 **Relationships pickers.** The Relationships Edit / Add rows
 choose reviewer + reviewee via **name-or-email search-box
 pickers** — a text `<input>` backed by a `<datalist>` of

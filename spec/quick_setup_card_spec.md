@@ -93,7 +93,7 @@ Errors in one slot do not affect other slots' submissions or existing data.
 
 ### Validation scope
 
-The card validates each file individually for parse correctness and per-file integrity (unique IDs, required fields, well-formed values). It does **not** perform cross-entity validation — checking whether assignments correctly reference existing reviewers and reviewees, for example, is the existing Validate page's job and is surfaced via the lifecycle-transition action on Home.
+The card validates each file individually for parse correctness and per-file integrity (unique IDs, required fields, well-formed values). Beyond that it performs **one** cross-roster check, and only the one the write paths perform everywhere else: `check_cross_table_identity` on each roster slot, rejecting a row whose email another roster already holds under a different name (`spec/csv_contracts.md` §3.2; the Observers slot joined at 19Q Item 7). Everything else is left to the Validate page — whether assignments correctly reference existing reviewers and reviewees, for example, is its job and is surfaced via the lifecycle-transition action on Home.
 
 ### Interaction with per-entity Setup pages
 
