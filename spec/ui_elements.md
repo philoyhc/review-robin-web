@@ -793,10 +793,11 @@ inside `max-width` so a narrow column cannot overflow.
 
 The captures arrive at **two scales** — 1× shots at ~830px and 2× shots
 at ~1680px. The split is a rule about display width, not a promise about
-the mix: after 19Q Item 5 replaced most of the set from one 2× slot, the
-wide family spans ~1380–1760px and the narrow one holds a single pair.
-Counts are deliberately not written down here or in the test file, both
-having gone stale before; measure them if you need them. Left to fill the prose column they would read at two
+the mix: after 19Q Item 5 replaced most of the set from one 2× slot the
+narrow family is the exception rather than half of it, and the wide one
+spans a range rather than clustering at ~1680px. Neither the tally nor
+the range is written down here or in the test file, both having gone
+stale before; measure them if you need them. Left to fill the prose column they would read at two
 different apparent scales, so each family gets a **fixed display width**:
 the base rule pins the wide family at **1200px**, `.guide-figure-narrow`
 pins the narrow one at **600px**. Both are author's numbers, set from
@@ -820,8 +821,8 @@ which is the part the markup cannot state.
 **What none of it checks is that the two halves show the same app
 state.** A pair is meant to be one screen photographed twice; nothing
 stops it being two different screens, and the failure is invisible to
-every gate above — the files exist, the widths match, the one `alt`
-agrees with itself. It is a reader-facing defect: the instrument appears
+every gate above — the files exist, both halves land in the same scale
+family, the one `alt` agrees with itself. It is a reader-facing defect: the instrument appears
 to rename itself, or a counter to change, when the theme toggle is
 pressed. It has been found five times by hand and never by a test
 (19H.3's `instrument-card-preview`, and four pairs in 19Q Item 5).

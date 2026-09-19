@@ -1253,7 +1253,13 @@ describing neither. Both shipped, repeatedly:
   had, sees none of them: they do not move the layout.
 
 `spec/ui_elements.md` now carries this at the `.guide-figure` contract,
-because no test can.
+because no test can. The close pass caught that first draft writing the
+narrow family's tally into the sentence that says not to write tallies
+down, and restating `test_a_pair_is_shot_at_one_scale` as "the widths
+match" when it compares scale *families* and passes on halves hundreds
+of pixels apart. Both are the item's own failure mode — a claim about a
+measurement, made without the measurement — in the document written to
+warn against it.
 
 **Two reads, and what they found.** Codex read rung 1; `diff-reviewer`
 read the item's cumulative diff at rung 2, per `CLAUDE.md`'s per-item
