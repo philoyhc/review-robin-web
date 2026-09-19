@@ -4,7 +4,17 @@ from typing import TYPE_CHECKING, Any
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    func,
+    select,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -19,6 +29,32 @@ if TYPE_CHECKING:
     from app.db.models.review_session import ReviewSession
 
 
+def _next_session_seq(context: Any) -> int:
+    """``max(session_seq) + 1`` within the row's session, 19Q Item 6.
+
+    A context-sensitive column default: SQLAlchemy calls it per insert
+    with the pending parameters, so it reads the ``session_id`` being
+    written and never needs the caller to supply a number.
+
+    ``max + 1``, not ``count + 1``: the sequence must not reuse a number
+    after a delete. Deleting the second of three leaves 1, 3 and the
+    next instrument created is 4.
+
+    The clone path does not reach here — ``session_clone`` copies every
+    mapped column, so an explicit ``session_seq`` is already in the
+    parameters and the default is skipped. That is what preserves a
+    source reading 1, 3, 2 as 1, 3, 2.
+    """
+    table = Instrument.__table__
+    params = context.get_current_parameters()
+    highest = context.connection.execute(
+        select(func.max(table.c.session_seq)).where(
+            table.c.session_id == params["session_id"]
+        )
+    ).scalar()
+    return (highest or 0) + 1
+
+
 class Instrument(Base, TimestampMixin):
     __tablename__ = "instruments"
 
@@ -30,6 +66,31 @@ class Instrument(Base, TimestampMixin):
     short_label: Mapped[str | None] = mapped_column(String(32))
     description: Mapped[str | None] = mapped_column(String(2000))
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    session_seq: Mapped[int] = mapped_column(
+        Integer, default=_next_session_seq, nullable=False
+    )
+    """19Q Item 6 — the instrument's per-session identity.
+
+    Assigned once at creation (``instruments.next_session_seq``) and
+    never updated, so it is the operator-facing number in the
+    ``Instrument_{N}`` fallback label and the key for the card tint.
+    Deliberately *not* ``order``: instrument drag-and-drop ships
+    (``POST .../instruments/order``), and a number that moved under the
+    drag is the defect this column exists to remove.
+
+    Gaps are expected and correct. Deleting the second of three leaves
+    1, 3 — closing the gap would be renumbering, which is the thing a
+    stable handle must not do. Cloning a session copies the value
+    verbatim (``session_clone`` copies every mapped column), so a
+    source reading 1, 3, 2 reproduces as 1, 3, 2.
+
+    Assigned by a context-sensitive column default rather than by each
+    creation path, so no path can forget it and none has to remember:
+    ``ensure_default_instrument``, ``create_instrument``,
+    ``replicate_instrument`` and the config importer all get it free.
+    There is no *server* default, so a row inserted outside SQLAlchemy
+    still fails loudly instead of minting ``Instrument_0``.
+    """
     accepting_responses: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
