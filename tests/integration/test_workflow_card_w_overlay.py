@@ -21,7 +21,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
-from tests.integration.test_invitations import _create_session, _populate
+# Relative, per the `._display_field_helpers` convention in this
+# package: `tests/` has no `__init__.py`, so `tests.integration` is
+# importable only when the repo root happens to be on `sys.path`.
+# `python -m pytest` puts it there and the `pytest` console script does
+# not — which is how an absolute import passed here and failed on
+# `ci-postgres`.
+from .test_invitations import _create_session, _populate
 
 STATE_4_BODY = "there are no invitations"
 STATE_5_BODY = "Invitations are ready to send"
