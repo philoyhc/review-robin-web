@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; fifteen entries, two open
+## Item 7 — Loose ends, recorded 2026-09-18; fifteen entries, one open
 
 ### Opportunity
 
@@ -26,10 +26,11 @@ grew 8 and added 9–12; the pass that followed closed nine and the
 `spec-writer` check on it added 13. The author ruled 3 and 13 on
 2026-09-18 and both are swept; 19Q.3's close added 14, ruled and built
 2026-09-19. **15 was added 2026-09-19** from the author's question about
-the lobby's search box, and is ruled but not built. **Three stay open:**
-8, the dev-slot verification only the author can do; the
-`docs/status.md` compaction half of 12, a judgment call about what to
-drop; and 15. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+the lobby's search box, and was ruled and built the same day. **Two
+stay open:** 8, the dev-slot verification only the author can do — to
+which 15 adds the two adjacent `Clear` controls and the typeahead
+dropdown; and the `docs/status.md` compaction half of 12, a judgment
+call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -41,14 +42,14 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Thirteen worked, two open, plus the dev-slot list.** The worked
+**Fourteen worked, one open, plus the dev-slot list.** The worked
 entries compact to their outcome: each one's evidence is in its commit
 and in `docs/status.md`, and what a later reader needs from here is what
 was found, not how. Entry 8 keeps its detail because it is still live;
 entry 12 keeps its measurements because the split it records is a
 decision a later reader may want to re-apply or reverse; entry 15 keeps
-its because it is ruled but unbuilt, and the measurements are what a
-treatment starts from.
+the two claims it measured **false**, which is the part of it a later
+reader cannot reconstruct from the diff.
 
 1. **Done.** `spec/operations_pages.md` had the invitation gate wrong in
    both directions in one paragraph — all six routes gate on
@@ -84,9 +85,14 @@ treatment starts from.
    by 19Q Item 6's three: the instrument card **title**, the **delete
    confirmation** beneath it, and **every card's tint**, which now runs
    1..6 by creation order rather than arbitrarily. That last one is the
-   only entry here a screenshot answers better than prose. The
-   screencaps block the 19Q close by the author's ruling, 2026-09-18;
-   the rest block nothing.
+   only entry here a screenshot answers better than prose. Grown again
+   by entry 15: the Lobby and Archive filter cards, renamed and now
+   carrying a typeahead — specifically **how the `<datalist>` reads
+   while typing**, which headless Chromium proves is present and does
+   not settle, and **the two adjacent `Clear` controls** on the lobby,
+   the tag strip's chip and the filter box's button, which clear
+   different things under the same word. The screencaps block the 19Q
+   close by the author's ruling, 2026-09-18; the rest block nothing.
 9. **Done.** The Workflow card's State 6 told the operator reviewers had
    been notified when no transport is wired — the sentence 19Q.3's cold
    read found copied into the Guide.
@@ -153,100 +159,67 @@ treatment starts from.
     resolves and the `pytest` console script does not, so CI failed at
     collection where the sandbox was green.
 
-15. **Open — ruled, not built.** *"There's no search button for the
-    search box?"* (author, 2026-09-19). There is not, and the reason is
-    that **it is not a search box.** The Session Lobby's control hides
-    rows already rendered, live on every keystroke
-    (`sessions_list.html:865`), and never queries or navigates; the
-    Archive page carries a copy of it
-    (`sessions_archived.html:299`). **Author's ruling: it is a filter,
-    name it one, and fold the Archive in.**
+15. **Done — ruled and built.** *"There's no search button for the
+    search box?"* (author). There is not, because it is not a search
+    box: the Session Lobby's control hides rows already rendered, live
+    on every keystroke, and never queries or navigates. The Archive
+    page carried a copy. **Author's ruling: it is a filter, name it
+    one, fold the Archive in** — plus typeahead over name, code and
+    tag. Three rungs, PRs #2488 → #2489 and this close.
 
-    The ruling settles the opening question by dissolving it — a filter
-    that applies live has nothing to submit, so the missing button is
-    correct and the **Cancel** beside it is the odd one. It also
-    settles the vocabulary the rest of the app got wrong the other way:
-    the seven roster and operations boxes are server-side filters
-    (`?q=` re-renders the same table) labelled *Search*, and
-    `session_reviewers.html:771` says both at once — `<label
-    class="filter-search">` wrapping the copy `Search:` and a `Search`
-    submit button.
+    The ruling dissolved the opening question rather than answering it:
+    a filter that applies live has nothing to submit, so the missing
+    button was correct and the `Cancel` beside it was the odd control.
+    It is `Clear` now, in a card headed `Filter`, on both pages.
 
-    **Also wanted, same ruling:** typeahead over **name, code and tag**.
-    Matching already covers those three, so the ask is suggestions, not
-    reach. Half the work exists — `lobby_tags` / `archived_tags` are
-    already in context, and `app/web/views/_filters.py` has the
-    seven-surface `<datalist>` helpers, caps
-    (`SEARCH_TAG_OPTIONS_CAP`, `REVIEWERS_DATALIST_CAP`) and per-column
-    rules to copy from.
-
-    **What a treatment has to settle, found while measuring:**
-
-    - **The two copies have drifted three ways.** Lobby tag chips carry
-      AND/OR pills and branch `.every()` / `.some()`; the Archive has no
-      mode pills and is hardcoded OR, with nothing saying so. Empty
-      state: the lobby renders its card and sets `disabled` on the input
-      and Cancel (`has_live`), the Archive omits the whole page body
-      (`{% if sessions %}`, line 10) — same intent, different mechanism,
-      different thing seen. And the lobby's card also holds `Add new
-      session` / `Rehydrate` / `Go to Archive`, where the Archive's
-      holds Cancel alone.
-    - **`matchesSearch` is byte-identical on both** and concatenates
-      before matching — `cells[0] + " " + cells[1] + " " +
-      tags.join(" ")`, then `indexOf`. Tags therefore match by
-      **substring** where `spec/setup_pages.md` specifies whole-value
-      precisely so `Team A` cannot drag in `Team A2`; the lobby and
-      Archive are the only two surfaces where it does. **Live, and
-      reproduced in Chromium at rung 2.**
-
-      This entry also claimed a cross-column false positive — a term
-      spanning the name→code boundary matching the joined string. **It
-      does not reproduce**, and the browser check written to prove it
-      passed against the old code too, which is how it was caught.
-      `textContent` carries the markup's indentation, so the haystack
-      reads `"\n                Spring Review\n               2026-A"`
-      and nothing an operator can type bridges that gap. Per-column
-      matching still shipped, on the two reasons that survive: it is
-      the documented rule, and it stops the behaviour depending on
-      template whitespace — reformat those cells onto one line and the
-      unreachable defect becomes reachable. Recorded rather than
-      quietly dropped, because a claim measured false is worth as much
-      as one measured true.
-    - **Neither can see the other's half.** The lobby renders
-      non-archived only (`_lobby.py:91`), the Archive archived only. An
-      operator filtering the lobby for an empty result had no signal
-      that the session exists one click away — while the empty
-      Archive's own copy does the opposite favour (*"Sessions you
-      archive from the lobby appear here"*).
-
-      **Settled at rung 1, not by the author's ruling.** The ruling
-      covered naming and folding the Archive in; this was the open
-      design question beside it, and the minimal reading was taken —
-      the lobby's empty-filter row names the Archive and links to it,
-      which is all a *filter* owes where a *search* would have owed the
-      matching rows. The Archive does not reciprocate: its operator
-      arrived from the lobby and its empty-page copy already says so.
-      Both halves are pinned by tests, and the whole of it is one
-      `<tr>`'s copy to reverse. Recorded here because the cold read
-      found this bullet still calling it open while the code shipped an
-      answer.
-
-    Folding the Archive in is the ruling because there are two copies
-    that have already drifted three ways: treating one alone guarantees
-    a fourth.
-
-    **Rung 2 answered that by making it one copy, after a first pass
-    made the two identical again.** The matching rule is
+    **The two copies became one.** The matching rule is
     `rrwSessionFilterMatches` in `base.html`, beside the sort primitive
-    the same two pages already share; each page keeps only the three
-    property reads that turn a `<tr>` into the three values. Identical
-    copies are how the fourth drift starts, and nothing in the suite
-    would have caught them parting — `test_inline_scripts_parse.py`
-    runs `node --check` and nothing else. Which is also why the rule
-    now has `tests/integration/test_session_filter_rule.py`: node was
-    already in CI for the parse gate, so *executing* one pure function
-    costs nothing new, and the `<datalist>` cases written beside it
-    would all have passed with the matching reverted.
+    the same two pages already share. A first pass made the copies
+    *identical* instead, which the cold read named as how the fourth
+    drift starts — the entry's own argument for folding the Archive in
+    was that two copies had already drifted three ways. The three
+    drifts themselves stand: AND/OR pills on the lobby against
+    hardcoded OR on the Archive, and two different empty-state
+    mechanisms, each right for its page.
+
+    **Two claims measured false, both mine, both recorded rather than
+    dropped.**
+
+    - *The cross-column false positive does not reproduce.* Driving the
+      filter in Chromium and then mutating the matching back showed the
+      check written to prove it passing against the old code too.
+      `textContent` carries the markup's indentation, so the haystack
+      read `"\n                Spring Review\n               2026-A"`
+      and nothing typable bridged that gap. Per-column matching shipped
+      on the reasons that survive: it is the documented rule, and it
+      stops the behaviour depending on template whitespace.
+    - *The session cap halved a session.* Names and codes were merged
+      and sliced, so 150 sessions offered 150 names and 50 codes — the
+      rest findable by one spelling of their identity and not the
+      other, while the docstring claimed the opposite. It counts
+      sessions now.
+
+    The **tag** defect was real and is fixed: `team a` no longer drags
+    in `team a2`, which is the collision whole-value matching exists to
+    prevent and these two pages were the only surfaces to have.
+
+    **The gap under all of it was that page JS had no test but
+    `node --check`.** `tests/integration/test_session_filter_rule.py`
+    executes the rule under the node CI already runs, and writing it
+    immediately found a hidden precondition — the function assumed a
+    pre-lowercased term.
+
+    **Found while auditing, not fixed:** the Archived page's row
+    expander ships a `Download` button `disabled` unconditionally, a
+    placeholder for an export that does not exist, with nothing beside
+    it saying so. Now at least audited (`spec/operator_button_audit.md`
+    §2a #184), along with the rest of that page's buttons, which had no
+    section at all.
+
+    **Open for the author, on the dev slot:** the lobby now shows the
+    tag strip's `Clear` chip and the filter box's `Clear` button side
+    by side, clearing different things. `Clear` is the app-wide word
+    for both, so the rename is right and the adjacency is what is new.
 
 ### Doc impact
 
@@ -267,7 +240,7 @@ treatment starts from.
 - `spec/visual_style_rrw.md` — the Workflow card's transition list (entry 13).
 - `spec/sessions_overview.md` — the card is a **Filter**, not a Search: its drawing, its control table and its prose all name a `Search` card carrying `Cancel`, where the shipped card is headed `Filter` and carries `Clear`. Also the matching rule, which is per column and whole-value on tags now, and the typeahead (entry 15).
 - `spec/operator_button_audit.md` — Section 2 row 12's card name and the `Cancel` it lists; the Archived page has **no section at all**, so its filter card's `Clear` is unaudited along with the rest of its buttons (entry 15).
-- `spec/setup_pages.md` — its "Search matching and suggestions" section states the per-column rules for seven surfaces; the Lobby and Archive are now an eighth and ninth that follow them by a different mechanism, and the one deliberate divergence (no `"Name (handle)"` label, because a per-column filter cannot match it) belongs beside that rule (entry 15). <!-- cites: spec/setup_pages.md -->
+- `spec/setup_pages.md` — its "Search matching and suggestions" section states the per-column rules for seven surfaces; the Lobby and Archive are now an eighth and ninth that follow them by a different mechanism, and the one deliberate divergence (no `"Name (handle)"` label, because a per-column filter cannot match it) belongs beside that rule (entry 15).
 
 ### Open questions
 

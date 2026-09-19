@@ -39,9 +39,9 @@ A single-column page:
 ```
 ┌─ <h1>Sessions Lobby</h1> ───────────────────────────┐
 │                                                     │
-│ ┌─ Sessions ─────────┐ ┌─ Search ─────────────────┐ │
-│ │ counts + tag chips │ │ [search box]             │ │
-│ │                    │ │ [Cancel] [Add new        │ │
+│ ┌─ Sessions ─────────┐ ┌─ Filter ─────────────────┐ │
+│ │ counts + tag chips │ │ [filter box + typeahead] │ │
+│ │                    │ │ [Clear] [Add new         │ │
 │ │                    │ │  session] [Rehydrate]    │ │
 │ │                    │ │ [Go to Archive]          │ │
 │ └────────────────────┘ └──────────────────────────┘ │
@@ -55,9 +55,9 @@ A single-column page:
 
 The two half-width cards render in **every** state; the table is
 replaced by the first-run card when there are no live sessions.
-**Below 800px they stack, `Search` under `Sessions`** — the app's
+**Below 800px they stack, `Filter` under `Sessions`** — the app's
 established two-column collapse point, shared with `.page-grid` and
-`.bottom-grid`. Side by side on a narrow page the Search card is the
+`.bottom-grid`. Side by side on a narrow page the Filter card is the
 one that suffers: its four buttons wrap into a ragged block and the
 input shrinks to a stub. `Sessions` stays first because it is the
 page's summary and the actions read as what you do about it.
@@ -72,14 +72,14 @@ Danger Zone card.
 
 - **`<h1>Sessions Lobby</h1>`** — page title, left-aligned, on its
   own line. **The header carries no button.** The page's one create
-  affordance is the Search card's `Add new session`, which renders in
+  affordance is the Filter card's `Add new session`, which renders in
   every state — see "Lobby states" below.
 
 ## Empty state — the first-run card
 
 When the operator has **zero non-archived sessions**, the page
 renders an onboarding card (`id="lobby-first-run"`) **below the
-`Sessions` and `Search` cards**, in place of the table and the
+`Sessions` and `Filter` cards**, in place of the table and the
 bulk-action form — the two cards render in every state, so this card
 is never the whole page. See "Lobby states" below.
 
@@ -136,9 +136,9 @@ The card carries, in order:
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
 
-**The card has no CTA of its own.** It and the Search card would
+**The card has no CTA of its own.** It and the Filter card would
 otherwise offer the same destination in the same state under two
-different names, so the card **names** the Search card's button rather
+different names, so the card **names** the Filter card's button rather
 than competing with it — one way to start a session, one name for it.
 
 The naming happens **once**, in the **Set up a session** tile, where it
@@ -160,7 +160,7 @@ never had a session". An operator who archives everything sees the
 card again, which is intended: they are back at the start. No
 "has-ever-had" state is tracked.
 
-**One create affordance in this state, and it is the Search card's.**
+**One create affordance in this state, and it is the Filter card's.**
 `Add new session` stays active in the empty lobby on purpose — with
 `Rehydrate` it is one of the two ways *out* of one — so the first-run
 card must not carry a second button to the same place. A difference in
@@ -178,12 +178,12 @@ first-time operator.
 
 ## Lobby states — one shape, three fillings
 
-The `Sessions` and `Search` cards render on **every** lobby, so an
+The `Sessions` and `Filter` cards render on **every** lobby, so an
 operator learns one page rather than two — neither card belongs inside
 the populated branch, where it would vanish with the table. What varies
-is which Search controls are live:
+is which Filter controls are live:
 
-| Lobby holds | `Sessions` card | Search + Cancel | `Add new session` · `Rehydrate` · `Go to Archive` |
+| Lobby holds | `Sessions` card | Filter box + Clear | `Add new session` · `Rehydrate` · `Go to Archive` |
 |---|---|---|---|
 | Live sessions (± archived) | counts + tag filter | **active** | active |
 | Nothing at all | counts, all `0` | **inert** | active |
@@ -364,9 +364,59 @@ The lobby carries all three:
   sessions tagged with:") with one `tag-chip` per tag in the
   lobby tag vocabulary, an AND/OR mode chip, and a clear chip.
   Client-side filtering against each row's `data-tags`.
-- **Search.** A Search card with a free-text input matching name,
+**It is a filter, not a search** (author's ruling, 2026-09-19; 19O Item
+7 entry 15). It hides rows already rendered, live on every keystroke,
+and never queries or navigates — so there is nothing to submit and no
+Search button is missing. Headed `Search` with a `Cancel` beside it
+until that ruling, which is the shape the drawing above used to show.
+
+**What it matches — per column, unioned.** A row is kept when *any* of
+its columns matches:
+
+| Column | Rule |
+|---|---|
+| Session name | substring, case-insensitive |
+| Session code | substring, case-insensitive |
+| Session tags | **whole value**, case- and surrounding-whitespace-insensitive |
+
+The same three rules `spec/setup_pages.md` states for the roster and
+operations filters, and for the same reasons: substring on a name makes
+a partial name useful, whole value on a tag keeps `team a` from
+dragging in `team a2`. Until 19O Item 7 entry 15 this concatenated the
+three into one string and matched a substring of *that*, so the tag
+rule did not hold here.
+
+The rule is `rrwSessionFilterMatches` in `base.html`, shared with the
+Archived page rather than copied to it, and executed — not merely
+parsed — by `tests/integration/test_session_filter_rule.py`.
+
+**What the typeahead offers.** A `<datalist>` of the distinct tag
+values first, then the session names and codes, built by
+`views.sessions_filter_options`. Tags lead because browsers filter a
+`<datalist>` in document order. Two caps, kept separate so a long
+session list cannot crowd the tags out: `SEARCH_TAG_OPTIONS_CAP` on the
+tag half, `SESSIONS_DATALIST_CAP` on the session half — the latter
+counted in **sessions**, each contributing up to two options, so a
+capped session never keeps one spelling of its identity and loses the
+other.
+
+**Names and codes are offered as themselves**, not as the
+`"Name (handle)"` label the roster surfaces use. That label works there
+because the server exact-matches the parenthesized handle when the
+input equals one it offered; a client-side per-column filter cannot,
+so the label would be a suggestion that matches nothing. A value
+offered as a tag is not offered again as a name or code.
+
+**An empty result names the Archive.** The lobby is given non-archived
+sessions only, so an empty filter is ambiguous between *no such
+session* and *it is archived*. The no-match row says so and links
+through. The Archived page does not reciprocate — its operator arrived
+from the lobby, and its own empty-page copy already says where its rows
+come from.
+
+- **Filter.** A Filter card with a free-text input matching name,
   code, or tag. Its right-flushed `.sessions-action-buttons` row
-  carries **Cancel**, **Add new session**
+  carries **Clear**, **Add new session**
   (`/operator/sessions/new` — the label names the noun, because the
   lobby is the one page where "new *what*" is not obvious from
   context), **Rehydrate** (`/operator/sessions/rehydrate`) — **gated off by
