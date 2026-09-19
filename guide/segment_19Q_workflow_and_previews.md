@@ -1,11 +1,12 @@
 # Segment 19Q — Workflow and preview revamp
 
-Seven items, closing independently. Item-level `Doc impact` / `Status`, so
+Six items, closing independently. Item-level `Doc impact` / `Status`, so
 `tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
 2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
-the author delivered a new capture set — and 6 and 7 on 2026-09-19,
-when a question about the instrument tints found both the tint and the
-fallback label keyed workspace-wide.
+the author delivered a new capture set — and 6 on 2026-09-19, when a
+question about the instrument tints found both the tint and the fallback
+label keyed workspace-wide. It opened as two items that day and merged
+into one before a rung was cut; see its own note.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -809,104 +810,119 @@ At `ac6d0832`:
 
 ---
 
-## Item 6 — The instrument tint follows the number the reviewer sees
+
+## Item 6 — An instrument's per-session identity
+
+**Revised at planning time, 2026-09-19, before any rung was cut** — same
+shape as the segment's own 2026-09-17 reversal. The author's three
+requirements: least code change, per-session numbering, and **creation
+order rather than on-screen order**, because instrument drag-and-drop
+already ships (`_instruments_pagination.py:107`), so a position-based
+number moves under the drag. The first draft was two items keyed on
+display position; the tint cannot land before the label's column exists,
+so they are one.
 
 ### Opportunity
 
-Three numbers describe an instrument and no two of them agree.
+An instrument's identity is keyed on `Instrument.id`, a workspace-wide
+autoincrement PK, and shown on a per-session page. It surfaces twice:
 
-| | scope | drives |
-|---|---|---|
-| `Instrument.id` | **workspace-wide** autoincrement PK (`app/db/models/instrument.py:25`) | the card tint |
-| `Instrument.order` | per session | display sequence (`.order_by(Instrument.order, Instrument.id)`) |
-| `loop.index` → `#N` | per session | the heading the reviewer reads |
+- **The fallback label.** Author's screenshot, 2026-09-19: two
+  instruments in one session titled *Instrument_1* and *Instrument_7*.
+  `_state.py::_instrument_label` returns `short_label` or
+  `f"Instrument_{instrument.id}"`.
+- **The card tint.** `instruments_index.html:693` keys the background on
+  `instrument_palette[(instrument.id - 1) % instrument_palette | length]`,
+  so ids 47, 48, 51 render tints 5, 6, 3 and two sessions with identical
+  instruments differ by insertion date.
 
-`instruments_index.html:693` keys the background on
-`instrument_palette[(instrument.id - 1) % instrument_palette | length]`,
-so the tint is a fact
-about the whole workspace shown on a per-session page. Two sessions with
-structurally identical instruments get different tint runs depending on
-when their rows were inserted, and within one session the colours do not
-run 1→6 in card order: ids 47, 48, 51 render tints 5, 6, 3.
-
-**Nothing pins any of it.** `grep -rln "surface-tint\|instrument_palette"
-tests/` returns nothing, which is why this has never gone red.
-
-`spec/instruments.md` states the id-keying deliberately — "keyed by
-**instrument id and not by loop position**, so the colour rides with the
-instrument across reorders / replicates / deletes". That reasoning is
-sound about drag stability and is what the author has now weighed
-against legibility.
+Three numbers already describe an instrument and none is a per-session
+identity: `Instrument.id` is workspace-wide, and `Instrument.order` and
+the reviewer's `#N` are per-session but **move on drag**.
 
 ### Decision
 
-Key the tint on `loop.index0` — **the same ordinal
-`views.instrument_heading` already uses for `#N`** (`_instruments.py:129`,
-previewed on the operator's own card at `instruments_index.html:1808`,
-inside this same loop). Author's ruling, 2026-09-19: per-session
-ordinal.
+Add **`Instrument.session_seq`** — an integer set once at creation,
+never updated. The label becomes `f"Instrument_{session_seq}"`; the tint
+keys on the same value. *Instrument_3* then means "the third instrument
+I created in this session", permanently.
 
-The point is not a tidy 1→6 run. It is that the tint stops being a
-fourth fact and becomes the one the reviewer's heading already states,
-so `#3` is always the third tint.
+**Zero of the label's 44 call sites change.** `_instrument_label`
+takes the instrument and reads a column, so its signature is untouched
+and every caller — including the six audit-summary sites and the three
+reviewer-facing ones — is untouched with it.
 
-**Rejected — rank of `id` within the session.** It is per-session, gives
-1..n, and keeps the drag stability `spec/instruments.md` argues for. It
-also silently disagrees with `#N` the moment anyone reorders, which
-recreates the defect this item exists to remove, one layer down where
-nothing shows it.
+**Rejected — derive the rank inside `_instrument_label`.** Smaller and
+migration-free, which is what requirement 1 asks for, and still wrong:
+the number moves on delete instead of on drag, and it moves
+*retroactively inside stored copy* — `audit_events.summary` is a
+persisted `String(500)` with the label baked in at emit time, so a
+summary naming `Instrument_3` would come to mean another instrument.
+
+**Rejected — display position (`loop.index0` / `Instrument.order`).**
+This plan's own first draft. Reorder ships, so the number would move
+whenever the operator drags, which is the thing requirement 3 exists to
+prevent.
 
 ### Semantics
 
-- **Single-instrument session:** `instrument_heading` returns no `#N`
-  prefix at all when `total_count == 1`, so there is no number to agree
-  with. Tint 1, and nothing claims otherwise.
-- **More than six:** `% 6` wraps, as today. Instrument 7 and instrument 1
-  share a tint; the palette is six colours and the ordinal is not a key.
-- **Reorder reshuffles the tints, and that is the contract now.** The
-  tint tracks position, so dragging an instrument up moves its colour
-  with the position rather than with the row. `spec/instruments.md`'s
-  paragraph is reversed, not deleted.
-- **Delete renumbers the successors**, for the same reason and by the
-  same rule as `#N`.
-- **Page-break cards do not consume an index.** They render inside the
-  instrument loop (`:668`) ahead of a successor with `starts_new_page`,
-  not as iterations of it, so `loop.index` stays the instrument ordinal.
-- **Replicate** lands the copy at a position and it takes that
-  position's tint; there is no "same colour as its source" rule to keep.
+- **Gaps after delete are accepted** (author, 2026-09-19). Delete the
+  second instrument and the labels read 1, 3, 4. That is what a handle
+  that never moves costs, and closing the gap is renumbering.
+- **Reorder never touches `session_seq`.** Display order stays
+  `Instrument.order`; the two are independent by construction.
+- **Clone preserves the source's sequence** (author, 2026-09-19): a
+  session whose instruments read 1, 3, 2 down the page clones to 1, 3, 2,
+  not 1, 2, 3. This needs **no code** — `session_clone.py:167` builds
+  the row with `**_column_values(instrument, skip=…)`, which copies every
+  mapped column except `id` / `created_at` / `updated_at`, so a new
+  column rides along. The rung asserts it rather than implementing it.
+- **Config import mints a fresh sequence**: the payload keys instruments
+  by `short_label` and carries no ordinal, and adding one to the CSV
+  contract is wider than requirement 1 allows. Recorded so the
+  divergence from clone reads as a decision.
+- **The reviewer's `#N` is unchanged**, still display position via
+  `instrument_heading`. The two mean different things on purpose: `#N` is
+  where you are in the form, `session_seq` is which instrument this is.
+- `short_label` still wins, still muted italic so the fallback reads as
+  a placeholder (`spec/instruments.md:274-284`); tints still wrap at six.
 
 ### Judgment calls — decided
 
-- `loop.index0` rather than a view-layer field (2026-09-19): the value is already in scope at `:693`, the template already reads it later in the same loop for `#N`, and a context key would put the same arithmetic in two places. `spec/architecture.md`'s fourth seam covers *computed* view shape; a loop position is not that.
-- The palette itself is untouched (2026-09-19). Six tints, same order, same tokens — `spec/color_tokens.md`'s table is a record of values, and this item changes only which instrument gets which.
+- One item rather than two (2026-09-19): the tint reads a column the label's rung creates, so the tint cannot ship first and a shared migration serves both.
+- Stored rather than derived (2026-09-19), accepting the larger diff, because only a stored value is stable in copy that was already written.
+- Backfill with `ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY id)` — one statement, and supported by both SQLite (≥ 3.25) and Postgres 16, so the `ci-postgres` round-trip sees the same thing the suite does.
 
 ### Blast radius (measured)
 
 Run 2026-09-19:
 
-- `grep -rn "instrument_palette" app/ | wc -l` → **2** (the list at `:422`, the use at `:693`)
-- `grep -rln "surface-tint" app/ | wc -l` → **2** (`base.html` defines the six, `instruments_index.html` uses them)
-- `grep -rn "instrument.id - 1" app/ | wc -l` → **1** — the whole behavior change
-- `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0**
-- `grep -rln "surface-tint\|instrument_palette\|Card background colour" spec/ docs/ guide/*.md` → `spec/instruments.md`, `spec/color_tokens.md`
+- `grep -rn "_instrument_label(" app/ --include=*.py | grep -v "def " | wc -l` → **44** across **18** files — **all unchanged**
+- of those, `grep -ci "summary="` → **6** audit summaries; three are reviewer-facing
+- `grep -rn "Instrument_" tests/ --include=*.py | wc -l` → **13** assertions to update
+- `grep -rn "instrument.id - 1" app/ | wc -l` → **1** — the tint
+- `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0** — the tint is unpinned
+- creation paths needing a line: **4** — `_instrument_crud.py` (`ensure_default_instrument`, `create_instrument`, `replicate_instrument`) and `session_config_io/_apply_instrument.py:296`. `session_clone.py` needs none, per Semantics.
 
 ### PR ladder
 
-1. **The re-key and its guard.** `:693` moves to `loop.index0`; a test
-   renders a session whose instruments' ids are deliberately
-   non-contiguous and asserts the tints run in card order, with the
-   id-keyed order as the mutant. Must not touch the palette or
-   `base.html`.
-2. **The close.** `spec/instruments.md`'s "Card background colour"
-   paragraph reversed with its reason, `docs/status.md` row, the five
-   close lines.
+1. **The column.** `session_seq` on the model, the migration with its
+   backfill, the four creation paths, and a test that the clone carries
+   the source's values. Nothing visible changes yet.
+2. **The label.** `_instrument_label` reads `session_seq`; the 13 test
+   assertions move with it. Must not touch the tint.
+3. **The tint.** `:693` keys on `session_seq`, with the id-keyed order
+   as its mutant — the first guard this palette has ever had.
+4. **The close.**
 
 ### Definition of done
 
-- A session whose instrument ids are non-contiguous renders tints 1, 2, 3 in card order.
+- A two-instrument session labels them 1 and 2, whatever their ids.
+- Dragging either one changes neither its label nor its tint.
+- Deleting the first leaves the second reading 2.
+- Cloning a session whose sequence reads 1, 3, 2 reproduces 1, 3, 2.
 - `grep -rn "instrument.id - 1" app/` returns nothing.
-- The guard fails when the keying is restored to `instrument.id`, shown in the PR body.
-- `spec/instruments.md` states the ordinal keying and what it costs on reorder.
+- `alembic downgrade base && alembic upgrade head` round-trips on Postgres 16.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.6` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -915,120 +931,18 @@ Run 2026-09-19:
 
 ### Open questions
 
-1. **Does this land before or after Item 5's captures?** The four
-   `instrument-card-*` pairs Item 5 replaces show the tints. Landing
-   Item 6 after them makes those four stale on the day they ship; the
-   author re-shoots either way, so the only question is when. Author's.
+None — the author answered all three on 2026-09-19: creation order over
+display order, gaps accepted, clone preserves.
 
 ### Out of scope
 
-- The palette's six values, its order, and the dark-mode variants. `spec/color_tokens.md` holds them and nothing here reads them.
-- Tinting anything on the reviewer surface. The palette is used in exactly one template today, and widening it is a design question this item does not open.
+- `short_label`, and the operator-identifier policy reserving `#` for reviewer-facing headings. This item changes what the *fallback* says, not who may use which prefix.
+- The palette's six values and their dark-mode variants — `spec/color_tokens.md` holds them and only *which instrument gets which* moves here.
+- The extracts' `Instrument_{position}` fallback — already per-session, and nothing here reads it.
 
 ### Doc impact
 
 - `docs/status.md` — row when Item 6 lands (Item 6).
-- `spec/instruments.md` — the "Card background colour" paragraph: ordinal keying, and the reorder cost it now accepts (Item 6).
-
----
-
-## Item 7 — The fallback label is workspace-wide too, and it is not one audience
-
-### Opportunity
-
-Author's screenshot, 2026-09-19: two instruments in one session titled
-*Instrument_1* and *Instrument_7*. Same root cause as Item 6 —
-`_state.py::_instrument_label` returns `short_label` or
-`f"Instrument_{instrument.id}"`, and the id counts across the workspace.
-
-**It is computed, not stored.** No migration: nothing persists the
-fallback as a name. But it is baked into copy that *is* stored, which is
-what makes this item unlike Item 6.
-
-Measured 2026-09-19:
-
-- **44 call sites across 18 files** — `grep -rn "_instrument_label(" app/ --include=*.py | grep -v "def " | wc -l`
-- **Six are audit summaries** (`grep … | grep -ci "summary="`), written into `audit_events.summary`, a persisted `String(500)`, at emit time.
-- **Three are reviewer-facing** — `routes_reviewer/_surface/_context.py:263`, `views/_reviewee_results.py:561`, `views/_reviewer_summary.py:424`.
-- **13 test assertions** name `Instrument_` (`grep -rn "Instrument_" tests/ --include=*.py | wc -l`), against the tint's zero.
-
-So the fallback is one function serving three audiences, and the
-docstring's own word for what it provides is **"stable"**. It is not a
-one-line change with a different constant.
-
-### Decision
-
-**Not yet made — this item opens the question rather than answering it.**
-The author's instruction ("should also be scoped per-session") settles
-the operator UI. What it cannot settle by itself is the other two
-audiences, because a per-session ordinal is not stable and two of the
-three callers need stability for different reasons.
-
-The recommendation to be ruled on is a **split by audience**:
-
-| caller | label | why |
-|---|---|---|
-| operator UI (the card title, validation messages) | per-session ordinal | it is what the operator sees beside `#N` and the tint; the screenshot is this case |
-| audit summaries | `Instrument_{id}` | the row is written once and read later, and a reorder must not make it name a different instrument |
-| reviewer surfaces | `#N` already, via `instrument_heading` | these three sites fall back only when there is no heading; they may want the heading's ordinal, not a fourth spelling |
-
-**Rejected — change `_instrument_label` in place.** One edit, 44 sites,
-and the six audit ones would retroactively misidentify instruments after
-any reorder or delete. An audit trail that changes meaning is worse than
-an ugly label.
-
-### Semantics
-
-- **Audit copy is already partly unstable**, which is the strongest argument *against* treating stability as sacred here: `short_label` wins over the fallback and the operator can edit it at any time, so a summary written before a rename already names the old label. The fallback's stability is a property of the *fallback*, not of the summary.
-- **A per-session ordinal in a stored string goes stale on delete**, not just on reorder: deleting instrument 2 leaves every later summary naming a position that has shifted under it.
-- **Italic muted rendering is the point of the fallback** (`spec/instruments.md:274-284`): it reads as a placeholder, nudging the operator to set a short label. Whatever replaces the number keeps that.
-- **The extracts already made this choice** and went the other way: `by_instrument_extract.py:73` returns `f"Instrument_{position}"`, per-session, for file names and meta rows. So the codebase carries both conventions already, split by purpose rather than by accident.
-
-### Judgment calls — decided
-
-- Opened as its own item rather than folded into Item 6 (2026-09-19): one site against 44, zero tests against 13, and Item 6 touches no audience but the operator's eye. Bundling them would put a template one-liner and an audit-trail decision in one review.
-
-### Blast radius (measured)
-
-Run 2026-09-19, commands in **Opportunity** above. Summary: 44 sites /
-18 files / 6 audit summaries / 3 reviewer-facing / 13 test assertions.
-Specs naming the fallback: `spec/instruments.md` (`:274-284`, `:722`),
-`spec/operator_ui_concept.md` (`:318`).
-
-### PR ladder
-
-*Not cut — the ladder depends on the ruling.* If the split is accepted
-it is roughly: a seam that takes the audience, the operator callers
-moved onto it, then audit and reviewer callers left explicitly on the
-id with a comment saying why.
-
-### Definition of done
-
-- The operator card title in a two-instrument session reads 1 and 2, not 1 and 7.
-- Every caller that kept `Instrument_{id}` says in a comment which audience it serves.
-- No audit summary's meaning changes when an instrument is reordered or deleted.
-- `## Doc impact` section present and current
-- `python3 tools/close_check.py 19Q.7` exits 0; any warning adjudicated
-- `spec-writer` run against the doc-impact specs; flags adjudicated
-- `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
-
-### Open questions
-
-1. **Does the split hold, or does the whole fallback go per-session?**
-   The author's. The recommendation above is the split; the cost of not
-   splitting is named in Decision.
-2. **Do the three reviewer-facing callers want `#N` instead?** They fall
-   back where `instrument_heading` gave no title. Author's, and it can
-   be answered after 1.
-
-### Out of scope
-
-- `short_label` itself, and the operator-identifier policy that reserves `#` for reviewer-facing headings. This item changes what the *fallback* says, not who may use which prefix.
-- The extracts' positional fallback. It already does the per-session thing and nothing here reads it.
-
-### Doc impact
-
-- `docs/status.md` — row when Item 7 lands (Item 7).
-- `spec/instruments.md` — the Title bullet's fallback, and the operator-identifier policy restatement at `:722`, once the split is ruled (Item 7).
-- `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 7).
+- `spec/instruments.md` — the Title bullet's fallback (`:274-284`), the operator-identifier restatement (`:722`), and the "Card background colour" paragraph, whose id-keying rationale this item reverses (Item 6).
+- `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 6).
+- `docs/database.md` — the new column (Item 6).
