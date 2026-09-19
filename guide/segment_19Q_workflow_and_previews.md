@@ -1,9 +1,12 @@
 # Segment 19Q — Workflow and preview revamp
 
-Five items, closing independently. Item-level `Doc impact` / `Status`, so
+Six items, closing independently. Item-level `Doc impact` / `Status`, so
 `tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
 2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
-the author delivered a new capture set.
+the author delivered a new capture set — and 6 on 2026-09-19, when a
+question about the instrument tints found both the tint and the fallback
+label keyed workspace-wide. It opened as two items that day and merged
+into one before a rung was cut; see its own note.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -804,3 +807,160 @@ At `ac6d0832`:
 - `docs/status.md` — row when Item 5 lands (Item 5).
 - `spec/setup_pages.md` — the Reviewers page prose, if pair 2's collapse changes what the Guide says the Unlock panel holds (Item 5).
 - `spec/ui_elements.md` — the capture-family counts, if the 6 → 3 narrowing is worth stating (Item 5).
+
+---
+
+
+## Item 6 — An instrument's per-session identity
+
+**Revised at planning time, 2026-09-19, before any rung was cut** — same
+shape as the segment's own 2026-09-17 reversal. The author's three
+requirements: least code change, per-session numbering, and **creation
+order rather than on-screen order**, because instrument drag-and-drop
+already ships (`_instruments_pagination.py:107`), so a position-based
+number moves under the drag. The first draft was two items keyed on
+display position; the tint cannot land before the label's column exists,
+so they are one.
+
+### Opportunity
+
+An instrument's identity is keyed on `Instrument.id`, a workspace-wide
+autoincrement PK, and shown on a per-session page. It surfaces twice:
+
+- **The fallback label.** Author's screenshot, 2026-09-19: two
+  instruments in one session titled *Instrument_1* and *Instrument_7*.
+  `_state.py::_instrument_label` returns `short_label` or
+  `f"Instrument_{instrument.id}"`.
+- **The card tint.** `instruments_index.html:693` keys the background on
+  `instrument_palette[(instrument.id - 1) % instrument_palette | length]`,
+  so ids 47, 48, 51 render tints 5, 6, 3 and two sessions with identical
+  instruments differ by insertion date.
+- **The delete confirmation** (`:4779`), author's screenshot: "Yes,
+  delete **Instrument #1** and its associated assignments…". A third
+  spelling: it keys on `loop.index` so it moves under the drag, it
+  ignores `short_label` so a named instrument is confirmed under a name
+  nobody chose, and its `#` is the prefix the operator-identifier policy
+  reserves for reviewer-facing headings.
+
+**The rule has two implementations.** `_state.py::_instrument_label` is
+the Python copy; `:780` inlines `short_label or "Instrument_" ~ id` for
+the card title the screenshots show. They agree only because both read
+`id`. Measuring the function rather than the rendered text is how 19O.7
+entry 13's sweep missed two strings, and nearly did again here.
+
+Three numbers already describe an instrument and none is a per-session
+identity: `Instrument.id` is workspace-wide, and `Instrument.order` and
+the reviewer's `#N` are per-session but **move on drag**.
+
+### Decision
+
+Add **`Instrument.session_seq`** — an integer set once at creation,
+never updated. The label becomes `f"Instrument_{session_seq}"`; the tint
+keys on the same value. *Instrument_3* then means "the third instrument
+I created in this session", permanently.
+
+**Zero of the label's 44 call sites change.** `_instrument_label`
+takes the instrument and reads a column, so its signature is untouched
+and every caller — including the six audit-summary sites and the three
+reviewer-facing ones — is untouched with it.
+
+**Rejected — derive the rank inside `_instrument_label`.** Smaller and
+migration-free, which is what requirement 1 asks for, and still wrong:
+the number moves on delete instead of on drag, and it moves
+*retroactively inside stored copy* — `audit_events.summary` is a
+persisted `String(500)` with the label baked in at emit time, so a
+summary naming `Instrument_3` would come to mean another instrument.
+
+**Rejected — display position**, this plan's first draft: reorder ships,
+so the number moves whenever the operator drags.
+
+### Semantics
+
+- **Gaps after delete are accepted** (author, 2026-09-19). Delete the
+  second instrument and the labels read 1, 3, 4. That is what a handle
+  that never moves costs, and closing the gap is renumbering.
+- **Reorder never touches `session_seq`.** Display order stays
+  `Instrument.order`; the two are independent by construction.
+- **Clone preserves the source's sequence** (author, 2026-09-19): 1, 3, 2
+  clones to 1, 3, 2. Needs **no code** — `session_clone.py:167` builds the
+  row with `**_column_values(instrument, skip=…)`, copying every mapped
+  column but `id` / `created_at` / `updated_at`. The rung asserts it.
+- **Config import mints a fresh sequence**: the payload keys instruments
+  by `short_label` and carries no ordinal, and adding one to the CSV
+  contract is wider than requirement 1 allows. Recorded so the
+  divergence from clone reads as a decision.
+- **The reviewer's `#N` is unchanged**, still display position via
+  `instrument_heading`. The two mean different things on purpose: `#N` is
+  where you are in the form, `session_seq` is which instrument this is.
+- `short_label` still wins, still muted italic so the fallback reads as
+  a placeholder (`spec/instruments.md:274-284`); tints still wrap at six.
+- **The delete confirmation says what the card title says** — the
+  `short_label` when there is one, `Instrument_{session_seq}` otherwise —
+  so the operator confirms the thing they recognise. Its `#` retires
+  with the change, which is the operator-identifier policy applied
+  rather than a new rule.
+
+### Judgment calls — decided
+
+- One item rather than two (2026-09-19): the tint reads a column the label's rung creates, so the tint cannot ship first and a shared migration serves both.
+- Stored rather than derived (2026-09-19), accepting the larger diff, because only a stored value is stable in copy that was already written.
+- Backfill with `ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY id)` — one statement, and supported by both SQLite (≥ 3.25) and Postgres 16, so the `ci-postgres` round-trip sees the same thing the suite does.
+
+### Blast radius (measured)
+
+Run 2026-09-19:
+
+- `grep -rn "_instrument_label(" app/ --include=*.py | grep -v "def " | wc -l` → **44** across **18** files — **all unchanged**
+- of those, `grep -ci "summary="` → **6** audit summaries; three are reviewer-facing
+- `grep -rn "Instrument_" tests/ --include=*.py | wc -l` → **13** assertions to update
+- `grep -rn 'Instrument_" ~\|Instrument #' app/web/templates/` → **2** rendered spellings outside `_instrument_label` (`:780` the card title, `:4779` the delete confirm) plus one comment
+- `grep -rn "instrument.id - 1" app/ | wc -l` → **1** — the tint
+- `grep -rln "surface-tint\|instrument_palette" tests/ | wc -l` → **0** — the tint is unpinned
+- creation paths needing a line: **4** — `_instrument_crud.py` (`ensure_default_instrument`, `create_instrument`, `replicate_instrument`) and `session_config_io/_apply_instrument.py:296`. `session_clone.py` needs none, per Semantics.
+
+### PR ladder
+
+1. **The column.** `session_seq` on the model, the migration with its
+   backfill, the four creation paths, and a test that the clone carries
+   the source's values. Nothing visible changes yet.
+2. **The label, in all three places it is spelled.**
+   `_instrument_label` reads `session_seq`; `:780`'s inline copy follows
+   it; `:4779`'s confirm drops `loop.index` and the `#` and says what
+   the title says. The 13 test assertions move with them. Must not touch
+   the tint.
+3. **The tint.** `:693` keys on `session_seq`, with the id-keyed order
+   as its mutant — the first guard this palette has ever had.
+4. **The close.**
+
+### Definition of done
+
+- A two-instrument session labels them 1 and 2, whatever their ids.
+- Dragging either one changes neither its label, its tint, nor its delete confirmation.
+- No template spells the fallback independently of `_instrument_label`.
+- Deleting the first leaves the second reading 2.
+- Cloning a session whose sequence reads 1, 3, 2 reproduces 1, 3, 2.
+- `grep -rn "instrument.id - 1" app/` returns nothing.
+- `alembic downgrade base && alembic upgrade head` round-trips on Postgres 16.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None — the author answered all three on 2026-09-19: creation order over
+display order, gaps accepted, clone preserves.
+
+### Out of scope
+
+- `short_label`, and the operator-identifier policy reserving `#` for reviewer-facing headings. This item changes what the *fallback* says, not who may use which prefix.
+- The palette's six values and their dark-mode variants — `spec/color_tokens.md` holds them and only *which instrument gets which* moves here.
+- The extracts' `Instrument_{position}` fallback — already per-session, and nothing here reads it.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 6 lands (Item 6).
+- `spec/instruments.md` — the Title bullet's fallback (`:274-284`), the operator-identifier restatement (`:722`), and the "Card background colour" paragraph, whose id-keying rationale this item reverses (Item 6).
+- `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 6).
+- `docs/database.md` — the new column (Item 6).
