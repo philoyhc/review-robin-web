@@ -434,8 +434,16 @@ def test_lobby_sort_cookie_orders_the_table(client: TestClient) -> None:
     body = client.get("/operator/sessions").text
     client.cookies.delete("rrw-sort-lobby")
 
+    # Scoped to the table body. Indexing the whole page stopped
+    # measuring the table when the filter typeahead landed (19O Item 7
+    # entry 15 rung 2): its `<datalist>` renders every session name
+    # alphabetically, above the table, so `body.index("Aaa Session")`
+    # found an `<option>`. The assertion still read as a sort assertion
+    # while testing the suggestion list's order instead.
+    rows = body.split('<tbody class="rrw-rows">', 1)[1].split("</tbody>", 1)[0]
+
     # Descending by name — "Zzz Session" sorts above "Aaa Session".
-    assert body.index("Zzz Session") < body.index("Aaa Session")
+    assert rows.index("Zzz Session") < rows.index("Aaa Session")
 
 
 def test_archive_selected_archives_draft_and_excludes_from_lobby(

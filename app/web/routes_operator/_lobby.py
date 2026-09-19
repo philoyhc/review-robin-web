@@ -98,6 +98,7 @@ def list_sessions(
         review_sessions, sort_spec, value_resolver=_session_sort_value
     )
     session_ids = [s.id for s in review_sessions]
+    lobby_tags = session_tags.vocabulary(db, session_ids)
     return _templates.TemplateResponse(
         request,
         "operator/sessions_list.html",
@@ -106,7 +107,10 @@ def list_sessions(
             "sessions": review_sessions,
             "lobby_stats": lobby_stats,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
-            "lobby_tags": session_tags.vocabulary(db, session_ids),
+            "lobby_tags": lobby_tags,
+            "filter_options": views.sessions_filter_options(
+                review_sessions, lobby_tags
+            ),
             "breadcrumbs": breadcrumbs.operator_root(),
             "rehydrate_enabled": settings.rehydrate_enabled,
         },
@@ -121,7 +125,7 @@ def archived_sessions(
 ) -> HTMLResponse:
     """The archived-sessions child page (Segment 18A Part 3) — a
     stub: lists the operator's archived sessions. The full surface
-    (Search card, tag-chip info card, bulk-only expander) follows."""
+    (Filter card, tag-chip info card, bulk-only expander) follows."""
     archived = [
         s
         for s in sessions.list_for_user(db, user)
@@ -136,6 +140,7 @@ def archived_sessions(
         archived, sort_spec, value_resolver=_session_sort_value
     )
     session_ids = [s.id for s in archived]
+    archived_tags = session_tags.vocabulary(db, session_ids)
     return _templates.TemplateResponse(
         request,
         "operator/sessions_archived.html",
@@ -143,7 +148,10 @@ def archived_sessions(
             "user": user,
             "sessions": archived,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
-            "archived_tags": session_tags.vocabulary(db, session_ids),
+            "archived_tags": archived_tags,
+            "filter_options": views.sessions_filter_options(
+                archived, archived_tags
+            ),
             "breadcrumbs": breadcrumbs.operator_sessions_child("Archived"),
         },
     )

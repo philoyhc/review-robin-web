@@ -65,9 +65,15 @@
     <div class="card sessions-action-card">
       <h2>Filter</h2>
       <input type="text" class="sessions-search-input"
+             list="lobby-filter-options"
              placeholder="Filter by name, code, or tag"
              aria-label="Filter sessions"
              {% if not has_live %}disabled{% endif %}>
+      <datalist id="lobby-filter-options">
+        {% for value in filter_options %}
+          <option value="{{ value }}"></option>
+        {% endfor %}
+      </datalist>
       <div class="sessions-action-buttons">
         {% if has_live %}
           <button type="button" class="btn secondary"
@@ -763,7 +769,7 @@
 
         var selected = {};   // tag -> true
         var mode = "or";
-        var searchTerm = "";
+        var filterTerm = "";
 
         function load() {
           var raw;
@@ -803,20 +809,50 @@
           return picks.some(function (t) { return tags.indexOf(t) !== -1; });
         }
 
-        function matchesSearch(row) {
-          if (!searchTerm) return true;
-          var hay = (
-            row.cells[0].textContent + " " +
-            row.cells[1].textContent + " " +
-            rowTags(row).join(" ")
-          ).toLowerCase();
-          return hay.indexOf(searchTerm) !== -1;
+        // Per column, unioned — the rule `spec/setup_pages.md` states for
+        // the seven roster and operations filters, now that this one is
+        // named a filter too (19O Item 7 entry 15).
+        //
+        // It concatenated name, code and tags into one haystack and ran
+        // `indexOf`. **Two claims were made about that, and only one
+        // survived being run in Chromium.**
+        //
+        // The live defect is the tags: they matched by *substring*, so
+        // `team a` dragged in a session tagged `team a2` — the collision
+        // whole-value matching exists to prevent, and these two pages
+        // were the only surfaces where it happened. Reproduced, and the
+        // fix reproduced against it.
+        //
+        // The cross-column false positive was **not** real. A term
+        // spanning the name-to-code boundary looked like it should match
+        // the joined string, but `textContent` carries the markup's
+        // indentation, so the haystack reads
+        // `"\n                Spring Review\n               2026-A"` and
+        // `review 2026` is not in it. Nothing an operator can type
+        // bridges that gap. Per-column matching stays, for the two
+        // reasons that survive: it is the documented rule, and it stops
+        // the behaviour depending on template whitespace — reformat
+        // these cells onto one line and the unreachable defect becomes
+        // reachable.
+        function matchesFilter(row) {
+          if (!filterTerm) return true;
+          var name = row.cells[0].textContent.trim().toLowerCase();
+          if (name.indexOf(filterTerm) !== -1) return true;
+          var code = row.cells[1].textContent.trim().toLowerCase();
+          if (code.indexOf(filterTerm) !== -1) return true;
+          // Whole value on tags, case- and surrounding-whitespace-
+          // insensitive. Substring on a name is what makes a partial
+          // name useful; whole value on a tag is what keeps one group
+          // out of another's results.
+          return rowTags(row).some(function (tag) {
+            return tag.trim().toLowerCase() === filterTerm;
+          });
         }
 
         function apply() {
           var visible = 0;
           rows.forEach(function (row) {
-            var show = matchesTags(row) && matchesSearch(row);
+            var show = matchesTags(row) && matchesFilter(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
           });
@@ -881,14 +917,14 @@
 
         if (searchInput) {
           searchInput.addEventListener("input", function () {
-            searchTerm = searchInput.value.trim().toLowerCase();
+            filterTerm = searchInput.value.trim().toLowerCase();
             apply();
           });
         }
         if (filterClear) {
           filterClear.addEventListener("click", function () {
             if (searchInput) searchInput.value = "";
-            searchTerm = "";
+            filterTerm = "";
             apply();
           });
         }

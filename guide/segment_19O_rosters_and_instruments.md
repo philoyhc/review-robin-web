@@ -193,12 +193,25 @@ treatment starts from.
       holds Cancel alone.
     - **`matchesSearch` is byte-identical on both** and concatenates
       before matching — `cells[0] + " " + cells[1] + " " +
-      tags.join(" ")`, then `indexOf`. Two consequences: a term
-      spanning the name→code boundary matches (a session *Spring
-      Review* with code *2026-A* is found by `review 2026`), and tags
-      match by **substring** where `spec/setup_pages.md` specifies
-      whole-value precisely so `Team A` cannot drag in `Team A2`. The
-      lobby and Archive are the only two surfaces where it does.
+      tags.join(" ")`, then `indexOf`. Tags therefore match by
+      **substring** where `spec/setup_pages.md` specifies whole-value
+      precisely so `Team A` cannot drag in `Team A2`; the lobby and
+      Archive are the only two surfaces where it does. **Live, and
+      reproduced in Chromium at rung 2.**
+
+      This entry also claimed a cross-column false positive — a term
+      spanning the name→code boundary matching the joined string. **It
+      does not reproduce**, and the browser check written to prove it
+      passed against the old code too, which is how it was caught.
+      `textContent` carries the markup's indentation, so the haystack
+      reads `"\n                Spring Review\n               2026-A"`
+      and nothing an operator can type bridges that gap. Per-column
+      matching still shipped, on the two reasons that survive: it is
+      the documented rule, and it stops the behaviour depending on
+      template whitespace — reformat those cells onto one line and the
+      unreachable defect becomes reachable. Recorded rather than
+      quietly dropped, because a claim measured false is worth as much
+      as one measured true.
     - **Neither can see the other's half.** The lobby renders
       non-archived only (`_lobby.py:91`), the Archive archived only. An
       operator filtering the lobby for an archived session gets an empty

@@ -27,7 +27,13 @@ from collections.abc import Iterable
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
 
-from app.db.models import Observer, Relationship, Reviewee, Reviewer
+from app.db.models import (
+    Observer,
+    Relationship,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
 
 # Cap for the per-page `<datalist>` autocomplete options. Decision 14
 # in ``guide/segment_15F_enhanced_setup_pages.md`` — the
@@ -715,3 +721,49 @@ def relationships_search_options(
         key=str.casefold,
     )
     return tags + labels[:REVIEWERS_DATALIST_CAP]
+
+
+# Cap for the session half of the Lobby / Archive `<datalist>`, kept
+# separate from the tag half for the reason ``SEARCH_TAG_OPTIONS_CAP``
+# gives (19O Item 7 entry 15). Sessions accumulate where a roster is
+# bounded by one review, so this is the half that grows.
+SESSIONS_DATALIST_CAP: int = 200
+
+
+def sessions_filter_options(
+    rows: list[ReviewSession], tags: Iterable[str]
+) -> list[str]:
+    """Typeahead options for the Lobby and Archive filter boxes: the
+    distinct tag values, then the session names and codes.
+
+    Tags lead for the reason they lead on the roster pages — browsers
+    filter a `<datalist>` in document order, so the partition values
+    stay visible when both halves match.
+
+    **Names and codes are offered as themselves, not as a
+    ``"Name (code)"`` label.** The seven roster and operations boxes
+    offer a combined label and then exact-match the parenthesized
+    handle when the input equals one they offered
+    (`spec/setup_pages.md`). Copying that here would have shipped a
+    suggestion that matches nothing: this filter is client-side and
+    compares per column, so picking ``Spring Review (spring-2026)``
+    would test that whole string against a name column holding
+    ``Spring Review`` and a code column holding ``spring-2026``, and
+    hide every row. Two plain options, each of which matches the
+    column it came from, is what a per-column filter can honour.
+
+    Names and codes share one cap because they are two spellings of one
+    session's identity rather than two kinds of thing; tags keep their
+    own because they are a partition. Duplicates collapse — a session
+    whose name and code are the same string offers one option.
+    """
+    tag_options = _distinct_tag_options(tags)
+    handles = {
+        value.strip()
+        for row in rows
+        for value in (row.name, row.code)
+        if value and value.strip()
+    }
+    return tag_options + sorted(handles, key=str.casefold)[
+        :SESSIONS_DATALIST_CAP
+    ]
