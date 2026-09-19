@@ -1027,12 +1027,29 @@ section **exists**, and §3.2 does. It also caught
 may not also be a reviewee identifier" — the case the rule *permits*,
 the self-review one. Sixth spec file, bullet added.
 
-And `spec/validate_page.md` §2.2's canonical row order named two rows
-that have never been built — Relationships, and an Activation-readiness
-row carrying `_verdict(...)`, which is computed and reaches
-`ValidateContext` but which no template reads. Pre-existing, and this
-close had renumbered around them, which would have read as endorsement.
-Retired from the list, and the real eighth row (Help contact) named.
+And `spec/validate_page.md` §2.2's canonical row order named rows that
+have never been built. Pre-existing, and this close had renumbered
+around them, which would have read as endorsement — so the first fix
+retired **Relationships** and an **Activation readiness** row carrying
+`_verdict(...)` (computed, reaches `ValidateContext`, read by no
+template). Codex on #2486 then found that fix half-done: the list's
+composite opening row, *"Session metadata (name / code / description /
+deadline / help contact)"*, is not a row either — the code emits
+**Session name** and **Session code** separately, and nothing for
+description or deadline — so naming Help contact as the new last row
+duplicated it. The list is now enumerated against `_setup_coverage_rows`
+label by label. **Retiring two entries from a list is not the same as
+checking the list**, which is this item's own lesson arriving once more.
+
+Codex also caught the deferred rehydrate entry understating its own
+exposure. It said a conflicting pair could only arrive by hand-editing
+an extract, since a rehydrate replays a session that passed the check on
+the way in — wrong about exactly the population this item exists for. A
+session built before the guards landed already holds the pair, the
+roster extracts carry the names beside the emails, and rehydrating
+untouched reproduces it. The decision does not move — it creates no
+state the source session was not already in, and the Validate rules
+report it there — but the reason now derives from something.
 
 ### Judgment calls — decided
 

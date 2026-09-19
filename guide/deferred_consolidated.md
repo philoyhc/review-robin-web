@@ -807,12 +807,27 @@ import **routes**. Rehydrate calls `csv_imports.save_reviewers` /
 route and the check has never run on that path — before 19Q
 Item 7 or after it.
 
-**Why it is deferred rather than a defect to fix now.** A
-rehydrate replays an extract of a session that already passed the
-check on its way in, so the only way to import a conflicting pair
-is to hand-edit the extract between the two. The Validate rules
-that shipped in the same item report such a pair on the rebuilt
-session, so it is visible rather than silent.
+**The exposure, stated correctly.** A first draft of this entry
+said a conflicting pair could only arrive by hand-editing the
+extract, because a rehydrate replays a session that already
+passed the check on its way in. That is wrong, and wrong about
+the population this item exists for: a session built before the
+19Q Item 7 guards landed can already hold one mailbox under two
+names, the roster extracts carry `ReviewerName` / `RevieweeName`
+/ `ObserverName` beside the email, and rehydrating that extract
+untouched reproduces the pair. No hand-editing needed. (Found by
+Codex on #2486, which is the third time in this item that a
+claim sounding right turned out to be derived from nothing.)
+
+**Why it is deferred anyway** — author, 2026-09-19. It creates
+no state a session could not already be in: the source session
+holds the pair, and the rehydrated copy holds the same one. The
+three `*.cross_roster_identity` Validate rules that shipped with
+this item report it on the rebuilt session, so it is visible
+rather than silent, and the operator fixing it there fixes it
+for good. What closing this buys is refusing the rehydrate
+rather than reporting afterwards — worth doing, not worth
+widening the item for.
 
 **Ships when taken up.** A call to `check_cross_table_identity`
 per roster inside the rehydrate step, with the whole rehydrate

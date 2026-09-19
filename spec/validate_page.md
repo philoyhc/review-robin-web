@@ -108,28 +108,39 @@ Coverage rows are derived from rules + session state by
 `_setup_coverage_rows` in `app/web/views/_validate.py`. The
 canonical row order:
 
-1. Session metadata (name / code / description / deadline /
-   help contact).
-2. Reviewers (count + duplicate-email count).
-3. Reviewees (count + duplicate-id count).
-4. Observers (count), **only when `observers_enabled`** — a
-   session with observers switched off has no roster to
-   summarise, and a permanently blank row is one the operator
-   learns to skip.
-5. Instruments (count + per-instrument field count).
-6. Assignments (mode + count).
-7. Email template (default + overrides).
-8. Help contact (set / unset).
+One row per `label` emitted by `_setup_coverage_rows`, in the
+order it emits them:
 
-Two rows this list used to name have never been built: a
-**Relationships** row, and an **Activation readiness** row
-carrying `_verdict(...)`. `_verdict` is computed and reaches
+1. **Session name** — the name, or `—`. Carries the
+   `session`-source issue counts.
+2. **Session code** — the code, or `—`. No counts of its own.
+3. **Reviewers** — count, with the `reviewers`-source counts.
+4. **Reviewees** — count, with the `reviewees`-source counts.
+5. **Observers** — count, with the `observers`-source counts.
+   **Only when `observers_enabled`**: a session with observers
+   switched off has no roster to summarise, and a permanently
+   blank row is one the operator learns to skip. Eight rows
+   without it, nine with.
+6. **Instruments** — count, or `—`.
+7. **Assignments** — `{count} · {mode}`, or the count, or `—`.
+8. **Email template** — *Custom overrides* / *Default (no
+   overrides)*. No counts.
+9. **Help contact** — *Set* / `—`. No source, so it never
+   badges and never links.
+
+**Three rows this list used to name do not exist.** It opened
+with a composite *"Session metadata (name / code / description
+/ deadline / help contact)"* where the code emits **Session
+name** and **Session code** as separate rows and nothing for
+description or deadline; and it ended with **Relationships**
+and an **Activation readiness** row carrying `_verdict(...)`.
+`_verdict` is computed and reaches
 `ValidateContext.verdict_line` / `.verdict_class`, but no
 template reads either — the verdict the operator sees is the
-lifecycle copy above the grid. Retired from the list at 19Q
-Item 7's close rather than renumbered around, since a
-canonical order that names rows nobody can find is worse than
-a shorter one.
+lifecycle copy above the grid. Enumerated against the code at
+19Q Item 7's close, after a first pass retired two of the
+three and left the composite standing, which then duplicated
+help contact.
 
 Every issue `source` that can raise an error has a row here, or
 its findings badge nothing on the grid — see §7 step 5. Observers
