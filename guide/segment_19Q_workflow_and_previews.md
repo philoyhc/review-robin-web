@@ -1017,6 +1017,23 @@ that PR, two recorded below. Plus one Codex review on #2485 — one P2,
 real, fixed. Mutation gate ended at 18, all caught. Prose-only rungs
 took no read, per `CLAUDE.md`'s cadence.
 
+The close's `spec-writer` pass found the count wrong again, in the
+other direction: two pointers said `spec/csv_contracts.md` §3.2, which
+is *Relationships*, where they meant §3.1 — propagated from this plan's
+own `Doc impact` bullet, now fixed. `test_doc_conventions.py`'s
+section-reference gate cannot catch it: it checks that the target
+section **exists**, and §3.2 does. It also caught
+`spec/rrw_functional_spec.md` glossing the rule as "a reviewer email
+may not also be a reviewee identifier" — the case the rule *permits*,
+the self-review one. Sixth spec file, bullet added.
+
+And `spec/validate_page.md` §2.2's canonical row order named two rows
+that have never been built — Relationships, and an Activation-readiness
+row carrying `_verdict(...)`, which is computed and reaches
+`ValidateContext` but which no template reads. Pre-existing, and this
+close had renumbered around them, which would have read as endorsement.
+Retired from the list, and the real eighth row (Help contact) named.
+
 ### Judgment calls — decided
 
 - **The write guard fires on any edit to a conflicting row, not only on
@@ -1082,9 +1099,10 @@ took no read, per `CLAUDE.md`'s cadence.
 - `docs/status.md` — row when Item 7 lands (Item 7).
 - `spec/validate_page.md` — the rule registry gains four entries; the §3.2 per-rule table, the §6 anchor table, the §2.2 coverage-row order (which gains Observers), and the counts that quote them (Item 7).
 - `spec/setup_pages.md` — the roster create/edit contracts gain the cross-roster rejection alongside the within-roster one (Item 7).
-- `spec/csv_contracts.md` — §3.2b Observers per-row validation gains the cross-table identity row; §3.2 and the §9 helper table describe the check as two-way, name its parameter `side` where it is `kind`, and gloss it as rejecting a shared email where it rejects a shared email under *different names* (Item 7).
+- `spec/csv_contracts.md` — §3.2b Observers per-row validation gains the cross-roster identity row; §3.1 and the §9 helper table describe the check as two-way, name its parameter `side` where it is `kind`, and gloss it as rejecting a shared email where it rejects a shared email under *different names* (Item 7).
 - `spec/rehydrate.md` — §7 claims rehydrate applies the cross-table identity rules; it calls `csv_imports.save_*` directly and reaches no route, so the check never runs there. Either the sentence goes or the gap is named as deferred (Item 7).
 - `spec/quick_setup_card_spec.md` — the card is described as performing no cross-entity validation; each roster slot now runs the cross-roster identity check (Item 7).
+- `spec/rrw_functional_spec.md` — the common-checks list glosses cross-table identity as "a reviewer email may not also be a reviewee identifier", which is the case the rule permits (Item 7).
 
 ---
 

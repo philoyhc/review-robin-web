@@ -116,12 +116,20 @@ canonical row order:
    session with observers switched off has no roster to
    summarise, and a permanently blank row is one the operator
    learns to skip.
-5. Relationships (count, optional).
-6. Instruments (count + per-instrument field count).
-7. Assignments (mode + count).
-8. Email template (default + overrides).
-9. Activation readiness (overall verdict from
-   `_verdict(error_count, warning_count)`).
+5. Instruments (count + per-instrument field count).
+6. Assignments (mode + count).
+7. Email template (default + overrides).
+8. Help contact (set / unset).
+
+Two rows this list used to name have never been built: a
+**Relationships** row, and an **Activation readiness** row
+carrying `_verdict(...)`. `_verdict` is computed and reaches
+`ValidateContext.verdict_line` / `.verdict_class`, but no
+template reads either — the verdict the operator sees is the
+lifecycle copy above the grid. Retired from the list at 19Q
+Item 7's close rather than renumbered around, since a
+canonical order that names rows nobody can find is worse than
+a shorter one.
 
 Every issue `source` that can raise an error has a row here, or
 its findings badge nothing on the grid — see §7 step 5. Observers

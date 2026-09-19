@@ -380,7 +380,7 @@ both round-trip.
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
-| Cross-roster identity | As §3.2 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. **This importer did not call the check before 19Q Item 7**, on the reasoning that a person can be both an observer and a reviewer by design — true, and never an argument for the exclusion, since the check has always permitted one person in two roles and blocks only two names on one mailbox. |
+| Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. **This importer did not call the check before 19Q Item 7**, on the reasoning that a person can be both an observer and a reviewer by design — true, and never an argument for the exclusion, since the check has always permitted one person in two roles and blocks only two names on one mailbox. |
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
