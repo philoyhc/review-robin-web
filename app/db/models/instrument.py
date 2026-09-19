@@ -36,9 +36,16 @@ def _next_session_seq(context: Any) -> int:
     with the pending parameters, so it reads the ``session_id`` being
     written and never needs the caller to supply a number.
 
-    ``max + 1``, not ``count + 1``: the sequence must not reuse a number
-    after a delete. Deleting the second of three leaves 1, 3 and the
-    next instrument created is 4.
+    ``max + 1``, not ``count + 1``. That makes an *interior* delete
+    safe — remove the second of three and the next created is 4 — but
+    **a trailing delete does hand the number back**: delete the newest
+    of 1, 2, 3 and the next instrument is 3 again. A monotonic sequence
+    needs a high-water mark this column does not keep. Measured, not
+    inferred; pinned by
+    ``test_a_trailing_delete_hands_the_number_back``, and put to the
+    author as open question 1 on 19Q Item 6, because the stored-label
+    decision was made on audit stability and this is the one case that
+    does not deliver it.
 
     The clone path does not reach here — ``session_clone`` copies every
     mapped column, so an explicit ``session_seq`` is already in the
@@ -71,7 +78,7 @@ class Instrument(Base, TimestampMixin):
     )
     """19Q Item 6 — the instrument's per-session identity.
 
-    Assigned once at creation (``instruments.next_session_seq``) and
+    Assigned once at creation (``_next_session_seq`` below) and
     never updated, so it is the operator-facing number in the
     ``Instrument_{N}`` fallback label and the key for the card tint.
     Deliberately *not* ``order``: instrument drag-and-drop ships
@@ -80,7 +87,8 @@ class Instrument(Base, TimestampMixin):
 
     Gaps are expected and correct. Deleting the second of three leaves
     1, 3 — closing the gap would be renumbering, which is the thing a
-    stable handle must not do. Cloning a session copies the value
+    stable handle must not do. See ``_next_session_seq`` for the one
+    case where the handle is *not* stable. Cloning a session copies the value
     verbatim (``session_clone`` copies every mapped column), so a
     source reading 1, 3, 2 reproduces as 1, 3, 2.
 

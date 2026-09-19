@@ -549,7 +549,7 @@ def build_reviewee_results_context(
         # ``instrument_heading`` the reviewer surface + observer
         # collation use, so the same instrument reads identically
         # across every reader surface. Falls back to the operator
-        # label (``Instrument_{id}``) — never the internal ``name`` —
+        # label (``Instrument_{session_seq}``) — never the internal ``name`` —
         # when the reviewer-facing title is empty (single-instrument,
         # no short_label, no description).
         heading_title = (

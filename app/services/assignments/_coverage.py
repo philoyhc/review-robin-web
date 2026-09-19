@@ -450,18 +450,24 @@ def _code_point(db: Session, expression):
 
 def _instrument_label_sql(instrument):
     """The SQL form of ``instruments._instrument_label``: the trimmed
-    ``short_label`` when it holds anything, else ``Instrument_{id}``.
+    ``short_label`` when it holds anything, else
+    ``Instrument_{session_seq}``.
 
     Kept beside the Python original rather than derived from it,
-    because there is no way to derive it — and pinned against it by
-    ``tests/unit/test_pair_sort_sql.py`` so the two cannot drift.
+    because there is no way to derive it. It said it was "pinned
+    against it by ``tests/unit/test_pair_sort_sql.py`` so the two
+    cannot drift" — that file has never mentioned an instrument, and
+    the two did drift: 19Q Item 6 rung 2 moved the Python form onto
+    ``session_seq`` and left this one on ``id``, so the page sorted by
+    a string it no longer displayed. ``test_instrument_session_seq.py``
+    now pins them together for real.
     """
     trimmed = func.trim(func.coalesce(instrument.short_label, ""))
     return case(
         (trimmed != "", trimmed),
         # ``||`` on both dialects: SQLite only grew a ``concat()``
         # function in 3.44, and the operator has always worked.
-        else_=literal("Instrument_") + cast(instrument.id, String),
+        else_=literal("Instrument_") + cast(instrument.session_seq, String),
     )
 
 

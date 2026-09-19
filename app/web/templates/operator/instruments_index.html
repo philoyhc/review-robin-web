@@ -168,7 +168,7 @@
       font-weight: 500;
       color: var(--text-subtle);
     }
-    /* Operator-only ``Instrument_{id}`` fallback on the card
+    /* Operator-only ``Instrument_{session_seq}`` fallback on the card
        title — rendered when no short_label is set. Styled muted
        + italic so it reads as a placeholder nudging the operator
        to set a proper short label rather than as a chosen name. */
@@ -690,7 +690,14 @@
          data-instrument-card="{{ instrument.id }}"
          data-instrument-locked="{{ 'false' if is_editing else 'true' }}"
          {% if is_editing %}data-instrument-editing="true"{% endif %}
-         style="background: {{ instrument_palette[(instrument.id - 1) % instrument_palette | length] }};">
+         {# 19Q Item 6 rung 3 — keyed on ``session_seq``, the same
+            number the card title shows, so the tint means something
+            the operator can read. It was ``instrument.id - 1``, a
+            workspace-wide autoincrement, which made the run arbitrary
+            within a session and different between two sessions
+            holding identical instruments. Not the display position:
+            drag-and-drop ships, and the tint must not move under it. #}
+         style="background: {{ instrument_palette[(instrument.session_seq - 1) % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
       {# New-model card — concept-test layout for the Instrument
          Builder (guide/instrument_builder.md). Identity at the
@@ -751,7 +758,7 @@
                 aria-hidden="true">&#8942;&#8942;</span>
           {# Card title: per the 2026-05-28 operator-identifier
              policy, the title shows the operator-facing
-             ``short_label`` with the ugly ``Instrument_{id}``
+             ``short_label`` with the ugly ``Instrument_{session_seq}``
              fallback that nudges the operator to set a proper
              short label. The ``#`` prefix is reserved for the
              reviewer-facing ``#{N}: …`` heading rendered inside
@@ -777,7 +784,7 @@
                view span from the input when the card locks. #}
             <span data-card-title-view data-lock-only
                   class="{% if not instrument.short_label %}card-title-fallback{% endif %}"
-                  style="min-width: 0;">{{ instrument_labels[instrument.id] }}</span>
+                  style="min-width: 0;">{{ instrument_label(instrument) }}</span>
             <input type="text"
                    data-card-title-input data-unlock-only
                    form="dfsave-{{ instrument.id }}" name="short_label"
@@ -4783,7 +4790,7 @@
              facing heading. It also ignored ``short_label``, so a
              named instrument was confirmed under a name nobody
              chose. #}
-          Yes, delete <strong>{{ instrument_labels[instrument.id] }}</strong> and its associated assignments and reviewer responses.
+          Yes, delete <strong>{{ instrument_label(instrument) }}</strong> and its associated assignments and reviewer responses.
         </label>
       </p>
       </details>

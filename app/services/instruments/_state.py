@@ -45,7 +45,7 @@ def _instrument_label(instrument: Instrument) -> str:
     validation error messages, and operator-page UI sites that need a
     stable human-readable handle for an instrument.
 
-    **Per-session since 19Q Item 6.** It was ``Instrument_{id}``, and
+    **Per-session since 19Q Item 6.** It was ``Instrument_{session_seq}``, and
     ``id`` is a workspace-wide autoincrement, so one session could hold
     ``Instrument_1`` and ``Instrument_7``. ``session_seq`` is assigned
     once at creation and never updated, so the handle is stable in the
@@ -56,7 +56,7 @@ def _instrument_label(instrument: Instrument) -> str:
     ``spec/instruments.md``): the ``#`` prefix is
     reserved for reviewer-facing position numbering
     (``#{N}: {short_label}``); operator-facing UI uses short_label
-    with the ``Instrument_{id}`` fallback. ``description`` and the
+    with the ``Instrument_{session_seq}`` fallback. ``description`` and the
     auto-generated ``name`` handle no longer participate in the
     chain — ``description`` is reviewer-instructional copy and
     shouldn't silently become an operator label; ``name`` is now

@@ -131,7 +131,7 @@ _templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
 # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
 _templates.env.globals["progress_pill"] = views.progress_pill
 # Operator-facing instrument label resolver
-# (``short_label > Instrument_{id}`` per the 2026-05-28 operator-
+# (``short_label > Instrument_{session_seq}`` per the 2026-05-28 operator-
 # identifier policy in ``spec/instruments.md``). Registered as a
 # Jinja global so operator templates can call ``instrument_label(...)``
 # inline without the view shape having to pre-compute every cell.
