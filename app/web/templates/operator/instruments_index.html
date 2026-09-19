@@ -168,7 +168,7 @@
       font-weight: 500;
       color: var(--text-subtle);
     }
-    /* Operator-only ``Instrument_{id}`` fallback on the card
+    /* Operator-only ``Instrument_{session_seq}`` fallback on the card
        title — rendered when no short_label is set. Styled muted
        + italic so it reads as a placeholder nudging the operator
        to set a proper short label rather than as a chosen name. */
@@ -758,7 +758,7 @@
                 aria-hidden="true">&#8942;&#8942;</span>
           {# Card title: per the 2026-05-28 operator-identifier
              policy, the title shows the operator-facing
-             ``short_label`` with the ugly ``Instrument_{id}``
+             ``short_label`` with the ugly ``Instrument_{session_seq}``
              fallback that nudges the operator to set a proper
              short label. The ``#`` prefix is reserved for the
              reviewer-facing ``#{N}: …`` heading rendered inside
@@ -784,7 +784,7 @@
                view span from the input when the card locks. #}
             <span data-card-title-view data-lock-only
                   class="{% if not instrument.short_label %}card-title-fallback{% endif %}"
-                  style="min-width: 0;">{{ instrument_labels[instrument.id] }}</span>
+                  style="min-width: 0;">{{ instrument_label(instrument) }}</span>
             <input type="text"
                    data-card-title-input data-unlock-only
                    form="dfsave-{{ instrument.id }}" name="short_label"
@@ -4790,7 +4790,7 @@
              facing heading. It also ignored ``short_label``, so a
              named instrument was confirmed under a name nobody
              chose. #}
-          Yes, delete <strong>{{ instrument_labels[instrument.id] }}</strong> and its associated assignments and reviewer responses.
+          Yes, delete <strong>{{ instrument_label(instrument) }}</strong> and its associated assignments and reviewer responses.
         </label>
       </p>
       </details>

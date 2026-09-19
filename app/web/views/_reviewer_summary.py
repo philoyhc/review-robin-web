@@ -412,7 +412,7 @@ def build_reviewer_summary_context(
         # collation use rather than re-implementing it, so the
         # reviewer reads the same heading on the summary they read
         # on the form. Falls back to the operator label
-        # (``Instrument_{id}``) — never the internal ``name`` — when
+        # (``Instrument_{session_seq}``) — never the internal ``name`` — when
         # the reviewer-facing title is empty, so the card always has
         # *some* heading.
         heading_title = (

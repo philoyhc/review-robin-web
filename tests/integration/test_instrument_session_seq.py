@@ -329,7 +329,13 @@ def test_no_template_spells_the_fallback_itself() -> None:
         f"{path.relative_to(root)}:{n}"
         for path in root.rglob("*.html")
         for n, line in enumerate(comment.sub("", path.read_text()).split("\n"), 1)
-        if re.search(r'"Instrument_"\s*~|Instrument_\{\{|Instrument #\{\{', line)
+        # Both quote styles — Jinja takes either, and this template
+        # uses single quotes elsewhere (`:422`) — plus the ``%`` form.
+        if re.search(
+            r'''["']Instrument_["']\s*~|["']Instrument_%s["']|'''
+            r'''Instrument_\{\{|Instrument #\{\{''',
+            line,
+        )
     ]
     assert offenders == [], offenders
 
@@ -439,3 +445,80 @@ def test_the_palette_wraps_past_six(client: TestClient, db: Session) -> None:
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     assert _rendered_tints(body) == [1, 2, 3, 4, 5, 6, 1]
+
+
+# --------------------------------------------------------------------------- #
+# What the item's cumulative cold read found
+# --------------------------------------------------------------------------- #
+
+
+def test_a_trailing_delete_hands_the_number_back(db: Session) -> None:
+    """The one case where the handle is not stable, pinned as it is.
+
+    `max + 1` makes an interior delete safe and a trailing one not:
+    delete the newest of 1, 2, 3 and the next created is 3 again. The
+    sibling test above pins the interior case and passed while this
+    one was unwritten, which is how the model docstring came to claim
+    the sequence "never reuses a number".
+
+    Recorded rather than fixed: a monotonic sequence needs a
+    high-water mark the column does not keep, and adding one is the
+    author's call (19Q Item 6, open question 1).
+    """
+    review_session, op = _session(db, "seq-trail")
+    for _ in range(2):
+        crud.create_instrument(db, review_session=review_session, actor=op)
+    db.flush()
+    assert _seqs(db, review_session.id) == [1, 2, 3]
+
+    newest = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.session_seq == 3)
+    ).scalar_one()
+    crud.delete_instrument(db, instrument=newest, actor=op)
+    db.flush()
+
+    crud.create_instrument(db, review_session=review_session, actor=op)
+    db.flush()
+    assert _seqs(db, review_session.id) == [1, 2, 3], (
+        "a trailing delete no longer hands the number back — if this is "
+        "now monotonic, the model docstring and 19Q Item 6 need updating "
+        "to say so"
+    )
+
+
+def test_the_sql_label_and_the_python_label_agree(db: Session) -> None:
+    """The gate `_instrument_label_sql`'s docstring claimed to have.
+
+    The Assignments page sorts by the SQL form and renders the Python
+    one. They drifted at rung 2 — the SQL stayed on `id` — so the
+    server ordered by a string the page no longer displayed, and with
+    ids 9 and 47 the string collation inverts the visible order.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.services.assignments._coverage import _instrument_label_sql
+    from app.services.instruments import _instrument_label
+
+    first, op = _session(db, "sqllbl-a")
+    second, _ = _session(db, "sqllbl-b")
+    crud.create_instrument(db, review_session=second, actor=op)
+    crud.create_instrument(db, review_session=first, actor=op)
+    db.flush()
+    named = db.execute(
+        select(Instrument).where(Instrument.session_id == first.id)
+    ).scalars().first()
+    named.short_label = "Peer feedback"
+    db.flush()
+
+    rows = db.execute(
+        sa_select(Instrument, _instrument_label_sql(Instrument))
+        .where(Instrument.session_id == first.id)
+        .order_by(Instrument.id)
+    ).all()
+    assert rows, "no instruments — the comparison would be vacuous"
+    for instrument, sql_label in rows:
+        assert sql_label == _instrument_label(instrument)
+    # And the fallback really is exercised, not just the short_label arm.
+    assert any(lbl.startswith("Instrument_") for _, lbl in rows)

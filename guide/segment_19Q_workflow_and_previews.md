@@ -904,7 +904,7 @@ so the number moves whenever the operator drags.
 
 - One item rather than two (2026-09-19): the tint reads a column the label's rung creates, so the tint cannot ship first and a shared migration serves both.
 - Stored rather than derived (2026-09-19), accepting the larger diff, because only a stored value is stable in copy that was already written.
-- Backfill with `ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY id)` — one statement, and supported by both SQLite (≥ 3.25) and Postgres 16, so the `ci-postgres` round-trip sees the same thing the suite does.
+- Backfill with a correlated `COUNT` rather than the planned `ROW_NUMBER() OVER (...)` (revised at build): landing a window function's result needs `UPDATE ... FROM`, which SQLite only gained in 3.33, while the correlated form is plain SQL-92 and runs the same on both.
 
 ### Blast radius (measured)
 
@@ -939,7 +939,7 @@ Run 2026-09-19:
 - No template spells the fallback independently of `_instrument_label`.
 - Deleting the first leaves the second reading 2.
 - Cloning a session whose sequence reads 1, 3, 2 reproduces 1, 3, 2.
-- `grep -rn "instrument.id - 1" app/` returns nothing.
+- `grep -rn "instrument.id - 1" app/` returns only the comment recording what the tint keying replaced.
 - `alembic downgrade base && alembic upgrade head` round-trips on Postgres 16.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Q.6` exits 0; any warning adjudicated
@@ -949,8 +949,19 @@ Run 2026-09-19:
 
 ### Open questions
 
-None — the author answered all three on 2026-09-19: creation order over
-display order, gaps accepted, clone preserves.
+1. **A trailing delete hands the number back.** `max + 1` makes an
+   interior delete safe and the newest one not: delete the newest of
+   1, 2, 3 and the next instrument created is 3 again. Found by the
+   item's cumulative cold read, measured, and pinned as it stands. It
+   matters because the stored-label decision was made *on audit
+   stability* — a summary naming `Instrument_3` can come to name a
+   different instrument, which is the harm that rejected the
+   derive-at-read-time alternative. **Recommendation: make it
+   monotonic** with a per-session high-water mark; the cost is a second
+   column and a migration, against requirement 1. Author's.
+
+The three that existed at planning time were answered on 2026-09-19:
+creation order over display order, gaps accepted, clone preserves.
 
 ### Out of scope
 
@@ -963,4 +974,5 @@ display order, gaps accepted, clone preserves.
 - `docs/status.md` — row when Item 6 lands (Item 6).
 - `spec/instruments.md` — the Title bullet's fallback (`:274-284`), the operator-identifier restatement (`:722`), and the "Card background colour" paragraph, whose id-keying rationale this item reverses (Item 6).
 - `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 6).
+- `spec/setup_pages.md` — the delete-confirmation pattern it holds up as the exemplar for four other pages' copy, which still quotes the retired `Instrument #1` (Item 6).
 - `docs/database.md` — the new column (Item 6).
