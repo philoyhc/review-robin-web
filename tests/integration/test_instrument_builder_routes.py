@@ -184,7 +184,10 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     assert "Visibility when closed:" not in body
     assert "Show all when closed" not in body
     instrument = _instrument(db, review_session.id)  # noqa: F841
-    assert "Instrument #1" in body
+    # 19Q Item 6 rung 2 — the operator-facing handle is
+    # ``Instrument_{session_seq}``; ``#`` is reserved for the
+    # reviewer-facing heading.
+    assert f"Instrument_{instrument.session_seq}" in body
 
 
 def test_legacy_per_instrument_get_redirects_to_consolidated(

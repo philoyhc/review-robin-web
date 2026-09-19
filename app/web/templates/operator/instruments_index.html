@@ -777,7 +777,7 @@
                view span from the input when the card locks. #}
             <span data-card-title-view data-lock-only
                   class="{% if not instrument.short_label %}card-title-fallback{% endif %}"
-                  style="min-width: 0;">{{ instrument.short_label or "Instrument_" ~ instrument.id }}</span>
+                  style="min-width: 0;">{{ instrument_labels[instrument.id] }}</span>
             <input type="text"
                    data-card-title-input data-unlock-only
                    form="dfsave-{{ instrument.id }}" name="short_label"
@@ -4776,7 +4776,14 @@
           <input type="checkbox" name="confirm" value="true" required
                  form="instrument-delete-{{ instrument.id }}"
                  {% if delete_disabled %}disabled{% else %}data-delete-confirm="{{ instrument.id }}"{% endif %}>
-          Yes, delete <strong>Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
+          {# 19Q Item 6 rung 2 — the same handle the card title shows.
+             It was ``Instrument #{{ loop.index }}``: the display
+             position, which moves under a drag, and a ``#`` the
+             operator-identifier policy reserves for the reviewer-
+             facing heading. It also ignored ``short_label``, so a
+             named instrument was confirmed under a name nobody
+             chose. #}
+          Yes, delete <strong>{{ instrument_labels[instrument.id] }}</strong> and its associated assignments and reviewer responses.
         </label>
       </p>
       </details>

@@ -40,13 +40,20 @@ def _instrument_label(instrument: Instrument) -> str:
     """Operator-facing label for an instrument.
 
     Returns ``short_label`` when the operator has set one, else the
-    ugly fallback ``"Instrument_{id}"`` that nudges the operator to
-    set a proper short label. Used by audit-event copy, validation
-    error messages, and operator-page UI sites that need a stable
-    human-readable handle for an instrument.
+    ugly fallback ``"Instrument_{session_seq}"`` that nudges the
+    operator to set a proper short label. Used by audit-event copy,
+    validation error messages, and operator-page UI sites that need a
+    stable human-readable handle for an instrument.
+
+    **Per-session since 19Q Item 6.** It was ``Instrument_{id}``, and
+    ``id`` is a workspace-wide autoincrement, so one session could hold
+    ``Instrument_1`` and ``Instrument_7``. ``session_seq`` is assigned
+    once at creation and never updated, so the handle is stable in the
+    audit summaries it is written into — which is why it is not the
+    display position, and why a reorder does not touch it.
 
     Per the 2026-05-28 operator-identifier policy (see
-    ``spec/instruments.md`` "Identifiers"): the ``#`` prefix is
+    ``spec/instruments.md``): the ``#`` prefix is
     reserved for reviewer-facing position numbering
     (``#{N}: {short_label}``); operator-facing UI uses short_label
     with the ``Instrument_{id}`` fallback. ``description`` and the
@@ -62,7 +69,7 @@ def _instrument_label(instrument: Instrument) -> str:
     short = (instrument.short_label or "").strip()
     if short:
         return short
-    return f"Instrument_{instrument.id}"
+    return f"Instrument_{instrument.session_seq}"
 
 
 def _response_count_for_field(db: Session, field_id: int) -> int:
