@@ -181,7 +181,7 @@ state (`app/web/views/_workflow_card.py`), and the template appends its
 help-line *after* the body branch instead of in place of it. So `4W` is State
 4 with the overlay on, and `5W` and `6W` exist and are reachable. The overlay
 adds three things — the help-line under the body, the warning / info pill row
-and per-issue list in the right column, and the warnings detour on **Activate
+and the Validate link in the right column, and the warnings detour on **Activate
 session** ("Warnings detour" below) — and changes no button's visibility,
 because `send_invites_visible` reads invitation state alone.
 
@@ -413,8 +413,9 @@ which runs three steps in sequence:
    clean and the session is still `draft`,
    `lifecycle.mark_validated(...)` flips `draft → validated`.
    When the report has errors, the chain stops here — assignment
-   pairs survive, the session stays in `draft`, and the right-
-   column issue list surfaces the diagnostic.
+   pairs survive, the session stays in `draft`, and the right
+   column reports the counts and links to Validate for the
+   diagnostic.
 3. **Invite.** `invitations.generate_invitations(...)` —
    idempotently creates one `Invitation` row per eligible
    reviewer (assigned, with at least one `include=True`
@@ -704,8 +705,8 @@ id="next-action-status">` block. It carries up to two layers,
 stacked top-to-bottom:
 
 1. **Per-state status detail** — a heading + content block
-   (checklist, issue list, or short status copy), keyed on the
-   workflow state.
+   (checklist, validation counts + Validate link, or short status
+   copy), keyed on the workflow state.
 2. **Signal lines** — inline icon-prefixed paragraphs (no
    background, no border). Up to four lines render depending on
    the data; they're driven by `super_failure`,
@@ -731,9 +732,9 @@ item; there's no separate heading row.
 | --- | --- |
 | **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
 | **2** (draft, not yet validated) | (no detail) |
-| **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by the per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
+| **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
 | **4** (validated, no invites) | **Status** — "Setup validated." |
-| **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + per-issue list. |
+| **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + Validate link. |
 | **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
 | **6** (validated + invites sent) | Same as State 4 — **Status** — "Setup validated." |
 | **7** (ready, no invitations yet) | (no detail) |
@@ -742,8 +743,10 @@ item; there's no separate heading row.
 | **10** (expired) | (no detail) |
 
 **Under the `W` overlay** the "Setup validated." line is followed by a
-per-warning pill row and the per-issue list inline, so the operator sees what
-they're about to acknowledge before clicking the detour. That block hangs off
+per-warning pill row and the Validate link, so the operator can see how much
+they're about to acknowledge before clicking the detour — and read what, on
+Validate. (The left column's help-line already says "review on Validate before
+activating", so the overlay names Validate in both columns.) That block hangs off
 the shared `is_validated` + `can_activate` branch, so it renders over States 4,
 5 and 6 alike — not over 4Err, which takes the State 3 shape above instead.
 
@@ -791,8 +794,9 @@ session", `precondition` → "pre-flight check"), and **the step
 phrase is suppressed when it repeats the button label** — "Close session failed at the Close
 session." says nothing twice. The error detail (when
 present) renders inline below the headline. State 3 / 4Err
-issue lists continue to render in the per-state detail block —
-the failure signal doesn't suppress them.
+validation counts and their Validate link continue to render in
+the per-state detail block — the failure signal doesn't suppress
+them.
 
 #### Scheduled-activation signal
 
@@ -910,7 +914,8 @@ the corresponding child page; values outside the allowlist
 ## Source-of-truth pointers
 
 - Partial: `app/web/templates/operator/partials/next_action_card.html`
-- Right-column issue list partial:
+- Right-column Validate-link partial (named for the issue list it
+  rendered until 19Q Item 4):
   `app/web/templates/operator/partials/_next_action_issue_list.html`
 - Context builder: `app/web/views/_workflow_card.py`
 - Prepare + Activate routes: `app/web/routes_operator/_workflow.py`

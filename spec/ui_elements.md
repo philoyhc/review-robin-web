@@ -389,6 +389,26 @@ border, single-line label. **Roles differ by token, not by shape**, so a
 role change is a colour change and nothing else. If a button does not fit
 one of the five, ask before inventing a sixth.
 
+**A `.btn` never extends past its container** (author's contract,
+2026-09-19). The mechanism is `box-sizing: border-box` on the base `.btn`
+rule, and it is stated here because the default is a trap rather than a
+neutral choice: `<button>` inherits `border-box` from the UA stylesheet
+and `<a>` does not, and this sheet has no global reset. So the two forms
+of the same role sized differently the moment either was given a width —
+a `width: 100%` `a.btn` in a grid track overflowed it by its 32px of
+padding and 2px of border, which is how the Workflow card's fourth slot
+came to sit outside its own column (19Q Item 4). Only an *explicit* width
+does this: flex and grid account for padding and border themselves.
+`tests/unit/test_btn_box_model.py` pins both halves — the base rule
+carries `border-box`, and nothing anywhere takes it away.
+
+A `.btn` can still overflow the one way the box model cannot reach: a
+grid item never shrinks below its longest unbreakable word, whatever
+`min-width` says. Measured on the Workflow card's four-slot row, that
+bites below a 400px viewport — outside the range this sheet has
+breakpoints for, and narrow-viewport support is a separate spec
+(`visual_style_general.md`).
+
 | Class | Role | Notes |
 |---|---|---|
 | `.btn` (no modifier) | **Primary** | `--btn-primary-bg` fill, `--btn-primary-fg` label, `--btn-primary-border` border. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |

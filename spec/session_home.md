@@ -188,11 +188,13 @@ Notes specific to Session Home:
   one. Email and reviewer-surface previews are reached from an Invitations
   per-reviewer drill-in once assignments exist; Home does not add a second
   door.
-- **Status pills + per-issue list live in the right column**, not
-  the body. States 3 and 5 surface the readiness pill row
-  (`pill-error` / `pill-empty` / `pill-count`) and per-issue list
-  in the right-column `.next-action-status` aside; the left
-  column carries prose only. See `spec/workflow_card.md`
+- **Status pills live in the right column**, not the body. States
+  3 and 5 surface the readiness pill row (`pill-error` /
+  `pill-empty` / `pill-count`) in the right-column
+  `.next-action-status` aside, followed by a single link to the
+  Validate page; the left column carries prose only. Home reports
+  *how many*, Validate reports *which* — the column stopped
+  enumerating the issues at 19Q Item 4. See `spec/workflow_card.md`
   "Right column — per state".
 - **`expired` and `archived` are live states**, and the card's
   behaviour in each is `spec/workflow_card.md`'s State 10 and the
@@ -457,7 +459,7 @@ page reuses the same class without further design work.
 |---|---|---|---|
 | `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
 | `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + per-issue list | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + Validate link | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Revert to draft first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
