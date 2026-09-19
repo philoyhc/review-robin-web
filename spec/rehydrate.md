@@ -325,9 +325,17 @@ forbidden cells serialize as empty and parse back to "off".
 
 1. **Reviewers / Reviewees / Observers** via `csv_imports.save_reviewers`
    / `save_reviewees` / `save_observers` (observers only if enabled). Same
-   dedup + email-lowercasing + cross-table-identity rules as normal
-   import; `reviewees` keep their `email_or_identifier` (non-email handles
-   allowed).
+   dedup + email-lowercasing rules as normal import; `reviewees` keep
+   their `email_or_identifier` (non-email handles allowed).
+
+   **The cross-roster identity check does not run here**, and never
+   has — this step calls the `save_*` functions directly, while the
+   check sits on the import routes. The sentence above said it did
+   until 19Q Item 7 found otherwise. Deferred rather than closed: the
+   rehydrated session can hold a conflicting pair, but only one its
+   source already held, and the `*.cross_roster_identity` Validate
+   rules report it there. Tracked in
+   `guide/deferred_consolidated.md`.
 2. **Relationships** (if enabled) via `relationships.save_relationships`,
    resolving emails against the just-imported rosters.
 3. **Assignments** — regenerate from the imported rule sets via the

@@ -108,16 +108,43 @@ Coverage rows are derived from rules + session state by
 `_setup_coverage_rows` in `app/web/views/_validate.py`. The
 canonical row order:
 
-1. Session metadata (name / code / description / deadline /
-   help contact).
-2. Reviewers (count + duplicate-email count).
-3. Reviewees (count + duplicate-id count).
-4. Relationships (count, optional).
-5. Instruments (count + per-instrument field count).
-6. Assignments (mode + count).
-7. Email template (default + overrides).
-8. Activation readiness (overall verdict from
-   `_verdict(error_count, warning_count)`).
+One row per `label` emitted by `_setup_coverage_rows`, in the
+order it emits them:
+
+1. **Session name** — the name, or `—`. Carries the
+   `session`-source issue counts.
+2. **Session code** — the code, or `—`. No counts of its own.
+3. **Reviewers** — count, with the `reviewers`-source counts.
+4. **Reviewees** — count, with the `reviewees`-source counts.
+5. **Observers** — count, with the `observers`-source counts.
+   **Only when `observers_enabled`**: a session with observers
+   switched off has no roster to summarise, and a permanently
+   blank row is one the operator learns to skip. Eight rows
+   without it, nine with.
+6. **Instruments** — count, or `—`.
+7. **Assignments** — `{count} · {mode}`, or the count, or `—`.
+8. **Email template** — *Custom overrides* / *Default (no
+   overrides)*. No counts.
+9. **Help contact** — *Set* / `—`. No source, so it never
+   badges and never links.
+
+**Three rows this list used to name do not exist.** It opened
+with a composite *"Session metadata (name / code / description
+/ deadline / help contact)"* where the code emits **Session
+name** and **Session code** as separate rows and nothing for
+description or deadline; and it ended with **Relationships**
+and an **Activation readiness** row carrying `_verdict(...)`.
+`_verdict` is computed and reaches
+`ValidateContext.verdict_line` / `.verdict_class`, but no
+template reads either — the verdict the operator sees is the
+lifecycle copy above the grid. Enumerated against the code at
+19Q Item 7's close, after a first pass retired two of the
+three and left the composite standing, which then duplicated
+help contact.
+
+Every issue `source` that can raise an error has a row here, or
+its findings badge nothing on the grid — see §7 step 5. Observers
+became such a source at 19Q Item 7 and gained this row with it.
 
 Each row's status string is a short prose summary (e.g.
 *"5 reviewers"*, *"2 instruments, 3 + 4 fields"*) — the
@@ -216,6 +243,10 @@ first duplicate row's `#reviewer-row-{id}`).
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
+| `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. The page's job is to report, and observers were the one roster it had nothing to report with (19Q Item 7). |
+| `reviewers.cross_roster_identity` | reviewers | error | A reviewer's email is held in another roster under a *different* name. |
+| `reviewees.cross_roster_identity` | reviewees | error | As above, for a reviewee. |
+| `observers.cross_roster_identity` | observers | error | As above, for an observer. |
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
 | `instruments.no_rule_pinned` | instruments | warning | **Inert by design** — raises no findings, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap. The key stays registered so audit history remains addressable. |
 | `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. |
@@ -228,6 +259,39 @@ first duplicate row's `#reviewer-row-{id}`).
 | `instruments.stale_generated` | instruments | warning | One per instrument whose materialised rows have fallen out of step with what the engine would produce now — the pinned rule changed, or the rosters or relationships moved after Generate. The verdict is the engine's own reconcile diff, so it cannot disagree with what Generate would do. A never-generated instrument is **not** flagged here: a run would insert its whole fan-out, and an always-on warning is one the operator learns to ignore — the `assignments.*` empty rules carry that case. |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
 | `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
+
+#### Cross-roster identity — three rules, one generator
+
+One mailbox under two names is one person recorded twice, and
+nothing downstream can tell which spelling is right: results,
+collation and the reviewer's own surface all key on the email.
+Reviewer / reviewee overlap itself is legitimate and stays so — a
+self-review is exactly that — as long as the name agrees.
+
+The write paths refuse such a pair
+(`csv_imports.cross_table_identity_conflict`, from every
+create / edit service and every roster importer); these rules
+find the pairs a session already held when they started refusing.
+
+- **Both sides are reported**, each under its own roster with its
+  own row anchor, because neither row is known to be the wrong
+  one. Hence three registered rules over one generator rather
+  than one session-wide rule: a `ValidationRule` carries a single
+  `fix_url` for every issue it emits, so one rule would send two
+  of every three findings to the wrong roster page.
+- **A within-roster pair is not reported here.** Two reviewers on
+  one mailbox is `reviewers.duplicate_email`'s finding alone; one
+  problem must not read as two under one heading.
+- **A row that cannot disagree is skipped** —
+  `csv_imports.is_comparable_identity`, the same predicate the
+  write guards apply: an identifier with no `@` (an anonymous
+  reviewee handle is not a mailbox) and a row with no name
+  (`Observer.display_name` is nullable, and a missing name is not
+  a different one).
+- **Comparison** is `normalize_email` on the mailbox and exact on
+  the stored name. Exact means case-sensitive; it is never
+  whitespace-sensitive, because every path trims a name before
+  storing it.
 
 Severity guidance:
 
@@ -329,6 +393,8 @@ the issue points at a specific row. Conventions:
 |---|---|---|
 | `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email` |
 | `reviewees` (row-specific) | `#reviewee-row-{id}` | `_check_reviewees_duplicate_id` |
+| `observers` (row-specific) | `#observer-row-{id}` | `_check_observers_duplicate_email` |
+| any roster (row-specific) | that roster's row anchor | `_cross_roster_identity_issues`, via the three `*.cross_roster_identity` rules |
 | `instruments` (row-specific) | `#instrument-{id}` | per-rule |
 | Whole-page rules | empty anchor — `fix_url` lands the operator on the right page without scrolling. |
 

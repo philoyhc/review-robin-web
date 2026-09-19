@@ -321,7 +321,7 @@ banner-error.
 | Required cell present | Empty `ReviewerName` / `ReviewerEmail` / `RevieweeName` / `RevieweeEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings on the email columns. Reviewees skip this check when the cell isn't an email (non-email identifier). |
 | Within-file duplicates | Same `ReviewerEmail` / `RevieweeEmail` twice → per-row error on the second occurrence. |
-| Cross-table identity | `check_cross_table_identity` rejects a Reviewer + Reviewee with the same email (would break the self-review predicate). |
+| Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way since 19Q Item 7: each roster is compared against the other two, observers included. |
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `PhotoLink` may be absent. An absent column is `None` for every
@@ -380,6 +380,7 @@ both round-trip.
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
+| Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. **This importer did not call the check before 19Q Item 7**, on the reasoning that a person can be both an observer and a reviewer by design — true, and never an argument for the exclusion, since the check has always permitted one person in two roles and blocks only two names on one mailbox. |
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
@@ -553,7 +554,9 @@ shares. Public surface:
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
 | `_parse_email(value, *, field, row_number)` | Email validation with row-context error message. Used on `ReviewerEmail`, `RevieweeEmail` (when the cell is an email), and `ReviewerEmail` / `RevieweeEmail` in the Relationships importer. |
-| `check_cross_table_identity(db, session_id, rows, *, side)` | Cross-table guard — rejects a Reviewer with the same email as a Reviewee in the same session. |
+| `check_cross_table_identity(db, session_id, rows, *, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
+| `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |
+| `is_comparable_identity(identifier, name)` | Whether a pair can disagree with another at all — an identifier with no `@`, or a row with no name, cannot. One predicate for the importers, the services and the Validate rules. |
 
 ---
 

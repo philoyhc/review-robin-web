@@ -959,86 +959,97 @@ joining costs more than a third branch:
   report, not the behaviour.
 - `spec/validate_page.md` mentions the two duplicate rules **5** times.
 
-### Status
+### Status — intended vs done
 
-**Rung 1** (#2484) landed piece 1 as planned. Two findings worth
-carrying:
+**Closed 2026-09-19.** Three rungs as planned: #2484 (piece 1),
+#2485 (pieces 2 + 3, plus the two reads below), this close.
 
-- Open question 2's premise was false, and the test written to pin the
-  answer is what found it — see the struck question.
-- The rung's diff perturbed `ci-postgres` into failing a *pre-existing*
-  false green: `test_clone_preserves_the_source_sequence` asserted an
-  order `clone_session` never guaranteed, which SQLite grants an
-  unordered `SELECT` and Postgres does not. Fixed in the same PR
-  (`sorted()`), and the lesson applied forward — rung 2's two new
-  queries carry an explicit `ORDER BY` so "the first duplicate's row"
-  is a fact rather than a dialect's habit.
+**The ladder held; two counts in it did not.**
 
-**Rung 2 landed four rules, not two.** The blast radius counted the
-*pieces* (cross-roster, observer duplicates) and assumed one rule each.
-Cross-roster identity needs three, one per roster, because a rule
-carries a single `fix_url` for every issue it emits: a session-wide rule
-would send two of every three findings to the wrong page, and would
-badge the Setup-coverage matrix's "Session name" row with a roster
-problem. One generator, three thin registrations — the registry goes
-18 → 22. Nothing about intent moved; only the count did.
+- **Four Validate rules, not two.** The blast radius counted the
+  *pieces* and assumed one rule each. A `ValidationRule` carries one
+  `fix_url` for every issue it emits, so cross-roster identity needs
+  one rule per roster or two of every three findings link to the wrong
+  page. One generator, three registrations; registry 18 → 22.
+- **Two more spec files than `Doc impact` named** — `spec/csv_contracts.md`
+  (which owns the importer's per-row tables and had the helper's
+  signature and its two-way gloss wrong) and `spec/rehydrate.md`.
+  Both added, both honoured.
 
-Both sides of a conflict are reported, each under its own roster with
-its own row anchor, because neither row is known to be the wrong one.
-A within-roster pair stays `*.duplicate_email`'s finding alone.
+**Scope that moved.** The Setup-coverage grid gained an Observers row,
+gated on `observers_enabled`: the rules made `observers` an issue
+source, and a source with no row badges nothing on the at-a-glance grid
+(`spec/validate_page.md` §7 step 5 makes this the last step of adding a
+rule). Not in the ladder; owed by it.
 
-**The item's cold read** (cumulative, base `a699432a`) returned ten
-findings; eight were real and six are fixed in rung 2. Two are notable
-beyond their fix:
+**Decisions confirmed at build.**
 
-- **The rung-1 docstring reversal reached one of its two copies.**
-  `_setup_observers.py` was rewritten at length; `_quick_setup.py` kept
-  the sentence saying observers are excluded, five lines above the call
-  that includes them. The rung-1 commit message said "the docstring",
-  singular, and was right about the file it had edited. Same short-count
-  shape as Item 4's, and the same lesson: a claim about "the" copy of
-  anything is a claim nothing derives.
-- **`_identity_holders` kept whichever holder it saw last, unordered.**
-  Its docstring defended that on the ground that two rosters holding one
-  email must already agree — true across rosters, false within one,
-  since reviewers and reviewees carry no DB uniqueness on
-  `(session_id, email)`. So which name a 400 cited was the dialect's
-  choice, in operator-facing copy — the *same* lesson rung 1's CI
-  failure taught, applied at rung 2 only to its own new queries.
+- Both sides of a cross-roster conflict are reported, each under its own
+  roster with its own row anchor — neither row is known to be the wrong
+  one. A within-roster pair stays `*.duplicate_email`'s alone.
+- The membership predicate (`is_comparable_identity`) has one home. Rung
+  1 left it in two copies and rung 2 would have made three, which is the
+  defect `Decision` rejects by name, one level down.
+- Rehydrate's gap is deferred, not closed — author, 2026-09-19. Entry in
+  `guide/deferred_consolidated.md`; `spec/rehydrate.md` §6.3 corrected.
 
-  The first fix was `ORDER BY id`, and the mutation gate rejected it:
-  deleting the clause changed nothing, because SQLite hands an
-  unordered `SELECT` back in insertion order. A clause the suite cannot
-  see the absence of is a guarantee on Postgres and a decoration here.
-  The second was to pick in Python — highest `id` wins — against a
-  query ordered *descending*, so the regression differed from the rule
-  under the order the tests run.
+**One error, three times: reaching for the database to settle a question
+the values answer.** Rung 1's CI failure was a pre-existing assertion on
+an order nothing guaranteed. Rung 2 then (a) added `ORDER BY id` to
+`_identity_holders`, which the mutation gate rejected — deleting the
+clause changed nothing, because SQLite hands an unordered `SELECT` back
+in insertion order; (b) picked in Python against a descending query, so
+the regression at least differed from the rule; and (c) after Codex
+found that *picking at all* was the bug — a mailbox already holding two
+names accepted a row matching the chosen one, the rule failing open on
+exactly the legacy sessions this item is for — kept every holder and
+made any disagreement a conflict. Which holder a message cites is now
+presentation, decided from the values.
 
-  **Codex then found that picking at all was the bug** (#2485, P2).
-  Collapsing a mailbox to one holder let a new row matching *that*
-  holder through while another still disagreed — the rule failing open,
-  on exactly the legacy sessions this item exists for. And the pick
-  compared a `Reviewer.id` against an `Observer.id`, which are
-  table-local and say nothing about which row came first, so it was not
-  selecting what its docstring claimed. Every holder is kept now and
-  **any** disagreement is a conflict; which one the 400 cites is
-  presentation, decided from the values (roster order, then name).
-  Nothing depends on query order any more.
+The generalisable half is (a): **a clause the suite cannot see the
+absence of is not a fix.** Where one buys only issue ordering
+(`validation._identity_holders_by_email`) it stays, with a comment
+saying no test covers it.
 
-  Three attempts, and the useful shape is that each was a smaller
-  version of the same error — reaching for the database to settle a
-  question the values already answer. Where the clause buys only issue
-  ordering (`validation._identity_holders_by_email`) it stays, with a
-  comment saying plainly that no test covers it.
+**Reads.** One `diff-reviewer` pass, cumulative from `a699432a` at rung
+2, the item's last build rung: ten findings, eight real, six fixed in
+that PR, two recorded below. Plus one Codex review on #2485 — one P2,
+real, fixed. Mutation gate ended at 18, all caught. Prose-only rungs
+took no read, per `CLAUDE.md`'s cadence.
 
-Also fixed: the reviewees finding named an `email` column reviewees do
-not have; the `observers` issue source had no Setup-coverage row, so an
-error badged nothing on the at-a-glance grid (`spec/validate_page.md`
-§7 step 5) — added, gated on `observers_enabled`; and the membership
-predicate, which rung 1 left in two copies and rung 2 would have made
-three, is now one `csv_imports.is_comparable_identity` that the Validate
-rule imports. Two spec files the diff governs were missing from
-`Doc impact` and have been added.
+The close's `spec-writer` pass found the count wrong again, in the
+other direction: two pointers said `spec/csv_contracts.md` §3.2, which
+is *Relationships*, where they meant §3.1 — propagated from this plan's
+own `Doc impact` bullet, now fixed. `test_doc_conventions.py`'s
+section-reference gate cannot catch it: it checks that the target
+section **exists**, and §3.2 does. It also caught
+`spec/rrw_functional_spec.md` glossing the rule as "a reviewer email
+may not also be a reviewee identifier" — the case the rule *permits*,
+the self-review one. Sixth spec file, bullet added.
+
+And `spec/validate_page.md` §2.2's canonical row order named rows that
+have never been built. Pre-existing, and this close had renumbered
+around them, which would have read as endorsement — so the first fix
+retired **Relationships** and an **Activation readiness** row carrying
+`_verdict(...)` (computed, reaches `ValidateContext`, read by no
+template). Codex on #2486 then found that fix half-done: the list's
+composite opening row, *"Session metadata (name / code / description /
+deadline / help contact)"*, is not a row either — the code emits
+**Session name** and **Session code** separately, and nothing for
+description or deadline — so naming Help contact as the new last row
+duplicated it. The list is now enumerated against `_setup_coverage_rows`
+label by label. **Retiring two entries from a list is not the same as
+checking the list**, which is this item's own lesson arriving once more.
+
+Codex also caught the deferred rehydrate entry understating its own
+exposure. It said a conflicting pair could only arrive by hand-editing
+an extract, since a rehydrate replays a session that passed the check on
+the way in — wrong about exactly the population this item exists for. A
+session built before the guards landed already holds the pair, the
+roster extracts carry the names beside the emails, and rehydrating
+untouched reproduces it. The decision does not move — it creates no
+state the source session was not already in, and the Validate rules
+report it there — but the reason now derives from something.
 
 ### Judgment calls — decided
 
@@ -1088,14 +1099,10 @@ rule imports. Two spec files the diff governs were missing from
 1. ~~Do observers join the cross-roster check?~~ **Yes** — author,
    2026-09-19. The check goes three-way; see `Decision`.
 2. ~~Is the name comparison exact, trimmed, or case-insensitive?~~
-   **Exact** — author, 2026-09-19. Inherited becomes chosen. **The
-   question was posed on a false premise**: it offered "trimmed" as an
-   alternative to "exact", but every path already trims a name before
-   comparing (`_cell`; each service's `_normalised_name`), so the live
-   rule was *exact on trimmed values* all along. Exact means
-   case-sensitive; surrounding whitespace was never a difference and the
-   plan's claim that `"Aisha Haddad "` fails today was wrong. Found at
-   rung 1 by the test written to pin it.
+   **Exact** — author, 2026-09-19; inherited becomes chosen. Posed on a
+   false premise, which the test written to pin the answer found: every
+   path already trims, so the live rule was *exact on trimmed values*
+   all along — case-sensitive, never whitespace-sensitive.
 
 ### Out of scope
 
@@ -1109,8 +1116,10 @@ rule imports. Two spec files the diff governs were missing from
 - `docs/status.md` — row when Item 7 lands (Item 7).
 - `spec/validate_page.md` — the rule registry gains four entries; the §3.2 per-rule table, the §6 anchor table, the §2.2 coverage-row order (which gains Observers), and the counts that quote them (Item 7).
 - `spec/setup_pages.md` — the roster create/edit contracts gain the cross-roster rejection alongside the within-roster one (Item 7).
-- `spec/csv_contracts.md` — §3.2b Observers per-row validation gains the cross-table identity row; §3.2 and the §9 helper table describe the check as two-way, name its parameter `side` where it is `kind`, and gloss it as rejecting a shared email where it rejects a shared email under *different names* (Item 7).
+- `spec/csv_contracts.md` — §3.2b Observers per-row validation gains the cross-roster identity row; §3.1 and the §9 helper table describe the check as two-way, name its parameter `side` where it is `kind`, and gloss it as rejecting a shared email where it rejects a shared email under *different names* (Item 7).
 - `spec/rehydrate.md` — §7 claims rehydrate applies the cross-table identity rules; it calls `csv_imports.save_*` directly and reaches no route, so the check never runs there. Either the sentence goes or the gap is named as deferred (Item 7).
+- `spec/quick_setup_card_spec.md` — the card is described as performing no cross-entity validation; each roster slot now runs the cross-roster identity check (Item 7).
+- `spec/rrw_functional_spec.md` — the common-checks list glosses cross-table identity as "a reviewer email may not also be a reviewee identifier", which is the case the rule permits (Item 7).
 
 ---
 

@@ -2010,8 +2010,12 @@ then refresh" loop. Common checks:
 
 - Required columns present.
 - Email format and within-file uniqueness.
-- Cross-table identity (a reviewer email may not also be a
-  reviewee identifier, and vice versa).
+- Cross-roster identity (a mailbox may not be held in two
+  rosters under two different **names**). Holding it twice is
+  fine and common — one person is often both reviewer and
+  reviewee, which is the self-review case; only the names
+  disagreeing is an error. Three-way across reviewers,
+  reviewees and observers since 19Q Item 7.
 - Foreign-key resolution (a Relationships row's reviewer/
   reviewee emails must exist on the rosters).
 - Enum membership (status must be `active` or `inactive`).
