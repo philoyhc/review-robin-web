@@ -1,10 +1,11 @@
 # Segment 19Q — Workflow and preview revamp
 
-Six items, closing independently. Item-level `Doc impact` / `Status`, so
+Seven items, closing independently. Item-level `Doc impact` / `Status`, so
 `tools/close_check.py 19Q.1` reads Item 1's. Items 4 and 5 were added
 2026-09-18 — 4 after Item 3's own recapture showed the defect, 5 when
-the author delivered a new capture set — and 6 on 2026-09-19, when a
-question about the instrument tints found them keyed workspace-wide.
+the author delivered a new capture set — and 6 and 7 on 2026-09-19,
+when a question about the instrument tints found both the tint and the
+fallback label keyed workspace-wide.
 
 Opened 2026-09-17, after 19P.6 landed the per-reviewer operator view and
 19P Item 7 measured when each door to it is open.
@@ -928,3 +929,106 @@ Run 2026-09-19:
 
 - `docs/status.md` — row when Item 6 lands (Item 6).
 - `spec/instruments.md` — the "Card background colour" paragraph: ordinal keying, and the reorder cost it now accepts (Item 6).
+
+---
+
+## Item 7 — The fallback label is workspace-wide too, and it is not one audience
+
+### Opportunity
+
+Author's screenshot, 2026-09-19: two instruments in one session titled
+*Instrument_1* and *Instrument_7*. Same root cause as Item 6 —
+`_state.py::_instrument_label` returns `short_label` or
+`f"Instrument_{instrument.id}"`, and the id counts across the workspace.
+
+**It is computed, not stored.** No migration: nothing persists the
+fallback as a name. But it is baked into copy that *is* stored, which is
+what makes this item unlike Item 6.
+
+Measured 2026-09-19:
+
+- **44 call sites across 18 files** — `grep -rn "_instrument_label(" app/ --include=*.py | grep -v "def " | wc -l`
+- **Six are audit summaries** (`grep … | grep -ci "summary="`), written into `audit_events.summary`, a persisted `String(500)`, at emit time.
+- **Three are reviewer-facing** — `routes_reviewer/_surface/_context.py:263`, `views/_reviewee_results.py:561`, `views/_reviewer_summary.py:424`.
+- **13 test assertions** name `Instrument_` (`grep -rn "Instrument_" tests/ --include=*.py | wc -l`), against the tint's zero.
+
+So the fallback is one function serving three audiences, and the
+docstring's own word for what it provides is **"stable"**. It is not a
+one-line change with a different constant.
+
+### Decision
+
+**Not yet made — this item opens the question rather than answering it.**
+The author's instruction ("should also be scoped per-session") settles
+the operator UI. What it cannot settle by itself is the other two
+audiences, because a per-session ordinal is not stable and two of the
+three callers need stability for different reasons.
+
+The recommendation to be ruled on is a **split by audience**:
+
+| caller | label | why |
+|---|---|---|
+| operator UI (the card title, validation messages) | per-session ordinal | it is what the operator sees beside `#N` and the tint; the screenshot is this case |
+| audit summaries | `Instrument_{id}` | the row is written once and read later, and a reorder must not make it name a different instrument |
+| reviewer surfaces | `#N` already, via `instrument_heading` | these three sites fall back only when there is no heading; they may want the heading's ordinal, not a fourth spelling |
+
+**Rejected — change `_instrument_label` in place.** One edit, 44 sites,
+and the six audit ones would retroactively misidentify instruments after
+any reorder or delete. An audit trail that changes meaning is worse than
+an ugly label.
+
+### Semantics
+
+- **Audit copy is already partly unstable**, which is the strongest argument *against* treating stability as sacred here: `short_label` wins over the fallback and the operator can edit it at any time, so a summary written before a rename already names the old label. The fallback's stability is a property of the *fallback*, not of the summary.
+- **A per-session ordinal in a stored string goes stale on delete**, not just on reorder: deleting instrument 2 leaves every later summary naming a position that has shifted under it.
+- **Italic muted rendering is the point of the fallback** (`spec/instruments.md:274-284`): it reads as a placeholder, nudging the operator to set a short label. Whatever replaces the number keeps that.
+- **The extracts already made this choice** and went the other way: `by_instrument_extract.py:73` returns `f"Instrument_{position}"`, per-session, for file names and meta rows. So the codebase carries both conventions already, split by purpose rather than by accident.
+
+### Judgment calls — decided
+
+- Opened as its own item rather than folded into Item 6 (2026-09-19): one site against 44, zero tests against 13, and Item 6 touches no audience but the operator's eye. Bundling them would put a template one-liner and an audit-trail decision in one review.
+
+### Blast radius (measured)
+
+Run 2026-09-19, commands in **Opportunity** above. Summary: 44 sites /
+18 files / 6 audit summaries / 3 reviewer-facing / 13 test assertions.
+Specs naming the fallback: `spec/instruments.md` (`:274-284`, `:722`),
+`spec/operator_ui_concept.md` (`:318`).
+
+### PR ladder
+
+*Not cut — the ladder depends on the ruling.* If the split is accepted
+it is roughly: a seam that takes the audience, the operator callers
+moved onto it, then audit and reviewer callers left explicitly on the
+id with a comment saying why.
+
+### Definition of done
+
+- The operator card title in a two-instrument session reads 1 and 2, not 1 and 7.
+- Every caller that kept `Instrument_{id}` says in a comment which audience it serves.
+- No audit summary's meaning changes when an instrument is reordered or deleted.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19Q.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Does the split hold, or does the whole fallback go per-session?**
+   The author's. The recommendation above is the split; the cost of not
+   splitting is named in Decision.
+2. **Do the three reviewer-facing callers want `#N` instead?** They fall
+   back where `instrument_heading` gave no title. Author's, and it can
+   be answered after 1.
+
+### Out of scope
+
+- `short_label` itself, and the operator-identifier policy that reserves `#` for reviewer-facing headings. This item changes what the *fallback* says, not who may use which prefix.
+- The extracts' positional fallback. It already does the per-session thing and nothing here reads it.
+
+### Doc impact
+
+- `docs/status.md` — row when Item 7 lands (Item 7).
+- `spec/instruments.md` — the Title bullet's fallback, and the operator-identifier policy restatement at `:722`, once the split is ruled (Item 7).
+- `spec/operator_ui_concept.md` — the fallback mention at `:318` (Item 7).
