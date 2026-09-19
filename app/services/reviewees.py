@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
-from app.services import audit
+from app.services import audit, csv_imports
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -149,6 +149,21 @@ def create_reviewee(
             f"{clean_identifier!r}.",
         )
 
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=review_session.id,
+        kind="reviewees",
+        identifier=clean_identifier,
+        name=clean_name,
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise RevieweeOperationError(
+            "cross_table_identity",
+            f"{clean_identifier!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
+
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -253,6 +268,28 @@ def update_reviewee(
                 f"Another reviewee in this session already uses "
                 f"{proposed['email_or_identifier']!r}.",
             )
+
+    # Keyed on the resulting pair, so a name-only edit is caught too —
+    # the within-roster gate above can only see an identifier edit.
+    final_identifier = proposed.get(
+        "email_or_identifier", reviewee.email_or_identifier
+    )
+    final_name = proposed.get("name", reviewee.name)
+
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=reviewee.session_id,
+        kind="reviewees",
+        identifier=final_identifier,  # type: ignore[arg-type]
+        name=final_name,  # type: ignore[arg-type]
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise RevieweeOperationError(
+            "cross_table_identity",
+            f"{final_identifier!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
 
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():

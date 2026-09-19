@@ -29,7 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
-from app.services import audit
+from app.services import audit, csv_imports
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -141,6 +141,21 @@ def create_reviewer(
             f"Another reviewer in this session already uses {clean_email!r}.",
         )
 
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=review_session.id,
+        kind="reviewers",
+        identifier=clean_email,
+        name=clean_name,
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise ReviewerOperationError(
+            "cross_table_identity",
+            f"{clean_email!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
+
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -240,6 +255,28 @@ def update_reviewer(
                 f"Another reviewer in this session already uses "
                 f"{proposed['email']!r}.",
             )
+
+    # The conflict depends on the resulting (email, name) pair, so this
+    # runs whether the operator edited the email, the name, or both —
+    # unlike the within-roster gate above, which only an email edit can
+    # trip. Renaming a reviewer into disagreement with the reviewee
+    # sharing its mailbox is the case that guard cannot see.
+    final_email = proposed.get("email", reviewer.email)
+    final_name = proposed.get("name", reviewer.name)
+    conflict = csv_imports.cross_table_identity_conflict(
+        db,
+        session_id=reviewer.session_id,
+        kind="reviewers",
+        identifier=final_email,  # type: ignore[arg-type]
+        name=final_name,  # type: ignore[arg-type]
+    )
+    if conflict is not None:
+        holder_label, holder_name = conflict
+        raise ReviewerOperationError(
+            "cross_table_identity",
+            f"{final_email!r} is already used by {holder_label} "
+            f"{holder_name!r} in this session — names must match.",
+        )
 
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():

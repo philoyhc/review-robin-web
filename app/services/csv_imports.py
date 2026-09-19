@@ -583,83 +583,186 @@ def parse_observer_csv(content: bytes) -> ParseResult:
     return ParseResult(rows=parsed, issues=issues)
 
 
+#: Per roster: the model, its identity attribute, its name attribute,
+#: and the label a message uses for it. The import-row classes spell the
+#: same two fields differently, so each carries its own pair.
+_IDENTITY_ROSTERS: dict[str, dict[str, str]] = {
+    "reviewers": {
+        "model_attr": "email",
+        "row_attr": "email",
+        "name_attr": "name",
+        "row_name_attr": "name",
+        "label": "reviewer",
+        "field": "ReviewerEmail",
+    },
+    "reviewees": {
+        "model_attr": "email_or_identifier",
+        "row_attr": "email_or_identifier",
+        "name_attr": "name",
+        "row_name_attr": "name",
+        "label": "reviewee",
+        "field": "RevieweeEmail",
+    },
+    "observers": {
+        "model_attr": "email",
+        "row_attr": "email",
+        "name_attr": "display_name",
+        "row_name_attr": "display_name",
+        "label": "observer",
+        "field": "ObserverEmail",
+    },
+}
+
+_IDENTITY_MODELS = {
+    "reviewers": Reviewer,
+    "reviewees": Reviewee,
+    "observers": Observer,
+}
+
+
+def _identity_holders(
+    db: Session, *, session_id: int, exclude: str
+) -> dict[str, tuple[str, str]]:
+    """``{normalized email: (roster label, name)}`` for every roster but
+    ``exclude``, within one session.
+
+    Two kinds of row are skipped, for the same reason — they cannot
+    disagree with a name:
+
+    * an identifier with no ``@`` (a reviewee's anonymous handle in the
+      asymmetric mode, which is not a mailbox and cannot collide with
+      one);
+    * a row whose name is unset. ``Observer.display_name`` is nullable
+      and its CSV column optional, where ``Reviewer.name`` and
+      ``Reviewee.name`` are not — so without this an unnamed observer
+      would conflict with every reviewer sharing its mailbox (19Q Item
+      7, the author's two answers interacting).
+
+    When two rosters already hold one email they must already agree, each
+    having been checked as it was added, so keeping whichever is seen
+    last is equivalent. Legacy rows that disagree are the Validate rule's
+    to report, not this function's — it runs on the way in.
+    """
+    holders: dict[str, tuple[str, str]] = {}
+    for roster, spec in _IDENTITY_ROSTERS.items():
+        if roster == exclude:
+            continue
+        model = _IDENTITY_MODELS[roster]
+        for row in (
+            db.execute(select(model).where(model.session_id == session_id))
+            .scalars()
+            .all()
+        ):
+            identifier = getattr(row, spec["model_attr"]) or ""
+            name = getattr(row, spec["name_attr"])
+            if "@" not in identifier or not name:
+                continue
+            holders[normalize_email(identifier)] = (spec["label"], name)
+    return holders
+
+
+def cross_table_identity_conflict(
+    db: Session, *, session_id: int, kind: str, identifier: str, name: str
+) -> tuple[str, str] | None:
+    """The ``(roster label, name)`` already holding ``identifier`` under
+    a *different* name, or ``None``.
+
+    The single-row form of :func:`check_cross_table_identity`, for the
+    create / edit services. Both call it, so the rule has one home —
+    19Q Item 7 exists because the rule had one home and only the CSV
+    path could reach it.
+
+    A row of the same ``kind`` never conflicts: the whole roster is
+    excluded, which is also why an edit does not collide with itself.
+    Within-roster duplicates are each service's own ``_email_taken`` /
+    ``_identifier_taken`` guard.
+    """
+    if kind not in _IDENTITY_ROSTERS:
+        raise ValueError(
+            f"cross_table_identity_conflict: unknown kind {kind!r}; "
+            f"expected one of {sorted(_IDENTITY_ROSTERS)}"
+        )
+    if "@" not in (identifier or "") or not name:
+        return None
+    held = _identity_holders(
+        db, session_id=session_id, exclude=kind
+    ).get(normalize_email(identifier))
+    if held is None or held[1] == name:
+        return None
+    return held
+
+
 def check_cross_table_identity(
     db: Session,
     *,
     session_id: int,
-    rows: list[ReviewerImportRow] | list[RevieweeImportRow],
+    rows: list[ReviewerImportRow]
+    | list[RevieweeImportRow]
+    | list[ObserverImportRow],
     kind: str,
 ) -> list[ValidationIssue]:
-    """Block CSV uploads where a row's email is already present in the
-    *other* table (within the same session) under a different name.
+    """Block CSV uploads where a row's email is already present in
+    *another* roster (within the same session) under a different name.
 
-    Email is the unique person-identifier across both tables; name is
-    just the human-facing label. Same email + same name across tables
-    is allowed (the person is both reviewer and reviewee, common in
-    peer review). Same email + different name is a blocking error.
+    Email is the unique person-identifier across the three rosters; name
+    is the human-facing label. Same email + same name is allowed — one
+    person is commonly both reviewer and reviewee, and may observe too.
+    Same email + different name is a blocking error.
 
-    Reviewees without an ``@`` in their identifier are skipped — those
-    are non-email handles in the asymmetric mode and can't collide
-    with reviewer emails by construction. When the symmetric mode
-    lands (see ``spec/preview_hub.md``), every reviewee will have a
-    real email and this filter becomes a no-op.
+    **Names compare exactly** (author's ruling, 2026-09-19), as this
+    function has always done; what changed is that the rule is now
+    chosen rather than inherited. Exact means **case-sensitive** — and
+    not whitespace-sensitive, because every path trims a name long
+    before it arrives here (`_cell` on the CSV side, each service's
+    `_normalised_name`). A first draft of this docstring claimed a
+    trailing space would conflict; the test that went looking for it
+    found 303.
+
+    **Three-way since 19Q Item 7** (author, 2026-09-19). It compared
+    reviewers against reviewees and back, and observers took part in
+    neither direction — nor did the observer CSV import call this at
+    all. Each kind now compares against the other two.
+
+    An unrecognised ``kind`` raises. It used to fall through both
+    branches and return ``[]``, so an observer CSV routed here would
+    have been checked, found nothing, and reported success — a guard
+    that passes by not running.
     """
+    spec = _IDENTITY_ROSTERS.get(kind)
+    if spec is None:
+        raise ValueError(
+            f"check_cross_table_identity: unknown kind {kind!r}; "
+            f"expected one of {sorted(_IDENTITY_ROSTERS)}"
+        )
+
+    holders = _identity_holders(db, session_id=session_id, exclude=kind)
     issues: list[ValidationIssue] = []
-    if kind == "reviewers":
-        existing = {
-            normalize_email(r.email_or_identifier): r.name
-            for r in db.execute(
-                select(Reviewee).where(Reviewee.session_id == session_id)
+    for index, row in enumerate(rows, start=1):
+        identifier = getattr(row, spec["row_attr"]) or ""
+        if "@" not in identifier:
+            continue
+        name = getattr(row, spec["row_name_attr"])
+        if not name:
+            continue
+        held = holders.get(normalize_email(identifier))
+        if held is None:
+            continue
+        holder_label, holder_name = held
+        if holder_name == name:
+            continue
+        issues.append(
+            ValidationIssue(
+                severity=Severity.error,
+                source=kind,
+                row_number=index,
+                field=spec["field"],
+                message=(
+                    f"{spec['field']} '{identifier}' is already used by "
+                    f"{holder_label} '{holder_name}' in this session — "
+                    f"names must match (got '{name}')."
+                ),
             )
-            .scalars()
-            .all()
-            if "@" in r.email_or_identifier
-        }
-        for index, row in enumerate(rows, start=1):
-            assert isinstance(row, ReviewerImportRow)
-            prior_name = existing.get(normalize_email(row.email))
-            if prior_name is not None and prior_name != row.name:
-                issues.append(
-                    ValidationIssue(
-                        severity=Severity.error,
-                        source="reviewers",
-                        row_number=index,
-                        field="ReviewerEmail",
-                        message=(
-                            f"ReviewerEmail '{row.email}' is already used by "
-                            f"reviewee '{prior_name}' in this session — "
-                            f"names must match (got '{row.name}')."
-                        ),
-                    )
-                )
-    elif kind == "reviewees":
-        existing = {
-            normalize_email(r.email): r.name
-            for r in db.execute(
-                select(Reviewer).where(Reviewer.session_id == session_id)
-            )
-            .scalars()
-            .all()
-        }
-        for index, row in enumerate(rows, start=1):
-            assert isinstance(row, RevieweeImportRow)
-            if "@" not in row.email_or_identifier:
-                continue
-            prior_name = existing.get(normalize_email(row.email_or_identifier))
-            if prior_name is not None and prior_name != row.name:
-                issues.append(
-                    ValidationIssue(
-                        severity=Severity.error,
-                        source="reviewees",
-                        row_number=index,
-                        field="RevieweeEmail",
-                        message=(
-                            f"RevieweeEmail '{row.email_or_identifier}' is already "
-                            f"used by reviewer '{prior_name}' in this session — "
-                            f"names must match (got '{row.name}')."
-                        ),
-                    )
-                )
+        )
     return issues
 
 
