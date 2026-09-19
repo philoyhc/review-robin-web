@@ -713,8 +713,10 @@ no template can widen that: **0** of the 79 anchors carry an inline
 
 ### Status
 
-**Rung 1 landed 2026-09-19.** Two CSS lines and a unit guard; no
-template changed.
+**Rung 1 landed 2026-09-19.** One declaration, two comments and a unit
+guard, all inside `base.html`; no *page* template changed. (The first
+draft of this line said "no template changed", which a cold read caught:
+`base.html` is a template.)
 
 - **The render test the rung owed turned out to be already written.**
   `tests/integration/test_workflow_card_w_overlay.py` pins the `5W`
@@ -730,6 +732,10 @@ template changed.
   of the suite's own fixture and renders faithfully offline (the sheet is
   inline). Before: three `<button>` at 169.6px and the `<a>` at 203.6px,
   the row overflowing by 34px. After: all four at 169.6px, 0px overflow.
+  **These are not the 103.2px / 137.2px of `Opportunity` above** — same
+  defect, same 34px delta, wider container: that probe was the author's
+  capture, this one a 1440px viewport. The invariant is the delta, not
+  the track.
 - **Six mutants, six caught** — and two of the guard's own drafts were
   wrong first. `min-width: 0` satisfied a "has a width" regex, so the
   premise check passed with the row's `width: 100%` deleted; the obvious
@@ -768,6 +774,41 @@ retired for one, a seven-mutant guard.
   this sheet has never defined — the only use of that name in the file,
   so the fix links rendered at inherited size all along. The
   replacement rule uses `--fs-small`.
+
+**The cold read, at rung 2 (the item's last build rung).** One read over
+the cumulative diff from `ddf640d8`, per `CLAUDE.md`'s per-item cadence.
+It reported five findings; all five were real and all five are fixed in
+rung 2:
+
+1. **`spec/rrw_functional_spec.md` was a second undeclared spec** — and
+   the one `spec/README.md` sends a new reader to first. Bullet added.
+2. **The `spec/workflow_card.md` bullet under-counted its own file** —
+   "all four" passages were five; the `## Source-of-truth pointers` entry
+   names the partial. Corrected.
+3. **Three comments in `next_action_card.html` contradicted the code**,
+   one of them flatly ("Under the W overlay this lists the warning
+   details too"). *This is the item's own defect class, committed by the
+   rung that set out to close it*: rung 2 fixed the partial's comment and
+   created three fresh instances one file up. Fixed.
+4. "No template changed" in the rung-1 entry above — `base.html` is a
+   template. Corrected in place.
+5. **103.2px and 169.6px, unreconciled** in one document. Annotated: same
+   delta, different container.
+
+It also falsified nothing in the rung-1 blast-radius claim, and extended
+it: no `.btn` carries a `height`/`min-height`/`max-height` or an explicit
+`flex-basis` either, and the one non-`<a>`/non-`<button>` `.btn` carrier
+(a `<span>` on the lobby) is reached by no width rule. And it found the
+`content-box` guard claiming more than it checked — a rule whose subject
+is not a `.btn` can still reach one. Widened, and the mutant it predicted
+would survive now fails.
+
+**Two things it raised that are the author's, not mine** (recorded here,
+not acted on): under the `W` overlay the card now says the same thing in
+both columns — left "N warnings — review on Validate before activating",
+right "Review on Validate"; and the pointer carries no fragment, so it
+lands at the top of Validate, above a second copy of the Workflow card.
+Neither is a defect against the call; both want a look on the dev slot.
 
 ### PR ladder
 
@@ -821,8 +862,9 @@ retired for one, a seven-mutant guard.
 
 - `docs/status.md` — row when Item 4 lands (Item 4).
 - `spec/ui_elements.md` — §6 gains the no-overflow intent for `.btn` and names `box-sizing: border-box` as its mechanism (Item 4).
-- `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, and the §"`4W` is an overlay" mention: all four describe the per-issue list the card will stop rendering (Item 4).
+- `spec/workflow_card.md` — "Right-column content by state" rows 3 and 4Err, the `W`-overlay paragraph under it, the §"`4W` is an overlay" mention, and the `## Source-of-truth pointers` entry "Right-column issue list partial": **five** passages, not the four this bullet first counted (a cold read found the fifth) (Item 4).
 - `spec/session_home.md` — the two "Status pills + per-issue list live in the right column" bullets and the State 3 row of the lifecycle table, all three describing a per-issue list the card no longer renders. **Undeclared at planning time**, found at rung 2 (Item 4).
+- `spec/rrw_functional_spec.md` — the "right-hand column" bullet, which says the column carries "a validation issue list wherever validation has findings to show". **Undeclared at planning time**, found by the cold read at rung 2; it matters because `spec/README.md` makes this file the entry point a new reader starts from (Item 4).
 
 ---
 

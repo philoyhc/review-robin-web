@@ -116,6 +116,12 @@ def _render_partial(**context: object) -> str:
     a page-level "clean session" test exercises the *absence of the
     include*, not the guard inside it — which is how the first draft of
     this file passed while a mutant deleted the guard outright.
+
+    **A bare environment, not the app's.** Correct only while the partial
+    uses no app globals or custom filters, as it does not today. If it
+    ever reaches for one, this renders fine here and breaks in
+    production, so a partial that grows a ``url_for`` or a filter wants
+    this swapped for the configured environment rather than trusted.
     """
     from jinja2 import Environment, FileSystemLoader
 
