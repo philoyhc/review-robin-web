@@ -282,9 +282,9 @@ Two tests skip themselves rather than pass, and that is expected.
 `test_a_kit_built_project_can_be_the_source_for_the_next`, both in
 `tests/unit/test_practice_kit.py`, export the theme group by slicing
 `app/web/templates/base.html`, which step 7 creates. The kit's own guard
-skips them until that file exists and carries the toggle's markup, so
-they stay skipped too if you write your own template before landing the
-group. Step 7 turns them back on; leave them alone until then.
+keys on the group having landed rather than on that one file, so they
+stay skipped if you write your own template first — the hand-merge step 7
+describes. Step 7 turns them back on; leave them alone until then.
 
 If the suite could not run at all, say so in the first PR body and name
 what did.

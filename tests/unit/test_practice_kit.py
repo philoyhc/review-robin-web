@@ -31,27 +31,30 @@ pk = _load()
 def _deferred_group_landed(needs: str) -> bool:
     """Has setup step 7 exported this deferred group into the tree?
 
-    The group's trigger file (``DEFERRED_GROUPS``) is the signal, except for
-    the theme group, whose trigger is a template the kit *builds*. A project
-    that wrote its own ``base.html`` before landing the group has the trigger
-    without the group, and ``build_base_template`` cannot slice that file —
-    so the theme trigger must also look like the kit's.
+    A group whose trigger the *project* writes — ``app/main.py`` for the app
+    pair — has landed when that file appears: the trigger's whole job is to
+    say the group is now due.
 
-    The marker is the toggle's class, which the stylesheet carries as well as
-    the script, so editing the script alone still fails loudly instead of
-    going quiet."""
-    trigger = REPO_ROOT / pk.DEFERRED_GROUPS[needs]
-    if needs != "theme":
-        return trigger.is_file()
-    try:
-        return "theme-toggle-opt" in trigger.read_text(encoding="utf-8")
-    except OSError:
-        return False
+    A group whose trigger the *kit builds* (``BUILDERS``) cannot use it as
+    the signal, because the trigger is itself a group member and a project
+    may write its own before the group arrives. Step 7 tells the reader to do
+    exactly that. Such a group has landed when any member the kit copies
+    rather than builds is present, which stays true however far the built
+    file is later edited — so editing ``base.html`` can never quietly retire
+    the gate over the other eight theme files."""
+    trigger = pk.DEFERRED_GROUPS[needs]
+    if trigger not in pk.BUILDERS:
+        return (REPO_ROOT / trigger).is_file()
+    return any(
+        (REPO_ROOT / path).is_file()
+        for path, _tier, group, _note in pk.MANIFEST
+        if group == needs and path not in pk.BUILDERS
+    )
 
 
 needs_theme_source = pytest.mark.skipif(
     not _deferred_group_landed("theme"),
-    reason="the theme group is built by slicing the kit's own base.html (setup step 7)",
+    reason="the theme group has not landed, so there is no kit base.html to slice (step 7)",
 )
 
 _ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*([^|]*?)\s*\|")
