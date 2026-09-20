@@ -200,9 +200,7 @@ def build_base_template(source: pathlib.Path) -> str:
     after the stylesheet in the source is this app's chrome and stays behind."""
     text = (source / "app/web/templates/base.html").read_text(encoding="utf-8")
     end = text.index("</style>") + len("</style>")
-    toggle_markup = (source / "app/web/templates/_partials/theme_toggle.html").read_text(
-        encoding="utf-8"
-    )
+    toggle_markup = _toggle_markup(source, text)
     start = text.index("var opts = document.querySelectorAll(\".theme-toggle-opt\")")
     script_open = text.rindex("<script>", 0, start)
     script_close = text.index("</script>", start) + len("</script>")
@@ -221,6 +219,19 @@ def build_base_template(source: pathlib.Path) -> str:
   </body>
 </html>
 """
+
+
+def _toggle_markup(source: pathlib.Path, base_text: str) -> str:
+    """The theme toggle's markup: this repo keeps it in a partial that
+    ``base.html`` includes; a project the kit built carries it inline in its
+    ``base.html``. Read the partial when it exists, else slice the inline
+    block, so a kit-built project can be the source for the next one."""
+    partial = source / "app/web/templates/_partials/theme_toggle.html"
+    if partial.is_file():
+        return partial.read_text(encoding="utf-8")
+    open_at = base_text.index('<div class="theme-toggle"')
+    close_at = base_text.index("</div>", base_text.index("</button>", base_text.index("</button>", open_at) + 1))
+    return base_text[open_at:close_at + len("</div>")] + "\n"
 
 
 #: Deferred entries that are generated from the source rather than copied.
