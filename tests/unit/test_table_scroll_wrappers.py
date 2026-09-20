@@ -18,7 +18,7 @@ card below 1100px.
 
 **The rule is now uniform, which is the point.** The alternative was a
 width threshold, and nothing in a template knows a rendered width; the
-judgement that produced four reactive fixes is exactly what cannot be
+judgment that produced four reactive fixes is exactly what cannot be
 written down. A wrapper on a table that never overflows costs nothing —
 verified: table geometry at 1400px is byte-identical across all eleven
 operator pages before and after the sweep, and the twelve page/width
@@ -60,6 +60,20 @@ _JINJA = (re.compile(r"\{%.*?%\}", re.S), re.compile(r"\{\{.*?\}\}", re.S))
 #: A ``<table>`` start tag as written, for reconciling against the parse.
 _RAW_TABLE = re.compile(r"<table\b", re.I)
 
+#: A ``<table>`` inside a string literal — a table built in JavaScript.
+#: Distinguished from the several JS *comments* that quote the sortable
+#: contract (``//   <table data-rrw-sortable="{cookie-key}">``) by the
+#: opening quote, which only a literal has.
+_BUILT_TABLE = re.compile(r"""['"]<table\b""")
+
+#: Where a script-built table is written, and so what must carry the
+#: wrapper. There is no server-rendered ``<table>`` for the sweep to wrap,
+#: and stripping ``<script>`` — which the parse must do, or every quoted
+#: example becomes a finding — takes these with it.
+_BUILT_TABLE_HOSTS = {
+    "operator/instruments_index.html": "data-new-model-band2-preview",
+}
+
 #: The one table that goes without, and why.
 #:
 #: ``.shaper-preview-table`` is flattened to ``display: block; width: 100%``
@@ -68,7 +82,7 @@ _RAW_TABLE = re.compile(r"<table\b", re.I)
 #: reason written beside it: the row *wraps to a second line* "rather than
 #: scrolling horizontally". It is a table in name only and cannot exceed its
 #: container, so a scroller there would re-add what that rule removed.
-#: Anchored to a CSS decision, not to a judgement about width.
+#: Anchored to a CSS decision, not to a judgment about width.
 _NOT_LAID_OUT_AS_A_TABLE = "shaper-preview-table"
 
 _VOID = frozenset(
@@ -171,6 +185,42 @@ def test_the_parser_sees_every_table_that_is_written() -> None:
         "a <table> was written but not parsed, so the wrapper check never "
         "saw it:\n  " + "\n  ".join(mismatched)
     )
+
+
+def test_a_script_built_table_has_a_wrapped_host() -> None:
+    """The gate's blind spot, named rather than left.
+
+    The parse strips ``<script>`` bodies, so a table assembled in
+    JavaScript is invisible to every other check here — removing the
+    wrapper from its host left all of them green. ``rebuildPreview`` in
+    ``instruments_index.html`` writes a ``table-layout: fixed`` table with
+    operator-set column widths, which is the shape that overflows.
+    """
+    builders = {
+        str(path.relative_to(TEMPLATES)): len(_BUILT_TABLE.findall(path.read_text()))
+        for path in sorted(TEMPLATES.rglob("*.html"))
+        if _BUILT_TABLE.search(path.read_text())
+    }
+
+    assert builders, "no script-built tables found — has the idiom moved?"
+    assert set(builders) == set(_BUILT_TABLE_HOSTS), (
+        "a template builds a <table> in JavaScript and this file does not "
+        f"name where it lands: {sorted(set(builders) - set(_BUILT_TABLE_HOSTS))}"
+    )
+    for name, marker in _BUILT_TABLE_HOSTS.items():
+        text = (TEMPLATES / name).read_text()
+        # The *start tag*, not the first mention: the same attribute names
+        # a dozen CSS selectors further up, and a first-occurrence locator
+        # read one of those instead — the positional-anchor mistake this
+        # item has now made three times.
+        host = re.search(rf"<[a-zA-Z]+[^>]*\b{re.escape(marker)}\b[^>]*>", text)
+
+        assert host, f"{name}: no element carries `{marker}`"
+        classes = re.search(r'class="([^"]*)"', host.group(0))
+        assert classes and "table-scroll" in classes.group(1).split(), (
+            f"{name}: the host for its script-built table(s) "
+            f"(`{marker}`) has no `.table-scroll`:\n  {host.group(0)}"
+        )
 
 
 def test_the_scan_can_tell_wrapped_from_unwrapped() -> None:
