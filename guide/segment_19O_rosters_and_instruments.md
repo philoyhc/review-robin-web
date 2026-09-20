@@ -161,6 +161,16 @@ the assertion read backwards. It anchors on the response table's own
 `data-rrw-sortable` key — strictly more specific than what it had, and
 it still fails when the row is moved below the table.
 
+**Rung 2 found §6 pointing at a rule §10 no longer holds.** Its
+`.table-scroll` entry read "Used on `instruments_index.html` and around
+`review_surface.html`'s response table" — four templates' worth of
+description for a primitive now in 23 — and sent the reader to §10 "for
+which tables need it and which measure inside their card". Both halves
+went. The two things a template-level check cannot see are stated in
+§10 instead: a script-built table needs the wrapper on its *host*, and
+`.shaper-preview-table` is the one exception, anchored to the CSS rule
+that earns it.
+
 ### PR ladder
 
 1. **The wrappers and the check.** Wrap the seven, and add the test that

@@ -472,9 +472,10 @@ everywhere, so "you can click this" reads the same way on every control.
 
 > **`.table-scroll`** — a wrapper adding `overflow-x: auto`, so a wide
 > table's overflow stays inside its card instead of scrolling the page.
-> Used on `instruments_index.html` and around `review_surface.html`'s
-> response table. See §10 for which tables need it and which measure
-> inside their card and go without.
+> **Every table in the app sits in one**, which §10 states as a rule and
+> a test holds; the wrapper costs a table that never overflows nothing,
+> and the judgment about which tables need it is the thing that could not
+> be written down.
 
 > **`.col-shrink`** — the shrink-to-fit column idiom: `width: 1%` plus
 > `white-space: nowrap`, for an action column that should hug the right
@@ -635,7 +636,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.field-builder` + `.field-builder.locked` | The Display Fields / Response Fields builder, and its inert form (§8). |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
 | `.guide-figure` (+ `.guide-figure-narrow`) | The `/guide` screencap figure. Detailed below. |
-| `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. For a table that is wider than its card by construction — the Operations preview tables, whose hidden columns still occupy width; a roster that measures inside its card goes without |
+| `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. **Every table sits in one** — see below |
 | `.col-divider` (`border-top: 1px solid var(--border-default)`) | A horizontal rule **inside** a column, marking that what follows shares the column for space rather than belonging to what precedes it. Takes the same `--border-default` as the vertical rules between columns, so the two read as one system — that match is the point, and a divider drawn from another token would say the wrong thing. Today: the self-review exclusion checkbox under Link 3 of the Instrument assignment rule card, which is not a unit-of-review setting and must not read as a third Link 3 state (`spec/instruments.md` § *Self-review exclusion*). **Use it only where a reader would otherwise misattribute the control to the block above**; a rule between two things that do belong together is noise |
 | `.chip-group` | One labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips |
 | `.col-chip-row.is-grouped` | The modifier a chip row takes **when its chips are in `.chip-group` boxes**: it swaps the parent's `gap` for a wider `column-gap` between the groups. A `gap` applies on both axes, so a wrapped second line arrived indented against the line above it; a column-gap is between-items-on-a-line by definition and cannot. A **modifier and not a change to `.col-chip-row`**, because the four roster rows put their label and chips directly in the row — widening the gap there would space a label from its own chips. Assignments is the only caller (19P.5 rung 1 moved its three groups into the half-width left pane, where they stopped fitting on one line) |
@@ -790,6 +791,45 @@ pictures of one UI, and only one is in the accessibility tree at a time.
 `fit-content` makes the mat hug its picture rather than run to the column
 edge past a 600px capture, and `box-sizing: border-box` keeps the padding
 inside `max-width` so a narrow column cannot overflow.
+
+**Every table sits in a `.table-scroll`, with one exception.**
+
+This was not always so, and the history is the argument. The wrapper
+was applied four times between 19H and 19I, each time after someone
+noticed a page scrolling sideways — Instruments, Assignments,
+Invitations, Responses — and this section carried the rule those four
+suggested: it was for a table "wider than its card by construction",
+and "a roster that measures inside its card goes without". That rule
+was measured at one viewport. 19O Item 8 measured the others: of eleven
+operator pages, **seven pushed the whole document sideways**,
+Relationships from 1100px and the Sessions lobby, Archive, Reviewers
+and Reviewees from 900. No roster measured inside its card below
+1100px.
+
+So the rule is now uniform and a test holds it
+(`tests/unit/test_table_scroll_wrappers.py`). There is no width
+threshold, because **nothing in a template knows a rendered width** —
+the judgment that produced four reactive fixes is precisely what cannot
+be written down, and an exceptions list is that judgment returning in a
+form nobody re-measures. A wrapper on a table that never overflows
+costs nothing: table geometry across all eleven operator pages was
+identical before and after the sweep at a viewport where none of them
+overflowed.
+
+Two things the rule has to say out loud, because a template-level check
+cannot see them:
+
+- **A table built in JavaScript needs the wrapper on its host.** The
+  Instrument card's Band 2 preview is assembled in `rebuildPreview` and
+  written into `[data-new-model-band2-preview]`; there is no
+  server-rendered `<table>` to wrap, so the container carries the class.
+- **`.shaper-preview-table` goes without**, and is the one exception.
+  It is flattened to `display: block; width: 100%` with its cells as
+  wrapping flex children, and its own `.shaper-preview-scroll` sets
+  `overflow-x: visible` deliberately — the row *wraps to a second line*
+  rather than scrolling. It is a table in name only and cannot exceed
+  its container; a scroller there would re-add what that rule removed.
+  The exception is anchored to that CSS decision, not to a width.
 
 The captures arrive at **two scales** — 1× shots at ~830px and 2× shots
 at ~1680px. The split is a rule about display width, not a promise about
