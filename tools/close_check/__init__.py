@@ -67,6 +67,15 @@ that level — the moment the commitment was made — found with
 `git log -G'^## Doc impact$' --reverse` on the plan's **pre-archive**
 path. Never `--follow --reverse`, which returns the archive-move commit
 for a renamed file (measured: start = end, 0 of 110 paths "touched").
+
+A plan **renamed during its life** — a segment renumbered at its close,
+`01` to `01a` — has no history under its new pre-archive path at all, and
+the archived path always answers the pickaxe because the archive move
+adds the whole file there. So the lookup runs on every name the file has
+had, discovered with `--follow --name-only` (names only, never to pick a
+commit), and takes the **earliest** answer rather than the first one
+found. Measured on Segment 01a: without it, 14 of 23 honoured paths
+failed C3 with nothing wrong with any of them.
 End = `HEAD`, or for an archived plan the commit that added the archived
 path. A path is honoured by at least one non-merge commit touching it in
 `[start, end]` — the start commit **included**, so a plan that lands its
@@ -120,6 +129,7 @@ from ._manifest import (
     PASS,
     WARN,
     _COMMIT_CACHE,
+    _PRIOR_PATHS_CACHE,
     _first_commit_matching,
     _ITEM_START_CACHE,
     _section,
@@ -146,6 +156,7 @@ __all__ = [
     "Unresolvable",
     "WARN",
     "_COMMIT_CACHE",
+    "_PRIOR_PATHS_CACHE",
     "_ITEM_START_CACHE",
     "_first_commit_matching",
     "_git",
