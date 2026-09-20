@@ -16,7 +16,7 @@ agent's call.
 This replaces the 2026-09-04 checklist of the same name. That version was
 read by a person and predated the constitution, the plan skill, the close
 check, the pace audit and the doc gates; its five day-one items survive
-as steps 3, 5 and 7 below.
+as steps 1, 3, 5 and 7 below, and the one it dropped is named in step 7.
 
 ## 0. Preconditions
 
@@ -50,8 +50,8 @@ right.
 | `constitution.md` | adapt | keep the six articles; drop the dated annotations; re-point 'derived from' |
 | `CONTRIBUTING.md` | adapt | fill the merge-policy paragraph's <slow job> and <paths> for the new CI |
 | `.gitignore` | skeleton | the .claude/* negation lines only; appended if absent |
-| `.claude/agents/diff-reviewer.md` | adapt | check 4 names this app's seams (routes_operator/_shared.py, base.html); name yours |
-| `.claude/agents/spec-writer.md` | adapt | cites spec/README.md and the close procedure; re-point once your spec/ exists |
+| `.claude/agents/diff-reviewer.md` | adapt | project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph |
+| `.claude/agents/spec-writer.md` | adapt | cites this project's specs and close procedure; re-point once your spec/ has a second file |
 | `.claude/skills/segment-plan/SKILL.md` | verbatim | the plan / item / close procedure |
 | `guide/segment_plan_template.md` | verbatim | the shape every plan copies |
 | `guide/sweep_template.md` | verbatim | the shape every spec/docs sweep copies |
@@ -65,7 +65,7 @@ right.
 | `docs/unenforced_conventions.md` | skeleton | constitution VI's short list; starts empty |
 | `.github/workflows/ci.yml` | verbatim | ruff + pytest -n auto on 3.12 |
 | `.github/workflows/ci-postgres.yml` | adapt | DB user / password / name; the alembic round-trip stays |
-| `tests/unit/test_doc_conventions.py` | adapt | keep the twins, path-reference and section-reference checks; delete the checks that import app constants until you have one |
+| `tests/unit/test_doc_references.py` | verbatim | the twins, path-reference and section-reference gates; read only the tree |
 | `tests/unit/test_guide_indexes.py` | verbatim | the guide-index gate; reads the skeleton READMEs |
 | `app/web/spec_registry.py` | adapt | the route-table -> spec mapping; empty the table, lower _MINIMUM_ROUTES |
 | `tests/unit/test_spec_coverage.py` | adapt | pairs with spec_registry; baseline set starts empty |
@@ -125,12 +125,21 @@ these are the details that matter.
   second file; then re-point the paths it cites.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
   name; keep the upgrade / downgrade-base / upgrade round-trip.
-- **`tests/unit/test_doc_conventions.py`.** Keep the twins check, the
-  path-reference pair and the section-reference pair; they read only the
-  tree. Delete every check that imports from `app` — lifecycle labels,
-  retired button terms, visibility grid, tokens — and keep one of them in
-  a comment as the template for the first constant the new project
-  documents in prose (step 7).
+- **`tests/unit/test_doc_references.py`** is verbatim and is the first
+  gate that will go red, on purpose: it resolves every backticked repo
+  path in live prose, and the kit ships prose that points at files that
+  stayed in the source — this document's "Deliberately not copied"
+  section, `CONTRIBUTING.md`'s pointer to the practice audit, and every
+  `CLAUDE.md` section you have not rewritten yet. Fix the ones that
+  should point at something of yours; mark the deliberate ones with the
+  test's inline escape, the `path-ref-ok` HTML comment, on the line (the
+  test's docstring shows it). That red-then-green is the gate's
+  first proof that it runs. `tests/unit/test_doc_conventions.py` is
+  **not** copied: its checks derive from this app's constants and
+  stylesheet, and it is the template for step 7.
+- **Deleting a kit file** — `ci-postgres.yml` when there is no Postgres,
+  say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`,
+  or `tests/unit/test_practice_kit.py` fails on the missing path.
 - **`app/web/spec_registry.py`** with **`tests/unit/test_spec_coverage.py`.**
   Empty the module-to-spec table, set `_MINIMUM_ROUTES` to the number of
   routes the new app registers today, and let the baseline set of pending
@@ -144,7 +153,7 @@ these are the details that matter.
 - `pyproject.toml`: a `dev` extra with `pytest`, `pytest-xdist`, `httpx`
   and `ruff`, and `[tool.ruff]` with `line-length = 100` and
   `target-version = "py312"`. The workflows and the gates assume these.
-- A `tests/conftest.py` that builds the app's in-memory database from the
+- A pytest `conftest` that builds the app's in-memory database from the
   ORM metadata, if the new app has one; the kit's tests do not need it.
 - `README.md`: one paragraph pointing at `CLAUDE.md` and `constitution.md`.
 
@@ -155,15 +164,15 @@ pip install -e '.[dev]'
 ruff check .
 pytest -n auto
 python3 tools/close_check.py --stale
-python3 tools/pace_audit.py --cut 1
 python3 tools/practice_kit.py --list
 ```
 
-All green on an otherwise empty repository is the expected result. Then
-mutation-test one gate: add a backticked path to `docs/status.md` that
-does not exist, run `pytest tests/unit/test_doc_conventions.py`, watch it
-fail naming the file and line, and remove it. A gate that cannot go red
-has not been installed.
+Green once step 3 is complete is the expected result; the one gate that
+reads prose will have gone red during step 3 and told you what to fix.
+If it did not, mutation-test it: add a backticked path to `docs/status.md`
+that does not exist, run `pytest tests/unit/test_doc_references.py`,
+watch it fail naming the file and line, and remove it. A gate that cannot
+go red has not been installed.
 
 If the suite could not run at all, say so in the first PR body and name
 what did.
@@ -175,6 +184,9 @@ what did.
   moment to run it; if you did not, run it now and say so). Carry the
   value as the `Instruction-Received:` trailer, per `CLAUDE.md` "Where
   work runs".
+- After the commit, `python3 tools/pace_audit.py --cut 1`: it reads the
+  merge history, so it has nothing to read before one exists, and on a
+  clone with no remote yet it falls back to local `main`.
 - Push, open a draft PR, and mark it ready only after reading the
   gates' output, not just their exit code.
 
@@ -191,11 +203,15 @@ first things a new project reaches for:
   cadence in `CLAUDE.md`; retrofitting it later means its first read is
   against a surface it has no history with.
 - **The first time a code constant is described in prose, derive a test
-  from the constant** — the template left in
+  from the constant** — the template is the source's
   `tests/unit/test_doc_conventions.py`. A checker for a convention
   nobody wrote down, or one that needs a growing allowlist, is not
   written; it goes in `docs/unenforced_conventions.md` instead
   (constitution VI).
+- **When a deploy workflow arrives, make it depend on the test job**, not
+  merely run after it. The old checklist put this on day one; a kit
+  cannot carry a deploy it has not seen, so it is the first thing to
+  check when one is written.
 
 ## Deliberately not copied
 

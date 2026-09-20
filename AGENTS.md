@@ -5,7 +5,7 @@ other AI coding agent working in this repository.
 
 > **`AGENTS.md` and `CLAUDE.md` are byte-identical twins.** Edit one,
 > then run `cp CLAUDE.md AGENTS.md` (or the reverse) before committing.
-> `tests/unit/test_doc_conventions.py` fails if they diverge.
+> `tests/unit/test_doc_references.py` fails if they diverge.
 
 ## Project conventions
 
@@ -201,10 +201,11 @@ reject it.
   -e .[dev]` before the agent phase. `requirements.txt` is the Azure
   deploy manifest and yields neither `pytest` nor `httpx`.
 - **A green `ruff` is not evidence.** Much of what gates a merge reads
-  no Python and only `pytest` runs it: `tests/unit/test_doc_conventions.py`
-  (a dozen checks, among them every anchored backticked repo path in
-  live prose — top-level `.md` in `spec/`, `docs/`, `guide/` **and the
-  root**, this file included), `tests/unit/test_guide_indexes.py` (a
+  no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
+  (the twins, every anchored backticked repo path in live prose —
+  top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
+  file included — and every `§N` pointer), `tests/unit/test_doc_conventions.py`
+  (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document), and
   `tests/unit/test_generated_tools_are_current.py` plus
   `tests/unit/test_contrast_audit.py` (both read `base.html`'s inline

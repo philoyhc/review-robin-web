@@ -128,15 +128,22 @@ def stale_report(since: str | None, stream) -> int:
 
     untouched = sum(1 for _, edited, _ in rows if edited < since)
     days = (today - datetime.date.fromisoformat(since)).days
-    if not _git("rev-parse", "--verify", "--quiet", "origin/main").strip():
+    main_ref = next(
+        (
+            ref for ref in ("origin/main", "main")
+            if _git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").strip()
+        ),
+        None,
+    )
+    if main_ref is None:
         raise Unresolvable(
-            "origin/main does not resolve, so the merge count would read 0 "
-            "and the trigger would say 'not due' for the wrong reason — "
+            "neither origin/main nor main resolves, so the merge count would "
+            "read 0 and the trigger would say 'not due' for the wrong reason — "
             "fetch first"
         )
     merges = len([
         row for row in _git(
-            "rev-list", "--merges", f"--since={since}", "origin/main"
+            "rev-list", "--merges", f"--since={since}", main_ref
         ).split("\n") if row.strip()
     ])
     due_weeks = days >= SWEEP_INTERVAL_WEEKS * 7

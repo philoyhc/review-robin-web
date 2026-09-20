@@ -115,7 +115,7 @@ def resolve_ref(ref: str = MAIN_REF) -> str:
             return candidate
     raise SystemExit(
         f"pace_audit: neither {ref!r} nor 'main' names a commit here. "
-        "Run from a clone with the main line fetched, or pass the ref to load()."
+        "Run from a clone with the main line fetched, or name it with --ref."
     )
 
 
@@ -295,9 +295,10 @@ def main() -> int:
     ap.add_argument("--since", default="2026-09-04", help="earliest merge date to read")
     ap.add_argument("--recent", default="2026-09-14", help="start of the last BEFORE window")
     ap.add_argument("--prs", help="JSONL of PR number/created_at/merged_at from the GitHub API")
+    ap.add_argument("--ref", default=MAIN_REF, help="the main line to read (default origin/main, then main)")
     args = ap.parse_args()
 
-    rows = load(args.since)
+    rows = load(args.since, ref=args.ref)
     if args.prs:
         add_pr_timestamps(rows, args.prs)
     recent = dt.date.fromisoformat(args.recent)
