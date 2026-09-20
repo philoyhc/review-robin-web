@@ -34,66 +34,46 @@ other AI coding agent working in this repository.
   explicitly requested; assume Azure App Service Easy Auth will provide
   authenticated identity headers in deployed environments.
 - **US spelling in new prose** (author's preference, 2026-09-07):
-  *color*, *behavior*, *materialized*, *anonymized*. Three tiers, because
-  the point is a default and not a campaign:
-  - **New or rewritten prose** — US.
-  - **Existing prose** — left alone. Measured 2026-09-07 over paired
-    variants (`color`/`colour`, `behavior`/`behaviour`, …), live prose is
-    **439 British against 438 US — a dead heat**, the commonest British
-    forms being `behaviour` (100), `colour` (66), `materialised` (44) and
-    `catalogue` (38). So this is not a British codebase gaining a US
-    exception; it is a mixed one gaining a tie-breaker. Fix a form when
-    you are editing that line anyway, never as a sweep and never as a PR
-    of its own. Nothing enforces it, deliberately: a check failing on ~440
-    existing lines would be switched off within a day.
-  - **Identifiers, filenames, DB columns and shipped labels** — never
-    renamed for spelling. `normalise_status`, `_normalised_name` and their
-    kin stay as they are; a name is a name, and churning them buys a
-    reader nothing.
-  **Where prose names a control, quote the control.** The app's visibility
-  modes are `Anonymized` / `Summarized` (`app/services/visibility_policies.py`),
-  so prose about them spells them that way regardless of the surrounding
-  convention — a reader sent to hunt for a label that does not exist is
-  worse served than one reading a mixed page.
+  *color*, *behavior*, *materialized*, *anonymized*. New or rewritten
+  prose is US. Existing prose is left alone — live prose measured a dead
+  heat between the two on that date, so this is a tie-breaker, not a
+  campaign: fix a form when you are editing that line anyway, never as a
+  sweep, and nothing enforces it, deliberately. Identifiers, filenames,
+  DB columns and shipped labels are never renamed for spelling.
+  **Where prose names a control, quote the control**: the visibility
+  modes are `Anonymized` / `Summarized`
+  (`app/services/visibility_policies.py`), so prose spells them that way
+  whatever the surrounding convention.
 - Keep changes small and PR-sized.
 
 ## Working approach
 
 Land changes as small, reviewable slices. The natural unit is one
-coherent feature step — e.g. a migration + its seed code, a service
-helper set + the routes that call it, a template refactor + its
-tests — sized so a reviewer can model the full contract in one
-sitting.
+coherent feature step — a migration + its seed code, a service helper
+set + the routes that call it, a template refactor + its tests — sized
+so a reviewer can model the full contract in one sitting.
 
-When a segment plan in `guide/` calls out internal slices, land
-them in order across multiple PRs rather than collapsing them; use
-the plan's "land X first as a self-contained Y" risk notes as the
-cut points. Don't bundle independent changes (e.g. an unrelated bug
-fix) into the same PR.
+When a segment plan in `guide/` calls out internal slices, land them in
+order across multiple PRs rather than collapsing them; use the plan's
+"land X first as a self-contained Y" risk notes as the cut points. Don't
+bundle independent changes (e.g. an unrelated bug fix) into the same PR.
 
 **Consequential UI lands scaffold-first.** When a change adds a new
-page, a new card, or a new navigation affordance, land the
-**scaffold as its own reviewable slice before wiring any
-behaviour**: the nav / button plus the page with every card as a
-static placeholder — real copy and layout, inert controls (buttons
-present but no-op or disabled). Iterate the page shape on that
-placeholder, then wire each card / action in follow-up slices.
-Agreeing the surface before attaching logic keeps UI churn out of
-the wiring PRs and gives a cheap, early look at the real thing.
+page, a new card, or a new navigation affordance, land the scaffold as
+its own reviewable slice before wiring any behavior: the nav / button
+plus the page with every card as a static placeholder — real copy and
+layout, inert controls. Iterate the page shape on that placeholder, then
+wire each card / action in follow-up slices.
 
 **Write the `guide/` artefact shorter than feels complete.** A plan, a
 sweep record or a findings register is read under pressure by someone
-checking one thing, so every sentence that is not a constraint, a
-decision or a pointer costs them. Budgets: a segment plan under ~250
-lines, an item under ~120, one line per file in a sweep record. Measured
-against the archive, most overflow is not the thinking — it is the
-record of the build outgrowing the build, so `## Status` and answered
-open questions **compact at close** rather than accumulating (the
-`segment-plan` skill — "Revising a plan", and step 4 of "Closing a
-segment"). Say it once, in the section that owns
-it; keep the conclusion and the command that proves it, not the search
-that found it; cite a section rather than reproducing it. Pure
-accretion is not a record — it is a document nobody opens.
+checking one thing. Budgets: a segment plan under ~250 lines, an item
+under ~120, one line per file in a sweep record. `## Status` and
+answered open questions **compact at close** rather than accumulating
+(the `segment-plan` skill, "Revising a plan" and "Closing a segment"
+step 4). Say it once, in the section that owns it; keep the conclusion
+and the command that proves it, not the search that found it; cite a
+section rather than reproducing it.
 
 ## Common commands
 
@@ -209,51 +189,47 @@ reject it.
 ## Where work runs
 
 - The human author does not run Python, alembic, or a database
-  locally. There is no laptop dev loop.
-- The agent's session container is the pre-PR gate: `pytest` and
-  `ruff check .` must both pass there before pushing. Both run in CI
-  (`ci.yml`) on every PR, alongside `ci-postgres.yml`, which
-  round-trips the Alembic chain and runs the full suite against
-  Postgres 16.
-- **The install belongs in whatever step has network.** A sandbox whose
-  *agent* phase has no package index must run `pip install -e .[dev]`
-  before that phase. Installing `requirements.txt` instead — it is the
-  Azure deploy manifest — yields neither `pytest` nor `httpx`, which
-  `TestClient` needs, so adding `pytest` alone does not recover. `node`
-  is wanted too, for the reason two bullets down.
-- **A green `ruff` is not evidence.** Much of what gates a merge here
-  reads no Python at all and only `pytest` runs it. A sample, not a
-  roster: `tests/unit/test_doc_conventions.py` — a dozen checks, among
-  them every anchored backticked repo path in live prose, which is
-  top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
-  file included; `tests/unit/test_guide_indexes.py`, a README row per
-  `guide/` document, so it fires on every plan and every close; and
+  locally. There is no laptop dev loop. `docs/local_setup.md` and
+  `ALLOW_FAKE_AUTH=true` exist for the agent's sandbox.
+- The agent's session container is the pre-PR gate: `pytest -n auto`
+  and `ruff check .` must both pass there before pushing, with `node`
+  present so `tests/integration/test_inline_scripts_parse.py` runs
+  rather than skips — the suite's only tool-gated skip, and a silent
+  one, so read the skip list, not just the exit code. Both also run in
+  CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`.
+- **The install belongs in whatever step has network**: `pip install
+  -e .[dev]` before the agent phase. `requirements.txt` is the Azure
+  deploy manifest and yields neither `pytest` nor `httpx`.
+- **A green `ruff` is not evidence.** Much of what gates a merge reads
+  no Python and only `pytest` runs it: `tests/unit/test_doc_conventions.py`
+  (a dozen checks, among them every anchored backticked repo path in
+  live prose — top-level `.md` in `spec/`, `docs/`, `guide/` **and the
+  root**, this file included), `tests/unit/test_guide_indexes.py` (a
+  README row per `guide/` document), and
   `tests/unit/test_generated_tools_are_current.py` plus
-  `tests/unit/test_contrast_audit.py`, both reading `base.html`'s inline
-  stylesheet, so one CSS edit can fail either. A lint-only run passes
-  all of them by not running them.
-- **`tests/integration/test_inline_scripts_parse.py` skips when `node`
-  is absent** — the suite's only tool-gated skip, and worse than a hard
-  failure, because a sandbox without the tool reports success rather
-  than an error. Read the skip list, not just the exit code.
+  `tests/unit/test_contrast_audit.py` (both read `base.html`'s inline
+  stylesheet). A lint-only run passes all of them by not running them.
 - **Deleting a file can fail a doc gate in the rung that deletes it**,
-  rather than the later rung that owns the spec sweep: an anchored
-  backticked path in live prose dangles immediately. That is a manifest
-  bullet to plan forward, not the sweep pulled forward — at 19Q Item 1
-  rung 2 it was one line in one spec, while the unanchored mentions of
-  the same template stayed green and correctly deferred. Deleting a
-  whole routing module trips `tests/unit/test_spec_coverage.py` the same
-  way; deleting a single handler trips nothing.
+  not the later rung that owns the spec sweep: an anchored backticked
+  path in live prose dangles immediately, so plan that bullet forward
+  in the manifest. Deleting a whole routing module trips
+  `tests/unit/test_spec_coverage.py` the same way; deleting a single
+  handler trips nothing.
 - **If the suite could not run at all, say so in the PR body** and name
   what did. A disclosed gap beats an implied gate.
+- **Stamp when the instruction arrived.** The first command of a slice
+  is `date -u +%FT%TZ`; the slice's first commit carries that value as
+  a git trailer, `Instruction-Received: 2026-09-20T01:02:03Z`, and
+  fix commits answering a reader or CI do not. `tools/pace_audit.py`
+  reads it to split *turn* (previous merge → first commit, a flat
+  10–14 minute floor per slice, `rrw_sdd_in_practice.md` §6.4) into
+  the wait for an instruction and the build that followed it. No gate
+  checks it; a slice without it is not wrong, only unmeasured.
 - **Two cold readers, different cadences.** A slice is read cold before
   it is marked **ready for review** — not before it is pushed: a draft
   PR is not a merge, and an unpushed commit in an ephemeral container is
-  a loss risk. The gates that run inside `pytest` are cheap and are not
-  what this bullet rations: `ruff check .` and `pytest -n auto` green in
-  the sandbox, with `node` present so
-  `tests/integration/test_inline_scripts_parse.py` runs rather than
-  skips, are owed on **every** push regardless of what follows.
+  a loss risk. The gates above are owed on **every** push regardless of
+  what follows.
 
   `diff-reviewer`'s cadence is **per item, not per slice** (author's
   ruling, 2026-09-18, on a merge-history audit: the read catches real
@@ -294,6 +270,4 @@ reject it.
   the test suite can't exercise (templates, redirects, real auth),
   say so explicitly in the PR description rather than claiming it was
   verified.
-- `docs/local_setup.md` and `ALLOW_FAKE_AUTH=true` exist for the
-  agent's sandbox, not for a human dev loop.
 - If dependencies or tooling change, update `README.md`.

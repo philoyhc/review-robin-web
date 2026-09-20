@@ -212,7 +212,10 @@ lines; **0** under the per-item cadence) and is the same for a
 prose-only slice as for a code one. That floor is the instruction loop
 and the context a slice loads, not the build. Splitting it needs a
 timestamp the repository does not carry — when the instruction arrived —
-which is the next thing to instrument. *Re-take with*
+which is the next thing to instrument — done the same day: a slice's
+first commit now carries an `Instruction-Received` trailer (`CLAUDE.md`
+"Where work runs") and the tool splits turn at it into *wait* and
+*build* once three slices carry one. *Re-take with*
 `python3 tools/pace_audit.py --cut 2460`*; the turn line is the fit.*
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
