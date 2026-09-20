@@ -83,8 +83,8 @@ the feature rather than a part of it.
 ### 3.1 Getting there — the lobby "Rehydrate" button
 
 Rehydrate has its **own page**, not a card on Add New Session. It's reached
-from the **Sessions Lobby** (`/operator/sessions`): the search card's
-button row — today `Cancel` · `Add new` · `Go to Archive`
+from the **Sessions Lobby** (`/operator/sessions`): the Filter card's
+button row — today `Clear` · `Add new session` · `Go to Archive`
 (`app/web/templates/operator/sessions_list.html`) — gains a **`Rehydrate`**
 button **between `Add new` and `Go to Archive`**, linking to
 `GET /operator/sessions/rehydrate`. Same `.btn` styling as its siblings.
@@ -537,7 +537,7 @@ Stated plainly so the card copy and the PR description stay honest:
 - Round-trip coverage matrix: `spec/roundtrip_coverage.md` (what survives
   export→import today, and the gaps this spec depends on closing).
 - Lobby / entry UI: `spec/sessions_overview.md`,
-  `app/web/templates/operator/sessions_list.html` (the search-card button
+  `app/web/templates/operator/sessions_list.html` (the Filter-card button
   row that gains `Rehydrate`), `app/web/routes_operator/_session_home.py`
   (the `/operator/sessions/new` page whose chrome the rehydrate page
   mirrors).

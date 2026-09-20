@@ -31,12 +31,43 @@ LIVE_DOCS = sorted(
 
 # The pre-19B button vocabulary, superseded by the canonical .btn roles in
 # spec/ui_elements.md section 6 (see CLAUDE.md "Project conventions").
+# Matched literally and case-sensitively: these are exact display labels,
+# and "primary outline" in running prose is not one of them.
 RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline")
+
+# Retired control *names*, which prose spells loosely — so matched by
+# pattern rather than by substring.
+#
+# "Search card" is the Sessions lobby's filter card before 19O Item 7
+# entry 15 renamed it; the control filters rows already rendered and
+# never was a search. Entry 16's first pass checked the literal string
+# and passed over `spec/rehydrate.md`'s "the search card's" and
+# `docs/status.md`'s "search-card" — a gate that reproduced, in its own
+# first hour, the miss it was written to prevent (Codex, #2507).
+#
+# The term is the *card*, not the word: seven operator tables carry a
+# real `Search:` input and a `Search` submit button that posts a query,
+# and those are correct, which is why the pattern requires both words.
+#
+# **It is not unambiguous, and that is known.** Those same pages put
+# their search in a card, so "search card" is the *correct* name for it,
+# and no spec names one today only because none has needed to. The day
+# one does, this fires on a true line and the answer is `TERM_ESCAPE` on
+# it, not a narrower pattern: a regex cannot tell the lobby's card from
+# a roster's, and a gate that guessed would be worse than one that asks.
+RETIRED_PATTERNS = (
+    ("Search card", re.compile(r"search[-\s]card", re.IGNORECASE)),
+)
 # Deliberate historical references carry this marker on the same line.
 TERM_ESCAPE = "<!-- retired-term-ok -->"
 # A whole document that is a historical record rather than a live contract
-# (a dated audit or assessment snapshot, which quotes the old vocabulary by
-# the paragraph) opts out with this marker anywhere in the file.
+# opts out with this marker anywhere in the file: a dated audit or
+# assessment snapshot, which quotes the old vocabulary by the paragraph,
+# or a verbatim-history file like `docs/status_history.md`, whose rows are
+# kept unrewritten on purpose and will gain more as `docs/status.md`
+# compacts. The marker goes on its own line between blank lines — a line
+# opening `<!--` starts a CommonMark HTML block that runs to the line
+# carrying `-->`, so mid-paragraph it swallows the rest of the paragraph.
 FILE_ESCAPE = "<!-- retired-term-ok: file -->"
 
 # A `| `enum` | Label |` row in a lifecycle table.
@@ -74,8 +105,8 @@ def test_lifecycle_tables_match_the_display_label_mapping() -> None:
     )
 
 
-def test_retired_button_terminology_is_absent_from_live_docs() -> None:
-    """The pre-19B button names must not be prescribed anywhere live.
+def test_retired_terminology_is_absent_from_live_docs() -> None:
+    """Retired user-facing names must not be prescribed anywhere live.
 
     A deliberate historical reference ("renamed from X in PR #N") is fine
     — mark that line with ``TERM_ESCAPE``, or the whole document with
@@ -93,9 +124,13 @@ def test_retired_button_terminology_is_absent_from_live_docs() -> None:
             for term in RETIRED_TERMS:
                 if term in line:
                     hits.append(f"{rel}:{number}: {term!r}")
+            for name, pattern in RETIRED_PATTERNS:
+                found = pattern.search(line)
+                if found:
+                    hits.append(f"{rel}:{number}: {found.group(0)!r} ({name})")
     assert not hits, (
-        "retired button terminology (superseded by the canonical .btn roles "
-        "in spec/ui_elements.md section 6):\n  "
+        "retired user-facing terminology (the .btn roles are canonical in "
+        "spec/ui_elements.md section 6; see RETIRED_TERMS for the rest):\n  "
         + "\n  ".join(hits)
         + f"\nIf a hit is a deliberate historical reference rather than a live "
         f"prescription, mark that line with {TERM_ESCAPE!r} — or, for a document "

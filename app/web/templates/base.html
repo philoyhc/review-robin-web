@@ -3853,7 +3853,7 @@
         color: var(--text-subtle);
       }
       /* Sessions-list lobby — the H1 stands alone; the create
-         affordance is the Search card's `Add new session` Primary,
+         affordance is the Filter card's `Add new session` Primary,
          and it is the page's only one (2026-09-07). Body is a v2
          table inside a single .card; when there are no live sessions
          the table is replaced by the first-run .card, which carries
@@ -3876,9 +3876,9 @@
       }
       body.ui-v2 .sessions-lobby-card h2,
       body.ui-v2 .sessions-action-card h2 { margin-top: 0; }
-      /* Narrow viewports stack the two cards, Search below Sessions.
+      /* Narrow viewports stack the two cards, Filter below Sessions.
          Side by side they are each half of an already-narrow page, and
-         the Search card is the one that suffers: its four buttons wrap
+         the Filter card is the one that suffers: its four buttons wrap
          into a ragged block and the input shrinks to a stub. 800px is
          the app's established two-column collapse point — `.page-grid`
          and `.bottom-grid`, the other half-width card layouts, both

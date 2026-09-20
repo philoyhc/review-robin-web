@@ -1,12 +1,16 @@
 # Implementation status — history
 
+<!-- retired-term-ok: file -->
+
 **Timeline rows dated 2026-09-11 and earlier**, moved out of
 `docs/status.md` on 2026-09-19 (19O Item 7 entry 12b). That file had
 reached 1,260 lines and 642K characters, of which this table was the
 larger part, and a status file nobody can scan has stopped being one.
 
 **Nothing was rewritten or dropped.** The rows below are the originals,
-verbatim, in the order they were in. The split *is* the compaction:
+verbatim, in the order they were in. That is why this file opts out of
+the retired-terminology gate — a row quoting a control by the name it
+had on the day is the point of keeping it. The split *is* the compaction:
 `guide/codebase_assessment_18sep.md` §3 records that **compaction with
 no register is deletion**, so the register here is a whole file rather
 than a summary of one.
