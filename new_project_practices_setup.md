@@ -261,6 +261,29 @@ first things a new project reaches for:
   plan, a known-limitations page and a test that stayed in the source,
   so the path gate goes red again on export: cut those references or
   mark them, as in step 3.
+- **Then set the palette**, which is what the customizer is for. Open
+  `tools/theme_customizer.html` in a browser (no server); the toolbar
+  flips light and dark, and every token is editable with live repaint.
+  Design each theme, then **Export JSON**. The download is
+  `{ primitives, semantic: { light, dark } }`: port `primitives` into the
+  primitives block of `base.html`'s `:root`, `semantic.light` into the
+  semantic block that follows it, and `semantic.dark` into
+  `:root[data-theme="dark"]`, one token per line, 1:1. Regenerate both
+  pages, run `pytest tests/unit/test_contrast_audit.py`: every
+  foreground/background pair the stylesheet forms must clear AA (4.5:1),
+  and a pair that does not is fixed, or recorded in one of two places.
+  `ACCEPTED_BELOW_AA` in `tools/_harness_common.py` is for a transient
+  dip only — a hover state whose `resting_bg` pair clears AA — and the
+  test checks that resting pair, so an entry without one fails. A
+  genuine shortfall you decide to ship goes in `OPEN_SHORTFALLS` in the
+  test, with its measured ratio and a known-limitations entry. The
+  customizer's Contrast panel lists the same pairs, worst first, so a
+  shortfall is visible before the test says so. Re-catalogue the changed
+  tokens in `spec/color_tokens.md`.
+  The Primitives grid marks any primitive no semantic token reaches;
+  retire it or use it, never leave it. The full control set and the
+  reasoning behind the panel are in `tools/README.md` under
+  `theme_customizer.gen.py`.
 - **When a deploy workflow arrives, make it depend on the test job**, not
   merely run after it. The old checklist put this on day one; a kit
   cannot carry a deploy it has not seen, so it is the first thing to
