@@ -202,8 +202,7 @@ tests, a separate reader, a human verifier of last resort),
 [`constitution.md`](constitution.md) (the six binding rules distilled
 from that document's §6 — decision, rationale, trade-off, and stop),
 [`new_project_practices_setup.md`](new_project_practices_setup.md)
-(a portable day-one checklist for a *new* repository, generalised
-from `docs/practice-audit-2026-09-04.md` — merge policy, agent-config
-tracking, a fresh-context diff reviewer, and the
-convention-as-failing-test pattern; nothing in it is RRW-specific),
+(the procedure an agent runs to carry this practice into a *new*
+repository on the same stack: `tools/practice_kit.py` exports the
+practice's files, the document says how each is adapted and verified),
 `README.md` (this file).

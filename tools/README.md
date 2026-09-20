@@ -12,6 +12,7 @@ but aren't part of the app or its test suite.
 | `theme_variants.gen.py` | Border-contrast report, plus the machinery for a theme variant when one is needed. [Detail](#theme_variantsgenpy) | `python3 tools/theme_variants.gen.py` |
 | `css_parity_check.py` | CSS-refactor parity check (read-only) — renders every page carrying a shared CSS shape, reads the computed styles Chromium resolves, and diffs two snapshots. Proves a refactor changed nothing, which the suite cannot: it has no layout engine, so which rule *wins* is invisible to it. **Needs `node` + `playwright` + a Chromium binary, none of them repo dependencies**; set `RRW_NODE_ROOT` and `RRW_CHROMIUM`. Unlike the other entries here it **does** lean on the suite — it drives the normally-skipped `tests/integration/test_css_parity_dump.py` (via `RRW_PARITY_DUMP`) so the pages it samples are real template output. Exit codes follow `close_check.py`: 0 no differences, 1 differences found, 2 could not check. Samples every page at **two viewports** (1280 and 700), since a rule inside a media query is invisible at a width where that query is inactive. Not in CI. | `python3 tools/css_parity_check.py --out /tmp/before` |
 | `pace_audit.py` | Pace audit (read-only) — elapsed time per merged slice from merge history, split BEFORE / AFTER a cut PR number; the method behind `rrw_sdd_in_practice.md` §6.4 (2026-09-19). [Detail](#pace_auditpy) | `python3 tools/pace_audit.py --cut 2460` |
+| `practice_kit.py` | Practice kit — the manifest of files a new repository inherits from this one, with `--list` (the table `new_project_practices_setup.md` carries) and `--export DEST`. [Detail](#practice_kitpy) | `python3 tools/practice_kit.py --list` |
 | `_harness_common.py` | Shared helpers for the two generators — the `base.html` `<style>` lift, the `:root` / `:root[data-theme="dark"]` token parse, the harness CSS, the gallery markup. Not a generator; imported by both. | — |
 
 ---
@@ -281,3 +282,21 @@ read for it.
 
 Written for the 2026-09-19 re-measurement of the reader cadence; the
 numbers it produced are in `rrw_sdd_in_practice.md` §6.4. Not in CI.
+
+---
+
+## `practice_kit.py`
+
+Read-only here; writes only into `--export DEST`. `MANIFEST` is the
+constant: every file the practice consists of, in four tiers — *verbatim*
+(copied, needs at most a project name), *adapt* (copied, with a named edit
+the setup document spells out), *skeleton* (generated empty but
+well-formed, because this repo's version is its own history) and
+*deferred* (imports the application; exported only with
+`--include-deferred`). Export never overwrites an existing file; `--force`
+does. `tests/unit/test_practice_kit.py`
+asserts every copied path exists, every skeleton has a generator, the
+export lands every entry, the generated `guide/README.md` satisfies the
+guide-index gate, and the table in `new_project_practices_setup.md` equals
+the manifest — regenerate that table with `--list` when the manifest
+changes. Not in CI beyond the suite.

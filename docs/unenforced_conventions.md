@@ -100,8 +100,8 @@ the joke it sounds like.
 - **What covers it instead.** A habit, not a gate: *a change that
   retires a page, section or file greps for what points at it, in the
   same change.* The file-level half of that **is** now enforced —
-  `tests/unit/test_doc_conventions.py` fails on a path reference naming
-  nothing (19G.1 rung 2). The section-level half is not.
+  `tests/unit/test_doc_references.py` fails on a path reference naming
+  nothing (19G.1 rung 2; moved to its own module 2026-09-20). The section-level half is not.
 
 ### 1.6 A measurement that certifies a corpus must state what it could not see
 
