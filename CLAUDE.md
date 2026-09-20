@@ -200,6 +200,14 @@ reject it.
 - **The install belongs in whatever step has network**: `pip install
   -e .[dev]` before the agent phase. `requirements.txt` is the Azure
   deploy manifest and yields neither `pytest` nor `httpx`.
+- **The web container builds itself.** `.claude/hooks/session-start.sh`
+  is a SessionStart hook that does exactly that install: it resolves a
+  3.12+ interpreter by name (the image's default `python3` is older than
+  the floor `pyproject.toml` pins), builds `.venv/` from it, and exports
+  `.venv/bin` on PATH for the session, so `pytest` and `ruff` are the
+  project's own. It reuses a cached `.venv/` and rebuilds only when that
+  one is missing or too old. It no-ops unless `CLAUDE_CODE_REMOTE=true`,
+  so a local checkout keeps whatever environment its owner made.
 - **A green `ruff` is not evidence.** Much of what gates a merge reads
   no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
   (the twins, every anchored backticked repo path in live prose —
