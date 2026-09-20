@@ -155,8 +155,9 @@ on the tool and **must not be quoted**.
 
 The `theme_preview` gallery with every colour token **editable** and live
 repaint. Design a light + dark palette (edit each separately via the toggle),
-then **Export JSON** — a coding agent ports its flat `tokens` map 1:1 into
-`base.html`'s `:root` blocks. Controls: Load defaults / Re-read `base.html`…
+then **Export JSON** — `{ primitives, semantic: { light, dark } }`, which a
+coding agent ports 1:1 into `base.html`'s `:root` blocks (primitives, then
+each theme's semantic map). Controls: Load defaults / Re-read `base.html`…
 (file-picker) / Save-as named library (`localStorage`) / Delete / Export +
 Import JSON.
 
