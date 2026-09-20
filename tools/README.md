@@ -295,7 +295,8 @@ well-formed, because this repo's version is its own history) and
 *deferred*, in two groups exported on request — `--include-deferred app`
 (imports the application) and `--include-deferred theme` (reads
 `base.html`; builds a starter `base.html` from this one's head and
-stylesheet). Export never overwrites an existing file; `--force` does. `tests/unit/test_practice_kit.py`
+stylesheet, with a `body.ui-v2` carrying the theme toggle). Export never
+overwrites an existing file; `--force` does. `tests/unit/test_practice_kit.py`
 asserts every copied path exists, every skeleton has a generator, the
 export lands every entry, the generated `guide/README.md` satisfies the
 guide-index gate, and the table in `new_project_practices_setup.md` equals

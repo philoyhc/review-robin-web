@@ -57,15 +57,15 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("tests/unit/__init__.py", "skeleton", "", "makes tests/unit a package; the contrast audit imports its helper relatively"),
     ("app/web/spec_registry.py", "deferred", "app", "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES"),
     ("tests/unit/test_spec_coverage.py", "deferred", "app", "pairs with spec_registry; imports the app, so it cannot collect before one exists"),
-    ("app/web/templates/base.html", "deferred", "theme", "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class) wrapped as a minimal Jinja base; rename the title, favicon and localStorage key"),
+    ("app/web/templates/base.html", "deferred", "theme", "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key"),
     ("tools/_harness_common.py", "deferred", "theme", "the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list"),
     ("tools/theme_preview.gen.py", "deferred", "theme", "regenerate tools/theme_preview.html after export and commit it"),
     ("tools/theme_customizer.gen.py", "deferred", "theme", "regenerate tools/theme_customizer.html after export and commit it"),
     ("tools/theme_variants.gen.py", "deferred", "theme", "border-contrast report; runs as is"),
     ("tests/unit/_base_css.py", "deferred", "theme", "parsing helpers the contrast audit imports"),
     ("tests/unit/test_generated_tools_are_current.py", "deferred", "theme", "fails until the two pages are regenerated and committed"),
-    ("tests/unit/test_contrast_audit.py", "deferred", "theme", "16 of 17 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"),
-    ("spec/color_tokens.md", "deferred", "theme", "the inherited palette's catalogue; re-catalogue when a token changes"),
+    ("tests/unit/test_contrast_audit.py", "deferred", "theme", "13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"),
+    ("spec/color_tokens.md", "deferred", "theme", "the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export"),
     ("tools/close_check.py", "verbatim", "", "close check entry point"),
     ("tools/close_check/__init__.py", "verbatim", "", "close check package"),
     ("tools/close_check/_shared.py", "verbatim", "", "close check package"),
@@ -189,19 +189,35 @@ code constant exists to derive a check from. Revisit each when one appears.
 
 def build_base_template(source: pathlib.Path) -> str:
     """A starter ``base.html``: the source's head through ``</style>``, then a
-    minimal body. The stylesheet is the design system — both ``:root`` blocks
-    and every component class — and the no-flash theme script above it is
-    what makes the dark theme apply before first paint. Everything after the
-    stylesheet in the source is this app's chrome and stays behind."""
+    minimal body that makes the stylesheet live. The stylesheet is the design
+    system — both ``:root`` blocks and every component class — but its v2
+    primitives are scoped to ``body.ui-v2``, so the body carries that class
+    (and the ``body_class`` block this repo's pages override). The no-flash
+    script in the head reads the saved theme before first paint; the body
+    carries the toggle that writes it — the source's ``_partials/theme_toggle``
+    markup and the click handler that follows the stylesheet — so both themes
+    are reachable from the page, not only by editing storage. Everything else
+    after the stylesheet in the source is this app's chrome and stays behind."""
     text = (source / "app/web/templates/base.html").read_text(encoding="utf-8")
     end = text.index("</style>") + len("</style>")
+    toggle_markup = (source / "app/web/templates/_partials/theme_toggle.html").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("var opts = document.querySelectorAll(\".theme-toggle-opt\")")
+    script_open = text.rindex("<script>", 0, start)
+    script_close = text.index("</script>", start) + len("</script>")
+    toggle_script = text[script_open:script_close]
     return text[:end] + """
     {% block extra_head %}{% endblock %}
   </head>
-  <body>
+  <body class="ui-v2 {% block body_class %}{% endblock %}">
+    <header class="site-header">
+""" + toggle_markup.rstrip("\n") + """
+    </header>
     <main id="main-content">
       {% block content %}{% endblock %}
     </main>
+    """ + toggle_script + """
   </body>
 </html>
 """
@@ -236,6 +252,9 @@ def export(
     include_deferred: frozenset[str] | set[str] = frozenset(),
 ) -> list[str]:
     """Copy the kit into ``dest``. Returns one report line per manifest entry."""
+    unknown = set(include_deferred) - set(DEFERRED_GROUPS)
+    if unknown:
+        raise ValueError(f"unknown deferred group(s) {sorted(unknown)}; known: {sorted(DEFERRED_GROUPS)}")
     report: list[str] = []
     for path, tier, needs, _note in MANIFEST:
         target = dest / path

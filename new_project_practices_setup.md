@@ -74,15 +74,15 @@ right.
 | `tests/unit/__init__.py` | skeleton | — | makes tests/unit a package; the contrast audit imports its helper relatively |
 | `app/web/spec_registry.py` | deferred | app | imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES |
 | `tests/unit/test_spec_coverage.py` | deferred | app | pairs with spec_registry; imports the app, so it cannot collect before one exists |
-| `app/web/templates/base.html` | deferred | theme | BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class) wrapped as a minimal Jinja base; rename the title, favicon and localStorage key |
+| `app/web/templates/base.html` | deferred | theme | BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key |
 | `tools/_harness_common.py` | deferred | theme | the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list |
 | `tools/theme_preview.gen.py` | deferred | theme | regenerate tools/theme_preview.html after export and commit it |
 | `tools/theme_customizer.gen.py` | deferred | theme | regenerate tools/theme_customizer.html after export and commit it |
 | `tools/theme_variants.gen.py` | deferred | theme | border-contrast report; runs as is |
 | `tests/unit/_base_css.py` | deferred | theme | parsing helpers the contrast audit imports |
 | `tests/unit/test_generated_tools_are_current.py` | deferred | theme | fails until the two pages are regenerated and committed |
-| `tests/unit/test_contrast_audit.py` | deferred | theme | 16 of 17 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
-| `spec/color_tokens.md` | deferred | theme | the inherited palette's catalogue; re-catalogue when a token changes |
+| `tests/unit/test_contrast_audit.py` | deferred | theme | 13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
+| `spec/color_tokens.md` | deferred | theme | the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export |
 | `tools/close_check.py` | verbatim | — | close check entry point |
 | `tools/close_check/__init__.py` | verbatim | — | close check package |
 | `tools/close_check/_shared.py` | verbatim | — | close check package |
@@ -236,23 +236,31 @@ first things a new project reaches for:
   registers today, and let `tests/unit/test_spec_coverage.py`'s baseline
   be whatever its first run reports. From then on a routing module added
   without a spec fails the gate, which is its job.
-- **When the app gets its first page**, export the `theme` group —
+- **Before the app's first page**, export the `theme` group —
   `--include-deferred theme`. It builds `app/web/templates/base.html`
   from the source: the no-flash theme script, both `:root` token blocks
-  and every component class, wrapped as a minimal Jinja base with a
-  `content` block, so the new project starts from this design system in
-  both themes. Rename the title, the favicon and the `localStorage` key
-  in it. Then regenerate the two pages and commit them —
-  `python3 tools/theme_preview.gen.py` and
+  and every component class, then a `body.ui-v2` (the scope the v2
+  primitives are written under) carrying the light/dark toggle and the
+  script that writes the saved choice, and a `content` block. The new
+  project starts from this design system with both themes reachable
+  from the page. It will not overwrite a `base.html` that exists; if you
+  already wrote one, export the group into a scratch directory and merge
+  its head and body by hand. Rename the title, the favicon and the
+  storage key (`rrw-theme`, in both scripts). Then regenerate the two
+  pages and commit them — `python3 tools/theme_preview.gen.py` and
   `python3 tools/theme_customizer.gen.py` — because
   `tests/unit/test_generated_tools_are_current.py` compares the committed
-  page to a fresh run. Of `tests/unit/test_contrast_audit.py`'s seventeen
-  checks, sixteen pass on the inherited stylesheet as exported; the one
-  that does not, `test_the_muted_token_absorbed_the_retired_one`, counts
-  a token's uses across this project's templates and asserts this
-  project's numbers — delete it until you have templates of your own,
-  then re-derive it. `spec/color_tokens.md` catalogues the palette you
-  inherited; it is your catalogue now.
+  page to a fresh run. Of the group's seventeen tests (fourteen in the
+  contrast audit, three on the generated pages), sixteen pass as
+  exported; the one that does not,
+  `test_the_muted_token_absorbed_the_retired_one`, counts a token's uses
+  across this project's templates and asserts this project's numbers —
+  delete it until you have templates of your own, then re-derive it.
+  `spec/color_tokens.md` catalogues the palette you inherited and is
+  your catalogue now, but it cites two visual-style specs, an archived
+  plan, a known-limitations page and a test that stayed in the source,
+  so the path gate goes red again on export: cut those references or
+  mark them, as in step 3.
 - **When a deploy workflow arrives, make it depend on the test job**, not
   merely run after it. The old checklist put this on day one; a kit
   cannot carry a deploy it has not seen, so it is the first thing to

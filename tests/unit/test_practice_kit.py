@@ -39,10 +39,12 @@ def _document_rows() -> dict[str, str]:
 
 
 def test_every_copied_path_exists() -> None:
-    """Verbatim and adapt entries always; deferred ones once the app exists.
+    """Verbatim and adapt entries always; a deferred group once its trigger
+    file exists (`DEFERRED_GROUPS`).
 
-    In a repository the kit was just exported into, the deferred pair is
-    absent by design until `app/main.py` is written (setup step 7)."""
+    In a repository the kit was just exported into, a deferred group is
+    absent by design until its trigger arrives (setup step 7): `app/main.py`
+    for the `app` pair, `base.html` for the theme group."""
     def required(tier: str, needs: str) -> bool:
         if tier in ("verbatim", "adapt"):
             return True
@@ -115,7 +117,7 @@ def test_skeleton_indexes_satisfy_the_guide_index_gate(tmp_path: pathlib.Path) -
 
 
 def test_deferred_tier_exports_only_on_request(tmp_path: pathlib.Path) -> None:
-    """With the flag, every deferred file the source has lands in DEST."""
+    """Naming one group exports that group's files and no other's."""
     dest = tmp_path / "fresh"
     pk.export(dest, include_deferred={"app"})
     for path, tier, needs, _ in pk.MANIFEST:
@@ -148,9 +150,19 @@ def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> N
     assert ":root" in text and "</style>" in text
     assert "{% block content %}" in text
     assert text.count("<body") == 1
+    assert '<body class="ui-v2 {% block body_class %}{% endblock %}">' in text
+    assert 'data-theme-choice="dark"' in text
+    assert 'localStorage.setItem("rrw-theme", mode)' in text
     for path, tier, needs, _ in pk.MANIFEST:
         if needs == "theme":
             assert (dest / path).is_file(), path
     base.write_text("mine\n")
     pk.export(dest, include_deferred={"theme"})
     assert base.read_text() == "mine\n"
+
+
+def test_an_unknown_deferred_group_is_refused(tmp_path: pathlib.Path) -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="unknown deferred group"):
+        pk.export(tmp_path / "fresh", include_deferred={"themes"})
