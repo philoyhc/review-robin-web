@@ -288,11 +288,13 @@ numbers it produced are in `rrw_sdd_in_practice.md` §6.4. Not in CI.
 ## `practice_kit.py`
 
 Read-only here; writes only into `--export DEST`. `MANIFEST` is the
-constant: every file the practice consists of, in three tiers — *verbatim*
+constant: every file the practice consists of, in four tiers — *verbatim*
 (copied, needs at most a project name), *adapt* (copied, with a named edit
-the setup document spells out) and *skeleton* (generated empty but
-well-formed, because this repo's version is its own history). Export never
-overwrites an existing file; `--force` does. `tests/unit/test_practice_kit.py`
+the setup document spells out), *skeleton* (generated empty but
+well-formed, because this repo's version is its own history) and
+*deferred* (imports the application; exported only with
+`--include-deferred`). Export never overwrites an existing file; `--force`
+does. `tests/unit/test_practice_kit.py`
 asserts every copied path exists, every skeleton has a generator, the
 export lands every entry, the generated `guide/README.md` satisfies the
 guide-index gate, and the table in `new_project_practices_setup.md` equals

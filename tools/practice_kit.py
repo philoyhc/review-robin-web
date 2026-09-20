@@ -9,12 +9,14 @@ drift from the other or from the tree.
     python3 tools/practice_kit.py --list              # the manifest, as a table
     python3 tools/practice_kit.py --export DEST       # copy the kit into DEST
 
-Three tiers. ``verbatim`` files are copied and need at most a project
+Four tiers. ``verbatim`` files are copied and need at most a project
 name. ``adapt`` files are copied and carry a named edit the setup
 document spells out. ``skeleton`` files are not copied from here at all —
 they are generated empty-but-well-formed, because this repo's version is
-its own history, not a template. Export never overwrites an existing
-file; ``--force`` does.
+its own history, not a template. ``deferred`` files import the
+application and cannot collect until one exists, so ``--export`` leaves
+them out until ``--include-deferred``. Export never overwrites an
+existing file; ``--force`` does.
 """
 
 from __future__ import annotations
@@ -49,8 +51,8 @@ MANIFEST: tuple[tuple[str, str, str], ...] = (
     (".github/workflows/ci-postgres.yml", "adapt", "DB user / password / name; the alembic round-trip stays"),
     ("tests/unit/test_doc_references.py", "verbatim", "the twins, path-reference and section-reference gates; read only the tree"),
     ("tests/unit/test_guide_indexes.py", "verbatim", "the guide-index gate; reads the skeleton READMEs"),
-    ("app/web/spec_registry.py", "adapt", "the route-table -> spec mapping; empty the table, lower _MINIMUM_ROUTES"),
-    ("tests/unit/test_spec_coverage.py", "adapt", "pairs with spec_registry; baseline set starts empty"),
+    ("app/web/spec_registry.py", "deferred", "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES"),
+    ("tests/unit/test_spec_coverage.py", "deferred", "pairs with spec_registry; imports the app, so it cannot collect before one exists"),
     ("tools/close_check.py", "verbatim", "close check entry point"),
     ("tools/close_check/__init__.py", "verbatim", "close check package"),
     ("tools/close_check/_shared.py", "verbatim", "close check package"),
@@ -67,15 +69,17 @@ MANIFEST: tuple[tuple[str, str, str], ...] = (
     ("new_project_practices_setup.md", "verbatim", "the procedure; a new project re-derives it from its own kit"),
 )
 
-TIERS = ("verbatim", "adapt", "skeleton")
+TIERS = ("verbatim", "adapt", "skeleton", "deferred")
 
-GITIGNORE_LINES = """
-# Agent-harness config is local, EXCEPT the checked-in agent definitions.
-# Without the negation a new agent file is silently ignored and never committed.
-.claude/*
-!.claude/agents/
-!.claude/skills/
-"""
+#: Every line the harness-config rule needs. Checked one by one: a
+#: destination that already ignores ``.claude/*`` but lacks a negation would
+#: swallow the exported agent and skill files silently — the failure the
+#: rule exists to prevent.
+GITIGNORE_REQUIRED = (".claude/*", "!.claude/agents/", "!.claude/skills/")
+GITIGNORE_HEADER = (
+    "# Agent-harness config is local, EXCEPT the checked-in agent definitions.\n"
+    "# Without the negation a new agent file is silently ignored and never committed.\n"
+)
 
 SKELETONS: dict[str, str] = {
     "guide/README.md": """# guide/
@@ -174,21 +178,36 @@ def render_table() -> str:
     return "\n".join(lines)
 
 
-def export(dest: pathlib.Path, source: pathlib.Path = REPO, force: bool = False) -> list[str]:
+def _gitignore_lines_missing(target: pathlib.Path) -> list[str]:
+    present = set()
+    if target.exists():
+        present = {line.strip() for line in target.read_text().splitlines()}
+    return [line for line in GITIGNORE_REQUIRED if line not in present]
+
+
+def export(
+    dest: pathlib.Path,
+    source: pathlib.Path = REPO,
+    force: bool = False,
+    include_deferred: bool = False,
+) -> list[str]:
     """Copy the kit into ``dest``. Returns one report line per manifest entry."""
     report: list[str] = []
     for path, tier, _note in MANIFEST:
         target = dest / path
+        if tier == "deferred" and not include_deferred:
+            report.append(f"deferred {path} (export with --include-deferred once the app exists)")
+            continue
         if tier == "skeleton":
             if path == ".gitignore":
-                existing = target.read_text() if target.exists() else ""
-                if ".claude/*" in existing:
-                    report.append(f"kept     {path} (negation lines present)")
+                missing = _gitignore_lines_missing(target)
+                if not missing:
+                    report.append(f"kept     {path} (all three harness lines present)")
                     continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with target.open("a", encoding="utf-8") as fh:
-                    fh.write(GITIGNORE_LINES)
-                report.append(f"appended {path}")
+                    fh.write("\n" + GITIGNORE_HEADER + "".join(f"{line}\n" for line in missing))
+                report.append(f"appended {path} ({', '.join(missing)})")
                 continue
             if target.exists() and not force:
                 report.append(f"kept     {path} (exists)")
@@ -215,6 +234,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="print the manifest as a markdown table")
     ap.add_argument("--export", metavar="DEST", help="copy the kit into DEST")
     ap.add_argument("--force", action="store_true", help="overwrite files that already exist in DEST")
+    ap.add_argument(
+        "--include-deferred", action="store_true",
+        help="also export the deferred tier (files that import the application)",
+    )
     args = ap.parse_args(argv)
     if args.list:
         print(render_table())
@@ -222,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.export:
         dest = pathlib.Path(args.export).resolve()
         dest.mkdir(parents=True, exist_ok=True)
-        lines = export(dest, force=args.force)
+        lines = export(dest, force=args.force, include_deferred=args.include_deferred)
         print("\n".join(lines))
         missing = [line for line in lines if line.startswith("MISSING")]
         return 1 if missing else 0

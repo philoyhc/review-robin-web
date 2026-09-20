@@ -37,10 +37,12 @@ From the new repository's root, with `SRC` the source checkout:
 python3 "$SRC/tools/practice_kit.py" --export .
 ```
 
-It copies every file in the table below, generates the skeletons, appends
-the `.gitignore` lines, and prints one line per entry. It never overwrites
-a file that exists; `--force` does. `--list` prints the table without
-copying. The table is derived from the tool's manifest and a test in the
+It copies every `verbatim` and `adapt` file in the table below, generates
+the skeletons, appends whichever of the three `.gitignore` harness lines
+are missing, and prints one line per entry. The `deferred` rows import the
+application and would fail test collection in an empty repository, so
+they wait for step 7. It never overwrites a file that exists; `--force`
+does. `--list` prints the table without copying. The table is derived from the tool's manifest and a test in the
 source repository keeps them identical, so if they disagree the tool is
 right.
 
@@ -67,8 +69,8 @@ right.
 | `.github/workflows/ci-postgres.yml` | adapt | DB user / password / name; the alembic round-trip stays |
 | `tests/unit/test_doc_references.py` | verbatim | the twins, path-reference and section-reference gates; read only the tree |
 | `tests/unit/test_guide_indexes.py` | verbatim | the guide-index gate; reads the skeleton READMEs |
-| `app/web/spec_registry.py` | adapt | the route-table -> spec mapping; empty the table, lower _MINIMUM_ROUTES |
-| `tests/unit/test_spec_coverage.py` | adapt | pairs with spec_registry; baseline set starts empty |
+| `app/web/spec_registry.py` | deferred | imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES |
+| `tests/unit/test_spec_coverage.py` | deferred | pairs with spec_registry; imports the app, so it cannot collect before one exists |
 | `tools/close_check.py` | verbatim | close check entry point |
 | `tools/close_check/__init__.py` | verbatim | close check package |
 | `tools/close_check/_shared.py` | verbatim | close check package |
@@ -104,10 +106,15 @@ these are the details that matter.
   and Easy Auth bullets, which name this app's constants. Rewrite
   "Architecture at a glance" for the new app or reduce it to the
   three-layer rule and a pointer. Regenerate "Where to look" from the
-  skeleton indexes. In "Where work runs", the gate bullet, the
-  install bullet, the stamp bullet and the two-readers bullet are the
-  practice and stay; the dated ruling text may be cut to its four rules.
-  Then `cp CLAUDE.md AGENTS.md` — the twins test is in the kit.
+  skeleton indexes. In "Where work runs", the install bullet, the stamp
+  bullet and the two-readers bullet are the practice and stay, and the
+  dated ruling text may be cut to its four rules; the two gate bullets
+  keep their shape but name this project's tests — of the tests they
+  cite, only `tests/unit/test_doc_references.py` and
+  `tests/unit/test_guide_indexes.py` come with the kit, so the
+  inline-scripts, generated-tools, contrast-audit and spec-coverage
+  lines go until you have those gates. Then `cp CLAUDE.md AGENTS.md` —
+  the twins test is in the kit.
 - **`constitution.md`.** The six articles are the practice. Delete the
   dated annotations under III; change "derived from
   `rrw_sdd_in_practice.md` §6" to say the derivation is owed, so the
@@ -138,8 +145,10 @@ these are the details that matter.
   **not** copied: its checks derive from this app's constants and
   stylesheet, and it is the template for step 7.
 - **Deleting a kit file** — `ci-postgres.yml` when there is no Postgres,
-  say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`,
-  or `tests/unit/test_practice_kit.py` fails on the missing path.
+  say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
+  and replaces the table in this document with `--list` output, or
+  `tests/unit/test_practice_kit.py` fails on the missing path and then
+  on the table.
 - **`app/web/spec_registry.py`** with **`tests/unit/test_spec_coverage.py`.**
   Empty the module-to-spec table, set `_MINIMUM_ROUTES` to the number of
   routes the new app registers today, and let the baseline set of pending
@@ -208,6 +217,13 @@ first things a new project reaches for:
   nobody wrote down, or one that needs a growing allowlist, is not
   written; it goes in `docs/unenforced_conventions.md` instead
   (constitution VI).
+- **When `app/main.py` exists**, export the deferred tier —
+  `python3 "$SRC/tools/practice_kit.py" --export . --include-deferred` —
+  and adapt the pair: empty the module-to-spec table in
+  `app/web/spec_registry.py`, set `_MINIMUM_ROUTES` to the routes the app
+  registers today, and let `tests/unit/test_spec_coverage.py`'s baseline
+  be whatever its first run reports. From then on a routing module added
+  without a spec fails the gate, which is its job.
 - **When a deploy workflow arrives, make it depend on the test job**, not
   merely run after it. The old checklist put this on day one; a kit
   cannot carry a deploy it has not seen, so it is the first thing to

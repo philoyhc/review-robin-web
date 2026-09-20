@@ -39,7 +39,16 @@ def _document_rows() -> dict[str, str]:
 
 
 def test_every_copied_path_exists() -> None:
-    missing = [p for p, tier, _ in pk.MANIFEST if tier != "skeleton" and not (REPO_ROOT / p).is_file()]
+    """Verbatim and adapt entries always; deferred ones once the app exists.
+
+    In a repository the kit was just exported into, the deferred pair is
+    absent by design until `app/main.py` is written (setup step 7)."""
+    app_exists = (REPO_ROOT / "app" / "main.py").is_file()
+    missing = [
+        p for p, tier, _ in pk.MANIFEST
+        if tier in ("verbatim", "adapt") or (tier == "deferred" and app_exists)
+        if not (REPO_ROOT / p).is_file()
+    ]
     assert not missing, f"manifest names files that are not in the tree: {missing}"
 
 
@@ -72,8 +81,11 @@ def test_export_writes_every_entry_and_never_overwrites(tmp_path: pathlib.Path) 
     (dest / ".gitignore").write_text("*.pyc\n")
     report = pk.export(dest)
     assert not [line for line in report if line.startswith("MISSING")], report
-    for path, _tier, _ in pk.MANIFEST:
-        assert (dest / path).is_file(), path
+    for path, tier, _ in pk.MANIFEST:
+        if tier == "deferred":
+            assert not (dest / path).exists(), f"{path} exported without --include-deferred"
+        else:
+            assert (dest / path).is_file(), path
     assert ".claude/*" in (dest / ".gitignore").read_text()
     # A second export keeps what is there rather than clobbering an adapted file.
     (dest / "CLAUDE.md").write_text("adapted\n")
@@ -95,3 +107,24 @@ def test_skeleton_indexes_satisfy_the_guide_index_gate(tmp_path: pathlib.Path) -
         assert doc.name in names or any(
             n.endswith("*.md") and doc.name.startswith(n.split("*")[0]) for n in names
         ), f"{doc.name} has no row in the skeleton guide/README.md"
+
+
+def test_deferred_tier_exports_only_on_request(tmp_path: pathlib.Path) -> None:
+    """With the flag, every deferred file the source has lands in DEST."""
+    dest = tmp_path / "fresh"
+    pk.export(dest, include_deferred=True)
+    for path, tier, _ in pk.MANIFEST:
+        if tier == "deferred":
+            assert (dest / path).is_file() == (REPO_ROOT / path).is_file(), path
+
+
+def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> None:
+    """A destination that ignores .claude/* but negates nothing would swallow
+    the exported agents silently; the guard must add the missing lines."""
+    dest = tmp_path / "fresh"
+    dest.mkdir()
+    (dest / ".gitignore").write_text(".claude/*\n")
+    pk.export(dest)
+    text = (dest / ".gitignore").read_text()
+    for line in pk.GITIGNORE_REQUIRED:
+        assert text.count(line + "\n") == 1, line
