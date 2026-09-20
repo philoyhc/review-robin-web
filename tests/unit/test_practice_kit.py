@@ -43,29 +43,34 @@ def test_every_copied_path_exists() -> None:
 
     In a repository the kit was just exported into, the deferred pair is
     absent by design until `app/main.py` is written (setup step 7)."""
-    app_exists = (REPO_ROOT / "app" / "main.py").is_file()
+    def required(tier: str, needs: str) -> bool:
+        if tier in ("verbatim", "adapt"):
+            return True
+        return tier == "deferred" and (REPO_ROOT / pk.DEFERRED_GROUPS[needs]).is_file()
+
     missing = [
-        p for p, tier, _ in pk.MANIFEST
-        if tier in ("verbatim", "adapt") or (tier == "deferred" and app_exists)
-        if not (REPO_ROOT / p).is_file()
+        p for p, tier, needs, _ in pk.MANIFEST
+        if required(tier, needs) and not (REPO_ROOT / p).is_file()
     ]
     assert not missing, f"manifest names files that are not in the tree: {missing}"
 
 
 def test_every_skeleton_has_a_generator() -> None:
-    absent = [p for p, tier, _ in pk.MANIFEST if tier == "skeleton" and p != ".gitignore" and p not in pk.SKELETONS]
+    absent = [p for p, tier, _, _ in pk.MANIFEST if tier == "skeleton" and p != ".gitignore" and p not in pk.SKELETONS]
     assert not absent, f"skeleton entries with no SKELETONS text: {absent}"
 
 
 def test_tiers_are_known_and_paths_unique() -> None:
-    assert all(tier in pk.TIERS for _, tier, _ in pk.MANIFEST)
+    assert all(tier in pk.TIERS for _, tier, _, _ in pk.MANIFEST)
+    assert all((tier == "deferred") == bool(needs) for _, tier, needs, _ in pk.MANIFEST)
+    assert all(needs in pk.DEFERRED_GROUPS for _, tier, needs, _ in pk.MANIFEST if needs)
     paths = pk.manifest_paths()
     assert len(paths) == len(set(paths))
 
 
 def test_the_setup_document_table_matches_the_manifest() -> None:
     rows = _document_rows()
-    expected = {p: tier for p, tier, _ in pk.MANIFEST}
+    expected = {p: tier for p, tier, _, _ in pk.MANIFEST}
     assert rows == expected, (
         "new_project_practices_setup.md's kit table has drifted from tools/practice_kit.py MANIFEST; "
         "regenerate it with `python3 tools/practice_kit.py --list`.\n"
@@ -81,7 +86,7 @@ def test_export_writes_every_entry_and_never_overwrites(tmp_path: pathlib.Path) 
     (dest / ".gitignore").write_text("*.pyc\n")
     report = pk.export(dest)
     assert not [line for line in report if line.startswith("MISSING")], report
-    for path, tier, _ in pk.MANIFEST:
+    for path, tier, _, _ in pk.MANIFEST:
         if tier == "deferred":
             assert not (dest / path).exists(), f"{path} exported without --include-deferred"
         else:
@@ -112,10 +117,11 @@ def test_skeleton_indexes_satisfy_the_guide_index_gate(tmp_path: pathlib.Path) -
 def test_deferred_tier_exports_only_on_request(tmp_path: pathlib.Path) -> None:
     """With the flag, every deferred file the source has lands in DEST."""
     dest = tmp_path / "fresh"
-    pk.export(dest, include_deferred=True)
-    for path, tier, _ in pk.MANIFEST:
+    pk.export(dest, include_deferred={"app"})
+    for path, tier, needs, _ in pk.MANIFEST:
         if tier == "deferred":
-            assert (dest / path).is_file() == (REPO_ROOT / path).is_file(), path
+            expected = needs == "app" and (REPO_ROOT / path).is_file()
+            assert (dest / path).is_file() == expected, path
 
 
 def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> None:
@@ -128,3 +134,23 @@ def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> Non
     text = (dest / ".gitignore").read_text()
     for line in pk.GITIGNORE_REQUIRED:
         assert text.count(line + "\n") == 1, line
+
+
+def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> None:
+    """The theme group needs base.html, so exporting it builds one from the
+    source: the no-flash script and the whole stylesheet, then a content
+    block — and never over an existing base.html."""
+    dest = tmp_path / "fresh"
+    pk.export(dest, include_deferred={"theme"})
+    base = dest / "app/web/templates/base.html"
+    text = base.read_text()
+    assert text.startswith("<!doctype html>")
+    assert ":root" in text and "</style>" in text
+    assert "{% block content %}" in text
+    assert text.count("<body") == 1
+    for path, tier, needs, _ in pk.MANIFEST:
+        if needs == "theme":
+            assert (dest / path).is_file(), path
+    base.write_text("mine\n")
+    pk.export(dest, include_deferred={"theme"})
+    assert base.read_text() == "mine\n"

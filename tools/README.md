@@ -292,9 +292,10 @@ constant: every file the practice consists of, in four tiers — *verbatim*
 (copied, needs at most a project name), *adapt* (copied, with a named edit
 the setup document spells out), *skeleton* (generated empty but
 well-formed, because this repo's version is its own history) and
-*deferred* (imports the application; exported only with
-`--include-deferred`). Export never overwrites an existing file; `--force`
-does. `tests/unit/test_practice_kit.py`
+*deferred*, in two groups exported on request — `--include-deferred app`
+(imports the application) and `--include-deferred theme` (reads
+`base.html`; builds a starter `base.html` from this one's head and
+stylesheet). Export never overwrites an existing file; `--force` does. `tests/unit/test_practice_kit.py`
 asserts every copied path exists, every skeleton has a generator, the
 export lands every entry, the generated `guide/README.md` satisfies the
 guide-index gate, and the table in `new_project_practices_setup.md` equals
