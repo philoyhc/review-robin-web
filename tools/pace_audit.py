@@ -29,6 +29,10 @@ Definitions, all in minutes:
 * ``push2merge`` last commit -> merge.
 * ``review``     the PR carries a commit whose subject names a cold read,
                  a second reader or acting on one.
+* ``turn`` fit   least squares of turn on code+test lines over product PRs:
+                 the intercept is the cost a slice pays whatever its size
+                 (instruction, context load, the gate run), the slope what
+                 scales with the build.
 
 Exit 0 always; it reports, a person reads.
 """
@@ -209,6 +213,19 @@ def report(label: str, rows: list[dict]) -> None:
     loc = sum(r["code"] + r["tests"] for r in product)
     rate = loc / product_hours if product_hours else 0
     print(f"  code+test LOC per within-session hour (product PRs): {rate:6.0f}")
+    turns = sorted(r["turn"] for r in within if r["turn"] > 0)
+    if len(product) >= 3 and turns:
+        xs = [r["code"] + r["tests"] for r in product]
+        ys = [r["turn"] for r in product]
+        mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+        sxx = sum((x - mx) ** 2 for x in xs)
+        slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx if sxx else 0.0
+        fixed = my - slope * mx
+        pct = lambda p: turns[int(p * (len(turns) - 1))]  # noqa: E731
+        print(
+            f"  turn p25 {pct(0.25):4.1f}  med {pct(0.5):4.1f}  p75 {pct(0.75):4.1f}  "
+            f"| fit on product PRs: fixed {fixed:4.1f} min + {slope * 100:4.2f} min per 100 LOC"
+        )
 
 
 def main() -> int:
