@@ -263,9 +263,9 @@ these are the details that matter.
   not copied. The kit's own row stays.
 - **`new_project_practices_setup.md`.** Fill the Provenance blockquote's
   two slots with the source and the commit step 1 had you note down.
-  Nothing checks it, deliberately (`docs/unenforced_conventions.md` §2.3),
-  so an unfilled one survives to the next reader, who then cannot tell
-  which version of the procedure this project inherited.
+  Nothing checks it, deliberately, so an unfilled one survives to the
+  next reader, who then cannot tell which version of the procedure this
+  project inherited.
 
 ## 4. Add what the kit cannot carry
 
