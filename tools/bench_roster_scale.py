@@ -52,13 +52,19 @@ LOOPBACK = ("@127.0.0.1", "@localhost", "@/", "host=/")
 
 PAGES = (
     ("Lobby", "/operator/sessions", False),
+    ("Lobby: archived", "/operator/sessions/archived", False),
     ("Session Home", "", True),
     ("Assignments", "/assignments", True),
     ("Invitations", "/invitations", True),
     ("Responses", "/responses", True),
     ("Validate", "/validate", True),
     ("Setup: reviewers", "/reviewers", True),
+    ("Setup: reviewers p5", "/reviewers?offset=800", True),
+    ("Setup: reviewers ?q=", "/reviewers?q=Reviewer+00500", True),
+    ("Setup: reviewers ?q=Team", "/reviewers?q=Team+3", True),
     ("Setup: reviewees", "/reviewees", True),
+    ("Setup: relationships", "/relationships", True),
+    ("Setup: observers", "/observers", True),
 )
 
 
@@ -85,6 +91,8 @@ def seed(args: argparse.Namespace) -> None:
         Instrument,
         InstrumentResponseField,
         Invitation,
+        Observer,
+        Relationship,
         Response,
         Reviewee,
         Reviewer,
@@ -118,6 +126,8 @@ def seed(args: argparse.Namespace) -> None:
             status="draft",
             created_by_user_id=user.id,
             assignment_mode="rule_based",
+            relationships_enabled=True,
+            observers_enabled=True,
         )
         db.add(review_session)
         db.flush()
@@ -213,6 +223,35 @@ def seed(args: argparse.Namespace) -> None:
         ]
         db.execute(insert(Assignment), pairs)
         db.execute(
+            insert(Relationship),
+            [
+                {
+                    "session_id": session_id,
+                    "reviewer_id": reviewer_id,
+                    "reviewee_id": reviewee_ids[
+                        (index + offset + 1) % len(reviewee_ids)
+                    ],
+                    "tag_1": f"Team {index % 10}",
+                    "status": "active",
+                }
+                for index, reviewer_id in enumerate(reviewer_ids)
+                for offset in range(args.per_reviewer)
+            ],
+        )
+        db.execute(
+            insert(Observer),
+            [
+                {
+                    "session_id": session_id,
+                    "email": f"observer{n:05d}@example.edu",
+                    "display_name": f"Observer {n:05d}",
+                    "status": "active",
+                    "tag_1": f"Team {n % 10}",
+                }
+                for n in range(args.observers)
+            ],
+        )
+        db.execute(
             insert(Invitation),
             [
                 {
@@ -253,6 +292,8 @@ def seed(args: argparse.Namespace) -> None:
         f"session_id={session_id} code={args.code} "
         f"reviewers={len(reviewer_ids)} reviewees={len(reviewee_ids)} "
         f"instruments={args.instruments} assignments={len(pairs)} "
+        f"relationships={len(reviewer_ids) * args.per_reviewer} "
+        f"observers={args.observers} "
         f"responses={len(rows)} in {time.perf_counter() - started:.1f}s"
     )
 
@@ -260,6 +301,57 @@ def seed(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # bench / profile
 # ---------------------------------------------------------------------------
+
+
+def seed_lobby(args: argparse.Namespace) -> None:
+    """Add N sessions owned by the bench operator — the lobby's own axis.
+
+    The lobby renders every non-archived session the operator can see, with
+    no pager and no cap (`guide/roster_search_filter.md` explains why the
+    client-side Filter can work there and not on a roster). Its cost
+    therefore scales with **session count**, not roster size, which is a
+    different question from everything else this tool measures — so the
+    sessions it writes are deliberately near-empty.
+    """
+    from app.db.models import ReviewSession, SessionOperator, SessionTag, User
+
+    url = _database_url()
+    _require_loopback(url)
+    engine = create_engine(url, future=True)
+    started = time.perf_counter()
+    with Session(engine) as db:
+        user = db.execute(
+            select(User).where(User.email == args.operator_email)
+        ).scalar_one()
+        existing = db.execute(
+            select(SessionOperator.id).where(SessionOperator.user_id == user.id)
+        ).all()
+        statuses = ("draft", "validated", "ready", "expired", "archived")
+        for n in range(args.sessions):
+            review_session = ReviewSession(
+                name=f"Lobby filler {n:04d}",
+                code=f"{args.prefix}{n:04d}",
+                status=statuses[n % len(statuses)],
+                created_by_user_id=user.id,
+                assignment_mode="rule_based",
+            )
+            db.add(review_session)
+            db.flush()
+            db.add(
+                SessionOperator(
+                    session_id=review_session.id, user_id=user.id, role="owner"
+                )
+            )
+            for tag in (f"Term {n % 6}", f"Faculty {n % 4}"):
+                db.add(SessionTag(session_id=review_session.id, tag=tag))
+        db.commit()
+        total = db.execute(
+            select(SessionOperator.id).where(SessionOperator.user_id == user.id)
+        ).all()
+    print(
+        f"added {args.sessions} sessions (was {len(existing)}, now {len(total)}) "
+        f"in {time.perf_counter() - started:.1f}s"
+    )
 
 
 class _SqlMeter:
@@ -316,6 +408,8 @@ def bench(args: argparse.Namespace) -> None:
 
     print(f"{'page':26s} {'total':>9s} {'sql':>9s} {'python':>9s} {'queries':>8s} {'html':>9s}")
     for label, suffix, scoped in PAGES:
+        if args.only and args.only.lower() not in label.lower():
+            continue
         url = f"{root}{suffix}" if scoped else suffix
         first = client.get(url, follow_redirects=False)
         if first.status_code != 200:
@@ -434,13 +528,24 @@ def main() -> None:
     seed_parser.add_argument("--per-reviewer", type=int, default=5)
     seed_parser.add_argument("--instruments", type=int, default=2)
     seed_parser.add_argument("--fields", type=int, default=3)
+    seed_parser.add_argument("--observers", type=int, default=200)
     seed_parser.add_argument("--answered", type=float, default=0.6)
     seed_parser.add_argument("--code", default="BENCH1")
     seed_parser.set_defaults(func=seed)
 
+    lobby_parser = sub.add_parser(
+        "seed-lobby", parents=[common], help="add N near-empty sessions"
+    )
+    lobby_parser.add_argument("--sessions", type=int, default=50)
+    lobby_parser.add_argument("--prefix", default="LOB")
+    lobby_parser.set_defaults(func=seed_lobby)
+
     bench_parser = sub.add_parser("bench", parents=[common], help="time every page")
     bench_parser.add_argument("--session", type=int, required=True)
     bench_parser.add_argument("--runs", type=int, default=3)
+    bench_parser.add_argument(
+        "--only", default="", help="substring filter over the page labels"
+    )
     bench_parser.set_defaults(func=bench)
 
     pin_parser = sub.add_parser("pin-rule", parents=[common], help="pin a MATCH rule")

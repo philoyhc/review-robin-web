@@ -24,7 +24,19 @@ python3 tools/bench_roster_scale.py bench --session 3 --runs 1
 python3 tools/bench_roster_scale.py pin-rule --session 3   # → state B
 python3 tools/bench_roster_scale.py post --session 3 --path /workflow/prepare
 python3 tools/bench_roster_scale.py bench --session 3 --runs 1
+
+# the two axes in "The two axes that turned out fine"
+python3 tools/bench_roster_scale.py seed-lobby --sessions 500
+python3 tools/bench_roster_scale.py bench --session 3 --only Lobby
+python3 tools/bench_roster_scale.py seed --code BENCH5K \
+    --reviewers 5000 --reviewees 5000 --per-reviewer 1
+python3 tools/bench_roster_scale.py bench --session N --only "Setup:"
 ```
+
+The browser-side figures come from driving the same fixture with the
+container's Chromium against a local `uvicorn` started with
+`ALLOW_FAKE_AUTH=true` and `FAKE_AUTH_EMAIL` set to the bench operator —
+ad-hoc, not part of the tool.
 
 **Two states, because the lifecycle state changes the answer.**
 
@@ -170,16 +182,102 @@ clicking again — is the worst available move. Whether a request that long
 survives the deployed front end is a question for the dev slot, not for
 this container.
 
-## What is not slow
+## Finding 5 — nothing is compressed
 
-- **The lobby**: 11 ms, 4 queries, unchanged between states. Its cost
-  scales with the number of sessions, not roster size — a different axis,
-  not measured here.
-- **The Setup rosters in state A**: 110 ms. The 200-row page cap is doing
-  exactly its job (`guide/roster_search_filter.md` documents that cap and
-  why it exists).
-- **SQL, everywhere**: 0.5%–9% of page time. Every slow page is slow in
-  Python.
+`app/main.py` installs no compression middleware, so every response goes
+out as plain text however the client asks for it:
+
+```bash
+curl -s -D - -o /dev/null -H "Accept-Encoding: gzip, br" \
+  http://127.0.0.1:8099/operator/sessions | grep -i content-
+# content-length: 1622603      (no content-encoding line at all)
+```
+
+What that costs, measured by piping the same responses through `gzip -9`:
+
+| page | as sent | gzipped | ratio |
+|---|---|---|---|
+| Lobby, 1,003 sessions | 1,584 KB | **95 KB** | 16.5× |
+| Setup reviewers, 5,000-row roster | 520 KB | 77 KB | 6.7× |
+| Assignments | 562 KB | 74 KB | 7.6× |
+
+This is the one finding in this document that is cheap, global, and
+independent of everything else: server-rendered HTML with a 1,000-row
+table is the most compressible payload there is, and the lobby's 16.5×
+is the whole page weight problem. Whether the deployed front end adds
+its own `Content-Encoding` is a dev-slot question this container cannot
+answer — one `curl -sI -H 'Accept-Encoding: gzip'` against the dev slot
+settles it, and if it does not, the middleware is a one-line change.
+
+## The two axes that turned out fine — measured, not assumed
+
+### The lobby scales with sessions, and it scales well
+
+The lobby renders every non-archived session with no pager and no cap —
+the property `guide/roster_search_filter.md` turns on. Its axis is session
+count, not roster size, so it gets its own fixture
+(`bench_roster_scale.py seed-lobby`) of near-empty sessions:
+
+| sessions owned | lobby | queries | HTML |
+|---|---|---|---|
+| 3 | 11 ms | 4 | 260 KB |
+| 13 | 12 ms | 4 | 276 KB |
+| 53 | 18 ms | 4 | 331 KB |
+| 203 | 24 ms | 4 | 538 KB |
+| 503 | 45 ms | 4 | 934 KB |
+| 1,003 | 85 ms | 4 | 1,584 KB |
+
+**Four queries at every size**, and server time grows linearly at roughly
+70 µs per session. Nothing here needs fixing. What grows is the page.
+
+In real Chromium (`--executable-path /opt/pw-browsers/chromium-1194/…`),
+at 1,003 sessions / 805 rendered rows / 18,200 DOM nodes: a cold load is
+**811 ms** end to end, `domInteractive` at 398 ms, and **one keystroke in
+the Filter box costs 5 ms**. The client-side filter that
+`roster_search_filter.md` declined to extend to the rosters is, on its own
+page, essentially free — 805 rows filtered to 80 within a frame. The
+lobby's only real exposure is the 1.58 MB it sends to get there, which is
+finding 5.
+
+### The roster pages hold up, including filtered and deep-paged
+
+All four Setup rosters, `draft`, two roster sizes — 1,000 rows and 5,000,
+the latter being `csv_imports.MAX_ROWS`, the import ceiling:
+
+| page | 1,000 rows | 5,000 rows | queries | HTML at 5,000 |
+|---|---|---|---|---|
+| Setup: reviewers | 195 ms | 341 ms | 28 | 520 KB |
+| …page 5 (`?offset=800`) | 184 ms | 327 ms | 28 | 520 KB |
+| …`?q=` one match | 181 ms | 350 ms | 28 | 278 KB |
+| …`?q=Team 3` (500 matches) | 192 ms | 370 ms | 28 | 864 KB |
+| Setup: reviewees | 218 ms | 353 ms | 28 | 508 KB |
+| Setup: relationships | 243 ms | 555 ms | 21 | 537 KB |
+| Setup: observers | 89 ms | 106 ms | 29 | 488 KB |
+
+Three things worth reading off that table:
+
+- **The query count is flat** — 21–29 whatever the roster size, and paging
+  and filtering do not add any. The N+1 of finding 2 is not here.
+- **Cost still tracks roster size, not page size.** Every row is loaded,
+  sorted and filtered before the 200-row window is cut
+  (`app/web/routes_operator/_shared.py` says so in its own docstring), so
+  a page showing 200 rows gets ~1.7× slower between a 1,000-row roster and
+  a 5,000-row one. At the import ceiling that is still 341 ms, so the
+  shape is fine at the sizes the CSV contract allows.
+- **A filtered view renders up to 500 rows** (`_SETUP_FILTERED_CAP`), which
+  is why `?q=Team 3` is the heaviest cell in the table at 864 KB — 2.5× the
+  default page. In Chromium that page is 702 ms end to end versus 268 ms
+  for the unfiltered 200 rows.
+
+Where a roster page *did* get slow — 110 ms → 2.0 s between state A and
+state B — nothing about the roster changed. That is finding 3's
+`_count_assignments` walking 200,000 rows.
+
+**And SQL, everywhere**: 0.5%–9% of page time on every *slow* page in
+this document. On the fast ones it is a larger share of a much smaller
+number — 44% of the observers page's 106 ms — which is the same point
+from the other end. A page is fast here exactly when it is not doing
+Python work per row.
 
 ## The room that is left, in order of what it is worth
 
@@ -208,7 +306,11 @@ this container.
 3. **Count with `count()`** (finding 3). Five one-line changes, plus one
    real fix in `session_response_count`.
 4. **Bulk-insert the generated pairs** (finding 4). Worth part of 75 s.
-5. **Precompute the pair sort key.** Measured in isolation: sorting the
+5. **Turn on compression** (finding 5). One middleware line, worth
+   1.49 MB on the lobby alone, and it is the only item here that helps
+   every page and every roster size at once. Confirm what the dev slot
+   already does before adding it.
+6. **Precompute the pair sort key.** Measured in isolation: sorting the
    1M-pair list drops from 0.87 s to 0.31 s when the normalized email is
    computed once per person instead of once per pair. Only worth doing
    inside a wider engine change — on its own it removes a twelfth of the
@@ -245,4 +347,5 @@ slower than no rule) is the argument for it.
 - Any fix. This is an investigation; nothing here is scheduled.
 - The reviewer-facing surfaces and the participant pages — the report was
   about the operator surfaces, and only those were measured.
-- The lobby's own scaling axis (many sessions rather than many people).
+- Browser-side cost beyond the two spot checks above; no profiling of
+  layout, paint or the sort / column-chip handlers.
