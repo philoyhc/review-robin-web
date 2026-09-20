@@ -39,52 +39,64 @@ python3 "$SRC/tools/practice_kit.py" --export .
 
 It copies every `verbatim` and `adapt` file in the table below, generates
 the skeletons, appends whichever of the three `.gitignore` harness lines
-are missing, and prints one line per entry. The `deferred` rows import the
-application and would fail test collection in an empty repository, so
-they wait for step 7. It never overwrites a file that exists; `--force`
-does. `--list` prints the table without copying. The table is derived from the tool's manifest and a test in the
+are missing, and prints one line per entry. The `deferred` rows wait for
+step 7: the `app` group imports the application and would fail test
+collection in an empty repository; the `theme` group reads `base.html`'s
+stylesheet and is exported together with a starter `base.html` the kit
+builds. It never overwrites a file that exists; `--force` does. `--list`
+prints the table without copying. The table is derived from the tool's manifest and a test in the
 source repository keeps them identical, so if they disagree the tool is
 right.
 
-| Path | Tier | Note |
-|---|---|---|
-| `CLAUDE.md` | adapt | rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md |
-| `constitution.md` | adapt | keep the six articles; drop the dated annotations; re-point 'derived from' |
-| `CONTRIBUTING.md` | adapt | fill the merge-policy paragraph's <slow job> and <paths> for the new CI |
-| `.gitignore` | skeleton | the .claude/* negation lines only; appended if absent |
-| `.claude/agents/diff-reviewer.md` | adapt | project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph |
-| `.claude/agents/spec-writer.md` | adapt | cites this project's specs and close procedure; re-point once your spec/ has a second file |
-| `.claude/skills/segment-plan/SKILL.md` | verbatim | the plan / item / close procedure |
-| `guide/segment_plan_template.md` | verbatim | the shape every plan copies |
-| `guide/sweep_template.md` | verbatim | the shape every spec/docs sweep copies |
-| `guide/README.md` | skeleton | index with the documented shapes the guide-index gate reads |
-| `guide/archive/README.md` | skeleton | index the archive gate reads; one row per file, no patterns |
-| `guide/todo_master.md` | skeleton | Done / Upcoming roadmap |
-| `guide/deferred_consolidated.md` | skeleton | everything scoped but not scheduled |
-| `spec/README.md` | skeleton | index of the surface contracts |
-| `docs/README.md` | skeleton | index of the operational docs |
-| `docs/status.md` | skeleton | implementation state; first row is this setup |
-| `docs/unenforced_conventions.md` | skeleton | constitution VI's short list; starts empty |
-| `.github/workflows/ci.yml` | verbatim | ruff + pytest -n auto on 3.12 |
-| `.github/workflows/ci-postgres.yml` | adapt | DB user / password / name; the alembic round-trip stays |
-| `tests/unit/test_doc_references.py` | verbatim | the twins, path-reference and section-reference gates; read only the tree |
-| `tests/unit/test_guide_indexes.py` | verbatim | the guide-index gate; reads the skeleton READMEs |
-| `app/web/spec_registry.py` | deferred | imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES |
-| `tests/unit/test_spec_coverage.py` | deferred | pairs with spec_registry; imports the app, so it cannot collect before one exists |
-| `tools/close_check.py` | verbatim | close check entry point |
-| `tools/close_check/__init__.py` | verbatim | close check package |
-| `tools/close_check/_shared.py` | verbatim | close check package |
-| `tools/close_check/_manifest.py` | verbatim | close check package |
-| `tools/close_check/_archive.py` | verbatim | close check package |
-| `tools/close_check/_sweep.py` | verbatim | close check package |
-| `tests/unit/test_close_check.py` | verbatim | builds its own repo; runs on an empty guide/ |
-| `tests/unit/test_close_check_archived.py` | verbatim | builds its own repo; passes on an empty archive |
-| `tools/pace_audit.py` | verbatim | merge-history pace audit; needs full history |
-| `tests/unit/test_pace_audit.py` | verbatim | builds its own repo |
-| `tools/practice_kit.py` | verbatim | this tool, so the next project can inherit from yours |
-| `tests/unit/test_practice_kit.py` | verbatim | keeps the manifest, the tree and the setup document in step |
-| `tools/README.md` | adapt | keep the rows and sections for the tools you copied |
-| `new_project_practices_setup.md` | verbatim | the procedure; a new project re-derives it from its own kit |
+| Path | Tier | Needs | Note |
+|---|---|---|---|
+| `CLAUDE.md` | adapt | — | rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md |
+| `constitution.md` | adapt | — | keep the six articles; drop the dated annotations; re-point 'derived from' |
+| `CONTRIBUTING.md` | adapt | — | fill the merge-policy paragraph's <slow job> and <paths> for the new CI |
+| `.gitignore` | skeleton | — | the .claude/* negation lines only; appended if absent |
+| `.claude/agents/diff-reviewer.md` | adapt | — | project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph |
+| `.claude/agents/spec-writer.md` | adapt | — | cites this project's specs and close procedure; re-point once your spec/ has a second file |
+| `.claude/skills/segment-plan/SKILL.md` | verbatim | — | the plan / item / close procedure |
+| `guide/segment_plan_template.md` | verbatim | — | the shape every plan copies |
+| `guide/sweep_template.md` | verbatim | — | the shape every spec/docs sweep copies |
+| `guide/README.md` | skeleton | — | index with the documented shapes the guide-index gate reads |
+| `guide/archive/README.md` | skeleton | — | index the archive gate reads; one row per file, no patterns |
+| `guide/todo_master.md` | skeleton | — | Done / Upcoming roadmap |
+| `guide/deferred_consolidated.md` | skeleton | — | everything scoped but not scheduled |
+| `spec/README.md` | skeleton | — | index of the surface contracts |
+| `docs/README.md` | skeleton | — | index of the operational docs |
+| `docs/status.md` | skeleton | — | implementation state; first row is this setup |
+| `docs/unenforced_conventions.md` | skeleton | — | constitution VI's short list; starts empty |
+| `.github/workflows/ci.yml` | verbatim | — | ruff + pytest -n auto on 3.12 |
+| `.github/workflows/ci-postgres.yml` | adapt | — | DB user / password / name; the alembic round-trip stays |
+| `tests/unit/test_doc_references.py` | verbatim | — | the twins, path-reference and section-reference gates; read only the tree |
+| `tests/unit/test_guide_indexes.py` | verbatim | — | the guide-index gate; reads the skeleton READMEs |
+| `tests/unit/__init__.py` | skeleton | — | makes tests/unit a package; the contrast audit imports its helper relatively |
+| `app/web/spec_registry.py` | deferred | app | imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES |
+| `tests/unit/test_spec_coverage.py` | deferred | app | pairs with spec_registry; imports the app, so it cannot collect before one exists |
+| `app/web/templates/base.html` | deferred | theme | BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key |
+| `tools/_harness_common.py` | deferred | theme | the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list |
+| `tools/theme_preview.gen.py` | deferred | theme | regenerate tools/theme_preview.html after export and commit it |
+| `tools/theme_customizer.gen.py` | deferred | theme | regenerate tools/theme_customizer.html after export and commit it |
+| `tools/theme_variants.gen.py` | deferred | theme | border-contrast report; runs as is |
+| `tests/unit/_base_css.py` | deferred | theme | parsing helpers the contrast audit imports |
+| `tests/unit/test_generated_tools_are_current.py` | deferred | theme | fails until the two pages are regenerated and committed |
+| `tests/unit/test_contrast_audit.py` | deferred | theme | 13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
+| `spec/color_tokens.md` | deferred | theme | the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export |
+| `tools/close_check.py` | verbatim | — | close check entry point |
+| `tools/close_check/__init__.py` | verbatim | — | close check package |
+| `tools/close_check/_shared.py` | verbatim | — | close check package |
+| `tools/close_check/_manifest.py` | verbatim | — | close check package |
+| `tools/close_check/_archive.py` | verbatim | — | close check package |
+| `tools/close_check/_sweep.py` | verbatim | — | close check package |
+| `tests/unit/test_close_check.py` | verbatim | — | builds its own repo; runs on an empty guide/ |
+| `tests/unit/test_close_check_archived.py` | verbatim | — | builds its own repo; passes on an empty archive |
+| `tools/pace_audit.py` | verbatim | — | merge-history pace audit; needs full history |
+| `tests/unit/test_pace_audit.py` | verbatim | — | builds its own repo |
+| `tools/practice_kit.py` | verbatim | — | this tool, so the next project can inherit from yours |
+| `tests/unit/test_practice_kit.py` | verbatim | — | keeps the manifest, the tree and the setup document in step |
+| `tools/README.md` | adapt | — | keep the rows and sections for the tools you copied |
+| `new_project_practices_setup.md` | verbatim | — | the procedure; a new project re-derives it from its own kit |
 
 ## 2. Read before adapting
 
@@ -217,13 +229,38 @@ first things a new project reaches for:
   nobody wrote down, or one that needs a growing allowlist, is not
   written; it goes in `docs/unenforced_conventions.md` instead
   (constitution VI).
-- **When `app/main.py` exists**, export the deferred tier —
-  `python3 "$SRC/tools/practice_kit.py" --export . --include-deferred` —
-  and adapt the pair: empty the module-to-spec table in
+- **When `app/main.py` exists**, export the `app` group —
+  `python3 "$SRC/tools/practice_kit.py" --export . --include-deferred app`
+  — and adapt the pair: empty the module-to-spec table in
   `app/web/spec_registry.py`, set `_MINIMUM_ROUTES` to the routes the app
   registers today, and let `tests/unit/test_spec_coverage.py`'s baseline
   be whatever its first run reports. From then on a routing module added
   without a spec fails the gate, which is its job.
+- **Before the app's first page**, export the `theme` group —
+  `--include-deferred theme`. It builds `app/web/templates/base.html`
+  from the source: the no-flash theme script, both `:root` token blocks
+  and every component class, then a `body.ui-v2` (the scope the v2
+  primitives are written under) carrying the light/dark toggle and the
+  script that writes the saved choice, and a `content` block. The new
+  project starts from this design system with both themes reachable
+  from the page. It will not overwrite a `base.html` that exists; if you
+  already wrote one, export the group into a scratch directory and merge
+  its head and body by hand. Rename the title, the favicon and the
+  storage key (`rrw-theme`, in both scripts). Then regenerate the two
+  pages and commit them — `python3 tools/theme_preview.gen.py` and
+  `python3 tools/theme_customizer.gen.py` — because
+  `tests/unit/test_generated_tools_are_current.py` compares the committed
+  page to a fresh run. Of the group's seventeen tests (fourteen in the
+  contrast audit, three on the generated pages), sixteen pass as
+  exported; the one that does not,
+  `test_the_muted_token_absorbed_the_retired_one`, counts a token's uses
+  across this project's templates and asserts this project's numbers —
+  delete it until you have templates of your own, then re-derive it.
+  `spec/color_tokens.md` catalogues the palette you inherited and is
+  your catalogue now, but it cites two visual-style specs, an archived
+  plan, a known-limitations page and a test that stayed in the source,
+  so the path gate goes red again on export: cut those references or
+  mark them, as in step 3.
 - **When a deploy workflow arrives, make it depend on the test job**, not
   merely run after it. The old checklist put this on day one; a kit
   cannot carry a deploy it has not seen, so it is the first thing to
@@ -236,8 +273,10 @@ first things a new project reaches for:
   record, read for rationale, never transplanted.
 - `spec/` and `app/` — the product, not the practice. `spec_registry.py`
   is the one exception, because it is the gate's mechanism.
-- `tools/code_metrics.py` and the theme tools — the first needs a merge
-  history to measure, the rest read this app's stylesheet.
+- `tools/code_metrics.py` — needs a merge history to measure.
+- The two generated theme pages, `tools/theme_preview.html` and
+  `tools/theme_customizer.html` — regenerated in the new repository from
+  its own `base.html`, never copied (the `theme` group above).
 - The `docs/` operational documents — deployment, security posture,
   runbook — each describes an environment the new project has not
   chosen yet.

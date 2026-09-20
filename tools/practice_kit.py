@@ -13,9 +13,11 @@ Four tiers. ``verbatim`` files are copied and need at most a project
 name. ``adapt`` files are copied and carry a named edit the setup
 document spells out. ``skeleton`` files are not copied from here at all —
 they are generated empty-but-well-formed, because this repo's version is
-its own history, not a template. ``deferred`` files import the
-application and cannot collect until one exists, so ``--export`` leaves
-them out until ``--include-deferred``. Export never overwrites an
+its own history, not a template. ``deferred`` files need something the
+new project does not have on day one — the ``app`` group imports the
+application, the ``theme`` group reads ``base.html``'s stylesheet — so
+``--export`` leaves them out until ``--include-deferred app`` or
+``--include-deferred theme`` (repeatable). Export never overwrites an
 existing file; ``--force`` does.
 """
 
@@ -28,48 +30,65 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-#: (path, tier, one-line note). Order is the order the setup document works in.
-MANIFEST: tuple[tuple[str, str, str], ...] = (
-    ("CLAUDE.md", "adapt", "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md"),
-    ("constitution.md", "adapt", "keep the six articles; drop the dated annotations; re-point 'derived from'"),
-    ("CONTRIBUTING.md", "adapt", "fill the merge-policy paragraph's <slow job> and <paths> for the new CI"),
-    (".gitignore", "skeleton", "the .claude/* negation lines only; appended if absent"),
-    (".claude/agents/diff-reviewer.md", "adapt", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph"),
-    (".claude/agents/spec-writer.md", "adapt", "cites this project's specs and close procedure; re-point once your spec/ has a second file"),
-    (".claude/skills/segment-plan/SKILL.md", "verbatim", "the plan / item / close procedure"),
-    ("guide/segment_plan_template.md", "verbatim", "the shape every plan copies"),
-    ("guide/sweep_template.md", "verbatim", "the shape every spec/docs sweep copies"),
-    ("guide/README.md", "skeleton", "index with the documented shapes the guide-index gate reads"),
-    ("guide/archive/README.md", "skeleton", "index the archive gate reads; one row per file, no patterns"),
-    ("guide/todo_master.md", "skeleton", "Done / Upcoming roadmap"),
-    ("guide/deferred_consolidated.md", "skeleton", "everything scoped but not scheduled"),
-    ("spec/README.md", "skeleton", "index of the surface contracts"),
-    ("docs/README.md", "skeleton", "index of the operational docs"),
-    ("docs/status.md", "skeleton", "implementation state; first row is this setup"),
-    ("docs/unenforced_conventions.md", "skeleton", "constitution VI's short list; starts empty"),
-    (".github/workflows/ci.yml", "verbatim", "ruff + pytest -n auto on 3.12"),
-    (".github/workflows/ci-postgres.yml", "adapt", "DB user / password / name; the alembic round-trip stays"),
-    ("tests/unit/test_doc_references.py", "verbatim", "the twins, path-reference and section-reference gates; read only the tree"),
-    ("tests/unit/test_guide_indexes.py", "verbatim", "the guide-index gate; reads the skeleton READMEs"),
-    ("app/web/spec_registry.py", "deferred", "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES"),
-    ("tests/unit/test_spec_coverage.py", "deferred", "pairs with spec_registry; imports the app, so it cannot collect before one exists"),
-    ("tools/close_check.py", "verbatim", "close check entry point"),
-    ("tools/close_check/__init__.py", "verbatim", "close check package"),
-    ("tools/close_check/_shared.py", "verbatim", "close check package"),
-    ("tools/close_check/_manifest.py", "verbatim", "close check package"),
-    ("tools/close_check/_archive.py", "verbatim", "close check package"),
-    ("tools/close_check/_sweep.py", "verbatim", "close check package"),
-    ("tests/unit/test_close_check.py", "verbatim", "builds its own repo; runs on an empty guide/"),
-    ("tests/unit/test_close_check_archived.py", "verbatim", "builds its own repo; passes on an empty archive"),
-    ("tools/pace_audit.py", "verbatim", "merge-history pace audit; needs full history"),
-    ("tests/unit/test_pace_audit.py", "verbatim", "builds its own repo"),
-    ("tools/practice_kit.py", "verbatim", "this tool, so the next project can inherit from yours"),
-    ("tests/unit/test_practice_kit.py", "verbatim", "keeps the manifest, the tree and the setup document in step"),
-    ("tools/README.md", "adapt", "keep the rows and sections for the tools you copied"),
-    ("new_project_practices_setup.md", "verbatim", "the procedure; a new project re-derives it from its own kit"),
+#: (path, tier, needs, one-line note). ``needs`` is the deferred group, or "".
+#: Order is the order the setup document works in.
+MANIFEST: tuple[tuple[str, str, str, str], ...] = (
+    ("CLAUDE.md", "adapt", "", "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md"),
+    ("constitution.md", "adapt", "", "keep the six articles; drop the dated annotations; re-point 'derived from'"),
+    ("CONTRIBUTING.md", "adapt", "", "fill the merge-policy paragraph's <slow job> and <paths> for the new CI"),
+    (".gitignore", "skeleton", "", "the .claude/* negation lines only; appended if absent"),
+    (".claude/agents/diff-reviewer.md", "adapt", "", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph"),
+    (".claude/agents/spec-writer.md", "adapt", "", "cites this project's specs and close procedure; re-point once your spec/ has a second file"),
+    (".claude/skills/segment-plan/SKILL.md", "verbatim", "", "the plan / item / close procedure"),
+    ("guide/segment_plan_template.md", "verbatim", "", "the shape every plan copies"),
+    ("guide/sweep_template.md", "verbatim", "", "the shape every spec/docs sweep copies"),
+    ("guide/README.md", "skeleton", "", "index with the documented shapes the guide-index gate reads"),
+    ("guide/archive/README.md", "skeleton", "", "index the archive gate reads; one row per file, no patterns"),
+    ("guide/todo_master.md", "skeleton", "", "Done / Upcoming roadmap"),
+    ("guide/deferred_consolidated.md", "skeleton", "", "everything scoped but not scheduled"),
+    ("spec/README.md", "skeleton", "", "index of the surface contracts"),
+    ("docs/README.md", "skeleton", "", "index of the operational docs"),
+    ("docs/status.md", "skeleton", "", "implementation state; first row is this setup"),
+    ("docs/unenforced_conventions.md", "skeleton", "", "constitution VI's short list; starts empty"),
+    (".github/workflows/ci.yml", "verbatim", "", "ruff + pytest -n auto on 3.12"),
+    (".github/workflows/ci-postgres.yml", "adapt", "", "DB user / password / name; the alembic round-trip stays"),
+    ("tests/unit/test_doc_references.py", "verbatim", "", "the twins, path-reference and section-reference gates; read only the tree"),
+    ("tests/unit/test_guide_indexes.py", "verbatim", "", "the guide-index gate; reads the skeleton READMEs"),
+    ("tests/unit/__init__.py", "skeleton", "", "makes tests/unit a package; the contrast audit imports its helper relatively"),
+    ("app/web/spec_registry.py", "deferred", "app", "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES"),
+    ("tests/unit/test_spec_coverage.py", "deferred", "app", "pairs with spec_registry; imports the app, so it cannot collect before one exists"),
+    ("app/web/templates/base.html", "deferred", "theme", "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key"),
+    ("tools/_harness_common.py", "deferred", "theme", "the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list"),
+    ("tools/theme_preview.gen.py", "deferred", "theme", "regenerate tools/theme_preview.html after export and commit it"),
+    ("tools/theme_customizer.gen.py", "deferred", "theme", "regenerate tools/theme_customizer.html after export and commit it"),
+    ("tools/theme_variants.gen.py", "deferred", "theme", "border-contrast report; runs as is"),
+    ("tests/unit/_base_css.py", "deferred", "theme", "parsing helpers the contrast audit imports"),
+    ("tests/unit/test_generated_tools_are_current.py", "deferred", "theme", "fails until the two pages are regenerated and committed"),
+    ("tests/unit/test_contrast_audit.py", "deferred", "theme", "13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"),
+    ("spec/color_tokens.md", "deferred", "theme", "the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export"),
+    ("tools/close_check.py", "verbatim", "", "close check entry point"),
+    ("tools/close_check/__init__.py", "verbatim", "", "close check package"),
+    ("tools/close_check/_shared.py", "verbatim", "", "close check package"),
+    ("tools/close_check/_manifest.py", "verbatim", "", "close check package"),
+    ("tools/close_check/_archive.py", "verbatim", "", "close check package"),
+    ("tools/close_check/_sweep.py", "verbatim", "", "close check package"),
+    ("tests/unit/test_close_check.py", "verbatim", "", "builds its own repo; runs on an empty guide/"),
+    ("tests/unit/test_close_check_archived.py", "verbatim", "", "builds its own repo; passes on an empty archive"),
+    ("tools/pace_audit.py", "verbatim", "", "merge-history pace audit; needs full history"),
+    ("tests/unit/test_pace_audit.py", "verbatim", "", "builds its own repo"),
+    ("tools/practice_kit.py", "verbatim", "", "this tool, so the next project can inherit from yours"),
+    ("tests/unit/test_practice_kit.py", "verbatim", "", "keeps the manifest, the tree and the setup document in step"),
+    ("tools/README.md", "adapt", "", "keep the rows and sections for the tools you copied"),
+    ("new_project_practices_setup.md", "verbatim", "", "the procedure; a new project re-derives it from its own kit"),
 )
 
 TIERS = ("verbatim", "adapt", "skeleton", "deferred")
+
+#: Deferred group -> the file whose presence means the group applies.
+DEFERRED_GROUPS = {
+    "app": "app/main.py",
+    "theme": "app/web/templates/base.html",
+}
 
 #: Every line the harness-config rule needs. Checked one by one: a
 #: destination that already ignores ``.claude/*`` but lacks a negation would
@@ -82,6 +101,7 @@ GITIGNORE_HEADER = (
 )
 
 SKELETONS: dict[str, str] = {
+    "tests/unit/__init__.py": "",
     "guide/README.md": """# guide/
 
 **Forward-looking planning and todos.** Once a segment ships, move its plan
@@ -167,14 +187,65 @@ code constant exists to derive a check from. Revisit each when one appears.
 }
 
 
+def build_base_template(source: pathlib.Path) -> str:
+    """A starter ``base.html``: the source's head through ``</style>``, then a
+    minimal body that makes the stylesheet live. The stylesheet is the design
+    system — both ``:root`` blocks and every component class — but its v2
+    primitives are scoped to ``body.ui-v2``, so the body carries that class
+    (and the ``body_class`` block this repo's pages override). The no-flash
+    script in the head reads the saved theme before first paint; the body
+    carries the toggle that writes it — the source's ``_partials/theme_toggle``
+    markup and the click handler that follows the stylesheet — so both themes
+    are reachable from the page, not only by editing storage. Everything else
+    after the stylesheet in the source is this app's chrome and stays behind."""
+    text = (source / "app/web/templates/base.html").read_text(encoding="utf-8")
+    end = text.index("</style>") + len("</style>")
+    toggle_markup = _toggle_markup(source, text)
+    start = text.index("var opts = document.querySelectorAll(\".theme-toggle-opt\")")
+    script_open = text.rindex("<script>", 0, start)
+    script_close = text.index("</script>", start) + len("</script>")
+    toggle_script = text[script_open:script_close]
+    return text[:end] + """
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="ui-v2 {% block body_class %}{% endblock %}">
+    <header class="site-header">
+""" + toggle_markup.rstrip("\n") + """
+    </header>
+    <main id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+    """ + toggle_script + """
+  </body>
+</html>
+"""
+
+
+def _toggle_markup(source: pathlib.Path, base_text: str) -> str:
+    """The theme toggle's markup: this repo keeps it in a partial that
+    ``base.html`` includes; a project the kit built carries it inline in its
+    ``base.html``. Read the partial when it exists, else slice the inline
+    block, so a kit-built project can be the source for the next one."""
+    partial = source / "app/web/templates/_partials/theme_toggle.html"
+    if partial.is_file():
+        return partial.read_text(encoding="utf-8")
+    open_at = base_text.index('<div class="theme-toggle"')
+    close_at = base_text.index("</div>", base_text.index("</button>", base_text.index("</button>", open_at) + 1))
+    return base_text[open_at:close_at + len("</div>")] + "\n"
+
+
+#: Deferred entries that are generated from the source rather than copied.
+BUILDERS = {"app/web/templates/base.html": build_base_template}
+
+
 def manifest_paths() -> list[str]:
-    return [path for path, _tier, _note in MANIFEST]
+    return [path for path, _tier, _needs, _note in MANIFEST]
 
 
 def render_table() -> str:
-    lines = ["| Path | Tier | Note |", "|---|---|---|"]
-    for path, tier, note in MANIFEST:
-        lines.append(f"| `{path}` | {tier} | {note} |")
+    lines = ["| Path | Tier | Needs | Note |", "|---|---|---|---|"]
+    for path, tier, needs, note in MANIFEST:
+        lines.append(f"| `{path}` | {tier} | {needs or '—'} | {note} |")
     return "\n".join(lines)
 
 
@@ -189,14 +260,25 @@ def export(
     dest: pathlib.Path,
     source: pathlib.Path = REPO,
     force: bool = False,
-    include_deferred: bool = False,
+    include_deferred: frozenset[str] | set[str] = frozenset(),
 ) -> list[str]:
     """Copy the kit into ``dest``. Returns one report line per manifest entry."""
+    unknown = set(include_deferred) - set(DEFERRED_GROUPS)
+    if unknown:
+        raise ValueError(f"unknown deferred group(s) {sorted(unknown)}; known: {sorted(DEFERRED_GROUPS)}")
     report: list[str] = []
-    for path, tier, _note in MANIFEST:
+    for path, tier, needs, _note in MANIFEST:
         target = dest / path
-        if tier == "deferred" and not include_deferred:
-            report.append(f"deferred {path} (export with --include-deferred once the app exists)")
+        if tier == "deferred" and needs not in include_deferred:
+            report.append(f"deferred {path} (--include-deferred {needs})")
+            continue
+        if tier == "deferred" and path in BUILDERS:
+            if target.exists() and not force:
+                report.append(f"kept     {path} (exists)")
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(BUILDERS[path](source), encoding="utf-8")
+            report.append(f"built    {path}")
             continue
         if tier == "skeleton":
             if path == ".gitignore":
@@ -225,7 +307,7 @@ def export(
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, target)
-        report.append(f"{tier:8} {path}")
+        report.append(f"{'copied' if tier == 'deferred' else tier:8} {path}")
     return report
 
 
@@ -235,8 +317,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--export", metavar="DEST", help="copy the kit into DEST")
     ap.add_argument("--force", action="store_true", help="overwrite files that already exist in DEST")
     ap.add_argument(
-        "--include-deferred", action="store_true",
-        help="also export the deferred tier (files that import the application)",
+        "--include-deferred", action="append", choices=sorted(DEFERRED_GROUPS), default=[],
+        metavar="GROUP", help="also export a deferred group: app (imports the application) "
+        "or theme (reads base.html); repeatable",
     )
     args = ap.parse_args(argv)
     if args.list:
@@ -245,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.export:
         dest = pathlib.Path(args.export).resolve()
         dest.mkdir(parents=True, exist_ok=True)
-        lines = export(dest, force=args.force, include_deferred=args.include_deferred)
+        lines = export(dest, force=args.force, include_deferred=set(args.include_deferred))
         print("\n".join(lines))
         missing = [line for line in lines if line.startswith("MISSING")]
         return 1 if missing else 0
