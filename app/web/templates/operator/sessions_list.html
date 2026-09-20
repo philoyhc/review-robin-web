@@ -99,6 +99,9 @@
     <form method="post" action="/operator/sessions/bulk-delete"
           id="sessions-list-form">
       <div class="card">
+        {# `.table-scroll` (base.html): a table wider than its card
+           scrolls inside the card rather than pushing the page sideways. #}
+        <div class="table-scroll">
         <table data-rrw-sortable="rrw-sort-lobby">
           <thead>
           <tr>
@@ -199,6 +202,7 @@
           </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
     </form>

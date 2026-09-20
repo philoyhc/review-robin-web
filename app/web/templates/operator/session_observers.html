@@ -669,6 +669,9 @@
             to get started.</p>
         {% endif %}
       {% else %}
+      {# `.table-scroll` (base.html): a table wider than its card
+         scrolls inside the card rather than pushing the page sideways. #}
+      <div class="table-scroll">
       <table id="observers-table">
         <thead>
         <tr>
@@ -790,6 +793,7 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
       {# Second copy: a 200-row table is several screens tall, so the
          pager belongs where the operator finishes reading as well as
          where they start (19J.5, carried to the cluster at 19J.9). #}

@@ -692,9 +692,13 @@ def test_surface_renders_constraint_summary_row_above_table(
     assert "rs-constraints" in body
     assert "<strong>Rating</strong> (1-5, steps of 1)" in body
     assert "<strong>Comments</strong> (0-2000 char)" in body
-    # Row sits above the table-scroll wrapper.
+    # Row sits above the response table. Anchored on that table's own
+    # `data-rrw-sortable` key rather than on the first `.table-scroll` in
+    # the body: 19O Item 8 wrapped every table in the app, so the first
+    # wrapper on this page is now the visibility-policy card's, which
+    # renders above the constraints row and made this read backwards.
     summary_idx = body.find('class="rs-constraints')
-    table_idx = body.find('class="table-scroll"')
+    table_idx = body.find('data-rrw-sortable="rrw-sort-rs-')
     assert 0 < summary_idx < table_idx
 
 

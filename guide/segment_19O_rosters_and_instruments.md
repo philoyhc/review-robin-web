@@ -96,6 +96,42 @@ At `4fa3bb2a`:
 - `grep -rln "table-scroll" spec/` → **5**: `ui_elements.md`, `assignments.md`, `operations_pages.md`, `visual_style_rrw.md`, `reviewer-surface.md`
 - `grep -rln "table-scroll" tests/ --include="*.py"` → **4**, none asserting a page does not scroll sideways
 
+### Status
+
+**Open question 1 answered by the author, 2026-09-20: the template-level
+check.** Taking it literally makes the rule uniform — *every* `<table>`
+sits in `.table-scroll`, with no width threshold and no exceptions list
+— and that is much wider than `Opportunity`'s seven pages: **31 tables
+across 23 templates, 27 of them unwrapped**, including the reviewer
+surfaces and the sys-admin pages the measurement never reached. The
+seven were the ones that overflow *today*, at the widths and content
+measured; the rule is what stops an eighth.
+
+**The uniform rule is not free by inspection, so it was measured.** A
+`<table>` shrink-wraps its content and a `<div>` fills its line box, so
+wrapping a narrow table could have moved it. Geometry of every table on
+all eleven operator pages, before and after, at 1400 / 900 / 700:
+**identical at 1400**, where nothing overflowed either way, and the
+**twelve page/width combinations that scrolled sideways all stopped,
+with none newly broken**.
+
+**Two defects in my own work, both the shape this segment keeps
+meeting.** The scan first stripped comments by deleting them, which
+shifted every line after and made it name line 173 of
+`review_surface.html` where the table is on 253 — a failure pointing at
+innocent markup. And the check's first version **passed with
+`wrapped = True` hard-coded**: every template already conformed, so
+nothing distinguished a working detector from one that always said yes.
+Both now have their own test, and the mutant dies.
+
+**One existing test was re-aimed, not weakened.**
+`test_surface_renders_constraint_summary_row_above_table` located the
+response table as "the first `.table-scroll` in the body". It is now the
+visibility-policy card's, which renders above the constraints row, so
+the assertion read backwards. It anchors on the response table's own
+`data-rrw-sortable` key — strictly more specific than what it had, and
+it still fails when the row is moved below the table.
+
 ### PR ladder
 
 1. **The wrappers and the check.** Wrap the seven, and add the test that

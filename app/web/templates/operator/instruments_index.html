@@ -1849,6 +1849,9 @@
               <div class="card rs-instrument-card"
                    data-new-model-band2-vp-preview-card>
                 <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
+                {# `.table-scroll` (base.html): a table wider than its card
+                   scrolls inside the card rather than pushing the page sideways. #}
+                <div class="table-scroll">
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -1867,6 +1870,7 @@
                     {% endfor %}
                   </tbody>
                 </table>
+                </div>
               </div>
             {% endif %}
           </div>
@@ -3977,6 +3981,9 @@
           <input form="dfsave-{{ instrument.id }}" type="hidden" name="observer_after_release_mode"
                  data-new-model-vp-input="observer-after_release"
                  value="{{ _ob.after_release_mode or '' }}">
+          {# `.table-scroll` (base.html): a table wider than its card
+             scrolls inside the card rather than pushing the page sideways. #}
+          <div class="table-scroll">
           <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
               <thead>
                 <tr style="text-align: left;">
@@ -4039,6 +4046,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
         </div>
         <div style="padding-left: 16px; border-left: 1px solid var(--border-default);">
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>

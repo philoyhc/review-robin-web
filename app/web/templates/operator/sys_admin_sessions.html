@@ -14,6 +14,9 @@
 
   {% if sessions %}
     <div class="card">
+      {# `.table-scroll` (base.html): a table wider than its card
+         scrolls inside the card rather than pushing the page sideways. #}
+      <div class="table-scroll">
       <table>
         <tr>
           <th>Session Name</th>
@@ -82,6 +85,7 @@
           </tr>
         {% endfor %}
       </table>
+      </div>
     </div>
   {% else %}
     <p class="muted">No sessions in this workspace yet.</p>
@@ -110,6 +114,9 @@
     </p>
 
     {% if visibility_audit_rows %}
+      {# `.table-scroll` (base.html): a table wider than its card
+         scrolls inside the card rather than pushing the page sideways. #}
+      <div class="table-scroll">
       <table>
         <tr>
           <th>Session</th>
@@ -142,6 +149,7 @@
           </tr>
         {% endfor %}
       </table>
+      </div>
     {% else %}
       <p>
         <strong>No findings.</strong> Every stored visibility cell in this
