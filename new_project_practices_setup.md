@@ -227,10 +227,15 @@ these are the details that matter.
 - **`.claude/agents/spec-writer.md`.** Leave as is until `spec/` has a
   second file; then re-point the paths it cites.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
-  name; keep the upgrade / downgrade-base / upgrade round-trip. An empty
-  tree has no chain to round-trip and the job goes red on the first PR,
-  so guard the two Alembic steps on `alembic.ini` existing: the job is
-  green until the first migration and binds from it on.
+  name; keep the upgrade / downgrade-base / upgrade round-trip, and the
+  `pytest` step that runs the whole suite against that server — it is
+  what makes the SQLite default safe to keep (step 4). An empty tree has
+  no chain to round-trip and the job goes red on the first PR, so guard
+  the two Alembic steps on `alembic.ini` existing: the job is green until
+  the first migration and binds from it on. Assert the round-trip's
+  *reverse* direction too, between `downgrade base` and the second
+  `upgrade head`: with `IF NOT EXISTS` up and `IF EXISTS` down, a
+  downgrade that dropped nothing still exits 0.
 - **`tests/unit/test_doc_references.py`** is verbatim and is the first
   gate that will go red, on purpose: it resolves every backticked repo
   path in live prose, and the kit ships prose that points at files that
@@ -277,9 +282,82 @@ these are the details that matter.
 - `pyproject.toml`: a `dev` extra with `pytest`, `pytest-xdist`, `httpx`
   and `ruff`, and `[tool.ruff]` with `line-length = 100` and
   `target-version = "py312"`. The workflows and the gates assume these.
-- A pytest `conftest` that builds the app's in-memory database from the
-  ORM metadata, if the new app has one; the kit's tests do not need it.
+- The two-dialect test arrangement, below. The kit's own tests do not
+  need a database, so nothing in it forces this; write it anyway.
 - `README.md`: one paragraph pointing at `CLAUDE.md` and `constitution.md`.
+
+### The two-dialect test arrangement
+
+Three files, and six traps that are each silent until something real
+depends on them.
+
+**The shape.** One database URL in the settings module, `DATABASE_URL`
+winning and local SQLite as the fallback. One engine builder that every
+path calls — the app, `alembic/env.py` and the conftest — so what SQLite
+needs is applied once rather than remembered three times. Then a
+session-scoped `engine` fixture in `tests/conftest.py` that reads the
+URL and forks: in-memory SQLite builds its schema from
+`Base.metadata.create_all`, and Postgres applies the full Alembic chain.
+`.github/workflows/ci-postgres.yml` runs the same suite on the second,
+so the migration chain and dialect divergence are covered on every PR
+without either costing the default run.
+
+**Land it before the first model, not with it.** The first project built
+from this kit deferred the conftest to "with the first model" and had to
+bring it forward — which left that slice writing fixtures and a model at
+once, and meant six defects were found in the harness by readers rather
+than by the model that would have tripped over them.
+
+**The traps**, each measured on a real Postgres and a real SQLite, with
+the symptom it produces:
+
+1. **SQLite does not ignore a schema-qualified name.** It reads one as
+   an attached database: `sqlite3.OperationalError: unknown database
+   core`. Any project whose models declare a schema needs a
+   `schema_translate_map` collapsing them to `None` on that dialect only
+   — defined in one module the conftest *and* the Alembic environment
+   import, never copied into both.
+2. **Two schemas then cannot share a table name.** Translated to one
+   namespace, `leave.approval_decision` and `events.approval_decision`
+   both compile to `approval_decision`: `table approval_decision already
+   exists`. Attaching one database per schema preserves the names and
+   makes SQLAlchemy's SQLite dialect **silently omit every cross-schema
+   foreign key from the DDL** — the orphan insert is accepted with
+   `PRAGMA foreign_keys=ON`. Neither is free. Decide which before
+   designing such a pair, and gate the collision meanwhile so it fails
+   at design time rather than inside a fixture.
+3. **`check_same_thread=False` does not share an in-memory database.**
+   SQLAlchemy picks `SingletonThreadPool` for `:memory:`, so a second
+   thread — a `TestClient`, a background task — opens a *new, empty* one
+   and finds no tables. `StaticPool` is what shares it.
+4. **SQLite ships foreign keys off.** Without `PRAGMA foreign_keys=ON`
+   on every connection, an `ON DELETE CASCADE` does nothing and the test
+   asserting it passes for the wrong reason.
+5. **Offline `--sql` cannot translate.** `schema_translate_map` is a
+   connection execution option and offline mode has no connection;
+   Alembic has no equivalent. So `alembic upgrade head --sql` against
+   SQLite prints DDL that dialect cannot run, with no error. Refuse it
+   there and name the fix.
+6. **The Postgres path is destructive, and single-process.** It drops
+   and rebuilds the schema, so each xdist worker would drop it out from
+   under the others — refuse `-n` there. And once a Postgres
+   `DATABASE_URL` is exported (trap 5 makes that the normal local
+   state), the next bare `pytest` in that shell reaches the drop; refuse
+   a non-local host unless a separate `TEST_DATABASE_URL` named it.
+
+Only 1 and 2 need more than one schema. **3 to 6 apply to any project on
+this stack**, including a single-schema one — including this one, whose
+`tests/conftest.py` builds its in-memory engine on `SingletonThreadPool`.
+Trap 3 is latent rather than biting there: `TestClient` does run the app
+in another thread, but the app never opens its own connection, because
+`tests/integration/conftest.py` overrides `get_db` with a session made in
+the test thread. Drop that override and the trap is live. Which is the
+point — these are all arrangements that work until the day something
+ordinary changes.
+
+Pin each property with a **pair** of tests: the helper's engine against a
+plain one. A single assertion that the engine behaves correctly passes
+just as well when the helper stopped being called.
 
 ## 5. Verify, before the first commit
 
