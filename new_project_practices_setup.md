@@ -48,6 +48,14 @@ prints the table without copying. The table is derived from the tool's manifest 
 source repository keeps them identical, so if they disagree the tool is
 right.
 
+If the sandbox refuses to run a script out of the source checkout — an
+agent session may only execute code from a repository attached to it —
+reproduce the export by hand instead of skipping it. The export is a
+manifest-driven copy: `MANIFEST` names every row, `SKELETONS` holds the
+generated texts verbatim, and the three `.gitignore` harness lines are
+appended if missing. Then run `--list` from the new tree and check it
+against the table below.
+
 | Path | Tier | Needs | Note |
 |---|---|---|---|
 | `CLAUDE.md` | adapt | — | rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md |
@@ -143,19 +151,30 @@ these are the details that matter.
 - **`.claude/agents/spec-writer.md`.** Leave as is until `spec/` has a
   second file; then re-point the paths it cites.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
-  name; keep the upgrade / downgrade-base / upgrade round-trip.
+  name; keep the upgrade / downgrade-base / upgrade round-trip. An empty
+  tree has no chain to round-trip and the job goes red on the first PR,
+  so guard the two Alembic steps on `alembic.ini` existing: the job is
+  green until the first migration and binds from it on.
 - **`tests/unit/test_doc_references.py`** is verbatim and is the first
   gate that will go red, on purpose: it resolves every backticked repo
   path in live prose, and the kit ships prose that points at files that
-  stayed in the source — this document's "Deliberately not copied"
-  section, `CONTRIBUTING.md`'s pointer to the practice audit, and every
-  `CLAUDE.md` section you have not rewritten yet. Fix the ones that
-  should point at something of yours; mark the deliberate ones with the
-  test's inline escape, the `path-ref-ok` HTML comment, on the line (the
-  test's docstring shows it). That red-then-green is the gate's
-  first proof that it runs. `tests/unit/test_doc_conventions.py` is
-  **not** copied: its checks derive from this app's constants and
-  stylesheet, and it is the template for step 7.
+  stayed in the source. Expect around 130 dangling pointers on a first
+  export, from five places: every `CLAUDE.md` section you have not
+  rewritten yet, `CONTRIBUTING.md`'s pointer to the practice audit,
+  `spec/README.md`'s pointer to the route registry, this document's
+  "Deliberately not copied" section, and — much the largest group — this
+  document's own kit table and step 7 prose, whose `deferred` rows name
+  the `app/` and theme files no new tree holds before step 7. Fix the
+  ones that should point at something of yours; mark the deliberate ones
+  with the test's inline escape, the `path-ref-ok` HTML comment, on the
+  line (the test's docstring shows it). Around forty markers is normal
+  and most of them land in this document. Leave them accurate rather
+  than tidy: the same test fails a marker whose path has come to exist,
+  so step 7 will name each one to drop as it lands the file it covered.
+  That red-then-green is the gate's first proof that it runs.
+  `tests/unit/test_doc_conventions.py` is **not** copied: its checks
+  derive from this app's constants and stylesheet, and it is the
+  template for step 7.
 - **Deleting a kit file** — `ci-postgres.yml` when there is no Postgres,
   say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
   and replaces the table in this document with `--list` output, or
@@ -194,6 +213,15 @@ If it did not, mutation-test it: add a backticked path to `docs/status.md`
 that does not exist, run `pytest tests/unit/test_doc_references.py`,
 watch it fail naming the file and line, and remove it. A gate that cannot
 go red has not been installed.
+
+Two tests are the known exception, and they are a defect in the kit
+rather than in your tree. `test_theme_group_builds_a_starter_base_template`
+and `test_a_kit_built_project_can_be_the_source_for_the_next`, both in
+`tests/unit/test_practice_kit.py`, export the theme group from the tree
+under test, which reads `app/web/templates/base.html` — the one file
+step 7 creates and day one cannot have. Skip both on that file's
+absence, the condition `test_every_copied_path_exists` already keys on,
+rather than deleting them; step 7 turns them back on.
 
 If the suite could not run at all, say so in the first PR body and name
 what did.
