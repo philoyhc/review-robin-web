@@ -261,8 +261,12 @@ def test_the_wide_chip_tables_sit_inside_a_table_scroll_wrapper(
     populated it renders **14 columns**, a 1508px table in a 1360px
     card, pushing the document 126px past a 1440 viewport.
 
-    The three Setup rosters are deliberately absent: measured at 1324px
-    inside a 1360px card, they fit.
+    The three Setup rosters were deliberately absent: measured at 1324px
+    inside a 1360px card, they fit — at that viewport, which is the part
+    this left out. 19O Item 8 measured them below it and found Reviewers
+    and Reviewees pushing the document sideways from 900px. All three
+    carry the wrapper now, and the rule is uniform rather than
+    width-judged (`tests/unit/test_table_scroll_wrappers.py`).
     """
     src = (OPERATOR / name).read_text()
     table = src.index('<table id="')

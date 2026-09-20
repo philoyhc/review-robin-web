@@ -122,7 +122,36 @@ shifted every line after and made it name line 173 of
 innocent markup. And the check's first version **passed with
 `wrapped = True` hard-coded**: every template already conformed, so
 nothing distinguished a working detector from one that always said yes.
-Both now have their own test, and the mutant dies.
+Both now have their own test, and the mutant dies. A third survivor — matching the wrapper class by substring, so `no-table-scroll` would pass — survived only because no template has a lookalike, and took a fixture case rather than a template to kill.
+
+**The cold read found a false pass, and the worst one available.**
+`html.parser` takes `{` and `%` as legal tag-name characters, so the
+house idiom `<table{% if … %}` — no space before the Jinja tag — parses
+as an element named `table{%` and never reaches the check. Live in the
+repo: `reviewer/review_surface.html`'s **response table**, the widest in
+the app. Not reported unwrapped; not seen. And the re-aim below had just
+removed the suite's only other assertion that it was wrapped, so for one
+commit the app's widest table was covered by nothing. Jinja tags are
+blanked before parsing now, and a new check reconciles `<table` as
+written against `<table` as parsed, per file — so the next idiom this
+parser cannot read fails loudly instead of passing.
+
+**"No exceptions list" was not true as landed, twice over.** Two tables
+on the Instruments page are built in JavaScript into a bare `<div>`, so
+the wrapper goes on that container — there is no server-rendered table
+to wrap. And three on Extract data were wrapped that should not have
+been: `.shaper-preview-table` is flattened to `display: block` and its
+own container sets `overflow-x: visible`, with the reason beside it —
+the row *wraps* "rather than scrolling horizontally". Those three are
+backed out, and the check names that one exception against the CSS rule
+that earns it rather than against a width.
+
+**A sibling test's rationale was left behind by the sweep.**
+`tests/unit/test_column_visibility_primitive.py` recorded "the three
+Setup rosters are deliberately absent: measured at 1324px inside a
+1360px card, they fit" — true at that viewport, which is the part it
+left out. Corrected at rung 1: it is entry 16's failure again, one item
+later.
 
 **One existing test was re-aimed, not weakened.**
 `test_surface_renders_constraint_summary_row_above_table` located the
@@ -165,13 +194,15 @@ it still fails when the row is moved below the table.
 
 - The nav tab strips' own overflow — already scrollered, and a different mechanism.
 - Hiding or stacking columns at narrow viewports.
-- `reviewer/review_surface.html`, which already carries the wrapper.
+- ~~`reviewer/review_surface.html`, which already carries the wrapper.~~ Struck at rung 1: it carries one on its *response* table and not on the visibility-policy table above it, and the uniform rule reaches both.
 
 ### Doc impact
 
 - `spec/ui_elements.md` — §10's `.table-scroll` row states "a roster that measures inside its card goes without", which no roster does below 1100px; §6's pointer repeats it (Item 8).
 - `spec/assignments.md` — "The table sits in `.table-scroll`" names one of the page's two tables (Item 8).
 - `spec/setup_pages.md` — the shared preview-table shape gains the wrapper (Item 8).
+- `spec/reviewer-surface.md` — describes `.table-scroll` as specific to wide instrument tables; four reviewer templates carry it now (Item 8, added at rung 1).
+- `spec/visual_style_rrw.md` — records that `.table-scroll`'s `overflow-x` forces an `overflow-y` scroll context, which now applies in 24 more places (Item 8, added at rung 1).
 - `docs/status.md` — row when Item 8 lands (Item 8).
 
 ---

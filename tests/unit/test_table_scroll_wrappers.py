@@ -25,7 +25,7 @@ operator pages before and after the sweep, and the twelve page/width
 combinations that scrolled sideways stopped, with none newly broken.
 
 So this asks one question with no exceptions list: is there a
-``.table-scroll`` ancestor? An exceptions list would be the judgement
+``.table-scroll`` ancestor? An exceptions list would be the judgment
 call coming back in a form nobody re-measures.
 """
 
@@ -46,13 +46,38 @@ _NON_MARKUP = (
     re.compile(r"<style\b.*?</style>", re.S | re.I),
 )
 
+#: Jinja statements and expressions, blanked before parsing.
+#:
+#: ``html.parser`` takes ``{`` and ``%`` as legal tag-name characters, so
+#: the house idiom ``<table{% if group.is_group %} class="…"{% endif %}>``
+#: — no space before the tag — parses as an element named ``table{%`` and
+#: never reaches ``handle_starttag``'s ``tag == "table"``. The table is not
+#: reported unwrapped; it is not seen at all. That is a **false pass**, and
+#: it was live: ``reviewer/review_surface.html``'s response table, the
+#: widest in the app, was invisible to the first version of this check.
+_JINJA = (re.compile(r"\{%.*?%\}", re.S), re.compile(r"\{\{.*?\}\}", re.S))
+
+#: A ``<table>`` start tag as written, for reconciling against the parse.
+_RAW_TABLE = re.compile(r"<table\b", re.I)
+
+#: The one table that goes without, and why.
+#:
+#: ``.shaper-preview-table`` is flattened to ``display: block; width: 100%``
+#: with its cells as wrapping flex children (``base.html``), and its own
+#: ``.shaper-preview-scroll`` container sets ``overflow-x: visible`` with the
+#: reason written beside it: the row *wraps to a second line* "rather than
+#: scrolling horizontally". It is a table in name only and cannot exceed its
+#: container, so a scroller there would re-add what that rule removed.
+#: Anchored to a CSS decision, not to a judgement about width.
+_NOT_LAID_OUT_AS_A_TABLE = "shaper-preview-table"
+
 _VOID = frozenset(
     "area base br col embed hr img input link meta param source track wbr".split()
 )
 
 
 def _blank(match: re.Match[str]) -> str:
-    """Replace a comment with its own newlines.
+    """Replace a stripped span with its own newlines.
 
     Deleting it outright shifts every line number after it, which made a
     first pass at this check report ``review_surface.html``'s table 80
@@ -73,7 +98,10 @@ class _TableFinder(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         classes = dict(attrs).get("class") or ""
         if tag == "table":
-            wrapped = any("table-scroll" in cls for _, cls in self._stack)
+            # Token match, not substring: `no-table-scroll` is not a wrapper.
+            wrapped = any(
+                "table-scroll" in cls.split() for _, cls in self._stack
+            ) or _NOT_LAID_OUT_AS_A_TABLE in classes.split()
             self.tables.append((self.getpos()[0], wrapped))
         if tag not in _VOID:
             self._stack.append((tag, classes))
@@ -87,11 +115,17 @@ class _TableFinder(HTMLParser):
                 return
 
 
-def _scan(path: pathlib.Path) -> list[tuple[int, bool]]:
+def _markup(path: pathlib.Path) -> str:
+    """The template with its non-markup and its Jinja tags blanked."""
     text = path.read_text()
-    for pattern in _NON_MARKUP:
+    for pattern in _NON_MARKUP + _JINJA:
         text = pattern.sub(_blank, text)
-    if "<table" not in text:
+    return text
+
+
+def _scan(path: pathlib.Path) -> list[tuple[int, bool]]:
+    text = _markup(path)
+    if not _RAW_TABLE.search(text):
         return []
     finder = _TableFinder()
     finder.feed(text)
@@ -115,6 +149,30 @@ def test_the_scan_finds_the_tables() -> None:
     assert sum(len(t) for t in found.values()) >= 30
 
 
+def test_the_parser_sees_every_table_that_is_written() -> None:
+    """The check's real failure mode: a table it cannot see.
+
+    A table reported unwrapped is a loud, fixable failure. A table the
+    parser never reaches is a silent pass, and the first version of this
+    file had one — ``<table{% if ... %}`` parses as an element named
+    ``table{%``. Counting what is written against what was parsed is the
+    only assertion that catches the next such idiom, whatever it is.
+    """
+    mismatched = []
+    for path in sorted(TEMPLATES.rglob("*.html")):
+        text = _markup(path)
+        written = len(_RAW_TABLE.findall(text))
+        parsed = len(_scan(path))
+        if written != parsed:
+            mismatched.append(f"{path.relative_to(TEMPLATES)}: "
+                              f"{written} written, {parsed} parsed")
+
+    assert not mismatched, (
+        "a <table> was written but not parsed, so the wrapper check never "
+        "saw it:\n  " + "\n  ".join(mismatched)
+    )
+
+
 def test_the_scan_can_tell_wrapped_from_unwrapped() -> None:
     """Guards the detector, which the sweep above cannot.
 
@@ -132,10 +190,20 @@ def test_the_scan_can_tell_wrapped_from_unwrapped() -> None:
     sibling = _TableFinder()
     sibling.feed('<div class="table-scroll"></div>'
                  "<table><tr><td>x</td></tr></table>")
+    # A class that merely contains the name is not the class.
+    lookalike = _TableFinder()
+    lookalike.feed('<div class="no-table-scroll">'
+                   "<table><tr><td>x</td></tr></table></div>")
+    # One class among several still counts.
+    among = _TableFinder()
+    among.feed('<div class="card table-scroll wide">'
+               "<table><tr><td>x</td></tr></table></div>")
 
     assert [w for _, w in wrapped.tables] == [True]
     assert [w for _, w in unwrapped.tables] == [False]
     assert [w for _, w in sibling.tables] == [False]
+    assert [w for _, w in lookalike.tables] == [False]
+    assert [w for _, w in among.tables] == [True]
 
 
 def test_the_scan_reports_the_line_the_table_is_on() -> None:

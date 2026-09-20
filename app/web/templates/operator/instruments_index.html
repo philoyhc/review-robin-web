@@ -1887,7 +1887,11 @@
              only — JS rebuildPreview replaces all of it on
              DOMContentLoaded + on every R / chip / Band 3 row
              toggle, picking up the help cards + constraints. #}
-          <div data-new-model-band2-preview
+          {# `.table-scroll`: this container is filled by ``rebuildPreview``
+             with a ``table-layout: fixed`` table carrying operator-set
+             column widths, so the wrapper goes on the container — there
+             is no server-rendered <table> here to wrap. #}
+          <div data-new-model-band2-preview class="table-scroll"
                style="margin-top: 16px;">
             <div class="rs-progress-row">
               <p class="rs-instrument-progress"
