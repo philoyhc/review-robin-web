@@ -214,14 +214,14 @@ that does not exist, run `pytest tests/unit/test_doc_references.py`,
 watch it fail naming the file and line, and remove it. A gate that cannot
 go red has not been installed.
 
-Two tests are the known exception, and they are a defect in the kit
-rather than in your tree. `test_theme_group_builds_a_starter_base_template`
-and `test_a_kit_built_project_can_be_the_source_for_the_next`, both in
-`tests/unit/test_practice_kit.py`, export the theme group from the tree
-under test, which reads `app/web/templates/base.html` — the one file
-step 7 creates and day one cannot have. Skip both on that file's
-absence, the condition `test_every_copied_path_exists` already keys on,
-rather than deleting them; step 7 turns them back on.
+Two tests skip themselves rather than pass, and that is expected.
+`test_theme_group_builds_a_starter_base_template` and
+`test_a_kit_built_project_can_be_the_source_for_the_next`, both in
+`tests/unit/test_practice_kit.py`, export the theme group by slicing
+`app/web/templates/base.html`, which step 7 creates. The kit's own guard
+skips them until that file exists and carries the toggle's markup, so
+they stay skipped too if you write your own template before landing the
+group. Step 7 turns them back on; leave them alone until then.
 
 If the suite could not run at all, say so in the first PR body and name
 what did.

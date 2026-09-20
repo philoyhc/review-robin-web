@@ -27,13 +27,25 @@ def _load():
 
 pk = _load()
 
-#: The theme group is *built* from this tree's ``base.html``, so the two tests
-#: that export it need that file present. A repository the kit was just
-#: exported into has none until setup step 7 lands the group — the same
-#: trigger ``test_every_copied_path_exists`` keys on.
+def _theme_source_is_the_kits() -> bool:
+    """``build_base_template`` slices the source ``base.html`` on the theme
+    toggle's own markers, so the two tests that export the group need that
+    file to be the kit's, not merely present: a tree that wrote its own
+    template before landing the group has one the builder cannot slice.
+
+    The marker is the toggle's class, which the stylesheet carries as well as
+    the script, so editing the script alone still fails loudly here instead of
+    skipping silently."""
+    try:
+        text = (REPO_ROOT / pk.DEFERRED_GROUPS["theme"]).read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "theme-toggle-opt" in text
+
+
 needs_theme_source = pytest.mark.skipif(
-    not (REPO_ROOT / pk.DEFERRED_GROUPS["theme"]).is_file(),
-    reason="the theme group is built from app/web/templates/base.html (setup step 7)",
+    not _theme_source_is_the_kits(),
+    reason="the theme group is built by slicing the kit's own base.html (setup step 7)",
 )
 
 _ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*([^|]*?)\s*\|")
