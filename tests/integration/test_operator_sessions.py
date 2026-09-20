@@ -534,8 +534,8 @@ def test_archive_selected_archives_non_activated_states(
         assert db.get(ReviewSession, rs.id).status == "archived"
 
 
-def test_lobby_search_card_has_go_to_archive(client: TestClient) -> None:
-    """The Search card carries a 'Go to Archive' link to the archived
+def test_lobby_filter_card_has_go_to_archive(client: TestClient) -> None:
+    """The Filter card carries a 'Go to Archive' link to the archived
     sessions child page."""
     client.post(
         "/operator/sessions",
@@ -583,7 +583,7 @@ def test_archived_page_lists_archived_sessions(
     assert 'data-sort-key="archived"' in body
     assert 'data-rrw-sortable="rrw-sort-archived"' in body
     assert 'class="archived-list-select-all"' in body
-    # Search card + the bulk-only expander template.
+    # Filter card + the bulk-only expander template.
     assert 'class="archived-search-input"' in body
     assert 'id="archived-bulk-expander"' in body
 

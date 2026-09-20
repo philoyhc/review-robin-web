@@ -1,7 +1,7 @@
 """Rehydrate an extracted session — operator surface.
 
 Segment 18P Group 2. Reached from the ``Rehydrate`` button in the
-Sessions Lobby search-card row; rebuilds a session from a complete set
+Sessions Lobby Filter-card row; rebuilds a session from a complete set
 of extract CSV files (``spec/rehydrate.md``).
 
 **PR G0** landed the UI scaffold; **PR G3** wired the mandatory pre-flight

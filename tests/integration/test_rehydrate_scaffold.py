@@ -11,8 +11,8 @@ from fastapi.testclient import TestClient
 
 
 def test_lobby_shows_rehydrate_button(client: TestClient) -> None:
-    # The search-card button row (Cancel / Add new / Rehydrate / Go to
-    # Archive) renders once the operator has a session; a bare lobby
+    # The Filter-card button row (Clear / Add new session / Rehydrate /
+    # Go to Archive) renders once the operator has a session; a bare lobby
     # shows the onboarding empty state instead.
     client.post(
         "/operator/sessions",

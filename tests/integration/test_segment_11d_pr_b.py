@@ -108,14 +108,14 @@ def test_sessions_list_empty_state_has_one_create_affordance(
     card did not render at all when there were no sessions. Standardising
     the lobby (2026-09-07) made both cards render in every state, which
     briefly left two buttons to the same route under two different names.
-    Removing the card's CTA settles it in the Search card's favour: the
+    Removing the card's CTA settles it in the Filter card's favour: the
     button an operator will use for every session after the first is the
     one they meet on the first.
     """
     body = client.get("/operator/sessions").text
     # No sessions exist yet for the test user.
     assert "You don't have any sessions yet" in body
-    # The Search card's `Add new session` is the single create affordance.
+    # The Filter card's `Add new session` is the single create affordance.
     assert 'class="btn" href="/operator/sessions/new">Add new session</a>' in body
     assert body.count('href="/operator/sessions/new"') == 1
     # The first-run card carries no button of its own — it names the one
@@ -129,7 +129,7 @@ def test_sessions_list_empty_state_has_one_create_affordance(
     # until 2026-09-07; saying it twice on one card is not emphasis.
     assert "Create one using the <strong>Add new session</strong> button" in body
     # Named exactly once *within the card*. Counting across the whole page
-    # would be wrong twice over: the Search card's own button is a legitimate
+    # would be wrong twice over: the Filter card's own button is a legitimate
     # occurrence, and base.html inlines its stylesheet, so a CSS comment
     # mentioning the button counts too.
     card = body.split('id="lobby-first-run"', 1)[1]
