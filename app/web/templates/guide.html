@@ -29,6 +29,9 @@
       collects, organises, and shares the results. As the operator you decide
       who reviews whom, what questions they answer, and who sees the outcome.
     </p>
+    {# `.table-scroll` (base.html): a table wider than its card
+       scrolls inside the card rather than pushing the page sideways. #}
+    <div class="table-scroll">
     <table>
       <thead>
         <tr><th>Term</th><th>Meaning</th></tr>
@@ -43,6 +46,7 @@
         <tr><td><strong>Observer</strong> <span class="muted">(optional)</span></td><td>Someone who may view collated results without reviewing.</td></tr>
       </tbody>
     </table>
+    </div>
   </div>
   {% endif %}
 

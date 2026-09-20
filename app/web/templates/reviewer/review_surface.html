@@ -250,6 +250,9 @@
               <div class="card rs-instrument-card"
                    data-rs-visibility-policy-card>
                 <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
+                {# `.table-scroll` (base.html): a table wider than its card
+                   scrolls inside the card rather than pushing the page sideways. #}
+                <div class="table-scroll">
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -268,6 +271,7 @@
                     {% endfor %}
                   </tbody>
                 </table>
+                </div>
               </div>
             {% endif %}
           </div>

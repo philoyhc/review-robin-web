@@ -43,6 +43,9 @@
              keyed by its ``data_type``. Operator-set column
              widths don't carry over: the aggregate-row shape
              doesn't carry the same column semantics. #}
+          {# `.table-scroll` (base.html): a table wider than its card
+             scrolls inside the card rather than pushing the page sideways. #}
+          <div class="table-scroll">
           <table>
             <thead>
               <tr>
@@ -84,6 +87,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         {% elif section.field_cols and section.rows %}
           {# Same table shape as the reviewer-surface form + the
              reviewer summary page (Reviewee / Group identity →
@@ -93,6 +97,9 @@
              ``<colgroup>`` + ``table-layout: fixed`` pinning only
              kicks in when the operator drag-resized at least one
              column on Band 2; otherwise widths auto-distribute. #}
+          {# `.table-scroll` (base.html): a table wider than its card
+             scrolls inside the card rather than pushing the page sideways. #}
+          <div class="table-scroll">
           <table class="{% if section.is_group %}rs-group-table{% endif %}"{% if section.has_custom_widths and not section.is_group %} style="table-layout: fixed;"{% endif %}>
             {% if section.has_custom_widths %}
               <colgroup>
@@ -159,6 +166,7 @@
             {% endfor %}
             </tbody>
           </table>
+          </div>
         {% else %}
           <p class="muted">No responses on this instrument yet.</p>
         {% endif %}

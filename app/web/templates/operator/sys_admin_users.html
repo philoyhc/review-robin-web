@@ -146,6 +146,9 @@
                   disabled>Delete</button>
         </form>
       </div>
+      {# `.table-scroll` (base.html): a table wider than its card
+         scrolls inside the card rather than pushing the page sideways. #}
+      <div class="table-scroll">
       <table id="users-table">
         <tr>
           <th class="col-shrink"></th>
@@ -199,6 +202,7 @@
           </tr>
         {% endfor %}
       </table>
+      </div>
       <script>
         (function () {
           var table = document.getElementById("users-table");

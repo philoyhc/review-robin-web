@@ -17,6 +17,9 @@
     <p class="muted" style="margin: 0 0 var(--space-2) 0;">
       Resolved fire moments for the session's anchors + offsets.
     </p>
+    {# `.table-scroll` (base.html): a table wider than its card
+       scrolls inside the card rather than pushing the page sideways. #}
+    <div class="table-scroll">
     <table style="margin-top: var(--space-2);">
       <tr>
         <th>When</th>
@@ -29,5 +32,6 @@
         </tr>
       {% endfor %}
     </table>
+    </div>
   </div>
 {% endif %}

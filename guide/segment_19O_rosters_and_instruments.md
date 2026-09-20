@@ -10,7 +10,204 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; sixteen entries, one open
+## Item 8 — Seven operator tables scroll the page sideways
+
+### Opportunity
+
+The author, on the dev slot, 2026-09-20: the Sessions lobby table
+overflows its card at narrow widths. Measured across all eleven operator
+tables in Chromium, against a session with every tag slot and profile
+link filled so the roster tables render their full column set —
+**seven of eleven push the whole document sideways**:
+
+| page | document scrolls sideways at | widest row |
+|---|---|---|
+| Relationships | 1100, 900, 700 | 1130px |
+| Sessions lobby | 900, 700 | 994px |
+| Archive | 900, 700 | 990px |
+| Reviewers | 900, 700 | 925px |
+| Reviewees | 900, 700 | 929px |
+| Observers | 700 | 737px |
+| Assignments | 700 | 741px |
+
+Clean at every width: Instruments, Invitations, Responses, Extract data.
+
+**The spec says this cannot happen.** `spec/ui_elements.md` §10's
+`.table-scroll` row reserves the wrapper for "a table that is wider than
+its card by construction", and ends "a roster that measures inside its
+card goes without"; §6 sends the reader to §10 "for which tables need it
+and which measure inside their card and go without". **No roster
+measures inside its card below 1100px.** The rule holds at 1400 and is
+false at every width beneath it, and nothing reads a viewport.
+
+**Assignments carries the wrapper and still fails.**
+`spec/assignments.md` says "The table sits in `.table-scroll`", which is
+true of `#assignments-table` and not of the **Per-instrument status**
+table above it — two tables on one page, one wrapped. That second table
+is what pushes at 700.
+
+**Column count does not predict any of it**, though a first pass at this
+item said it would: Relationships overflows at 1100 on **8** columns
+while Instruments is clean at 700 on **10**. It is content width. The
+"17 and 19 columns" in that first report came from `grep -c "<th"` over
+a whole page, which counts every table on it at once — a count taken
+from a shortcut, which is the failure this segment's register already
+carries twice.
+
+### Decision
+
+**Wrap every operator table whose content can exceed its card, and
+replace §10's "measures inside its card" clause with a rule a check can
+hold.** The wrapper is `.table-scroll`, unchanged and already in
+`base.html`.
+
+**Rejected — wrap only the pages named today.** That is the fifth
+reactive application. Four preceded it (Instruments, Assignments,
+Invitations, Responses, the last recorded in `docs/status_history.md` at
+19I Item 12), and each left the rest of the app as it found it. A fifth
+without a check buys the sixth.
+
+**Rejected — narrow the columns instead.** The widths are content: names,
+emails, friendly tag labels. Hiding columns at narrow viewports is a
+different feature and a larger one.
+
+### Semantics
+
+- `.table-scroll` clips overflow to the card. Column widths do not
+  change, and no content is hidden — the table scrolls within its card.
+- **The wrapper is per table, not per page.** Assignments is the proof.
+- **The Archive renders nothing without an archived session** — its whole
+  body is inside `{% if sessions %}`. The first measurement pass reported
+  it clean for that reason; it fails at 900 and 700 once one exists.
+- The nav tab strips overflow the viewport on every session page and sit
+  inside their own scroller already. Not this item.
+
+### Judgment calls — decided
+
+- Measure `document.documentElement.scrollWidth` against `clientWidth`, not table width against card width (2026-09-20). A wrapped table is *meant* to be wider than its card, so the second comparison reports every correctly-wrapped page as a defect — it called Invitations and Responses broken when they are the pages that got this right.
+- Count an overflowing element only when no ancestor between it and the document scrolls (2026-09-20). Without that filter the probe blames the nav tab strip, which is already inside a scroller.
+
+### Blast radius (measured)
+
+At `4fa3bb2a`:
+
+- `grep -rln "table-scroll" app/web/templates/ | wc -l` → **6** files: `base.html` (the one rule), four operator pages, `reviewer/review_surface.html`
+- operator templates rendering a table → **11**; carrying the wrapper → **4**
+- `grep -rln "table-scroll" spec/` → **5**: `ui_elements.md`, `assignments.md`, `operations_pages.md`, `visual_style_rrw.md`, `reviewer-surface.md`
+- `grep -rln "table-scroll" tests/ --include="*.py"` → **4**, none asserting a page does not scroll sideways
+
+### Status
+
+**Open question 1 answered by the author, 2026-09-20: the template-level
+check.** Taking it literally makes the rule uniform — *every* `<table>`
+sits in `.table-scroll`, with no width threshold and no exceptions list
+— and that is much wider than `Opportunity`'s seven pages: **31 tables
+across 23 templates, 27 of them unwrapped**, including the reviewer
+surfaces and the sys-admin pages the measurement never reached. The
+seven were the ones that overflow *today*, at the widths and content
+measured; the rule is what stops an eighth.
+
+**The uniform rule is not free by inspection, so it was measured.** A
+`<table>` shrink-wraps its content and a `<div>` fills its line box, so
+wrapping a narrow table could have moved it. Geometry of every table on
+all eleven operator pages, before and after, at 1400 / 900 / 700:
+**identical at 1400**, where nothing overflowed either way, and the
+**twelve page/width combinations that scrolled sideways all stopped,
+with none newly broken**.
+
+**Two defects in my own work, both the shape this segment keeps
+meeting.** The scan first stripped comments by deleting them, which
+shifted every line after and made it name line 173 of
+`review_surface.html` where the table is on 253 — a failure pointing at
+innocent markup. And the check's first version **passed with
+`wrapped = True` hard-coded**: every template already conformed, so
+nothing distinguished a working detector from one that always said yes.
+Both now have their own test, and the mutant dies. A third survivor — matching the wrapper class by substring, so `no-table-scroll` would pass — survived only because no template has a lookalike, and took a fixture case rather than a template to kill.
+
+**The cold read found a false pass, and the worst one available.**
+`html.parser` takes `{` and `%` as legal tag-name characters, so the
+house idiom `<table{% if … %}` — no space before the Jinja tag — parses
+as an element named `table{%` and never reaches the check. Live in the
+repo: `reviewer/review_surface.html`'s **response table**, the widest in
+the app. Not reported unwrapped; not seen. And the re-aim below had just
+removed the suite's only other assertion that it was wrapped, so for one
+commit the app's widest table was covered by nothing. Jinja tags are
+blanked before parsing now, and a new check reconciles `<table` as
+written against `<table` as parsed, per file — so the next idiom this
+parser cannot read fails loudly instead of passing.
+
+**"No exceptions list" was not true as landed, twice over.** Two tables
+on the Instruments page are built in JavaScript into a bare `<div>`, so
+the wrapper goes on that container — there is no server-rendered table
+to wrap. And three on Extract data were wrapped that should not have
+been: `.shaper-preview-table` is flattened to `display: block` and its
+own container sets `overflow-x: visible`, with the reason beside it —
+the row *wraps* "rather than scrolling horizontally". Those three are
+backed out, and the check names that one exception against the CSS rule
+that earns it rather than against a width.
+
+**A sibling test's rationale was left behind by the sweep.**
+`tests/unit/test_column_visibility_primitive.py` recorded "the three
+Setup rosters are deliberately absent: measured at 1324px inside a
+1360px card, they fit" — true at that viewport, which is the part it
+left out. Corrected at rung 1: it is entry 16's failure again, one item
+later.
+
+**One existing test was re-aimed, not weakened.**
+`test_surface_renders_constraint_summary_row_above_table` located the
+response table as "the first `.table-scroll` in the body". It is now the
+visibility-policy card's, which renders above the constraints row, so
+the assertion read backwards. It anchors on the response table's own
+`data-rrw-sortable` key — strictly more specific than what it had, and
+it still fails when the row is moved below the table.
+
+### PR ladder
+
+1. **The wrappers and the check.** Wrap the seven, and add the test that
+   makes the eighth impossible to forget. Touches no CSS.
+2. **The specs.** §10's rule, §6's pointer to it, and
+   `spec/assignments.md`'s singular "the table".
+3. **The close.**
+
+### Definition of done
+
+- No operator page scrolls the document sideways at 1400, 1100, 900 or 700.
+- A test fails when an operator template renders an unwrapped table that can exceed its card.
+- `spec/ui_elements.md` §10 states a rule that matches what ships.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19O.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **What shape should the check take?** A template-level assertion
+   (every `<table>` in an operator template has a `.table-scroll`
+   ancestor) is cheap, reads no browser, and would have caught all seven
+   — but it cannot see the widths, so it would also demand a wrapper on
+   Extract data's one-column table. A rendered measurement is honest and
+   needs a browser the suite does not have. Mine to propose, author's to
+   rule.
+
+### Out of scope
+
+- The nav tab strips' own overflow — already scrollered, and a different mechanism.
+- Hiding or stacking columns at narrow viewports.
+- ~~`reviewer/review_surface.html`, which already carries the wrapper.~~ Struck at rung 1: it carries one on its *response* table and not on the visibility-policy table above it, and the uniform rule reaches both.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §10's `.table-scroll` row states "a roster that measures inside its card goes without", which no roster does below 1100px; §6's pointer repeats it (Item 8).
+- `spec/assignments.md` — "The table sits in `.table-scroll`" names one of the page's two tables (Item 8).
+- `spec/setup_pages.md` — the shared preview-table shape gains the wrapper (Item 8).
+- `spec/reviewer-surface.md` — describes `.table-scroll` as specific to wide instrument tables; four reviewer templates carry it now (Item 8, added at rung 1).
+- `spec/visual_style_rrw.md` — records that `.table-scroll`'s `overflow-x` forces an `overflow-y` scroll context, which now applies in 24 more places (Item 8, added at rung 1).
+- `docs/status.md` — row when Item 8 lands (Item 8).
+
+---
+
+## Item 7 — Loose ends, recorded 2026-09-18; sixteen entries, all closed
 
 ### Opportunity
 
@@ -29,13 +226,11 @@ grew 8 and added 9–12; the pass that followed closed nine and the
 the lobby's search box, and was ruled and built the same day; **16**
 followed it on 2026-09-20 — 19Q.5's cold read found 15's rename had
 left the old name in live spec prose — and is the first entry to leave
-a gate behind rather than a sweep. **Two stay open:** 8, the dev-slot
-verification only the author can do — to which 15 adds the two adjacent
-`Clear` controls and the typeahead dropdown, and 19Q.5 the Guide page —
-filed here because entry 8 *is* the dev-slot list, and a second one
-would be the register's own failure mode; and, not a whole entry, the
-`docs/status.md` compaction half of 12, a judgment call about what to
-drop. The heading counts entries; this sentence counts open threads. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
+a gate behind rather than a sweep. **Nothing stays open.** Entry 8, the dev-slot list, cleared 2026-09-20;
+entry 12's compaction half was settled by the author's split-rather-than-
+summarise call, which dropped nothing and so left no judgment call behind.
+The two findings entry 8 produced are filed as **Item 8** and as a Guide
+fix of its own. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
 is_validated`. Quoting only its first clause makes it look wrong.
@@ -47,7 +242,7 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Fifteen worked, one open, plus the dev-slot list.** The worked
+**All sixteen worked, the dev-slot list among them.** The worked
 entries compact to their outcome: each one's evidence is in its commit
 and in `docs/status.md`, and what a later reader needs from here is what
 was found, not how. Entry 8 keeps its detail because it is still live;
@@ -79,25 +274,21 @@ reader cannot reconstruct from the diff.
    and never committed, so the row died with the connection. The control
    is the finding: `workflow_run_started` survived only because a later
    service happened to commit.
-8. **Dev-slot verification owed on five merged changes**, none of which
-   the suite can exercise: 19O.6's sort panel on Reviewees /
-   Relationships / Assignments, 19Q.2 rung 1's Manage Invitations
-   counter, 19Q.2 rung 3's six rewritten copy strings, 19Q.3 rung 1a's
-   State 2 card copy, and 19Q.3 rung 2's four recaptured Guide
-   screencaps with the prose around them. Grown 2026-09-19 by entry
-   13's two missed strings: the Quick Setup lifecycle banner and the
-   Danger Zone intro, both of which want a reading in place, and again
-   by 19Q Item 6's three: the instrument card **title**, the **delete
-   confirmation** beneath it, and **every card's tint**, which now runs
-   1..6 by creation order rather than arbitrarily. That last one is the
-   only entry here a screenshot answers better than prose. Grown again
-   by entry 15: the Lobby and Archive filter cards, renamed and now
-   carrying a typeahead — specifically **how the `<datalist>` reads
-   while typing**, which headless Chromium proves is present and does
-   not settle, and **the two adjacent `Clear` controls** on the lobby,
-   the tag strip's chip and the filter box's button, which clear
-   different things under the same word. The screencaps block the 19Q
-   close by the author's ruling, 2026-09-18; the rest block nothing.
+8. **Done — cleared by the author, 2026-09-20.** The dev-slot list ran
+   to eleven surfaces across four segments: 19O.6's sort panel on
+   Reviewees / Relationships / Assignments, 19Q.2's Manage Invitations
+   counter and six rewritten copy strings, 19Q.3's State 2 card copy,
+   entry 13's Quick Setup lifecycle banner and Danger Zone intro, 19Q
+   Item 6's instrument card title, delete confirmation and per-card
+   tint, entry 15's two filter cards with their typeahead and adjacent
+   `Clear` controls, and 19Q.5's Guide page. **Two findings came out of
+   it**, both filed rather than folded back here: the Guide's
+   `assignments-page` capture renamed its instrument between themes and
+   was re-shot (`Guide_v3b.docx`), and the Sessions lobby table
+   overflows its card at narrow widths, which is **Item 8** — the
+   author's ruling that it is an item, not an entry. Anything further
+   comes from user feedback.
+
 9. **Done.** The Workflow card's State 6 told the operator reviewers had
    been notified when no transport is wired — the sentence 19Q.3's cold
    read found copied into the Guide.
