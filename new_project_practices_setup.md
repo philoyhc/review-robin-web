@@ -253,7 +253,10 @@ these are the details that matter.
   say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
   and replaces the table in this document with `--list` output, or
   `tests/unit/test_practice_kit.py` fails on the missing path and then
-  on the table.
+  on the table. `--list` renders the manifest notes as they are, so a
+  regenerated table drops any `path-ref-ok` markers the old one carried
+  in its Note cells — the path gate names them, but re-add them rather
+  than wondering.
 - **`app/web/spec_registry.py`** with **`tests/unit/test_spec_coverage.py`.**
   Empty the module-to-spec table, set `_MINIMUM_ROUTES` to the number of
   routes the new app registers today, and let the baseline set of pending
