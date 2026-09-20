@@ -344,7 +344,7 @@ This page is the operator's "lobby" and is the natural landing page when signing
   - **Created** — `YYYY-MM-DD`.
   - **Last Modified** — `YYYY-MM-DD`.
   - **Action** — unlabelled trailing column carrying a select-row checkbox. The column carries **no per-row Delete**: deletion from the lobby is a bulk action over the checkbox selection, so a per-row affordance here would be a second route to the same thing.
-- **Create Session affordance:** a single Primary button labeled "Add new session", in the Search card, present in every lobby state. **It is the page's only route to `/operator/sessions/new`** — the empty state's first-run card names this button rather than carrying a second one, because two buttons to one route is two affordances for one action (`spec/sessions_overview.md`).
+- **Create Session affordance:** a single Primary button labeled "Add new session", in the Filter card, present in every lobby state. **It is the page's only route to `/operator/sessions/new`** — the empty state's first-run card names this button rather than carrying a second one, because two buttons to one route is two affordances for one action (`spec/sessions_overview.md`).
 
 **A table, not a grid of session cards.** At the operator's lobby dense scannable rows matter more than per-card framing, and every column above has a natural width budget. The table takes the row-only borders and muted header treatment from the app's default table (`spec/ui_elements.md` §7) and adds no framing of its own.
 

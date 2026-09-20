@@ -10,7 +10,7 @@ instrument setup surfaces · **Related:** `spec/instruments.md`,
 
 ---
 
-## Item 7 — Loose ends, recorded 2026-09-18; sixteen entries, two open
+## Item 7 — Loose ends, recorded 2026-09-18; sixteen entries, one open
 
 ### Opportunity
 
@@ -26,10 +26,13 @@ grew 8 and added 9–12; the pass that followed closed nine and the
 `spec-writer` check on it added 13. The author ruled 3 and 13 on
 2026-09-18 and both are swept; 19Q.3's close added 14, ruled and built
 2026-09-19. **15 was added 2026-09-19** from the author's question about
-the lobby's search box, and was ruled and built the same day. **Two
-stay open:** 8, the dev-slot verification only the author can do — to
-which 15 adds the two adjacent `Clear` controls and the typeahead
-dropdown; and the `docs/status.md` compaction half of 12, a judgment
+the lobby's search box, and was ruled and built the same day; **16**
+followed it on 2026-09-20 — 19Q.5's cold read found 15's rename had
+left the old name in live spec prose — and is the first entry to leave
+a gate behind rather than a sweep. **Two stay open:** 8, the dev-slot
+verification only the author can do — to which 15 adds the two adjacent
+`Clear` controls and the typeahead dropdown, and 19Q.5 the Guide page;
+and the `docs/status.md` compaction half of 12, a judgment
 call about what to drop. One candidate was checked and **rejected** — `next_action_card.html`'s context comment reads "`None`
 outside the `?validated=1` entry path **and outside `is_validated`**",
 which is exactly `_workflow_card.py:121`'s `validated_just_ran or
@@ -42,7 +45,7 @@ its treatment when the author takes it up, as Item 6's did.
 
 ### The register
 
-**Fourteen worked, two open, plus the dev-slot list.** The worked
+**Fifteen worked, one open, plus the dev-slot list.** The worked
 entries compact to their outcome: each one's evidence is in its commit
 and in `docs/status.md`, and what a later reader needs from here is what
 was found, not how. Entry 8 keeps its detail because it is still live;
@@ -221,21 +224,34 @@ reader cannot reconstruct from the diff.
     by side, clearing different things. `Clear` is the app-wide word
     for both, so the rename is right and the adjacency is what is new.
 
-16. **Open.** Entry 15's rename left the old value in three files —
-    four lines. `spec/sessions_overview.md` was swept, but
-    `spec/operator_ui_concept.md` ("the **Add new session** button sits
-    in the Search card above the table"),
-    `spec/visual_style_rrw.md` ("a single Primary button labeled
-    \"Add new session\", in the Search card") and two comments in
-    `app/web/templates/base.html` still name a card the app no longer
-    has. Found by 19Q.5's cold read, which noticed the Guide's new
-    *Filter card* alt text disagreeing with them. The blast-radius
-    recipe in `.claude/skills/segment-plan/SKILL.md` prescribes exactly
-    the grep that would have caught this —
-    `grep -rn "<old term>" spec/ docs/ app/web/templates` — and entry 15
-    ran it over the templates it was changing rather than over the
-    whole tree. Four one-line edits; no test sees them, because
-    `Search card` is prose rather than a constant-derived label.
+16. **Done — built 2026-09-20.** Entry 15's rename left the old value
+    behind, and the entry's own count of it was wrong twice over. It
+    said three files, four lines, taken from the cold read that found
+    it rather than measured; the re-grep found **five** live lines
+    across four files — `spec/operator_ui_concept.md`,
+    `spec/visual_style_rrw.md`, two CSS comments in
+    `app/web/templates/base.html`, and a comment in
+    `app/web/templates/operator/sessions_list.html` that no one had
+    listed at all. A sixth, in `docs/status_history.md`, my own grep
+    hid: the line cites an archived plan and I had piped the search
+    through `grep -v guide/archive/`.
+    **Three stay**, all historical records: `guide/todo_master.md`'s
+    account of a decision taken when the card *was* called Search,
+    `guide/roster_expander_revamp_handoff.md` (shipped and superseded,
+    and about a roster page, which still has a real search), and this
+    entry, quoting the old name on purpose. `docs/status_history.md`
+    takes the file-level escape, its whole premise being rows kept
+    verbatim.
+    **The durable half is a gate**: `Search card` joins `RETIRED_TERMS`
+    in `tests/unit/test_doc_conventions.py`, which reads `spec/` and
+    `docs/` — exactly the scope where a stale control name is a live
+    contract, and the scope both sweeps missed. Mutation-checked: put
+    either spec line back and it fails. The term is the **card**, not
+    the word — seven operator tables still carry a real `Search:` input
+    and a `Search` submit button, and those are correct, which is why
+    entry 15 was right to rename only the two lobby pages.
+    `.claude/skills/segment-plan/SKILL.md`'s blast-radius recipe names
+    the list, so its "(button vocabulary today)" aside is updated too.
 
 ### Doc impact
 

@@ -68,7 +68,7 @@ Do not estimate. Run and record:
 - templates touching a surface: `grep -rln "<route-or-partial>" app/web/templates`
 - specs mentioning the term or route: `grep -rln "<term>" spec/ docs/`
 - tests exercising the path: `grep -rln "<route-or-function>" tests/`
-- for a user-facing rename: `grep -rn "<old term>" spec/ docs/ app/web/templates` — this list becomes doc-impact bullets. Add the old term to `RETIRED_TERMS` in `tests/unit/test_doc_conventions.py` only when no code constant derives the new one (button vocabulary today); a lifecycle-label rename is already caught by the `DISPLAY_LABELS`-derived check.
+- for a user-facing rename: `grep -rn "<old term>" spec/ docs/ app/web/templates` — this list becomes doc-impact bullets. Add the old term to `RETIRED_TERMS` in `tests/unit/test_doc_conventions.py` only when no code constant derives the new one (the pre-19B button names, plus the lobby's `Search card` after 19O Item 7 entry 16 — where the sweep missed two specs and nothing could see it); a lifecycle-label rename is already caught by the `DISPLAY_LABELS`-derived check.
 
 Record the numbers and the commands. A blast radius that turns out wrong at build time is a finding for `## Status`, not a reason to silently revise the count.
 

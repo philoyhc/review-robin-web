@@ -29,9 +29,22 @@ LIVE_DOCS = sorted(
     if "archive" not in p.parts
 )
 
-# The pre-19B button vocabulary, superseded by the canonical .btn roles in
-# spec/ui_elements.md section 6 (see CLAUDE.md "Project conventions").
-RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline")
+# Retired user-facing vocabulary that no code constant derives, so nothing
+# else can catch it going stale. Two groups:
+#   - the pre-19B button names, superseded by the canonical .btn roles in
+#     spec/ui_elements.md section 6 (see CLAUDE.md "Project conventions");
+#   - "Search card", the Sessions lobby's filter card before 19O Item 7
+#     entry 15 renamed it. The control is a client-side filter and never
+#     was a search; the rename swept the templates and one spec and left
+#     two others behind, which is entry 16. Note the term is the *card*,
+#     not the word: seven operator tables still carry a real `Search:`
+#     input and a `Search` submit button, and those are correct.
+RETIRED_TERMS = (
+    "Primary Outline",
+    "Alert Outline",
+    "Danger Outline",
+    "Search card",
+)
 # Deliberate historical references carry this marker on the same line.
 TERM_ESCAPE = "<!-- retired-term-ok -->"
 # A whole document that is a historical record rather than a live contract
@@ -75,7 +88,7 @@ def test_lifecycle_tables_match_the_display_label_mapping() -> None:
 
 
 def test_retired_button_terminology_is_absent_from_live_docs() -> None:
-    """The pre-19B button names must not be prescribed anywhere live.
+    """Retired user-facing names must not be prescribed anywhere live.
 
     A deliberate historical reference ("renamed from X in PR #N") is fine
     — mark that line with ``TERM_ESCAPE``, or the whole document with
@@ -94,8 +107,8 @@ def test_retired_button_terminology_is_absent_from_live_docs() -> None:
                 if term in line:
                     hits.append(f"{rel}:{number}: {term!r}")
     assert not hits, (
-        "retired button terminology (superseded by the canonical .btn roles "
-        "in spec/ui_elements.md section 6):\n  "
+        "retired user-facing terminology (the .btn roles are canonical in "
+        "spec/ui_elements.md section 6; see RETIRED_TERMS for the rest):\n  "
         + "\n  ".join(hits)
         + f"\nIf a hit is a deliberate historical reference rather than a live "
         f"prescription, mark that line with {TERM_ESCAPE!r} — or, for a document "

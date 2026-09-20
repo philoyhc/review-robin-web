@@ -227,7 +227,7 @@ A short contract per page: URL + template + role + key affordances. For per-rout
 
 ### `/operator/sessions` — Sessions list
 
-Top-level operator lobby. A table of sessions, one row per session, columns: **Name**, **Code**, **Status**, **Deadline**, **Created**, **Created by**, plus a per-row **expander** (rename / tag / clone / purge-and-archive / delete) — see `spec/sessions_overview.md`. The **Add new session** button sits in the Search card above the table, not below it, and is the page's only create affordance. There are no per-row Access or Delete buttons outside the expander.
+Top-level operator lobby. A table of sessions, one row per session, columns: **Name**, **Code**, **Status**, **Deadline**, **Created**, **Created by**, plus a per-row **expander** (rename / tag / clone / purge-and-archive / delete) — see `spec/sessions_overview.md`. The **Add new session** button sits in the Filter card above the table, not below it, and is the page's only create affordance. There are no per-row Access or Delete buttons outside the expander.
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
