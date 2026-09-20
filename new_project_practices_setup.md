@@ -13,15 +13,78 @@ and say "run it". It is written to be executed top to bottom in one
 session. Where a step says *ask*, stop and ask; everything else is the
 agent's call.
 
+If you are the person setting a project up rather than the agent running
+it, the next section is the whole of your part.
+
 This replaces the 2026-09-04 checklist of the same name. That version was
 read by a person and predated the constitution, the plan skill, the close
 check, the pace audit and the doc gates; its five day-one items survive
 as steps 1, 3, 5 and 7 below, and the one it dropped is named in step 7.
 
+## Humans: read this first
+
+Steps 1 to 7 are the agent's. This section is yours, and everything in it
+is something no agent can do for you.
+
+**Before the session**
+
+1. **Create the new repository on GitHub with an initial commit** — a
+   README or a `.gitignore` is enough. An empty repository has no default
+   branch, so the first branch an agent pushes silently becomes it, and
+   there is nothing to open a pull request against. Unpicking that costs
+   a throwaway root commit and a rebase. Measured on the first project
+   set up from this kit.
+2. **Set the repository up while you are there.** Agents cannot change
+   repository settings — default branch, branch protection, installed
+   apps — so decide them now. Codex review is one of those settings
+   rather than a file; see "Deliberately not copied". Leave branch
+   protection off until you have measured the merge policy being broken
+   (`CONTRIBUTING.md`).
+3. **Attach both repositories to the session**, the new one and the
+   source. The kit is copied from the source, never reconstructed, and an
+   agent may be refused permission to execute a script out of a checkout
+   the session has not attached — step 1 carries the fallback for when
+   that happens. A session that can see only the new repository has to
+   stop and ask you for the other.
+4. **Say "run `new_project_practices_setup.md`".** Steps 1 to 6 are then
+   the agent's: export, adapt, add what the kit cannot carry, run the
+   gates, commit, push, open a draft pull request.
+
+**While it runs**
+
+There is one case where the agent must stop and ask: the source
+repository is not reachable. Everything else it decides and records. Two
+things are worth telling it up front rather than correcting afterwards:
+whether the project will use Postgres, since without it the workflow and
+its merge-policy paragraph are deleted rather than adapted, and any
+convention the project has already settled, which belongs in the rewritten
+Project conventions.
+
+**Afterwards, and from then on**
+
+- **You merge.** No agent merges and nothing runs unattended
+  (`constitution.md` IV). The agent opens drafts; the call is yours.
+- **You decide when to wait for the slow CI job.** `CONTRIBUTING.md` sets
+  the policy and leaves the gate to you.
+- **You verify what the suite cannot see** — layout, rendering,
+  in-browser behavior, real authentication — on an environment you can
+  open. A change that touches any of those says so in its description
+  instead of claiming it was verified.
+
+**The one task in step 7 that is only yours**
+
+Setting the palette. Open `tools/theme_customizer.html` in a browser, no
+server needed, design the light and dark themes with live repaint, then
+Export JSON and hand it back to be ported into `base.html`. You also
+decide whether a contrast shortfall is fixed or shipped. An agent can
+measure a contrast ratio; it cannot decide that a color is right.
+
 ## 0. Preconditions
 
 - The new repository exists, is cloned, and is the working directory.
-  It may be empty or carry a first commit; it must not already carry a
+  It should carry a first commit — the section above says why. It still
+  runs on an empty one, but say so in the first PR body, because the
+  branch you push becomes the default. It must not already carry a
   `CLAUDE.md` you were told to keep.
 - The source repository `philoyhc/review-robin-web` is reachable — cloned
   beside the new one, or attached to the session. If it is not, **ask**
