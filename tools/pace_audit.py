@@ -68,6 +68,7 @@ REVIEW_RE = re.compile(
 )
 BUCKETS = [(1, 50), (50, 150), (150, 400), (400, 10**9)]
 SESSION_GAP_MIN = 180
+MAIN_REF = "origin/main"
 
 
 def git(*args: str) -> str:
@@ -99,10 +100,11 @@ def since_arg(since: str) -> str:
     return since
 
 
-def load(since: str) -> list[dict]:
+def load(since: str, ref: str = MAIN_REF) -> list[dict]:
+    """Every merge on ``ref``'s first-parent line since ``since``, oldest first."""
     rows: list[dict] = []
     log = git(
-        "log", "--merges", "--first-parent", "origin/main", f"--since={since_arg(since)}",
+        "log", "--merges", "--first-parent", ref, f"--since={since_arg(since)}",
         "--format=%H|%ct|%s|%b",
     )
     for line in log.splitlines():
