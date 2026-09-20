@@ -1446,7 +1446,7 @@ The sessions lobby and its archived child share a table shape, a panel
 construction and a script shape; neither tests whether the convention
 generalises.
 
-And the third caller is not established. `guide/new_ux_ideas.md` entry 1
+And the third caller is not established. `guide/archive/new_ux_ideas.md` entry 1
 records the transfer question rather than assuming it: the bracket was
 designed for **one wide row in a tall table of like things**, where the
 panel names a count and the operator is choosing among sessions. A

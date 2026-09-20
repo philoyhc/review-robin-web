@@ -422,7 +422,7 @@ reader cannot reconstruct from the diff.
     through `grep -v guide/archive/`.
     **Three stay**, all historical records: `guide/todo_master.md`'s
     account of a decision taken when the card *was* called Search,
-    `guide/roster_expander_revamp_handoff.md` (shipped and superseded,
+    `guide/archive/roster_expander_revamp_handoff.md` (shipped and superseded,
     and about a roster page, which still has a real search), and this
     entry, quoting the old name on purpose. `docs/status_history.md`
     takes the file-level escape, its whole premise being rows kept
@@ -519,7 +519,7 @@ See `### Status`.)*
 - `spec/operations_pages.md` — the drill-in's email region sits below two cards or three, depending on the Review Progress card (Item 6).
 - `app/web/spec_registry.py` — `_preview_surface`'s governing spec, which pointed only at the retirement note (Item 6).
 - `README.md` — the `previews` route row is a redirect, not an Operations row (Item 6).
-- `guide/new_ux_ideas.md` — entry 2 no longer proposes folding in a retired page (Item 6).
+- `guide/archive/new_ux_ideas.md` — entry 2 no longer proposes folding in a retired page (Item 6).
 - `spec/reviewer-surface.md` — the redirect now carries the unmatched address, and the landing page re-checks it; **added at the close**, having been marked `cites:` on the registry half alone (Item 6).
 - `spec/operations_pages.md` — the shared page shape gains a conditional fifth region between the Workflow card and the info card; **added at the close** (Item 6).
 - `spec/workflow_card.md` — its copy of the return-to allowlist carried the dead `previews` slug too; **added at the close** (Item 6).
@@ -645,7 +645,7 @@ scope from the day it was filed. It is a line now, and it closed here:
 ### Out of scope
 
 - ~~The sort-workaround migration above, by the author's ruling.~~ Taken up 2026-09-18 once the rest had landed.
-- `guide/new_ux_ideas.md:143`'s mention of Previews, which is a dated
+- `guide/archive/new_ux_ideas.md:143`'s mention of Previews, which is a dated
   measurement (`453546c4`) and correct on its date.
 
 ---
