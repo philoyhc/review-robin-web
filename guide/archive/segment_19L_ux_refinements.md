@@ -2,7 +2,7 @@
 
 **Opened:** 2026-09-12 · **Theme:** small, independent operator-UI
 refinements, each shipping on its own · **Related:**
-`guide/new_ux_ideas.md`, `spec/ui_elements.md`, `spec/sessions_overview.md`
+`guide/archive/new_ux_ideas.md`, `spec/ui_elements.md`, `spec/sessions_overview.md`
 
 A log for **small UX items**. Each is self-contained, closes
 independently, and is sized so that a reviewer can hold the whole change
@@ -34,7 +34,7 @@ did *not* close with it. **One open question was live:** 19L.3's — whether
 the archived page wants the single-row expander, which today heads a lone
 selection *"1 sessions selected"*. It is a refinement described and not
 yet worth doing, so it goes where the segment's own preamble sends such
-work: `guide/new_ux_ideas.md`. The declined bulk-expander merge stays
+work: `guide/archive/new_ux_ideas.md`. The declined bulk-expander merge stays
 declined and is not carried.
 
 **What the four items have in common** is that each was a signal that was
@@ -50,7 +50,7 @@ thing rather than at the code that makes it.
 a visual state, a copy fix, an affordance that is present but weak. Work
 that adds a page, a card, or a navigation affordance is a segment of its
 own and lands scaffold-first per `CLAUDE.md`. Work that is merely
-*described* and not yet worth doing belongs in `guide/new_ux_ideas.md`;
+*described* and not yet worth doing belongs in `guide/archive/new_ux_ideas.md`;
 an entry there graduates by becoming an item here.
 
 ---
@@ -87,7 +87,7 @@ The panel's intended action set includes **Purge and archive** and
 placeholder (its own comment: *"the action buttons are disabled; only the
 selection-management buttons are wired"*), so this is **not a live safety
 defect** — it is a weak link in a pattern that is about to carry
-destructive actions, and one the app is likely to reuse. `guide/new_ux_ideas.md`
+destructive actions, and one the app is likely to reuse. `guide/archive/new_ux_ideas.md`
 entry 1 proposes reusing exactly this fan-out for a consolidated Rosters
 page holding *Clear all* and a replacing *Upload CSV*.
 
@@ -265,7 +265,7 @@ leave a half-marked row in `main`.
 3. ~~**Does the marking become a shared primitive?**~~ **No — still
    lobby-local, and now for a better-evidenced reason.** It has one
    caller. The speculative second, the Rosters index, is recorded in
-   `guide/new_ux_ideas.md` with the transfer question stated rather than
+   `guide/archive/new_ux_ideas.md` with the transfer question stated rather than
    assumed: the bracket was designed for one wide row in a tall table of
    *like* things, and a Rosters index is four *unlike* things where one
    action is Clear all. Promoting it now would export a primitive to a
@@ -296,7 +296,7 @@ leave a half-marked row in `main`.
 
 - **The expander's disabled action buttons.** A placeholder, and wiring
   them is not a UX refinement.
-- **Anything on the roster Setup pages.** `guide/new_ux_ideas.md` entry 1
+- **Anything on the roster Setup pages.** `guide/archive/new_ux_ideas.md` entry 1
   is gated on pilot evidence; this item must not become its first slice
   by stealth.
 - **The panel's own styling**, which already carries `--surface-muted`
@@ -421,7 +421,7 @@ deployed page.
 - `spec/color_tokens.md` — the Tier-2 catalogue gains `--row-selected-bg`
   and its count is corrected. Not named at planning time; added when the
   build chose a new role over reusing the chip's token (Item 1).
-- `guide/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
+- `guide/archive/new_ux_ideas.md` — entry 2 annotated as graduated to 19L.1
   (Item 1). *Honoured, then superseded: Item 2 removed entry 2 outright
   on the author's instruction — session lobby work is segment work, not
   an idea awaiting pilot evidence — so a reader following this bullet
@@ -736,7 +736,7 @@ row whose panel is off-screen.
   bracket and the panel's new fill (Item 2).
 - `spec/color_tokens.md` — `--row-selected-bg` becomes
   `--selection-panel-bg`; same primitives, count unchanged (Item 2).
-- `guide/new_ux_ideas.md` — entry 2 removed entirely: session lobby work
+- `guide/archive/new_ux_ideas.md` — entry 2 removed entirely: session lobby work
   is segment work, not an idea awaiting evidence, and the entry has been
   superseded twice over (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).
@@ -782,7 +782,7 @@ open question 3 asked exactly this and the author answered *"Local
 lobby"* on the same day. A second caller inside the same lobby family is
 not the general primitive that question declined; promoting the class to
 `spec/ui_elements.md` as a reusable layout primitive is still not done,
-and the Rosters transfer question in `guide/new_ux_ideas.md` still stands
+and the Rosters transfer question in `guide/archive/new_ux_ideas.md` still stands
 unanswered.
 
 **Rejected — sharing one script between the two pages.** They have
@@ -866,7 +866,7 @@ marks rows under a panel that does not close the bracket, or the reverse.
    only a bulk panel today, so a lone selected row gets a panel headed
    *"1 sessions selected"* — a pre-existing wrinkle this item does not
    touch. Decided by the author if it grates. **Carried at the segment
-   close (2026-09-13) to `guide/new_ux_ideas.md`** rather than answered:
+   close (2026-09-13) to `guide/archive/new_ux_ideas.md`** rather than answered:
    still undecided, and an archived plan is not where an undecided
    refinement should wait.
 
@@ -942,7 +942,7 @@ is opt-in had gone elliptical once both pages carried the class, where
 entry still opened *"a selected row on the sessions lobby"*, correcting
 itself only three sentences later.
 
-The fourth was **undeclared doc impact**. `guide/new_ux_ideas.md` carried
+The fourth was **undeclared doc impact**. `guide/archive/new_ux_ideas.md` carried
 two clauses this item falsified — *"the archived page injects the same
 panel without it"* and *"the archived sessions page — which injects the
 same classes and marks no rows — still renders that way"* — and the
@@ -973,7 +973,7 @@ JavaScript runtime and cannot see a rendered colour.
 - `spec/ui_elements.md` — the `.session-row-selected` entry's "lobby-local"
   wording gains its second caller, without promoting it to a primitive
   (Item 3).
-- `guide/new_ux_ideas.md` — entry 1's account of the lobby expander said
+- `guide/archive/new_ux_ideas.md` — entry 1's account of the lobby expander said
   the archived page injects the panel *without* the opt-in class and
   marks no rows. Both clauses corrected (Item 3). *Not named at planning
   time; added when `spec-writer` found them — see `Status`.*
@@ -1015,7 +1015,7 @@ grep -rn "beforeunload" app/ spec/ docs/ | grep -v Binary
 
 and the `| grep -v Binary`, added to tidy the output, **deleted the one
 line that would have falsified the conclusion**. A design discussion in
-`guide/new_ux_ideas.md` was then built on "no such mechanism exists",
+`guide/archive/new_ux_ideas.md` was then built on "no such mechanism exists",
 corrected once to a narrower wrong claim, and corrected again only
 because the author sent a screenshot of the feature working. *A check
 whose tidying step removes the disconfirming evidence is worse than no

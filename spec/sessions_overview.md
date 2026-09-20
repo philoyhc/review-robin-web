@@ -265,7 +265,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`bulk-delete-archived`). Its heading is the bulk phrasing at every
   count, so one selected row reads *"1 sessions selected"*. Whether that
   wants singular copy or the lobby's second template is undecided and
-  recorded in `guide/new_ux_ideas.md` entry 2; the contract here is what
+  recorded in `guide/archive/new_ux_ideas.md` entry 2; the contract here is what
   ships.
 - **Selected rows are marked.** Every selected row carries
   `session-row-selected`, styled in `base.html` as a **rail at each end

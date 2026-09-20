@@ -7,7 +7,7 @@ pages. Reviewers is the worked case study; the other three follow the same
 recipe.
 
 **Why this is worth doing on its own.** The four-pages-into-one
-consolidation (`guide/new_ux_ideas.md` §1) is a big, deferrable move. But
+consolidation (`guide/archive/new_ux_ideas.md` §1) is a big, deferrable move. But
 its single clearest UX win — the lobby's **selected-row bracket + inline
 action expander**, where row actions sit *next to the rows they act on*
 instead of in a button strip floating above the table — is independent of
@@ -204,7 +204,7 @@ The ambitious version. On top of Variant A, add to each page a **one-row
 index** — the same row shape as the consolidated Rosters index, but with
 just *this* roster in it — plus its **Unlock expander**.
 
-**What the single index row carries** (per `guide/new_ux_ideas.md` §1):
+**What the single index row carries** (per `guide/archive/new_ux_ideas.md` §1):
 - **Populated columns** — each header with its filled-row count
   (`Name (154)`, `Email (154)`, `Tutor (150)`…). Free re-house of the
   `col_data` the preview already computes.
@@ -389,5 +389,5 @@ on request.
 - `app/web/templates/base.html` — `.session-expander*`, `tr.session-row-selected`.
 - `guide/archive/segment_19L_ux_refinements.md` — the bracket's design + how to write the item.
 - `spec/setup_pages.md` — "Operator actions card" (the strip this step splits) + shared body shape.
-- `guide/new_ux_ideas.md` §1 — the parent idea; this step is its
+- `guide/archive/new_ux_ideas.md` §1 — the parent idea; this step is its
   presentation half, minus consolidation.

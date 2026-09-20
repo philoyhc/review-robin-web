@@ -675,7 +675,7 @@ treats the session in lobby and extract surfaces.
   does still ship elsewhere — `session_detail.html` and the Quick Setup
   lock both tell the operator to "Pause the session" for this same
   transition — and six other specs use it as live terminology. That
-  split is recorded in `guide/segment_19O_rosters_and_instruments.md`
+  split is recorded in `guide/archive/segment_19O_rosters_and_instruments.md`
   Item 7; this section describes the button.
 - **`ready → expired`** (Close session): Operator clicks the
   Workflow card's **Close session** button. Every instrument is

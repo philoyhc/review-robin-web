@@ -2,7 +2,7 @@
 
 **Opened:** 2026-09-14 · **Closed:** 2026-09-18 · **Theme:** re-house selection-driven controls into the
 Session Lobby's row-expander idiom, page by page · **Related:**
-`guide/roster_expander_revamp_handoff.md`, `guide/new_ux_ideas.md` §1,
+`guide/archive/roster_expander_revamp_handoff.md`, `guide/archive/new_ux_ideas.md` §1,
 `spec/setup_pages.md`
 
 Split out of 19O at 175 lines, when the Reviewers item outgrew the ~120-line
@@ -24,8 +24,8 @@ Its first question became 19Q Item 1.
 
 ## Item 1 — Reviewers moves to the lobby's expander idiom
 
-Pilot for `guide/roster_expander_revamp_handoff.md` — **Variant B on Reviewers**,
-the presentation half of `guide/new_ux_ideas.md` §1, minus consolidation.
+Pilot for `guide/archive/roster_expander_revamp_handoff.md` — **Variant B on Reviewers**,
+the presentation half of `guide/archive/new_ux_ideas.md` §1, minus consolidation.
 
 ### Opportunity
 
@@ -102,7 +102,7 @@ pages. Observers goes second, as 19P.2.
   slices later, and the handoff's case for A standing alone assumes the cards
   stay, which here they do not.
 - **2026-09-14.** All three cards are **deleted**, not hidden behind a flag —
-  author's call, confirming what `guide/new_ux_ideas.md:67-76` already put in
+  author's call, confirming what `guide/archive/new_ux_ideas.md:67-76` already put in
   the roster row. A flag leaves two live surfaces for one action.
 - **2026-09-14.** `.session-row-selected` is promoted past "**Not a general
   primitive**" (`spec/ui_elements.md:592`), which withheld the transfer and
@@ -426,7 +426,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 
 ### Out of scope
 
-- **Consolidating the four pages.** `guide/new_ux_ideas.md` §1; unchanged.
+- **Consolidating the four pages.** `guide/archive/new_ux_ideas.md` §1; unchanged.
 - **A shippable Variant A.** Declined above; B contains it.
 - **The other three rosters.** Observers is 19P.2 and proves the divergence.
 - **New capabilities** — including **Download**, per the judgment call above.
@@ -456,7 +456,7 @@ rung 2 no longer leaves a filter strip behind — there is no card to leave it i
 
 - `spec/ui_elements.md` — **added 2026-09-15:** §10 states the `#<noun>-table-card` fragment as the **pager's** contract (*"the route supplies the id, the pager never derives it"*). The filter strip's controls now take the same anchor, and entering edit mode takes a second one, `#<noun>-row-editor`. **Corrected 2026-09-15:** the reason recorded here was "because the editor is split across two cards" — it no longer is. The editor card was retired, so `#<noun>-row-editor` is an **add-mode-only id on the `<tr>` itself**, `Edit` builds `#<noun>-row-<id>` from the id it already has, and there is no card in the contract at all. §10 states the landing targets as they are, not as they were. `spec/setup_pages.md` § *Search + filter strip* describes the strip with no landing behavior at all (Item 1).
 - `spec/rrw_functional_spec.md` — the Danger Zone and Upload card descriptions at §§ around `:1044`, `:1111`, `:1113` retire (Item 1).
-- `guide/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
+- `guide/archive/roster_expander_revamp_handoff.md` — dated annotation recording the four claims 19O.4 falsified (Item 1).
 - `spec/color_tokens.md` — `:425` and `:448` describe `.page-guidance` as *"the `What this page is for` disclosure on every Setup page"* and argue its anchoring; the token set is unchanged, but the Reviewers placement the argument assumes is not, so the sentence is re-sited (Item 1).
 
 - `spec/settings_inventory.md` — §2.5's *Surface → Edit* line (`:140-141`) sites the labels editor as an "Inline editor card **above the data table** on `/operator/sessions/{id}/reviewers`"; that is the position this item moves, stated per page. **Amended 2026-09-15 by 3a:** on Reviewers it is now TWO positions, not one — inside the Unlock panel where the panel can render, in its old home where it cannot (locked, or mid-edit) — so the line states the condition, not just a place (Item 1).
