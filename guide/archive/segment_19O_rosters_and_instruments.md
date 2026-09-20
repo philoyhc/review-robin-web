@@ -98,78 +98,61 @@ At `4fa3bb2a`:
 
 ### Status
 
-**Open question 1 answered by the author, 2026-09-20: the template-level
-check.** Taking it literally makes the rule uniform — *every* `<table>`
-sits in `.table-scroll`, with no width threshold and no exceptions list
-— and that is much wider than `Opportunity`'s seven pages: **31 tables
-across 23 templates, 27 of them unwrapped**, including the reviewer
-surfaces and the sys-admin pages the measurement never reached. The
-seven were the ones that overflow *today*, at the widths and content
-measured; the rule is what stops an eighth.
+**Closed 2026-09-20, three rungs as planned**, and with it segment 19O.
+Intended versus done:
 
-**The uniform rule is not free by inspection, so it was measured.** A
-`<table>` shrink-wraps its content and a `<div>` fills its line box, so
-wrapping a narrow table could have moved it. Geometry of every table on
-all eleven operator pages, before and after, at 1400 / 900 / 700:
-**identical at 1400**, where nothing overflowed either way, and the
-**twelve page/width combinations that scrolled sideways all stopped,
-with none newly broken**.
+**The author ruled open question 1 for the template-level check, and
+taking it literally made the rule uniform** — every `<table>` in
+`.table-scroll`, no width threshold, no exceptions list. That is wider
+than `Opportunity`'s seven pages: 31 tables across 23 templates, 27
+unwrapped, including reviewer surfaces and sys-admin pages the
+measurement never reached. The seven overflowed *today*; the rule is
+what stops an eighth. Two carve-outs the check has to state because it
+cannot see them: a table built in JavaScript needs the wrapper on its
+**host**, and `.shaper-preview-table` goes without, anchored to the
+`overflow-x: visible` rule that earns it rather than to a width.
 
-**Two defects in my own work, both the shape this segment keeps
-meeting.** The scan first stripped comments by deleting them, which
-shifted every line after and made it name line 173 of
-`review_surface.html` where the table is on 253 — a failure pointing at
-innocent markup. And the check's first version **passed with
-`wrapped = True` hard-coded**: every template already conformed, so
-nothing distinguished a working detector from one that always said yes.
-Both now have their own test, and the mutant dies. A third survivor — matching the wrapper class by substring, so `no-table-scroll` would pass — survived only because no template has a lookalike, and took a fixture case rather than a template to kill.
+**Uniform was not free by inspection, so it was measured.** Geometry of
+every table on all eleven operator pages, before and after, at 1400 /
+900 / 700: identical at 1400, and the twelve page/width combinations
+that scrolled sideways all stopped, none newly broken.
 
-**The cold read found a false pass, and the worst one available.**
-`html.parser` takes `{` and `%` as legal tag-name characters, so the
-house idiom `<table{% if … %}` — no space before the Jinja tag — parses
-as an element named `table{%` and never reaches the check. Live in the
-repo: `reviewer/review_surface.html`'s **response table**, the widest in
-the app. Not reported unwrapped; not seen. And the re-aim below had just
-removed the suite's only other assertion that it was wrapped, so for one
-commit the app's widest table was covered by nothing. Jinja tags are
-blanked before parsing now, and a new check reconciles `<table` as
-written against `<table` as parsed, per file — so the next idiom this
-parser cannot read fails loudly instead of passing.
+**What the record is really for: four positional-anchor errors in one
+item.** A string match is not a location, and this item made that
+mistake four times in two days —
 
-**"No exceptions list" was not true as landed, twice over.** Two tables
-on the Instruments page are built in JavaScript into a bare `<div>`, so
-the wrapper goes on that container — there is no server-rendered table
-to wrap. And three on Extract data were wrapped that should not have
-been: `.shaper-preview-table` is flattened to `display: block` and its
-own container sets `overflow-x: visible`, with the reason beside it —
-the row *wraps* "rather than scrolling horizontally". Those three are
-backed out, and the check names that one exception against the CSS rule
-that earns it rather than against a width.
+- the check stripped comments by **deleting** them, shifting every line
+  after, so it named line 173 of `review_surface.html` where the table
+  is on 253;
+- `test_surface_renders_constraint_summary_row_above_table` located the
+  response table as "the first `.table-scroll` in the body", which the
+  sweep made the visibility-policy card's;
+- the script-built-host check took the marker's first occurrence, a CSS
+  selector a thousand lines above the element;
+- rung 2 inserted the `.table-scroll` rule on a text anchor that turned
+  out to sit inside `.guide-figure`'s detail, splitting that contract in
+  half.
 
-**A sibling test's rationale was left behind by the sweep.**
-`tests/unit/test_column_visibility_primitive.py` recorded "the three
-Setup rosters are deliberately absent: measured at 1324px inside a
-1360px card, they fit" — true at that viewport, which is the part it
-left out. Corrected at rung 1: it is entry 16's failure again, one item
-later.
+Three were caught by a reader rather than a gate. Alongside entries 15
+and 16's counts-taken-from-shortcuts, that is this segment's whole
+lesson: **a claim about a location or a count is worth what the command
+proving it is worth.**
 
-**One existing test was re-aimed, not weakened.**
-`test_surface_renders_constraint_summary_row_above_table` located the
-response table as "the first `.table-scroll` in the body". It is now the
-visibility-policy card's, which renders above the constraints row, so
-the assertion read backwards. It anchors on the response table's own
-`data-rrw-sortable` key — strictly more specific than what it had, and
-it still fails when the row is moved below the table.
+**The check had a false pass, and it was the worst one available.**
+`html.parser` takes `{` and `%` as legal tag-name characters, so
+`<table{% if … %}` — the house idiom, no space — parses as an element
+named `table{%` and is never seen. Live on `review_surface.html`'s
+response table, the widest in the app, at the same moment the re-aim
+above removed its only other assertion. Jinja is blanked before parsing
+now, and a reconciliation of `<table` written against `<table` parsed
+makes the next unreadable idiom fail loudly.
 
-**Rung 2 found §6 pointing at a rule §10 no longer holds.** Its
-`.table-scroll` entry read "Used on `instruments_index.html` and around
-`review_surface.html`'s response table" — four templates' worth of
-description for a primitive now in 23 — and sent the reader to §10 "for
-which tables need it and which measure inside their card". Both halves
-went. The two things a template-level check cannot see are stated in
-§10 instead: a script-built table needs the wrapper on its *host*, and
-`.shaper-preview-table` is the one exception, anchored to the CSS rule
-that earns it.
+**Prose the sweep refuted, found by reading rather than by a gate:**
+`spec/ui_elements.md` §6's "Used on `instruments_index.html` and around
+`review_surface.html`'s response table" (four templates' worth of a
+primitive now in 23), `spec/assignments.md`'s "The table" on a page with
+two, and `tests/unit/test_column_visibility_primitive.py`'s "the three
+Setup rosters … fit" — true at 1400px, which is the part it left out.
 
 ### PR ladder
 
@@ -192,13 +175,10 @@ that earns it.
 
 ### Open questions
 
-1. **What shape should the check take?** A template-level assertion
-   (every `<table>` in an operator template has a `.table-scroll`
-   ancestor) is cheap, reads no browser, and would have caught all seven
-   — but it cannot see the widths, so it would also demand a wrapper on
-   Extract data's one-column table. A rendered measurement is honest and
-   needs a browser the suite does not have. Mine to propose, author's to
-   rule.
+1. **Answered, author 2026-09-20: the template-level check.** Cheap,
+   reads no browser, and catches a table before it can overflow rather
+   than after. Its cost is the two carve-outs in `Status` — it cannot
+   see widths, and it cannot see a table assembled in JavaScript.
 
 ### Out of scope
 
@@ -213,7 +193,9 @@ that earns it.
 - `spec/setup_pages.md` — the shared preview-table shape gains the wrapper (Item 8).
 - `spec/reviewer-surface.md` — describes `.table-scroll` as specific to wide instrument tables; four reviewer templates carry it now (Item 8, added at rung 1).
 - `spec/visual_style_rrw.md` — records that `.table-scroll`'s `overflow-x` forces an `overflow-y` scroll context, which now applies in 24 more places (Item 8, added at rung 1).
-- `docs/status.md` — row when Item 8 lands (Item 8).
+- `docs/status.md` — row when Item 8 lands, and the header, which named 19O's register as open (Item 8).
+- `guide/todo_master.md` — 19O's roadmap entry reads live at seven items (Item 8, added at the close).
+- `spec/rrw_functional_spec.md` — carries a backticked pointer to this plan, which the archive move dangles (Item 8, added at the close).
 
 ---
 
@@ -1066,7 +1048,7 @@ check scanned an opt-in attribute list, so it missed the bulk tag box,
 then the purge checkboxes. Each fix was aimed at the instance; the third
 was aimed at the class, and now reads every control in the panel.
 Verification pointers: `tests/unit/test_sort_drops_injected_panel.py`
-and `guide/segment_19O_rosters_and_instruments.md` Item 4's Doc impact.
+and `guide/archive/segment_19O_rosters_and_instruments.md` Item 4's Doc impact.
 
 **Browser half unverified.** No JS runtime in the suite, so the shipped
 source is asserted as mechanism; the confirm dialog, the sort badges
