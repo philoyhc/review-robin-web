@@ -9,6 +9,7 @@ new project runs the export (constitution II).
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 import re
 
@@ -160,6 +161,29 @@ def test_deferred_tier_exports_only_on_request(tmp_path: pathlib.Path) -> None:
         if tier == "deferred":
             expected = needs == "app" and (REPO_ROOT / path).is_file()
             assert (dest / path).is_file() == expected, path
+
+
+def test_an_executable_kit_file_lands_executable(tmp_path: pathlib.Path) -> None:
+    """The mode is the constant, so the check reads it rather than naming a
+    file (constitution II).
+
+    `shutil.copyfile` drops permission bits. A SessionStart hook exported
+    without its exec bit is the silent kind of broken: git records the mode,
+    the harness finds the file and never runs it, and the new project's
+    pre-PR gate is simply absent with nothing failing to say so.
+    """
+    executable = [
+        path for path, tier, needs, _ in pk.MANIFEST
+        if tier in ("verbatim", "adapt")
+        and (REPO_ROOT / path).is_file()
+        and os.access(REPO_ROOT / path, os.X_OK)
+    ]
+    assert executable, "no executable kit file to check — did a manifest row lose its mode?"
+    dest = tmp_path / "fresh"
+    dest.mkdir()
+    pk.export(dest)
+    not_runnable = [path for path in executable if not os.access(dest / path, os.X_OK)]
+    assert not not_runnable, f"exported without the exec bit: {not_runnable}"
 
 
 def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> None:

@@ -108,7 +108,7 @@ python3 "$SRC/tools/practice_kit.py" --export .
 ```
 
 It copies every `verbatim` and `adapt` file in the table below, generates
-the skeletons, appends whichever of the three `.gitignore` harness lines
+the skeletons, appends whichever of the seven `.gitignore` harness lines
 are missing, and prints one line per entry. The `deferred` rows wait for
 step 7: the `app` group imports the application and would fail test
 collection in an empty repository; the `theme` group reads `base.html`'s
@@ -122,7 +122,7 @@ If the sandbox refuses to run a script out of the source checkout — an
 agent session may only execute code from a repository attached to it —
 reproduce the export by hand instead of skipping it. The export is a
 manifest-driven copy: `MANIFEST` names every row, `SKELETONS` holds the
-generated texts verbatim, and the three `.gitignore` harness lines are
+generated texts verbatim, and the seven `.gitignore` harness lines are
 appended if missing. Then run `--list` from the new tree and check it
 against the table below. Either way, record the source's commit before you
 move on. If the source is attached to the session rather than cloned and
@@ -135,10 +135,12 @@ commit.
 | `CLAUDE.md` | adapt | — | rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md |
 | `constitution.md` | adapt | — | keep the six articles; drop the dated annotations; re-point 'derived from' |
 | `CONTRIBUTING.md` | adapt | — | fill the merge-policy paragraph's <slow job> and <paths> for the new CI |
-| `.gitignore` | skeleton | — | the .claude/* negation lines only; appended if absent |
+| `.gitignore` | skeleton | — | the harness lines only — .claude/* negations plus the hook's build products; appended if absent |
 | `.claude/agents/diff-reviewer.md` | adapt | — | project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph |
 | `.claude/agents/spec-writer.md` | adapt | — | cites this project's specs and close procedure; re-point once your spec/ has a second file |
 | `.claude/skills/segment-plan/SKILL.md` | verbatim | — | the plan / item / close procedure |
+| `.claude/hooks/session-start.sh` | adapt | — | builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test |
+| `.claude/settings.json` | verbatim | — | registers the SessionStart hook; project-relative, so it needs no edit |
 | `guide/segment_plan_template.md` | verbatim | — | the shape every plan copies |
 | `guide/sweep_template.md` | verbatim | — | the shape every spec/docs sweep copies |
 | `guide/README.md` | skeleton | — | index with the documented shapes the guide-index gate reads |
