@@ -17,17 +17,40 @@ does, measured at `c65b7fa1`.
 |---|---|---|
 | Where it runs | Browser, over rendered rows | Server, in Python |
 | Submits | Nothing — keystroke-live | `GET ?q=…`, a full page load |
-| Rows it can see | **Every** non-archived session | The **whole** roster, before paging |
-| Rows it renders | All of them; no pager, no cap | 200 a page, or 500 when filtered |
+| Rows it can see | **Every** non-archived session | The whole roster, before paging — except Assignments, which never leaves SQL |
+| Rows it renders | All of them; no pager, no cap | 200 a page unfiltered; **three different things when filtered** (below) |
 | Typeahead | `<datalist>`, built from all rows | `<datalist>`, built from all rows |
 | Pre-filters | Tag chip strip (AND/OR), client-side | `Status:` select, server-side |
-| Matching rule | `rrwSessionFilterMatches` (JS) | `_matches_row` (Python) |
+| Matching rule | `rrwSessionFilterMatches` (JS) | `_matches_row` (Python) — except Assignments (below) |
 
-Both matching rules are the same rule: **substring on text columns,
-whole value on tags**, unioned per column. The lobby's is a JavaScript
-reimplementation of the Python one, which is worth saying plainly —
-there are already two copies of this contract, and a conversion has to
-decide which is canonical rather than quietly make a third.
+**"The seven pages" is not one thing, and this document said it was
+until Codex read it.** Two corrections, both load-bearing:
+
+**Three filtered-window behaviours, not one.** Each is deliberate and
+each is documented where it lives:
+
+| | filtered view renders | pager |
+|---|---|---|
+| The four Setup rosters | first **500** (`_SETUP_FILTERED_CAP`) | none |
+| Invitations, Responses | **every** matching row, uncapped | none |
+| Assignments | first **200** (`PAIR_PREVIEW_LIMIT`), in SQL | none |
+
+`_page_operations_rows` says why the middle row differs: those two
+"never had a cap, and inventing one would take rows away from a
+filtered view that shows them today".
+
+**Three matching implementations, not two.** Beside `_matches_row`
+(Python, six list filters) and `rrwSessionFilterMatches` (JS, the two
+lobby pages) there is `_apply_pair_search`
+(`app/services/assignments/_coverage.py:325`), which matches **in SQL**
+and does two things neither other does: `search_by` scopes the match to
+the reviewer side, the reviewee side, or either; and a typeahead label
+the operator picked resolves to that side's handle and is matched by
+**equality**, because `%Ana Lim (ana@example.edu)%` is a substring of no
+name and no email.
+
+So a parity test over the Python and JS copies would leave the third
+unchecked, and it is the one whose behaviour differs most.
 
 ## The finding that decides the shape
 
@@ -47,7 +70,10 @@ The lobby can filter in the browser because **the browser has all the
 rows** — `_lobby.py:79` loads every session and the template renders
 every one, with no pager and no cap.
 
-A roster does not. `csv_imports.MAX_ROWS = 5000`. A client-side filter
+A roster does not. `csv_imports.MAX_ROWS = 5000`. **Assignments does
+not even load them**: `list_pairs` caps at `PAIR_PREVIEW_LIMIT = 200` in
+the query, so for that page option A is not "render more rows the server
+already has" but a change to what the query returns. A client-side filter
 on an unfiltered roster page would be filtering **the 200 rows of the
 current page**, not the roster. On a 1,000-row roster, typing a name
 that exists would find nothing 80% of the time, and the operator would
@@ -112,9 +138,10 @@ Counted at `c65b7fa1`:
   typeahead builders
 - `grep -rln "filter-search\|reviewers-search-options" tests/ | wc -l` →
   **6** test files naming the control
-- one JS rule (`rrwSessionFilterMatches`, `base.html`) and one Python
-  rule (`_matches_row`, `_filters.py`), which a conversion must collapse
-  or deliberately keep doubled
+- **three** matching implementations — `_matches_row` (`_filters.py`),
+  `rrwSessionFilterMatches` (`base.html`), `_apply_pair_search`
+  (`assignments/_coverage.py`) — which a conversion must collapse or
+  deliberately keep apart
 
 `spec/setup_pages.md` "Search matching and suggestions" states the
 per-column rule for the seven surfaces and would govern any change.
@@ -129,11 +156,13 @@ this investigation to be adopted:
    *searches* — it re-queries the whole roster — so `Search:` is the
    right word there. Entry 15's rename was correctly scoped to the two
    lobby pages, and this investigation does not change that.
-2. **The two matching rules.** They agree today by inspection and by a
-   node test (`tests/integration/test_session_filter_rule.py`) that
-   executes the JS copy. Nothing asserts the two agree *with each
-   other*. That is a one-test gap, and it exists whether or not the
-   rosters ever convert.
+2. **The three matching rules.** Each is tested on its own — including
+   a node test (`tests/integration/test_session_filter_rule.py`) that
+   executes the JS copy. Nothing asserts they agree *with each other*,
+   and the SQL one is not even a candidate for the same test shape. The
+   gap exists whether or not the rosters ever convert; so does the
+   question of whether `search_by` side-scoping is a feature the other
+   six pages should have or an Assignments-only accident.
 
 ## Open questions, for whoever picks this up
 
