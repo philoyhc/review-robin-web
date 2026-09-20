@@ -755,44 +755,7 @@ than a new tile look.
 Reference user: the sessions-lobby first-run card
 (`spec/sessions_overview.md`).
 
-**`.guide-figure` / `.guide-figure-narrow`.** The `/guide` screencaps.
-
-These are pictures **of** this app rendered **inside** it, so a bordered
-image alone reads as more page rather than as an illustration of one —
-the capture's own white ground runs straight into the card's. The figure
-is therefore a **mat**: a padded `--surface-muted` panel with a
-`--border-subtle` edge, on which the capture sits the way a photograph is
-mounted. The tint separates the two even where the capture's own edge is
-white, and the inset says *this is a picture of something* before the
-reader has parsed what. The capture keeps a 1px `--border-default` edge,
-whose job is only to define it against the mat — thickening it fights
-the mat rather than helping.
-
-**Not a drop shadow**, the other common answer: shadows in this app are
-solid offset markers and focus rings, never blurred elevation, so a soft
-shadow here would read as a different design language.
-
-**Each capture ships twice**: `x.png` and `x-dark.png`, both rendered
-inside the one `<figure>`, with the theme choosing which is shown —
-`img[data-theme-variant="dark"]` is hidden by default and the pair swaps
-under `:root[data-theme="dark"]`.
-The selector reads the **`data-theme` attribute the toggle writes**, not
-`prefers-color-scheme`: this app is two-state with no OS-follow
-(`spec/settings_inventory.md`), so a media query would serve a light
-capture to a reader sitting in Dark. Because the no-FOUC script stamps
-the attribute in `<head>` before the `<img>`s are parsed, the right
-capture is up from the first frame; because it is CSS, the live toggle
-flips every figure on the page with no reload and no JavaScript of its
-own. Light is the copy with no hiding rule, so a page with JavaScript off
-or storage blocked shows the light set — the same default the rest of the
-theme system takes. Both copies carry the **same** `alt`: they are
-pictures of one UI, and only one is in the accessibility tree at a time.
-
-`fit-content` makes the mat hug its picture rather than run to the column
-edge past a 600px capture, and `box-sizing: border-box` keeps the padding
-inside `max-width` so a narrow column cannot overflow.
-
-**Every table sits in a `.table-scroll`, with one exception.**
+**`.table-scroll`.** Every table in the app sits in one, with a single exception.
 
 This was not always so, and the history is the argument. The wrapper
 was applied four times between 19H and 19I, each time after someone
@@ -830,6 +793,43 @@ cannot see them:
   rather than scrolling. It is a table in name only and cannot exceed
   its container; a scroller there would re-add what that rule removed.
   The exception is anchored to that CSS decision, not to a width.
+
+**`.guide-figure` / `.guide-figure-narrow`.** The `/guide` screencaps.
+
+These are pictures **of** this app rendered **inside** it, so a bordered
+image alone reads as more page rather than as an illustration of one —
+the capture's own white ground runs straight into the card's. The figure
+is therefore a **mat**: a padded `--surface-muted` panel with a
+`--border-subtle` edge, on which the capture sits the way a photograph is
+mounted. The tint separates the two even where the capture's own edge is
+white, and the inset says *this is a picture of something* before the
+reader has parsed what. The capture keeps a 1px `--border-default` edge,
+whose job is only to define it against the mat — thickening it fights
+the mat rather than helping.
+
+**Not a drop shadow**, the other common answer: shadows in this app are
+solid offset markers and focus rings, never blurred elevation, so a soft
+shadow here would read as a different design language.
+
+**Each capture ships twice**: `x.png` and `x-dark.png`, both rendered
+inside the one `<figure>`, with the theme choosing which is shown —
+`img[data-theme-variant="dark"]` is hidden by default and the pair swaps
+under `:root[data-theme="dark"]`.
+The selector reads the **`data-theme` attribute the toggle writes**, not
+`prefers-color-scheme`: this app is two-state with no OS-follow
+(`spec/settings_inventory.md`), so a media query would serve a light
+capture to a reader sitting in Dark. Because the no-FOUC script stamps
+the attribute in `<head>` before the `<img>`s are parsed, the right
+capture is up from the first frame; because it is CSS, the live toggle
+flips every figure on the page with no reload and no JavaScript of its
+own. Light is the copy with no hiding rule, so a page with JavaScript off
+or storage blocked shows the light set — the same default the rest of the
+theme system takes. Both copies carry the **same** `alt`: they are
+pictures of one UI, and only one is in the accessibility tree at a time.
+
+`fit-content` makes the mat hug its picture rather than run to the column
+edge past a 600px capture, and `box-sizing: border-box` keeps the padding
+inside `max-width` so a narrow column cannot overflow.
 
 The captures arrive at **two scales** — 1× shots at ~830px and 2× shots
 at ~1680px. The split is a rule about display width, not a promise about
