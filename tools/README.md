@@ -272,5 +272,12 @@ on build time, not a measure of it. PR-opened → merged needs `--prs`, a
 JSONL of `number` / `created_at` / `merged_at` from the GitHub API,
 because PR timestamps are not in git.
 
+**Turn splits only where the trailer exists.** A slice whose first commit
+carries `Instruction-Received: <UTC>` (`CLAUDE.md` "Where work runs")
+has its turn split into *wait* (previous merge → instruction) and *build*
+(instruction → first commit); the line prints once three slices carry it.
+Fix commits answering a reader or CI do not carry the trailer and are not
+read for it.
+
 Written for the 2026-09-19 re-measurement of the reader cadence; the
 numbers it produced are in `rrw_sdd_in_practice.md` §6.4. Not in CI.

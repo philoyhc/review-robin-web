@@ -33,6 +33,11 @@ Definitions, all in minutes:
                  the intercept is the cost a slice pays whatever its size
                  (instruction, context load, the gate run), the slope what
                  scales with the build.
+* ``wait`` / ``build``  when a slice's first commit carries an
+                 ``Instruction-Received: <UTC ISO-8601>`` trailer (CLAUDE.md
+                 "Where work runs"), turn splits at it: ``wait`` is previous
+                 merge -> instruction, ``build`` is instruction -> first
+                 commit. Reported once at least three slices carry it.
 
 Exit 0 always; it reports, a person reads.
 """
@@ -113,6 +118,7 @@ def load(since: str) -> list[dict]:
             continue
         times = [int(c.split("|", 1)[0]) for c in commits]
         subjects = [c.split("|", 1)[1] for c in commits]
+        received = instruction_received(sha)
         loc: collections.Counter[str] = collections.Counter()
         for stat in git("diff", "--numstat", f"{sha}^1", sha).splitlines():
             added, deleted, path = stat.split("\t", 2)
@@ -130,6 +136,7 @@ def load(since: str) -> list[dict]:
                 "tests": loc["tests"],
                 "prose": loc["prose"],
                 "review": any(REVIEW_RE.search(s) for s in subjects),
+                "received": received,
             }
         )
     rows.sort(key=lambda r: r["merge"])
@@ -140,8 +147,30 @@ def load(since: str) -> list[dict]:
         r["cycle"] = (r["merge"] - prev) / 60 if prev else None
         r["iter"] = (r["last"] - r["first"]) / 60
         r["push2merge"] = (r["merge"] - r["last"]) / 60
+        r["wait"] = r["build"] = None
+        if prev and r["received"] and prev <= r["received"] <= r["first"]:
+            r["wait"] = (r["received"] - prev) / 60
+            r["build"] = (r["first"] - r["received"]) / 60
         prev = r["merge"]
     return rows
+
+
+def instruction_received(merge_sha: str) -> int | None:
+    """Epoch seconds from the ``Instruction-Received`` trailer on the slice's
+    first commit, or None. Read from the earliest commit only: a later fix
+    commit answers a reader or CI, not an instruction."""
+    first = git("rev-list", "--reverse", f"{merge_sha}^1..{merge_sha}^2").split()
+    if not first:
+        return None
+    raw = git(
+        "log", "-1", "--format=%(trailers:key=Instruction-Received,valueonly)", first[0]
+    ).strip()
+    if not raw:
+        return None
+    try:
+        return int(dt.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp())
+    except ValueError:
+        return None
 
 
 def add_pr_timestamps(rows: list[dict], path: str) -> None:
@@ -226,6 +255,17 @@ def report(label: str, rows: list[dict]) -> None:
             f"  turn p25 {pct(0.25):4.1f}  med {pct(0.5):4.1f}  p75 {pct(0.75):4.1f}  "
             f"| fit on product PRs: fixed {fixed:4.1f} min + {slope * 100:4.2f} min per 100 LOC"
         )
+    stamped = [r for r in within if r["wait"] is not None]
+    if len(stamped) >= 3:
+        print(
+            f"  turn split on Instruction-Received (n={len(stamped)}): "
+            f"wait med {median(r['wait'] for r in stamped):4.1f} "
+            f"mean {mean(r['wait'] for r in stamped):4.1f}  |  "
+            f"build med {median(r['build'] for r in stamped):4.1f} "
+            f"mean {mean(r['build'] for r in stamped):4.1f}"
+        )
+    else:
+        print(f"  turn split: {len(stamped)} slices carry Instruction-Received; needs 3")
 
 
 def main() -> int:
