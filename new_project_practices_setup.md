@@ -282,8 +282,12 @@ these are the details that matter.
 - `pyproject.toml`: a `dev` extra with `pytest`, `pytest-xdist`, `httpx`
   and `ruff`, and `[tool.ruff]` with `line-length = 100` and
   `target-version = "py312"`. The workflows and the gates assume these.
-- The two-dialect test arrangement, below. The kit's own tests do not
-  need a database, so nothing in it forces this; write it anyway.
+- The two-dialect test arrangement, below, if the project has Postgres.
+  The kit's own tests do not need a database, so nothing in it forces
+  this; write it anyway. A project that deleted `ci-postgres.yml` in step
+  3 has one dialect and skips the arrangement — but still owes traps 3
+  and 4, which are properties of SQLite rather than of running two
+  dialects.
 - `README.md`: one paragraph pointing at `CLAUDE.md` and `constitution.md`.
 
 ### The two-dialect test arrangement
@@ -295,9 +299,18 @@ depends on them.
 winning and local SQLite as the fallback. One engine builder that every
 path calls — the app, `alembic/env.py` and the conftest — so what SQLite
 needs is applied once rather than remembered three times. Then a
-session-scoped `engine` fixture in `tests/conftest.py` that reads the
-URL and forks: in-memory SQLite builds its schema from
-`Base.metadata.create_all`, and Postgres applies the full Alembic chain.
+session-scoped `engine` fixture in `tests/conftest.py` — and **the
+suite resolves its own URL, in this order**: `TEST_DATABASE_URL`, then
+`DATABASE_URL`, then an in-memory default of its own. Not the settings
+URL: with `DATABASE_URL` unset that is the application's *file-backed*
+fallback, so the suite would build and drop schema in the developer's
+own database rather than in memory. Having resolved it, write it back to
+the settings object, so a no-argument engine built anywhere in the app
+reaches the database the fixtures built and not the file.
+
+The fixture then forks on the URL: in-memory SQLite builds its schema
+from `Base.metadata.create_all`, and Postgres applies the full Alembic
+chain.
 `.github/workflows/ci-postgres.yml` runs the same suite on the second,
 so the migration chain and dialect divergence are covered on every PR
 without either costing the default run.
@@ -331,8 +344,13 @@ the symptom it produces:
    thread — a `TestClient`, a background task — opens a *new, empty* one
    and finds no tables. `StaticPool` is what shares it.
 4. **SQLite ships foreign keys off.** Without `PRAGMA foreign_keys=ON`
-   on every connection, an `ON DELETE CASCADE` does nothing and the test
-   asserting it passes for the wrong reason.
+   on every connection, an `ON DELETE CASCADE` does nothing. Note which
+   test that fools, because it is not the obvious one: a test asserting
+   the child row is gone **fails**, loudly. What passes is every test
+   that deletes a parent and asserts only that the *parent* is gone —
+   while the database quietly accumulates orphans, and an integrity
+   constraint the schema declares is enforced nowhere. Measured both
+   ways.
 5. **Offline `--sql` cannot translate.** `schema_translate_map` is a
    connection execution option and offline mode has no connection;
    Alembic has no equivalent. So `alembic upgrade head --sql` against
