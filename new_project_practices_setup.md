@@ -308,6 +308,14 @@ own database rather than in memory. Having resolved it, write it back to
 the settings object, so a no-argument engine built anywhere in the app
 reaches the database the fixtures built and not the file.
 
+**Resolve and write back at `tests/conftest.py` import time, not inside
+the fixture.** pytest imports `conftest.py` before it imports the test
+modules beside it, and a test module that builds or caches an engine at
+import has already captured whatever the URL was then — which, from a
+fixture, is still the file-backed fallback, because no fixture has run
+yet. Verified in that order. Only the schema build belongs in the
+fixture.
+
 The fixture then forks on the URL: in-memory SQLite builds its schema
 from `Base.metadata.create_all`, and Postgres applies the full Alembic
 chain.
