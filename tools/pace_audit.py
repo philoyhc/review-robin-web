@@ -44,7 +44,18 @@ import statistics
 import subprocess
 
 REVIEW_RE = re.compile(
-    r"cold[- ]read|second read|codex|act on the|spec-writer pass|close pass", re.I
+    # Response forms only — "act on the cold read", "cold-read fixes", "the
+    # cold read: ...", "Codex: ...", "Codex #2485: ...", "spec-writer pass" —
+    # never a bare topic word: "Refresh Codex codebase assessment" and
+    # "Cold-read cadence: per item" are about the reader, not answers to it.
+    r"act(?:ed|ing)? on (?:the|both|its|all|each)\b"
+    r"|cold[- ]reads?(?:'s)?[ -](?:fix|adjudicat|round|finding|found|pass)"
+    r"|cold readers adjudicated"
+    r"|(?:the|a|an|its|item's|cumulative) cold read(?:'s)?\b"
+    r"|second read\b"
+    r"|\bcodex(?:'s)?(?::|,| #\d+:| review| finding| p[0-9]| two| three)"
+    r"|from the codex review|spec-writer pass|close pass(?:es)?\b|close's spec-writer",
+    re.I,
 )
 BUCKETS = [(1, 50), (50, 150), (150, 400), (400, 10**9)]
 SESSION_GAP_MIN = 180
@@ -66,10 +77,23 @@ def category(path: str) -> str:
     return "other"
 
 
+def since_arg(since: str) -> str:
+    """A bare date must be pinned to midnight UTC.
+
+    ``git log --since=2026-09-04`` fills the missing time of day with the
+    *current* clock, so the same command run at 23:50 UTC drops every merge
+    made before 23:50 on that date and the count drifts with the hour it was
+    run. Measured 2026-09-20: 25 merges lost and recovered across three runs.
+    """
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", since):
+        return f"{since}T00:00:00+00:00"
+    return since
+
+
 def load(since: str) -> list[dict]:
     rows: list[dict] = []
     log = git(
-        "log", "--merges", "--first-parent", "origin/main", f"--since={since}",
+        "log", "--merges", "--first-parent", "origin/main", f"--since={since_arg(since)}",
         "--format=%H|%ct|%s|%b",
     )
     for line in log.splitlines():

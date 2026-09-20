@@ -158,16 +158,17 @@ over three hours dropped so the author's own scheduling does not enter
 (`tools/pace_audit.py`, which prints the figures below from a cut PR
 number). The reader now ran, and the answer to "cheap enough to stay
 routine" was **no**. A slice that carried a cold-read round took a
-median **49** minutes merge-to-merge against **22** for one that did
-not; a prose-only slice, **37** against **21**; in the week the per-rung
+median **49** minutes merge-to-merge against **23** for one that did
+not; a prose-only slice, **59** against **21** (nine such slices, so
+read the direction, not the digit); in the week the per-rung
 cadence was in force the median slice took **44** minutes, against
 **25** for the fortnight before it, and in-PR iteration — first commit
-to last — rose from about **9** minutes to **23**. Instruction-to-first-
+to last — rose from about **8** minutes to **23**. Instruction-to-first-
 commit did not move in any period, so the cost was the loop the reader
 adds, not slower building. What the reader caught divides cleanly: of
-74 response commits, 55 changed code or tests and describe live defects
+78 response commits, 58 changed code or tests and describe live defects
 (a control that destroyed Save, two guards deleted as cleanup, a
-regression in deriving an invitation from its row); the 19 that changed
+regression in deriving an invitation from its row); the 20 that changed
 only prose describe the author overclaiming in a plan or a close. So
 the cadence is now scoped rather than universal — `diff-reviewer` once
 per item on the item's cumulative diff, and per slice only for code
@@ -176,7 +177,7 @@ unchanged — the author's ruling of 2026-09-18, stated in `CLAUDE.md`
 "Where work runs" and noted under `constitution.md` III. Re-measured
 over the first 33 slices under the scoped cadence (#2460–#2492):
 iteration back to **10** minutes, prose-only slices to **23**, slices
-carrying a read down from 71% to 33%, and the reads that did fire still
+carrying a read down from 69% to 30%, and the reads that did fire still
 reporting defects ("five findings, all real"). *Re-take it the same way
 at the next audit — `python3 tools/pace_audit.py --cut 2460`; a faster
 number with no findings recorded at item closes means the read was
