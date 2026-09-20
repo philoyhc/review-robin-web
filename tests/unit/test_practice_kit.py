@@ -27,25 +27,34 @@ def _load():
 
 pk = _load()
 
-def _theme_source_is_the_kits() -> bool:
-    """``build_base_template`` slices the source ``base.html`` on the theme
-    toggle's own markers, so the two tests that export the group need that
-    file to be the kit's, not merely present: a tree that wrote its own
-    template before landing the group has one the builder cannot slice.
 
-    The marker is the toggle's class, which the stylesheet carries as well as
-    the script, so editing the script alone still fails loudly here instead of
-    skipping silently."""
-    try:
-        text = (REPO_ROOT / pk.DEFERRED_GROUPS["theme"]).read_text(encoding="utf-8")
-    except OSError:
-        return False
-    return "theme-toggle-opt" in text
+def _deferred_group_landed(needs: str) -> bool:
+    """Has setup step 7 exported this deferred group into the tree?
+
+    A group whose trigger the *project* writes — ``app/main.py`` for the app
+    pair — has landed when that file appears: the trigger's whole job is to
+    say the group is now due.
+
+    A group whose trigger the *kit builds* (``BUILDERS``) cannot use it as
+    the signal, because the trigger is itself a group member and a project
+    may write its own before the group arrives. Step 7 tells the reader to do
+    exactly that. Such a group has landed when any member the kit copies
+    rather than builds is present, which stays true however far the built
+    file is later edited — so editing ``base.html`` can never quietly retire
+    the gate over the other eight theme files."""
+    trigger = pk.DEFERRED_GROUPS[needs]
+    if trigger not in pk.BUILDERS:
+        return (REPO_ROOT / trigger).is_file()
+    return any(
+        (REPO_ROOT / path).is_file()
+        for path, _tier, group, _note in pk.MANIFEST
+        if group == needs and path not in pk.BUILDERS
+    )
 
 
 needs_theme_source = pytest.mark.skipif(
-    not _theme_source_is_the_kits(),
-    reason="the theme group is built by slicing the kit's own base.html (setup step 7)",
+    not _deferred_group_landed("theme"),
+    reason="the theme group has not landed, so there is no kit base.html to slice (step 7)",
 )
 
 _ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*([^|]*?)\s*\|")
@@ -65,16 +74,17 @@ def _document_rows() -> dict[str, tuple[str, str]]:
 
 
 def test_every_copied_path_exists() -> None:
-    """Verbatim and adapt entries always; a deferred group once its trigger
-    file exists (`DEFERRED_GROUPS`).
+    """Verbatim and adapt entries always; a deferred group once it has landed
+    (`_deferred_group_landed`).
 
     In a repository the kit was just exported into, a deferred group is
-    absent by design until its trigger arrives (setup step 7): `app/main.py`
-    for the `app` pair, `base.html` for the theme group."""
+    absent by design until setup step 7 lands it: `app/main.py` triggers the
+    `app` pair, and the theme group needs a `base.html` the kit built, since
+    a hand-written one is not the group arriving."""
     def required(tier: str, needs: str) -> bool:
         if tier in ("verbatim", "adapt"):
             return True
-        return tier == "deferred" and (REPO_ROOT / pk.DEFERRED_GROUPS[needs]).is_file()
+        return tier == "deferred" and _deferred_group_landed(needs)
 
     missing = [
         p for p, tier, needs, _ in pk.MANIFEST
