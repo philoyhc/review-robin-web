@@ -191,7 +191,7 @@ Setup rosters … fit" — true at 1400px, which is the part it left out.
 - `spec/ui_elements.md` — §10's `.table-scroll` row states "a roster that measures inside its card goes without", which no roster does below 1100px; §6's pointer repeats it (Item 8).
 - `spec/assignments.md` — "The table sits in `.table-scroll`" names one of the page's two tables (Item 8).
 - `spec/setup_pages.md` — the shared preview-table shape gains the wrapper (Item 8).
-- `spec/reviewer-surface.md` — describes `.table-scroll` as specific to wide instrument tables; four reviewer templates carry it now (Item 8, added at rung 1).
+- `spec/reviewer-surface.md` — describes `.table-scroll` as specific to wide instrument tables; all five reviewer templates carry it now (Item 8, added at rung 1).
 - `spec/visual_style_rrw.md` — records that `.table-scroll`'s `overflow-x` forces an `overflow-y` scroll context, which now applies in 24 more places (Item 8, added at rung 1).
 - `docs/status.md` — row when Item 8 lands, and the header, which named 19O's register as open (Item 8).
 - `guide/todo_master.md` — 19O's roadmap entry reads live at seven items (Item 8, added at the close).
