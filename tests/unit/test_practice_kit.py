@@ -12,6 +12,8 @@ import importlib.util
 import pathlib
 import re
 
+import pytest
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
@@ -24,6 +26,27 @@ def _load():
 
 
 pk = _load()
+
+def _theme_source_is_the_kits() -> bool:
+    """``build_base_template`` slices the source ``base.html`` on the theme
+    toggle's own markers, so the two tests that export the group need that
+    file to be the kit's, not merely present: a tree that wrote its own
+    template before landing the group has one the builder cannot slice.
+
+    The marker is the toggle's class, which the stylesheet carries as well as
+    the script, so editing the script alone still fails loudly here instead of
+    skipping silently."""
+    try:
+        text = (REPO_ROOT / pk.DEFERRED_GROUPS["theme"]).read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "theme-toggle-opt" in text
+
+
+needs_theme_source = pytest.mark.skipif(
+    not _theme_source_is_the_kits(),
+    reason="the theme group is built by slicing the kit's own base.html (setup step 7)",
+)
 
 _ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*([^|]*?)\s*\|")
 
@@ -141,6 +164,7 @@ def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> Non
         assert text.count(line + "\n") == 1, line
 
 
+@needs_theme_source
 def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> None:
     """The theme group needs base.html, so exporting it builds one from the
     source: the no-flash script and the whole stylesheet, then a content
@@ -165,12 +189,11 @@ def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> N
 
 
 def test_an_unknown_deferred_group_is_refused(tmp_path: pathlib.Path) -> None:
-    import pytest
-
     with pytest.raises(ValueError, match="unknown deferred group"):
         pk.export(tmp_path / "fresh", include_deferred={"themes"})
 
 
+@needs_theme_source
 def test_a_kit_built_project_can_be_the_source_for_the_next(tmp_path: pathlib.Path) -> None:
     """Second-generation inheritance: a tree the kit built has the toggle
     inline in base.html and no partial, and must still export the theme
