@@ -1,9 +1,10 @@
 # New-project practice setup
 
-> **Provenance.** This copy is the original, in `philoyhc/review-robin-web`.
-> A project that inherits the kit replaces this line with its own source and
-> the commit it exported from, so a later reader can diff this file against
-> that commit and see what the source has fixed since.
+> **Provenance.** Exported from `<source>` at `<commit>`; step 3 fills both
+> slots. Brackets still showing means this is either the original, in
+> `philoyhc/review-robin-web`, or a copy whose step 3 was skipped. Once
+> filled, diff this file against that commit to see what the source has
+> fixed since.
 
 A procedure for an agent linked to a **fresh repository** on the same
 stack as this one — Python 3.12, FastAPI, SQLAlchemy 2, Alembic, pytest,
@@ -102,6 +103,7 @@ measure a contrast ratio; it cannot decide that a color is right.
 From the new repository's root, with `SRC` the source checkout:
 
 ```bash
+git -C "$SRC" rev-parse --short HEAD    # note it down; step 3 asks for it
 python3 "$SRC/tools/practice_kit.py" --export .
 ```
 
@@ -122,7 +124,11 @@ reproduce the export by hand instead of skipping it. The export is a
 manifest-driven copy: `MANIFEST` names every row, `SKELETONS` holds the
 generated texts verbatim, and the three `.gitignore` harness lines are
 appended if missing. Then run `--list` from the new tree and check it
-against the table below.
+against the table below. Either way, record the source's commit before you
+move on. If the source is attached to the session rather than cloned and
+`git rev-parse` is not available, write down what you do have — the
+repository and the date — and say in the Provenance line that it is not a
+commit.
 
 | Path | Tier | Needs | Note |
 |---|---|---|---|
@@ -243,12 +249,6 @@ these are the details that matter.
   `tests/unit/test_doc_conventions.py` is **not** copied: its checks
   derive from this app's constants and stylesheet, and it is the
   template for step 7.
-- **`new_project_practices_setup.md`.** Replace the Provenance line under
-  the title with your source and the commit you exported from. Nothing
-  checks it, deliberately, and without it no later reader can tell which
-  version of the procedure this project inherited or what the source has
-  fixed since. This is also the file that takes most of the path-gate
-  markers above.
 - **Deleting a kit file** — `ci-postgres.yml` when there is no Postgres,
   say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
   and replaces the table in this document with `--list` output, or
@@ -261,6 +261,11 @@ these are the details that matter.
   first routing module added without a spec, which is its job.
 - **`tools/README.md`.** Delete the rows and sections for tools that were
   not copied. The kit's own row stays.
+- **`new_project_practices_setup.md`.** Fill the Provenance blockquote's
+  two slots with the source and the commit step 1 had you note down.
+  Nothing checks it, deliberately (`docs/unenforced_conventions.md` §2.3),
+  so an unfilled one survives to the next reader, who then cannot tell
+  which version of the procedure this project inherited.
 
 ## 4. Add what the kit cannot carry
 
