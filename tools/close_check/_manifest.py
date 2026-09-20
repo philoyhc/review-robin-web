@@ -394,6 +394,19 @@ def _prior_paths(plan: pathlib.Path) -> list[str]:
     manifest and once per item heading — 13 times for the largest plan in
     the archive.
 
+    **Filtered to segment-plan names, because ``--follow`` is
+    similarity-based and will name a file that was never this one.**
+    Measured: a plan born by dissolving a brief in one commit — delete
+    `guide/brief.md`, add `guide/segment_01_x.md` carrying its body, which
+    is exactly how this lineage began — reports `guide/brief.md` among its
+    prior paths. Asking a foreign file for a pattern is worse than not
+    asking: for `## Item n` it can *answer*, where `None` is load-bearing
+    (see ``window``'s ``provisional``), and its commit is old enough to
+    widen a window into a silent pass. A plan's earlier names are always
+    plan names, so anything else is dropped. The cost of the filter is a
+    plan renamed *from* a non-plan name, which loses its earliest commit
+    and narrows its window — a loud failure rather than a quiet one.
+
     ``--follow`` is used here only to *enumerate names*, never to pick a
     commit — the rule the package docstring states is about
     ``--follow --reverse`` returning the archive-move commit, and that
@@ -414,9 +427,13 @@ def _prior_paths(plan: pathlib.Path) -> list[str]:
         "log", "--follow", "--name-only", "--format=",
         "--", plan.relative_to(_shared.REPO).as_posix(),
     )
-    _PRIOR_PATHS_CACHE[key] = list(
-        dict.fromkeys(row.strip() for row in listed.split("\n") if row.strip())
-    )
+    _PRIOR_PATHS_CACHE[key] = [
+        name
+        for name in dict.fromkeys(
+            row.strip() for row in listed.split("\n") if row.strip()
+        )
+        if pathlib.PurePosixPath(name).name.startswith("segment_")
+    ]
     return _PRIOR_PATHS_CACHE[key]
 
 
