@@ -36,10 +36,12 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("CLAUDE.md", "adapt", "", "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md"),
     ("constitution.md", "adapt", "", "keep the six articles; drop the dated annotations; re-point 'derived from'"),
     ("CONTRIBUTING.md", "adapt", "", "fill the merge-policy paragraph's <slow job> and <paths> for the new CI"),
-    (".gitignore", "skeleton", "", "the .claude/* negation lines only; appended if absent"),
+    (".gitignore", "skeleton", "", "the harness lines only — .claude/* negations plus the hook's build products; appended if absent"),
     (".claude/agents/diff-reviewer.md", "adapt", "", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph"),
     (".claude/agents/spec-writer.md", "adapt", "", "cites this project's specs and close procedure; re-point once your spec/ has a second file"),
     (".claude/skills/segment-plan/SKILL.md", "verbatim", "", "the plan / item / close procedure"),
+    (".claude/hooks/session-start.sh", "adapt", "", "builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test"),
+    (".claude/settings.json", "verbatim", "", "registers the SessionStart hook; project-relative, so it needs no edit"),
     ("guide/segment_plan_template.md", "verbatim", "", "the shape every plan copies"),
     ("guide/sweep_template.md", "verbatim", "", "the shape every spec/docs sweep copies"),
     ("guide/README.md", "skeleton", "", "index with the documented shapes the guide-index gate reads"),
@@ -94,10 +96,21 @@ DEFERRED_GROUPS = {
 #: destination that already ignores ``.claude/*`` but lacks a negation would
 #: swallow the exported agent and skill files silently — the failure the
 #: rule exists to prevent.
-GITIGNORE_REQUIRED = (".claude/*", "!.claude/agents/", "!.claude/skills/")
+GITIGNORE_REQUIRED = (
+    ".claude/*",
+    "!.claude/agents/",
+    "!.claude/skills/",
+    "!.claude/hooks/",
+    "!.claude/settings.json",
+    ".venv/",
+    "__pycache__/",
+)
 GITIGNORE_HEADER = (
-    "# Agent-harness config is local, EXCEPT the checked-in agent definitions.\n"
-    "# Without the negation a new agent file is silently ignored and never committed.\n"
+    "# Kept by the practice kit. Agent-harness config is local, EXCEPT the\n"
+    "# checked-in agent definitions and the SessionStart hook that builds the\n"
+    "# container — without the negation a new file there is silently ignored\n"
+    "# and never committed. The last two are what that hook and its test run\n"
+    "# create; a fresh repo commits the whole virtualenv without them.\n"
 )
 
 SKELETONS: dict[str, str] = {
@@ -306,7 +319,7 @@ def export(
             report.append(f"kept     {path} (exists)")
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, target)
+        shutil.copy(src, target)  # copy, not copyfile: the hook must stay executable
         report.append(f"{'copied' if tier == 'deferred' else tier:8} {path}")
     return report
 
