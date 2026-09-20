@@ -169,9 +169,11 @@ def archive_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(cc._shared, "REPO", root)
     cc._ITEM_START_CACHE.clear()
     cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
     yield root
     cc._ITEM_START_CACHE.clear()
     cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
 
 
 def _sweep(root: pathlib.Path) -> str:

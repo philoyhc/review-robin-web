@@ -53,6 +53,15 @@ From the commit that **added** the `Doc impact` heading to `HEAD` — or, for an
 archived plan, to the commit that archived it. The moment the commitment was
 made, not the plan file's first commit, which is often months earlier.
 
+**A renamed plan keeps its window.** A segment renumbered (`01` → `01a`)
+answers the lookup under its *new* name with the commit that created that
+name — the rename, or the archive move — so the window collapses onto it
+and every honoured path reports as untouched. When a plan has an earlier
+name, every name is therefore asked and the earliest answer wins; when it
+has none, which is almost always, nothing changes. Earlier names come from
+`--follow` and are filtered to plan names, because `--follow` matches on
+similarity and will name a file that was never this plan.
+
 **That start commit counts.** A plan landing its manifest and the doc edit it
 names in one commit has kept the commitment in one commit rather than two;
 excluding it was `git log A..B` arithmetic rather than a rule, and it had cost 6

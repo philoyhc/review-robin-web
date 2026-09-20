@@ -125,9 +125,11 @@ def plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(cc._shared, "REPO", root)
     cc._ITEM_START_CACHE.clear()
     cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
     yield plan
     cc._ITEM_START_CACHE.clear()
     cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
 
 
 def test_untagged_bullet_keeps_the_segment_window(plan_repo) -> None:
@@ -674,3 +676,202 @@ def test_a_directory_path_still_matches_with_its_trailing_slash() -> None:
     assert _paths("- `.github/workflows/` — the postgres job.") == [
         ".github/workflows/"
     ]
+
+
+# --------------------------------------------------------------------
+# a renamed plan keeps its own window
+
+
+@pytest.fixture
+def renamed_plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
+    """A plan that gains a manifest, sees its spec edited, then is renamed
+    *and* archived in one commit — what a segment renumbered at its close
+    does (`01` -> `01a`).
+
+    The trap this guards: the archived path always answers the manifest
+    pickaxe, because the archive move adds the whole file there. Take that
+    answer and the window starts on the move, ends on the move, and every
+    honoured path reads as untouched.
+    """
+    root = tmp_path / "repo"
+    (root / "guide" / "archive").mkdir(parents=True)
+    (root / "spec").mkdir()
+    run = lambda *a: subprocess.run(  # noqa: E731 - test-local shorthand
+        ["git", "-C", str(root), *a], check=True, capture_output=True
+    )
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    run("config", "user.email", "t@example.com")
+    run("config", "user.name", "T")
+
+    # A decoy plan with its own manifest, committed FIRST. A lookup that
+    # searches repo-wide — no pathspec — answers from this one and reads
+    # as correct without it.
+    other = root / "guide" / "segment_YY_decoy.md"
+    other.write_text("# Segment YY\n\n## Doc impact\n\n- `spec/z.md` — decoy.\n")
+    run("add", "-A")
+    run("commit", "-qm", "an older, unrelated plan carrying the same heading")
+
+    plan = root / "guide" / "segment_ZZ_demo.md"
+    spec = root / "spec" / "a.md"
+    spec.write_text("one\n")
+    plan.write_text("# Segment ZZ\n\n## Doc impact\n\n- `spec/a.md` — x.\n")
+    run("add", "-A")
+    run("commit", "-qm", "manifest")
+    opened = run("rev-parse", "HEAD").stdout.decode().strip()
+
+    spec.write_text("two\n")  # the edit the manifest committed to
+    run("add", "-A")
+    run("commit", "-qm", "the spec edit the bullet promised")
+
+    renamed = root / "guide" / "archive" / "segment_ZZa_demo.md"
+    run("mv", str(plan), str(renamed))
+    run("commit", "-qm", "renumber ZZ as ZZa, and archive it")
+
+    monkeypatch.setattr(cc._shared, "REPO", root)
+    cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
+    yield renamed, opened
+    cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
+
+
+def test_a_renamed_plan_dates_from_its_original_manifest(renamed_plan_repo) -> None:
+    """Not from the commit that renamed it."""
+    renamed, opened = renamed_plan_repo
+    found = cc._first_commit_matching(renamed, "^## Doc impact$")
+    assert found is not None, "no window at all for a renamed plan"
+    assert found[0] == opened, (
+        "window starts on the rename rather than on the manifest, which "
+        "empties it and fails every honoured path"
+    )
+
+
+def test_a_renamed_plan_still_sees_its_honoured_paths(renamed_plan_repo) -> None:
+    """The consequence the window exists for: C3 passes on a path edited
+    before the rename.
+
+    Built by hand rather than through ``_report``, which writes the plan
+    and hardcodes the id ``ZZ``; this plan is ``ZZa`` and its text is the
+    fixture's.
+    """
+    buffer = io.StringIO()
+    cc.report(cc.run("ZZa", None), buffer)
+    out = buffer.getvalue()
+    assert "FAIL  C3" not in out, out
+    assert "PASS  C3" in out, out
+
+
+@pytest.fixture
+def renamed_live_plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
+    """A plan renumbered while still live — renamed, never archived.
+
+    The harder half: unlike the archived case the new name *does* have
+    history, because the rename commit created it, so a lookup that stops
+    at the first answer gets the rename rather than the manifest and is
+    wrong without ever being empty.
+    """
+    root = tmp_path / "repo"
+    (root / "guide").mkdir(parents=True)
+    (root / "spec").mkdir()
+    run = lambda *a: subprocess.run(  # noqa: E731 - test-local shorthand
+        ["git", "-C", str(root), *a], check=True, capture_output=True
+    )
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    run("config", "user.email", "t@example.com")
+    run("config", "user.name", "T")
+
+    # A decoy plan with its own manifest, committed FIRST. A lookup that
+    # searches repo-wide — no pathspec — answers from this one and reads
+    # as correct without it.
+    other = root / "guide" / "segment_YY_decoy.md"
+    other.write_text("# Segment YY\n\n## Doc impact\n\n- `spec/z.md` — decoy.\n")
+    run("add", "-A")
+    run("commit", "-qm", "an older, unrelated plan carrying the same heading")
+
+    plan = root / "guide" / "segment_ZZ_demo.md"
+    spec = root / "spec" / "a.md"
+    spec.write_text("one\n")
+    plan.write_text("# Segment ZZ\n\n## Doc impact\n\n- `spec/a.md` — x.\n")
+    run("add", "-A")
+    run("commit", "-qm", "manifest")
+    opened = run("rev-parse", "HEAD").stdout.decode().strip()
+
+    spec.write_text("two\n")
+    run("add", "-A")
+    run("commit", "-qm", "the spec edit the bullet promised")
+
+    renamed = root / "guide" / "segment_ZZa_demo.md"
+    run("mv", str(plan), str(renamed))
+    run("commit", "-qm", "renumber ZZ as ZZa, still open")
+
+    monkeypatch.setattr(cc._shared, "REPO", root)
+    cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
+    yield renamed, opened
+    cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
+
+
+def test_a_plan_renamed_while_live_dates_from_its_original_manifest(
+    renamed_live_plan_repo,
+) -> None:
+    renamed, opened = renamed_live_plan_repo
+    found = cc._first_commit_matching(renamed, "^## Doc impact$")
+    assert found is not None
+    assert found[0] == opened, (
+        "window starts on the rename rather than the manifest; the new name "
+        "has history, so this one is wrong without ever being empty"
+    )
+
+
+def test_a_manifest_added_after_a_rename_is_still_found(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The oldest name never carried the heading.
+
+    Discriminates the fix from "ask the oldest name and stop", which
+    answers every other scenario here correctly and returns ``None`` for
+    this one — a plan renamed early and given its manifest later, which
+    is an ordinary way for one to be written.
+    """
+    root = tmp_path / "repo"
+    (root / "guide").mkdir(parents=True)
+    (root / "spec").mkdir()
+    run = lambda *a: subprocess.run(  # noqa: E731 - test-local shorthand
+        ["git", "-C", str(root), *a], check=True, capture_output=True
+    )
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    run("config", "user.email", "t@example.com")
+    run("config", "user.name", "T")
+
+    plan = root / "guide" / "segment_ZZ_demo.md"
+    (root / "spec" / "a.md").write_text("one\n")
+    plan.write_text("# Segment ZZ\n\nOpened, no manifest yet.\n")
+    run("add", "-A")
+    run("commit", "-qm", "plan opened without a manifest")
+
+    renamed = root / "guide" / "segment_ZZa_demo.md"
+    run("mv", str(plan), str(renamed))
+    run("commit", "-qm", "renumber before the manifest exists")
+
+    renamed.write_text(renamed.read_text() + "\n## Doc impact\n\n- `spec/a.md` — x.\n")
+    run("add", "-A")
+    run("commit", "-qm", "the manifest, under the new name")
+    manifest = run("rev-parse", "HEAD").stdout.decode().strip()
+
+    monkeypatch.setattr(cc._shared, "REPO", root)
+    cc._ITEM_START_CACHE.clear()
+    cc._COMMIT_CACHE.clear()
+    cc._PRIOR_PATHS_CACHE.clear()
+    try:
+        found = cc._first_commit_matching(renamed, "^## Doc impact$")
+        assert found is not None, "the manifest commit was not found at all"
+        assert found[0] == manifest
+    finally:
+        cc._ITEM_START_CACHE.clear()
+        cc._COMMIT_CACHE.clear()
+        cc._PRIOR_PATHS_CACHE.clear()

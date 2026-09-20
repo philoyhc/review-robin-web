@@ -371,8 +371,10 @@ _COMMIT_CACHE: dict[tuple[str, str], list[str] | None] = {}
 def _first_commit_matching(plan: pathlib.Path, pattern: str) -> list[str] | None:
     """[sha, date] of the first commit adding a line matching `pattern`.
 
-    Searched on the pre-archive path first, never with ``--follow``, per the
-    window rules in this module's docstring.
+    Searched on the pre-archive path first, then on any earlier name, then
+    on the archived path — never with ``--follow --reverse``, per the
+    window rules in this module's docstring. ``--follow`` enumerates the
+    earlier names and nothing else.
     """
     key = (plan.as_posix(), pattern)
     if key in _COMMIT_CACHE:
@@ -381,21 +383,111 @@ def _first_commit_matching(plan: pathlib.Path, pattern: str) -> list[str] | None
     return _COMMIT_CACHE[key]
 
 
+_PRIOR_PATHS_CACHE: dict[str, list[str]] = {}
+
+
+def _prior_paths(plan: pathlib.Path) -> list[str]:
+    """Every path this file has been known by, oldest name last.
+
+    Memoised per plan rather than per (plan, pattern): the answer does not
+    depend on the pattern, and ``_first_commit_matching`` asks once for the
+    manifest and once per item heading — 13 times for the largest plan in
+    the archive.
+
+    **Filtered to segment-plan names, because ``--follow`` is
+    similarity-based and will name a file that was never this one.**
+    Measured: a plan born by dissolving a brief in one commit — delete
+    `guide/brief.md`, add `guide/segment_01_x.md` carrying its body, which
+    is exactly how this lineage began — reports `guide/brief.md` among its
+    prior paths. Asking a foreign file for a pattern is worse than not
+    asking: for `## Item n` it can *answer*, where `None` is load-bearing
+    (see ``window``'s ``provisional``), and its commit is old enough to
+    widen a window into a silent pass. A plan's earlier names are always
+    plan names, so anything else is dropped. The cost of the filter is a
+    plan renamed *from* a non-plan name, which loses its earliest commit
+    and narrows its window — a loud failure rather than a quiet one.
+
+    ``--follow`` is used here only to *enumerate names*, never to pick a
+    commit — the rule the package docstring states is about
+    ``--follow --reverse`` returning the archive-move commit, and that
+    trap is avoided by running the ordinary pickaxe on each name found.
+
+    Without this, renaming a live plan silently empties its own window:
+    the pre-archive path of `segment_01a_x.md` has no history at all when
+    the file went straight from `guide/segment_01_x.md` to
+    `guide/archive/segment_01a_x.md`, so start collapses onto end and
+    every honoured path reads as untouched. Measured on Segment 01a,
+    which renamed at its close: 14 of 23 committed paths failed C3 with
+    nothing wrong with any of them.
+    """
+    key = plan.as_posix()
+    if key in _PRIOR_PATHS_CACHE:
+        return _PRIOR_PATHS_CACHE[key]
+    listed = _git(
+        "log", "--follow", "--name-only", "--format=",
+        "--", plan.relative_to(_shared.REPO).as_posix(),
+    )
+    _PRIOR_PATHS_CACHE[key] = [
+        name
+        for name in dict.fromkeys(
+            row.strip() for row in listed.split("\n") if row.strip()
+        )
+        if pathlib.PurePosixPath(name).name.startswith("segment_")
+    ]
+    return _PRIOR_PATHS_CACHE[key]
+
+
+def _pickaxe(candidate: str, pattern: str) -> list[str] | None:
+    """[sha, date] of the first commit adding ``pattern`` at ``candidate``."""
+    found = [
+        row for row in _git(
+            "log", "--reverse", "--format=%H %ad", "--date=short",
+            "-G", pattern, "--", candidate,
+        ).split("\n") if row.strip()
+    ]
+    return found[0].split(" ", 1) if found else None
+
+
 def _uncached_first_commit_matching(
     plan: pathlib.Path, pattern: str
 ) -> list[str] | None:
-    for candidate in dict.fromkeys(
-        [pre_archive_path(plan), plan.relative_to(_shared.REPO).as_posix()]
-    ):
-        found = [
-            row for row in _git(
-                "log", "--reverse", "--format=%H %ad", "--date=short",
-                "-G", pattern, "--", candidate,
-            ).split("\n") if row.strip()
-        ]
-        if found:
-            return found[0].split(" ", 1)
-    return None
+    """The earliest commit adding ``pattern`` under any name the plan had.
+
+    **Unrenamed — the overwhelming majority — costs what it always did.**
+    The pre-archive path answers, and the first answer is taken. The only
+    addition is one memoised ``--follow`` per plan to establish there is
+    no earlier name; the pickaxes, which scan a file's whole history and
+    are what makes ``--archived`` slow, are unchanged in number.
+
+    **Renamed, and the first answer is the wrong one.** Every name can
+    answer, and the newest ones answer with the commit that created them:
+    the archive move for an archived plan, the rename itself for a live
+    one. Either puts the window start at or after the moment the
+    commitment was supposedly checked — start collapses onto end and every
+    honoured path reads as untouched, which is the failure the package
+    docstring records for ``--follow --reverse``, reached another way. So
+    when an earlier name exists, every name is asked and the earliest
+    answer wins.
+
+    ``--follow`` enumerates names here and never chooses a commit.
+    """
+    pre = pre_archive_path(plan)
+    current = plan.relative_to(_shared.REPO).as_posix()
+    older = [name for name in _prior_paths(plan) if name not in (pre, current)]
+
+    if not older:
+        for candidate in dict.fromkeys([pre, current]):
+            found = _pickaxe(candidate, pattern)
+            if found:
+                return found
+        return None
+
+    earliest: list[str] | None = None
+    for candidate in dict.fromkeys([pre] + older + [current]):
+        found = _pickaxe(candidate, pattern)
+        if found and (earliest is None or _later_commit(earliest, found) is earliest):
+            earliest = found
+    return earliest
 
 
 def _later_commit(a: list[str] | None, b: list[str] | None) -> list[str] | None:

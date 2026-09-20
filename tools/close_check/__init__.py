@@ -67,6 +67,24 @@ that level — the moment the commitment was made — found with
 `git log -G'^## Doc impact$' --reverse` on the plan's **pre-archive**
 path. Never `--follow --reverse`, which returns the archive-move commit
 for a renamed file (measured: start = end, 0 of 110 paths "touched").
+
+A plan **renamed during its life** — a segment renumbered at its close,
+`01` to `01a` — breaks that lookup, because the newest names answer with
+the commit that created them: the archive move for an archived plan, the
+rename itself for a live one. Either puts start at or after end.
+Measured on `nuscr-res-apps` Segment 01a: 14 of 23 honoured paths failed
+C3 with nothing wrong with any of them.
+
+So earlier names are enumerated with `--follow --name-only` — names only,
+never to pick a commit — and **filtered to plan names**, because
+`--follow` is similarity-based and reports a file that was never this one
+(a plan born by dissolving a brief names that brief). Then: **no earlier
+name, the common case, keeps the old behaviour exactly** — pre-archive
+path, then archived path, first answer wins, same number of pickaxes.
+**An earlier name exists** — every name is asked and the earliest answer
+wins. The cost is one memoised `--follow` per plan; measured over 163
+archived plans, 3.15s to 3.53s with byte-identical output.
+
 End = `HEAD`, or for an archived plan the commit that added the archived
 path. A path is honoured by at least one non-merge commit touching it in
 `[start, end]` — the start commit **included**, so a plan that lands its
@@ -120,6 +138,7 @@ from ._manifest import (
     PASS,
     WARN,
     _COMMIT_CACHE,
+    _PRIOR_PATHS_CACHE,
     _first_commit_matching,
     _ITEM_START_CACHE,
     _section,
@@ -146,6 +165,7 @@ __all__ = [
     "Unresolvable",
     "WARN",
     "_COMMIT_CACHE",
+    "_PRIOR_PATHS_CACHE",
     "_ITEM_START_CACHE",
     "_first_commit_matching",
     "_git",
