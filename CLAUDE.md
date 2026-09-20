@@ -258,7 +258,9 @@ reject it.
   `diff-reviewer`'s cadence is **per item, not per slice** (author's
   ruling, 2026-09-18, on a merge-history audit: the read catches real
   defects on code rungs, overclaimed only prose on plan and close rungs,
-  and roughly doubles a slice's elapsed time). Four rules:
+  and roughly doubles a slice's elapsed time — the figures are in
+  `rrw_sdd_in_practice.md` §6.4 and `tools/pace_audit.py` re-takes
+  them). Four rules:
 
   - **Prose-only slices take no read.** A slice is prose-only when its
     diff touches nothing under `app/`, `tests/` or `alembic/` — plan

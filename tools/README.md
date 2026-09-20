@@ -11,6 +11,7 @@ but aren't part of the app or its test suite.
 | `theme_customizer.gen.py` → `theme_customizer.html` | Theme customizer — the same gallery with every colour token editable, live repaint, and the palette's WCAG audit. [Detail](#theme_customizergenpy) | `python3 tools/theme_customizer.gen.py` |
 | `theme_variants.gen.py` | Border-contrast report, plus the machinery for a theme variant when one is needed. [Detail](#theme_variantsgenpy) | `python3 tools/theme_variants.gen.py` |
 | `css_parity_check.py` | CSS-refactor parity check (read-only) — renders every page carrying a shared CSS shape, reads the computed styles Chromium resolves, and diffs two snapshots. Proves a refactor changed nothing, which the suite cannot: it has no layout engine, so which rule *wins* is invisible to it. **Needs `node` + `playwright` + a Chromium binary, none of them repo dependencies**; set `RRW_NODE_ROOT` and `RRW_CHROMIUM`. Unlike the other entries here it **does** lean on the suite — it drives the normally-skipped `tests/integration/test_css_parity_dump.py` (via `RRW_PARITY_DUMP`) so the pages it samples are real template output. Exit codes follow `close_check.py`: 0 no differences, 1 differences found, 2 could not check. Samples every page at **two viewports** (1280 and 700), since a rule inside a media query is invisible at a width where that query is inactive. Not in CI. | `python3 tools/css_parity_check.py --out /tmp/before` |
+| `pace_audit.py` | Pace audit (read-only) — elapsed time per merged slice from merge history, split BEFORE / AFTER a cut PR number; the method behind `rrw_sdd_in_practice.md` §6.4 (2026-09-19). [Detail](#pace_auditpy) | `python3 tools/pace_audit.py --cut 2460` |
 | `_harness_common.py` | Shared helpers for the two generators — the `base.html` `<style>` lift, the `:root` / `:root[data-theme="dark"]` token parse, the harness CSS, the gallery markup. Not a generator; imported by both. | — |
 
 ---
@@ -250,3 +251,26 @@ lost on the numbers (1.238:1 light / 1.145:1 dark), and previewing it needed a
 second 2.6 MB customizer carrying two tokens `base.html` deliberately does not
 have — which read as a facility rather than a closed experiment. The reasoning
 is in prose in `guide/segment_19C_refinements.md` Item 8.
+
+---
+
+## `pace_audit.py`
+
+Read-only. Stdlib + `git`; needs a full history (`git fetch --unshallow
+origin main` on a session clone). Reads every merge to `main` since
+`--since`, splits them at `--cut` (the first PR number under a changed
+rule) and prints, for BEFORE, the last BEFORE stretch from `--recent`,
+and AFTER: the within-session merge-to-merge cycle and its split into
+turn / in-PR iteration / push-to-merge, the share of PRs carrying a
+review-response commit, product and prose-only slices separately, the
+cycle by code-size bucket, and code+test lines per hour.
+
+**A gap over three hours is dropped**, so the author's scheduling does
+not enter; what remains is the loop between one merge and the next.
+`turn` includes the time an instruction took to write and is a ceiling
+on build time, not a measure of it. PR-opened → merged needs `--prs`, a
+JSONL of `number` / `created_at` / `merged_at` from the GitHub API,
+because PR timestamps are not in git.
+
+Written for the 2026-09-19 re-measurement of the reader cadence; the
+numbers it produced are in `rrw_sdd_in_practice.md` §6.4. Not in CI.

@@ -12,6 +12,11 @@ The document is drafted with the help of Claude Code, with access to the reposit
 
 **Revised 2026-09-05** after external review. Section 6.1's trade-off now states the exit asymmetry in one place; Sections 5 and 6.6 name scaffold-first as the partial answer to the browser-only class; Section 6.4 records a retrospective test of the reviewer against the 2026-05-11 email-case commit; "before the term arrived" tightened to "before the term went mainstream" (Sections 1, 3). No number changed.
 
+**Revised 2026-09-19.** Section 6.4 gains a dated annotation with the
+measured cost of the per-rung reader cadence named on 2026-09-14, the
+scoped cadence that replaced it, and the first re-measurement under it;
+`tools/pace_audit.py` is the method. No earlier number changed.
+
 ---
 
 ## 2. Spec-driven development, as the term is used
@@ -144,6 +149,39 @@ push only on the narrow cases in `CLAUDE.md` "Where work runs". *This
 paragraph's own open item is answered by naming the cadence, not by
 demonstrating it holds; whether the reader is now routinely run is a
 measurement for the next audit, made the same way.*
+
+**Annotated 2026-09-19.** The cadence named on 2026-09-14 was measured
+four days later, from merge history rather than commit messages: every
+merge to `main` since 2026-09-04, joined to GitHub's PR-opened and
+PR-merged timestamps, with elapsed time taken merge-to-merge and gaps
+over three hours dropped so the author's own scheduling does not enter
+(`tools/pace_audit.py`, which prints the figures below from a cut PR
+number). The reader now ran, and the answer to "cheap enough to stay
+routine" was **no**. A slice that carried a cold-read round took a
+median **49** minutes merge-to-merge against **23** for one that did
+not; a prose-only slice, **59** against **21** (nine such slices, so
+read the direction, not the digit); in the week the per-rung
+cadence was in force the median slice took **44** minutes, against
+**25** for the fortnight before it, and in-PR iteration — first commit
+to last — rose from about **8** minutes to **23**. Instruction-to-first-
+commit did not move in any period, so the cost was the loop the reader
+adds, not slower building. What the reader caught divides cleanly: of
+78 response commits, 58 changed code or tests and describe live defects
+(a control that destroyed Save, two guards deleted as cleanup, a
+regression in deriving an invitation from its row); the 20 that changed
+only prose describe the author overclaiming in a plan or a close. So
+the cadence is now scoped rather than universal — `diff-reviewer` once
+per item on the item's cumulative diff, and per slice only for code
+outside a ladder; prose-only slices take no read; `spec-writer`
+unchanged — the author's ruling of 2026-09-18, stated in `CLAUDE.md`
+"Where work runs" and noted under `constitution.md` III. Re-measured
+over the first 33 slices under the scoped cadence (#2460–#2492):
+iteration back to **10** minutes, prose-only slices to **23**, slices
+carrying a read down from 69% to 30%, and the reads that did fire still
+reporting defects ("five findings, all real"). *Re-take it the same way
+at the next audit — `python3 tools/pace_audit.py --cut 2460`; a faster
+number with no findings recorded at item closes means the read was
+skipped, not batched.*
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
 
