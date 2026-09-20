@@ -12,6 +12,8 @@ import importlib.util
 import pathlib
 import re
 
+import pytest
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
@@ -24,6 +26,15 @@ def _load():
 
 
 pk = _load()
+
+#: The theme group is *built* from this tree's ``base.html``, so the two tests
+#: that export it need that file present. A repository the kit was just
+#: exported into has none until setup step 7 lands the group — the same
+#: trigger ``test_every_copied_path_exists`` keys on.
+needs_theme_source = pytest.mark.skipif(
+    not (REPO_ROOT / pk.DEFERRED_GROUPS["theme"]).is_file(),
+    reason="the theme group is built from app/web/templates/base.html (setup step 7)",
+)
 
 _ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*([^|]*?)\s*\|")
 
@@ -141,6 +152,7 @@ def test_gitignore_guard_checks_each_harness_line(tmp_path: pathlib.Path) -> Non
         assert text.count(line + "\n") == 1, line
 
 
+@needs_theme_source
 def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> None:
     """The theme group needs base.html, so exporting it builds one from the
     source: the no-flash script and the whole stylesheet, then a content
@@ -165,12 +177,11 @@ def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> N
 
 
 def test_an_unknown_deferred_group_is_refused(tmp_path: pathlib.Path) -> None:
-    import pytest
-
     with pytest.raises(ValueError, match="unknown deferred group"):
         pk.export(tmp_path / "fresh", include_deferred={"themes"})
 
 
+@needs_theme_source
 def test_a_kit_built_project_can_be_the_source_for_the_next(tmp_path: pathlib.Path) -> None:
     """Second-generation inheritance: a tree the kit built has the toggle
     inline in base.html and no partial, and must still export the theme
