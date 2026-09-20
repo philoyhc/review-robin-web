@@ -1,5 +1,11 @@
 # New-project practice setup
 
+> **Provenance.** Exported from `<source>` at `<commit>`; step 3 fills both
+> slots. Brackets still showing means this is either the original, in
+> `philoyhc/review-robin-web`, or a copy whose step 3 was skipped. Once
+> filled, diff this file against that commit to see what the source has
+> fixed since.
+
 A procedure for an agent linked to a **fresh repository** on the same
 stack as this one — Python 3.12, FastAPI, SQLAlchemy 2, Alembic, pytest,
 ruff, GitHub Actions. It copies this repository's working practice across
@@ -97,6 +103,7 @@ measure a contrast ratio; it cannot decide that a color is right.
 From the new repository's root, with `SRC` the source checkout:
 
 ```bash
+git -C "$SRC" rev-parse --short HEAD    # note it down; step 3 asks for it
 python3 "$SRC/tools/practice_kit.py" --export .
 ```
 
@@ -117,7 +124,11 @@ reproduce the export by hand instead of skipping it. The export is a
 manifest-driven copy: `MANIFEST` names every row, `SKELETONS` holds the
 generated texts verbatim, and the three `.gitignore` harness lines are
 appended if missing. Then run `--list` from the new tree and check it
-against the table below.
+against the table below. Either way, record the source's commit before you
+move on. If the source is attached to the session rather than cloned and
+`git rev-parse` is not available, write down what you do have — the
+repository and the date — and say in the Provenance line that it is not a
+commit.
 
 | Path | Tier | Needs | Note |
 |---|---|---|---|
@@ -167,7 +178,7 @@ against the table below.
 | `tools/practice_kit.py` | verbatim | — | this tool, so the next project can inherit from yours |
 | `tests/unit/test_practice_kit.py` | verbatim | — | keeps the manifest, the tree and the setup document in step |
 | `tools/README.md` | adapt | — | keep the rows and sections for the tools you copied |
-| `new_project_practices_setup.md` | verbatim | — | the procedure; a new project re-derives it from its own kit |
+| `new_project_practices_setup.md` | adapt | — | the procedure; set the Provenance line, and mark the paths that stay in the source |
 
 ## 2. Read before adapting
 
@@ -242,7 +253,10 @@ these are the details that matter.
   say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
   and replaces the table in this document with `--list` output, or
   `tests/unit/test_practice_kit.py` fails on the missing path and then
-  on the table.
+  on the table. `--list` renders the manifest notes as they are, so a
+  regenerated table drops any `path-ref-ok` markers the old one carried
+  in its Note cells — the path gate names them, but re-add them rather
+  than wondering.
 - **`app/web/spec_registry.py`** with **`tests/unit/test_spec_coverage.py`.**
   Empty the module-to-spec table, set `_MINIMUM_ROUTES` to the number of
   routes the new app registers today, and let the baseline set of pending
@@ -250,6 +264,11 @@ these are the details that matter.
   first routing module added without a spec, which is its job.
 - **`tools/README.md`.** Delete the rows and sections for tools that were
   not copied. The kit's own row stays.
+- **`new_project_practices_setup.md`.** Fill the Provenance blockquote's
+  two slots with the source and the commit step 1 had you note down.
+  Nothing checks it, deliberately, so an unfilled one survives to the
+  next reader, who then cannot tell which version of the procedure this
+  project inherited.
 
 ## 4. Add what the kit cannot carry
 

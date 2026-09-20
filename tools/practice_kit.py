@@ -79,7 +79,7 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("tools/practice_kit.py", "verbatim", "", "this tool, so the next project can inherit from yours"),
     ("tests/unit/test_practice_kit.py", "verbatim", "", "keeps the manifest, the tree and the setup document in step"),
     ("tools/README.md", "adapt", "", "keep the rows and sections for the tools you copied"),
-    ("new_project_practices_setup.md", "verbatim", "", "the procedure; a new project re-derives it from its own kit"),
+    ("new_project_practices_setup.md", "adapt", "", "the procedure; set the Provenance line, and mark the paths that stay in the source"),
 )
 
 TIERS = ("verbatim", "adapt", "skeleton", "deferred")

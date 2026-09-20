@@ -170,7 +170,7 @@ the joke it sounds like.
 
 ## 2. Enforceable but not enforced — the revisit queue
 
-Neither of these needs an allowlist, and both would pass on the current
+None of these needs an allowlist, and each would pass on the current
 tree, so a check would be green from its first commit. They are here
 because nobody has written them, which is a different fact from a
 decision not to.
@@ -202,6 +202,28 @@ decision not to.
   target and so is not itself a slice — plus `__init__.py`. The
   convention is being followed by hand today, which is the best moment
   to pin it: before the first violation makes the check a cleanup.
+
+### 2.3 The Provenance line in `new_project_practices_setup.md`
+
+- **Written down at** that document's own step 3, and the blockquote
+  under its title carries two `<slot>`s for a reader to fill.
+- **The check.** `tools/practice_kit.py` ships to every project the kit
+  sets up, so a `PROVENANCE_DEFAULT` constant holding the shipped text,
+  plus a test that the local document's blockquote differs from it,
+  would fire in exactly the repositories that need it. The awkward part
+  is real but small: the test has to pass here, where the blockquote *is*
+  the default, so it needs a way to tell the source from a copy.
+- **Why it is not written yet.** The clean version is for the export to
+  stamp the line as it copies, which makes the constant exact and the
+  test trivial. That is a change to the tool, and it was kept out of the
+  slice that added the line. Until then a check would enforce a
+  convention whose input nothing produces.
+- **What would change this.** The export stamping it. Then this entry
+  moves out of the queue and the test follows.
+- **Verified 2026-09-20.** The one downstream copy,
+  `philoyhc/nuscrm`, filled it by hand in the same session, so the
+  convention has been followed once and broken zero times — the same
+  "pin it before the first violation" moment as §2.2.
 
 ---
 
