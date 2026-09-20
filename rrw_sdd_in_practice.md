@@ -17,6 +17,11 @@ measured cost of the per-rung reader cadence named on 2026-09-14, the
 scoped cadence that replaced it, and the first re-measurement under it;
 `tools/pace_audit.py` is the method. No earlier number changed.
 
+**Revised 2026-09-20.** Section 6.4 gains a second annotation: the
+whole-history audit that separates the gates' cost from the reads', and
+the finding that *turn* is a flat, size-independent floor. The tool
+gains the turn fit it quotes. No earlier number changed.
+
 ---
 
 ## 2. Spec-driven development, as the term is used
@@ -182,6 +187,33 @@ reporting defects ("five findings, all real"). *Re-take it the same way
 at the next audit — `python3 tools/pace_audit.py --cut 2460`; a faster
 number with no findings recorded at item closes means the read was
 skipped, not batched.*
+
+**Annotated 2026-09-20.** A fresh audit over the whole history, with the
+tool's review matching tightened to response forms (Codex's finding on
+#2493) and its date cut pinned to midnight UTC, separates what the
+2026-09-19 note ran together. There were **three** step changes, not
+one. From Segment 1 to 19C the median slice drifted from **11** to
+**17** minutes as the suite grew — PR-opened-to-merged went from under
+**2** minutes to **6**, which is CI. On 2026-09-04 the doc and test
+gates added about **5** minutes of in-PR iteration and lifted the median
+to **22**, roughly **1.3×** at matched size. On 2026-09-14 the per-rung
+reads began — the tightened matching puts them at **3%** of slices
+before that date and **69%** after, which agrees with III's own note
+that the reader had not been running — and with Codex on every slice
+the median doubled again to **44**. The per-item cadence recovered most
+of the third step and none of the second: **30** over its first 34
+slices, iteration **23 → 10**, read-carrying slices **69% → 29%**,
+prose-only slices back to **23** from **34**. *Turn* — previous merge to
+the slice's first commit — is the component the cadence does not touch,
+and it is flat: median **8** to **10** minutes in every era since April,
+with a fitted fixed cost of **10** to **14** minutes per slice that does
+not scale with the slice's size (slope at or below **1** minute per 100
+lines; **0** under the per-item cadence) and is the same for a
+prose-only slice as for a code one. That floor is the instruction loop
+and the context a slice loads, not the build. Splitting it needs a
+timestamp the repository does not carry — when the instruction arrived —
+which is the next thing to instrument. *Re-take with*
+`python3 tools/pace_audit.py --cut 2460`*; the turn line is the fit.*
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
 
