@@ -636,10 +636,15 @@ The Operations-row page at
    **active-only**, matching the rule engine, where the
    Relationships Setup page counts every row.
 
-   The table sits in `.table-scroll`. With all nine tag slots
-   populated it renders 14 columns — 1508px inside a 1360px card —
-   so its overflow belongs inside the card rather than scrolling the
-   whole page, the same wrapper Invitations and Responses use.
+   **Both of the page's tables sit in `.table-scroll`** — this one,
+   and the **Per-instrument status** card above it. With all nine tag
+   slots populated the pair table renders 14 columns — 1508px inside a
+   1360px card — so its overflow belongs inside the card rather than
+   scrolling the whole page. The status card looks small enough not to
+   need it and is not: at 700px it was the element pushing this page
+   sideways, while the wide table beside it sat quietly in its wrapper
+   (19O Item 8). Every table in the app carries the wrapper now
+   (`spec/ui_elements.md` §10).
 
 The page reuses the Workflow card chrome shared with Session
 Home + other Operations-row pages.

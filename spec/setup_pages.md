@@ -473,6 +473,13 @@ helper (`app.web.views.preview_count_line`) and **one** partial
 (`operator/partials/_preview_count_line.html`), never a per-page
 variant.
 
+**Every preview table sits in `.table-scroll`** (`spec/ui_elements.md`
+§10). The four roster pages went without until 19O Item 8, on a rule
+that said they "measure inside their card" — true at 1400px, and false
+below it: Reviewers and Reviewees push the document sideways from
+900px, Relationships from 1100. The wrapper is not a per-page decision
+any more, on these or anywhere else.
+
 ### The row pager
 
 **The 200-row cap is a page size, not a truncation.** Each of the four

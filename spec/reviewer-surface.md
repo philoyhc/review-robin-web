@@ -355,7 +355,9 @@ Each page renders **one tabular response artifact** for the current
 instrument: every assignment the reviewer has on that instrument is
 one row, with response fields as columns. Wrapped in
 `.table-scroll` so very wide instruments scroll horizontally instead
-of forcing the surrounding layout to grow.
+of forcing the surrounding layout to grow — as every table in the app
+now is (`spec/ui_elements.md` §10), this one being the widest and the
+reason the rule reads the way it does.
 
 Reviewer-table rows use a **tighter vertical cell padding** than the
 standard v2 table — half the global row gap, same horizontal
@@ -1368,7 +1370,8 @@ recorded as an aspirational possibility in
 compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
-  `.table-scroll`. Column-width hint classes (`.rs-narrow` /
+  `.table-scroll`, as does the visibility-policy card's table above
+  it. Column-width hint classes (`.rs-narrow` /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
   `_surface_context` as a list of dicts with stable, serializable

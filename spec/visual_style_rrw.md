@@ -741,7 +741,11 @@ this principle imposes are:
   header stays visible only if the table becomes its own internal
   scroll viewport (a `max-height` box). The surface keeps
   whole-page scroll and a non-sticky header — a header that stays
-  put does not buy that scroll-model change.
+  put does not buy that scroll-model change. **This now reaches every
+  table in the app**, not just this one: 19O Item 8 made the wrapper
+  universal (`spec/ui_elements.md` §10), so a sticky header anywhere
+  costs the same scroll-model change and is ruled out on the same
+  grounds.
 - **Filter to incomplete.** A "show only unscored" toggle is
   invaluable for reviewers working across multiple sessions or
   returning to a table they partially filled.
