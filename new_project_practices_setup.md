@@ -1,5 +1,10 @@
 # New-project practice setup
 
+> **Provenance.** This copy is the original, in `philoyhc/review-robin-web`.
+> A project that inherits the kit replaces this line with its own source and
+> the commit it exported from, so a later reader can diff this file against
+> that commit and see what the source has fixed since.
+
 A procedure for an agent linked to a **fresh repository** on the same
 stack as this one — Python 3.12, FastAPI, SQLAlchemy 2, Alembic, pytest,
 ruff, GitHub Actions. It copies this repository's working practice across
@@ -167,7 +172,7 @@ against the table below.
 | `tools/practice_kit.py` | verbatim | — | this tool, so the next project can inherit from yours |
 | `tests/unit/test_practice_kit.py` | verbatim | — | keeps the manifest, the tree and the setup document in step |
 | `tools/README.md` | adapt | — | keep the rows and sections for the tools you copied |
-| `new_project_practices_setup.md` | verbatim | — | the procedure; a new project re-derives it from its own kit |
+| `new_project_practices_setup.md` | adapt | — | the procedure; set the Provenance line, and mark the paths that stay in the source |
 
 ## 2. Read before adapting
 
@@ -238,6 +243,12 @@ these are the details that matter.
   `tests/unit/test_doc_conventions.py` is **not** copied: its checks
   derive from this app's constants and stylesheet, and it is the
   template for step 7.
+- **`new_project_practices_setup.md`.** Replace the Provenance line under
+  the title with your source and the commit you exported from. Nothing
+  checks it, deliberately, and without it no later reader can tell which
+  version of the procedure this project inherited or what the source has
+  fixed since. This is also the file that takes most of the path-gate
+  markers above.
 - **Deleting a kit file** — `ci-postgres.yml` when there is no Postgres,
   say — also deletes its row from `MANIFEST` in `tools/practice_kit.py`
   and replaces the table in this document with `--list` output, or
