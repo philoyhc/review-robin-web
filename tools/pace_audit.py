@@ -100,11 +100,30 @@ def since_arg(since: str) -> str:
     return since
 
 
+def resolve_ref(ref: str = MAIN_REF) -> str:
+    """``ref`` if it exists, else the local ``main`` a fresh clone has, else an error.
+
+    A repository with no remote yet, or one whose remote branch is called
+    something else, should say so rather than fail inside ``git log``.
+    """
+    for candidate in (ref, "main"):
+        probe = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{candidate}^{{commit}}"],
+            capture_output=True, text=True,
+        )
+        if probe.returncode == 0:
+            return candidate
+    raise SystemExit(
+        f"pace_audit: neither {ref!r} nor 'main' names a commit here. "
+        "Run from a clone with the main line fetched, or pass the ref to load()."
+    )
+
+
 def load(since: str, ref: str = MAIN_REF) -> list[dict]:
     """Every merge on ``ref``'s first-parent line since ``since``, oldest first."""
     rows: list[dict] = []
     log = git(
-        "log", "--merges", "--first-parent", ref, f"--since={since_arg(since)}",
+        "log", "--merges", "--first-parent", resolve_ref(ref), f"--since={since_arg(since)}",
         "--format=%H|%ct|%s|%b",
     )
     for line in log.splitlines():

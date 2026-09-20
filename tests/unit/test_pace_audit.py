@@ -182,3 +182,19 @@ def test_report_prints_the_split_at_three(repo: Repo, capsys: pytest.CaptureFixt
     assert "turn split on Instruction-Received (n=3)" in out
     assert "wait med  3.0 mean  4.0" in out
     assert "build med  7.0 mean  6.0" in out
+
+
+# --------------------------------------------------------------------
+# the main ref: origin/main, else main, else a message rather than a traceback
+
+
+def test_falls_back_to_local_main_when_there_is_no_remote(repo: Repo) -> None:
+    repo.slice([("first", 5)], merge_minute=10)
+    assert pa.resolve_ref("origin/main") == "main"
+    assert len(pa.load("2026-09-01")) == 1
+
+
+def test_no_main_line_at_all_is_a_message_not_a_traceback(repo: Repo) -> None:
+    repo.git("branch", "-m", "main", "trunk")
+    with pytest.raises(SystemExit, match="neither 'origin/main' nor 'main'"):
+        pa.load("2026-09-01")

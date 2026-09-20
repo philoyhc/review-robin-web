@@ -223,10 +223,17 @@ def test_a_root_level_document_is_a_committed_path() -> None:
     assert _paths("- `constitution.md` — VI gains a pointer.") == ["constitution.md"]
 
 
-def test_a_bare_filename_resolves_to_the_folder_that_holds_it() -> None:
+def test_a_bare_filename_resolves_to_the_folder_that_holds_it(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Two of the 99 plans use a bare name as shorthand for a spec.
     Resolution reads the filesystem — root, then ``spec/``, then
-    ``docs/`` — so there is no list to maintain."""
+    ``docs/`` — so there is no list to maintain. Resolved against a tree
+    built here rather than this repository's, so the test also holds in a
+    repository the practice kit has just been exported into."""
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "spec" / "architecture.md").write_text("# spec\n")
+    monkeypatch.setattr(cc._shared, "REPO", tmp_path)
     assert _paths("- `architecture.md` — the module map.") == ["spec/architecture.md"]
 
 

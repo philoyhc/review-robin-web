@@ -1,296 +1,214 @@
-# New-project practices setup
+# New-project practice setup
 
-A drop-in checklist for the first day of a new repository. Everything here
-is generalised from the Review Robin Web practice audit of 2026-09-04
-(`docs/practice-audit-2026-09-04.md`), where each item was established by
-running a deliberate violation and watching what happened — not by reasoning
-about what a config file ought to do.
+A procedure for an agent linked to a **fresh repository** on the same
+stack as this one — Python 3.12, FastAPI, SQLAlchemy 2, Alembic, pytest,
+ruff, GitHub Actions. It copies this repository's working practice across
+and adapts it to the new environment. What it carries is the practice's
+**machinery** — the instruction file, the constitution, the two readers,
+the plan procedure, the gates, the tools — not this project's specs,
+history or code.
 
-The theme: **each of these costs under an hour at project start and gets
-progressively more awkward to retrofit.** RRW added them at ~4,500 commits;
-every one would have been cheaper at commit 10.
+Drop this file into the agent's instructions, or into the new repo's root,
+and say "run it". It is written to be executed top to bottom in one
+session. Where a step says *ask*, stop and ask; everything else is the
+agent's call.
 
-Copy this file into the new repo, work through Part 1, delete the parts that
-do not apply, and keep it as the record of what was decided.
+This replaces the 2026-09-04 checklist of the same name. That version was
+read by a person and predated the constitution, the plan skill, the close
+check, the pace audit and the doc gates; its five day-one items survive
+as steps 3, 5 and 7 below.
 
----
+## 0. Preconditions
 
-## Part 1 — Do these on day one
+- The new repository exists, is cloned, and is the working directory.
+  It may be empty or carry a first commit; it must not already carry a
+  `CLAUDE.md` you were told to keep.
+- The source repository `philoyhc/review-robin-web` is reachable — cloned
+  beside the new one, or attached to the session. If it is not, **ask**
+  for it; the kit is copied from it, not reconstructed.
+- `python3` is 3.12 or later and `git` is present. Nothing else is needed
+  to run the kit; the gates need the dev install in step 6.
 
-### 1. Write the merge policy down (10 minutes)
+## 1. Export the kit
 
-Not branch protection. A paragraph.
+From the new repository's root, with `SRC` the source checkout:
 
-Every project develops a rule about when it is acceptable to merge ahead of
-a slow check. That rule is usually sound and almost never written down, so
-it survives exactly as long as the person holding it. Write it into
-`CONTRIBUTING.md` on day one, while it is still a decision rather than a
-habit.
-
-```markdown
-## When to wait for CI
-
-`main` carries no branch protection, so nothing mechanically blocks a
-merge — the gate is your judgement. Stratify by what the diff touches.
-
-**Wait for `<slow job>` to report green** when the diff touches
-`<paths where that job is the only coverage>`. It is the only check
-that covers `<the gap — e.g. a test/production dialect split>`, and
-`<what happens downstream if a failure gets through>`.
-
-**Merging ahead of it is fine** for changes that cannot reach
-`<the risk>`: documentation, and dev-only tooling under `<path>`. The
-fast job (`<lint + unit tests>`) still applies to anything containing
-executable code.
+```bash
+python3 "$SRC/tools/practice_kit.py" --export .
 ```
 
-**Why not just turn on branch protection?** Because you should measure
-first. The RRW audit expected to recommend it and withdrew the
-recommendation: 9 of the last 23 merges *had* gone in ahead of the slow job,
-but every one of them was documentation or dev-only tooling — zero app code,
-zero models, zero migrations — while every database-touching PR whose CI run could
-be retrieved (3 of 4) had waited.
-Protection would have added friction to ~95% of PRs to formalise a rule
-already being followed. Add it when you have a second contributor, or when
-you measure the policy being broken; not reflexively.
+It copies every file in the table below, generates the skeletons, appends
+the `.gitignore` lines, and prints one line per entry. It never overwrites
+a file that exists; `--force` does. `--list` prints the table without
+copying. The table is derived from the tool's manifest and a test in the
+source repository keeps them identical, so if they disagree the tool is
+right.
 
-**Related, and worth checking on day one:** does your deploy pipeline
-*depend* on CI, or merely run after it? In RRW the deploy job needs the
-migration job but not the test job, so a red test suite does not stop a
-deploy. That is a one-line fix at pipeline-creation time and an archaeology
-project later.
+| Path | Tier | Note |
+|---|---|---|
+| `CLAUDE.md` | adapt | rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md |
+| `constitution.md` | adapt | keep the six articles; drop the dated annotations; re-point 'derived from' |
+| `CONTRIBUTING.md` | adapt | fill the merge-policy paragraph's <slow job> and <paths> for the new CI |
+| `.gitignore` | skeleton | the .claude/* negation lines only; appended if absent |
+| `.claude/agents/diff-reviewer.md` | adapt | check 4 names this app's seams (routes_operator/_shared.py, base.html); name yours |
+| `.claude/agents/spec-writer.md` | adapt | cites spec/README.md and the close procedure; re-point once your spec/ exists |
+| `.claude/skills/segment-plan/SKILL.md` | verbatim | the plan / item / close procedure |
+| `guide/segment_plan_template.md` | verbatim | the shape every plan copies |
+| `guide/sweep_template.md` | verbatim | the shape every spec/docs sweep copies |
+| `guide/README.md` | skeleton | index with the documented shapes the guide-index gate reads |
+| `guide/archive/README.md` | skeleton | index the archive gate reads; one row per file, no patterns |
+| `guide/todo_master.md` | skeleton | Done / Upcoming roadmap |
+| `guide/deferred_consolidated.md` | skeleton | everything scoped but not scheduled |
+| `spec/README.md` | skeleton | index of the surface contracts |
+| `docs/README.md` | skeleton | index of the operational docs |
+| `docs/status.md` | skeleton | implementation state; first row is this setup |
+| `docs/unenforced_conventions.md` | skeleton | constitution VI's short list; starts empty |
+| `.github/workflows/ci.yml` | verbatim | ruff + pytest -n auto on 3.12 |
+| `.github/workflows/ci-postgres.yml` | adapt | DB user / password / name; the alembic round-trip stays |
+| `tests/unit/test_doc_conventions.py` | adapt | keep the twins, path-reference and section-reference checks; delete the checks that import app constants until you have one |
+| `tests/unit/test_guide_indexes.py` | verbatim | the guide-index gate; reads the skeleton READMEs |
+| `app/web/spec_registry.py` | adapt | the route-table -> spec mapping; empty the table, lower _MINIMUM_ROUTES |
+| `tests/unit/test_spec_coverage.py` | adapt | pairs with spec_registry; baseline set starts empty |
+| `tools/close_check.py` | verbatim | close check entry point |
+| `tools/close_check/__init__.py` | verbatim | close check package |
+| `tools/close_check/_shared.py` | verbatim | close check package |
+| `tools/close_check/_manifest.py` | verbatim | close check package |
+| `tools/close_check/_archive.py` | verbatim | close check package |
+| `tools/close_check/_sweep.py` | verbatim | close check package |
+| `tests/unit/test_close_check.py` | verbatim | builds its own repo; runs on an empty guide/ |
+| `tests/unit/test_close_check_archived.py` | verbatim | builds its own repo; passes on an empty archive |
+| `tools/pace_audit.py` | verbatim | merge-history pace audit; needs full history |
+| `tests/unit/test_pace_audit.py` | verbatim | builds its own repo |
+| `tools/practice_kit.py` | verbatim | this tool, so the next project can inherit from yours |
+| `tests/unit/test_practice_kit.py` | verbatim | keeps the manifest, the tree and the setup document in step |
+| `tools/README.md` | adapt | keep the rows and sections for the tools you copied |
+| `new_project_practices_setup.md` | verbatim | the procedure; a new project re-derives it from its own kit |
 
-### 2. Decide how agent config is tracked (2 minutes)
+## 2. Read before adapting
 
-If you use an agent harness that reads config from a dotdir (`.claude/`,
-`.cursor/`, `.github/copilot-instructions.md`, …), decide **now** which parts
-are shared and which are local, and encode it:
+Read, in the new tree, in this order: `constitution.md`, then
+`CLAUDE.md`, then `.claude/skills/segment-plan/SKILL.md`. Read
+`rrw_sdd_in_practice.md` **in the source** — it is the rationale for
+every article and is deliberately not copied, because it is this
+project's history. The new project writes its own when it has one.
 
-```gitignore
-# Harness config is local, EXCEPT the checked-in agent definitions.
-.claude/*
-!.claude/agents/
+## 3. Adapt, file by file
+
+Work the `adapt` rows in table order. The note on each row is the edit;
+these are the details that matter.
+
+- **`CLAUDE.md`.** Keep the header note, "Working approach", "Common
+  commands" (fix the app module and DB file names) and "Where work runs".
+  Rewrite "Project conventions" down to the stack bullets plus whatever
+  the new project has decided; delete the button-role, visibility-mode
+  and Easy Auth bullets, which name this app's constants. Rewrite
+  "Architecture at a glance" for the new app or reduce it to the
+  three-layer rule and a pointer. Regenerate "Where to look" from the
+  skeleton indexes. In "Where work runs", the gate bullet, the
+  install bullet, the stamp bullet and the two-readers bullet are the
+  practice and stay; the dated ruling text may be cut to its four rules.
+  Then `cp CLAUDE.md AGENTS.md` — the twins test is in the kit.
+- **`constitution.md`.** The six articles are the practice. Delete the
+  dated annotations under III; change "derived from
+  `rrw_sdd_in_practice.md` §6" to say the derivation is owed, so the
+  first practice audit writes it.
+- **`CONTRIBUTING.md`.** The merge-policy paragraph is the point of the
+  file. Fill its slow job and the paths only that job covers; for this
+  stack that is `ci-postgres` and `alembic/` plus anything issuing
+  queries, unless the new project has no Postgres, in which case delete
+  the paragraph and the workflow together.
+- **`.claude/agents/diff-reviewer.md`.** Check 4 names this app's seams.
+  Replace them with the new app's, or with the generic form the
+  2026-09-04 checklist carried: "a module importing across a boundary its
+  neighbours respect, a hand-rolled thing the codebase has a helper for".
+- **`.claude/agents/spec-writer.md`.** Leave as is until `spec/` has a
+  second file; then re-point the paths it cites.
+- **`.github/workflows/ci-postgres.yml`.** Database user, password and
+  name; keep the upgrade / downgrade-base / upgrade round-trip.
+- **`tests/unit/test_doc_conventions.py`.** Keep the twins check, the
+  path-reference pair and the section-reference pair; they read only the
+  tree. Delete every check that imports from `app` — lifecycle labels,
+  retired button terms, visibility grid, tokens — and keep one of them in
+  a comment as the template for the first constant the new project
+  documents in prose (step 7).
+- **`app/web/spec_registry.py`** with **`tests/unit/test_spec_coverage.py`.**
+  Empty the module-to-spec table, set `_MINIMUM_ROUTES` to the number of
+  routes the new app registers today, and let the baseline set of pending
+  modules be whatever the first run reports. The gate then fails on the
+  first routing module added without a spec, which is its job.
+- **`tools/README.md`.** Delete the rows and sections for tools that were
+  not copied. The kit's own row stays.
+
+## 4. Add what the kit cannot carry
+
+- `pyproject.toml`: a `dev` extra with `pytest`, `pytest-xdist`, `httpx`
+  and `ruff`, and `[tool.ruff]` with `line-length = 100` and
+  `target-version = "py312"`. The workflows and the gates assume these.
+- A `tests/conftest.py` that builds the app's in-memory database from the
+  ORM metadata, if the new app has one; the kit's tests do not need it.
+- `README.md`: one paragraph pointing at `CLAUDE.md` and `constitution.md`.
+
+## 5. Verify, before the first commit
+
+```bash
+pip install -e '.[dev]'
+ruff check .
+pytest -n auto
+python3 tools/close_check.py --stale
+python3 tools/pace_audit.py --cut 1
+python3 tools/practice_kit.py --list
 ```
 
-The failure mode this prevents is silent. RRW ignored `.claude/` wholesale
-while keeping one agent file tracked as a historical exception; adding a
-second agent file produced **no output at all** from `git status`, and it
-would have been committed nowhere. A negation pattern makes the tracked
-subtree the rule instead of an exception. Note that `.claude/` alone cannot
-be negated into — git will not descend into an excluded directory, so the
-`.claude/*` form is required.
+All green on an otherwise empty repository is the expected result. Then
+mutation-test one gate: add a backticked path to `docs/status.md` that
+does not exist, run `pytest tests/unit/test_doc_conventions.py`, watch it
+fail naming the file and line, and remove it. A gate that cannot go red
+has not been installed.
 
-### 3. One agent-instruction file, and keep it an index (ongoing)
+If the suite could not run at all, say so in the first PR body and name
+what did.
 
-- **One file, not twins.** If your tooling wants several names
-  (`CLAUDE.md`, `AGENTS.md`, …), symlink them. RRW kept two byte-identical
-  files in sync by hand, with a comment in both saying no automation
-  enforced it — a second unenforced convention created to serve the first.
-  It is now enforced by a test, which is the cheaper retrofit when a
-  symlink is awkward; one file from the start is cheaper still.
-- **Aim for an index, not an encyclopaedia.** Current practitioner guidance
-  is roughly 100 lines pointing at deeper documents, on the grounds that
-  instruction compliance degrades as the file grows. RRW's reached 266 lines,
-  of which about 12 bullets were genuinely normative; the rest was
-  orientation that served better as links, and was cut back to ~180 by
-  deleting a section whose claims were all restated elsewhere, replacing a
-  50-module inventory with a pointer, and capping index entries at one line.
-- **Watch for the same rule stated three times.** In RRW one convention
-  appeared 3×, another 4×, and two adjacent sections restated the same three
-  instructions back to back — including one claim ("lint is not yet in CI")
-  that had been false for months in *both* copies. Duplication is where
-  staleness hides, because fixing one copy feels like fixing the rule.
+## 6. Record, and the first commit
 
-### 4. A fresh-context diff reviewer, from the first PR (30 minutes)
+- Fill the `<date>` placeholders in `docs/status.md`.
+- The first commit's first command was `date -u +%FT%TZ` (step 0 was the
+  moment to run it; if you did not, run it now and say so). Carry the
+  value as the `Instruction-Received:` trailer, per `CLAUDE.md` "Where
+  work runs".
+- Push, open a draft PR, and mark it ready only after reading the
+  gates' output, not just their exit code.
 
-Tests catch behavioural regressions. They do not catch requirement gaps, spec
-misreadings, silent scope creep, or a diff that quietly contradicts the
-document describing it. On a solo project nothing else does either.
+## 7. From the second slice on
 
-Retrofitting this means its first run is against a large surface it has no
-history with. Started at PR #1, every pass is one small diff against one
-small spec.
+The practice is now the new repository's, and its own documents govern.
+Three things the old checklist put on day one still hold and are the
+first things a new project reaches for:
 
-Drop this in as `.claude/agents/diff-reviewer.md` (adapt the frontmatter to
-your harness):
+- **Write the merge policy before it becomes a habit** (step 3,
+  `CONTRIBUTING.md`). Do not add branch protection until you have
+  measured the policy being broken.
+- **The diff reviewer reads from the first PR**, once per item under the
+  cadence in `CLAUDE.md`; retrofitting it later means its first read is
+  against a surface it has no history with.
+- **The first time a code constant is described in prose, derive a test
+  from the constant** — the template left in
+  `tests/unit/test_doc_conventions.py`. A checker for a convention
+  nobody wrote down, or one that needs a growing allowlist, is not
+  written; it goes in `docs/unenforced_conventions.md` instead
+  (constitution VI).
 
-```markdown
----
-name: diff-reviewer
-description: Reads a PR diff cold, with no prior context, and checks it against the specs. Use before merging, to catch requirement gaps and convention drift the test suite structurally cannot.
-tools: Read, Grep, Glob, Bash
----
-You review one diff with no prior context about why it was written.
-Assume the tests pass — they do, and they are not what you are for.
-You never edit: report, don't fix.
+## Deliberately not copied
 
-Read the diff (`git diff main...HEAD`). Then, for each changed area:
-
-1. Identify which spec document governs it. Read that section. Report
-   anything the diff does that the spec does not describe, and anything
-   the spec requires that the diff omits.
-2. Report claims in the commit message or PR body that the diff does not
-   support — "also updates X" when X is untouched, "per spec Y" when Y
-   says something else.
-3. Report scope the diff carries beyond its stated purpose: unrelated
-   fixes, drive-by renames, changes to files the stated purpose does not
-   reach.
-4. Report inconsistency with sibling modules — a module importing across
-   a boundary its neighbours respect, a function returning a shape unlike
-   its siblings, a hand-rolled thing the codebase has a helper for.
-5. Where the diff changes a user-visible string, enum, or role name,
-   check whether a spec document still states the old value.
-
-Report each finding as: `file:line`, what you expected from the spec,
-what the diff does, and your confidence. Report nothing if nothing is
-wrong — a clean pass is a useful result, and inventing findings to look
-thorough makes you worse than no reviewer.
-
-You will not catch rendering, layout, or in-browser behaviour. Those
-need a running deployment, not a reader. Say so rather than guessing.
-```
-
-**Be honest about its ceiling.** In RRW's last 30 fix commits, ~50% were
-browser-only defects (a 4px misalignment, a keypress toggling a card, a
-caption that was selectable) that no diff reader could catch — those need a
-running deployment. ~20% were documentation corrections this would catch,
-and ~30% were logic bugs where a second reader helps. The strongest evidence
-for it is a P0 that a one-off external review pass found and 2,697 tests did
-not: duplicate user rows from case-variant emails. The fix shipped with 265
-lines of new tests, which existed only because a fresh reader thought of the
-case. Tests encode what you thought of.
-
----
-
-## Part 2 — The first time you have a convention worth enforcing
-
-### 5. Turn the convention into a failing test, not a paragraph
-
-The pattern, in one sentence: **derive the check's expectation from the code
-constant it documents, so the check cannot go stale.**
-
-RRW had a mapping from internal enum values to user-facing labels. One entry
-changed on 2026-06-01. Three months later, three specification documents
-still stated the old label — and the drift had survived a deliberate,
-whole-folder documentation hygiene sweep that re-read those exact files.
-Nothing failed, because nothing was checking. A vigilant reader missed a
-three-month-old, single-word contradiction, which is what vigilance is
-structurally bad at.
-
-The generalised shape:
-
-```python
-"""Guard the documentation conventions that only prose enforces.
-
-The rule lives in code, so drift fails a test rather than waiting to be
-noticed.
-"""
-
-from __future__ import annotations
-
-import re
-from pathlib import Path
-
-from myapp.constants import DISPLAY_LABELS  # the single source of truth
-
-REPO = Path(__file__).resolve().parents[2]
-
-# Live prose only — archived docs are a historical record, not a contract.
-LIVE_DOCS = sorted(
-    p for p in (REPO / "docs").rglob("*.md") if "archive" not in p.parts
-)
-
-# Deliberate historical references opt out; a document that is a historical
-# record throughout opts out wholesale.
-LINE_ESCAPE = "<!-- convention-ok -->"
-FILE_ESCAPE = "<!-- convention-ok: file -->"
-
-TABLE_ROW = re.compile(r"^\|\s*`(\w+)`\s*\|\s*\*{0,2}([A-Za-z]+)\*{0,2}\s*\|")
-
-
-def test_docs_match_the_mapping() -> None:
-    wrong: list[str] = []
-    for doc in LIVE_DOCS:
-        text = doc.read_text()
-        if FILE_ESCAPE in text:
-            continue
-        for number, line in enumerate(text.splitlines(), 1):
-            if LINE_ESCAPE in line:
-                continue
-            match = TABLE_ROW.match(line)
-            if not match:
-                continue
-            key, documented = match.group(1), match.group(2)
-            if key in DISPLAY_LABELS and documented != DISPLAY_LABELS[key]:
-                wrong.append(
-                    f"{doc.relative_to(REPO)}:{number}: `{key}` documented "
-                    f"as {documented!r}, mapping says {DISPLAY_LABELS[key]!r}"
-                )
-    assert not wrong, (
-        "documentation drift:\n  " + "\n  ".join(wrong)
-        + "\nDISPLAY_LABELS is the source of truth; correct the prose, not "
-        "the mapping — unless the mapping itself is what changed."
-    )
-```
-
-Four design rules, each learned by getting it wrong first:
-
-1. **Derive, never hardcode.** A check with the expected values typed into
-   it is a second thing to keep in sync — the problem, restated.
-2. **Give it an escape hatch, at two levels.** A line-level marker for a
-   deliberate historical reference ("renamed from X in PR #N"), *and* a
-   file-level marker for a document that is a historical record throughout.
-   RRW shipped only the line-level one, and the very next document — an audit
-   quoting the old vocabulary by the paragraph, including inside a fenced
-   code block where a per-line marker cannot go — could not be marked at all.
-3. **The failure message must name the remedy.** Not just what is wrong: what
-   to do, including that the escape hatch exists and what it looks like.
-   Otherwise the first person to hit it on a legitimate historical reference
-   will "correct" it into a wrong one.
-4. **Mutation-test the check.** Reintroduce each violation and confirm it
-   fails again, naming the right file and line. A green check that cannot go
-   red is worse than none, because it buys confidence it has not earned.
-
-Scope it to live prose. Archived documents are a record of what was true
-then; enforcing today's contract over them is noise that will get the check
-disabled.
-
----
-
-## Part 3 — Deliberately not recommended
-
-Recorded because each looks obviously worth doing and is not.
-
-- **A checker for a convention nobody wrote down.** RRW's author believed the
-  documentation used British spelling. It is not stated anywhere in the
-  repository, the documentation uses both forms throughout, and the agent
-  instruction file uses both spellings within itself. A checker would also
-  need a permanently growing allowlist, because `color`, `gray`, `catalog`
-  and `normalize` are token names, primitive family names and function names
-  in that codebase. **Write the convention down first — one line — and only
-  then consider mechanising it.** A check for an unstated preference gets
-  tuned forever and then ignored, and a check that gets ignored is worse than
-  no check.
-- **Branch protection, added reflexively.** See item 1. Measure whether the
-  policy is actually being broken, and by what kind of change.
-- **Restating a mechanised rule in the always-loaded instruction file.** Once
-  a check enforces something, a paragraph describing the check is
-  duplication with extra steps. A one-line pointer to the test is enough; put
-  the real guidance in the failure message, where it appears exactly when
-  someone needs it.
-- **Test-coverage expansion as a first move.** RRW's suite is ~2,700 tests
-  and catches behavioural regressions well. Its gaps are not coverage gaps —
-  they are classes of defect that no test can catch, which is why items 4 and
-  5 exist instead.
-
----
-
-## Setup checklist
-
-- [ ] Merge policy paragraph in `CONTRIBUTING.md` (item 1)
-- [ ] Deploy pipeline *depends on* the test job, not merely ordered after it (item 1)
-- [ ] Agent-config tracking encoded in `.gitignore`, both directions verified with `git check-ignore` (item 2)
-- [ ] One agent-instruction file, symlinked if several names are needed (item 3)
-- [ ] Fresh-context diff reviewer added before the first PR (item 4)
-- [ ] First convention-as-test written the first time a code constant is described in prose (item 5)
-- [ ] Nothing from Part 3 added without measuring first
+- `rrw_sdd_in_practice.md`, `docs/practice-audit-2026-09-04.md`, the
+  assessments, sweeps and `docs/status_history.md` — this project's
+  record, read for rationale, never transplanted.
+- `spec/` and `app/` — the product, not the practice. `spec_registry.py`
+  is the one exception, because it is the gate's mechanism.
+- `tools/code_metrics.py` and the theme tools — the first needs a merge
+  history to measure, the rest read this app's stylesheet.
+- The `docs/` operational documents — deployment, security posture,
+  runbook — each describes an environment the new project has not
+  chosen yet.
+- Codex review — a GitHub App setting on the repository, not a file;
+  enable it from the Codex settings if wanted, and note that it runs on
+  every mark-ready.
