@@ -165,3 +165,34 @@ filter both use — so PR 3 added the composite
 Index work here stays **plain cross-dialect B-tree**. Postgres-only
 index types (e.g. `JSONB` GIN) wait on the deferred type
 migrations — see `guide/deferred_consolidated.md`.
+
+## Derived cache columns
+
+A few columns hold a **derived value plus the content stamp it was
+derived from** — a lazy persisted cache, not a fact about the domain.
+The pattern is always the same: on read, recompute the stamp from the
+inputs and compare; a mismatch means recompute the value. A NULL stamp
+is a miss, so the columns land inert and need no backfill.
+
+| Table / columns | Holds | Stamped against |
+|---|---|---|
+| `instruments.cached_reconcile_stamp` / `_stale` / `_eligible` / `_self_reviews_excluded` | the per-instrument staleness verdict and the two counts beside it (19R Item 2) | both rosters, the relationships rows, the pinned rule, `rule_set_id`, `group_kind`, the session's self-review setting, **and** a summary of the instrument's own `assignments` rows |
+| `instruments.cached_group_pair_count` / `_stamp` | the reviewer-group pair count on a group-scoped instrument's rule card (13C) | roster + pinned rule + `group_kind`. **No reader or writer exists** — the helper that was to populate it never landed. |
+
+Two things worth knowing before adding another:
+
+- **A stamp carries a version prefix** (`v1:` ahead of the digest) so a
+  change to the stamp's *shape* reads as a miss rather than colliding
+  with a value computed some other way. That is why
+  `cached_reconcile_stamp` is `VARCHAR(80)` where the older
+  `cached_group_pair_stamp` is `VARCHAR(64)`.
+- **Row-count plus `max(id)` is a Postgres-only invalidator.** The
+  reconcile stamp includes `count` + `max(id)` over an instrument's
+  `assignments` rows, on the reasoning that an insert always takes a
+  fresh id above the current maximum. That holds where the id comes from
+  a sequence. **SQLite does not**: an `INTEGER PRIMARY KEY` is a rowid
+  alias and reuses ids freed by deleting the highest rows, so
+  delete-then-insert can return both figures to their old values over a
+  different row set. Production is Postgres; SQLite is the dev and
+  unit-test dialect, so a cache leaning on this shape is right in CI and
+  wrong in the sandbox.

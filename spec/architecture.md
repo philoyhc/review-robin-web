@@ -93,10 +93,12 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      `_response_fields.py`, `_band1.py`, `_band2.py`, `_pagination.py`,
      `_instrument_crud.py`, `_field_presets.py`.
    - `app/services/assignments/` — `_shared.py`, `_coverage.py`,
-     `_self_review.py`, `_generate.py` (18O Track B carve).
+     `_self_review.py`, `_generate.py` (18O Track B carve),
+     `_reconcile_cache.py` (19R Item 2 — the staleness verdict's
+     content stamp).
    - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`.
    - `app/services/rules/` — the pure rule engine (`engine.py`,
-     `predicates.py`, `quotas.py`, `preview.py`, `fields.py`).
+     `predicates.py`, `quotas.py`, `fields.py`).
    Other notable services: `session_lifecycle.py`, `validation.py`,
    `visibility_policies.py`, `observers.py` / `observer_cohort.py`,
    `participant_tokens.py`, `audit.py`, the `extracts/` package, the

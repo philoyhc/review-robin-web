@@ -253,145 +253,85 @@ count** removes a feature rather than a cost.
 
 ### Status
 
-**Rung 1 landed 2026-09-21** — the migration and the model columns,
-inert.
+**Closed 2026-09-21. Four rungs as planned** — columns (#2518), stamp
+(#2519), wiring (#2520), this close. Nothing struck.
 
-- **Four columns, not two.** `Decision` says "same shape as
-  `instruments.cached_group_pair_count` / `cached_group_pair_stamp`",
-  and `Doc impact` turned that into "the two new columns" — but the
-  same `Decision` persists the whole `InstrumentReconcileState`, which
-  is three values and a stamp. The pair was carried over from the
-  precedent's shape, not derived from this one's. Bullet corrected.
-- **`String(80)`, not the precedent's `String(64)`**, so the version
-  prefix `Semantics` asks for fits ahead of a sha256 hex digest without
-  a second column to hold it.
-- **The precedent was never wired.** `cached_group_pair_count` /
-  `cached_group_pair_stamp` have no reader and no writer in `app/`;
-  their migration says "the first `evaluate_instrument_group_pair_counts`
-  call after deploy populates them" and no such function exists. Read as
-  a warning about rung 3 rather than as work: an inert rung 1 is only
-  inert until the rung that uses it lands.
-- The precedent's docstring compared itself to
-  `session_rule_sets.cached_eligible_pair_count`, dropped in Wave 5
-  PR 5.2. Said so in place rather than deleting the comparison, which is
-  still the reason the cache is per instrument. Confirms the premise of
-  this item's `guide/deferred_consolidated.md` bullet.
+**Measured on `Bench BENCH1`** (1,000 x 1,000, 200,000 rows), cold vs
+warm: Session Home **11.9 s -> 0.67 s**, Assignments **13.1 s ->
+0.67 s**, Validate **14.0 s -> 0.99 s**; the helper itself 10.95 s ->
+0.056 s, same verdict. Against a definition of done of 2 s. Invitations
+(20.6 -> 8.4 s) and Responses (24.8 -> 12.0 s) keep their 2,000-query
+N+1 — Item 3, now the dominant cost on both.
 
-**Rung 2 landed 2026-09-21** — `_reconcile_cache.py`: the stamp, the
-row-set summary, and 36 unit tests.
+**The shape that changed: the read path flushes and never commits.** A
+guard that would make committing safe cannot be written — `write_event`
+ends in `db.flush()`, so a handler that has emitted an audit event has
+work `db.new` / `db.dirty` can no longer see. And since `get_db` only
+closes and `deps.py` commits before the view, **no plain GET persists a
+warm**: the read-through warms within a request, and the cache is
+durable only where the write-through put it. After any invalidating
+edit every render recomputes until the next Generate, so the figures
+above are the post-Generate state.
 
-- **The roster columns are derived from
-  `app/services/rules/fields.py`'s `FIELD_MAP`**, not listed. Its own
-  docstring promises that adding an addressable predicate field is "a
-  one-row edit here and nowhere else"; a copy of the list here would
-  have made that false, and silently — a predicate on the new field
-  would move the fan-out while the stamp held still.
-- **Roster `status` is over-coverage, knowingly.** `Semantics` commits
-  to it, but the engine reads the roster unfiltered — `list_reviewers`
-  has no status filter and `engine.py` never mentions one — so
-  deactivating a reviewer cannot move the fan-out. Kept: the cost is one
-  needless recompute, against a badge that lies. `Relationship.status`
-  is *not* over-coverage; an inactive row hides its tags at lookup.
-- **`override_exclude_self_reviews` is in the stamp** although both app
-  callers leave it `None`, so a future caller passing `True` cannot read
-  a verdict computed for `None`.
-- **Mutation testing found a hole in the tests, not the code.** Eleven
-  mutants, ten caught; `sort_keys=False` survived, because the payload's
-  own keys are written in a fixed order and the only thing the flag buys
-  is a rule whose JSON keys come back in a different order. A test that
-  stamps the same rule both ways now kills it.
-- A case asserted `self_reviews_active = True` on a session that
-  defaults to `True` — a no-op mutation answering a question it had not
-  asked. The helper that applies a mutation now refuses one.
+**Four columns, not the two `Decision` implied** — the state is three
+values and a stamp — and `String(80)`, not the precedent's `String(64)`,
+for the version prefix.
 
-**Rung 3 landed 2026-09-21** — the read-through, the write-through,
-and 12 wiring tests that count engine walks rather than trusting the
-returned value.
+**Five things this item asserted turned out to be readings**, which is
+Item 1's lesson again and the segment's:
 
-- **The read path flushes and never commits**, a change from the
-  Decision's implied shape. The reason, after the cold read corrected
-  the first one twice over: a guard that would make committing safe
-  **cannot be written**, because `audit.write_event` ends in
-  `db.flush()`, so a handler that has already emitted an event has
-  uncommitted work that `db.new` / `db.dirty` can no longer see — and
-  the POST paths reaching this through `validate_session_setup` are
-  exactly that shape.
-- **The consequence is wider than first recorded.** It is not that
-  instruments generated before the deploy stay cold. `get_db` only
-  closes, and `app/web/deps.py`'s two commits run in the dependency,
-  before the view — so **no plain GET ever persists a warm**. The
-  read-through warms within a request; across requests the cache is
-  durable only where the write-through put it. After any
-  stamp-invalidating edit, every render recomputes until the next
-  Generate, and the bench figures below are the **post-Generate**
-  state.
-- **Two reasons this item recorded were wrong**, both found by the
-  per-item cold read, and both the same failure as Item 1's blast
-  radius — a reading asserted as a fact:
-  - *"Committing would commit a half-finished promotion."* Backwards.
-    `_workflow_card.py` validates **before** it promotes, and
-    `lifecycle.mark_validated` ends in its own commit, which in fact
-    carries the warm.
-  - *"A guard that never fired — autoflush had already emptied
-    `db.new`."* True of the test session and false of the app:
-    `app/db/session.py` builds sessions with `autoflush=False`. In
-    production the guard would have fired. It is still the wrong
-    mechanism, for the audit-flush reason above.
-- `_materialise_one_instrument` now returns the post-write verdict
-  alongside its counts, so the write-through stamps what the diff
-  already computed instead of walking the engine a second time.
-- **Measured on `Bench BENCH1`** (1,000 x 1,000, 200,000 assignment
-  rows), cold vs warm on this commit: Session Home **11.9 s -> 0.67 s**,
-  Assignments **13.1 s -> 0.67 s**, Validate **14.0 s -> 0.99 s**. The
-  helper itself goes 10.95 s -> 0.056 s and returns the same verdict.
-  Invitations (20.6 s -> 8.4 s) and Responses (24.8 s -> 12.0 s) keep
-  their 2,000-query N+1, which is Item 3.
-- **The row-set backstop is Postgres-only.** `Assignment.id` is a plain
-  `autoincrement=True` key, which SQLite implements as a rowid alias and
-  *reuses* after the highest rows are deleted — so delete-then-insert
-  can return `count` and `max(id)` to their old values over a different
-  key set. No live bug (production is Postgres; nothing outside
-  `replace_assignments` inserts an `Assignment`), but SQLite is the dev
-  and unit-test dialect, so a future insert path leaning on the backstop
-  rather than on the write-through would be wrong in the sandbox and
-  right in CI. Said so in the docstring.
-- A warm bumps `instruments.updated_at` on a GET, via `TimestampMixin`'s
-  `onupdate`. No reader of that column exists in `app/`; noted so it is
-  not a surprise later.
-- **Reads: one `diff-reviewer`** over the item's cumulative diff
-  (`6ed3040e..HEAD`) at rung 3, plus Codex per rung. The cold read found
-  no second stamp gap — it traced every roster, rule, group-key and
-  self-review read and confirmed the digest covers them — and instead
-  found that **three things the item asserted were readings, not
-  facts**: the two corrected above and the column-gate's scope. Acted on
-  in rung 3's PR.
-- **Pre-existing, found en route, not this item's to fix**:
-  `spec/instruments.md` calls `instruments.stale_generated` "inert by
-  design", which 19N reversed; `app/services/validation.py`'s docstring
-  for that rule says it fires when an instrument has never generated,
-  which contradicts both the code and `spec/assignments.md`; and
-  `spec/architecture.md` lists a `preview.py` under `app/services/rules/`
-  that does not exist.
-- **Open question answered by default**: a miss stays invisible to the
-  operator. Nothing in the build argued for surfacing it, and the bench
-  above is the evidence that hits happen — which is what
-  `deferred_consolidated.md`'s 18J Rec C wanted observability for.
+- `SessionRuleSet.seed` was missing from the digest (Codex P1, #2519).
+  The boundary — "everything `_session_rule_set_to_schema` reads" — was
+  right; the field list was built from the constructor's named
+  arguments, and `seed` rides in the `options=` block below them. It is
+  the `fallback_seed` for a `RANDOM` quota, so a change selects a
+  different pair set with every other input equal.
+- "Committing would commit a half-finished promotion" was backwards:
+  `_workflow_card.py` validates *before* it promotes, and
+  `mark_validated` commits, carrying the warm.
+- "A guard that never fired, because autoflush emptied `db.new`" was
+  true of the test session only; the app uses `autoflush=False`.
+- The column-coverage gate covers `SessionRuleSet` alone, not every
+  model the diff reads.
+- `count` + `max(id)` is a **Postgres-only** invalidator: SQLite reuses
+  ids freed from the top, so delete-then-insert can return both figures
+  over a different row set. No live bug, but SQLite is the dev and unit
+  dialect. Recorded in `docs/database.md`.
 
-- **Codex P1 upheld: `SessionRuleSet.seed` was missing** from the rule
-  digest, and it is the failure the whole design exists to prevent —
-  `engine.evaluate` takes it as the `fallback_seed` for a `RANDOM`
-  quota carrying no seed of its own, so changing it selects a different
-  pair set with every other input identical. The stated boundary,
-  "everything `_session_rule_set_to_schema` reads", already covered it;
-  the *reading* was wrong, because the field list was built from the
-  constructor's named arguments and `seed` is passed inside the
-  `options=` block, fifteen lines of comment further down. A
-  column-coverage gate now makes that class of miss loud **on
-  `SessionRuleSet`**: every one of its columns is digested or named in
-  the test's exclusion set with the reason it cannot move a pair. The
-  same miss on a new `ReviewSession`, `Instrument`, `Reviewer`,
-  `Reviewee` or `Relationship` column would still be silent — the cold
-  read's correction to an earlier, wider claim here.
+**Reads: one `diff-reviewer`** over the cumulative diff
+(`6ed3040e..HEAD`) at rung 3, plus Codex per rung. The cold read traced
+every roster, rule, group-key and self-review input and found **no
+second stamp gap** — the four wrong readings above are what it found
+instead. Both over-coverage calls were confirmed: roster `status` is
+over-coverage, `Relationship.status` is not.
+
+**Doc impact grew by two at rung 3** (`spec/assignments.md`,
+`spec/architecture.md`) and the close found the
+`guide/deferred_consolidated.md` bullet had named **Rec C** for a
+`cached_eligibility_stamp` note that is **Rec E**'s. Rec E is retired:
+every name in it — the helper, the columns, `session_library.py` — went
+in Wave 5. Rec C is re-aimed at this cache instead.
+
+**The `spec-writer` close pass found three of its own**, all acted on:
+the requalified "cannot disagree" claim existed in a **third** place,
+`spec/validate_page.md`'s rule row — the one a reader reaches from the
+rule's own Fix link, and the one with no cache explanation beneath it;
+the stamp-coverage sentence read as exhaustive while omitting the
+caller's self-review override; and "`reconcile_impact` runs on a
+confirmation path rather than a render" was wrong — it runs inside
+`build_workflow_card_context` too, gated on the `prepare_confirm`
+query parameter. *Gated rather than unconditional* is the real
+distinction, and it is what the file says now.
+
+**Pre-existing, found en route, for whoever gets there first:**
+`spec/instruments.md` calls `instruments.stale_generated` "inert by
+design", which 19N reversed; `validation.py`'s docstring for that rule
+contradicts both the code and `spec/assignments.md`, and carries the
+unqualified "cannot disagree" claim as well; and
+`app/web/views/_assignments.py`'s module docstring still points at
+`session_library.evaluate_session_rule_eligibility`, retired in Wave 5.
+(A `preview.py` listed under `app/services/rules/` that never existed
+was dropped here, since the close was editing that line.)
 
 ### PR ladder
 
@@ -425,7 +365,9 @@ returned value.
 ### Open questions
 
 - Should a cache miss be observable to an operator, or stay invisible?
-  *The author decides at rung 3; invisible is the default.*
+  **Invisible**, at the default — nothing in the build argued otherwise,
+  and the bench is the evidence that hits happen, which is what an
+  observability counter would have been for.
 
 ### Out of scope
 
@@ -447,6 +389,10 @@ returned value.
 - `spec/architecture.md` — the `app/services/assignments/` module map
   gains `_reconcile_cache.py` (Item 2; added at rung 3 by the cold
   read).
+- `spec/validate_page.md` — the `instruments.stale_generated` row
+  carried the same unqualified "cannot disagree" claim, and is the one
+  place a reader arrives at from the rule's own Fix link (Item 2; added
+  at the close by `spec-writer`).
 - `docs/database.md` — the four new `instruments` columns (Item 2).
 - `guide/deferred_consolidated.md` — 18J Rec C's lift trigger and its
   stale `cached_eligibility_stamp` wire-up note (Item 2).
