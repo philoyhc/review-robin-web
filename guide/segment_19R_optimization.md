@@ -356,6 +356,142 @@ own numbers do not support it.
 
 ---
 
+## Item 4 — the quick-setup upload cards drop friendly labels
+
+**Not an optimization.** It is a correctness defect, filed here because
+this is the open container for the current round of work, and it depends
+on nothing in Items 1–3.
+
+### Opportunity
+
+Reported 2026-09-21: the upload card on **Create new session** did not
+register the tag friendly labels, though the per-roster cards on
+Reviewers and Reviewees do. Reproduced through the real routes — eight
+uploads, each asserting `field_labels.resolve` after the import:
+
+| upload path | friendly label |
+|---|---|
+| Reviewers card (`/reviewers/import`) | **kept** |
+| Reviewees card (`/reviewees/import`) | **kept** |
+| Relationships card (`/relationships/import`) | **kept** |
+| Create new session (`POST /operator/sessions`) | **dropped** |
+| `quick-setup/reviewers` | **dropped** |
+| `quick-setup/reviewees` | **dropped** |
+| `quick-setup/relationships` | **dropped** |
+| `quick-setup/submit-all` | **dropped** |
+
+Observers are excluded by design: `parse_observer_csv` discards the
+captured map and `save_observers` has no parameter for it (19C Item 1).
+
+**The spec already says this should work.** `spec/csv_contracts.md`
+lists the Quick Setup roster slots as *"same as per-page Upload — Quick
+Setup is a thin shell over the per-entity primitives"*, and documents
+`field_labels_captured` as the argument that "reconciles the tag
+friendly labels from the header: upsert present, clear absent". The
+contract is right; two call sites do not honor it. So this is a code fix
+with no spec change behind it.
+
+**Why the loss is not recoverable elsewhere.** 19C Item 1 retired
+`field_labels.*` from the settings bundle precisely because roster
+headers carry them. The header is now the only way a label arrives, so a
+quick-setup upload leaves the operator retyping every label in the
+editor, and the extract → edit → re-upload round trip silently stops
+being one.
+
+### Decision
+
+Pass `field_labels_captured=result.field_labels` at the two quick-setup
+save sites, matching what `app/web/routes_operator/_shared.py` and
+`app/web/routes_operator/_setup_relationships.py` already do.
+
+*Alternative rejected:* make the argument keyword-only with no default so
+a caller cannot omit it. It would have prevented this, but it changes a
+service signature that `session_rehydrate` and the observers path also
+use — the observers path having nothing to pass by design. A gate over
+the entry points (rung 2) catches the same class without reshaping a
+service for it.
+
+### Semantics
+
+- **"Upsert present, clear absent" now applies on these paths too.** A
+  quick-setup upload whose header carries a bare `ReviewerTag1` will
+  clear an override the operator had set, exactly as the card already
+  does. That is the contract, and it is a behavior change beyond "labels
+  now register" — the half worth calling out at review.
+- Observers stay as they are: no capture, no parameter, no change.
+- This item changes **who calls** `field_labels.apply_import`, not what
+  it does. Whatever the card does for any header shape, the quick-setup
+  path must now do identically.
+
+### Judgment calls — decided
+
+- **Fix at the two helpers, not at the six routes** (2026-09-21):
+  `_run_quick_setup_import` and `_run_quick_setup_relationships` are the
+  single save sites behind every affected route, including `submit-all`
+  and the create-session upload.
+- **No change to `save_*` signatures** (2026-09-21) — see the rejected
+  alternative.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| quick-setup save sites missing the argument | 2 | `grep -n "save_fn(" app/web/routes_operator/_quick_setup.py` and the `save_relationships(` call below it |
+| routes reaching them | 6 | create-session, four per-slot, submit-all |
+| call sites already correct | 3 | `grep -rn "field_labels_captured" app/web/routes_operator/` |
+| templates | 0 | the card partial posts to routes that already exist |
+
+No schema change, no migration, no template change.
+
+### PR ladder
+
+1. **The fix and the test that pins it.** Both arguments, plus a test
+   covering every upload entry point — the three cards green before and
+   after, the five quick-setup paths red before and green after.
+2. **The gate.** A test that enumerates the roster upload entry points
+   and fails when one saves a roster without reconciling labels, so the
+   next one added cannot repeat this.
+3. **Close.**
+
+### Definition of done
+
+- Every upload entry point in the rung-1 test keeps the label, and the
+  three cards still do.
+- `grep -rn "field_labels_captured" app/web/routes_operator/` shows five
+  call sites, not three.
+- A bare-header upload through a quick-setup path clears an existing
+  override, matching the card.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Is rung 2's gate worth its weight, or does the rung-1 test over every
+  entry point already cover it? *The author decides after rung 1; the
+  argument for the gate is that this defect is exactly what "a new entry
+  point forgot" looks like.*
+
+### Out of scope
+
+- Observers' labels — there are none by design.
+- The settings-bundle path: `field_labels.*` was deliberately retired
+  from it (19C Item 1) and stays retired.
+
+### Doc impact
+
+- `docs/status.md` — row when the item lands (Item 4).
+- `spec/csv_contracts.md` — carried unwaived on purpose. No change is
+  expected: the contract already states the Quick Setup slots behave as
+  the per-page uploads do, so the code is what is wrong. If the build
+  finds otherwise, this bullet becomes the edit; if it does not, the
+  close waives it with that as the reason. Either way the close has to
+  say which (Item 4).
+
+---
+
 ## Later candidates
 
 Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
