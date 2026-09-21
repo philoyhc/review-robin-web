@@ -666,68 +666,49 @@ No schema change, no migration, no template change.
 **Closed 2026-09-21. Three rungs as planned** — the fix and its matrix
 (#2526), the gate (#2527), this close. Nothing struck.
 
-**The fix is two arguments** at `_run_quick_setup_import` and
-`_run_quick_setup_relationships`, the only save sites behind five
-upload routes. Against the pre-fix tree the suite was **6 failed,
-4,602 passed** — every failure in the new test file, none anywhere
-else. That silence was the defect: a 303 and a populated roster, and
-nothing noticed the labels going.
+**The fix is two arguments** at the two save sites behind five upload
+routes. Against the pre-fix tree: **6 failed, 4,602 passed**, every
+failure in the new test file. That silence was the defect — a 303 and
+a populated roster, and nothing noticed the labels going.
 
-**The gate asks the router, not a list.** `_upload_endpoints()` walks
-`app.main.app.routes` for every POST endpoint taking an `UploadFile`
-and finds twelve; each must be exercised by the matrix or carry a
-written reason in `EXEMPT_ENDPOINTS`. That is the half a matrix cannot
-cover — it enumerates the paths known when it was written, which is
-exactly the blind spot that let five routes drop labels at once.
+**The gate asks the router, not a list.** Twelve POST endpoints take an
+`UploadFile`; each must be exercised by the matrix or carry a written
+reason. A matrix can only enumerate the paths known when it was
+written, which is the blind spot that let five routes break at once.
 
-**The gate's own eyesight was wrong three times, all caught by a
-reader, none by me.** It matched the annotation's source text, so an
-aliased import or subclass was invisible; it keyed on the module
-basename, where `_shared.py` exists under two packages; and one level
-of `get_args` missed `list[UploadFile] | None` (Codex). Each time the
-twelve endpoints that exist happened not to use the missed shape, so
-the gate stayed green while seeing less than it claimed — the failure
-it exists to prevent, wearing its own face. Demonstrated rather than
-argued at the third: with the one-level check **and** a real
-`list[UploadFile] | None` route injected, the gate passes and the route
-is invisible; with the recursion it trips `unclassified`. The
-recogniser is pinned directly now, seven upload shapes and five
-non-uploads, so a later simplification fails loudly.
+**Its own eyesight was wrong three times, each caught by a reader.**
+Annotation source text (an aliased import or subclass invisible), the
+module basename as key (`_shared.py` exists under two packages), and
+one level of `get_args` (`list[UploadFile] | None`, Codex). Each time
+the twelve real endpoints happened not to use the missed shape, so the
+gate stayed green while seeing less than it claimed — the failure it
+exists to prevent, wearing its own face. Shown, not argued: with the
+one-level check and a real optional-batch route injected, the gate
+passes and the route is invisible. The recogniser is pinned directly
+now, seven upload shapes against five non-uploads.
 
-**The item's lesson is the segment's, for the fourth time: a claim is
-worth the command that proves it.** Two of three blast-radius rows were
-wrong — "routes reaching them" six where it is five (the observers slot
-is out of scope), "call sites already correct" three where the command
-gives two (the third is in `session_rehydrate.py`, outside the path it
-greps) — and the second fed a definition-of-done line. Rows corrected,
-not annotated downstream. And my first matrix run failed the *card*
-relationships case, which would have made the Opportunity table wrong
-about a path this item does not touch: `_VALID_SOURCE_FIELDS` keys
-pair-context slots `"1"`, not `"tag_1"`, and the wrong key returns a
-fallback that reads exactly like a dropped label. The card was never
-broken; the test file says so where the next reader will hit it.
+**A claim is worth the command that proves it — the segment's lesson,
+a fourth time.** Two of three blast-radius rows were wrong, one
+feeding a definition-of-done line. And a first test run that looked
+like a second bug was my own wrong lookup key:
+`_VALID_SOURCE_FIELDS` keys pair-context slots `"1"`, not `"tag_1"`,
+and the wrong key returns a fallback that reads exactly like a dropped
+label. The card was never broken; the test file says so where the next
+reader will hit it.
 
-**Two findings recorded rather than fixed.** The gate asks "takes an
-upload", not "saves a roster", so `_rehydrate.rehydrate_commit` —
-which saves all three rosters from a stashed token — is invisible to
-it. Correct today, ungated; widening the question is its own item.
-And `spec/csv_contracts.md` spells `parse_relationship_csv`'s
-parameters differently from the code: pre-existing, unrelated, not
-bundled.
+**Two findings recorded, not fixed.** The gate asks "takes an upload",
+not "saves a roster", so `_rehydrate.rehydrate_commit` is invisible to
+it — correct today, ungated, its own item. And
+`spec/csv_contracts.md` spells `parse_relationship_csv`'s parameters
+differently from the code: pre-existing, not bundled.
 
-**The `spec-writer` close pass found the rung-2 spec fix half-done.**
-I corrected the create-session dispatch paragraph and left the
-*submit-all* one — line 72, the Home card's everyday path — carrying
-the identical stale text, which is the more-used of the two. Same two
-defects, same fix, now applied to both, with the "only save sites"
-point stated once and cross-referenced rather than twice.
-
-**`spec/csv_contracts.md` needed no edit, which was the point of
-carrying it unwaived.** §1a's "upsert present, clear absent", the
-Quick Setup row at §6 ("same as per-page Upload — a thin shell over
-the per-entity primitives") and §5a's prediction that an unedited
-template renames the tag columns were all already right. The code was
-what was wrong. Waived with that reason rather than quietly dropped.
+**`spec/csv_contracts.md` needed no edit, which is what carrying it
+unwaived was for** — §1a, the §6 Quick Setup row and §5a were all
+already right, and the code was what was wrong. Waived with that
+reason. The `spec-writer` pass that confirmed it also found rung 2's
+spec fix half-done: I corrected the create-session dispatch paragraph
+and left the identical stale text in the submit-all one, the busier
+path. Both corrected.
 
 ### PR ladder
 
