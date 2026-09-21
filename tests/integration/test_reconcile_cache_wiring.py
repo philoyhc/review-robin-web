@@ -329,23 +329,33 @@ def _unpin_the_instrument(db: Session, ctx) -> None:
     db.commit()
 
 
-MISS_CASES: list[tuple[str, Callable[[Session, tuple], None]]] = [
-    ("a reviewer joins the roster", _add_a_reviewer),
-    ("a relationship tag is edited", _edit_the_relationship),
-    ("the pinned rule's predicates change", _change_the_rule),
-    ("the instrument is re-pinned", _repin_the_instrument),
-    ("the instrument is unpinned", _unpin_the_instrument),
-    ("the session's self-review toggle flips", _flip_self_reviews),
+#: ``(id, mutation, expected verdict after it)``. ``None`` where the
+#: mutation changes an *input* without changing the *answer* — which
+#: is not a weakness in the case but the reason the stamp covers
+#: inputs rather than answers. A stamp over the verdict would hit
+#: here, and hit wrongly the first time one of these did move a pair.
+MISS_CASES: list[
+    tuple[str, Callable[[Session, tuple], None], tuple[bool, int] | None]
+] = [
+    ("a reviewer joins the roster", _add_a_reviewer, (True, 6)),
+    ("a relationship tag is edited", _edit_the_relationship, None),
+    ("the pinned rule's predicates change", _change_the_rule, (True, 2)),
+    ("the instrument is re-pinned", _repin_the_instrument, None),
+    ("the instrument is unpinned", _unpin_the_instrument, None),
+    ("the session's self-review toggle flips", _flip_self_reviews, None),
 ]
 
 
 @pytest.mark.parametrize(
-    "mutate", [c[1] for c in MISS_CASES], ids=[c[0] for c in MISS_CASES]
+    "mutate,expected",
+    [(c[1], c[2]) for c in MISS_CASES],
+    ids=[c[0] for c in MISS_CASES],
 )
 def test_every_input_recomputes_the_verdict(
     db: Session,
     engine_runs: EngineRuns,
     mutate: Callable[[Session, tuple], None],
+    expected: tuple[bool, int] | None,
 ) -> None:
     ctx = _seed(db, code="rc-miss")
     user, review_session, instrument, *_ = ctx
@@ -360,8 +370,13 @@ def test_every_input_recomputes_the_verdict(
     mutate(db, ctx)
 
     engine_runs.reset()
-    _read(db, review_session, instrument)
+    state = _read(db, review_session, instrument)
     assert engine_runs.count == 1
+    if expected is not None:
+        # Where the answer moves, assert it reached the caller: a cache
+        # that recomputed and then returned its old copy would satisfy
+        # the walk count alone.
+        assert (state.stale, state.eligible) == expected
 
 
 def test_adding_a_reviewer_is_seen_as_stale_through_the_cache(
@@ -411,11 +426,17 @@ def test_regenerating_clears_a_stale_verdict_without_a_further_walk(
 def test_a_read_never_commits(
     db: Session, engine_runs: EngineRuns, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The read path warms the cache but must not commit, because it
-    runs inside a render that has its own writes in flight: the
-    workflow card runs validation and then, on the ``?validated=1``
-    entry, promotes ``draft → validated`` in the same request.
-    Committing a cache row is not worth reaching into that.
+    """The read path warms the cache but must not commit.
+
+    Not because of the promotion the workflow card does on the
+    ``?validated=1`` entry — that runs *after* validation and commits
+    itself, so it would carry the warm rather than be endangered by it.
+    The reason is that a guard making a commit here safe cannot be
+    written: ``audit.write_event`` ends in ``db.flush()``, so a handler
+    that has already emitted an event has uncommitted work that
+    ``db.new`` / ``db.dirty`` can no longer see, and the POST paths
+    reaching this function through ``validate_session_setup`` are
+    exactly that shape.
 
     Asserted against the session rather than against the database,
     because "did not commit" is a statement about what the code did.

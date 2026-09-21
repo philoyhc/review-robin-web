@@ -308,23 +308,35 @@ row-set summary, and 36 unit tests.
 and 12 wiring tests that count engine walks rather than trusting the
 returned value.
 
-- **The read path flushes and never commits**, which is a change from
-  the Decision's implied shape. Wiring it showed why: the workflow card
-  runs validation — reaching `staleness_by_instrument` — and then, on
-  the `?validated=1` entry, promotes `draft → validated` in the *same*
-  GET request. `get_db` never commits, so persisting a warm from a
-  render would mean committing, and committing there would commit a
-  half-finished promotion. The warm now rides the caller's transaction:
-  it persists if something downstream commits, and costs one recompute
-  if not. **Durability comes from the write-through**, which commits
-  because writing rows is its job.
-  *Consequence, stated rather than discovered later:* an instrument
-  generated before this deploy stays cold until its next Generate.
-- **A guard that never fired.** The first version wrote the warm only
-  when `db.new or db.dirty or db.deleted` was empty. It always was —
-  autoflush had already emptied it by the time the check ran, two
-  queries in. The test asserting the guard is what caught it, and the
-  fix was to remove the need for a guard rather than to move it.
+- **The read path flushes and never commits**, a change from the
+  Decision's implied shape. The reason, after the cold read corrected
+  the first one twice over: a guard that would make committing safe
+  **cannot be written**, because `audit.write_event` ends in
+  `db.flush()`, so a handler that has already emitted an event has
+  uncommitted work that `db.new` / `db.dirty` can no longer see — and
+  the POST paths reaching this through `validate_session_setup` are
+  exactly that shape.
+- **The consequence is wider than first recorded.** It is not that
+  instruments generated before the deploy stay cold. `get_db` only
+  closes, and `app/web/deps.py`'s two commits run in the dependency,
+  before the view — so **no plain GET ever persists a warm**. The
+  read-through warms within a request; across requests the cache is
+  durable only where the write-through put it. After any
+  stamp-invalidating edit, every render recomputes until the next
+  Generate, and the bench figures below are the **post-Generate**
+  state.
+- **Two reasons this item recorded were wrong**, both found by the
+  per-item cold read, and both the same failure as Item 1's blast
+  radius — a reading asserted as a fact:
+  - *"Committing would commit a half-finished promotion."* Backwards.
+    `_workflow_card.py` validates **before** it promotes, and
+    `lifecycle.mark_validated` ends in its own commit, which in fact
+    carries the warm.
+  - *"A guard that never fired — autoflush had already emptied
+    `db.new`."* True of the test session and false of the app:
+    `app/db/session.py` builds sessions with `autoflush=False`. In
+    production the guard would have fired. It is still the wrong
+    mechanism, for the audit-flush reason above.
 - `_materialise_one_instrument` now returns the post-write verdict
   alongside its counts, so the write-through stamps what the diff
   already computed instead of walking the engine a second time.
@@ -334,6 +346,32 @@ returned value.
   helper itself goes 10.95 s -> 0.056 s and returns the same verdict.
   Invitations (20.6 s -> 8.4 s) and Responses (24.8 s -> 12.0 s) keep
   their 2,000-query N+1, which is Item 3.
+- **The row-set backstop is Postgres-only.** `Assignment.id` is a plain
+  `autoincrement=True` key, which SQLite implements as a rowid alias and
+  *reuses* after the highest rows are deleted — so delete-then-insert
+  can return `count` and `max(id)` to their old values over a different
+  key set. No live bug (production is Postgres; nothing outside
+  `replace_assignments` inserts an `Assignment`), but SQLite is the dev
+  and unit-test dialect, so a future insert path leaning on the backstop
+  rather than on the write-through would be wrong in the sandbox and
+  right in CI. Said so in the docstring.
+- A warm bumps `instruments.updated_at` on a GET, via `TimestampMixin`'s
+  `onupdate`. No reader of that column exists in `app/`; noted so it is
+  not a surprise later.
+- **Reads: one `diff-reviewer`** over the item's cumulative diff
+  (`6ed3040e..HEAD`) at rung 3, plus Codex per rung. The cold read found
+  no second stamp gap — it traced every roster, rule, group-key and
+  self-review read and confirmed the digest covers them — and instead
+  found that **three things the item asserted were readings, not
+  facts**: the two corrected above and the column-gate's scope. Acted on
+  in rung 3's PR.
+- **Pre-existing, found en route, not this item's to fix**:
+  `spec/instruments.md` calls `instruments.stale_generated` "inert by
+  design", which 19N reversed; `app/services/validation.py`'s docstring
+  for that rule says it fires when an instrument has never generated,
+  which contradicts both the code and `spec/assignments.md`; and
+  `spec/architecture.md` lists a `preview.py` under `app/services/rules/`
+  that does not exist.
 - **Open question answered by default**: a miss stays invisible to the
   operator. Nothing in the build argued for surfacing it, and the bench
   above is the evidence that hits happen — which is what
@@ -348,9 +386,12 @@ returned value.
   the *reading* was wrong, because the field list was built from the
   constructor's named arguments and `seed` is passed inside the
   `options=` block, fifteen lines of comment further down. A
-  column-coverage gate now makes that class of miss loud: every
-  `SessionRuleSet` column is digested or named in the test's exclusion
-  set with the reason it cannot move a pair.
+  column-coverage gate now makes that class of miss loud **on
+  `SessionRuleSet`**: every one of its columns is digested or named in
+  the test's exclusion set with the reason it cannot move a pair. The
+  same miss on a new `ReviewSession`, `Instrument`, `Reviewer`,
+  `Reviewee` or `Relationship` column would still be silent — the cold
+  read's correction to an earlier, wider claim here.
 
 ### PR ladder
 
@@ -394,7 +435,18 @@ returned value.
 ### Doc impact
 
 - `spec/reconciling_regeneration.md` — the staleness verdict is now
-  cached against a content stamp; say what invalidates it (Item 2).
+  cached against a content stamp; say what invalidates it, and requalify
+  two sentences the cache makes conditional: the shared-diff "cannot
+  disagree" claim, and "the engine evaluation is in-memory and cheap",
+  which is the opposite of this item's `Opportunity` (Item 2).
+- `spec/assignments.md` — its "Staleness" section owns this contract and
+  says the preview and the verdict "share the engine's diff, so they
+  cannot disagree"; `reconcile_impact` still always walks it while
+  `staleness_by_instrument` may not (Item 2; added at rung 3 by the cold
+  read).
+- `spec/architecture.md` — the `app/services/assignments/` module map
+  gains `_reconcile_cache.py` (Item 2; added at rung 3 by the cold
+  read).
 - `docs/database.md` — the four new `instruments` columns (Item 2).
 - `guide/deferred_consolidated.md` — 18J Rec C's lift trigger and its
   stale `cached_eligibility_stamp` wire-up note (Item 2).

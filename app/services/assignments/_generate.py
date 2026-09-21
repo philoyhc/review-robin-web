@@ -835,6 +835,14 @@ def staleness_by_instrument(
 
     Inputs are loaded once for the whole session, so this costs one
     reconcile walk rather than one per instrument.
+
+    **Not a pure read since 19R Item 2.** Each instrument's verdict is
+    cached on ``instruments.cached_reconcile_*`` against a content
+    stamp; a hit skips the engine entirely, and a **miss writes the
+    recomputed verdict onto the session and flushes it** — into the
+    caller's transaction, never committed here. See the comment at the
+    flush for why, and ``guide/segment_19R_optimization_and_bugfixes.md``
+    Item 2 for what the stamp covers.
     """
     inputs = _load_reconcile_inputs(db, review_session, None)
     rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
@@ -893,18 +901,31 @@ def staleness_by_instrument(
         _store_state(instrument, stamp, computed)
         warmed = True
     if warmed:
-        # **Flushed, never committed.** This is a render path, and
-        # committing here would commit whatever else the caller has in
-        # flight — which on this path is not hypothetical: the workflow
-        # card runs validation and then, on the ``?validated=1`` entry,
-        # promotes ``draft → validated`` in the same request.
-        # Committing a cache row is not worth reaching into that.
+        # **Flushed, never committed.** Committing here would commit
+        # whatever else the caller has in flight, and the guard that
+        # would make that safe cannot be written: ``audit.write_event``
+        # ends in ``db.flush()``, so a handler that has already emitted
+        # an event has work pending that ``db.new`` / ``db.dirty`` can
+        # no longer see. The POST paths reaching this function through
+        # ``validate_session_setup`` are exactly that shape.
         #
-        # So the warm rides the caller's own transaction: it persists
-        # if something downstream commits and is dropped if nothing
-        # does, which costs one recompute. The write-through in
-        # :func:`replace_assignments` is what makes the cache durable,
-        # and it commits because writing the rows is its whole job.
+        # So the warm rides the caller's transaction: it persists if
+        # something downstream commits, and costs one recompute if not.
+        # **On a plain GET nothing does** — ``get_db`` only closes, and
+        # the two commits in ``app/web/deps.py`` run in the dependency,
+        # before the view. So this half of the cache warms within a
+        # request; what makes it durable is the write-through in
+        # :func:`replace_assignments`, which commits because writing
+        # the rows is its whole job.
+        #
+        # (An earlier version gave the reason as "the workflow card
+        # promotes ``draft → validated`` in the same request, so a
+        # commit here would commit a half-finished promotion". That
+        # reading was backwards: ``_workflow_card.py`` validates
+        # *before* it promotes, and ``lifecycle.mark_validated`` ends
+        # in its own commit — which in fact carries this warm. The
+        # conservative choice stands on the audit-flush reason above,
+        # not on that one. 19R Item 2 rung 3 cold read.)
         db.flush()
     return state
 
