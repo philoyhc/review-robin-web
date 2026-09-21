@@ -246,6 +246,20 @@ def test_count_pairs_agrees_with_the_rows_it_counts(
     assert counted == len(listed)
 
 
+def test_count_pairs_sees_the_search_narrow(
+    db: Session, seeded: ReviewSession
+) -> None:
+    """The same hazard as the status guard below, on the search path:
+    two of the parametrised cases above are ``0 == 0``, and a
+    ``_apply_pair_search`` that matched *nothing* would satisfy every
+    one of them. Pin a search that must narrow without emptying."""
+    everything = _coverage.count_pairs(db, seeded.id)
+    ana = _coverage.count_pairs(db, seeded.id, search="Ana")
+    # Ana reviews one reviewee, on both instruments.
+    assert ana == 2
+    assert 0 < ana < everything
+
+
 def test_count_pairs_sees_the_status_split(
     db: Session, seeded: ReviewSession
 ) -> None:

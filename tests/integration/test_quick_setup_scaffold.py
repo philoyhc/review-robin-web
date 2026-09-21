@@ -182,7 +182,7 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
     return 1 rather than seeding a response, so it was really asserting
     *which helper the card calls*. When the card moved to
     ``session_lifecycle.session_has_responses`` — the yes/no helper
-    eight other gates use — the stub stopped being reached and the test
+    seven other call sites use — the stub stopped being reached and the test
     failed while the behaviour it names was intact. It now persists a
     real ``Response``, which is what its own docstring claims, and is
     indifferent to how the card asks the question.

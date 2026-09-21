@@ -183,8 +183,8 @@ def build_quick_setup_context(
     # any instrument is group-scoped, then in the common case runs a
     # ``COUNT`` anyway. The card needs a yes/no, and
     # ``session_has_responses`` is the helper that answers exactly that
-    # — its own docstring says so, and eight other gates already use
-    # it. The two agree by construction: the deduped count collapses a
+    # — its own docstring says so, and seven other call sites already
+    # use it. The two agree by construction: the deduped count collapses a
     # group's fan-out to one cell per group, which can shrink a
     # positive count but never reach zero, so ``> 0`` and "a row
     # exists" are the same question.

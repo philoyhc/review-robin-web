@@ -6,8 +6,8 @@ which loads every ``Assignment`` in the session as an ORM object to
 decide whether any instrument is group-scoped — a count computed so a
 caller could compare it to zero. It now calls
 ``session_lifecycle.session_has_responses``, the helper whose docstring
-says it "answers the yes/no a gate needs" and which eight other gates
-already use.
+says it "answers the yes/no a gate needs" and which seven other call
+sites already use.
 
 The two agree by construction, and the group-scoped case is where that
 is worth proving rather than asserting: the deduped count collapses a
