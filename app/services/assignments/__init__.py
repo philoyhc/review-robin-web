@@ -33,7 +33,6 @@ from ._coverage import (
     PAIR_PREVIEW_LIMIT,
     _apply_pair_search,  # noqa: F401
     assignment_fields_with_data,
-    compute_staleness,
     count_pairs,
     delete_all_assignments,
     display_source_presence,
@@ -86,7 +85,6 @@ __all__ = [
     "assignment_fields_with_data",
     "bulk_set_assignment_include",
     "classify_self_review",
-    "compute_staleness",
     "count_pairs",
     "count_self_review_candidates",
     "count_self_reviews_in_assignments",

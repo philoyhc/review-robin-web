@@ -1448,6 +1448,35 @@ it; the honest end of that paragraph is a deletion.
 Net ~45 lines deleted across 3 files. No schema, no migration, no
 route, no template, no spec.
 
+### Status
+
+**One rung, as planned, and the measurement held.** Zero callers in
+`app/` and zero specs naming it, measured before the cut and
+re-derived independently by the cold read afterwards — which also
+ruled out dynamic reach the greps could not see: no star import of the
+package, no `getattr` walking it, no test asserting `__all__`'s shape.
+`pytest -n auto` went 4,639 → **4,636**, the three deleted test
+functions exactly.
+
+**Three counts in `Blast radius` were off**, all low: "4 functions"
+is **three** (one carries two asserts, which the suite delta proves);
+"the function | 21 lines" is **22**, counting the blank the cut took;
+and "~45 lines deleted" is **49** net, from 51 deletions and 2
+insertions. Left as measured per the `segment-plan` rule and corrected
+here. The first was caught by the suite, the other two by the read.
+
+**Reads: one**, on this slice's own diff, since a one-rung item is a
+code slice outside any ladder (`CLAUDE.md`, "Two cold readers"). It
+confirmed the deletion's premise on every axis and found four things:
+**this block claiming the read had happened *before* the cut**, when
+the same commit's body said it was "owed and running" — two records
+inside one commit disagreeing, and the ordering claim false; the
+`docs/status.md` header counter left at "six items" where Item 7's
+close had already missed it and this one made it two behind; three
+blank lines left where `_coverage.py` uses two, invisible to `ruff`
+because the config selects only E4/E7/E9/F; and the two extra
+`Blast radius` nits above. All four fixed.
+
 ### PR ladder
 
 1. **The deletion, and the close.** One slice.
