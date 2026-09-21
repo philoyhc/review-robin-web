@@ -30,7 +30,6 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.services import csv_imports
 from app.services import relationships as relationships_service
-from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 
 
@@ -177,7 +176,19 @@ def build_quick_setup_context(
     # rejected at the service layer via ``_require_editable`` +
     # ``_require_response_loss_ack``). The single description copy
     # names both conditions.
-    has_responses = responses_service.session_response_count(db, sid) > 0
+    #
+    # 19R.1 rung 2 — this asked the question through
+    # ``responses.session_response_count``, which loads every
+    # ``Assignment`` in the session as an ORM object to decide whether
+    # any instrument is group-scoped, then in the common case runs a
+    # ``COUNT`` anyway. The card needs a yes/no, and
+    # ``session_has_responses`` is the helper that answers exactly that
+    # — its own docstring says so, and eight other gates already use
+    # it. The two agree by construction: the deduped count collapses a
+    # group's fan-out to one cell per group, which can shrink a
+    # positive count but never reach zero, so ``> 0`` and "a row
+    # exists" are the same question.
+    has_responses = lifecycle.session_has_responses(db, review_session)
     is_available = lifecycle.is_draft(review_session) and not has_responses
     is_disabled = not is_available
 
