@@ -1595,3 +1595,64 @@ Recorded here rather than left in a closed item's judgment calls, which
 is where it sat until the 19O Item 7 register found it. Nothing is
 scheduled. If it is ever taken up, the size to plan against is the
 fixture count, not the two-line call site.
+
+### Tags, Owners and a typeahead on the Create page (19R Item 9, moved here unbuilt)
+
+Opened as 19R Item 9 on 2026-09-21, designed against a mock-up over
+four rounds, then moved here the same day: *"it's not absolutely
+essential."* Nothing was built. Recorded at design-settled state so a
+later pick-up starts from the answer rather than the question.
+
+**The gap.** Every tag write surface is on the lobby — the bulk-tags
+toolbar action and the single-session expander's Save
+(`POST /sessions/{id}/lobby-edit`). `session_new.html` carries **0**
+tag mentions, so a session is born untagged and the operator goes back
+to the lobby to classify it. Session Home's config card is the same:
+**0** mentions, on a card that edits every other session-level
+attribute. Owners is lobby-adjacent in the same way — the card exists
+on Session Home and nowhere on Create.
+
+**Nothing is missing underneath.** `app/services/session_tags.py` is
+complete (`set_tags` is the whole write path), `session.tag_added` /
+`session.tag_removed` are already emitted, and **tags already reach a
+new session through the settings CSV** — the Create form takes
+`settings_file` and `_apply_session_tags` applies `session_tags[N].tag`
+(18P PR D2). The gap is UI over a path that works end to end.
+
+**The settled design**, current page plus three changes, nothing else
+moving:
+
+1. **Tags**, half width, left column below Description — the slot the
+   buttons vacate.
+2. **Cancel** then **Create session** to the foot of the right column,
+   under *Release responses until*, flush right.
+3. **Owners**, half width, below the User interface settings card in
+   the bottom row's right column.
+
+**The finding worth keeping: Owners cannot reuse its own routes.**
+`POST /sessions/{id}/owners/add` and `.../remove` need a session id and
+there is none on this page. Rows must be staged in the form and applied
+after `sessions.create_session` — the same ordering a form tag needs
+against a settings-CSV tag, and a contract the build states rather than
+discovers. That makes Owners a different size of work from Tags: Tags
+is one input and one `set_tags` call; Owners is a staged mini-editor.
+Split them if this is ever taken up.
+
+**Carried with it, unplanned:** typeahead on the tag boxes, the lobby's
+existing one included. The lobby computes `vocabulary(db, session_ids)`
+over the sessions on screen; Create has none, so a suggestion list
+needs the operator's own sessions — a new query shape, not a new
+service.
+
+**Session Home's config card was scoped out before the move** and stays
+out, with its blocker recorded: a box there sits inside the card, whose
+`config_editing` is `is_draft or is_validated`
+(`app/web/routes_operator/_session_home.py`), so it would be editable
+in 2 of 5 lifecycle states where the lobby edits tags in **any** state.
+Either the box escapes the card's gate or the two surfaces disagree.
+That is a design call, and it is the reason Create came first.
+
+**Lift trigger:** an operator asking for it, or the next change that
+already opens `session_new.html` — the page also owes a `.btn` role
+audit on 8 inline-styled buttons (`grep -c 'style="[^"]*"'`), which
+would ride along.
