@@ -23,8 +23,8 @@ Item 4 was a defect found while they were being planned. **Item 5 is
 open** — the bench re-set that followed those closes left one cost
 unexplained, and `guide/app_responsiveness.md` Finding 6 attributes it.
 Further items land the same way, as measurement or a report turns them
-up; that document also holds the `## Later candidates` already measured
-but not scheduled.
+up; that document also holds the later candidates already measured but
+not scheduled.
 
 **Re-take any number here with** `python3 tools/bench_roster_scale.py`
 (`tools/README.md` has the recipe). Items 1–4's figures are from state B
@@ -773,84 +773,57 @@ path. Both corrected.
 
 ## Item 5 — the readiness report reloads the session once per check
 
-**Found by measurement, not by a report.** The bench re-set
-(`guide/app_responsiveness.md`, 2026-09-21) left one cost unexplained:
-every session page issues 79–112 queries whatever the roster size.
-Finding 6 attributes it.
-
 ### Opportunity
 
-`validation.validate_session_setup` is a clean orchestrator over 22
-registered rules — `for rule in REGISTERED_RULES: rule.check(db,
-review_session)` — and **each check loads for itself whatever it
-needs**. Nothing is shared between them.
+`guide/app_responsiveness.md` **Finding 6** has the measurement and the
+call paths. In one sentence: `validation.validate_session_setup` is
+54% / 46% / 76% of Session Home, Assignments and Validate, because its
+22 checks each load for themselves whatever they need and Validate
+builds the whole report twice.
 
-| page | queries | from the report |
-|---|---:|---:|
-| Session Home | 79 | **43 (54%)** |
-| Assignments | 92 | **43 (46%)** |
-| Validate | 112 | **86 (76%)** |
-
-Within one report run, **22 of 43 queries are exact repeats** —
-identical SQL *and* identical bound parameters, inside one transaction.
-Eight separate checks each re-`SELECT` the session's instruments;
-`_identity_holders_by_email` pulls the reviewer list 5×, reviewees 4×,
-observers 4×.
-
-**Validate's 86 is 43 × 2.** `_operations.py:187` runs the report for
-the page body, then `_operations.py:221` calls
-`build_workflow_card_context`, which runs it again at
-`_workflow_card.py:122`. Nothing passes the first result to the second.
-
-**Why it survived**: every one of these is a fast indexed read — 79
-queries cost 97 ms of SQL — so no profile pointed at it, and a count
-flat in the roster never grew into a complaint. It is visible now only
-because 19R removed what was hiding it.
-
-**The reason to fix it is consistency, not speed.** Twenty-two checks
-each deciding independently what "the session's instruments" means is
-how two of them come to disagree after someone edits one. The query
-count is the symptom that made that visible.
+**The reason to fix it is consistency, not speed.** These are fast
+indexed reads — 79 queries cost 97 ms — and will never be why a page
+feels slow. What is worth fixing is twenty-two checks each deciding
+independently what "the session's instruments" means, which is how two
+of them come to disagree after someone edits one.
 
 ### Decision
 
 Thread a per-run inputs object through `ValidationRule.check`, loaded
-once by the orchestrator: the instrument list, the three rosters, and
-the identity maps `_identity_holders_by_email` builds. Checks read from
-it instead of querying. And on Validate, pass the already-computed
-issues into `build_workflow_card_context` rather than letting it
-recompute.
+once by the orchestrator; checks read from it instead of querying. On
+Validate, pass the already-computed issues into
+`build_workflow_card_context` rather than letting it recompute.
 
 *Alternative rejected:* a request-scoped memo cache under the existing
-queries — no signature changes, and it would cut the same repeats. It
-buys the query count without buying the consistency, which is the
-half worth having: twenty-two checks would still each be *entitled* to
-their own definition of the session, and the next one added would
-still write its own load.
+queries — no signature changes, same repeats removed, but it buys the
+count without the consistency. Twenty-two checks would still each be
+entitled to their own definition of the session, and the next one added
+would still write its own load.
 
 ### Semantics
 
 - **The issue list must not change** — same rules, same order, same
   `rule_key` / `fix_url` / `fix_anchor` stamping. The orchestrator's
-  public signature stays as it is; `validate_session_setup(db,
-  review_session)` is called from six places and 8 test files.
-- **Lifecycle-dependent, and that stays.** A `ready` session renders
-  Session Home in 35 queries because fewer checks apply. The item
-  changes how many queries a check costs, never which checks run.
-- **Inputs are loaded once per report run**, not cached across runs: a
-  check must never see a roster older than the request that asked.
+  public signature stays; it has 6 callers and 8 test files.
+- **The report is all-or-nothing per render, not a lifecycle-selected
+  subset.** `build_workflow_card_context` runs it only under
+  `validated_just_ran or is_validated`; on a `ready` session it runs
+  **zero** checks, which is why that page measures 35 queries.
+  `validate_session_setup` itself always iterates all 22 rules. A
+  parity test that assumed a smaller subset on `ready` would be
+  asserting a behavior that does not exist.
+- **Inputs are loaded once per report run**, never cached across runs:
+  a check must not see a roster older than the request that asked.
   Validate's second build goes away by passing the result, not by
   caching it.
-- The scheduled-activation path (`scheduled_events/_activation.py:85`)
-  calls the same orchestrator outside a request, so the inputs object
-  may not assume a request scope.
+- `scheduled_events/_activation.py:85` calls the orchestrator outside a
+  request, so the inputs object may not assume a request scope.
 
 ### Judgment calls — decided
 
 - **Inputs object over a memo cache** (2026-09-21) — see `Decision`.
-- **Measured on `validated`** (2026-09-21): it is the state an operator
-  sits in while deciding to Activate, and the state with the most
-  checks live.
+- **Measured on `validated`** (2026-09-21): the state an operator sits
+  in while deciding to Activate, and the only one where the report runs.
 
 ### Blast radius (measured)
 
@@ -859,34 +832,38 @@ still write its own load.
 | registered rules / check functions | 22 / 22 | `grep -c 'ValidationRule(' app/services/validation.py`; `grep -c '^def _check_' app/services/validation.py` |
 | callers of the orchestrator | 6 | `grep -rn "validation.validate_session_setup(db" app/ --include=*.py` |
 | test files naming it | 8 | `grep -rln "validate_session_setup" tests/ --include=*.py` |
-| the double build | 1 page | `_operations.py:187` + `_workflow_card.py:122` on Validate |
+| the double build | 1 page | `_operations.py:187` + `_workflow_card.py:122` |
 
 No schema change, no migration, no template change.
 
 ### PR ladder
 
-1. **Stop Validate building the report twice.** One page, one call
-   site, no signature change — and the largest single win (112 → ~69).
-   Lands first because it is independent of the rest and provable on
-   its own.
+1. **Stop Validate building the report twice.** One call site, no
+   signature change, the largest single win (112 → ~69), independent of
+   the rest.
 2. **The inputs object, loaded once and threaded through `check`.**
-   The 22 checks move to reading from it. A parity test pins the issue
-   list unchanged across every fixture the validation tests already
-   carry.
+   It must carry **everything two checks both load**, measured rather
+   than guessed — on the bench fixture that is the instrument list, the
+   three roster lists, the roster non-empty probes, the per-instrument
+   response-field and display-field presence, and
+   `included_count_per_instrument`. The last three are per-instrument,
+   so their repeat count grows with instrument count, not roster size.
+   A parity test pins the issue list unchanged.
 3. **The guard.** A test asserting the report issues no duplicate
    (statement, params) pair in one run, so the next check added cannot
-   quietly reintroduce its own load.
+   quietly reintroduce its own load. It goes after rung 2 because it
+   fails until every repeated input above is covered — if rung 2 lands
+   short, this is what says so.
 4. **Close.**
 
 ### Definition of done
 
 - The readiness report issues **no exact-repeat query** in one run —
-  the rung-3 guard, measured as 22 of 43 today.
+  9 statements repeat today, 22 queries of 43.
 - Validate builds the report **once**.
 - `validate_session_setup` returns the identical issue list, rule for
   rule, on every fixture the existing validation tests carry.
-- Session Home, Assignments and Validate query counts re-measured in
-  `guide/app_responsiveness.md` and Finding 6 annotated with the result.
+- Page query counts re-measured and Finding 6 annotated with the result.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19R.5` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -905,9 +882,9 @@ No schema change, no migration, no template change.
 
 - **Which** checks run, and in what state. This item changes what a
   check costs, never the readiness verdict.
-- The remaining fixed queries outside the report — `session_status_pills`
-  is 11 per page and `build_setup_rows` 4. Same shape, smaller, and
-  measurable again once the report stops dominating.
+- The fixed queries outside the report — `session_status_pills` is 11
+  per page, `build_setup_rows` 4. Same shape, smaller, and measurable
+  again once the report stops dominating.
 
 ### Doc impact
 
