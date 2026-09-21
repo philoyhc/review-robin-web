@@ -1262,6 +1262,44 @@ the reader.
 
 No code, no schema, no migration, no template, no test.
 
+### Status
+
+**The premise was half wrong, and the build found it in the first
+command.** `Opportunity` said the stamp was carried by 16 of 450 slices,
+"all consecutive (`#2495`–`#2516`), and none of the last 20" — read as
+a campaign that ran and stopped. Re-measured at build over 451 slices:
+**37 wrote the line and 16 parse.** Git reads only a commit message's
+last block as trailers, so the 21 written in a paragraph of their own,
+above `Co-Authored-By`, are **silently discarded** — present in the
+text, absent to every reader. The practice did not stop at `#2516`; its
+*recording* broke, and nobody could tell, because nothing checks
+either failure.
+
+Found the way it had to be found: the two slices that opened this item
+(#2537, #2538) both stamped, and neither parsed. The rule's own author
+tripped the failure twice in one afternoon while writing about it.
+
+**The Decision survives and is better supported.** It rested on a rule
+96% unfollowed; it is now a rule ~92% unwritten *and* silently
+droppable when it is written. Recording the result, retiring the
+standing instruction and keeping the tool all still follow. What
+changes is the framing in every document: not "the campaign ended" but
+"the campaign ran, and more than half its samples never reached the
+reader".
+
+**One opportunity surfaced and deliberately not taken.** A reader that
+matched `Instruction-Received:` anywhere in the message rather than as
+a git trailer would recover all 21 lost stamps and roughly double the
+sample at zero ongoing cost. `Out of scope` forbids touching
+`tools/pace_audit.py`, so it is named in §6.4 and left for the author
+rather than folded in — widening a one-rung item on the strength of its
+own finding is how a rung becomes a segment.
+
+**`Definition of done` was written against the wrong numbers** and is
+annotated rather than rewritten: its "n=14" and "`#2495`–`#2516`" lines
+still hold (the parsed sample is unchanged), but the documents now say
+more than those lines asked for.
+
 ### PR ladder
 
 1. **All four documents, and the close.** One slice: the figure and the
@@ -1277,7 +1315,10 @@ No code, no schema, no migration, no template, no test.
 - `CLAUDE.md` and `AGENTS.md` describe the stamp as a campaign, name
   `#2495`–`#2516`, and are byte-identical
   (`tests/unit/test_doc_references.py` passes).
-- `new_project_practices_setup.md:422` matches the new framing.
+- `new_project_practices_setup.md` matches the new framing.
+- Every one of the four documents that tells a reader to stamp also
+  tells them the trailer goes in the message's **final block** — the
+  failure that lost 21 of 37 stamps (see `Status`).
 - `tools/pace_audit.py` and `tests/unit/test_pace_audit.py` are
   unchanged; `pytest tests/unit/test_pace_audit.py` still passes.
 - `## Doc impact` section present and current
@@ -1288,10 +1329,9 @@ No code, no schema, no migration, no template, no test.
 
 ### Open questions
 
-- **Does the author want the campaign re-run at some cadence** (e.g.
-  alongside each practice audit), or only when a figure is being
-  re-taken? The wording in `CLAUDE.md` follows from the answer. Decided
-  by the author; the plan assumes the latter until told otherwise.
+- ~~Re-run the campaign at a cadence, or only when a figure is being
+  re-taken?~~ **Only when a figure is being re-taken**, the plan's
+  assumed default, unchallenged at build. `CLAUDE.md` says so.
 
 ### Out of scope
 

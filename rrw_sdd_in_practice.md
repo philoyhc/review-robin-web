@@ -212,10 +212,30 @@ lines; **0** under the per-item cadence) and is the same for a
 prose-only slice as for a code one. That floor is the instruction loop
 and the context a slice loads, not the build. Splitting it needs a
 timestamp the repository does not carry — when the instruction arrived —
-which is the next thing to instrument — done the same day: a slice's
-first commit now carries an `Instruction-Received` trailer (`CLAUDE.md`
-"Where work runs") and the tool splits turn at it into *wait* and
-*build* once three slices carry one. *Re-take with*
+which is the next thing to instrument. It was instrumented the same
+day — an `Instruction-Received` trailer on a slice's first commit
+(`CLAUDE.md` "Where work runs"), which the tool splits turn at once
+three slices carry one — and **it has been taken**: sampled over
+`#2495`–`#2516`, *wait* is a median **3.5** minutes and *build* a
+median **3.0** (n=14, `--cut 2460`).
+
+**That qualifies the paragraph above.** Build is a minority of an 8.5
+minute turn median, but at roughly a third of it, not the "not the
+build" the sentence claims. The floor is mostly the instruction loop
+and the context; it is not only those.
+
+**Stamping is a sampling campaign, not a standing practice** — one ran
+`#2495`–`#2516` and produced the figure above. Two things measured at
+19R Item 7 are why it is written that way rather than as a rule
+everyone follows. Of 451 slices merged since 2026-09-04, **37 wrote
+the line and 16 parse**: git reads only a commit message's *last*
+block as trailers, so the 21 that sat in their own paragraph above
+`Co-Authored-By` were **silently discarded**, the stamp present in the
+text and absent to every reader. Nothing catches that, and nothing
+catches a slice that omits the line entirely. Re-stamp when a figure is
+being re-taken, keeping the trailer in the final block; a reader that
+matched the line anywhere in the message would recover the 21 and is
+not currently in `tools/pace_audit.py`. *Re-take with*
 `python3 tools/pace_audit.py --cut 2460`*; the turn line is the fit.*
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
