@@ -277,6 +277,33 @@ inert.
   still the reason the cache is per instrument. Confirms the premise of
   this item's `guide/deferred_consolidated.md` bullet.
 
+**Rung 2 landed 2026-09-21** — `_reconcile_cache.py`: the stamp, the
+row-set summary, and 36 unit tests.
+
+- **The roster columns are derived from
+  `app/services/rules/fields.py`'s `FIELD_MAP`**, not listed. Its own
+  docstring promises that adding an addressable predicate field is "a
+  one-row edit here and nowhere else"; a copy of the list here would
+  have made that false, and silently — a predicate on the new field
+  would move the fan-out while the stamp held still.
+- **Roster `status` is over-coverage, knowingly.** `Semantics` commits
+  to it, but the engine reads the roster unfiltered — `list_reviewers`
+  has no status filter and `engine.py` never mentions one — so
+  deactivating a reviewer cannot move the fan-out. Kept: the cost is one
+  needless recompute, against a badge that lies. `Relationship.status`
+  is *not* over-coverage; an inactive row hides its tags at lookup.
+- **`override_exclude_self_reviews` is in the stamp** although both app
+  callers leave it `None`, so a future caller passing `True` cannot read
+  a verdict computed for `None`.
+- **Mutation testing found a hole in the tests, not the code.** Eleven
+  mutants, ten caught; `sort_keys=False` survived, because the payload's
+  own keys are written in a fixed order and the only thing the flag buys
+  is a rule whose JSON keys come back in a different order. A test that
+  stamps the same rule both ways now kills it.
+- A case asserted `self_reviews_active = True` on a session that
+  defaults to `True` — a no-op mutation answering a question it had not
+  asked. The helper that applies a mutation now refuses one.
+
 ### PR ladder
 
 1. **Migration + columns**, no reader and no writer; round-trips on
