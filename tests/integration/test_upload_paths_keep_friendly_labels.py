@@ -5,8 +5,8 @@ suffix — ``ReviewerTag1.Tutor`` means *call `tag_1` "Tutor"* — and the
 save functions reconcile it into ``session_field_labels`` when handed
 ``field_labels_captured``. The three roster cards always passed it. The
 **five Quick Setup upload routes did not**, so an operator who set up a
-session through the card lost every label they had written into the
-header, silently.
+session through the *Quick Setup* card lost every label they had
+written into the header, silently.
 
 The loss is not recoverable anywhere else: 19C Item 1 retired
 ``field_labels.*`` from the settings bundle precisely *because* roster
@@ -19,8 +19,6 @@ argument shows up here as a failure, not as a report six months later.
 """
 
 from __future__ import annotations
-
-import inspect
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,6 +47,20 @@ BARE_REVIEWER_CSV = (
     b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
     b"Alice,alice@example.edu,senior\n"
 )
+
+
+def _assert_upload_succeeded(response) -> None:
+    """A rejected Quick Setup upload redirects with **303** too — see
+    `_quick_setup.quick_setup_error_redirect` — so a status check alone
+    passes on failure. Without this, a case that silently stopped
+    uploading would still satisfy its label assertion if the label
+    happened to be there for another reason.
+    """
+    assert response.status_code in (200, 303), response.text
+    location = response.headers.get("location", "")
+    assert "quick_setup_error" not in location, (
+        f"the upload was rejected, not applied: {location}"
+    )
 
 
 def _make_session(
@@ -168,49 +180,49 @@ def _submit_all(client, db, s):
 UPLOAD_PATHS = [
     (
         "card:reviewers",
-        "_setup_reviewers.reviewers_import_submit",
+        "app.web.routes_operator._setup_reviewers.reviewers_import_submit",
         False,
         _card_reviewers,
         [("reviewer", "tag_1", "Tutor")],
     ),
     (
         "card:reviewees",
-        "_setup_reviewees.reviewees_import_submit",
+        "app.web.routes_operator._setup_reviewees.reviewees_import_submit",
         False,
         _card_reviewees,
         [("reviewee", "tag_1", "House")],
     ),
     (
         "card:relationships",
-        "_setup_relationships.relationships_import_submit",
+        "app.web.routes_operator._setup_relationships.relationships_import_submit",
         True,
         _card_relationships,
         [("pair_context", "1", "Mentor")],
     ),
     (
         "quick-setup:reviewers",
-        "_quick_setup.quick_setup_reviewers_submit",
+        "app.web.routes_operator._quick_setup.quick_setup_reviewers_submit",
         False,
         _quick_setup_reviewers,
         [("reviewer", "tag_1", "Tutor")],
     ),
     (
         "quick-setup:reviewees",
-        "_quick_setup.quick_setup_reviewees_submit",
+        "app.web.routes_operator._quick_setup.quick_setup_reviewees_submit",
         False,
         _quick_setup_reviewees,
         [("reviewee", "tag_1", "House")],
     ),
     (
         "quick-setup:relationships",
-        "_quick_setup.quick_setup_relationships_submit",
+        "app.web.routes_operator._quick_setup.quick_setup_relationships_submit",
         True,
         _quick_setup_relationships,
         [("pair_context", "1", "Mentor")],
     ),
     (
         "quick-setup:submit-all",
-        "_quick_setup.quick_setup_submit_all",
+        "app.web.routes_operator._quick_setup.quick_setup_submit_all",
         False,
         _submit_all,
         [
@@ -239,13 +251,16 @@ def test_the_upload_keeps_the_headers_friendly_label(
     tests below, for six failures in this file and no others anywhere
     in the suite. That silence is the point: nothing else noticed."""
 
-    code = f"fl{abs(hash(post.__name__)) % 100000}"
+    # Derived from the case, not from `hash()`: string hashing is
+    # PYTHONHASHSEED-randomized, so a hashed code differs per run and
+    # per xdist worker and a failure message cannot be reproduced.
+    code = f"fl-{post.__name__.lstrip('_')}"[:32]
     review_session = _make_session(client, db, code=code)
     if needs_roster:
         _seed_pair(client, review_session)
 
     response = post(client, db, review_session)
-    assert response.status_code in (200, 303), response.text
+    _assert_upload_succeeded(response)
     db.expire_all()
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
@@ -274,10 +289,15 @@ def test_the_create_session_form_keeps_the_label(
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
             "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),
+            # All three roster slots, because the gate below classifies
+            # this endpoint as covered and it accepts all three. Two
+            # would leave the relationships slot on this route asserted
+            # nowhere while the gate said otherwise.
+            "relationships_file": ("rel.csv", RELATIONSHIP_CSV, "text/csv"),
         },
         follow_redirects=False,
     )
-    assert response.status_code == 303, response.text
+    _assert_upload_succeeded(response)
     db.expire_all()
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "fl-create")
@@ -285,6 +305,7 @@ def test_the_create_session_form_keeps_the_label(
 
     assert field_labels.resolve(review_session, "reviewer", "tag_1") == "Tutor"
     assert field_labels.resolve(review_session, "reviewee", "tag_1") == "House"
+    assert field_labels.resolve(review_session, "pair_context", "1") == "Mentor"
 
 
 def test_a_bare_header_on_quick_setup_clears_the_override(
@@ -339,19 +360,19 @@ def test_a_bare_header_on_quick_setup_clears_the_override(
 #: endpoint that is in neither this map nor ``UPLOAD_PATHS`` fails the
 #: gate, which is the whole point of it.
 EXEMPT_ENDPOINTS: dict[str, str] = {
-    "_setup_observers.observers_import_submit": (
+    "app.web.routes_operator._setup_observers.observers_import_submit": (
         "Observers carry no friendly labels by design — "
         "`parse_observer_csv` discards the captured map and "
         "`save_observers` has no parameter for it (19C Item 1)."
     ),
-    "_quick_setup.quick_setup_observers_submit": (
+    "app.web.routes_operator._quick_setup.quick_setup_observers_submit": (
         "Same as the Observers card: nothing to reconcile."
     ),
-    "_quick_setup.import_session_config": (
+    "app.web.routes_operator._quick_setup.import_session_config": (
         "A Settings CSV, not a roster. 19C Item 1 deliberately retired "
         "`field_labels.*` from the settings bundle, and it stays retired."
     ),
-    "_rehydrate.rehydrate_validate": (
+    "app.web.routes_operator._rehydrate.rehydrate_validate": (
         "Validates and stashes; saves no roster. The rehydrate path that "
         "*does* save is `app/services/session_rehydrate.py`, which passes "
         "`field_labels_captured` for all three rosters."
@@ -361,7 +382,7 @@ EXEMPT_ENDPOINTS: dict[str, str] = {
 #: Driven by `test_the_create_session_form_keeps_the_label` rather than
 #: by the matrix, because its labels arrive on the POST that creates the
 #: session and the matrix needs a session to exist first.
-CREATE_SESSION_ENDPOINT = "_quick_setup.create_session"
+CREATE_SESSION_ENDPOINT = "app.web.routes_operator._quick_setup.create_session"
 
 
 def _upload_endpoints() -> dict[str, list[str]]:
@@ -374,11 +395,35 @@ def _upload_endpoints() -> dict[str, list[str]]:
     later that nobody thought to write a case for — which is exactly how
     the labels came to be dropped on five routes at once.
 
-    The walk has to descend through FastAPI's lazy ``_IncludedRouter``
-    wrappers: ``app.routes`` holds seven of them and three real routes,
-    so a walk that only looks at the top level finds **no** upload
-    endpoints and passes vacuously. The assertion below exists for that.
+    **What it asks, and what it therefore cannot see.** The question is
+    "does this POST endpoint take an upload", asked of FastAPI's
+    resolved ``dependant.body_params`` rather than of the annotation's
+    source text: these modules use ``from __future__ import
+    annotations``, so ``inspect.signature`` hands back the *string*
+    ``"UploadFile"`` and a match on it would miss
+    ``from fastapi import UploadFile as Upload`` or any subclass, both
+    of which are ordinary FastAPI uploads. Resolving the type catches
+    those; it also catches ``Annotated[...]`` and ``list[UploadFile]``
+    (``rehydrate_validate`` is the latter) for free.
+
+    It still asks about **uploads**, not about roster saves. A route
+    that saves a roster from something other than an upload is invisible
+    here — ``_rehydrate.rehydrate_commit`` is the live example, saving
+    all three rosters from a stashed token. It happens to be correct,
+    but nothing below gates it, and a future save-from-blob route would
+    repeat this item's defect unseen. Widening the question from "takes
+    an upload" to "reaches a roster save" is a different gate and its
+    own item.
+
+    The walk has to descend FastAPI's lazy ``_IncludedRouter`` wrappers.
+    ``app.routes`` holds fifteen entries — seven of those wrappers, four
+    Starlette routes, one mount and three ``APIRoute``, none of the last
+    three a POST — so a walk that stops at the top level finds **no**
+    upload endpoints and passes while asserting nothing. The first
+    assertion in the test exists for exactly that.
     """
+    from fastapi import UploadFile
+
     from app.main import app
 
     def walk(routes):
@@ -394,25 +439,35 @@ def _upload_endpoints() -> dict[str, list[str]]:
             if hasattr(route, "endpoint"):
                 yield route
 
+    def _is_upload(annotation: object) -> bool:
+        candidates = (annotation, *getattr(annotation, "__args__", ()))
+        return any(
+            isinstance(c, type) and issubclass(c, UploadFile)
+            for c in candidates
+        )
+
     found: dict[str, list[str]] = {}
     for route in walk(app.routes):
         if "POST" not in (getattr(route, "methods", set()) or set()):
             continue
-        try:
-            signature = inspect.signature(route.endpoint)
-        except (ValueError, TypeError):  # pragma: no cover - defensive
+        dependant = getattr(route, "dependant", None)
+        if dependant is None:  # pragma: no cover - not an APIRoute
             continue
         uploads = [
-            name
-            for name, param in signature.parameters.items()
-            if "UploadFile" in str(param.annotation)
+            param.name
+            for param in dependant.body_params
+            if _is_upload(
+                getattr(getattr(param, "field_info", None), "annotation", None)
+            )
         ]
         if not uploads:
             continue
-        key = (
-            f"{route.endpoint.__module__.rsplit('.', 1)[-1]}."
-            f"{route.endpoint.__name__}"
-        )
+        # Keyed on the **full** dotted path, not the module basename:
+        # `_shared.py` exists under both `routes_operator/` and
+        # `routes_reviewer/`, so a basename key can silently overwrite
+        # one endpoint with another — and a dropped endpoint is an
+        # unguarded one, which is the failure this gate exists to stop.
+        key = f"{route.endpoint.__module__}.{route.endpoint.__name__}"
         found[key] = uploads
     return found
 
