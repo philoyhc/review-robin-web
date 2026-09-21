@@ -1001,9 +1001,9 @@ lost with the findings file.
 **The second row was wrong, and wrong in the item's own way** — the
 grep scoped out `app/`, so it missed the docstring on the function
 itself, which is the whole of rung 3. Left as measured rather than
-silently revised; `Status` carries the finding. Re-run over `app/` as
-well and it is three sites, plus a fourth in `tests/` that is still
-open (see `Status`).
+silently revised; `Status` carries the finding. Re-run over `app/` and
+`tests/` as well and it is **five** sites, the last of them found only
+by fixing the fourth (see `Status`).
 
 No schema, no migration, no template. Rungs 2 and 3 touch `tests/` and
 `app/` respectively, neither executably.
@@ -1074,15 +1074,28 @@ false by rungs 2 and 3, and the blast-radius grep that scoped out
 item's measurement failed in exactly the way the item is about. Both
 annotated above.
 
-**Two things it raised are not fixed here**, and are the author's:
-`tests/unit/test_validation_15E_rules.py` carries a **fourth**
-description of this rule, stale in the retired count-versus-count basis
-and in present tense, which by rung 3's own argument is in scope; and
-the docstring's "the two situations" reads exhaustive where
-`group_kind` and the self-review setting can also move the verdict —
-an under-coverage the `why`, `spec/assignments.md` and
-`spec/validate_page.md` §3.2 all share, so it is the spec's framing
-reproduced rather than a new error.
+**Rung 4 took both of the things rung 3's read raised**, on the
+author's instruction, and found a fifth description on the way.
+`tests/unit/test_validation_15E_rules.py`'s module docstring described
+the rule on the retired count-versus-count, pinned-only basis, and a
+test there credited its own silence to the instrument being unpinned
+when the cause is that nothing had been materialized; the same
+docstring also still described `instruments.no_rule_pinned` as live,
+which it stopped being at Wave 5 PR 5.3. The "two situations" sentence
+now leads with the general criterion and says the pair is not
+exhaustive, since the diff also reads `group_kind` and the
+self-review setting.
+
+**The fifth is `compute_staleness` itself** — the helper whose
+count-versus-count, pinned-only semantics the stale descriptions kept
+reproducing. Its docstring claimed the view field and the validation
+rule "share this one definition"; both take their verdict from
+`staleness_by_instrument` instead, which diffs rather than counts,
+ignores pinning, and does not flag a never-generated instrument — the
+opposite on all three points. **Nothing in `app/` calls it**: it is
+exported and unit-tested with no production caller. The docstring says
+so now; retiring the helper is a separate decision and is deferred
+rather than taken.
 
 ### PR ladder
 
@@ -1092,6 +1105,9 @@ reproduced rather than a new error.
    rung 1 had landed. Same PR; see `Status`.
 3. **The third description** — added 2026-09-21 on the author's
    instruction, after rung 2's cold read surfaced it. Same PR.
+4. **The fourth and fifth** — added 2026-09-21 on the author's
+   instruction, after rung 3's read surfaced the fourth and the fix
+   for it surfaced the fifth.
 
 ### Definition of done
 

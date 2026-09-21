@@ -4,22 +4,30 @@ replacement.
 
 Rules covered:
 
-- ``instruments.no_rule_pinned`` — warning per unpinned instrument
-  once the session has reviewers + reviewees. (Severity is
-  ``warning`` rather than ``error`` to mirror sibling rules like
-  ``assignments.instrument_empty`` and ``assignments.reviewer_missing``
-  that produce the same operator-visible outcome — silent empty
-  reviewer page.)
+- ``instruments.no_rule_pinned`` — **inert since Wave 5 PR 5.3**: a
+  NULL ``rule_set_id`` is the Full Matrix default, so an unpinned
+  instrument is never "not set up". It raised a warning per unpinned
+  instrument when this file was written; the tests below now assert
+  its silence, and the bullet said otherwise until 19R Item 6.
 - ``assignments.no_included_pairs`` — warning when sum of
   ``included_count_per_instrument`` is zero. Replaces the retired
   ``assignments.no_mode`` rule (broader: catches all-deactivated
   case too, not just never-generated).
-- ``instruments.stale_generated`` — warning per pinned instrument
-  whose eligible-pair count diverges from its generated row count.
+- ``instruments.stale_generated`` — warning per instrument whose
+  **materialized rows** have fallen out of step with what the engine
+  would produce now. Not a count comparison and not gated on pinning:
+  the verdict is the engine's own reconcile diff via
+  ``assignments.staleness_by_instrument``, and an instrument that has
+  never generated is not flagged. The count-versus-count,
+  pinned-only basis this bullet described is
+  ``compute_staleness``'s, which no production code calls
+  (19R Item 6).
 - ``instruments.zero_included`` — warning per instrument with
   ``generated_count > 0`` and ``included_count == 0``.
 
-Plus a focused test for the lifted ``compute_staleness`` helper.
+Plus a focused test for the ``compute_staleness`` helper, which is
+exported and covered here but has no caller in ``app/`` — see the
+``instruments.stale_generated`` bullet above.
 """
 from __future__ import annotations
 
@@ -327,11 +335,18 @@ def test_no_included_pairs_fires_when_all_deactivated(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_stale_generated_silent_when_no_instrument_pinned(
+def test_stale_generated_silent_before_anything_is_generated(
     db: Session,
 ) -> None:
-    """No instrument has a rule_set_id → silent (no_rule_pinned
-    carries the upstream signal)."""
+    """Nothing has been materialized → silent, because staleness means
+    *rows that have fallen out of step* and there are no rows.
+
+    The seeded session is also unpinned, which is why this test used to
+    say the silence came from `no_rule_pinned` carrying the signal.
+    It does not: since Wave 5 PR 5.3 an unpinned instrument generates
+    like any other, and the decision is
+    ``stale=bool(diff.existing_rows) and …`` in the engine
+    (19R Item 6)."""
     _user, review_session, _instr, _rs = _seed(db, code="stale-unpinned")
     issues = validate_session_setup(db, review_session)
     assert _issues_with_key(issues, "instruments.stale_generated") == []

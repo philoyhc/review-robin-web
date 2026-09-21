@@ -774,9 +774,12 @@ def _check_instruments_stale_generated(
     """Warning per instrument whose materialized rows have fallen out of
     step with what the engine would produce now.
 
-    It fires on the two situations this rule's ``why`` names: the
-    pinned rule changed, or the rosters or relationships moved after
-    Generate.
+    The criterion is the first sentence: a reconcile run would insert
+    or delete at least one pair. The two situations this rule's ``why``
+    names are the ones an operator recognises — the pinned rule
+    changed, or the rosters or relationships moved after Generate —
+    but they are not exhaustive, since the diff also reads
+    ``group_kind`` and the session's self-review setting.
 
     The verdict is the engine's own diff
     (``assignments.staleness_by_instrument``). Since 19R Item 2 that
