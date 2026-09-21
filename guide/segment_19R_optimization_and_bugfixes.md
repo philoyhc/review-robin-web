@@ -973,9 +973,11 @@ lost with the findings file.
 
 ### Semantics
 
-- **No behavior changes and no code changes.** Both edits are prose
-  about code that is already correct — in each case the spec was
-  stale, not the implementation.
+- **No behavior changes.** Every edit is prose about code that is
+  already correct — in each case the description was stale, not the
+  implementation. ~~and no code changes~~: rung 2 added a test and
+  rung 3 rewrote a docstring, so the item touches `app/` and `tests/`
+  while changing nothing either executes.
 - **The `stale_generated` description stays conditional.** 19R Item 2
   requalified the "cannot disagree with Generate" claim as holding
   under the cache's stamp conditions; the replacement bullet says so
@@ -996,7 +998,15 @@ lost with the findings file.
 | table rows vs registry | 22 vs 22, one misplaced | `diff <(grep -n 'key="' app/services/validation.py \| sed 's/.*key="\([^"]*\)".*/\1/') <(table key column)` |
 | other prose naming the rule | 1 file | `grep -rln "stale_generated" spec/ docs/ guide/` |
 
-No code, no schema, no migration, no template.
+**The second row was wrong, and wrong in the item's own way** — the
+grep scoped out `app/`, so it missed the docstring on the function
+itself, which is the whole of rung 3. Left as measured rather than
+silently revised; `Status` carries the finding. Re-run over `app/` as
+well and it is three sites, plus a fourth in `tests/` that is still
+open (see `Status`).
+
+No schema, no migration, no template. Rungs 2 and 3 touch `tests/` and
+`app/` respectively, neither executably.
 
 ### Status
 
@@ -1052,6 +1062,27 @@ of the item's ways and in a third neither the read nor rung 1 caught:
 it claimed the rule's own `why` names **three** situations where it
 names two, and the one its historical paragraph credits as already
 covered — never generated — is not among them.
+
+**Rung 3's own read: the docstring verified, the plan caught out.** All
+four claims check against the code — the two situations, the cache
+qualification with no flat "cannot disagree" surviving, never-generated
+decided at `_generate.py`'s `stale=bool(diff.existing_rows) and …`, and
+the no-op history. What it found was this plan: `Semantics` still said
+"no code changes" and `Blast radius` still said "No code", both made
+false by rungs 2 and 3, and the blast-radius grep that scoped out
+`app/` is why the third site went unmeasured in the first place — the
+item's measurement failed in exactly the way the item is about. Both
+annotated above.
+
+**Two things it raised are not fixed here**, and are the author's:
+`tests/unit/test_validation_15E_rules.py` carries a **fourth**
+description of this rule, stale in the retired count-versus-count basis
+and in present tense, which by rung 3's own argument is in scope; and
+the docstring's "the two situations" reads exhaustive where
+`group_kind` and the self-review setting can also move the verdict —
+an under-coverage the `why`, `spec/assignments.md` and
+`spec/validate_page.md` §3.2 all share, so it is the spec's framing
+reproduced rather than a new error.
 
 ### PR ladder
 
