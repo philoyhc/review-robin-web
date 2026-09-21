@@ -259,6 +259,7 @@ the signature for the loads a single rule still owns.
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
+| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 | `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. The page's job is to report, and observers were the one roster it had nothing to report with (19Q Item 7). |
 | `reviewers.cross_roster_identity` | reviewers | error | A reviewer's email is held in another roster under a *different* name. |
 | `reviewees.cross_roster_identity` | reviewees | error | As above, for a reviewee. |
@@ -274,7 +275,6 @@ the signature for the loads a single rule still owns.
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
 | `instruments.stale_generated` | instruments | warning | One per instrument whose materialised rows have fallen out of step with what the engine would produce now — the pinned rule changed, or the rosters or relationships moved after Generate. The verdict is the engine's own reconcile diff, and since 19R Item 2 it may be served from a stamped cache rather than recomputed on the spot — it still agrees with what Generate would do, under the conditions `spec/assignments.md` § *Staleness* states: the stamp covers every input the diff reads, and Generate writes the fresh verdict through. A never-generated instrument is **not** flagged here: a run would insert its whole fan-out, and an always-on warning is one the operator learns to ignore — the `assignments.*` empty rules carry that case. |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
-| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 
 #### Cross-roster identity — three rules, one generator
 
@@ -454,14 +454,24 @@ natural fragment-jump handles it.
 2. If the issue points at a specific row, set
    `issue.fix_anchor = "#<page>-row-{id}"` and make sure the
    target page renders the matching `<tr id="...">`.
-3. Append a `ValidationRule(...)` entry to `REGISTERED_RULES`
-   with the stable `key`, group `source`, `severity`, `why`
-   paragraph, `fix_url` callable, and `fix_page_label`.
-4. Add a unit test that constructs a session matching the rule's
+3. Add a `ValidationRule(...)` entry to `REGISTERED_RULES` with the
+   stable `key`, group `source`, `severity`, `why` paragraph,
+   `fix_url` callable, and `fix_page_label`. **Position is a
+   contract** — §2.4 derives within-gate source order from it — so put
+   the rule where it belongs among its siblings rather than at the end
+   if those differ.
+4. **Add its row to §3.2's table at the same position.**
+   `tests/unit/test_doc_conventions.py` derives that table's `key`
+   column from `REGISTERED_RULES` and fails on order as well as on
+   membership, so a rule registered without a row fails CI. The check
+   exists because a rule appended to the table where the code inserted
+   it stayed wrong from W8 through a corpus sweep and a `spec-writer`
+   pass (19R Item 6).
+5. Add a unit test that constructs a session matching the rule's
    trigger and asserts the rule yields exactly one issue with
    the expected `rule_key`, severity, and (where applicable)
    `fix_anchor`.
-5. Add the rule to the per-source row in `_setup_coverage_rows`
+6. Add the rule to the per-source row in `_setup_coverage_rows`
    if the operator needs to see it on the at-a-glance grid.
 
 `rule_key` is the stable identifier — once shipped, treat it as
