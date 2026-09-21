@@ -1171,6 +1171,434 @@ them raised is outstanding.
 
 ---
 
+## Item 7 — the `Instruction-Received` stamp is a campaign described as a standing rule
+
+### Opportunity
+
+`CLAUDE.md` "Where work runs" says **"The first command of a slice is
+`date -u +%FT%TZ`"** and `rrw_sdd_in_practice.md` §6.4 says a slice's
+first commit **"now carries"** the trailer. Measured on merge history
+since 2026-09-04: **16 of 450 slices carry it (3.6%)**, all consecutive
+(`#2495`–`#2516`), and none of the last 20. Two live passages in the
+present tense describe behavior the repository stopped having on
+`#2517`, and nothing catches it — `CLAUDE.md` says so itself ("No gate
+checks it").
+
+Worse, **§6.4 never records what the instrument measured.** It calls
+the split "the next thing to instrument — done the same day", records
+the instrumenting, and stops. The answer exists only in tool output:
+
+```
+$ python3 tools/pace_audit.py --cut 2460
+== AFTER (PR >= #2460): 77 PRs
+  turn p25 5.8  med 8.4  p75 12.8 | fit: fixed 9.5 min + 1.47 min per 100 LOC
+  turn split on Instruction-Received (n=14): wait med 3.5 mean 9.5 | build med 3.0 mean 3.3
+```
+
+That result **qualifies §6.4's own claim**. §6.4 says of the 10–14
+minute fitted floor: *"That floor is the instruction loop and the
+context a slice loads, **not the build**."* Build is median 3.0 against
+a turn median of 8.4 — a minority, around a third, not "not the build".
+A claim the document asserts and its own instrument partly contradicts,
+sitting unrecorded.
+
+This is Item 6's defect class in the file that states the conventions.
+
+### Decision
+
+**Record the result; retire the standing instruction; keep the
+instrument.** §6.4 gains the measured split and the qualification it
+forces. `CLAUDE.md` / `AGENTS.md` describe a sampling campaign — stamp
+when a figure is being re-taken, with `#2495`–`#2516` named as the
+campaign that produced the current one — instead of a per-slice rule.
+`tools/pace_audit.py` is not touched: its trailer support costs nothing
+idle and `tests/unit/test_pace_audit.py` already covers both the
+reported and the "needs 3" paths.
+
+**Rejected: resume blanket stamping.** More `n` will not move
+`wait ≈ build ≈ 3 min`, and a standing instruction that 96% of slices
+ignore teaches every agent reading `CLAUDE.md` that its bullets are
+aspirational — a compounding cost against a precision gain nobody
+needs.
+
+**Rejected: delete the trailer from `pace_audit.py` too.**
+`constitution.md` VI is *retire rather than mechanise badly*; the thing
+mechanised badly is the standing instruction, not the tool. The next
+practice audit may want a fresh sample and should not have to rebuild
+the reader.
+
+### Semantics
+
+- **Prose only.** No behavior change, no gate change, no tool change.
+  Nothing under `app/`, `tests/` or `alembic/`.
+- **`abe393cf` is not fixed.** This slice's own first commit is
+  unstamped and stays that way; it is in merged history and rewriting
+  it buys nothing.
+- **The twins.** `CLAUDE.md` and `AGENTS.md` are byte-identical and
+  `tests/unit/test_doc_references.py` enforces it — `cp` one to the
+  other before committing.
+- **`new_project_practices_setup.md:422`** carries the instruction into
+  *new* projects, so leaving it propagates the standing-rule framing to
+  repos that have never run the campaign. It changes with the others.
+
+### Judgment calls — decided
+
+- **Record the figure in §6.4 rather than in a new `guide/` artefact**
+  (2026-09-21) — §6.4 is where the question was posed and where the
+  *Re-take with* line already lives; a second home splits the answer
+  from the method.
+- **Name the campaign's PR range in `CLAUDE.md`, not just in §6.4**
+  (2026-09-21) — an agent reading the conventions needs to know the
+  stamp is dormant, not that it was once taken.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| slices merged since 2026-09-04 | 450 | `git rev-list --merges --since=2026-09-04 origin/main` |
+| …carrying the trailer on their first commit | **16** (3.6%), `#2495`–`#2516` consecutive | per-merge `git log -1 --format='%(trailers:key=Instruction-Received,valueonly)'` on `git rev-list --reverse $sha^1..$sha^2 \| head -1` |
+| files naming the trailer | 7 | `grep -rln "Instruction-Received" --include='*.md' --include='*.py' .` |
+| …of those, this item edits | **4** — `rrw_sdd_in_practice.md`, `CLAUDE.md`, `AGENTS.md`, `new_project_practices_setup.md` | the other 3 are `tools/pace_audit.py`, `tools/README.md`, `tests/unit/test_pace_audit.py`, all of which stay |
+
+No code, no schema, no migration, no template, no test.
+
+### PR ladder
+
+1. **All four documents, and the close.** One slice: the figure and the
+   reframing are the same edit, and splitting them would leave one file
+   asserting a practice another has just retired.
+
+### Definition of done
+
+- `rrw_sdd_in_practice.md` §6.4 states the measured split (`wait` med
+  3.5 / `build` med 3.0, n=14, `--cut 2460`) and qualifies its own
+  "not the build" sentence against it.
+- §6.4 no longer says a slice's first commit "now carries" the trailer.
+- `CLAUDE.md` and `AGENTS.md` describe the stamp as a campaign, name
+  `#2495`–`#2516`, and are byte-identical
+  (`tests/unit/test_doc_references.py` passes).
+- `new_project_practices_setup.md:422` matches the new framing.
+- `tools/pace_audit.py` and `tests/unit/test_pace_audit.py` are
+  unchanged; `pytest tests/unit/test_pace_audit.py` still passes.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- **Does the author want the campaign re-run at some cadence** (e.g.
+  alongside each practice audit), or only when a figure is being
+  re-taken? The wording in `CLAUDE.md` follows from the answer. Decided
+  by the author; the plan assumes the latter until told otherwise.
+
+### Out of scope
+
+- Any change to `tools/pace_audit.py`, including dropping the trailer
+  reader. The instrument stays; see `Decision`.
+- Re-stamping or rewriting `abe393cf` or any other merged commit.
+- Re-taking the other §6.4 figures. This item records one that was
+  already measured and never written down.
+
+### Doc impact
+
+- `rrw_sdd_in_practice.md` — §6.4 records the measured `wait`/`build`
+  split and qualifies the "not the build" claim; the "now carries"
+  sentence becomes a campaign record (Item 7).
+- `CLAUDE.md` — "Where work runs": the stamp bullet becomes a campaign
+  description naming `#2495`–`#2516`, not a per-slice instruction
+  (Item 7).
+- `AGENTS.md` — byte-identical twin of the above (Item 7).
+- `new_project_practices_setup.md` — the trailer instruction it seeds
+  into new projects matches the new framing (Item 7).
+- `docs/status.md` — row when the item lands (Item 7).
+
+---
+
+## Item 8 — retire `compute_staleness`
+
+### Opportunity
+
+`assignments.compute_staleness` is a one-line predicate with **no
+caller in `app/`**. It was the shared definition behind
+`InstrumentStatusBlock.is_stale` and `instruments.stale_generated`;
+both moved to `staleness_by_instrument` (19N), which diffs pair sets
+rather than comparing counts, does not gate on pinning, and does not
+flag a never-generated instrument — the opposite of this helper on all
+three points.
+
+Item 6 established that it is **the source the wrong descriptions kept
+reproducing**: of the nine wrong passages that item fixed, the
+count-versus-count and pinned-only framings all trace to this function
+still sitting in the package, exported and tested, reading like the
+live definition. Its own docstring now says so in 18 lines — longer
+than the function, the tests and the export combined.
+
+Item 6 left it deferred as "a public-surface removal". That framing was
+wrong: this is an internal package export in a monolith with no
+published API and no consumer.
+
+### Decision
+
+**Delete the function, its re-export and its four unit tests.** The
+descriptions Item 6 corrected stay corrected because there is no longer
+a second definition to drift back toward.
+
+**Rejected: keep it and mark it deprecated.** A deprecation comment is
+a fifth description of the same rule, in the place that produced the
+other four. The docstring already explains at length why nothing calls
+it; the honest end of that paragraph is a deletion.
+
+### Semantics
+
+- **No behavior change.** Nothing in `app/` calls it, so no code path
+  changes. The four unit tests assert the dead predicate's arithmetic
+  and go with it.
+- **No spec change.** `grep -rn "compute_staleness" spec/` returns
+  nothing; it was never a documented contract.
+- **No doc gate fires.** `tests/unit/test_doc_references.py`'s
+  `PATH_REF` matches backticked *repo paths*, not symbol names, so
+  deleting a function trips nothing. (Deleting a whole routing module
+  would trip `tests/unit/test_spec_coverage.py`; a single function does
+  not.)
+- **Historical prose stays.** `docs/status.md`, the archived plans and
+  `guide/archive/sweep_2026-09-13_spec_history.md` narrate what was
+  true when written and are not edited.
+
+### Judgment calls — decided
+
+- **A PR body, not a plan** (2026-09-21) — by the `segment-plan`
+  skill's own "When not to write a plan" test this is one PR touching
+  no schema, no spec contract and no user-facing surface. It is logged
+  as an item only because the author asked for it in the segment's
+  sequence; the reasoning above is the whole of it.
+- **`test_assignment_staleness.py:5` keeps its mention** (2026-09-21) —
+  it narrates why the per-rule eligibility helper retired, which is
+  history, not a live claim.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| callers in `app/` | **0** | `grep -rn "compute_staleness" app/ --include='*.py'` — 3 hits: the definition and the import/`__all__` pair |
+| the function | 21 lines (18 of them the docstring rung 4 rewrote) | `awk '/^def compute_staleness/,/^    return rule_id/' app/services/assignments/_coverage.py` |
+| the re-export | 2 lines | `app/services/assignments/__init__.py:36,89` |
+| unit tests | 4 functions, 23 lines | `tests/unit/test_validation_15E_rules.py:120-142` |
+| live prose to update | 2 module-docstring bullets | `tests/unit/test_validation_15E_rules.py:23,28` |
+| specs naming it | **0** | `grep -rn "compute_staleness" spec/` |
+
+Net ~45 lines deleted across 3 files. No schema, no migration, no
+route, no template, no spec.
+
+### PR ladder
+
+1. **The deletion, and the close.** One slice.
+
+### Definition of done
+
+- `grep -rn "compute_staleness" app/` returns nothing.
+- `tests/unit/test_validation_15E_rules.py` no longer tests the helper,
+  and its module docstring no longer points a reader at it.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None. Item 6 established the facts; this item acts on them.
+
+### Out of scope
+
+- `staleness_by_instrument`, `InstrumentStatusBlock.is_stale` and
+  `instruments.stale_generated`. All three are correct and stay.
+- Editing historical prose in `docs/status.md` or `guide/archive/`.
+
+### Doc impact
+
+- `docs/status.md` — row when the item lands (Item 8).
+
+---
+
+## Item 9 — a session cannot be tagged when it is created
+
+### Opportunity
+
+`session_tags` has a complete service (`add_tag`, `remove_tag`,
+`set_tags`, `vocabulary`, `tags_for_sessions`), its own audit events
+(`session.tag_added` / `session.tag_removed`), and a place in the
+config CSV bundle (`session_tags[N].tag`, 18P PR D2). Every write
+surface is on the **lobby**: the bulk-tags toolbar action and the
+single-session expander's Save (`POST /sessions/{id}/lobby-edit`).
+
+Two operator surfaces have **0** tag mentions in their templates:
+Create (`session_new.html`) and Session Home's config card
+(`session_detail.html`), which edits every session-level attribute —
+name, code, description, deadline, schedule, timezone, help contact,
+owners, two feature toggles — **except** tags. A session is therefore
+born untagged and the operator must go back to the lobby to classify
+it.
+
+**Tags are already settable at create, via CSV** — the Create form
+takes `settings_file` and `_apply_session_tags` applies
+`session_tags[N].tag`. The gap is UI over a path that already works
+end to end.
+
+### Decision
+
+**A tag edit box on the Create page**, reusing the lobby's
+comma-separated `tags` input and `session_tags.set_tags`.
+
+**Exact placement is deferred to rung 1** (author, 2026-09-21), which
+is what the scaffold rung is for — an inert placeholder the shape gets
+iterated on. The author's initial suggestion was *above the User
+interface settings card*; `session_new.html`'s lower half is a
+`.bottom-grid` (Quick Setup left, `#user-interface-settings` right),
+so that reads as the top of the right-hand column. Recorded as a
+starting point, not a decision.
+
+**No new route**, wherever it lands. Create's lower-half inputs already
+associate with the page's Save via the HTML `form=` attribute
+(`form="create-session-form"`), so the tag input posts to
+`POST /sessions` and `create_session` calls `set_tags` after the
+session row exists.
+
+**Session Home is deferred, not rejected** (author, 2026-09-21 —
+"if we want to simplify… leave aside edit session details"). The
+original shape put the same box on both pages. Dropping the second
+half removes the item's only blocking question:
+Session Home's box would sit inside the config card, whose
+`config_editing` is `is_draft or is_validated`
+(`_session_home.py:211-216`), so it would be editable in **2 of 5**
+lifecycle states where the lobby edits tags in **any** state — a
+gate-within-a-gate or a deliberate disagreement between two Save
+routes, and the author's call either way. **Create has no lifecycle
+state, so the question does not arise there.** Recorded in
+`Out of scope` with the constraint, so a later item starts from it
+rather than rediscovering it.
+
+**Rejected: a dedicated tag-editing page or modal** — three write
+surfaces for one attribute is how `lobby-edit` and `/config` came to
+disagree; complete the Save routes rather than add a fourth.
+
+### Semantics
+
+- **No display mode, no lock-on-data.** There is no session row yet,
+  which is why Quick Setup is always unlocked on this page; the tag box
+  is likewise always active. (Session Home would have needed a
+  `data-display-only` rendering beside a `data-edit-only` input for the
+  card-wide `data-config-mode` swap — dropped with it.)
+- **Vocabulary scope.** The lobby computes
+  `vocabulary(db, session_ids)` over the sessions on screen. Create has
+  none, so a `<datalist>` needs the operator's own sessions — a new
+  query shape, not a new service.
+- **Empty input is the normal case**, not a clear: a session created
+  with a blank box simply has no tags. (`set_tags` replaces the set, so
+  blank *does* clear where a set exists — that is the lobby's behavior
+  and is what Session Home would have had to match.)
+- **Audit.** `set_tags` already emits per-tag `session.tag_added` /
+  `session.tag_removed`; no new `EVENT_SCHEMAS` registration.
+- **Ordering against the settings CSV.** Tags need the session row, so
+  `create_session` applies them after `sessions.create_session` **and**
+  after the settings-CSV apply, so a form tag and a
+  `session_tags[N].tag` row do not race. Which wins is a contract the
+  build states rather than discovers.
+
+### Judgment calls — decided
+
+- **Reuse the lobby's comma-separated text input rather than designing
+  a chip editor** (2026-09-21) — it is what ships today and
+  `spec/ui_elements.md` has no chip-input primitive.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| routes writing tags today | **3**, all on the lobby | `grep -rn "session_tags\.\(set_tags\|add_tag\|remove_tag\)" app/web/ --include='*.py'` |
+| templates carrying a tag control | **2** (`sessions_list.html`, `sessions_archived.html`); `base.html` holds the CSS | `grep -rln "tags_by_session\|lobby_tags\|bulk-tags\|name=\"tags\"" app/web/templates/` |
+| tag mentions in `session_new.html` | **0** | `grep -c tag app/web/templates/operator/session_new.html` |
+| service functions needed that do not exist | **0** | `app/services/session_tags.py` — `set_tags` is the whole write path |
+| new routes / new audit event types | **0** / **0** | inputs associate via `form=`; `session.tag_*` already emitted |
+| test files touching tags or the create route | **14** | `grep -rln "session_tags\|bulk-tags\|lobby-edit" tests/` |
+| specs naming session tags | **5** — `sessions_overview` (30), `settings_inventory` (21), `csv_contracts` (28), `roundtrip_coverage` (11), `rrw_functional_spec` | `grep -rc tag spec/*.md` |
+| inline-styled buttons on the page, owed the `.btn` audit | **8** in 198 lines | `grep -c 'style="[^"]*"' app/web/templates/operator/session_new.html` |
+
+`session_detail.html` — 0 tag mentions, 19 inline-styled buttons in 562
+lines — was measured with the rest and is now out of scope; the figures
+stand for whoever picks Session Home up.
+
+### PR ladder
+
+**Scaffold first.** `CLAUDE.md` "Working approach" requires a new card
+to land as its own reviewable slice before any behavior is wired.
+
+1. **The placeholder block** — real copy and layout, **no `form=`
+   association and no route change**. This rung settles the placement:
+   iterate the shape on the inert box and land where it reads best,
+   starting from the author's suggestion above
+   `#user-interface-settings`.
+2. **Wire it** — `form="create-session-form"`, `set_tags` in
+   `create_session`, the vocabulary datalist, and the documented
+   ordering against a settings-CSV tag.
+3. **The button audit** — `session_new.html`'s 8 inline-styled buttons
+   to the `.btn` roles, separately so a role judgement never rides with
+   a behavior change.
+4. **Specs and the close.**
+
+### Definition of done
+
+- A tag box renders on the Create page, at the position rung 1
+  settled, and that position is recorded in `Status`.
+- No new route: it posts via `form=` to `POST /sessions`, and
+  `grep -rn "session_tags\." app/web/` shows no second write path.
+- Asserted: a tag typed at Create survives to the lobby; a form tag and
+  a settings-CSV tag on one submit resolve by the documented rule.
+- `session_new.html` carries no inline-styled buttons.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- **Where exactly on the page?** Decided at rung 1 on the placeholder,
+  from the author's starting suggestion. Not blocking: rung 1 exists to
+  answer it.
+- **Datalist scope: the operator's sessions, or none at all?** Create
+  has no sessions on screen, so the first needs a new query shape and
+  the second ships a plain text box. Author's call, defaulting to the
+  first. Not blocking — rung 1 is inert and rung 2 can land either.
+
+### Out of scope
+
+- **Session Home's config card.** Deferred with the constraint
+  recorded in `Decision`: its box would inherit `config_editing`'s
+  `is_draft or is_validated` gate where the lobby edits tags in any
+  state, which is a design question and the author's call. Whoever
+  picks it up starts there.
+- Any change to the lobby's own tag surfaces. They work.
+- A chip-style tag editor, tag rename, or tag deletion across sessions.
+- Tag-based filtering anywhere it does not already exist.
+- `spec/csv_contracts.md`'s `session_tags[N].tag` grammar. Unchanged.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the Create page's shape gains the tag box,
+  at the position rung 1 settles (Item 9).
+- `spec/sessions_overview.md` — note that tags are no longer
+  lobby-only, and where else they are set (Item 9).
+- `spec/settings_inventory.md` — update the session-tags row's "set
+  where" to name Create alongside the lobby (Item 9).
+- `spec/ui_elements.md` — button-audit outcome for `session_new.html`,
+  if rung 3 moves any role <!-- cites: spec/ui_elements.md --> (Item 9).
+- `docs/status.md` — row when the item lands (Item 9).
+
+---
+
 ## Later candidates
 
 Moved to `guide/app_responsiveness.md` 2026-09-21, so this plan carries
