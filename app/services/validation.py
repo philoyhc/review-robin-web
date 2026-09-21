@@ -834,6 +834,13 @@ def _check_instruments_zero_included(
     """
     from app.services import assignments as assignments_service
 
+    # Only one check needs the generated counts, so they stay a live
+    # read here rather than joining `ValidationInputs`. Note the
+    # asymmetry that creates: `generated` is read now, `included` was
+    # snapshotted at the top of the run. They agree because a report
+    # run never touches `assignments` rows — the one write in it is
+    # `staleness_by_instrument` caching its verdict onto instruments —
+    # and a check that broke that would have to say so here.
     generated_by_instrument = assignments_service.existing_count_per_instrument(
         db, review_session.id
     )
