@@ -575,6 +575,13 @@ async def _run_quick_setup_relationships(
         rows=result.rows,
         filename=file.filename or "",
         correlation_id=request_correlation_id(),
+        # Quick Setup is a thin shell over the per-entity primitives
+        # (`spec/csv_contracts.md`), so the header's friendly labels
+        # reconcile here exactly as they do on the Relationships card
+        # — upsert present, clear absent. Omitting this dropped them
+        # silently, and 19C Item 1 retired `field_labels.*` from the
+        # settings bundle, so the roster header is the only way back.
+        field_labels_captured=result.field_labels,
     )
     return None
 
@@ -732,6 +739,10 @@ async def _run_quick_setup_import(
         rows=result.rows,
         filename=file.filename or "",
         correlation_id=request_correlation_id(),
+        # Same reason as the relationships helper above: this is the
+        # only save site behind five upload routes, and the labels it
+        # drops cannot be recovered from anywhere else.
+        field_labels_captured=result.field_labels,
     )
     return None
 

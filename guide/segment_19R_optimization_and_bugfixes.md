@@ -659,6 +659,33 @@ that.
 
 No schema change, no migration, no template change.
 
+### Status
+
+**Rung 1 landed 2026-09-21** — both arguments at the two helpers, plus
+`tests/integration/test_upload_paths_keep_friendly_labels.py`: a matrix
+over every upload entry point, seven parametrized cases plus the
+create-session form (which the matrix cannot reach, since the labels
+ride in on the POST that *creates* the session) and the bare-header
+clearing case. Measured against the pre-fix tree, **six failed and
+4,602 passed** — every failure in the new file, none anywhere else in
+the suite. That silence is the defect: nothing noticed.
+
+**The blast radius was one out, and the definition of done inherited
+it.** It recorded three correct call sites where
+`grep -rn "field_labels_captured" app/web/routes_operator/` gives
+**two** (`_shared.py`, `_setup_relationships.py`); the third is in
+`app/services/session_rehydrate.py`, outside the command's path. The
+done line now reads four, not two. Counted again with the command
+rather than adjusted to fit.
+
+**One trip the test file now marks for the next reader.** The first
+matrix run failed the *card* relationships case too, which would have
+made the Opportunity table wrong about a path the item does not touch.
+It was my assertion: `field_labels._VALID_SOURCE_FIELDS` keys
+pair-context slots `"1"`, not `"tag_1"`, and resolving the wrong one
+returns the `"pair_context:tag_1"` fallback — which reads exactly like
+a dropped label. The card was never broken.
+
 ### PR ladder
 
 1. **The fix and the test that pins it.** Both arguments, plus a test
@@ -672,8 +699,8 @@ No schema change, no migration, no template change.
 ### Definition of done
 
 - Every upload entry point in the rung-1 test keeps the label.
-- `grep -rn "field_labels_captured" app/web/routes_operator/` shows five
-  call sites, not three.
+- `grep -rn "field_labels_captured" app/web/routes_operator/` shows four
+  call sites, not two.
 - A bare-header quick-setup upload clears an existing override, matching
   the card.
 - `## Doc impact` section present and current
