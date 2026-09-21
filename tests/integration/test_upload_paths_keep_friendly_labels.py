@@ -20,6 +20,8 @@ argument shows up here as a failure, not as a report six months later.
 
 from __future__ import annotations
 
+import typing
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -385,6 +387,29 @@ EXEMPT_ENDPOINTS: dict[str, str] = {
 CREATE_SESSION_ENDPOINT = "app.web.routes_operator._quick_setup.create_session"
 
 
+def _upload_annotation_predicate():
+    """Does this resolved annotation carry an ``UploadFile``?
+
+    Recursive, because the shapes nest. ``list[UploadFile] | None``
+    expands to ``list[UploadFile]`` and ``NoneType``; neither *is*
+    ``UploadFile``, so one level of ``get_args`` misses an ordinary
+    optional-batch signature while the gate's non-vacuity assertion
+    still passes — a blind spot that reads like coverage, which is the
+    thing this gate exists to stop (Codex, rung 2).
+    """
+    from fastapi import UploadFile
+
+    def check(annotation: object) -> bool:
+        if isinstance(annotation, type) and issubclass(annotation, UploadFile):
+            return True
+        return any(
+            arg is not None and check(arg)
+            for arg in typing.get_args(annotation)
+        )
+
+    return check
+
+
 def _upload_endpoints() -> dict[str, list[str]]:
     """Every endpoint the app exposes that accepts an upload, read off
     the router rather than off a list someone maintains.
@@ -422,8 +447,6 @@ def _upload_endpoints() -> dict[str, list[str]]:
     upload endpoints and passes while asserting nothing. The first
     assertion in the test exists for exactly that.
     """
-    from fastapi import UploadFile
-
     from app.main import app
 
     def walk(routes):
@@ -439,13 +462,6 @@ def _upload_endpoints() -> dict[str, list[str]]:
             if hasattr(route, "endpoint"):
                 yield route
 
-    def _is_upload(annotation: object) -> bool:
-        candidates = (annotation, *getattr(annotation, "__args__", ()))
-        return any(
-            isinstance(c, type) and issubclass(c, UploadFile)
-            for c in candidates
-        )
-
     found: dict[str, list[str]] = {}
     for route in walk(app.routes):
         if "POST" not in (getattr(route, "methods", set()) or set()):
@@ -456,7 +472,7 @@ def _upload_endpoints() -> dict[str, list[str]]:
         uploads = [
             param.name
             for param in dependant.body_params
-            if _is_upload(
+            if _upload_annotation_predicate()(
                 getattr(getattr(param, "field_info", None), "annotation", None)
             )
         ]
@@ -512,3 +528,42 @@ def test_every_upload_endpoint_either_reconciles_labels_or_says_why() -> None:
         f"{sorted(stale)}. A renamed or deleted route leaves this file "
         "asserting something about code that is gone."
     )
+
+
+def test_the_gate_recognises_every_shape_an_upload_parameter_takes() -> None:
+    """Pin the recogniser itself, not just its result today.
+
+    Three times now the gate's *own* ability to see an upload has been
+    wrong — it matched annotation source text (so an aliased import or
+    a subclass was invisible), then it expanded one level of
+    ``get_args`` (so ``list[UploadFile] | None`` was). Each time the
+    twelve endpoints that exist happened not to use the missed shape,
+    so every other assertion in this file still passed. A blind gate
+    reads exactly like a green one.
+
+    So the shapes are asserted directly. A future simplification of
+    ``_is_upload`` that drops the recursion fails here rather than
+    quietly narrowing what the gate can see.
+    """
+    import typing as _typing
+
+    from fastapi import UploadFile as _UploadFile
+
+    class _Subclass(_UploadFile):
+        pass
+
+    check = _upload_annotation_predicate()
+
+    for annotation in (
+        _UploadFile,
+        _Subclass,
+        list[_UploadFile],
+        _UploadFile | None,
+        list[_UploadFile] | None,
+        _typing.Optional[list[_UploadFile]],
+        dict[str, list[_UploadFile]],
+    ):
+        assert check(annotation), f"{annotation!r} is an upload and was missed"
+
+    for annotation in (str, int, list[str], str | None, None):
+        assert not check(annotation), f"{annotation!r} is not an upload"

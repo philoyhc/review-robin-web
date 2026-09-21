@@ -705,6 +705,20 @@ a rejected upload also satisfies (the error path is a 303 too), a
 its three roster slots, and a `hash()`-derived session code that
 differs per run. All fixed.
 
+**The gate's own eyesight was wrong three times, so it is now pinned
+directly.** Source-text matching missed an aliased import or a
+subclass; one level of `get_args` missed `list[UploadFile] | None`
+(Codex, rung 2). Each time the twelve endpoints that exist happened not
+to use the missed shape, so the gate stayed green while seeing less —
+which is the failure it exists to prevent, wearing its own face.
+`_upload_annotation_predicate` is recursive now, and
+`test_the_gate_recognises_every_shape_an_upload_parameter_takes`
+asserts seven upload shapes and five non-uploads so a later
+simplification fails loudly. Demonstrated rather than argued: with the
+one-level check **and** a real `list[UploadFile] | None` route
+injected, the gate passes and the route is invisible; with the
+recursion, the same route trips `unclassified`.
+
 **Two findings recorded rather than fixed.** The gate asks "does this
 POST take an upload", not "does this save a roster", so
 `_rehydrate.rehydrate_commit` — which saves all three rosters from a
