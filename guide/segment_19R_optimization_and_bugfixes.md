@@ -459,6 +459,35 @@ own numbers do not support it.
 | test files naming either, or `reviewer_session_state` | 7 | `grep -rln "per_reviewer_progress\|per_reviewee_coverage\|reviewer_session_state" tests/ --include=*.py` |
 | non-request caller | 1 | `app/services/scheduled_events/_reminders.py` |
 
+### Status
+
+**Rung 1 landed 2026-09-21** — `tests/integration/test_monitoring_rollup_parity.py`,
+12 cases, no app change. The harness is two implementation lists, one
+per rollup; rungs 2 and 3 append the SQL form and every case becomes a
+parity test with no new test code.
+
+**What the oracle pins that a naive `GROUP BY` would get wrong**: the
+dedupe key is `(instrument, group_key)`, not the group alone;
+`last_response_at` is a max over two nestings, rows-of-an-assignment
+then assignments-of-a-reviewee; the reviewee side requires
+`submitted_at`; the invitation join carries `last_reminder_at`, without
+which `summary_counts` undercounts and both reminder loops skip everyone
+(Codex P2); and both `ORDER BY`s matter, because the operations routes
+paginate whatever order they are handed (Codex P2). Thirteen mutations,
+all caught — four of them only after the fixture grew to carry the case,
+which is what the fixture's own comments record.
+
+**Two asymmetries between the rollups are now pinned**, neither
+obviously intended, both shipped: an inactive reviewer is dropped by the
+reviewer rollup and still counted by the reviewee one, and a draft is a
+completion to the reviewer rollup but not to the reviewee one. If either
+should change, that is its own item.
+
+**Expectations are hand-derived, not captured.** Two disagreed with the
+code on the first pass and the code was right both times: SQLite drops a
+`DateTime(timezone=True)` offset, so the oracle compares instants in
+UTC — which would otherwise have bitten rung 2 from the Postgres side.
+
 ### PR ladder
 
 1. **The parity harness.** A fixture with a group-scoped instrument and a
