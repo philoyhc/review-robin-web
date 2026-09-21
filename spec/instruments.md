@@ -1157,8 +1157,16 @@ of rules against instruments. Active ones that surface here
 - **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
-- **`instruments.stale_generated`** — raises no findings; it is
-  inert by design and `spec/validate_page.md` §3.2 carries why.
+- **`instruments.stale_generated`** (warning) — the instrument's
+  materialised rows have fallen out of step with what the engine
+  would produce now: the pinned rule changed, or the rosters or
+  relationships moved after Generate. The verdict is the engine's
+  own reconcile diff — since 19R Item 2 it may be served from a
+  stamped cache rather than recomputed, and it agrees with what
+  Generate would do under the conditions `spec/assignments.md`
+  § *Staleness* states. An instrument that has never generated is
+  **not** flagged. `spec/validate_page.md` §3.2 carries the full
+  rule, including why.
 - **`instruments.zero_included`** (warning) — every assignment row
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.

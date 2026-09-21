@@ -934,6 +934,125 @@ in `guide/findings_2026-09-21_validate_rules.md`.
 
 ---
 
+## Item 6 — two rule-registry documents that stopped matching the registry
+
+### Opportunity
+
+`guide/findings_2026-09-21_validate_rules.md`, opened by the
+`spec-writer` pass at Item 5's close. Two documents describe the
+validation rule registry and neither matches it.
+
+- `spec/validate_page.md` §3.2 lists `reviewees.unreachable_for_results`
+  22nd of 22; `REGISTERED_RULES` has it 7th. The other 21 rows are in
+  registry order, so this is an append where the code inserted.
+  Registration order **is** a contract: §2.4 derives source order from
+  it and `tests/integration/test_validation_issue_parity.py`'s golden
+  is keyed on it, so a reader using the table to predict issue order
+  gets it wrong. Predates 19R; the rule landed in W8.
+- `spec/instruments.md` says `instruments.stale_generated` "raises no
+  findings; it is inert by design". That is `instruments.no_rule_pinned`,
+  described correctly in the very next bullet. The staleness check has
+  been live since 19N — its own docstring narrates the Wave 5 PR 5.1 →
+  19N window when it was not, which is the state this prose still
+  describes as current.
+
+### Decision
+
+Fix both documents; change no code and add no gate.
+
+*Alternative rejected* for the first: declare in §3.2 that the table
+is not declaration-order. That would document a falsehood about the
+other 21 rows, which are in registry order exactly.
+
+*Alternative noted, not taken*: a test deriving §3.2's key column from
+`REGISTERED_RULES`, which is the constant-derived shape
+`tests/unit/test_doc_conventions.py` already uses and would have
+caught this at W8. Left out because the author asked for the two
+fixes; it remains available and is recorded here so the option is not
+lost with the findings file.
+
+### Semantics
+
+- **No behavior changes and no code changes.** Both edits are prose
+  about code that is already correct — in each case the spec was
+  stale, not the implementation.
+- **The `stale_generated` description stays conditional.** 19R Item 2
+  requalified the "cannot disagree with Generate" claim as holding
+  under the cache's stamp conditions; the replacement bullet says so
+  and points at `spec/assignments.md` § *Staleness* rather than
+  restoring the flat claim.
+
+### Judgment calls — decided
+
+- **One item rather than a plan-free PR** (2026-09-21, author's
+  ruling): both edits touch live spec contracts, so the close's
+  machinery — `close_check`, `spec-writer`, a `docs/status.md` row —
+  is worth the overhead.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| table rows vs registry | 22 vs 22, one misplaced | `diff <(grep -n 'key="' app/services/validation.py \| sed 's/.*key="\([^"]*\)".*/\1/') <(table key column)` |
+| other prose naming the rule | 1 file | `grep -rln "stale_generated" spec/ docs/ guide/` |
+
+No code, no schema, no migration, no template.
+
+### Status
+
+**Landed as one slice, as planned.** The only divergence was caught by
+re-reading rather than by a check: the first draft of the
+`stale_generated` bullet restored the flat "cannot disagree with what
+Generate would do" claim that **19R Item 2 had deliberately made
+conditional** on the cache stamp. Requalified before commit, pointing
+at `spec/assignments.md` § *Staleness* — a spec fix that quietly undoes
+an earlier spec fix is the failure mode a close is least likely to
+notice.
+
+### PR ladder
+
+1. **Both edits, and the close.** One slice: the findings file names
+   exactly what to change, and neither edit can break the other.
+
+### Definition of done
+
+- §3.2's key column equals `[r.key for r in REGISTERED_RULES]`, in
+  order, verified by diffing the two lists.
+- `spec/instruments.md` describes `stale_generated` as the live check
+  it is, without restoring the unconditional "cannot disagree" claim.
+- `guide/findings_2026-09-21_validate_rules.md` retired to
+  `guide/archive/` with its rows marked actioned, and both README
+  index rows updated.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None. Both fixes were adjudicated by the author before the item
+  opened.
+
+### Out of scope
+
+- The §3.2 order gate — see `Decision`.
+- Any behavior change to either rule. Both are correct as implemented.
+
+### Doc impact
+
+- `spec/validate_page.md` — move §3.2's
+  `reviewees.unreachable_for_results` row to registry position 7,
+  after `reviewees.duplicate_id` (Item 6).
+- `spec/instruments.md` — replace the `instruments.stale_generated`
+  bullet, which describes `instruments.no_rule_pinned`'s inertness,
+  with the live check's behavior (Item 6).
+- `guide/README.md` — drop the retired findings row (Item 6).
+- `guide/archive/README.md` — add the retired findings row (Item 6).
+- `docs/status.md` — row when the item lands (Item 6).
+
+---
+
 ## Later candidates
 
 Moved to `guide/app_responsiveness.md` 2026-09-21, so this plan carries
