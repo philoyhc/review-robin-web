@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, case, distinct, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
@@ -248,6 +248,159 @@ def per_reviewee_coverage(
     db: Session, review_session: ReviewSession
 ) -> list[RevieweeCoverage]:
     """Per-reviewee coverage rows for the Responses page.
+
+    **One aggregate query** (19R Item 3 rung 2), in place of loading
+    every ``Assignment`` and every ``Response`` in the session as ORM
+    objects and counting them in Python — which at a 1,000 x 1,000
+    roster meant 408,027 instances for one render
+    (``guide/app_responsiveness.md``).
+
+    Two levels of grouping, because "complete" is a property of an
+    assignment and the row is a property of a reviewee:
+
+    1. **Per assignment** — how many required fields its instrument has,
+       how many of those carry a non-empty *and submitted* answer, how
+       many response rows exist at all, and the latest ``submitted_at``
+       among them.
+    2. **Per reviewee** — how many assignments, how many of them came
+       out complete, and the latest stamp across all of them.
+
+    ``uq_response_assignment_field`` is what lets step 1 ask "does a
+    satisfying row exist" rather than "is the *last* row satisfying":
+    there is at most one row per ``(assignment, response_field)``, so
+    the two questions cannot differ.
+
+    Only ``_classify_coverage`` stays in Python, once per reviewee —
+    bounded by the roster, not by the assignment count.
+
+    The pre-rewrite implementation is kept as
+    :func:`_per_reviewee_coverage_python`, which the parity test runs
+    beside this one (``tests/integration/test_monitoring_rollup_parity.py``).
+    """
+    sid = review_session.id
+
+    # Required-field count per instrument. Its own aggregate rather
+    # than a correlated subquery: there are a handful of instruments
+    # per session, and an instrument with no required fields must come
+    # out as 0 rather than absent — hence the ``coalesce`` below.
+    required_per_instrument = (
+        select(
+            InstrumentResponseField.instrument_id.label("instrument_id"),
+            func.count(InstrumentResponseField.id).label("required_total"),
+        )
+        .where(InstrumentResponseField.required.is_(True))
+        .group_by(InstrumentResponseField.instrument_id)
+        .subquery()
+    )
+
+    #: A response that satisfies its required field: present, non-empty,
+    #: and submitted. `CASE` rather than `FILTER` so the same SQL runs
+    #: on SQLite and Postgres alike.
+    satisfied_field = case(
+        (
+            and_(
+                InstrumentResponseField.required.is_(True),
+                Response.value.is_not(None),
+                Response.value != "",
+                Response.submitted_at.is_not(None),
+            ),
+            Response.response_field_id,
+        ),
+        else_=None,
+    )
+
+    per_assignment = (
+        select(
+            Assignment.reviewee_id.label("reviewee_id"),
+            func.count(Response.id).label("row_count"),
+            func.coalesce(
+                required_per_instrument.c.required_total, 0
+            ).label("required_total"),
+            func.count(distinct(satisfied_field)).label("satisfied"),
+            func.max(Response.submitted_at).label("last_at"),
+        )
+        .select_from(Assignment)
+        .outerjoin(Response, Response.assignment_id == Assignment.id)
+        .outerjoin(
+            InstrumentResponseField,
+            InstrumentResponseField.id == Response.response_field_id,
+        )
+        .outerjoin(
+            required_per_instrument,
+            required_per_instrument.c.instrument_id
+            == Assignment.instrument_id,
+        )
+        .where(
+            Assignment.session_id == sid,
+            Assignment.include.is_(True),
+        )
+        .group_by(
+            Assignment.id,
+            Assignment.reviewee_id,
+            required_per_instrument.c.required_total,
+        )
+        .subquery()
+    )
+
+    # "Complete" mirrors the reviewer-side definition: at least one row
+    # exists, and every required field is satisfied. An instrument with
+    # no required fields is complete on the strength of any row at all.
+    is_complete = and_(
+        per_assignment.c.row_count > 0,
+        or_(
+            per_assignment.c.required_total == 0,
+            per_assignment.c.satisfied == per_assignment.c.required_total,
+        ),
+    )
+
+    rollup = (
+        select(
+            per_assignment.c.reviewee_id.label("reviewee_id"),
+            func.count().label("reviewer_count"),
+            func.sum(case((is_complete, 1), else_=0)).label(
+                "completed_count"
+            ),
+            func.max(per_assignment.c.last_at).label("last_response_at"),
+        )
+        .group_by(per_assignment.c.reviewee_id)
+        .subquery()
+    )
+
+    rows = db.execute(
+        select(
+            Reviewee,
+            rollup.c.reviewer_count,
+            rollup.c.completed_count,
+            rollup.c.last_response_at,
+        )
+        .join(rollup, rollup.c.reviewee_id == Reviewee.id)
+        .order_by(Reviewee.email_or_identifier)
+    ).all()
+
+    return [
+        RevieweeCoverage(
+            reviewee=reviewee,
+            reviewer_count=int(reviewer_count),
+            completed_count=int(completed_count),
+            pill_state=_classify_coverage(
+                int(completed_count), int(reviewer_count)
+            ),
+            last_response_at=last_response_at,
+        )
+        for reviewee, reviewer_count, completed_count, last_response_at in rows
+    ]
+
+
+def _per_reviewee_coverage_python(
+    db: Session, review_session: ReviewSession
+) -> list[RevieweeCoverage]:
+    """The pre-rewrite implementation, kept as the parity oracle.
+
+    19R Item 3 rung 2 replaced :func:`per_reviewee_coverage` with an
+    aggregate query. This body stays in the tree, unused by the app,
+    until the item closes — it is the thing the new form is checked
+    against in ``tests/integration/test_monitoring_rollup_parity.py``,
+    and a rewrite with no oracle is a rewrite nobody can check.
 
     Joins ``reviewees ⨯ assignments ⨯ responses ⨯ instruments``;
     classifies each reviewee per ``AT_RISK_THRESHOLDS``."""

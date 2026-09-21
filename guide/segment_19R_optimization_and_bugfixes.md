@@ -466,6 +466,32 @@ own numbers do not support it.
 per rollup; rungs 2 and 3 append the SQL form and every case becomes a
 parity test with no new test code.
 
+**Rung 2 landed 2026-09-21** — `per_reviewee_coverage` as **one
+aggregate query**, two levels of grouping: per assignment (required
+fields, satisfied fields, row count, latest stamp), then per reviewee.
+`uq_response_assignment_field` is what lets the inner level ask *does a
+satisfying row exist* rather than *is the last row satisfying* — with at
+most one row per `(assignment, field)` the two cannot differ. Only
+`_classify_coverage` stays in Python, once per reviewee. The old body is
+kept as `_per_reviewee_coverage_python`, registered beside the new one,
+so all 16 reviewee cases now run twice.
+
+**Measured** on the 200,000-row fixture: Responses **12.0 s → 8.6 s**
+(four runs; Invitations unchanged at 8.4 s, as it must be — it does not
+call this rollup). The query count barely moves, 2,077 → 2,074, because
+the page still reaches `per_reviewer_progress` through `summary_counts`.
+That is rung 3, and it is now the whole remaining cost on both pages.
+
+**The open question does not arise on this side, and `Semantics` was
+wrong about why.** It says a group-scoped instrument counts once per
+group and calls that "the part that resists a plain `GROUP BY`" — true
+of `per_reviewer_progress`, but `per_reviewee_coverage` has **never**
+deduped groups: it counts assignments. So this rung needed no hybrid and
+the question stays genuinely open for rung 3, where the dedupe actually
+lives. Verified against Postgres locally as well as SQLite; the rung-1
+decision to compare instants rather than datetime objects is what makes
+the same assertions pass on both.
+
 **What the oracle pins that a naive `GROUP BY` would get wrong**: the
 dedupe key is `(instrument, group_key)`, not the group alone;
 `last_response_at` is a max over two nestings, rows-of-an-assignment

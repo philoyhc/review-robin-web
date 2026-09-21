@@ -51,7 +51,11 @@ REVIEWER_IMPLEMENTATIONS: list[tuple[str, Callable]] = [
     ("python", monitoring.per_reviewer_progress),
 ]
 REVIEWEE_IMPLEMENTATIONS: list[tuple[str, Callable]] = [
-    ("python", monitoring.per_reviewee_coverage),
+    # Rung 2 added the aggregate form. The Python one stays until the
+    # item closes: it is what the new one is checked against, and every
+    # case below now runs twice with no new test code.
+    ("python", monitoring._per_reviewee_coverage_python),
+    ("sql", monitoring.per_reviewee_coverage),
 ]
 
 reviewer_impl = pytest.mark.parametrize(
