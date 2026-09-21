@@ -3207,7 +3207,10 @@ dep chains called out at the bottom of this file.
    **Evidence:** `guide/app_responsiveness.md` — the operator surfaces
    measured on a 1,000 x 1,000 roster, where five of six slow pages are
    slow for one shared reason and SQL is under 9% of any of them.
-   - **Item 1 (R3)** count with `count()` — hours, no design, no schema.
+   - **Item 1 (R3)** count with `count()` — **shipped 2026-09-21**,
+     three rungs, PRs #2515 -> #2516 and the close. Setup reviewers
+     2.4 s -> 277 ms on the 200,000-row fixture; the page is SQL-bound
+     now, and the remaining cost is the counting itself.
    - **Item 2 (R1)** cache the staleness verdict against a content
      stamp — the biggest single win, and a migration.
    - **Item 3 (R2)** roll per-person progress up in SQL rather than over

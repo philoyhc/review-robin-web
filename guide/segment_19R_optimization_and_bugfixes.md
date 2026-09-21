@@ -98,6 +98,62 @@ cheapest change here — hours, no design, no schema.
 
 No schema change, no template change.
 
+### Status
+
+**Closed 2026-09-21. Three rungs exactly as planned** — the five plain
+counters (#2515), the `> 0` caller (#2516), this close.
+
+**The ceiling was accurate.** Setup reviewers on `Bench BENCH1`
+(200,000 assignments), `bench --session 3 --only "Setup:" --runs 3`:
+**2.4 s → 277 ms**, against a projected 0.27 s. Session Home, rung 2's
+surface, on a 10,000-assignment draft: 237 ms → 85 ms, of which Python
+177 ms → 49 ms. The reviewers page is **SQL-bound now** — 236 ms of the
+277 ms across 28 queries — and that is the counting itself, not a
+missing index: one `count(id) WHERE session_id = 3` is a 21 ms parallel
+index scan on `ix_assignments_session_id`. No further move is worth it
+there.
+
+**Three things the plan got wrong**, all found by the cold read:
+
+- Ladder rung 2 says `_quick_setup` "gets an `EXISTS` helper".
+  `session_lifecycle.session_has_responses` already was one; rung 2
+  pointed the caller at it and wrote nothing.
+- `Blast radius` says **6** callers of
+  `responses.session_response_count`; there were **3**. Its
+  `grep -v "…session_lifecycle"` meant to drop the same-named lifecycle
+  helper's call sites, but those lines read
+  `lifecycle.session_response_count(` — the import alias, not the module
+  name — so it filtered nothing and counted the twin's callers as this
+  one's. The collision the judgment call above chose to leave alone
+  defeated the measurement of its own twin.
+- The four new `Model.session_id == session_id` count predicates could
+  have gone through a `session_scoped_count` beside `session_scoped` and
+  `slot_row_count` in `app/services/_queries.py`, which already carry
+  that shape. Copied instead, and not reopened — the helper is worth
+  writing at the site that needs a fifth.
+
+**Reads: one `diff-reviewer`**, at rung 2 over the item's cumulative
+diff (`abd2948f..HEAD`), five findings. The three above are recorded
+rather than fixed; the other two landed in `c6742898` — a claim of
+"eight other gates" that was seven (one grep hit was a docstring saying
+the helper is *distinct*), and a test gap where two of eight
+`count_pairs` parameter shapes asserted `0 == 0` and no search case
+pinned a non-zero result, so a search matching nothing would have
+passed. Codex reported nothing on either rung. *Per the per-item
+cadence in `CLAUDE.md`.*
+
+**Doc impact gained two bullets at the close**, both `guide/`
+housekeeping the plan had not named: `todo_master.md`'s queue entry, and
+`README.md`'s index row for `app_responsiveness.md`, which still called
+it "not planned" and still carried the "under 9% of every page" form
+that the document itself had already been corrected to "any *slow*
+page".
+
+**The mutation gate earned its keep**: three mutants survived rung 1's
+first pass, because dropping `session_id` from a roster counter changes
+nothing when the fixture holds one session. A populated neighbouring
+session in the fixture caught all six.
+
 ### PR ladder
 
 1. **The five plain counters.** `csv_imports` (×2), `relationships`,
@@ -124,8 +180,8 @@ No schema change, no template change.
 ### Open questions
 
 - Does any `existing_count` caller depend on the rows being loaded as a
-  side effect? *Decided at rung 1 by reading the twelve call sites; if
-  one does, it keeps its fetch and gains a comment saying why.*
+  side effect? **No** — all twelve read at rung 1; every one consumes
+  only the integer, so none kept its fetch.
 
 ### Out of scope
 
@@ -135,6 +191,8 @@ No schema change, no template change.
 ### Doc impact
 
 - `docs/status.md` — row when the item lands (Item 1).
+- `guide/todo_master.md` — mark Item 1 shipped in the 19R queue entry (Item 1; added at the close).
+- `guide/README.md` — the `app_responsiveness.md` index row still read "Investigation only — not planned" and carried an over-broad "under 9% of every page"; both corrected (Item 1; added at the close).
 
 ---
 
