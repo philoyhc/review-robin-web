@@ -32,6 +32,7 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, session_lifecycle as lifecycle
 
+from . import _reconcile_cache
 from ._coverage import (
     get_or_create_default_instrument,
     list_reviewees,
@@ -479,7 +480,7 @@ def _materialise_one_instrument(
     mode: AssignmentMode,
     override_exclude_self_reviews: bool | None,
     correlation_id: str,
-) -> tuple[int, int]:
+) -> tuple[int, int, InstrumentReconcileState]:
     """Materialise ``Assignment`` rows for a single instrument.
 
     Runs the engine against the instrument's pinned ``SessionRuleSet``,
@@ -492,7 +493,12 @@ def _materialise_one_instrument(
 
     Returns ``(deleted, new)`` for this instrument — the ``replaced``
     slot of the ``replace_assignments`` 2-tuple now carries the count
-    of pairs removed by the reconcile.
+    of pairs removed by the reconcile — plus the
+    :class:`InstrumentReconcileState` the instrument is in *after* the
+    write, which the caller stamps into the reconcile cache (19R Item
+    2). It comes from here because this is where the diff already is:
+    recomputing it would mean a second engine walk over the rows this
+    one just wrote.
     """
     diff = _diff_one_instrument(
         db,
@@ -583,7 +589,23 @@ def _materialise_one_instrument(
         refs=refs,
         correlation_id=correlation_id,
     )
-    return len(diff.to_delete), len(diff.to_insert)
+    return (
+        len(diff.to_delete),
+        len(diff.to_insert),
+        InstrumentReconcileState(
+            # Not stale, and not derived from the pre-write diff:
+            # ``to_insert`` and ``to_delete`` have just been applied,
+            # so a fresh diff against these rows would find nothing to
+            # do. The engine is deterministic for a given seed
+            # (``rules/engine.py`` module docstring), which is what
+            # makes "would find nothing" a fact rather than a hope.
+            stale=False,
+            eligible=diff.pairs_count,
+            self_reviews_excluded=diff.excluded_counts.get(
+                "self_review", 0
+            ),
+        ),
+    )
 
 
 @dataclass
@@ -705,6 +727,78 @@ class InstrumentReconcileState:
     nothing to exclude* (19O Item 1; Codex P2 on #2386)."""
 
 
+def _cached_state(
+    instrument: Instrument, stamp: str
+) -> InstrumentReconcileState | None:
+    """The instrument's cached verdict if it was computed against
+    ``stamp``, else ``None`` — a miss, which the caller answers by
+    running the engine.
+
+    A row whose stamp matches but whose values are not all present is
+    also a miss. That should not happen (the four columns are written
+    together), but a half-written row is the shape that would let a
+    ``NULL`` read as ``eligible = 0``, and the point of the version
+    prefix is the same instinct: prefer recomputing to guessing.
+    """
+    if instrument.cached_reconcile_stamp != stamp:
+        return None
+    if (
+        instrument.cached_reconcile_stale is None
+        or instrument.cached_reconcile_eligible is None
+        or instrument.cached_reconcile_self_reviews_excluded is None
+    ):
+        return None
+    return InstrumentReconcileState(
+        stale=bool(instrument.cached_reconcile_stale),
+        eligible=int(instrument.cached_reconcile_eligible),
+        self_reviews_excluded=int(
+            instrument.cached_reconcile_self_reviews_excluded
+        ),
+    )
+
+
+def _store_state(
+    instrument: Instrument, stamp: str, state: InstrumentReconcileState
+) -> None:
+    """Write the verdict and the stamp it was computed against.
+
+    All four together, so the read above never sees a stamp that
+    matches beside a value that was not computed with it.
+    """
+    instrument.cached_reconcile_stamp = stamp
+    instrument.cached_reconcile_stale = state.stale
+    instrument.cached_reconcile_eligible = state.eligible
+    instrument.cached_reconcile_self_reviews_excluded = (
+        state.self_reviews_excluded
+    )
+
+
+def _stamp_for(
+    instrument: Instrument,
+    *,
+    review_session: ReviewSession,
+    inputs: _ReconcileInputs,
+    rows_by_instrument: dict[int, _reconcile_cache.MaterializedRows],
+    override_exclude_self_reviews: bool | None,
+) -> str:
+    """:func:`_reconcile_cache.reconcile_stamp` with this module's
+    inputs unpacked — the two call sites below would otherwise repeat
+    eight arguments, and a stamp written by one that disagreed with a
+    stamp read by the other would be a cache that never hits."""
+    return _reconcile_cache.reconcile_stamp(
+        review_session=review_session,
+        instrument=instrument,
+        session_rule_set=inputs.rule_set_for(instrument),
+        reviewers=inputs.reviewers,
+        reviewees=inputs.reviewees,
+        pair_context_lookup=inputs.pair_context_lookup,
+        materialized=_reconcile_cache.rows_for(
+            rows_by_instrument, instrument.id
+        ),
+        override_exclude_self_reviews=override_exclude_self_reviews,
+    )
+
+
 def staleness_by_instrument(
     db: Session,
     review_session: ReviewSession,
@@ -743,8 +837,24 @@ def staleness_by_instrument(
     reconcile walk rather than one per instrument.
     """
     inputs = _load_reconcile_inputs(db, review_session, None)
+    rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
+        db, review_session.id
+    )
+
     state: dict[int, InstrumentReconcileState] = {}
+    warmed = False
     for instrument in inputs.targets:
+        stamp = _stamp_for(
+            instrument,
+            review_session=review_session,
+            inputs=inputs,
+            rows_by_instrument=rows_by_instrument,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+        )
+        cached = _cached_state(instrument, stamp)
+        if cached is not None:
+            state[instrument.id] = cached
+            continue
         diff = _diff_one_instrument(
             db,
             review_session=review_session,
@@ -771,7 +881,7 @@ def staleness_by_instrument(
         # than stale. The same sibling rules carry that case, and the
         # alternative — treating "no rows" as stale — is the false
         # positive above.
-        state[instrument.id] = InstrumentReconcileState(
+        computed = InstrumentReconcileState(
             stale=bool(diff.existing_rows)
             and bool(diff.to_insert or diff.to_delete),
             eligible=diff.pairs_count,
@@ -779,6 +889,23 @@ def staleness_by_instrument(
                 "self_review", 0
             ),
         )
+        state[instrument.id] = computed
+        _store_state(instrument, stamp, computed)
+        warmed = True
+    if warmed:
+        # **Flushed, never committed.** This is a render path, and
+        # committing here would commit whatever else the caller has in
+        # flight — which on this path is not hypothetical: the workflow
+        # card runs validation and then, on the ``?validated=1`` entry,
+        # promotes ``draft → validated`` in the same request.
+        # Committing a cache row is not worth reaching into that.
+        #
+        # So the warm rides the caller's own transaction: it persists
+        # if something downstream commits and is dropped if nothing
+        # does, which costs one recompute. The write-through in
+        # :func:`replace_assignments` is what makes the cache durable,
+        # and it commits because writing the rows is its whole job.
+        db.flush()
     return state
 
 
@@ -874,8 +1001,9 @@ def replace_assignments(
 
     total_replaced = 0
     total_new = 0
+    fresh_state: dict[int, InstrumentReconcileState] = {}
     for instrument in inputs.targets:
-        replaced_here, new_here = _materialise_one_instrument(
+        replaced_here, new_here, state_here = _materialise_one_instrument(
             db,
             review_session=review_session,
             user=user,
@@ -890,8 +1018,37 @@ def replace_assignments(
         )
         total_replaced += replaced_here
         total_new += new_here
+        fresh_state[instrument.id] = state_here
 
     review_session.assignment_mode = mode.value
+    db.flush()
+
+    # Stamp the fresh verdict into the reconcile cache (19R Item 2).
+    #
+    # This is the write-through, and it is why the cache can be trusted
+    # at all: the verdict is a *diff against the materialised rows*, so
+    # a Generate changes the answer while every engine input holds
+    # still. Without this, a cached ``stale=True`` would outlive the
+    # regenerate that made it fresh.
+    #
+    # **After the flush**, because the stamp carries the row summary
+    # and the rows were just rewritten — a stamp taken before the
+    # flush would describe the row set this run replaced.
+    rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
+        db, review_session.id
+    )
+    for instrument in inputs.targets:
+        _store_state(
+            instrument,
+            _stamp_for(
+                instrument,
+                review_session=review_session,
+                inputs=inputs,
+                rows_by_instrument=rows_by_instrument,
+                override_exclude_self_reviews=override_exclude_self_reviews,
+            ),
+            fresh_state[instrument.id],
+        )
     db.flush()
     db.commit()
 

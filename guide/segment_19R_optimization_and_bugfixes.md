@@ -304,6 +304,41 @@ row-set summary, and 36 unit tests.
   defaults to `True` — a no-op mutation answering a question it had not
   asked. The helper that applies a mutation now refuses one.
 
+**Rung 3 landed 2026-09-21** — the read-through, the write-through,
+and 12 wiring tests that count engine walks rather than trusting the
+returned value.
+
+- **The read path flushes and never commits**, which is a change from
+  the Decision's implied shape. Wiring it showed why: the workflow card
+  runs validation — reaching `staleness_by_instrument` — and then, on
+  the `?validated=1` entry, promotes `draft → validated` in the *same*
+  GET request. `get_db` never commits, so persisting a warm from a
+  render would mean committing, and committing there would commit a
+  half-finished promotion. The warm now rides the caller's transaction:
+  it persists if something downstream commits, and costs one recompute
+  if not. **Durability comes from the write-through**, which commits
+  because writing rows is its job.
+  *Consequence, stated rather than discovered later:* an instrument
+  generated before this deploy stays cold until its next Generate.
+- **A guard that never fired.** The first version wrote the warm only
+  when `db.new or db.dirty or db.deleted` was empty. It always was —
+  autoflush had already emptied it by the time the check ran, two
+  queries in. The test asserting the guard is what caught it, and the
+  fix was to remove the need for a guard rather than to move it.
+- `_materialise_one_instrument` now returns the post-write verdict
+  alongside its counts, so the write-through stamps what the diff
+  already computed instead of walking the engine a second time.
+- **Measured on `Bench BENCH1`** (1,000 x 1,000, 200,000 assignment
+  rows), cold vs warm on this commit: Session Home **11.9 s -> 0.67 s**,
+  Assignments **13.1 s -> 0.67 s**, Validate **14.0 s -> 0.99 s**. The
+  helper itself goes 10.95 s -> 0.056 s and returns the same verdict.
+  Invitations (20.6 s -> 8.4 s) and Responses (24.8 s -> 12.0 s) keep
+  their 2,000-query N+1, which is Item 3.
+- **Open question answered by default**: a miss stays invisible to the
+  operator. Nothing in the build argued for surfacing it, and the bench
+  above is the evidence that hits happen — which is what
+  `deferred_consolidated.md`'s 18J Rec C wanted observability for.
+
 - **Codex P1 upheld: `SessionRuleSet.seed` was missing** from the rule
   digest, and it is the failure the whole design exists to prevent —
   `engine.evaluate` takes it as the `fallback_seed` for a `RANDOM`
