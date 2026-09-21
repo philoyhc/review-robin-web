@@ -576,8 +576,10 @@ materialising any pair. Cross-side `same_as` / `different_from`
 still iterate per pair but over a much smaller surviving set.
 Optionally persist the index on a new `sessions.roster_index_json`
 column populated at import (or lazily on first eval and
-invalidated on roster edit, mirroring the existing
-`cached_eligibility_stamp` pattern).
+invalidated on roster edit, mirroring the
+`instruments.cached_reconcile_*` pattern — 19R Item 2; this
+read `cached_eligibility_stamp`, which Wave 5 PR 5.2 dropped
+with the rest of the library tier).
 
 **Why deferred.** Conditional on Rec B's worst case being
 observed in practice. For the broad-rule cases pilot operators
@@ -588,6 +590,17 @@ under 100ms on 1k × 1k.
 rule (e.g. `reviewer.tag1 = "Lead"` against a roster with only
 a handful of Leads) still runs past ~500ms, or a synthetic
 benchmark shows the worst case is realistic.
+
+**Re-aimed 2026-09-21 (19R Item 2).** The synthetic benchmark
+exists now (`guide/app_responsiveness.md`) and confirms the
+worst case: a *narrower* rule costs **more**, 3.52s against
+2.29s, because the million-pair list is built and sorted
+before any rule is consulted. But 19R Item 2 cached the
+verdict rather than making the walk cheaper, which takes the
+cost off every render. So the trigger is now **the cache
+missing often** — a session under active roster or rule
+editing, where each render recomputes — rather than the walk
+being slow in itself. Rec B stays the prerequisite.
 
 **Wire-up.** Index builder in
 `app/services/rules/engine.py` (or a sibling
@@ -648,8 +661,20 @@ per-card. No schema change.
 
 ---
 
-#### 18J Rec E — Verify Band 1 no-op Save stays cache-warm (~50 LOC)
+#### ~~18J Rec E — Verify Band 1 no-op Save stays cache-warm~~ *(retired 2026-09-21)*
 
+> **Retired: everything it names is gone.** Wave 5 PR 5.1
+> retired the helper `evaluate_session_rule_eligibility` and
+> PR 5.2 dropped the `session_rule_sets` eligibility-cache
+> columns with the rest of the library tier; there is no
+> `app/services/session_library.py`. <!-- path-ref-ok --> The entry survived because
+> nothing re-reads a deferred register against the code —
+> found by 19R Item 2, whose own cache made its `Doc impact`
+> point here. Text kept below, struck, because its *reasoning*
+> is the live part: a cache with no hit/miss signal cannot be
+> confirmed after deploy, and 19R Item 2 answers that with a
+> benchmark rather than a counter.
+>
 > Carved from `guide/archive/new_model_instruments_outstanding.md`
 > 2026-05-26. Tiny safety-net follow-on to Rec A — never
 > blocking, but worth doing once someone is in

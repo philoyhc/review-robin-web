@@ -158,10 +158,13 @@ The **Prepare session** button (`POST
    A per-instrument shape exists separately as
    `staleness_by_instrument`, which returns
    `dict[int, InstrumentReconcileState]`; a per-instrument preview
-   should read that rather than widen this one. Both share
-   `_diff_one_instrument` /
-   `_load_reconcile_inputs` with `replace_assignments`, so the
-   confirmation and the run cannot disagree about the diff.
+   should read that rather than widen this one. `reconcile_impact`
+   shares `_diff_one_instrument` / `_load_reconcile_inputs` with
+   `replace_assignments`, so the confirmation and the run cannot
+   disagree about the diff. `staleness_by_instrument` no longer shares
+   the call unconditionally — it may serve a cached verdict — and
+   agrees instead because its stamp covers every input the diff reads
+   (`spec/assignments.md` § *Staleness*).
 3. Runs straight through when `responses_deleted == 0`.
 4. 303s to the host page when `responses_deleted > 0`, where the
    Workflow card renders the `prepare_confirm` banner with both counts
@@ -173,8 +176,19 @@ The **Prepare session** button (`POST
    `acknowledge_response_loss=true`; there is no skip-Generate choice,
    because reconcile does not destroy unchanged data.
 
-The engine evaluation is in-memory and cheap, so a dry-run plus a real
-run on one click is acceptable.
+The engine evaluation is in-memory, and it is **not** cheap at roster
+scale: one walk is seconds per instrument on a 1,000 × 1,000 roster, and
+this path pays for two — the dry-run and the run. That is accepted
+because the dry-run is what makes a destructive write confirmable, and
+the confirmation has to come from the same engine the run will use.
+
+**The staleness cache does not apply here.** It caches
+`staleness_by_instrument`'s per-instrument verdict against a content
+stamp (`spec/assignments.md` § *Staleness*); `reconcile_impact` asks a
+different question — the aggregate cost of a run — on a confirmation
+path rather than a render, and always walks the engine. Generate
+invalidates the cached verdict by writing the fresh one through, so the
+Prepare path leaves no stale badge behind it.
 
 ## Source-of-truth pointers
 

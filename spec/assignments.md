@@ -1079,6 +1079,30 @@ and the Generate button (or Prepare session, which runs Generate
 transitively) is the only path. **Staleness is a prompt, never a
 blocker:** it is a warning, so it does not gate activation.
 
+**The verdict is cached against its inputs.** Answering it runs the
+engine once per instrument, which costs seconds per instrument at roster
+scale, so the verdict — together with the `eligible` and
+`self_reviews_excluded` counts it carries, both of which this page
+renders — persists on `instruments.cached_reconcile_*` against a content
+stamp. The stamp covers **everything the verdict is derived from**: both
+rosters, the relationships rows behind `pair_context`, the pinned rule,
+the instrument's `rule_set_id` and `group_kind`, the session's
+self-review setting, and a summary of the instrument's own `Assignment`
+rows. That last one is not an engine input, and it is in the stamp
+because the verdict is a *diff against the materialised rows*: Generate
+changes the answer while every rule and roster holds still. A mismatch
+on any of them recomputes.
+
+**Generate writes the fresh verdict through**, having just computed the
+diff — without that, a cached `stale` would outlive the regeneration
+that cleared it. A render that recomputes writes its result into the
+caller's transaction without committing, so the durable warming is
+Generate's.
+
+**A miss is invisible.** Nothing on any surface distinguishes a served
+verdict from a recomputed one; the operator sees the same answer either
+way, which is the point.
+
 ### `reconcile_impact` dry-run
 
 Used by the **Prepare session** button to show the
@@ -1086,8 +1110,11 @@ Used by the **Prepare session** button to show the
 Returns the `new` / `deleted` / `kept` / `responses_deleted` counts
 a real run would cause, **aggregated across the session** — the banner
 asks one question and needs one answer. A per-instrument preview reads
-`staleness_by_instrument` instead, which is that shape; the two share
-the engine's diff, so they cannot disagree.
+`staleness_by_instrument` instead, which is that shape. The two agree,
+but no longer because they share a call: `reconcile_impact` always walks
+the engine, while `staleness_by_instrument` may serve a cached verdict.
+They agree because the cache's stamp covers every input the diff reads
+— see **Staleness** above.
 The Workflow card renders `responses_deleted` and `deleted_pairs`
 from it and gates the re-POST on
 `acknowledge_response_loss=true`.
