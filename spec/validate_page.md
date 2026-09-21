@@ -223,7 +223,8 @@ class ValidationRule:
     fix_url: Callable[[ReviewSession], str]
                         # Builds the absolute URL to the page that fixes it.
     fix_page_label: str # Button copy, e.g. "Edit reviewers".
-    check: Callable[[Session, ReviewSession], Iterable[ValidationIssue]]
+    check: Callable[[Session, ReviewSession, ValidationInputs],
+                    Iterable[ValidationIssue]]
                         # Yields the actual diagnostics.
 ```
 
@@ -232,6 +233,21 @@ orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`, and
 `why` onto each one. Per-issue `fix_anchor` is set inside the
 `check` (e.g. the duplicate-email rule sets the anchor to the
 first duplicate row's `#reviewer-row-{id}`).
+
+**`ValidationInputs` is the third argument, and a check reads what
+it needs from there rather than querying for it** (19R Item 5). It
+carries what more than one check loads — the instrument list, the
+three rosters, the per-instrument response-field /
+visible-response-field / display-field presence, and the included
+counts per instrument — plus `active_reviewees`, the roster filtered
+in Python. Twenty-two checks each deciding independently what "the
+session's instruments" means is how two of them come to disagree
+after someone edits one; one load per run is what stops that. A load
+only one check makes stays in that check.
+
+It is built **once per report run and never cached** — a check must
+not see a roster older than the request that asked. `db` stays in
+the signature for the loads a single rule still owns.
 
 ### 3.2 The registered rules
 
@@ -342,10 +358,25 @@ Runs every registered rule against the session. Returns
 `list[ValidationIssue]` in registry order (which becomes the
 canonical issue order for grouping + display).
 
-Each rule's `check(db, session)` yields raw issues; the
-orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`,
-and `why` from the rule metadata, preserving any per-issue
-`fix_anchor` the check set itself.
+The orchestrator builds one `ValidationInputs` (§3.1) before the
+loop and hands it to every rule, so the inputs more than one check
+needs are read once per run. Each rule's
+`check(db, session, inputs)` yields raw issues; the orchestrator
+stamps `rule_key`, `fix_url`, `fix_page_label`, and `why` from the
+rule metadata, preserving any per-issue `fix_anchor` the check set
+itself.
+
+**The report never issues one of its own queries twice**, and
+`tests/integration/test_readiness_report_cost.py` enforces it. The
+one exception is the reload `assignments.staleness_by_instrument`
+performs inside its own engine, pinned there by a second test.
+
+**The Validate page builds the report once.** The route runs the
+orchestrator for its own issue table and passes the result to
+`views.build_workflow_card_context(..., issues=...)` rather than
+letting the card run it again; every other page that hosts the card
+leaves that argument `None` and the builder runs it itself. The
+hand-off is per request, never a cache.
 
 ### 5.2 View adapter — `build_validate_context(...)`
 
@@ -410,8 +441,16 @@ natural fragment-jump handles it.
 
 1. Write a `_check_<source>_<predicate>` function in
    `app/services/validation.py`. Signature:
-   `(db: Session, review_session: ReviewSession) -> Iterable[ValidationIssue]`.
-   Yield zero or more `ValidationIssue` instances.
+   `(db: Session, review_session: ReviewSession, inputs: ValidationInputs)
+   -> Iterable[ValidationIssue]`.
+   Yield zero or more `ValidationIssue` instances. **Read the
+   rosters, the instruments and the per-instrument field presence
+   from `inputs`** (§3.1) — a check that loads one of those itself
+   fails the no-duplicate guard in
+   `tests/integration/test_readiness_report_cost.py`. If the rule
+   needs something no other check needs, load it in the check; if a
+   second check later needs the same thing, move it into
+   `load_validation_inputs`.
 2. If the issue points at a specific row, set
    `issue.fix_anchor = "#<page>-row-{id}"` and make sure the
    target page renders the matching `<tr id="...">`.
