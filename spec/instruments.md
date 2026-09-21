@@ -1158,7 +1158,7 @@ of rules against instruments. Active ones that surface here
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
 - **`instruments.stale_generated`** (warning) — the instrument's
-  materialised rows have fallen out of step with what the engine
+  materialized rows have fallen out of step with what the engine
   would produce now: the pinned rule changed, or the rosters or
   relationships moved after Generate. The verdict is the engine's
   own reconcile diff — since 19R Item 2 it may be served from a
