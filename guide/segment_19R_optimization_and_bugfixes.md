@@ -670,6 +670,22 @@ clearing case. Measured against the pre-fix tree, **six failed and
 4,602 passed** — every failure in the new file, none anywhere else in
 the suite. That silence is the defect: nothing noticed.
 
+**Rung 2 landed 2026-09-21** — the gate, and it is asked of the
+**router** rather than of a list. `_upload_endpoints()` walks
+`app.main.app.routes` for every POST endpoint taking an `UploadFile`
+and finds twelve; each must either be exercised by rung 1's matrix or
+carry a written reason in `EXEMPT_ENDPOINTS`. That is the half rung 1
+could not cover: its matrix enumerates the paths known to exist when it
+was written, which is exactly the blind spot that let five routes drop
+labels at once.
+
+The walk has to descend FastAPI's lazy `_IncludedRouter` wrappers —
+`app.routes` holds seven of them and three real routes, so a top-level
+walk finds **zero** upload endpoints and the gate passes vacuously.
+There is an assertion for that, and it is the one mutation G2 trips.
+Three mutations, each caught by its own assertion: a new unclassified
+route, the blinded walk, and a classified endpoint renamed away.
+
 **The blast radius was one out, and the definition of done inherited
 it.** It recorded three correct call sites where
 `grep -rn "field_labels_captured" app/web/routes_operator/` gives
@@ -712,9 +728,11 @@ a dropped label. The card was never broken.
 ### Open questions
 
 - Is rung 2's gate worth its weight, or does rung 1's test over every
-  entry point cover it? *The author decides after rung 1; the argument
-  for the gate is that this defect is what "a new entry point forgot"
-  looks like.*
+  entry point cover it? *Built at the author's direction. It does not
+  overlap: the matrix asserts behavior on paths someone listed, the
+  gate asserts that the router exposes no upload endpoint nobody
+  listed. Twelve endpoints found, seven covered by the matrix, one by
+  the create-session test, four exempt with reasons.*
 
 ### Out of scope
 
