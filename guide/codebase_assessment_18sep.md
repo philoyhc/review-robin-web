@@ -4,7 +4,7 @@
 assessment's own merge. **The Claude Code lineage**, superseding
 `guide/archive/codebase_assessment_11sep.md`.
 
-**Read `guide/codex_assessment_18sep.md` first.** It is the cold read, taken
+**Read `guide/archive/codex_assessment_18sep.md` first.** It is the cold read, taken
 one commit earlier at `5ee6b6be`, and this assessment does not restate it. I
 built most of the six days it assesses, so under `constitution.md` III I am
 the maker, not a checker: what follows is deliberately the two things a maker
@@ -14,7 +14,7 @@ further than they earned.
 
 ## 1. Codex's numbers, re-measured
 
-Every structural figure in `guide/codex_assessment_18sep.md` reproduces:
+Every structural figure in `guide/archive/codex_assessment_18sep.md` reproduces:
 
 | Claim | Re-measured | Verdict |
 | --- | --- | --- |
