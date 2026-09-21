@@ -838,72 +838,29 @@ No schema change, no migration, no template change.
 
 ### Status
 
-**The cold read: one per item, at rung 3, over `122b0613..HEAD`.**
-Nothing wrong with the refactor — it ran a pre/post differential on six
-shapes the fixtures miss (1,005 instruments, instruments sharing an
-`order`, interleaved rosters, odd `status` values, a sibling session,
-`assignment_mode=None`) and the issue lists were byte-identical, a
-2,511-issue run included. It also re-derived the golden from
-`122b0613` itself, so the capture claim is checked rather than
-believed. What it found was around the change: the attribution in the
-new guard was path-fragile and, off-path, passed **while recognising
-nothing** — it demonstrated this by running the *pre-refactor* module
-and watching the guard go green (CI found the same thing an hour
-earlier from the other end). Fixed by resolving the root from
-`app.__file__`, plus an assertion that the guard saw the report at all.
-Also corrected here: the boundary's two roster repeats come from
-`_coverage.py`, not `_generate.py` — and then, on Codex's reading, the
-boundary itself. Allowing anything under `app/services/assignments/`
-was too wide to enforce the rule it exists for, since a check calling
-`included_count_per_instrument` twice issues both from `_coverage.py`
-and neither test would object. The exception is now the
-`staleness_by_instrument` **call**, matched on the stack; the mutant
-passed 20/20 under the package rule and fails 6/6 under this one. **Two owed at the close**, both
-below in `Doc impact`: `spec/validate_page.md` §5.1 / §7 still
-documents the two-argument `check`, so a rule written to its recipe
-now raises `TypeError` — the bullet predicted no change and the build
-found otherwise, so it becomes the edit; and `guide/app_responsiveness.md`
-Finding 6 still describes the double build and the old counts.
+**Landed as the ladder said; one Definition-of-done line was narrowed,
+deliberately.** "No exact-repeat query in one run" now reads "none of
+the report's own". Three repeats survive, all `staleness_by_instrument`
+re-reading inside its own `_load_reconcile_inputs`; handing that engine
+rosters the report already holds was rejected, because it caches each
+verdict and flushes and its value is that it cannot drift from what
+Generate would do. A second test pins the exception to the
+`staleness_by_instrument` **call**: allowing its whole package let a
+check call an assignments helper twice with neither test objecting
+(Codex, #2533). Figures in `guide/app_responsiveness.md` Finding 6.
 
-**Rung 3 narrowed the Definition of done rather than widening the
-engine** (2026-09-21). The three remaining repeats are
-`staleness_by_instrument` building its own `_load_reconcile_inputs`,
-and the alternative was to hand it rosters the report already holds.
-Rejected: that function is not a pure read — it caches each verdict and
-flushes — and its whole value is that it cannot drift from what
-Generate would do. A parameter meaning "trust me, these rows are
-current" is the snapshot this item spent two rungs refusing to build,
-and three indexed reads do not buy it. So the guard asks whether the
-**report** loads the same thing twice, which is the defect, and a
-second test pins the exception to that one engine call so the
-narrowing cannot quietly become a blanket.
+**`spec/validate_page.md` was carried unwaived against the expectation
+of no change, and the build found otherwise** — §7's recipe documented
+the two-argument `check`, so a rule written to the spec would have
+raised `TypeError`. That is what carrying a bullet unwaived is for.
+`spec/workflow_card.md` was a second one the plan had not named, found
+by `spec-writer` at the close; both are in `Doc impact`.
 
-**Rung 2 landed its whole list, and the Definition of done's
-"no exact-repeat query" was three short.** `ValidationInputs`
-covers every input the plan named, and the report went from 43 queries
-/ 21 distinct to **17 / 14** on `FM100`. The three that remain are one
-statement each — instruments, reviewers, reviewees — issued a second
-time inside `assignments.staleness_by_instrument`, which builds its own
-`_load_reconcile_inputs` and cannot see the report's. That is a
-report-to-engine boundary, not a check loading for itself, so rung 2
-left it rather than widening the engine's signature on its own
-authority. **Rung 3 decides**: pass the loaded rosters into
-`staleness_by_instrument`, or scope the guard to the report's own
-loads and say why.
-
-Pages on `FM100` (`validated`, 20,000 rows), before 19R.5 → after
-rung 1 → after rung 2: Validate **112 → 69 → 43**, Session Home
-**79 → 79 → 53**, Assignments **92 → 92 → 66**.
-
-**Parity was measured, not assumed** (2026-09-21). The golden in
-`tests/integration/test_validation_issue_parity.py` was captured by
-running the **pre-refactor** module from `origin/main` against its six
-fixtures; the post-refactor run reproduces all 29 issues byte for byte,
-on SQLite and on Postgres alike. Its first version pinned absolute row
-ids and so passed on SQLite and failed the `ci-postgres` job — the
-sequences do not rewind on rollback. The golden pins each row's
-**position** in its session instead, which is what the assertion meant
-all along.
+**One cold read, two Codex reviews, two CI failures — every one found
+a test rather than the code.** The read's own differential over six
+shapes the fixtures miss came back byte-identical. `docs/status.md`
+carries what each caught; two findings that are **not** this item's are
+in `guide/findings_2026-09-21_validate_rules.md`.
 
 ### PR ladder
 
@@ -946,12 +903,9 @@ all along.
 ### Open questions
 
 - ~~Is Validate's second build load-bearing?~~ **No** — two call
-  sites that do not know about each other (rung 1, 2026-09-21).
-  Nothing between `_operations.py:187` and the card call mutates the
-  session; the branches in between only redirect. The card's one write
-  path, `mark_validated`, is gated on `validated_just_ran`, which the
-  Validate route does not pass. Handing the first result over took
-  Validate from 112 queries to **69**, re-measured on `FM100`.
+  sites that did not know about each other, with nothing between them
+  mutating the session and the card's one write path gated on a flag
+  the Validate route never passes (rung 1).
 
 ### Out of scope
 
@@ -971,6 +925,11 @@ all along.
   document `check(db, review_session)`, so a rule written to the spec
   today raises `TypeError` on its first run. Both, and the rule-shape
   line, take the third argument and name `ValidationInputs` (Item 5).
+- `spec/workflow_card.md` — its signature listing for
+  `build_workflow_card_context` gains the `issues` argument rung 1
+  added, and points at `spec/validate_page.md` §5.1 for the
+  hand-off-not-a-cache contract rather than restating it (Item 5;
+  added at the close, found by `spec-writer`).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---

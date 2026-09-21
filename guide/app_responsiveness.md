@@ -329,7 +329,35 @@ its own `Content-Encoding` is a dev-slot question this container cannot
 answer — one `curl -sI -H 'Accept-Encoding: gzip'` against the dev slot
 settles it, and if it does not, the middleware is a one-line change.
 
-## Finding 6 — the readiness report reloads the session once per check
+## Finding 6 — the readiness report reloaded the session once per check
+
+**Actioned and closed 2026-09-21 by 19R Item 5.** Everything below the
+next block is the diagnosis as it stood before the fix; the line
+numbers and the `rule.check(db, review_session)` call shape it quotes
+are history, not current code.
+
+| page | queries before | after | from the report |
+|---|---:|---:|---:|
+| Session Home | 79 | **53** | 17 (32%) |
+| Assignments | 92 | **66** | 17 (26%) |
+| Validate | 112 | **43** | 17 (40%) |
+
+One report run went from **43 queries / 21 distinct** to **17 / 14**,
+and the double build on Validate is gone. The three repeats that
+remain are `assignments.staleness_by_instrument` re-reading inside its
+own engine — deliberately left, with the reasoning in the plan.
+Wall-clock on the same fixture, incidentally rather than as the goal:
+Session Home 213 ms → **137 ms**, Validate 238 ms → **103 ms**.
+
+Both halves are now enforced rather than merely done:
+`tests/integration/test_readiness_report_cost.py` fails if the report
+issues one of its own queries twice or builds twice on a page, and
+`test_validation_issue_parity.py` pins the issue list rule for rule
+against a golden captured from the pre-refactor module. Re-measured on
+the same `FM100` fixture; the contract is in `spec/validate_page.md`
+§3.1 / §5.1.
+
+---
 
 Added 2026-09-21, answering the open question the bench re-set raised:
 *what are the 79–112 queries every session page issues regardless of
@@ -357,7 +385,7 @@ orchestrator over 22 registered rules:
 
 ```python
 for rule in REGISTERED_RULES:
-    for issue in rule.check(db, review_session):
+    for issue in rule.check(db, review_session):   # pre-19R.5 shape
 ```
 
 …and **each `check` loads for itself whatever it needs.** Eleven
@@ -390,7 +418,8 @@ hiding it.
 deciding independently what "the session's instruments" means is how
 two of them come to disagree after someone edits one. A single set of
 inputs loaded per run buys consistency; the query count is the
-symptom that made it visible. Scoped as **19R Item 5**.
+symptom that made it visible. Scoped as **19R Item 5**, and shipped —
+see the block at the top of this finding.
 
 ## The two axes that turned out fine — measured, not assumed
 
