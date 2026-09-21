@@ -872,11 +872,13 @@ No schema change, no migration, no template change.
 
 ### Open questions
 
-- Is Validate's second build load-bearing — a deliberate recompute
-  after something the page body mutates — or two call sites that do not
-  know about each other? *Rung 1 answers it before changing anything;
-  if it is deliberate, rung 1 becomes a comment saying so and the
-  ladder loses its cheapest win.*
+- ~~Is Validate's second build load-bearing?~~ **No** — two call
+  sites that do not know about each other (rung 1, 2026-09-21).
+  Nothing between `_operations.py:187` and the card call mutates the
+  session; the branches in between only redirect. The card's one write
+  path, `mark_validated`, is gated on `validated_just_ran`, which the
+  Validate route does not pass. Handing the first result over took
+  Validate from 112 queries to **69**, re-measured on `FM100`.
 
 ### Out of scope
 

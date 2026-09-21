@@ -62,6 +62,7 @@ def build_workflow_card_context(
     *,
     return_to: str,
     validated_just_ran: bool = False,
+    issues: list[validation.ValidationIssue] | None = None,
     super_failure: dict[str, str] | None = None,
     prepare_confirm: str | None = None,
     user: User | None = None,
@@ -82,6 +83,16 @@ def build_workflow_card_context(
     flips it to ``validated`` via ``lifecycle.mark_validated``
     before populating the rest of the context. ``user`` and
     ``correlation_id`` are required when this path fires.
+
+    ``issues`` is a readiness issue list the caller has already
+    built **in this same request**, passed in so the builder does not
+    run ``validate_session_setup`` a second time. Only the Validate
+    route passes it, because it is the only page that needs the issue
+    list for its own body as well as for the card; every other caller
+    leaves it ``None`` and the builder runs the orchestrator itself.
+    It is a per-request hand-off, never a cache: a list built by an
+    earlier request would let the card report a roster the operator
+    has since changed.
 
     ``prepare_confirm`` (the page's ``?prepare_confirm=responses``
     entry path, 18F) is the Prepare-button's saved-response detour:
@@ -119,8 +130,12 @@ def build_workflow_card_context(
         "info": [],
     }
     if validated_just_ran or is_validated:
-        issues = validation.validate_session_setup(db, review_session)
-        report = lifecycle.build_readiness_report(issues)
+        run_issues = (
+            validation.validate_session_setup(db, review_session)
+            if issues is None
+            else issues
+        )
+        report = lifecycle.build_readiness_report(run_issues)
         if (
             validated_just_ran
             and report.can_activate
