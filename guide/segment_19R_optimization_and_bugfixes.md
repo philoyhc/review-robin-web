@@ -251,6 +251,32 @@ count** removes a feature rather than a cost.
 | test files naming it | 1 | `grep -rln "staleness_by_instrument" tests/` |
 | migration | 1 | new columns on `instruments`, plus the write-through in `replace_assignments` |
 
+### Status
+
+**Rung 1 landed 2026-09-21** — the migration and the model columns,
+inert.
+
+- **Four columns, not two.** `Decision` says "same shape as
+  `instruments.cached_group_pair_count` / `cached_group_pair_stamp`",
+  and `Doc impact` turned that into "the two new columns" — but the
+  same `Decision` persists the whole `InstrumentReconcileState`, which
+  is three values and a stamp. The pair was carried over from the
+  precedent's shape, not derived from this one's. Bullet corrected.
+- **`String(80)`, not the precedent's `String(64)`**, so the version
+  prefix `Semantics` asks for fits ahead of a sha256 hex digest without
+  a second column to hold it.
+- **The precedent was never wired.** `cached_group_pair_count` /
+  `cached_group_pair_stamp` have no reader and no writer in `app/`;
+  their migration says "the first `evaluate_instrument_group_pair_counts`
+  call after deploy populates them" and no such function exists. Read as
+  a warning about rung 3 rather than as work: an inert rung 1 is only
+  inert until the rung that uses it lands.
+- The precedent's docstring compared itself to
+  `session_rule_sets.cached_eligible_pair_count`, dropped in Wave 5
+  PR 5.2. Said so in place rather than deleting the comparison, which is
+  still the reason the cache is per instrument. Confirms the premise of
+  this item's `guide/deferred_consolidated.md` bullet.
+
 ### PR ladder
 
 1. **Migration + columns**, no reader and no writer; round-trips on
@@ -294,7 +320,7 @@ count** removes a feature rather than a cost.
 
 - `spec/reconciling_regeneration.md` — the staleness verdict is now
   cached against a content stamp; say what invalidates it (Item 2).
-- `docs/database.md` — the two new `instruments` columns (Item 2).
+- `docs/database.md` — the four new `instruments` columns (Item 2).
 - `guide/deferred_consolidated.md` — 18J Rec C's lift trigger and its
   stale `cached_eligibility_stamp` wire-up note (Item 2).
 - `docs/status.md` — row when the item lands (Item 2).

@@ -239,7 +239,49 @@ class Instrument(Base, TimestampMixin):
     mismatch on read recomputes. Per-instrument (not per-rule, like
     ``session_rule_sets.cached_eligible_pair_count``) because the
     count depends on the instrument's boundary tags. Both NULL on a
-    per-reviewee instrument or an un-pinned one — never populated."""
+    per-reviewee instrument or an un-pinned one — never populated.
+
+    *(The parenthetical above named `session_rule_sets`'
+    ``cached_eligible_pair_count``. Wave 5 PR 5.2 dropped that column
+    with the rest of the library tier, so the comparison is kept for
+    the reasoning and no longer points at a live column — 19R Item 2
+    rung 1.)*"""
+
+    cached_reconcile_stamp: Mapped[str | None] = mapped_column(
+        String(80), nullable=True
+    )
+    cached_reconcile_stale: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+    cached_reconcile_eligible: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    cached_reconcile_self_reviews_excluded: Mapped[int | None] = (
+        mapped_column(Integer, nullable=True)
+    )
+    """Lazy persisted cache for this instrument's
+    ``InstrumentReconcileState`` — *would regenerating change which
+    pairs exist?* — against a content stamp of what the verdict is
+    derived from (19R Item 2; the cost it removes is measured in
+    ``guide/app_responsiveness.md``).
+
+    **Four columns, not a verdict and a stamp.** The surfaces render
+    the whole state: ``app/web/views/_assignments.py`` reads
+    ``eligible`` and ``self_reviews_excluded`` as well as ``stale``, so
+    a verdict-only cache would leave the engine running on the page the
+    cache exists to speed up.
+
+    **Read as one unit.** A NULL or mismatched
+    ``cached_reconcile_stamp`` is a miss and the other three are
+    ignored, so they are never interpreted on their own. The stamp is
+    ``String(80)`` rather than the ``String(64)`` beside it because it
+    carries a version prefix ahead of its hash: a change to the stamp's
+    shape then reads as a miss rather than as a silent hit on a value
+    computed some other way.
+
+    All four land NULL and stay NULL until the read-through and
+    write-through arrive (rung 3); a NULL stamp is exactly the cache
+    miss the reader will already handle."""
 
     session: Mapped[ReviewSession] = relationship(back_populates="instruments")
     display_fields: Mapped[list[InstrumentDisplayField]] = relationship(
