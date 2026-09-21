@@ -973,9 +973,12 @@ lost with the findings file.
 
 ### Semantics
 
-- **No behavior changes and no code changes.** Both edits are prose
-  about code that is already correct — in each case the spec was
-  stale, not the implementation.
+- **No behavior changes.** Every edit is prose about code that is
+  already correct — in each case the description was stale, not the
+  implementation. ~~and no code changes~~: rung 2 added a test, rung
+  3 rewrote a docstring and rung 4 rewrote four more across both
+  trees, so the item touches `app/` and `tests/` while changing
+  nothing either executes.
 - **The `stale_generated` description stays conditional.** 19R Item 2
   requalified the "cannot disagree with Generate" claim as holding
   under the cache's stamp conditions; the replacement bullet says so
@@ -996,62 +999,99 @@ lost with the findings file.
 | table rows vs registry | 22 vs 22, one misplaced | `diff <(grep -n 'key="' app/services/validation.py \| sed 's/.*key="\([^"]*\)".*/\1/') <(table key column)` |
 | other prose naming the rule | 1 file | `grep -rln "stale_generated" spec/ docs/ guide/` |
 
-No code, no schema, no migration, no template.
+**The second row was wrong twice over, and wrong in the item's own
+way.** Its grep scoped out `app/` and `tests/`, where three of the
+five bad descriptions lived — including the docstring on the function
+itself, which is the whole of rung 3. It also never said what it was
+counting. Left as measured rather than silently revised, per the
+segment-plan rule; corrected here:
+
+| what | count | command |
+|---|---|---|
+| files mentioning the key, as the row's grep scoped it | 12 | `grep -rl "stale_generated" spec/ docs/ guide/ \| wc -l` |
+| …with `app/` and `tests/` added | 19 | `grep -rl "stale_generated" spec/ docs/ guide/ app/ tests/ --include='*.md' --include='*.py' \| wc -l` |
+| **passages stating what the rule does, and wrong** | **5, in 4 files** at the time of measuring; **9, in 6 files** once rung 4's own read swept `app/` and `tests/` for the family rather than for the key | the files named in `Status`; the rest either assert the key without describing it, or describe it correctly |
+
+Mentioning the key and describing the rule are different questions,
+and the original row measured neither deliberately.
+
+No schema, no migration, no template. Rungs 2, 3 and 4 touch `tests/`
+and `app/`, none executably — rung 4 both trees.
+
+**Four of the nine are invisible to any `stale_generated` grep**, which
+is why the corrected table above is still not the last word: three test
+and view docstrings describe the rule without naming its key, and
+`_assignments.py`'s `is_stale` carries the flat "cannot disagree"
+claim without naming the rule at all. Searching for the key finds
+files; searching for the *claim* (`cannot disagree`, `no_rule_pinned`,
+count-versus-count phrasing) is what found these.
 
 ### Status
 
-**Landed as one slice, as planned.** The only divergence was caught by
-re-reading rather than by a check: the first draft of the
-`stale_generated` bullet restored the flat "cannot disagree with what
-Generate would do" claim that **19R Item 2 had deliberately made
-conditional** on the cache stamp. Requalified before commit, pointing
-at `spec/assignments.md` § *Staleness* — a spec fix that quietly undoes
-an earlier spec fix is the failure mode a close is least likely to
-notice.
+**The ladder grew from one rung to four, each added by the author
+after the previous landed** — the gate rung 1 deferred, then the third
+description rung 2's read surfaced, then the fourth and the
+exhaustiveness nit rung 3's read surfaced. Struck rather than
+rewritten: `Out of scope` (the gate) and `Semantics`' "no code
+changes" (rungs 2–4 touch `tests/` and `app/`, none executably).
 
-**The gate was deferred, then asked for** (2026-09-21). `Decision`
-records why rung 1 left it out — the author had asked for the two
-fixes, and a test is not a fix. They asked for it after rung 1 landed,
-so it is rung 2 of the same PR rather than a follow-up. `Out of scope`
-is struck rather than rewritten.
+**Nine wrong descriptions of one rule, in six files** — five found
+by rung 4, four more by the read rung 4 owed. `spec/instruments.md`
+called it inert, which is `no_rule_pinned`; its own docstring said the
+`why` names three situations where it names two, claimed
+never-generated is flagged where the engine's
+`stale=bool(diff.existing_rows) and …` denies it, and carried the flat
+"cannot disagree" claim 19R Item 2 made conditional — that sentence
+needed requalifying **twice more** in this item, once in rung 1's own
+draft; `test_validation_15E_rules.py` described the retired
+count-versus-count, pinned-only basis and credited a test's silence to
+unpinning; and `compute_staleness` claimed the view field and the rule
+"share this one definition" when neither uses it. That helper is the
+source the rest reproduced, it is **exported, tested and uncalled**,
+and retiring it is deferred rather than decided.
 
-It is two assertions in `tests/unit/test_doc_conventions.py`, the home
-of the other constant-derived doc gates: one that §3.2's table still
-parses, one that its key column equals `[r.key for r in
-REGISTERED_RULES]`. Parseability is asserted **separately and first**,
-following the visibility-grid gate in the same file, so a moved table
-says so rather than reporting every rule as missing — and so the order
-assertion cannot pass by matching nothing against nothing. Four
-mutants, all caught: the original W8 drift replayed, two adjacent rows
-swapped, the heading renamed (which fails the parse test, as intended),
-and a 23rd rule registered but never documented — the case the gate
-exists for.
+**Rung 4's read caught rung 4 writing the sixth.** Fixing the
+exhaustiveness nit, I wrote that the diff "also reads `group_kind` and
+the session's self-review setting". It does read both, and only one
+can move the verdict: `self_reviews_active` sets a pair's `include`
+flag, while the diff is a difference of pair *keys*. The lever is the
+instrument's `group_kind`, and only while the **pinned rule set**
+excludes self-reviews — which is situation 1, so `group_kind` carries
+the non-exhaustiveness alone. The phrasing came from
+`_reconcile_cache`'s stamp inputs, which are deliberately a superset
+of the verdict's determinants; reading a cache key as a causal list is
+the specific mistake. It had already reached `docs/status.md` and a
+commit message. Three more followed once the sweep went after the
+*claim* rather than the key: two test docstrings still crediting
+`instruments.no_rule_pinned` with carrying a signal it has not carried
+since Wave 5 PR 5.3, and `_assignments.py`'s `is_stale` still making
+the flat "cannot disagree" claim — the fourth and final survivor of
+the sentence this item requalified three times.
 
-**The cold read the gate made owed.** Rung 1 was prose-only and took
-none; rung 2 put a file under `tests/`, so the item acquired one. It
-found the gate sound — seven mutations, none passing vacuously, no
-path-layout dependency and no fixture to be out of reach — and two
-defects in it, both fixed: the membership assert fired under
-*is-still-a-table* with no message, so the very case the gate exists
-for reported as "the table moved", which is the mis-attribution the
-two-test split was supposed to prevent; and the row pattern was
-stricter than its two siblings in the same file, failing on a bolded
-cell or a key carrying a digit. It also found §7 silent on the table
-row the gate now requires — added as step 4 — and two claims of mine
-that the files do not support: the inert rule is the list's **last**
-bullet, not the next one, and the `docs/status.md` row called this
-one rung while describing two.
+**The specs needed no edit, which is worth recording as a negative.**
+The read flagged the docstring's non-exhaustiveness as putting code
+prose at odds with three spec passages stating the two situations
+unqualified. They do not: `spec/validate_page.md` §3.2,
+`spec/instruments.md` and `spec/assignments.md` § *Staleness* each
+lead with the general criterion and put the two after a dash as
+illustrations — the shape the docstring now takes. No `Doc impact`
+bullet is owed.
 
-**Rung 3 took the third description after all** (author's instruction).
-The read raised `_check_instruments_stale_generated`'s own docstring as
-out of scope — app code, not in the diff, and `CLAUDE.md` forbids
-bundling an unrelated fix. But an item about descriptions of this
-registry that stopped matching it, leaving the one attached to the
-function, reads as evasion rather than discipline. It was wrong in both
-of the item's ways and in a third neither the read nor rung 1 caught:
-it claimed the rule's own `why` names **three** situations where it
-names two, and the one its historical paragraph credits as already
-covered — never generated — is not among them.
+**The blast radius failed in the item's own way.** Its grep scoped out
+`app/` and `tests/`, which is where three of the five lived. Left as
+measured per the segment-plan rule; the row above carries the
+correction and the definition the original lacked.
+
+**Four reviews, four different classes of finding.** `spec-writer`
+corroborated rung 1 from the parity golden. Codex caught British
+spelling in new prose, then this `Status` accumulating twice. The
+rung-2 read found the gate passing *while recognizing nothing*
+off-path and its row pattern stricter than its two siblings; the
+rung-3 read verified the docstring on all four claims and caught this
+plan instead; the rung-4 read — owed because rung 4 reopened `app/`
+and `tests/` after the item's read — caught the new wrong sentence and
+the three the key-based sweep could never have seen. Nothing any of
+them raised is outstanding.
 
 ### PR ladder
 
@@ -1061,6 +1101,9 @@ covered — never generated — is not among them.
    rung 1 had landed. Same PR; see `Status`.
 3. **The third description** — added 2026-09-21 on the author's
    instruction, after rung 2's cold read surfaced it. Same PR.
+4. **The fourth and fifth** — added 2026-09-21 on the author's
+   instruction, after rung 3's read surfaced the fourth and the fix
+   for it surfaced the fifth.
 
 ### Definition of done
 
@@ -1075,9 +1118,21 @@ covered — never generated — is not among them.
   column from `REGISTERED_RULES` and fails on order, on membership,
   and on the table moving — each under a name that says which.
 - `_check_instruments_stale_generated`'s docstring describes the rule
-  the code implements: the two situations its `why` names, the cache
-  qualification rather than the flat claim, and never-generated
-  excluded.
+  the code implements: the criterion in both its halves, the two
+  situations its `why` names given as the operator-facing examples
+  they are, the cache qualification rather than the flat claim, and
+  never-generated excluded.
+- No passage in `app/` or `tests/` still describes `stale_generated`
+  on the retired count-versus-count or pinned-only basis, credits
+  `instruments.no_rule_pinned` with carrying a signal, or makes the
+  flat "cannot disagree with Generate" claim: `grep -rn "disagree with
+  what Generate" app/` returns nothing. (`_generate.py`'s "cannot
+  drift from what Generate actually does" is a different claim, about
+  deriving the verdict from the same function, and its own docstring
+  requalifies it for the cache.)
+- `compute_staleness`'s docstring says what it is — a helper with no
+  caller in `app/`, whose basis differs from the rule's in three
+  named ways — rather than claiming a shared definition.
 - `spec/validate_page.md` §7 tells a rule author to add the §3.2 row,
   since the gate now makes that a CI failure rather than an oversight.
 - `## Doc impact` section present and current

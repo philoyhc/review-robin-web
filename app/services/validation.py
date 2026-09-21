@@ -774,9 +774,17 @@ def _check_instruments_stale_generated(
     """Warning per instrument whose materialized rows have fallen out of
     step with what the engine would produce now.
 
-    It fires on the two situations this rule's ``why`` names: the
-    pinned rule changed, or the rosters or relationships moved after
-    Generate.
+    The criterion is the first sentence, and it has two halves: the
+    instrument has materialized rows, and a reconcile run would insert
+    or delete at least one pair. The two situations this rule's ``why``
+    names are the ones an operator recognizes — the pinned rule
+    changed, or the rosters or relationships moved after Generate —
+    but they are not exhaustive: the instrument's own ``group_kind``
+    moves the verdict too, whenever the pinned rule set excludes
+    self-reviews, because the group boundary decides which pairs that
+    exclusion drops. The session's ``self_reviews_active`` does
+    **not**, despite reading like it would: it sets a pair's
+    ``include`` flag, and the diff is a difference of pair *keys*.
 
     The verdict is the engine's own diff
     (``assignments.staleness_by_instrument``). Since 19R Item 2 that

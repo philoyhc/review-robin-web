@@ -88,8 +88,11 @@ class InstrumentStatusBlock:
       individual rows (e.g. self-reviews) have been deactivated.
     - ``is_stale`` — the instrument has materialised rows and a
       regenerate would insert or delete at least one pair. Read from
-      the engine's reconcile diff, so it cannot disagree with what
-      Generate would do. Never-generated instruments read ``False``:
+      the engine's reconcile diff (``staleness_by_instrument``), so it
+      agrees with what Generate would do under the conditions
+      ``spec/assignments.md`` § *Staleness* states — since 19R Item 2
+      the diff may be served from a stamped cache rather than
+      recomputed. Never-generated instruments read ``False``:
       a run would insert their whole fan-out, and an always-on badge
       is one the operator learns to ignore.
     - ``edit_url`` — deep link to the matching Instrument card.

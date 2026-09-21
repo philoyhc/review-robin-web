@@ -13,8 +13,11 @@ Three ``ValidationRule`` entries land in this slice:
 
 All three rules skip the check when ``assignment_mode is None`` —
 a never-generated session has no actionable per-reviewer
-breakdown, and 15E's ``assignments.no_included_pairs`` /
-``instruments.no_rule_pinned`` warnings cover the upstream case.
+breakdown, and 15E's ``assignments.no_included_pairs`` warnings
+cover the upstream case. (``instruments.no_rule_pinned`` is named
+alongside it in older prose but covers nothing — it has been inert
+since Wave 5 PR 5.3 made a NULL ``rule_set_id`` the Full Matrix
+default.)
 The per-reviewer-per-instrument rule also skips any instrument
 whose total row count is zero — the ``assignments.instrument_empty``
 sibling handles that case without (reviewers × instruments)

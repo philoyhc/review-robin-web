@@ -209,13 +209,16 @@ def compute_staleness(
     materialised pair count diverges from what the engine would
     produce now. ``False`` when no rule is pinned or counts match.
 
-    Catches: never-generated pinned instruments
-    (``eligible > 0``, ``generated == 0``), instruments whose
-    pinned rule changed post-Generate, instruments whose roster /
-    relationships changed post-Generate. The view-shape
-    ``InstrumentStatusBlock.is_stale`` field and the
-    ``instruments.stale_generated`` validation rule share this one
-    definition.
+    **Nothing in ``app/`` calls this.** It was the shared definition
+    behind the view-shape ``InstrumentStatusBlock.is_stale`` field and
+    the ``instruments.stale_generated`` validation rule; both now take
+    their verdict from ``staleness_by_instrument``, which diffs the
+    pair sets rather than comparing counts, does not gate on pinning,
+    and does **not** flag a never-generated instrument — the opposite
+    of this helper on all three points. The sentence claiming they
+    share this definition survived until 19R Item 6, by which time it
+    was the fifth description of that rule that had stopped matching
+    it. Retiring the helper is deferred, not decided.
     """
     return rule_id is not None and eligible_count != generated_count
 
