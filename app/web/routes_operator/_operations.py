@@ -226,6 +226,13 @@ def validate_session(
             super_status, super_step, super_error, super_button
         ),
         prepare_confirm=prepare_confirm,
+        # This page is the only one that needs the readiness issues for
+        # its own body as well as for the Workflow card, and nothing
+        # between the run above and here mutates the session — the
+        # branches in between only redirect. Hand the result over rather
+        # than paying for an identical second run of all 22 rules
+        # (19R Item 5 rung 1; `guide/app_responsiveness.md` Finding 6).
+        issues=issues,
     )
     return _templates.TemplateResponse(
         request,
