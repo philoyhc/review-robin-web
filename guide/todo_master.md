@@ -3231,10 +3231,14 @@ dep chains called out at the bottom of this file.
    at 1.36 s and 1.52 s against a target of under a second: what is left
    on those two is the shared page chrome, which measures 0.65 s on a
    page with no rollup at all, and that is its own item. The other four
-   pages are under a second. All four items are closed and the segment
-   **stays open** for further work; its `## Later candidates` holds the
-   ones already measured — Prepare's 74.8-second insert, compression, the
-   pair sort key.
+   pages are under a second. Items 1-4 are closed and the segment
+   **stays open**: **Item 5** takes the one cost the 2026-09-21 bench
+   re-set could not explain — every session page issues 79-112 queries
+   whatever the roster size, because the readiness report reloads the
+   session once per check and Validate builds it twice
+   (`guide/app_responsiveness.md` Finding 6). That document also holds
+   the later candidates already measured — Prepare's insert,
+   compression, the pair sort key.
 
 #### Stubs
 
