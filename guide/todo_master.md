@@ -3202,6 +3202,21 @@ dep chains called out at the bottom of this file.
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
 
+2. **19R — Optimization (open segment).**
+   **Plan:** `guide/segment_19R_optimization.md`.
+   **Evidence:** `guide/app_responsiveness.md` — the operator surfaces
+   measured on a 1,000 x 1,000 roster, where five of six slow pages are
+   slow for one shared reason and SQL is under 9% of any of them.
+   - **Item 1 (R3)** count with `count()` — hours, no design, no schema.
+   - **Item 2 (R1)** cache the staleness verdict against a content
+     stamp — the biggest single win, and a migration.
+   - **Item 3 (R2)** roll per-person progress up in SQL rather than over
+     400,000 ORM rows.
+   Measured together these take every operator page under a second
+   (30-50x). The segment **stays open** for further optimization moves;
+   its `## Later candidates` holds the ones already measured — Prepare's
+   74.8-second insert, compression, the pair sort key.
+
 #### Stubs
 
 - ~~**Regenerate `spec/operator_button_audit.md` §§4–5**~~ *(filed 2026-09-08 by

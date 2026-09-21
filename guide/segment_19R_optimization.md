@@ -1,0 +1,377 @@
+# Segment 19R — Optimization
+
+Opened 2026-09-21 off `guide/app_responsiveness.md`, which measured the
+operator surfaces on a 1,000 × 1,000 roster and found five of six slow
+pages slow for one shared reason. That document is the evidence base for
+every item here; this one is the build.
+
+**Items close independently**, so each carries its own `### Doc impact`
+and `### Status` and there is no segment-level manifest —
+`python3 tools/close_check.py 19R.1` reads Item 1's. The archive half of
+the last definition-of-done line applies only when the segment's final
+item closes; an item close leaves this file in `guide/`.
+
+**The segment stays open.** Items 1–3 are the three changes that were
+measured to take every page under a second. Further optimization moves
+land as Items 4, 5, … as measurement finds them — `## Later candidates`
+at the end holds the ones already measured but not scheduled.
+
+**Re-take any number here with** `python3 tools/bench_roster_scale.py`
+(`tools/README.md` has the recipe). Every figure below is from state B
+of that document: 1,000 reviewers × 1,000 reviewees, two instruments,
+200,000 assignment rows, session `validated`.
+
+---
+
+## Item 1 — R3: count by counting
+
+### Opportunity
+
+Five call sites answer *how many rows* by fetching every id and calling
+`len()` on the list:
+
+```bash
+grep -rn "len(db.execute(" app/            # 5 hits
+```
+
+At 200,000 assignment rows that is 200,000 rows on the wire for one
+integer. `csv_imports._count_assignments` alone is **1.17 s of the Setup
+reviewers page's 2.4 s** — a roster page that went 110 ms → 2.4 s while
+nothing about the roster changed. A sixth site is worse in kind:
+`responses._core.session_response_count` loads every `Assignment` as an
+ORM object to decide whether any instrument is group-scoped, and its
+caller in `app/web/views/_quick_setup.py` only asks whether the result
+is `> 0`.
+
+Measured ceiling for this item alone: **Setup reviewers 2.4 s → 0.27 s.**
+That page runs neither the engine (Item 2) nor the rollups (Item 3), so
+nothing else in this segment removes its cost.
+
+### Decision
+
+Replace the five with `select(func.count())`, and give the `> 0` caller
+an `EXISTS` rather than a count of anything.
+
+*Alternative rejected:* leave them and let Items 2–3 carry the segment.
+Rejected because the Setup pages are untouched by either, and this is the
+cheapest change here — hours, no design, no schema.
+
+### Semantics
+
+- `len(select(Model.id).all())` and `select(func.count(Model.id))` agree
+  exactly for these five: no joins, no `DISTINCT`, no limit. Empty
+  session → `0` either way.
+- `responses._core.session_response_count` is **not** a plain count: it
+  deduplicates group fan-out, counting one cell per
+  `(reviewer, instrument, group_key, response_field)`. That path stays.
+  Only the `> 0` caller changes, to a query that can stop at the first
+  row.
+- A caller that relied on the fetched rows warming the identity map
+  would silently lose that. Rung 1 reads all twelve `existing_count`
+  callers before changing any of them.
+
+### Judgment calls — decided
+
+- **`EXISTS`, not `COUNT(*) > 0`** for the boolean caller (2026-09-21):
+  the answer is a boolean and the query should be allowed to stop.
+- **The name collision stays** (2026-09-21): `session_lifecycle` also has
+  a `session_response_count`, and it already uses `func.count()`. Two
+  functions, one name, different contracts — a readability problem, not a
+  performance one, and renaming a public helper is not this item's job.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| `len(db.execute(` sites | 5 | `grep -rn "len(db.execute(" app/` |
+| `existing_count(` callers | 12 | `grep -rn "existing_count(" app/ --include=*.py \| grep -v "def "` |
+| `_count_assignments(` callers | 4 | same shape |
+| `count_pairs(` callers | 1 | same shape |
+| `responses.session_response_count` callers | 6 | `grep -rn "session_response_count(" app/ --include=*.py \| grep -v "def \|__init__\|session_lifecycle"` |
+
+No schema change, no template change.
+
+### PR ladder
+
+1. **The five plain counters.** `csv_imports` (×2), `relationships`,
+   `assignments/_coverage` (×2) → `func.count()`, after reading every
+   caller. Must not touch `session_response_count`.
+2. **The `> 0` caller.** `_quick_setup` gets an `EXISTS` helper; the
+   dedupe path in `responses._core.session_response_count` is left
+   exactly as it is.
+3. **Close.** `Status`, `docs/status.md` row, close check.
+
+### Definition of done
+
+- `grep -rn "len(db.execute(" app/` returns nothing.
+- A test asserts each changed helper returns what the old form returned,
+  including on an empty session.
+- `python3 tools/bench_roster_scale.py bench --session N --only "Setup:"`
+  shows the reviewers page under 0.5 s on a 200,000-row fixture.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.1` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Does any `existing_count` caller depend on the rows being loaded as a
+  side effect? *Decided at rung 1 by reading the twelve call sites; if
+  one does, it keeps its fetch and gains a comment saying why.*
+
+### Out of scope
+
+- Renaming either `session_response_count` (judgment call above).
+- The group-dedupe path itself — that is Item 3's territory.
+
+### Doc impact
+
+- `docs/status.md` — row when the item lands (Item 1).
+
+---
+
+## Item 2 — R1: cache the staleness verdict
+
+### Opportunity
+
+`assignments.staleness_by_instrument` answers *would regenerating change
+which pairs exist?* by running the rules engine once per instrument on
+every render. Assignments and Validate call it always; the shared
+workflow card drags it onto four more pages whenever the session is
+`validated` — six builder call sites
+(`grep -rn "build_workflow_card_context(" app/web/routes_operator/`).
+
+The engine's floor at 1,000 × 1,000 is **2.29 s per instrument**, and a
+*narrower* rule costs **more** (3.52 s for a `MATCH` keeping a tenth),
+because `app/services/rules/engine.py` materializes and sorts the
+million-pair list before any rule is consulted. No rule an operator can
+author gets under it.
+
+Measured ceilings: **Validate 26.5 s → 1.8 s, Assignments 23.2 s →
+1.7 s, Session Home 14.1 s → 3.7 s.**
+
+### Decision
+
+Persist the per-instrument verdict against a **content hash of its
+inputs**, recomputing on a mismatch at read — the shape
+`instruments.cached_group_pair_count` / `cached_group_pair_stamp`
+already uses for the group pair count, extended to a second pair of
+columns.
+
+*Alternatives rejected:*
+
+- **18J Rec C (single-side predicate indexes)** makes the walk cheaper
+  but still per render, and it changes engine internals rather than how
+  often they run. It stays deferred as the follow-on if the cache turns
+  out to miss often; `guide/app_responsiveness.md` re-aims it.
+- **Stop building the card on the four pages that only render a summary
+  count.** The card needs the report to render that count, so this
+  removes a feature rather than a cost.
+
+### Semantics
+
+- **The hash covers every input the engine reads**: both rosters
+  including `status`, the relationships rows, the pinned rule's
+  definition, the instrument's `rule_set_id`, `group_kind`, and the
+  session's self-review setting. Anything left out is a wrong "fresh".
+- **A miss recomputes**; so does an unreadable or unrecognized stamp. The
+  stamp carries a version prefix so changing its shape is a miss rather
+  than a silent hit.
+- **Never serve a stale "fresh".** The verdict is a correctness signal —
+  it is the operator's only notice that generated rows no longer match
+  their rules, and `app/services/validation.py` records this rule having
+  once been a registered no-op, which "*reports a clean bill on exactly
+  the thing it exists to catch*".
+- Never-generated is still not stale, exactly as today.
+
+### Judgment calls — decided
+
+- **Columns on `instruments`, not a new table** (2026-09-21): the verdict
+  is per instrument, and the precedent next to it already is.
+- **Hash the inputs, not the result** (2026-09-21): hashing the fan-out
+  means computing the fan-out, which is the cost being removed.
+- **`reconcile_impact` does not share the cache** (2026-09-21): it
+  answers a different question (how many responses a run would delete)
+  and runs on a confirmation path, not a render.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| app call sites of `staleness_by_instrument` | 2 | `grep -rn "staleness_by_instrument" app/ --include=*.py \| grep -v "def \|__init__\|:.*``"` |
+| pages reaching it through the card | 6 | `grep -rn "build_workflow_card_context(" app/web/routes_operator/` |
+| test files naming it | 1 | `grep -rln "staleness_by_instrument" tests/` |
+| migration | 1 | new columns on `instruments` |
+
+### PR ladder
+
+1. **Migration + columns**, no reader and no writer. Round-trips on
+   Postgres in `ci-postgres`.
+2. **The stamp helper**, with its own unit tests: same inputs → same
+   stamp, and one test per input that changes it.
+3. **Wire the read-through** in `staleness_by_instrument`: hit returns
+   the stored verdict, miss recomputes and writes. Rung 2's tests become
+   the guard.
+4. **Close.**
+
+### Definition of done
+
+- A test mutates each hashed input in turn — add a reviewer, edit a
+  relationship, change the rule, re-pin the instrument, flip
+  self-reviews — and asserts the verdict is recomputed.
+- `bench --session N` shows Validate and Assignments under 2 s on the
+  200,000-row fixture.
+- `alembic downgrade base && alembic upgrade head` passes on Postgres.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Should a cache miss be observable to an operator (a "recomputing"
+  state) or stay invisible? *The author decides at rung 3; invisible is
+  the default.*
+
+### Out of scope
+
+- Any change to the engine itself — 18J Recs B and C stay deferred.
+- Caching the validation report as a whole.
+
+### Doc impact
+
+- `spec/reconciling_regeneration.md` — the staleness verdict is now
+  cached against a content stamp; say what invalidates it (Item 2).
+- `docs/database.md` — the two new `instruments` columns (Item 2).
+- `guide/deferred_consolidated.md` — 18J Rec C's lift trigger and its
+  stale `cached_eligibility_stamp` wire-up note (Item 2).
+- `docs/status.md` — row when the item lands (Item 2).
+
+---
+
+## Item 3 — R2: roll per-person progress up in SQL
+
+### Opportunity
+
+`monitoring.per_reviewer_progress` and `per_reviewee_coverage` load every
+`Assignment` and every `Response` in the session as ORM objects and count
+them in Python. With Items 1 and 2 applied, a single Responses render
+still constructs **408,027** ORM instances, while the rollup logic
+itself (`_state_from_assignments`) is 1.17 s of it.
+
+**The obvious fix is not this one.** Removing the 2,000-query N+1 those
+pages carry takes the query count to 78 and leaves the page as slow as it
+was: the queries were never where the time is. `guide/app_responsiveness.md`
+records that measurement, because it is the one that picks this item's
+shape.
+
+Measured ceilings: **Responses 24.9 s → 11.4 s on its own; 0.42 s with
+Items 1 and 2.**
+
+### Decision
+
+Compute both rollups as aggregate queries. Land `per_reviewee_coverage`
+first — it is the simpler shape — and keep today's Python implementation
+alongside as the parity oracle until a test says the two agree.
+
+*Alternative rejected:* hoist the two per-reviewer lookups out of the
+loop, which is what finding 2 of the investigation first proposed. Its
+own numbers do not support it.
+
+### Semantics
+
+- **A group-scoped instrument counts once per group**, not once per
+  member (Segment 13C). This is the part that resists a plain `GROUP BY`
+  and the part a rewrite will get wrong.
+- `include=False` rows stay excluded, as today.
+- "Complete" keeps its current definition — every required field with a
+  non-empty value and a `submitted_at` — and the pill states keep their
+  current thresholds. This item changes where the arithmetic happens,
+  not what it says.
+- The reminder scheduler (`scheduled_events/_reminders.py`) calls
+  `per_reviewer_progress` outside any request, so the new form may not
+  assume a request-scoped cache.
+
+### Judgment calls — decided
+
+- **Coverage before progress** (2026-09-21): one side at a time, and the
+  reviewee side has no invitation join.
+- **Parity test as the gate, not review** (2026-09-21): the Python form
+  stays in the tree until the test passes on a fixture that includes a
+  group-scoped instrument.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| app call sites | 7 | `grep -rn "per_reviewer_progress(\|per_reviewee_coverage(" app/ --include=*.py \| grep -v "def "` |
+| test files naming either, or `reviewer_session_state` | 7 | `grep -rln "per_reviewer_progress\|per_reviewee_coverage\|reviewer_session_state" tests/ --include=*.py` |
+| non-request caller | 1 | `app/services/scheduled_events/_reminders.py` |
+
+### PR ladder
+
+1. **The parity harness.** A fixture with a group-scoped instrument and a
+   test that asserts two implementations agree, with only the Python one
+   present. Proves the oracle before anything depends on it.
+2. **`per_reviewee_coverage` in SQL**, behind the parity test.
+3. **`per_reviewer_progress` in SQL**, same treatment.
+4. **Close.**
+
+### Definition of done
+
+- The parity test passes with both implementations, on a fixture that
+  includes a group-scoped instrument and an inactive row.
+- `tests/integration/test_monitoring_prefetch.py` gains the non-regression
+  half for this change — the pages do not scale with assignment count —
+  in the shape that file already uses for the 19K.3 prefetch.
+- `bench --session N` shows Invitations and Responses under 1 s on the
+  200,000-row fixture with Items 1 and 2 landed.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Can the group dedupe be expressed in one query, or does it need a
+  hybrid (aggregate per `(instrument, group_key)`, then fold in Python)?
+  *Decided at rung 2 by the parity harness; the hybrid is acceptable —
+  it is bounded by group count, not by assignment count.*
+
+### Out of scope
+
+- The reviewer-facing surfaces' own rollups, unless the parity work makes
+  them free.
+- Changing what "complete" means.
+
+### Doc impact
+
+- `spec/operations_pages.md` — the Progress and coverage columns are now
+  computed by aggregate query; the contract they render is unchanged
+  (Item 3).
+- `docs/status.md` — row when the item lands (Item 3).
+
+---
+
+## Later candidates
+
+Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
+item when someone picks it up; none blocks Items 1–3.
+
+- **Bulk-insert the generated pairs.** Prepare blocks **74.8 s** for
+  200,000 rows, 17.4 s of it SQL, adding one `Assignment()` per pair. A
+  click rather than a page, so it needs progress feedback or a background
+  job as much as it needs speed.
+- **Turn on compression.** No compression middleware exists: the lobby
+  ships 1,584 KB where gzip would send 95 KB (16.5×), the roster pages
+  6–7×. One middleware line — **after** checking what the dev slot's
+  front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`), which
+  the agent's container cannot see.
+- **Precompute the pair sort key.** Sorting the million-pair list drops
+  from 0.87 s to 0.31 s when the normalized email is computed once per
+  person. Only worth doing inside a wider engine change.
+- **Anything the next measurement finds.** The tool is committed;
+  re-running it after these items is how Item 4 gets written.
