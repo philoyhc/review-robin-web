@@ -466,6 +466,32 @@ own numbers do not support it.
 per rollup; rungs 2 and 3 append the SQL form and every case becomes a
 parity test with no new test code.
 
+**Rung 2 landed 2026-09-21** — `per_reviewee_coverage` as **one
+aggregate query**, two levels of grouping: per assignment (required
+fields, satisfied fields, row count, latest stamp), then per reviewee.
+`uq_response_assignment_field` is what lets the inner level ask *does a
+satisfying row exist* rather than *is the last row satisfying* — with at
+most one row per `(assignment, field)` the two cannot differ. Only
+`_classify_coverage` stays in Python, once per reviewee. The old body is
+kept as `_per_reviewee_coverage_python`, registered beside the new one,
+so the four reviewee-parametrized cases each run twice.
+
+**Measured** on the 200,000-row fixture: Responses **12.0 s → 8.6 s**
+(four runs; Invitations unchanged at 8.4 s, as it must be — it does not
+call this rollup). The query count barely moves, 2,077 → 2,074, because
+the page still reaches `per_reviewer_progress` through `summary_counts`.
+That is rung 3, and it is now the whole remaining cost on both pages.
+
+**The open question does not arise on this side, and `Semantics` was
+wrong about why.** It says a group-scoped instrument counts once per
+group and calls that "the part that resists a plain `GROUP BY`" — true
+of `per_reviewer_progress`, but `per_reviewee_coverage` has **never**
+deduped groups: it counts assignments. So this rung needed no hybrid and
+the question stayed genuinely open for rung 3, where the dedupe actually
+lives. Verified against Postgres locally as well as SQLite; the rung-1
+decision to compare instants rather than datetime objects is what makes
+the same assertions pass on both.
+
 **Rung 3 landed 2026-09-21** — `per_reviewer_progress` **split by
 instrument kind**: per-reviewee instruments in one aggregate,
 group-scoped ones on the existing Python dedupe, the two halves added.
@@ -486,11 +512,13 @@ said in the code, not left to be found.
 **Measured, and the definition of done is not met.** Invitations
 **8.4 s → 1.36 s**, Responses **8.6 s → 1.52 s**, queries **2,079 → 78**
 and **2,074 → 73**; ORM instances for one render 408,027 → ~9,000. The
-target was **under 1 s**. What is left is not the rollup: the rollup
-itself measures 0.69 s, and Session Home — same chrome, no rollup —
-measures 0.65 s with 79 queries. The residual is the shared page
-furniture, which is a different item's to take. Recorded rather than
-rounded.
+target was **under 1 s**. What remains splits roughly in half, and the
+rollup is still the larger share of it: the rollup itself measures
+0.69 s, Session Home — same chrome, no rollup — measures 0.65 s with 79
+queries, and 0.69 + 0.65 is the 1.36 s the page measures. So neither
+half alone gets Invitations under a second; the page furniture is a
+different item's to take, and a further rollup pass would be this one's.
+Recorded rather than rounded.
 
 **The non-regression guard is about ORM rows, not queries.** The 19K.3
 guards in `test_monitoring_prefetch.py` count queries, which is the
@@ -498,31 +526,29 @@ right measure for an N+1 and blind to this change: the old rollups
 issued few queries and built every row as an object. The new guard
 counts instances loaded and fails on either rollup reverted.
 
-**Rung 2 landed 2026-09-21** — `per_reviewee_coverage` as **one
-aggregate query**, two levels of grouping: per assignment (required
-fields, satisfied fields, row count, latest stamp), then per reviewee.
-`uq_response_assignment_field` is what lets the inner level ask *does a
-satisfying row exist* rather than *is the last row satisfying* — with at
-most one row per `(assignment, field)` the two cannot differ. Only
-`_classify_coverage` stays in Python, once per reviewee. The old body is
-kept as `_per_reviewee_coverage_python`, registered beside the new one,
-so all 16 reviewee cases now run twice.
+**Three asymmetries between the rollups are now pinned**, none obviously
+intended, all three shipped behavior this item did not change: an
+inactive reviewer is dropped by the reviewer rollup and still counted by
+the reviewee one; a draft is a completion to the reviewer rollup but not
+to the reviewee one; and a `required` field that is not `visible` is
+outstanding work to the reviewee rollup and invisible to the reviewer
+one. If any should change, that is its own item.
 
-**Measured** on the 200,000-row fixture: Responses **12.0 s → 8.6 s**
-(four runs; Invitations unchanged at 8.4 s, as it must be — it does not
-call this rollup). The query count barely moves, 2,077 → 2,074, because
-the page still reaches `per_reviewer_progress` through `summary_counts`.
-That is rung 3, and it is now the whole remaining cost on both pages.
+**`Semantics` describes one rollup, not both.** It says "complete"
+means every required field with a non-empty value **and** a
+`submitted_at` — the reviewee side. The reviewer side has never required
+`submitted_at`, which is the second asymmetry above. The item changed
+neither definition; the sentence was too narrow when it was written.
 
-**The open question does not arise on this side, and `Semantics` was
-wrong about why.** It says a group-scoped instrument counts once per
-group and calls that "the part that resists a plain `GROUP BY`" — true
-of `per_reviewer_progress`, but `per_reviewee_coverage` has **never**
-deduped groups: it counts assignments. So this rung needed no hybrid and
-the question stays genuinely open for rung 3, where the dedupe actually
-lives. Verified against Postgres locally as well as SQLite; the rung-1
-decision to compare instants rather than datetime objects is what makes
-the same assertions pass on both.
+**The cold read's one real defect was the third asymmetry, dropped.**
+The reviewer side reaches its fields through `_instrument_fields_by_id`,
+which filters `visible.is_(True)`; the three new field queries did not.
+A `required=True, visible=False` field — an un-pinned chip — would then
+count as outstanding, so a reviewer who answered everything shown reads
+`in progress` and **both reminder loops keep emailing them**. Fixed in
+all three places, with
+`test_an_invisible_required_field_is_the_reviewers_third_asymmetry`
+reproducing it; each of the three is separately mutation-checked.
 
 **What the oracle pins that a naive `GROUP BY` would get wrong**: the
 dedupe key is `(instrument, group_key)`, not the group alone;
@@ -531,20 +557,22 @@ then assignments-of-a-reviewee; the reviewee side requires
 `submitted_at`; the invitation join carries `last_reminder_at`, without
 which `summary_counts` undercounts and both reminder loops skip everyone
 (Codex P2); and both `ORDER BY`s matter, because the operations routes
-paginate whatever order they are handed (Codex P2). Thirteen mutations,
+paginate whatever order they are handed (Codex P2). Sixteen mutations,
 all caught — four of them only after the fixture grew to carry the case,
 which is what the fixture's own comments record.
-
-**Two asymmetries between the rollups are now pinned**, neither
-obviously intended, both shipped: an inactive reviewer is dropped by the
-reviewer rollup and still counted by the reviewee one, and a draft is a
-completion to the reviewer rollup but not to the reviewee one. If either
-should change, that is its own item.
 
 **Expectations are hand-derived, not captured.** Two disagreed with the
 code on the first pass and the code was right both times: SQLite drops a
 `DateTime(timezone=True)` offset, so the oracle compares instants in
 UTC — which would otherwise have bitten rung 2 from the Postgres side.
+
+**Carried to rung 4.** `test_monitoring_prefetch.py`'s module docstring
+still describes the per-assignment loop as the thing it guards, and its
+two equivalence tests now call `_assignment_complete`, which only
+`_per_reviewee_coverage_python` still reaches — so they compare two
+paths through the oracle, not through the shipped rollup. Neither is
+wrong; both are now about a narrower thing than the file says. The
+close re-aims the prose and says which guard covers what.
 
 ### PR ladder
 
@@ -586,8 +614,11 @@ UTC — which would otherwise have bitten rung 2 from the Postgres side.
 ### Doc impact
 
 - `spec/operations_pages.md` — the Progress and coverage columns are now
-  computed by aggregate query; the contract they render is unchanged
-  (Item 3).
+  computed by aggregate query; the contract they render is unchanged.
+  "What these pages cost to render" also needs re-taking: its "every
+  rollup reads the session's response rows in one query" and the
+  per-roster query budget under it are both false once the rollups stop
+  reading rows at all (Item 3).
 - `docs/status.md` — row when the item lands (Item 3).
 
 ---

@@ -557,6 +557,251 @@ def test_a_draft_is_complete_to_one_rollup_and_not_the_other(
     assert carol.completed_count == 2
 
 
+def test_an_invisible_required_field_is_the_reviewers_third_asymmetry(
+    db: Session,
+) -> None:
+    """An un-pinned chip leaves `required=True, visible=False`.
+
+    The reviewer surface filters response fields by `visible`
+    (`spec/instruments.md` § *Response fields*), so the field is never
+    rendered and cannot be answered — and the reviewer rollup reaches
+    its fields through `_instrument_fields_by_id`, which carries that
+    filter. The reviewee rollup does **not**: it selects the
+    instrument's fields unfiltered.
+
+    So the same field is invisible work to one side and outstanding
+    work to the other. Pinned in its own session rather than in the
+    shared fixture, because it moves both sides' numbers and would
+    otherwise make every other expectation harder to read.
+
+    Without this, a reviewer who answered everything they were shown
+    reads `in progress` on Invitations while their own dashboard reads
+    `submitted` — and both reminder loops, which filter on
+    `is_incomplete`, keep emailing them.
+    """
+    user = User(email="op-visible@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="Spring", code="r2-visible", created_by_user_id=user.id
+    )
+    db.add(review_session)
+    db.flush()
+    sid = review_session.id
+
+    reviewer = Reviewer(session_id=sid, name="Ann", email="ann@example.edu")
+    reviewee = Reviewee(
+        session_id=sid, name="Ben", email_or_identifier="ben@example.edu"
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    # **On both instrument kinds**, because the reviewer rollup has two
+    # halves — an aggregate for per-reviewee instruments and a Python
+    # path for group-scoped ones — and each reaches its fields by its
+    # own query.
+    instruments = [
+        Instrument(
+            session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None
+        ),
+        Instrument(
+            session_id=sid,
+            name="Grouped",
+            order=1,
+            session_seq=2,
+            group_kind="r1",
+        ),
+    ]
+    db.add_all(instruments)
+    db.flush()
+    for index, instrument in enumerate(instruments):
+        shown = InstrumentResponseField(
+            instrument_id=instrument.id,
+            field_key=f"shown{index}",
+            label="Shown",
+            required=True,
+            order=0,
+        )
+        hidden = InstrumentResponseField(
+            instrument_id=instrument.id,
+            field_key=f"hidden{index}",
+            label="Hidden",
+            required=True,
+            visible=False,
+            order=1,
+        )
+        db.add_all([shown, hidden])
+        db.flush()
+        assignment = Assignment(
+            session_id=sid,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+        )
+        db.add(assignment)
+        db.flush()
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=shown.id,
+                value="done",
+                saved_at=T0,
+                submitted_at=T0,
+            )
+        )
+        if index == 0:
+            # Answered **and then un-pinned**: a row survives on a field
+            # that is now invisible. The reviewer rollup must not count
+            # it as satisfying anything, or its "present required"
+            # exceeds its "required total" and the difference goes
+            # negative — which would not merely mis-state this
+            # assignment but corrupt the reviewer's whole sum.
+            db.add(
+                Response(
+                    assignment_id=assignment.id,
+                    response_field_id=hidden.id,
+                    value="answered before the chip was un-pinned",
+                    saved_at=T0,
+                    submitted_at=T0,
+                )
+            )
+    db.flush()
+
+    # The reviewer answered everything that was shown, on both.
+    for name, rollup in REVIEWER_IMPLEMENTATIONS:
+        row = _by_email(rollup(db, review_session))["ann@example.edu"]
+        assert row.assignment_count == 2, name
+        assert row.required_total == 2, name
+        assert row.missing_required_count == 0, name
+        assert row.completed_count == 2, name
+        assert row.pill_state == "submitted", name
+        assert row.is_incomplete is False, name
+
+    # The reviewee side counts the invisible ones. On the first
+    # instrument that field happens to carry the leftover answer, so it
+    # reads complete; on the second it does not. One of two.
+    for name, rollup in REVIEWEE_IMPLEMENTATIONS:
+        row = _by_identifier(rollup(db, review_session))["ben@example.edu"]
+        assert row.reviewer_count == 2, name
+        assert row.completed_count == 1, name
+        assert row.pill_state == "adequate", name
+
+
+def test_the_edges_the_shared_fixture_does_not_reach(
+    db: Session,
+) -> None:
+    """Three shapes the main fixture has no case for, each of which the
+    rewrite has an explicit branch or a portability risk for:
+
+    * **an instrument with no required fields at all** — both new forms
+      carry a `required_total == 0` branch whose whole claim is "complete
+      on the strength of any row at all";
+    * **`Response.value IS NULL`**, as distinct from `''` — the SQL asks
+      `value IS NOT NULL AND value != ''` where the Python asks
+      `(r.value or "") != ""`, and only a NULL tells them apart;
+    * **a reviewer holding only group-scoped work** — the reviewer
+      rollup adds two halves, and this is the one that exercises
+      `RollupParts.empty() + grouped` rather than the other order.
+    """
+    user = User(email="op-edges@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="Spring", code="r2-edges", created_by_user_id=user.id
+    )
+    db.add(review_session)
+    db.flush()
+    sid = review_session.id
+
+    plain_only = Reviewer(session_id=sid, name="Pat", email="pat@example.edu")
+    grouped_only = Reviewer(
+        session_id=sid, name="Quinn", email="quinn@example.edu"
+    )
+    subject = Reviewee(
+        session_id=sid, name="Sam", email_or_identifier="sam@example.edu"
+    )
+    db.add_all([plain_only, grouped_only, subject])
+    db.flush()
+
+    # No required fields on either instrument.
+    optional_solo = Instrument(
+        session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None
+    )
+    optional_group = Instrument(
+        session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1"
+    )
+    db.add_all([optional_solo, optional_group])
+    db.flush()
+    solo_field = InstrumentResponseField(
+        instrument_id=optional_solo.id,
+        field_key="note",
+        label="Note",
+        required=False,
+        order=0,
+    )
+    group_field = InstrumentResponseField(
+        instrument_id=optional_group.id,
+        field_key="gnote",
+        label="Group note",
+        required=False,
+        order=0,
+    )
+    db.add_all([solo_field, group_field])
+    db.flush()
+
+    pat_row = Assignment(
+        session_id=sid,
+        reviewer_id=plain_only.id,
+        reviewee_id=subject.id,
+        instrument_id=optional_solo.id,
+    )
+    quinn_row = Assignment(
+        session_id=sid,
+        reviewer_id=grouped_only.id,
+        reviewee_id=subject.id,
+        instrument_id=optional_group.id,
+    )
+    db.add_all([pat_row, quinn_row])
+    db.flush()
+    db.add_all(
+        [
+            # A saved row whose value is NULL, not "".
+            Response(
+                assignment_id=pat_row.id,
+                response_field_id=solo_field.id,
+                value=None,
+                saved_at=T0,
+                submitted_at=T0,
+            ),
+            Response(
+                assignment_id=quinn_row.id,
+                response_field_id=group_field.id,
+                value=None,
+                saved_at=T0,
+                submitted_at=T0,
+            ),
+        ]
+    )
+    db.flush()
+
+    for name, rollup in REVIEWER_IMPLEMENTATIONS:
+        rows = _by_email(rollup(db, review_session))
+        for email in ("pat@example.edu", "quinn@example.edu"):
+            row = rows[email]
+            assert row.assignment_count == 1, (name, email)
+            assert row.required_total == 0, (name, email)
+            assert row.missing_required_count == 0, (name, email)
+            # No required fields, and a row exists — complete, and
+            # submitted because nothing is unmet and nothing is a draft.
+            assert row.completed_count == 1, (name, email)
+            assert row.pill_state == "submitted", (name, email)
+
+    for name, rollup in REVIEWEE_IMPLEMENTATIONS:
+        row = _by_identifier(rollup(db, review_session))["sam@example.edu"]
+        assert row.reviewer_count == 2, name
+        assert row.completed_count == 2, name
+        assert row.pill_state == "complete", name
+
+
 def test_summary_counts_ride_on_the_reviewer_rollup(
     db: Session, rollups: Fixture
 ) -> None:

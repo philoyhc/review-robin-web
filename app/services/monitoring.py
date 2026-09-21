@@ -121,12 +121,24 @@ def _plain_instrument_parts(
     ``tests/integration/test_monitoring_rollup_parity.py`` pins it, so
     it is reproduced here deliberately rather than tidied.
     """
+    # ``visible`` is not decoration here. The reviewer surface filters
+    # response fields by it (``spec/instruments.md`` § *Visibility + Response
+    # fields*), so an un-pinned chip's field is never rendered and
+    # cannot be answered — and the Python path this replaces reached
+    # its fields through ``_instrument_fields_by_id``, which carries
+    # the filter. Without it a reviewer who answered everything they
+    # were shown reads `in progress` and both reminder loops keep
+    # emailing them. The reviewee rollup does **not** filter, which is
+    # its own asymmetry, pinned in the parity file.
     required_per_instrument = (
         select(
             InstrumentResponseField.instrument_id.label("instrument_id"),
             func.count(InstrumentResponseField.id).label("required_total"),
         )
-        .where(InstrumentResponseField.required.is_(True))
+        .where(
+            InstrumentResponseField.required.is_(True),
+            InstrumentResponseField.visible.is_(True),
+        )
         .group_by(InstrumentResponseField.instrument_id)
         .subquery()
     )
@@ -135,6 +147,7 @@ def _plain_instrument_parts(
         (
             and_(
                 InstrumentResponseField.required.is_(True),
+                InstrumentResponseField.visible.is_(True),
                 Response.value.is_not(None),
                 Response.value != "",
             ),
@@ -268,11 +281,16 @@ def _grouped_instrument_parts(
 
     fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
     for field in db.execute(
-        select(InstrumentResponseField).where(
+        select(InstrumentResponseField)
+        .where(
             InstrumentResponseField.instrument_id.in_(
                 {a.instrument_id for a in grouped}
             )
         )
+        # Same filter, same reason as the aggregate half above — this
+        # stands in for ``_instrument_fields_by_id``, which carries it.
+        .where(InstrumentResponseField.visible.is_(True))
+        .order_by(InstrumentResponseField.order)
     ).scalars():
         fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
