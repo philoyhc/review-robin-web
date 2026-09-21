@@ -12,7 +12,7 @@ became one rule per check; the public signature is unchanged
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -63,7 +63,129 @@ class ValidationRule:
     why: str
     fix_url: Callable[[ReviewSession], str]
     fix_page_label: str
-    check: Callable[[Session, ReviewSession], Iterable[ValidationIssue]]
+    check: Callable[
+        [Session, ReviewSession, "ValidationInputs"],
+        Iterable[ValidationIssue],
+    ]
+
+
+@dataclass(frozen=True)
+class ValidationInputs:
+    """What one report run loads once, for every check to read.
+
+    Twenty-two checks each loading for themselves is how two of them
+    come to disagree about what "the session's instruments" means. It
+    is also why one run issued 43 queries for 21 distinct reads
+    (19R Item 5; ``guide/app_responsiveness.md`` Finding 6).
+
+    **Measured, not guessed.** This carries exactly what more than one
+    check loaded: the instrument list, the three rosters, the roster
+    non-empty probes (now ``bool()`` over a list already loaded), the
+    per-instrument response-field / visible-response-field /
+    display-field presence, and ``included_count_per_instrument``. A
+    load only one check makes stays in that check.
+
+    **Per run, never a cache.** :func:`validate_session_setup` builds
+    one of these per call and drops it. A check must not see a roster
+    older than the request that asked.
+    """
+
+    instruments: tuple[Instrument, ...]
+    reviewers: tuple[Reviewer, ...]
+    reviewees: tuple[Reviewee, ...]
+    observers: tuple[Observer, ...]
+    #: Instrument ids with at least one ``InstrumentResponseField`` row.
+    instruments_with_response_fields: frozenset[int]
+    #: …with at least one ``visible=True`` response field.
+    instruments_with_visible_response_fields: frozenset[int]
+    #: …with at least one ``InstrumentDisplayField`` row.
+    instruments_with_display_fields: frozenset[int]
+    included_count_by_instrument: Mapping[int, int]
+
+    @property
+    def active_reviewees(self) -> tuple[Reviewee, ...]:
+        """The roster filtered in Python rather than re-queried."""
+        return tuple(r for r in self.reviewees if r.status == "active")
+
+
+def load_validation_inputs(
+    db: Session, review_session: ReviewSession
+) -> ValidationInputs:
+    """Load everything more than one registered rule needs, once.
+
+    The three rosters are ordered by id so that "the first duplicate's
+    row" in a ``fix_anchor`` is a fact rather than whatever the dialect
+    happened to return — SQLite grants an unordered ``SELECT`` the
+    insertion order anyway, so no test fails if the clause goes, which
+    is exactly why it is stated here once instead of per rule.
+
+    The per-instrument presence sets join through
+    ``Instrument.session_id`` rather than an ``IN`` over instrument
+    ids. The id list is short today, but ``IN`` is the shape that hits
+    SQLite's 999-variable ceiling once it is not.
+    """
+    # Local import: ``assignments`` imports this module's siblings.
+    from app.services import assignments as assignments_service
+
+    def _instrument_ids(
+        field_model: type[InstrumentResponseField]
+        | type[InstrumentDisplayField],
+        *extra: object,
+    ) -> frozenset[int]:
+        stmt = (
+            select(field_model.instrument_id)
+            .join(Instrument, Instrument.id == field_model.instrument_id)
+            .where(Instrument.session_id == review_session.id)
+            .distinct()
+        )
+        for clause in extra:
+            stmt = stmt.where(clause)
+        return frozenset(row[0] for row in db.execute(stmt).all())
+
+    return ValidationInputs(
+        instruments=tuple(
+            db.execute(
+                select(Instrument)
+                .where(Instrument.session_id == review_session.id)
+                .order_by(Instrument.order, Instrument.id)
+            ).scalars()
+        ),
+        reviewers=tuple(
+            db.execute(
+                select(Reviewer)
+                .where(Reviewer.session_id == review_session.id)
+                .order_by(Reviewer.id)
+            ).scalars()
+        ),
+        reviewees=tuple(
+            db.execute(
+                select(Reviewee)
+                .where(Reviewee.session_id == review_session.id)
+                .order_by(Reviewee.id)
+            ).scalars()
+        ),
+        observers=tuple(
+            db.execute(
+                select(Observer)
+                .where(Observer.session_id == review_session.id)
+                .order_by(Observer.id)
+            ).scalars()
+        ),
+        instruments_with_response_fields=_instrument_ids(
+            InstrumentResponseField
+        ),
+        instruments_with_visible_response_fields=_instrument_ids(
+            InstrumentResponseField, InstrumentResponseField.visible.is_(True)
+        ),
+        instruments_with_display_fields=_instrument_ids(
+            InstrumentDisplayField
+        ),
+        included_count_by_instrument=(
+            assignments_service.included_count_per_instrument(
+                db, review_session.id
+            )
+        ),
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -72,7 +194,9 @@ class ValidationRule:
 
 
 def _check_session_no_name(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     if not review_session.name:
         yield ValidationIssue(
@@ -84,7 +208,9 @@ def _check_session_no_name(
 
 
 def _check_session_no_code(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     if not review_session.code:
         yield ValidationIssue(
@@ -96,14 +222,11 @@ def _check_session_no_code(
 
 
 def _check_reviewers_empty(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    has_any = db.execute(
-        select(Reviewer.id)
-        .where(Reviewer.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    if has_any is None:
+    if not inputs.reviewers:
         yield ValidationIssue(
             severity=Severity.error,
             source="reviewers",
@@ -112,15 +235,12 @@ def _check_reviewers_empty(
 
 
 def _check_reviewers_duplicate_email(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
-    )
     by_email: dict[str, list[Reviewer]] = {}
-    for r in reviewers:
+    for r in inputs.reviewers:
         by_email.setdefault(normalize_email(r.email), []).append(r)
     for email, dupes in by_email.items():
         if len(dupes) > 1:
@@ -135,7 +255,9 @@ def _check_reviewers_duplicate_email(
 
 
 def _check_observers_duplicate_email(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """The backstop reviewers and reviewees have had all along.
 
@@ -147,22 +269,13 @@ def _check_observers_duplicate_email(
     observers were the one roster it had nothing to report with
     (19Q Item 7).
     """
-    observers = list(
-        db.execute(
-            select(Observer)
-            .where(Observer.session_id == review_session.id)
-            # Ordered so "the first duplicate's row" is a fact rather
-            # than whatever the dialect happened to return. Note what
-            # this does NOT buy: SQLite grants an unordered SELECT the
-            # insertion order anyway, so no test here fails if the
-            # clause is deleted, and the mutation gate says so. Where
-            # the choice reaches operator-facing copy it is made in
-            # Python instead — `csv_imports._identity_holders`.
-            .order_by(Observer.id)
-        ).scalars()
-    )
+    # The roster arrives ordered by id from ``load_validation_inputs``,
+    # which is what makes "the first duplicate's row" below a fact
+    # rather than whatever the dialect happened to return. Where the
+    # choice reaches operator-facing copy it is made in Python instead
+    # — `csv_imports._identity_holders`.
     by_email: dict[str, list[Observer]] = {}
-    for o in observers:
+    for o in inputs.observers:
         by_email.setdefault(normalize_email(o.email), []).append(o)
     for email, dupes in by_email.items():
         if len(dupes) > 1:
@@ -203,15 +316,21 @@ _CROSS_ROSTER_WHY = (
     "name wrong."
 )
 
-# ``(source, model, identifier attribute, name attribute, anchor prefix)``
-# in the order the Validate page reads best: reviewers, reviewees,
-# observers.
+# ``(source, ValidationInputs roster attribute, identifier attribute,
+# name attribute, anchor prefix)`` in the order the Validate page reads
+# best: reviewers, reviewees, observers.
 _ROSTER_IDENTITY_FIELDS: tuple[
-    tuple[str, type, str, str, str], ...
+    tuple[str, str, str, str, str], ...
 ] = (
-    ("reviewers", Reviewer, "email", "name", "reviewer-row"),
-    ("reviewees", Reviewee, "email_or_identifier", "name", "reviewee-row"),
-    ("observers", Observer, "email", "display_name", "observer-row"),
+    ("reviewers", "reviewers", "email", "name", "reviewer-row"),
+    (
+        "reviewees",
+        "reviewees",
+        "email_or_identifier",
+        "name",
+        "reviewee-row",
+    ),
+    ("observers", "observers", "email", "display_name", "observer-row"),
 )
 
 # Singular labels for the message; "reviewers" reads wrong inside
@@ -240,7 +359,7 @@ class _IdentityHolder:
 
 
 def _identity_holders_by_email(
-    db: Session, review_session: ReviewSession
+    inputs: ValidationInputs,
 ) -> dict[str, list[_IdentityHolder]]:
     """Every named roster row in the session, keyed by normalized email.
 
@@ -248,23 +367,17 @@ def _identity_holders_by_email(
     ``csv_imports.is_comparable_identity`` — the same predicate the
     write guards apply, called rather than restated, because a rule
     with two homes is the defect this item is fixing one level up.
+
+    The three rosters come from ``ValidationInputs``, already ordered
+    by id, so this reads no database of its own — it was the largest
+    repeat in the run, pulling all three rosters once per cross-roster
+    rule.
     """
     holders: dict[str, list[_IdentityHolder]] = {}
-    for source, model, id_attr, name_attr, anchor_prefix in (
+    for source, roster_attr, id_attr, name_attr, anchor_prefix in (
         _ROSTER_IDENTITY_FIELDS
     ):
-        rows = (
-            db.execute(
-                select(model)
-                .where(model.session_id == review_session.id)
-                # Deterministic issue order across dialects; see
-                # ``_check_observers_duplicate_email``.
-                .order_by(model.id)
-            )
-            .scalars()
-            .all()
-        )
-        for row in rows:
+        for row in getattr(inputs, roster_attr):
             identifier = getattr(row, id_attr) or ""
             name = getattr(row, name_attr) or ""
             if not is_comparable_identity(identifier, name):
@@ -282,7 +395,7 @@ def _identity_holders_by_email(
 
 
 def _cross_roster_identity_issues(
-    db: Session, review_session: ReviewSession, source: str
+    inputs: ValidationInputs, source: str
 ) -> Iterable[ValidationIssue]:
     """One issue per ``source`` row whose name another roster disagrees with.
 
@@ -292,7 +405,7 @@ def _cross_roster_identity_issues(
     left to that roster's ``duplicate_*`` rule, so a within-roster
     duplicate is not reported twice.
     """
-    for email, holders in sorted(_identity_holders_by_email(db, review_session).items()):
+    for email, holders in sorted(_identity_holders_by_email(inputs).items()):
         for holder in holders:
             if holder.source != source:
                 continue
@@ -321,32 +434,35 @@ def _cross_roster_identity_issues(
 
 
 def _check_reviewers_cross_roster_identity(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    return _cross_roster_identity_issues(db, review_session, "reviewers")
+    return _cross_roster_identity_issues(inputs, "reviewers")
 
 
 def _check_reviewees_cross_roster_identity(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    return _cross_roster_identity_issues(db, review_session, "reviewees")
+    return _cross_roster_identity_issues(inputs, "reviewees")
 
 
 def _check_observers_cross_roster_identity(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    return _cross_roster_identity_issues(db, review_session, "observers")
+    return _cross_roster_identity_issues(inputs, "observers")
 
 
 def _check_reviewees_empty(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    has_any = db.execute(
-        select(Reviewee.id)
-        .where(Reviewee.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    if has_any is None:
+    if not inputs.reviewees:
         yield ValidationIssue(
             severity=Severity.error,
             source="reviewees",
@@ -355,15 +471,12 @@ def _check_reviewees_empty(
 
 
 def _check_reviewees_duplicate_id(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    reviewees = list(
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).scalars()
-    )
     by_ident: dict[str, list[Reviewee]] = {}
-    for r in reviewees:
+    for r in inputs.reviewees:
         by_ident.setdefault(normalize_email(r.email_or_identifier), []).append(r)
     for ident, dupes in by_ident.items():
         if len(dupes) > 1:
@@ -377,7 +490,9 @@ def _check_reviewees_duplicate_id(
 
 
 def _check_reviewees_unreachable_for_results(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """W8 — soft warning when any reviewee's ``email_or_identifier``
     isn't a deliverable email. The ``/me/sessions/{id}/results``
@@ -388,16 +503,9 @@ def _check_reviewees_unreachable_for_results(
     Non-blocking — the operator may have non-email reviewees on
     purpose (anonymous IDs for analysis-only). The warning just
     surfaces the implication so they decide knowingly."""
-    reviewees = (
-        db.execute(
-            select(Reviewee)
-            .where(Reviewee.session_id == review_session.id)
-            .where(Reviewee.status == "active")
-        )
-        .scalars()
-        .all()
-    )
-    unreachable = [r for r in reviewees if not is_email_identified(r)]
+    unreachable = [
+        r for r in inputs.active_reviewees if not is_email_identified(r)
+    ]
     if not unreachable:
         return
     noun = "reviewee" if len(unreachable) == 1 else "reviewees"
@@ -415,22 +523,12 @@ def _check_reviewees_unreachable_for_results(
 
 
 def _check_instruments_no_fields(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    for instrument in instruments:
-        has_field = db.execute(
-            select(InstrumentResponseField.id).where(
-                InstrumentResponseField.instrument_id == instrument.id
-            )
-        ).first()
-        if has_field is None:
+    for instrument in inputs.instruments:
+        if instrument.id not in inputs.instruments_with_response_fields:
             label = (
                 instrument.description.strip()
                 if instrument.description and instrument.description.strip()
@@ -445,7 +543,9 @@ def _check_instruments_no_fields(
 
 
 def _check_assignments_no_included_pairs(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Session-wide warning: zero included rows across every
     instrument.
@@ -461,12 +561,7 @@ def _check_assignments_no_included_pairs(
     Per-instrument detail rides on the
     ``instruments.zero_included`` warning.
     """
-    from app.services import assignments as assignments_service
-
-    included = assignments_service.included_count_per_instrument(
-        db, review_session.id
-    )
-    if sum(included.values()) == 0:
+    if sum(inputs.included_count_by_instrument.values()) == 0:
         yield ValidationIssue(
             severity=Severity.warning,
             source="assignments",
@@ -478,7 +573,9 @@ def _check_assignments_no_included_pairs(
 
 
 def _check_assignments_reviewer_missing(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Single-instrument sessions: every reviewer must appear on at
     least one ``Assignment`` row.
@@ -496,22 +593,8 @@ def _check_assignments_reviewer_missing(
     """
     if review_session.assignment_mode is None:
         return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if len(instruments) != 1:
+    if len(inputs.instruments) != 1:
         return
-    reviewers = list(
-        db.execute(
-            select(Reviewer)
-            .where(Reviewer.session_id == review_session.id)
-            .order_by(Reviewer.id)
-        ).scalars()
-    )
     reviewer_ids_with_assignments = {
         row[0]
         for row in db.execute(
@@ -520,7 +603,7 @@ def _check_assignments_reviewer_missing(
             .distinct()
         ).all()
     }
-    for reviewer in reviewers:
+    for reviewer in inputs.reviewers:
         if reviewer.id in reviewer_ids_with_assignments:
             continue
         yield ValidationIssue(
@@ -536,7 +619,9 @@ def _check_assignments_reviewer_missing(
 
 
 def _check_assignments_reviewer_missing_for_instrument(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Multi-instrument sessions: every (reviewer, instrument) pair
     must appear on at least one ``Assignment`` row.
@@ -553,24 +638,12 @@ def _check_assignments_reviewer_missing_for_instrument(
     """
     if review_session.assignment_mode is None:
         return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if len(instruments) <= 1:
+    if len(inputs.instruments) <= 1:
         return
-    reviewers = list(
-        db.execute(
-            select(Reviewer)
-            .where(Reviewer.session_id == review_session.id)
-            .order_by(Reviewer.id)
-        ).scalars()
-    )
     # Per-instrument reviewer-presence map keyed by instrument_id.
-    presence: dict[int, set[int]] = {i.id: set() for i in instruments}
+    presence: dict[int, set[int]] = {
+        i.id: set() for i in inputs.instruments
+    }
     for instrument_id, reviewer_id in db.execute(
         select(Assignment.instrument_id, Assignment.reviewer_id)
         .where(Assignment.session_id == review_session.id)
@@ -578,12 +651,12 @@ def _check_assignments_reviewer_missing_for_instrument(
     ).all():
         if instrument_id in presence:
             presence[instrument_id].add(reviewer_id)
-    for instrument in instruments:
+    for instrument in inputs.instruments:
         in_use = presence[instrument.id]
         if not in_use:
             # Sibling instrument_empty rule covers this case.
             continue
-        for reviewer in reviewers:
+        for reviewer in inputs.reviewers:
             if reviewer.id in in_use:
                 continue
             yield ValidationIssue(
@@ -603,7 +676,9 @@ def _check_assignments_reviewer_missing_for_instrument(
 
 
 def _check_assignments_instrument_empty(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Multi-instrument sessions: every instrument must have at
     least one ``Assignment`` row.
@@ -616,14 +691,7 @@ def _check_assignments_instrument_empty(
     """
     if review_session.assignment_mode is None:
         return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if len(instruments) <= 1:
+    if len(inputs.instruments) <= 1:
         return
     instrument_ids_with_rows = {
         row[0]
@@ -633,7 +701,7 @@ def _check_assignments_instrument_empty(
             .distinct()
         ).all()
     }
-    for instrument in instruments:
+    for instrument in inputs.instruments:
         if instrument.id in instrument_ids_with_rows:
             continue
         yield ValidationIssue(
@@ -649,7 +717,9 @@ def _check_assignments_instrument_empty(
 
 
 def _check_instruments_no_rule_pinned(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Wave 5 PR 5.3 — retired. Pre-PR-5.3 the rule fired on legacy
     instruments with NULL ``rule_set_id``. With the legacy /
@@ -665,7 +735,9 @@ def _check_instruments_no_rule_pinned(
 
 
 def _check_new_model_no_visible_response_fields(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Warning per new-model instrument with no ``visible=True``
     :class:`InstrumentResponseField` rows once the session has
@@ -676,37 +748,10 @@ def _check_new_model_no_visible_response_fields(
     (Wave 4 PR 2 — replaces the rule-set-pinned readiness gap for
     new-model instruments).
     """
-    has_reviewer = db.execute(
-        select(Reviewer.id)
-        .where(Reviewer.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    has_reviewee = db.execute(
-        select(Reviewee.id)
-        .where(Reviewee.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    if has_reviewer is None or has_reviewee is None:
+    if not inputs.reviewers or not inputs.reviewees:
         return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if not instruments:
-        return
-    instrument_ids = [inst.id for inst in instruments]
-    visible_rows = db.execute(
-        select(InstrumentResponseField.instrument_id)
-        .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
-        .where(InstrumentResponseField.visible.is_(True))
-        .distinct()
-    ).all()
-    configured_ids = {row[0] for row in visible_rows}
-    for instrument in instruments:
-        if instrument.id in configured_ids:
+    for instrument in inputs.instruments:
+        if instrument.id in inputs.instruments_with_visible_response_fields:
             continue
         yield ValidationIssue(
             severity=Severity.warning,
@@ -722,7 +767,9 @@ def _check_new_model_no_visible_response_fields(
 
 
 def _check_instruments_stale_generated(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Warning per instrument whose generated rows have fallen out of
     step with what the engine would produce now.
@@ -752,14 +799,7 @@ def _check_instruments_stale_generated(
     )
     if not any(state.stale for state in state_by_instrument.values()):
         return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    for instrument in instruments:
+    for instrument in inputs.instruments:
         state = state_by_instrument.get(instrument.id)
         if state is None or not state.stale:
             continue
@@ -776,7 +816,9 @@ def _check_instruments_stale_generated(
 
 
 def _check_instruments_zero_included(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     """Warning per instrument with ``generated_count > 0`` but
     ``included_count == 0``.
@@ -795,19 +837,9 @@ def _check_instruments_zero_included(
     generated_by_instrument = assignments_service.existing_count_per_instrument(
         db, review_session.id
     )
-    included_by_instrument = assignments_service.included_count_per_instrument(
-        db, review_session.id
-    )
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    for instrument in instruments:
+    for instrument in inputs.instruments:
         generated = generated_by_instrument.get(instrument.id, 0)
-        included = included_by_instrument.get(instrument.id, 0)
+        included = inputs.included_count_by_instrument.get(instrument.id, 0)
         if generated > 0 and included == 0:
             yield ValidationIssue(
                 severity=Severity.warning,
@@ -823,7 +855,9 @@ def _check_instruments_zero_included(
 
 
 def _check_email_template_no_help_contact(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
     if not (review_session.help_contact and review_session.help_contact.strip()):
         yield ValidationIssue(
@@ -837,30 +871,15 @@ def _check_email_template_no_help_contact(
 
 
 def _check_instruments_no_display_fields(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    for instrument in instruments:
-        has_response_field = db.execute(
-            select(InstrumentResponseField.id).where(
-                InstrumentResponseField.instrument_id == instrument.id
-            )
-        ).first()
-        if has_response_field is None:
+    for instrument in inputs.instruments:
+        if instrument.id not in inputs.instruments_with_response_fields:
             # The no_fields rule already covers this; skip.
             continue
-        has_display_field = db.execute(
-            select(InstrumentDisplayField.id).where(
-                InstrumentDisplayField.instrument_id == instrument.id
-            )
-        ).first()
-        if has_display_field is None:
+        if instrument.id not in inputs.instruments_with_display_fields:
             label = (
                 instrument.description.strip()
                 if instrument.description and instrument.description.strip()
@@ -1233,11 +1252,16 @@ def validate_session_setup(
 
     Stamps each emitted issue with the rule's ``rule_key``, ``fix_url``,
     and ``fix_page_label``; preserves any per-issue ``fix_anchor`` the
-    check function set."""
+    check function set.
+
+    Every input more than one rule needs is loaded once, up front, and
+    handed to each ``check`` — see :class:`ValidationInputs` for what
+    that covers and why it is a per-run object rather than a cache."""
+    inputs = load_validation_inputs(db, review_session)
     issues: list[ValidationIssue] = []
     for rule in REGISTERED_RULES:
         url = rule.fix_url(review_session)
-        for issue in rule.check(db, review_session):
+        for issue in rule.check(db, review_session, inputs):
             issue.rule_key = rule.key
             issue.fix_url = url
             issue.fix_page_label = rule.fix_page_label

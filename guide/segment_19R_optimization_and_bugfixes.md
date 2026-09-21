@@ -836,6 +836,30 @@ would still write its own load.
 
 No schema change, no migration, no template change.
 
+### Status
+
+**Rung 2 landed its whole list, and the Definition of done's
+"no exact-repeat query" is still three short.** `ValidationInputs`
+covers every input the plan named, and the report went from 43 queries
+/ 21 distinct to **17 / 14** on `FM100`. The three that remain are one
+statement each — instruments, reviewers, reviewees — issued a second
+time inside `assignments.staleness_by_instrument`, which builds its own
+`_load_reconcile_inputs` and cannot see the report's. That is a
+report-to-engine boundary, not a check loading for itself, so rung 2
+left it rather than widening the engine's signature on its own
+authority. **Rung 3 decides**: pass the loaded rosters into
+`staleness_by_instrument`, or scope the guard to the report's own
+loads and say why.
+
+Pages on `FM100` (`validated`, 20,000 rows), before 19R.5 → after
+rung 1 → after rung 2: Validate **112 → 69 → 43**, Session Home
+**79 → 79 → 53**, Assignments **92 → 92 → 66**.
+
+**Parity was measured, not assumed** (2026-09-21). The golden in
+`tests/integration/test_validation_issue_parity.py` was captured by
+running the **pre-refactor** module from `origin/main` against its six
+fixtures; the post-refactor run reproduces all 29 issues byte for byte.
+
 ### PR ladder
 
 1. **Stop Validate building the report twice.** One call site, no
