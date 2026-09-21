@@ -12,76 +12,109 @@ below, no index is missing, and adding one would change nothing. Five of the six
 slow pages are slow for a single shared reason, and it is the same reason
 on all five.
 
-## Re-taken 2026-09-21 — after 19R, and at sizes an operator will run
+## The bench, re-set 2026-09-21 — 200 × 200 full matrix
 
-Everything below this section is the **2026-09-20 state**, before segment
-19R landed. Read it for *where the time went and why*; read this section
-for *what it costs now*.
+**The upper bound is 200 reviewers each reviewing 200 reviewees**
+(author's ruling, 2026-09-21). A hundred people to review is not crazy;
+the conditions under which a *thousand* are each asked to do it are
+rare. Everything below this section is the 2026-09-20 investigation,
+measured at 1,000 × 1,000 before segment 19R landed — read it for
+*where the time went and why*, and read this section for *what it costs
+at the size the app is built for*.
 
-Two things changed. 19R Items 1–3 shipped the three recommendations, and
-the fixture was challenged: 1,000 reviewers each reviewing ~100 people is
-a shape that exists, but "the conditions under which 1,000 are each asked
-to do that are rare" (author, 2026-09-21). **100 × 100 is the likely
-upper limit**; 200 × 200 is headroom. So the re-take covers three sizes,
-all in one run on one machine, so the columns are comparable to each
-other in a way this document's original figures are not comparable to
-them.
+**A correction first, because it changes the numbers.** The first
+attempt at this re-take used `pin-rule`, which applies
+`reviewer.tag1 same_as reviewee.tag1` and keeps **a tenth** of the
+matrix. A "100 × 100" fixture built that way gives each reviewer ten
+reviewees, not a hundred — an order of magnitude lighter than the
+workload under discussion, and the conclusions drawn from it were
+correspondingly wrong (Codex, PR #2529). The fixtures below pin no
+rule, so every instrument defaults to Full Matrix and each reviewer
+reviews everyone.
 
-| page | 100 × 100 | 200 × 200 | 1,000 × 1,000 |
+| | **the bench** | half it | the old stress fixture |
 |---|---:|---:|---:|
-| assignment rows | 2,000 | 8,000 | 200,000 |
-| Session Home | **136 ms** | **176 ms** | 716 ms |
-| Assignments | **132 ms** | **225 ms** | 719 ms |
-| Invitations | **120 ms** | **236 ms** | 1,401 ms |
-| Responses | **116 ms** | **209 ms** | 1,467 ms |
-| Validate | **136 ms** | **201 ms** | 1,126 ms |
-| Setup: reviewers | 38 ms | 62 ms | 266 ms |
-| Lobby, 1,003 sessions | 121 ms | 150 ms | 117 ms |
+| roster | **200 × 200** | 100 × 100 | 1,000 × 1,000 |
+| rule | **full matrix** | full matrix | tag cohort |
+| reviewees per reviewer | **200** | 100 | 100 |
+| assignment rows | **80,000** | 20,000 | 200,000 |
+| Session Home | **441 ms** | 213 ms | 716 ms |
+| Assignments | **389 ms** | 228 ms | 719 ms |
+| Invitations | **646 ms** | 264 ms | 1,401 ms |
+| Responses | **693 ms** | 273 ms | 1,467 ms |
+| Validate | **482 ms** | 238 ms | 1,126 ms |
+| Setup: reviewers | **196 ms** | 75 ms | 266 ms |
+| Lobby, 1,003 sessions | **96 ms** | 107 ms | 117 ms |
+| **Prepare** | **20.0 s** | **5.7 s** | 74.8 s |
+| **Activate** | **0.7 s** | — | 12.1 s |
 
-| action | 100 × 100 | 200 × 200 | 1,000 × 1,000 |
-|---|---:|---:|---:|
-| Prepare | **1.3 s** | **3.1 s** | 74.8 s |
-| Activate | 0.5 s | 0.6 s | 12.1 s |
+**Every page is under 700 ms at the upper bound**, so 19R Item 3's
+"under a second" target — recorded as missed, because it was measured
+at 1,000 × 1,000 — is met where it matters. The query counts are why it
+holds: **78 on Invitations at 20,000 rows, 80,000 and 200,000 alike**,
+flat in the roster as `spec/operations_pages.md` claims.
 
-**State B is a realistic lifecycle state, not a realistic session.** The
-sentence under "The measurements" calls it "the realistic one", meaning
-post-Prepare / pre-Activate — the state an operator deciding whether to
-Activate actually sits in. It does not mean 1,000 × 1,000 is a realistic
-*design*, and it should not be read that way.
+**The composition has inverted, and the document's headline with it.**
+Below, "this is not a database problem" — SQL never more than 9% of any
+slow page. At the bench it is **84% of Invitations** (540 ms of 646 ms)
+and 83% of Responses. Nothing regressed; 19R moved the counting *into*
+SQL and the Python it replaced is gone. But the sentence is a 2026-09-20
+fact, not a standing one, and the next page-time question at this scale
+is a query question.
 
-**At the likely ceiling every page is inside 250 ms**, with the "under a
-second" target 19R Item 3 missed at 1,000 × 1,000 met an order of
-magnitude over. The optimizations are not what made that true — the
-pages were already sub-second at this scale before them — but the query
-counts show they are what stops the curve running away: **78 queries on
-Invitations at 200 × 200 and the same 78 at 1,000 × 1,000**, flat in the
-roster as `spec/operations_pages.md` now claims.
+**Prepare is the one thing that is not comfortable**, and Finding 4
+stands as written. **20 seconds at the upper bound** is a click with no
+feedback, and the 5.7 s at half the roster shows it climbing steeply —
+80,000 rows is not where the per-object constant stops mattering. An
+earlier draft of this section claimed the finding was overstated; that
+was drawn from the tenth-of-the-matrix fixture and is withdrawn.
 
-**Prepare deflates hardest, and Finding 4 overstates it for real
-sessions.** 1.3 s → 3.1 s → 74.8 s across 2,000 → 8,000 → 200,000 rows
-is roughly linear per row with a per-object constant that only bites in
-the hundreds of thousands. At 8,000 rows the ORM-object-per-pair loop
-costs about two seconds: a click, not a hang. The bulk insert is worth
-doing if someone is in that code anyway; it is not worth a background
-job.
+**Two costs do not scale with the roster at all**, and on a small
+session they dominate:
 
-**Two costs do not scale down, and are now the largest things on a small
-session:**
+- **The lobby is ~1,590 KB at every size** — 1,003 filler sessions,
+  independent of the session being viewed. It is the largest response
+  the app sends and 81 ms of its 96 ms is Python. Finding 5's
+  compression case is unaffected by the re-set and still unactioned.
+- **79–112 queries per session page at every size** — Session Home 79,
+  Assignments 92, Validate 112, identical at 20,000 rows and at
+  200,000. Fixed cost, never attributed, and now the largest
+  unexplained thing on a realistic session.
 
-- **The lobby is 1,587 KB at every roster size** — it is 1,003 filler
-  sessions, independent of the session being viewed. At 100 × 100 it is
-  the largest response the app sends and its 107 ms is nearly all
-  Python. Finding 5's compression case is *stronger* after this re-take.
-- **Session Home, Assignments and Validate carry 79–112 queries at every
-  size.** Fixed cost, not roster cost, and nobody has looked at what
-  they are. That is the open question this re-take adds.
+Method: `tools/bench_roster_scale.py seed --code FM100 / FM200` with
+**no `pin-rule`**, `post --path /workflow/prepare`, then `bench --runs
+4`; Activate measured after the page bench, and confirmed real by the
+session reaching `ready` rather than the Validate warnings detour. The
+1,000 × 1,000 column is the pre-existing `BENCH1` cohort fixture
+re-benched in the same run, except Prepare and Activate which are the
+2026-09-20 figures; its Setup relationships / observers pages 404
+because those features are off on that older fixture.
 
-Method note: re-taken with `tools/bench_roster_scale.py seed --code R100
-/ R200`, `pin-rule`, `post --path /workflow/prepare`, then `bench --runs
-4`. The 1,000 × 1,000 column is the pre-existing `BENCH1` fixture
-re-benched in the same run; its Setup relationships / observers pages
-404 because those features are off on that older fixture, so those two
-rows are not comparable across columns.
+## Later candidates
+
+Moved here from `guide/segment_19R_optimization_and_bugfixes.md`
+2026-09-21 so the segment carries only its own items and the
+measurements stay with the evidence. Each becomes an item when someone
+picks it up.
+
+- **Bulk-insert the generated pairs.** `assignments/_generate.py` adds
+  one `Assignment()` per pair. **20.0 s at the bench**, 74.8 s at
+  1,000 × 1,000 — see Finding 4. A click rather than a page, so it
+  needs progress feedback or a background job as much as it needs
+  speed.
+- **Find out what the 79–112 fixed queries per session page are.**
+  Flat in the roster, so not roster cost; never attributed. The largest
+  unexplained cost on a realistic session.
+- **Turn on compression.** No compression middleware exists: the lobby
+  ships ~1,590 KB where gzip would send 95 KB (16.5×), the roster pages
+  6–7× — see Finding 5. One middleware line, **after** checking what
+  the dev slot's front end already sends
+  (`curl -sI -H 'Accept-Encoding: gzip'`), which this container cannot
+  see.
+- **Precompute the pair sort key.** Sorting the pair list drops from
+  0.87 s to 0.31 s at 1,000 × 1,000 when the normalized email is
+  computed once per person. Only worth doing inside a wider engine
+  change.
 
 ---
 
@@ -122,8 +155,8 @@ ad-hoc, not part of the tool.
 
 State B is the realistic **lifecycle state** — an operator who has
 clicked Prepare and is deciding whether to Activate sits in it. It is
-not a claim that 1,000 × 1,000 is a realistic session *design*; see the
-re-take above, which measures 100 × 100 and 200 × 200 as well.
+not a claim that 1,000 × 1,000 is a realistic session *design*; the
+bench is 200 × 200 full matrix, set above.
 
 **What these numbers are not.** Wall-clock is this container's CPU, one
 connection, no network between app and database. Azure adds a hop per
@@ -262,12 +295,11 @@ clicking again — is the worst available move. Whether a request that long
 survives the deployed front end is a question for the dev slot, not for
 this container.
 
-**Re-take 2026-09-21: this overstates the problem for real sessions.**
-Prepare is **1.3 s at 100 × 100 and 3.1 s at 200 × 200**. The
-per-object constant only bites in the hundreds of thousands of rows, so
-the hang described above needs a session design nobody runs. The bulk
-insert is worth doing if someone is in that code anyway; it does not
-need a background job.
+**Re-set 2026-09-21: this stands.** At the bench — 200 × 200 full
+matrix, 80,000 rows — Prepare is **20.0 s**, and 5.7 s at half that
+roster. A draft of the section above briefly claimed the finding was
+overstated; that was measured on a fixture keeping a tenth of the
+matrix and is withdrawn.
 
 ## Finding 5 — nothing is compressed
 
@@ -509,7 +541,7 @@ slower than no rule) is the argument for it.
    2026-09-21: **100 × 100 is the likely upper limit**. A hundred people
    to review is not crazy; the conditions under which a thousand are
    each asked to do it are rare. The pilot's own sessions are 154. The
-   re-take above measures 100 × 100 and 200 × 200 on that basis, and
+   bench above is set at 200 × 200 full matrix on that basis, and
    `guide/roster_search_filter.md` — which left the same question open —
    can take the same answer.*
 2. **Is the staleness verdict worth its price on every page?** It is
@@ -518,14 +550,15 @@ slower than no rule) is the argument for it.
 3. **Should the `validated` state cost less than the others?** It is the
    state an operator sits in while deciding to Activate, and it is the only
    state that runs validation inline on six pages.
-4. **What does the deployed front end do with a 75-second POST?** A dev-slot
-   question; this container cannot answer it. Lower priority after the
-   re-take: Prepare is 3.1 s at 200 × 200.
+4. **What does the deployed front end do with a long Prepare POST?** A
+   dev-slot question; this container cannot answer it. Still open at the
+   re-set: Prepare is **20 s at the bench**, not the 3.1 s an earlier
+   draft claimed from the wrong fixture.
 5. **What are the 79–112 queries that every session page issues
-   regardless of size?** New at the 2026-09-21 re-take, and now the
+   regardless of size?** New at the 2026-09-21 re-set, and now the
    largest unexplained cost on a realistic session: Session Home 79,
-   Assignments 92, Validate 112, identical at 2,000 rows and at 200,000.
-   Fixed cost, never measured, never attributed.
+   Assignments 92, Validate 112, identical at 20,000 rows and at
+   200,000. Fixed cost, never measured, never attributed.
 
 ## Out of scope
 

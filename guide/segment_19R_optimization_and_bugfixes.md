@@ -769,28 +769,6 @@ path. Both corrected.
 
 ## Later candidates
 
-Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
-item when someone picks it up; none blocked Items 1–4.
-
-- **Bulk-insert the generated pairs.** `_generate.py` adds one
-  `Assignment()` per pair, which costs **74.8 s** for 200,000 rows —
-  but the 2026-09-21 re-take puts it at **1.3 s at 100 × 100 and 3.1 s
-  at 200 × 200**, so the per-object constant only bites at a scale
-  nobody runs. Worth doing if someone is in that code anyway; it does
-  not need the progress feedback or background job this entry first
-  claimed.
-- **Find out what the 79–112 fixed queries per session page are.** New
-  at the re-take and now the largest unexplained cost on a realistic
-  session: Session Home 79, Assignments 92, Validate 112, identical at
-  2,000 assignment rows and at 200,000. Not roster cost, never
-  attributed.
-- **Turn on compression.** No compression middleware exists: the lobby
-  ships 1,584 KB where gzip would send 95 KB (16.5×), the roster pages
-  6–7×. One middleware line — **after** checking what the dev slot's
-  front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`), which
-  the agent's container cannot see.
-- **Precompute the pair sort key.** Sorting the million-pair list drops
-  from 0.87 s to 0.31 s when the normalized email is computed once per
-  person. Only worth doing inside a wider engine change.
-- **Anything the next measurement finds.** The tool is committed;
-  re-running it after these items is how the next item gets written.
+Moved to `guide/app_responsiveness.md` 2026-09-21, so this plan carries
+only its own items and each candidate sits with the measurement that
+motivates it.
