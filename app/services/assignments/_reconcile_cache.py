@@ -77,15 +77,28 @@ class MaterializedRows:
 
     It is sufficient for what the verdict reads, which is the *key set*
     ``{(reviewer_id, reviewee_id)}``: a delete moves ``count``, and an
-    insert always takes a fresh id above the current ``max_id``, so no
+    insert takes a fresh id above the current ``max_id``, so no
     combination of the two returns to the same pair. Updates to other
     columns move neither, and cannot change the verdict either, since
     the diff keys on those two FKs alone.
 
-    What it would miss is an in-place rewrite of ``reviewer_id`` or
-    ``reviewee_id`` on an existing row. Nothing does that — assignment
-    rows are replaced, not re-pointed — and this is the backstop
-    anyway, behind the write-through.
+    **That holds on Postgres, not on SQLite.** ``Assignment.id`` is a
+    plain ``autoincrement=True`` primary key, which SQLite implements
+    as a rowid alias without the ``AUTOINCREMENT`` keyword — so it
+    *reuses* ids freed by deleting the highest rows. Delete the top two
+    rows and insert two, and ``count`` and ``max(id)`` both return to
+    their old values over a different key set. Production is Postgres,
+    where a sequence never hands an id back, and nothing in ``app/``
+    inserts an ``Assignment`` outside ``replace_assignments``, which
+    write-throughs. But this is the dev and unit-test dialect, so a
+    future insert path leaning on this backstop instead of on the
+    write-through would be wrong in the sandbox and right in CI
+    (19R Item 2 rung 3 cold read).
+
+    What it misses on either dialect is an in-place rewrite of
+    ``reviewer_id`` or ``reviewee_id`` on an existing row. Nothing does
+    that — assignment rows are replaced, not re-pointed — and this is
+    the backstop anyway, behind the write-through.
     """
 
     count: int
