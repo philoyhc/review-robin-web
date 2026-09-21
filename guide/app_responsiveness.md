@@ -7,8 +7,8 @@ Home takes longer than it used to, and the Workflow actions are slow. *Is
 there still room to optimize?*
 
 There is, and the room is not where the question implies. **This is not a
-database problem.** SQL is never more than 9% of any page measured below,
-no index is missing, and adding one would change nothing. Five of the six
+database problem.** SQL is never more than 9% of any *slow* page measured
+below, no index is missing, and adding one would change nothing. Five of the six
 slow pages are slow for a single shared reason, and it is the same reason
 on all five.
 
@@ -147,9 +147,14 @@ than the SQL: the per-reviewer reload re-materializes assignment rows the
 function already holds — **415,024** ORM instance constructions in one
 Invitations render at state B.
 
-The fix is the one this function has already applied twice: pass the
-session-wide data in. The assignments are *already loaded* in
-`per_reviewer_progress` before the loop starts.
+The obvious fix is the one this function has already applied twice: pass
+the session-wide data in — the assignments are *already loaded* in
+`per_reviewer_progress` before the loop starts. **Measuring it says that
+is not enough.** Removing the N+1 takes the query count from 2,080 to 78
+and leaves the page as slow as it was, because the 400,000 ORM objects
+are still built either way. R2 below is the recommendation that follows
+from that, and this finding is why it is worth stating separately: a
+query count is not a cost.
 
 ## Finding 3 — five counts are answered by fetching the rows
 
@@ -279,42 +284,130 @@ number — 44% of the observers page's 106 ms — which is the same point
 from the other end. A page is fast here exactly when it is not doing
 Python work per row.
 
-## The room that is left, in order of what it is worth
+## Recommendations
 
-1. **Stop running the engine to render a page.** Worth ~10 s per page per
-   two instruments, on six pages, and effectively all of Validate.
-   Everything below is worth less than this, and this one changes whether
-   the others matter.
+**Three changes take every page in this document under a second.** Each
+was measured, not projected: the hot path was stubbed and the same
+benchmark re-run on the same fixture — state B, 1,000 × 1,000, 200,000
+assignment rows, `validated`.
 
-   The shape to copy is already in the codebase and already solves the part
-   that looks hard. `instruments.cached_group_pair_count` /
-   `cached_group_pair_stamp` cache a pair count against a **content hash of
-   the roster, the pinned rule's definition and `group_kind`**, recomputing
-   on a mismatch at read — so nothing has to remember to invalidate on a
-   roster edit, a rule edit or a re-pin. A staleness verdict wants the same
-   stamp over the same inputs.
+| page | today | R1 alone | R2 alone | R1 + R2 + R3 |
+|---|---|---|---|---|
+| Session Home | 14.1 s | 3.7 s | 15.2 s | **0.49 s** |
+| Assignments | 23.2 s | 1.7 s | 23.6 s | **0.52 s** |
+| Invitations | 20.8 s | 9.0 s | 12.3 s | **0.56 s** |
+| Responses | 24.9 s | 13.1 s | 11.4 s | **0.42 s** |
+| Validate | 26.5 s | 1.8 s | 23.9 s | **0.71 s** |
+| Setup: reviewers | 2.4 s | 2.0 s | 1.9 s | **0.27 s** |
 
-   One trap for whoever picks this up: *18J Rec C*'s wire-up note in
-   `guide/deferred_consolidated.md` offers to mirror "the existing
-   `cached_eligibility_stamp` pattern". Those columns do not exist — Wave 5
-   PR 5.2 dropped them with the library tier, as
-   `app/db/models/session_rule_set.py` records. The group-pair cache is the
-   surviving precedent.
-2. **Hoist the two per-reviewer lookups** (finding 2). Worth 2,000 queries
-   and ~400,000 ORM objects per render, on two pages. Small, local, and the
-   same function already does it twice — the cheapest real win here.
-3. **Count with `count()`** (finding 3). Five one-line changes, plus one
-   real fix in `session_response_count`.
-4. **Bulk-insert the generated pairs** (finding 4). Worth part of 75 s.
-5. **Turn on compression** (finding 5). One middleware line, worth
-   1.49 MB on the lobby alone, and it is the only item here that helps
-   every page and every roster size at once. Confirm what the dev slot
-   already does before adding it.
-6. **Precompute the pair sort key.** Measured in isolation: sorting the
-   1M-pair list drops from 0.87 s to 0.31 s when the normalized email is
-   computed once per person instead of once per pair. Only worth doing
-   inside a wider engine change — on its own it removes a twelfth of the
-   cost that item 1 removes entirely.
+**Read these as ceilings, not promises.** A stub is a cache that always
+hits and a rollup that costs nothing after the first call; a real
+implementation pays a miss sometimes and pays for its aggregate query.
+What the table establishes is that the prize is 30–50×, and that no two
+of the three substitute for each other — R1 alone leaves Responses at
+13 s, R2 alone leaves Assignments untouched.
+
+### R1 — cache the staleness verdict instead of recomputing it per render
+
+**What.** Persist each instrument's verdict against a content hash of its
+inputs — the rosters, the relationships, the pinned rule's definition, the
+instrument's pin and the self-review setting — and recompute only on a
+mismatch at read.
+
+**Where.** `assignments.staleness_by_instrument`. The shape to copy is
+already in the codebase and already solves the part that looks hard:
+`instruments.cached_group_pair_count` / `cached_group_pair_stamp` cache a
+pair count against exactly such a hash, so nothing has to remember to
+invalidate on a roster edit, a rule edit or a re-pin.
+
+One trap for whoever picks this up: *18J Rec C*'s wire-up note in
+`guide/deferred_consolidated.md` offers to mirror "the existing
+`cached_eligibility_stamp` pattern". Those columns do not exist — Wave 5
+PR 5.2 dropped them with the library tier, as
+`app/db/models/session_rule_set.py` records. The group-pair cache is the
+surviving precedent.
+
+**Worth.** Validate 26.5 s → 1.8 s, Assignments 23.2 s → 1.7 s, Session
+Home 14.1 s → 3.7 s. Nothing else in this document comes close.
+
+**Risk — the real one.** The verdict is a *correctness* signal: it tells
+an operator their generated rows no longer match their rules. A cache that
+wrongly says "fresh" is worse than a page that takes 20 seconds to say
+"stale", because the operator reads the silence as an answer — the same
+failure `app/services/validation.py` already records this rule having had
+once. So the hash has to cover every input the engine reads, and the
+safe direction on a hash miss or a hash-shape change is *recompute*.
+
+**Verify.** A test that mutates each input in turn — add a reviewer, edit
+a relationship, change the rule, re-pin the instrument, flip self-reviews
+— and asserts the verdict changes. That test is the deliverable as much
+as the cache is.
+
+### R2 — roll progress up in SQL instead of over every ORM row
+
+**What.** `monitoring.per_reviewer_progress` and `per_reviewee_coverage`
+load every `Assignment` and every `Response` in the session as ORM objects
+and count them in Python. Replace the row loads with `GROUP BY`
+aggregates.
+
+**The measurement that picks this over the obvious alternative.** With R1
+and R3 applied, a single Responses render still constructs **408,027** ORM
+instances, and the rollup logic itself (`_state_from_assignments`) is only
+1.17 s of it. Removing the 2,000-query N+1 of finding 2 — the fix that
+looks obvious, and the one this document first proposed — leaves all of
+that in place: in the simulation the query count fell to 78 and the page
+did not get faster. The queries were never where the time was.
+
+**Worth.** Responses 24.9 s → 11.4 s on its own; with R1 and R3, 0.42 s.
+
+**Risk.** The group-scoped contract (Segment 13C): a group-scoped
+instrument counts **once per group**, not once per member. That is what
+resists a plain `GROUP BY`, and it is where a rewrite will get it wrong.
+Land `per_reviewee_coverage` first — it is the simpler of the two — and
+keep the Python implementation next to the SQL one until a parity test
+over a fixture that includes group-scoped instruments passes on both.
+
+### R3 — count with `count()`
+
+**What.** The five `len(db.execute(...).all())` sites, plus
+`responses.session_response_count`, whose caller in
+`app/web/views/_quick_setup.py` only needs `> 0` and can take an `EXISTS`.
+
+**Worth.** Setup reviewers 2.4 s → 0.27 s. That page runs no engine and no
+rollup, so this is R3 measured on its own.
+
+**Risk.** Almost none — these are one-line changes with the same
+semantics. `session_response_count` is the one that needs care, because
+its full form deduplicates group fan-out; the `> 0` caller does not.
+
+**Do this one first.** It is hours, not days, and it is the only one of
+the three that needs no design.
+
+### Secondary, in descending order
+
+4. **Bulk-insert the generated pairs.** `app/services/assignments/_generate.py`
+   adds one `Assignment()` per pair. Prepare measured 74.8 s for 200,000
+   rows, 17.4 s of it SQL — so most of the minute is ORM object churn a
+   Core `insert()` with a list of dicts would not do. Unlike R1–R3 this
+   one is a click, not a page, so the bar is different: it needs progress
+   feedback or a background job as much as it needs speed.
+5. **Turn on compression.** One middleware line, worth 1.49 MB on the
+   lobby alone and 6–16× on every page here. Confirm first what the dev
+   slot's front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`),
+   since this container cannot see it. It is the only item that helps
+   every page and every roster size at once.
+6. **Precompute the pair sort key.** Sorting the 1M-pair list drops from
+   0.87 s to 0.31 s when the normalized email is computed once per person
+   rather than once per pair. Only worth doing inside a wider engine
+   change: on its own it removes a twelfth of what R1 removes entirely.
+
+### Sequencing, if any of this is adopted
+
+R3, then R1, then R2 — cheapest first, and each is independently
+shippable. R5 rides alongside whenever the dev-slot check comes back. R4
+is its own question because it is a workflow action rather than a page.
+This document remains an investigation: adopting any of it means a
+segment plan, where the ladder and the doc impact get written properly.
 
 **The relationship to work already scoped.** `guide/deferred_consolidated.md`
 carries *18J Rec B — Engine fast path* and *18J Rec C — Single-side
