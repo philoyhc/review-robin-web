@@ -19,15 +19,10 @@ Rules covered:
   the verdict is the engine's own reconcile diff via
   ``assignments.staleness_by_instrument``, and an instrument that has
   never generated is not flagged. The count-versus-count,
-  pinned-only basis this bullet described is
-  ``compute_staleness``'s, which no production code calls
-  (19R Item 6).
+  pinned-only basis this bullet described was
+  ``compute_staleness``'s, retired unused in 19R Item 8.
 - ``instruments.zero_included`` — warning per instrument with
   ``generated_count > 0`` and ``included_count == 0``.
-
-Plus a focused test for the ``compute_staleness`` helper, which is
-exported and covered here but has no caller in ``app/`` — see the
-``instruments.stale_generated`` bullet above.
 """
 from __future__ import annotations
 
@@ -118,26 +113,6 @@ def _generate(
         correlation_id=uuid.uuid4().hex,
         mode=AssignmentMode.rule_based,
     )
-
-
-# --------------------------------------------------------------------------- #
-# compute_staleness helper
-# --------------------------------------------------------------------------- #
-
-
-def test_compute_staleness_false_when_unpinned() -> None:
-    assert assignments_service.compute_staleness(None, 5, 0) is False
-
-
-def test_compute_staleness_false_when_counts_match() -> None:
-    assert assignments_service.compute_staleness(7, 4, 4) is False
-
-
-def test_compute_staleness_true_when_pinned_and_divergent() -> None:
-    # eligible > generated (never generated yet)
-    assert assignments_service.compute_staleness(7, 4, 0) is True
-    # generated > eligible (roster shrank post-generate)
-    assert assignments_service.compute_staleness(7, 2, 4) is True
 
 
 # --------------------------------------------------------------------------- #

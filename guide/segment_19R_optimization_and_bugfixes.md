@@ -1448,6 +1448,22 @@ it; the honest end of that paragraph is a deletion.
 Net ~45 lines deleted across 3 files. No schema, no migration, no
 route, no template, no spec.
 
+### Status
+
+**One rung, as planned, and the measurement held.** Zero callers in
+`app/`, zero specs naming it, and the cold read confirmed both
+independently before the cut. ~45 lines out across 3 files;
+`pytest -n auto` went 4,639 → **4,636**, the three deleted test
+functions exactly.
+
+**One count in `Blast radius` was off.** It says "unit tests | 4
+functions, 23 lines"; there are **three** functions in those 23 lines,
+one of which carries two asserts. Left as measured per the
+`segment-plan` rule, corrected here — the suite delta proves it.
+
+**Reads: one**, on this slice's own diff, since a one-rung item is a
+code slice outside any ladder (`CLAUDE.md`, "Two cold readers").
+
 ### PR ladder
 
 1. **The deletion, and the close.** One slice.
