@@ -195,13 +195,21 @@ def _rule_set_digest(rule_set: SessionRuleSet | None) -> Any:
     diff site, not an absence.
 
     The field list is *what the readers read*: ``id``, ``name``,
-    ``description``, ``combinator`` and ``rules_json`` reach the engine
-    through ``_session_rule_set_to_schema``, and
+    ``description``, ``combinator``, ``rules_json`` and ``seed`` reach
+    the engine through ``_session_rule_set_to_schema``, and
     ``exclude_self_reviews`` is read by ``_diff_one_instrument`` after
     the fan-out. ``name`` and ``description`` cannot move a pair, but
     they are read, and "what the readers read" is a boundary that can
     be checked against the code; "what could matter" is a judgement
     that goes stale.
+
+    ``seed`` is the one that is easy to miss and expensive to miss:
+    it reaches the schema inside the ``options=`` block rather than as
+    a named argument, and ``engine.evaluate`` takes it as the
+    ``fallback_seed`` for a ``RANDOM``-strategy quota that carries no
+    seed of its own. Change it and a different set of pairs survives
+    with every other input identical — the exact shape of a stamp that
+    lies (Codex P1 on #2519).
     """
     if rule_set is None:
         return None
@@ -211,6 +219,7 @@ def _rule_set_digest(rule_set: SessionRuleSet | None) -> Any:
         "description": rule_set.description,
         "combinator": rule_set.combinator,
         "exclude_self_reviews": bool(rule_set.exclude_self_reviews),
+        "seed": rule_set.seed,
         "rules": rule_set.rules_json,
     }
 

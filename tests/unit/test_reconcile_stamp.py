@@ -302,6 +302,15 @@ def _rule_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
             "the rule's name",
             lambda i: _set(i.session_rule_set, "name", "Renamed"),
         ),
+        # Codex P1 on #2519. ``seed`` reaches the engine inside
+        # ``_session_rule_set_to_schema``'s ``options=`` block, not as
+        # a named argument, and becomes the ``fallback_seed`` for a
+        # RANDOM-strategy quota with no seed of its own: change it and
+        # a different set of pairs survives with nothing else moving.
+        (
+            "the rule's selection seed",
+            lambda i: _set(i.session_rule_set, "seed", 7),
+        ),
         (
             "which rule is pinned",
             lambda i: _set(i.instrument, "rule_set_id", 9999),
@@ -436,6 +445,43 @@ def test_the_roster_columns_come_from_FIELD_MAP(
     undo = _set(inputs.reviewers[0], "name", "Alice Renamed")
     assert inputs.stamp() != before
     undo()
+
+
+def test_every_rule_set_column_is_decided_about(inputs: Inputs) -> None:
+    """A new column on ``SessionRuleSet`` has to be either in the
+    digest or named here as deliberately out.
+
+    Written after the seed was missed (Codex P1 on #2519): it reaches
+    the engine inside ``_session_rule_set_to_schema``'s ``options=``
+    block rather than as a named argument, so reading the constructor's
+    arguments — which is how the field list was built — skipped it. A
+    column list is something the code can be asked for; a reading is
+    not, and it was the reading that was wrong.
+    """
+    #: Columns deliberately outside the digest, each with the reason
+    #: it cannot change which pairs the engine produces.
+    NOT_IN_THE_DIGEST = {
+        # The rule is reached through ``instrument.rule_set_id``, which
+        # the stamp already carries, and a rule row does not move
+        # between sessions.
+        "session_id",
+        # Bookkeeping, and no reader in the generate path. ``updated_at``
+        # would in fact be a safe over-cover — it moves on any write —
+        # but hashing it would invalidate on a no-op Save, which is the
+        # cache's most common hit and the reason the plan's judgment
+        # calls settled on hashing content rather than a timestamp.
+        "created_at",
+        "updated_at",
+    }
+    columns = {c.key for c in SessionRuleSet.__table__.columns}
+    digested = set(cache._rule_set_digest(inputs.session_rule_set))
+    # ``rules_json`` is digested under the shorter key the engine's own
+    # schema uses.
+    digested = {"rules_json" if k == "rules" else k for k in digested}
+    assert columns - digested == NOT_IN_THE_DIGEST, (
+        "a SessionRuleSet column is neither digested nor excluded: "
+        f"{sorted(columns - digested - NOT_IN_THE_DIGEST)}"
+    )
 
 
 # --- the materialized-row query --------------------------------------

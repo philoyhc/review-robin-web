@@ -304,6 +304,19 @@ row-set summary, and 36 unit tests.
   defaults to `True` — a no-op mutation answering a question it had not
   asked. The helper that applies a mutation now refuses one.
 
+- **Codex P1 upheld: `SessionRuleSet.seed` was missing** from the rule
+  digest, and it is the failure the whole design exists to prevent —
+  `engine.evaluate` takes it as the `fallback_seed` for a `RANDOM`
+  quota carrying no seed of its own, so changing it selects a different
+  pair set with every other input identical. The stated boundary,
+  "everything `_session_rule_set_to_schema` reads", already covered it;
+  the *reading* was wrong, because the field list was built from the
+  constructor's named arguments and `seed` is passed inside the
+  `options=` block, fifteen lines of comment further down. A
+  column-coverage gate now makes that class of miss loud: every
+  `SessionRuleSet` column is digested or named in the test's exclusion
+  set with the reason it cannot move a pair.
+
 ### PR ladder
 
 1. **Migration + columns**, no reader and no writer; round-trips on
