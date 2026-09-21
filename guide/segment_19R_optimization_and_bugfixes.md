@@ -844,40 +844,23 @@ the report's own". Three repeats survive, all `staleness_by_instrument`
 re-reading inside its own `_load_reconcile_inputs`; handing that engine
 rosters the report already holds was rejected, because it caches each
 verdict and flushes and its value is that it cannot drift from what
-Generate would do — a "trust me, these rows are current" parameter is
-the snapshot this item spent two rungs refusing to build. A second test
-pins the exception to the `staleness_by_instrument` **call**: allowing
-its whole package let a check call an assignments helper twice with
-neither test objecting (Codex, #2533). Measured on `FM100` — report run
-43 queries / 21 distinct → **17 / 14**; Validate **112 → 43**, Session
-Home **79 → 53**, Assignments **92 → 66**.
+Generate would do. A second test pins the exception to the
+`staleness_by_instrument` **call**: allowing its whole package let a
+check call an assignments helper twice with neither test objecting
+(Codex, #2533). Figures in `guide/app_responsiveness.md` Finding 6.
 
 **`spec/validate_page.md` was carried unwaived against the expectation
 of no change, and the build found otherwise** — §7's recipe documented
 the two-argument `check`, so a rule written to the spec would have
 raised `TypeError`. That is what carrying a bullet unwaived is for.
+`spec/workflow_card.md` was a second one the plan had not named, found
+by `spec-writer` at the close; both are in `Doc impact`.
 
-**One cold read, one Codex review, two CI failures — and all four
-found a test rather than the code.** The `diff-reviewer` read ran a
-pre/post differential over six shapes the fixtures miss, byte-identical
-throughout, and re-derived the golden from `122b0613` rather than
-believing the capture claim; what it caught was the new guard's module
-attribution passing *while recognising nothing* off-path. Codex caught
-the boundary stated too widely to enforce its own rule. CI caught the
-parity golden pinning absolute row ids, which is a SQLite fact and not
-a fact. Each is fixed and mutation-pinned; `docs/status.md` carries the
-detail.
-
-**`spec-writer` at the close found one more of this item's own**, now
-in `Doc impact`: `spec/workflow_card.md` lists
-`build_workflow_card_context`'s full keyword signature, and rung 1's
-`issues` argument was missing from it. It also left two findings
-standing that are **not** this item's — `spec/validate_page.md` §3.2's
-rule table no longer matches `REGISTERED_RULES` order, and
-`spec/instruments.md` still calls `instruments.stale_generated` inert,
-which it stopped being at 19N. Both are in
-`guide/findings_2026-09-21_validate_rules.md` rather than fixed here,
-since each is a contract decision rather than a close's.
+**One cold read, two Codex reviews, two CI failures — every one found
+a test rather than the code.** The read's own differential over six
+shapes the fixtures miss came back byte-identical. `docs/status.md`
+carries what each caught; two findings that are **not** this item's are
+in `guide/findings_2026-09-21_validate_rules.md`.
 
 ### PR ladder
 
