@@ -48,7 +48,11 @@ from app.services import monitoring
 #: Implementations under test. One entry each today; rungs 2 and 3 append
 #: the SQL form, and every case below runs against both.
 REVIEWER_IMPLEMENTATIONS: list[tuple[str, Callable]] = [
-    ("python", monitoring.per_reviewer_progress),
+    # Rung 3 added the split form — per-reviewee instruments in one
+    # aggregate, group-scoped ones still in Python, the two halves
+    # added. The old one stays until the item closes.
+    ("python", monitoring._per_reviewer_progress_python),
+    ("split", monitoring.per_reviewer_progress),
 ]
 REVIEWEE_IMPLEMENTATIONS: list[tuple[str, Callable]] = [
     # Rung 2 added the aggregate form. The Python one stays until the

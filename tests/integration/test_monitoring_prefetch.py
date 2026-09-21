@@ -127,6 +127,32 @@ def _seeded(client: TestClient, db: Session, n: int, code: str) -> ReviewSession
     return session
 
 
+def _count_orm_rows(db: Session, fn) -> int:
+    """How many ORM instances ``fn`` loads.
+
+    The 19K.3 guards above count *queries*, which is the right measure
+    for an N+1. 19R Item 3 removed a different cost that a query count
+    cannot see: the rollups issued few queries and then built every
+    ``Assignment`` and ``Response`` in the session as an object —
+    408,027 of them for one render at a 1,000 x 1,000 roster
+    (``guide/app_responsiveness.md``). A rewrite that went back to
+    loading rows and counting them in Python would keep the query count
+    flat and put the seconds straight back.
+    """
+    total = 0
+
+    def cb(session, instance):
+        nonlocal total
+        total += 1
+
+    event.listen(db, "loaded_as_persistent", cb)
+    try:
+        fn()
+    finally:
+        event.remove(db, "loaded_as_persistent", cb)
+    return total
+
+
 def _count_queries(db: Session, fn) -> int:
     total = 0
 
@@ -252,6 +278,52 @@ def test_reviewer_progress_does_not_scale_with_the_assignment_count(
     assert growth < 2.5, (
         f"query count grew {growth:.1f}x ({small_q} -> {large_q})"
     )
+
+
+def test_the_rollups_do_not_load_a_row_per_assignment(
+    client: TestClient, db: Session
+) -> None:
+    """The 19R Item 3 guard, and the one the query counts above cannot
+    give.
+
+    Both rollups became aggregate queries, so the row count they load
+    must be flat in the roster's *square*: quadrupling the assignments
+    must not quadruple the objects. The reviewer side keeps a Python
+    path for group-scoped instruments — the fixture here has none, so
+    what is measured is the aggregate path that carries almost every
+    real session.
+    """
+    small = _seeded(client, db, 4, code="ORMSM")
+    large = _seeded(client, db, 8, code="ORMLG")
+
+    small_assignments = len(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == small.id)
+        ).scalars().all()
+    )
+    large_assignments = len(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == large.id)
+        ).scalars().all()
+    )
+    assert large_assignments >= small_assignments * 3, "fixture is not quadratic"
+
+    for name, rollup in (
+        ("per_reviewee_coverage", monitoring.per_reviewee_coverage),
+        ("per_reviewer_progress", monitoring.per_reviewer_progress),
+    ):
+        db.expunge_all()
+        small_rows = _count_orm_rows(db, lambda: rollup(db, small))
+        db.expunge_all()
+        large_rows = _count_orm_rows(db, lambda: rollup(db, large))
+        # The reviewee / reviewer objects themselves still load, and
+        # those grow with the roster — linearly. The assignments and
+        # responses must not.
+        assert large_rows < small_rows * 3, (
+            f"{name} loaded {small_rows} -> {large_rows} ORM rows for "
+            f"{large_assignments / small_assignments:.0f}x the "
+            "assignments — it is materialising rows again"
+        )
 
 
 def test_the_prefetch_loads_only_this_session(

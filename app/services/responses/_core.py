@@ -737,6 +737,65 @@ class ReviewerSessionState:
         return self.required_total - self.missing_required_count
 
 
+@dataclass
+class RollupParts:
+    """The additive parts of a reviewer rollup, before a pill is derived.
+
+    ``ReviewerSessionState`` collapses two booleans into `pill_state`,
+    which makes it **un-addable**: "not started" does not say whether
+    the required fields were unmet, so two halves of one reviewer's work
+    cannot be combined through it. 19R Item 3 rung 3 splits the rollup —
+    per-reviewee instruments in SQL, group-scoped ones in Python — so
+    the halves need a shape that sums.
+
+    ``all_required_and_submitted`` is ``True`` vacuously on an empty
+    half, which is what makes it safe to ``and`` two halves together.
+    """
+
+    total_assignments: int
+    completed_count: int
+    missing_required_count: int
+    required_total: int
+    any_response: bool
+    all_required_and_submitted: bool
+
+    @staticmethod
+    def empty() -> "RollupParts":
+        return RollupParts(0, 0, 0, 0, False, True)
+
+    def __add__(self, other: "RollupParts") -> "RollupParts":
+        return RollupParts(
+            total_assignments=self.total_assignments + other.total_assignments,
+            completed_count=self.completed_count + other.completed_count,
+            missing_required_count=(
+                self.missing_required_count + other.missing_required_count
+            ),
+            required_total=self.required_total + other.required_total,
+            any_response=self.any_response or other.any_response,
+            all_required_and_submitted=(
+                self.all_required_and_submitted
+                and other.all_required_and_submitted
+            ),
+        )
+
+    def pill_state(self) -> str:
+        """The three-state pill, from the two booleans that carry it."""
+        if not self.any_response:
+            return "not started"
+        if self.all_required_and_submitted:
+            return "submitted"
+        return "in progress"
+
+    def to_state(self) -> ReviewerSessionState:
+        return ReviewerSessionState(
+            total_assignments=self.total_assignments,
+            completed_count=self.completed_count,
+            missing_required_count=self.missing_required_count,
+            required_total=self.required_total,
+            pill_state=self.pill_state(),
+        )
+
+
 def _state_from_assignments(
     db: Session,
     assignments: list[Assignment],
@@ -765,14 +824,32 @@ def _state_from_assignments(
     is computed for this set, which scans the relationships table;
     hoisting the call out of a per-reviewer / per-instrument loop
     avoids repeating that scan."""
+    return rollup_parts_from_assignments(
+        db,
+        assignments,
+        fields_by_instrument,
+        group_key_by_assignment=group_key_by_assignment,
+        responses_by_assignment=responses_by_assignment,
+    ).to_state()
+
+
+def rollup_parts_from_assignments(
+    db: Session,
+    assignments: list[Assignment],
+    fields_by_instrument: dict[int, list[InstrumentResponseField]],
+    *,
+    group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
+    responses_by_assignment: dict[int, list[Response]] | None = None,
+) -> RollupParts:
+    """:func:`_state_from_assignments` without the pill — see
+    :class:`RollupParts` for why a caller would want that.
+
+    This is where the group dedupe and the per-assignment arithmetic
+    actually live; the named function above is a thin wrapper that
+    derives the pill.
+    """
     if not assignments:
-        return ReviewerSessionState(
-            total_assignments=0,
-            completed_count=0,
-            missing_required_count=0,
-            required_total=0,
-            pill_state="not started",
-        )
+        return RollupParts.empty()
 
     # Collapse each group-scoped instrument's member assignments to
     # one representative — the first by id — so a group response is
@@ -832,19 +909,13 @@ def _state_from_assignments(
             if r.submitted_at is None:
                 all_required_with_submitted = False
 
-    if not any_response:
-        pill_state = "not started"
-    elif all_required_with_submitted:
-        pill_state = "submitted"
-    else:
-        pill_state = "in progress"
-
-    return ReviewerSessionState(
+    return RollupParts(
         total_assignments=len(counted),
         completed_count=completed_count,
         missing_required_count=missing_required_count,
         required_total=required_total,
-        pill_state=pill_state,
+        any_response=any_response,
+        all_required_and_submitted=all_required_with_submitted,
     )
 
 

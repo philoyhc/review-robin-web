@@ -466,6 +466,38 @@ own numbers do not support it.
 per rollup; rungs 2 and 3 append the SQL form and every case becomes a
 parity test with no new test code.
 
+**Rung 3 landed 2026-09-21** — `per_reviewer_progress` **split by
+instrument kind**: per-reviewee instruments in one aggregate,
+group-scoped ones on the existing Python dedupe, the two halves added.
+`RollupParts` exists for that addition — `ReviewerSessionState` cannot
+be summed, because `not started` does not say whether the required
+fields were met, so two halves of one reviewer's work cannot combine
+through a pill. `_state_from_assignments` is now a thin wrapper over
+it, so the dedupe still has one home.
+
+**The hybrid is by instrument kind, and the bound is honest.** The
+group key is `(raw or "").strip()` over reviewee tags or an *active*
+`Relationship`; reproducing it in SQL means reproducing Python's
+`strip()`, which trims more than SQL's `TRIM`, on a path where being
+subtly wrong means an operator's progress figure is subtly wrong. So a
+session that is entirely group-scoped at roster scale gains nothing —
+said in the code, not left to be found.
+
+**Measured, and the definition of done is not met.** Invitations
+**8.4 s → 1.36 s**, Responses **8.6 s → 1.52 s**, queries **2,079 → 78**
+and **2,074 → 73**; ORM instances for one render 408,027 → ~9,000. The
+target was **under 1 s**. What is left is not the rollup: the rollup
+itself measures 0.69 s, and Session Home — same chrome, no rollup —
+measures 0.65 s with 79 queries. The residual is the shared page
+furniture, which is a different item's to take. Recorded rather than
+rounded.
+
+**The non-regression guard is about ORM rows, not queries.** The 19K.3
+guards in `test_monitoring_prefetch.py` count queries, which is the
+right measure for an N+1 and blind to this change: the old rollups
+issued few queries and built every row as an object. The new guard
+counts instances loaded and fails on either rollup reverted.
+
 **Rung 2 landed 2026-09-21** — `per_reviewee_coverage` as **one
 aggregate query**, two levels of grouping: per assignment (required
 fields, satisfied fields, row count, latest stamp), then per reviewee.

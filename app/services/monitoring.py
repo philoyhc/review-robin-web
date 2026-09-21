@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
     Assignment,
+    Instrument,
     InstrumentResponseField,
     Invitation,
     Response,
@@ -101,9 +102,253 @@ def _invitations_by_reviewer(
     return {inv.reviewer_id: inv for inv in rows}
 
 
+def _plain_instrument_parts(
+    db: Session, session_id: int
+) -> dict[int, responses_service.RollupParts]:
+    """Per-reviewer rollup parts for **per-reviewee instruments**, as one
+    aggregate query (19R Item 3 rung 3).
+
+    These are the instruments with no group dedupe to do, which is
+    almost all of them and effectively all of the rows. Same two-level
+    shape as ``per_reviewee_coverage``: per assignment, then per
+    reviewer.
+
+    **The reviewer side's "complete" is not the reviewee side's.** Here
+    a required field counts as met when it carries a non-empty value,
+    submitted or not; ``submitted_at`` only decides whether the *pill*
+    reaches `submitted`. The reviewee side requires both. That
+    asymmetry ships, and
+    ``tests/integration/test_monitoring_rollup_parity.py`` pins it, so
+    it is reproduced here deliberately rather than tidied.
+    """
+    required_per_instrument = (
+        select(
+            InstrumentResponseField.instrument_id.label("instrument_id"),
+            func.count(InstrumentResponseField.id).label("required_total"),
+        )
+        .where(InstrumentResponseField.required.is_(True))
+        .group_by(InstrumentResponseField.instrument_id)
+        .subquery()
+    )
+
+    present_required_field = case(
+        (
+            and_(
+                InstrumentResponseField.required.is_(True),
+                Response.value.is_not(None),
+                Response.value != "",
+            ),
+            Response.response_field_id,
+        ),
+        else_=None,
+    )
+
+    per_assignment = (
+        select(
+            Assignment.reviewer_id.label("reviewer_id"),
+            func.count(Response.id).label("row_count"),
+            func.coalesce(
+                required_per_instrument.c.required_total, 0
+            ).label("required_total"),
+            func.count(distinct(present_required_field)).label(
+                "present_required"
+            ),
+            func.count(
+                case((Response.submitted_at.is_(None), Response.id), else_=None)
+            ).label("unsubmitted_rows"),
+        )
+        .select_from(Assignment)
+        .join(Instrument, Instrument.id == Assignment.instrument_id)
+        .outerjoin(Response, Response.assignment_id == Assignment.id)
+        .outerjoin(
+            InstrumentResponseField,
+            InstrumentResponseField.id == Response.response_field_id,
+        )
+        .outerjoin(
+            required_per_instrument,
+            required_per_instrument.c.instrument_id
+            == Assignment.instrument_id,
+        )
+        .where(
+            Assignment.session_id == session_id,
+            Assignment.include.is_(True),
+            # The group-scoped ones go down the Python path.
+            Instrument.group_kind.is_(None),
+        )
+        .group_by(
+            Assignment.id,
+            Assignment.reviewer_id,
+            required_per_instrument.c.required_total,
+        )
+        .subquery()
+    )
+
+    missing = per_assignment.c.required_total - per_assignment.c.present_required
+    completed = or_(
+        and_(
+            per_assignment.c.required_total == 0,
+            per_assignment.c.row_count > 0,
+        ),
+        and_(
+            per_assignment.c.required_total > 0,
+            missing == 0,
+        ),
+    )
+
+    rows = db.execute(
+        select(
+            per_assignment.c.reviewer_id,
+            func.count().label("total_assignments"),
+            func.sum(case((completed, 1), else_=0)).label("completed_count"),
+            func.sum(missing).label("missing_required_count"),
+            func.sum(per_assignment.c.required_total).label("required_total"),
+            func.max(per_assignment.c.row_count).label("max_rows"),
+            # Anything unmet or unsubmitted anywhere keeps the pill off
+            # `submitted`; summing both and testing for zero is the
+            # additive form of the Python loop's two flags.
+            func.sum(missing + per_assignment.c.unsubmitted_rows).label(
+                "blockers"
+            ),
+        )
+        .group_by(per_assignment.c.reviewer_id)
+    ).all()
+
+    return {
+        reviewer_id: responses_service.RollupParts(
+            total_assignments=int(total_assignments),
+            completed_count=int(completed_count),
+            missing_required_count=int(missing_required_count),
+            required_total=int(required_total),
+            any_response=int(max_rows or 0) > 0,
+            all_required_and_submitted=int(blockers or 0) == 0,
+        )
+        for (
+            reviewer_id,
+            total_assignments,
+            completed_count,
+            missing_required_count,
+            required_total,
+            max_rows,
+            blockers,
+        ) in rows
+    }
+
+
+def _grouped_instrument_parts(
+    db: Session, review_session: ReviewSession
+) -> dict[int, responses_service.RollupParts]:
+    """The same, for **group-scoped instruments**, still in Python.
+
+    The dedupe keeps one assignment per ``(instrument, group_key)``, and
+    the key is a tuple of boundary tag values read off the reviewee row
+    or an *active* ``Relationship`` — with `(raw or "").strip()` applied
+    to each. Reproducing that in SQL means reproducing Python's
+    ``strip()``, which trims more than SQL's ``TRIM``, on a path where
+    being subtly wrong means an operator's progress figure is subtly
+    wrong. The item's open question allowed a hybrid; this is it.
+
+    **The bound is assignments on group-scoped instruments**, not the
+    session's assignments. A session that is entirely group-scoped at
+    roster scale gains nothing here — stated rather than discovered.
+    """
+    grouped = list(
+        db.execute(
+            select(Assignment)
+            .join(Instrument, Instrument.id == Assignment.instrument_id)
+            .where(
+                Assignment.session_id == review_session.id,
+                Assignment.include.is_(True),
+                Instrument.group_kind.is_not(None),
+            )
+            .order_by(Assignment.id)
+        ).scalars()
+    )
+    if not grouped:
+        return {}
+
+    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
+    for field in db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id.in_(
+                {a.instrument_id for a in grouped}
+            )
+        )
+    ).scalars():
+        fields_by_instrument.setdefault(field.instrument_id, []).append(field)
+
+    group_key_by_assignment = responses_service.group_keys(
+        db, assignments=grouped, session_id=review_session.id
+    )
+    responses_by_assignment = responses_service.responses_by_assignment(
+        db, session_id=review_session.id
+    )
+
+    by_reviewer: dict[int, list[Assignment]] = {}
+    for assignment in grouped:
+        by_reviewer.setdefault(assignment.reviewer_id, []).append(assignment)
+
+    return {
+        reviewer_id: responses_service.rollup_parts_from_assignments(
+            db,
+            rows,
+            fields_by_instrument,
+            group_key_by_assignment=group_key_by_assignment,
+            responses_by_assignment=responses_by_assignment,
+        )
+        for reviewer_id, rows in by_reviewer.items()
+    }
+
+
 def per_reviewer_progress(
     db: Session, review_session: ReviewSession
 ) -> list[ReviewerProgress]:
+    """Per-reviewer progress rows for the Invitations page.
+
+    **Split by instrument kind** (19R Item 3 rung 3): per-reviewee
+    instruments roll up in one aggregate query, group-scoped ones keep
+    the Python dedupe, and the two halves add. ``RollupParts`` exists
+    for that addition — a pill cannot be summed, because "not started"
+    does not say whether the required fields were met.
+
+    Replaces a loop that ran two queries per reviewer and built every
+    ``Assignment`` and ``Response`` in the session as ORM objects.
+
+    The pre-rewrite implementation is kept as
+    :func:`_per_reviewer_progress_python`, which the parity test runs
+    beside this one.
+    """
+    reviewers = _assigned_active_reviewers(db, review_session.id)
+    invitations = _invitations_by_reviewer(db, review_session.id)
+    plain = _plain_instrument_parts(db, review_session.id)
+    grouped = _grouped_instrument_parts(db, review_session)
+
+    empty = responses_service.RollupParts.empty()
+    out: list[ReviewerProgress] = []
+    for reviewer in reviewers:
+        parts = plain.get(reviewer.id, empty) + grouped.get(reviewer.id, empty)
+        invitation = invitations.get(reviewer.id)
+        out.append(
+            ReviewerProgress(
+                reviewer=reviewer,
+                invitation=invitation,
+                assignment_count=parts.total_assignments,
+                completed_count=parts.completed_count,
+                missing_required_count=parts.missing_required_count,
+                required_total=parts.required_total,
+                pill_state=parts.pill_state(),
+                last_reminder_at=(
+                    invitation.last_reminder_at if invitation else None
+                ),
+            )
+        )
+    return out
+
+
+def _per_reviewer_progress_python(
+    db: Session, review_session: ReviewSession
+) -> list[ReviewerProgress]:
+    """The pre-rewrite implementation, kept as the parity oracle until
+    the item closes (19R Item 3 rung 3)."""
     reviewers = _assigned_active_reviewers(db, review_session.id)
     invitations = _invitations_by_reviewer(db, review_session.id)
     # Group keys are computed once for the whole session and passed
