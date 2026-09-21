@@ -459,6 +459,39 @@ own numbers do not support it.
 | test files naming either, or `reviewer_session_state` | 7 | `grep -rln "per_reviewer_progress\|per_reviewee_coverage\|reviewer_session_state" tests/ --include=*.py` |
 | non-request caller | 1 | `app/services/scheduled_events/_reminders.py` |
 
+### Status
+
+**Rung 1 landed 2026-09-21** — the parity oracle, 11 tests, no app
+change.
+
+- **The harness is two implementation lists**, one per rollup, each
+  holding the Python form today. Rungs 2 and 3 append the SQL form and
+  every case becomes a parity test with no new test code.
+- **Expectations are hand-derived from the contract, not captured from
+  a run** — each case shows its arithmetic so a reader can check the
+  number. Two of the first derivations disagreed with the code, and both
+  times the code was right and the *comparison* was wrong: SQLite does
+  not preserve a `DateTime(timezone=True)` offset, so the oracle compares
+  instants in UTC rather than datetime objects. That would have bitten
+  rung 2 the other way round, where Postgres returns aware.
+- **Ten mutations, all caught — but four only after the fixture grew**,
+  and the four are the item's real content:
+  - a dedupe keyed on the group alone rather than
+    `(instrument, group_key)` survived until a **second** group-scoped
+    instrument on the same boundary tag existed;
+  - `last_response_at` is a max over two nestings, the rows of an
+    assignment and the assignments of a reviewee. Taking the wrong one
+    at either level survived until one assignment had two rows *and* was
+    not the reviewee's first;
+  - ignoring `submitted_at` on the reviewee side survived until a
+    **draft** row existed.
+- **Two asymmetries between the rollups are now pinned**, neither
+  obviously intended, both shipped: an inactive reviewer is dropped by
+  the reviewer rollup and still counted by the reviewee one, and a draft
+  is a completion to the reviewer rollup but not to the reviewee one. An
+  oracle's job is to stop a rewrite ironing those out by accident; if
+  either should change, that is its own item.
+
 ### PR ladder
 
 1. **The parity harness.** A fixture with a group-scoped instrument and a
