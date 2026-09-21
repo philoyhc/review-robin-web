@@ -1267,7 +1267,7 @@ No code, no schema, no migration, no template, no test.
 **The premise was half wrong, and the build found it in the first
 command.** `Opportunity` said the stamp was carried by 16 of 450 slices,
 "all consecutive (`#2495`–`#2516`), and none of the last 20" — read as
-a campaign that ran and stopped. Re-measured at build over 451 slices:
+a campaign that ran and stopped. Re-measured at build over 464 slices:
 **37 wrote the line and 16 parse.** Git reads only a commit message's
 last block as trailers, so the 21 written in a paragraph of their own,
 above `Co-Authored-By`, are **silently discarded** — present in the
@@ -1294,6 +1294,23 @@ sample at zero ongoing cost. `Out of scope` forbids touching
 `tools/pace_audit.py`, so it is named in §6.4 and left for the author
 rather than folded in — widening a one-rung item on the strength of its
 own finding is how a rung becomes a segment.
+
+**The verification pass caught the denominator, in the failure mode
+the tool documents.** The first measurement said 451 and the figure
+reached three documents before `spec-writer` re-derived it as **464**.
+Cause: `git log --since=2026-09-04` fills the missing time of day with
+the *current clock*, so a bare date counts from whenever the command
+ran — which is exactly why `tools/pace_audit.py` carries `since_arg`,
+whose comment records "25 merges lost and recovered across three runs"
+on 2026-09-20. The item about an unmeasured practice mis-measured it,
+using the wrong form of the command the tool exists to get right. The
+numerators were exact throughout; only the denominator moved, and the
+conclusion is unchanged at 8.0% rather than 8.2%.
+
+**Also carried: why 16 parse but the split is n=14.** `pace_audit`
+additionally requires a stamp's timestamp to fall between the previous
+merge and the first commit, which drops two. No document explained the
+gap; §6.4 now does.
 
 **`Definition of done` was written against the wrong numbers** and is
 annotated rather than rewritten: its "n=14" and "`#2495`–`#2516`" lines

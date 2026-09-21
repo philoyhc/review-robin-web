@@ -227,12 +227,17 @@ and the context; it is not only those.
 **Stamping is a sampling campaign, not a standing practice** — one ran
 `#2495`–`#2516` and produced the figure above. Two things measured at
 19R Item 7 are why it is written that way rather than as a rule
-everyone follows. Of 451 slices merged since 2026-09-04, **37 wrote
+everyone follows. Of 464 slices merged since 2026-09-04, **37 wrote
 the line and 16 parse**: git reads only a commit message's *last*
 block as trailers, so the 21 that sat in their own paragraph above
 `Co-Authored-By` were **silently discarded**, the stamp present in the
 text and absent to every reader. Nothing catches that, and nothing
-catches a slice that omits the line entirely. Re-stamp when a figure is
+catches a slice that omits the line entirely. (Count the denominator
+the way `tools/pace_audit.py` does — `--first-parent`, and the since
+date pinned to midnight UTC per its `since_arg`, whose absence cost
+this item 13 slices on the first pass. The split's n=14 is smaller than
+16 because the tool also drops a stamp whose timestamp does not fall
+between the previous merge and the first commit.) Re-stamp when a figure is
 being re-taken, keeping the trailer in the final block; a reader that
 matched the line anywhere in the message would recover the 21 and is
 not currently in `tools/pace_audit.py`. *Re-take with*
