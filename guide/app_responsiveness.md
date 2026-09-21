@@ -78,8 +78,8 @@ session they dominate:
   compression case is unaffected by the re-set and still unactioned.
 - **79–112 queries per session page at every size** — Session Home 79,
   Assignments 92, Validate 112, identical at 20,000 rows and at
-  200,000. Fixed cost, never attributed, and now the largest
-  unexplained thing on a realistic session.
+  200,000. Fixed cost, not roster cost. **Attributed in Finding 6**:
+  the readiness report reloads the session once per check. 19R Item 5.
 
 Method: `tools/bench_roster_scale.py seed --code FM100 / FM200` with
 **no `pin-rule`**, `post --path /workflow/prepare`, then `bench --runs
@@ -102,9 +102,10 @@ picks it up.
   1,000 × 1,000 — see Finding 4. A click rather than a page, so it
   needs progress feedback or a background job as much as it needs
   speed.
-- **Find out what the 79–112 fixed queries per session page are.**
-  Flat in the roster, so not roster cost; never attributed. The largest
-  unexplained cost on a realistic session.
+- ~~**Find out what the 79–112 fixed queries per session page are.**~~
+  *Answered 2026-09-21 — Finding 6. The readiness report reloads the
+  session once per check, and Validate builds the whole report twice.
+  Scoped as **19R Item 5**, so it is no longer a candidate.*
 - **Turn on compression.** No compression middleware exists: the lobby
   ships ~1,590 KB where gzip would send 95 KB (16.5×), the roster pages
   6–7× — see Finding 5. One middleware line, **after** checking what
@@ -327,6 +328,69 @@ is the whole page weight problem. Whether the deployed front end adds
 its own `Content-Encoding` is a dev-slot question this container cannot
 answer — one `curl -sI -H 'Accept-Encoding: gzip'` against the dev slot
 settles it, and if it does not, the middleware is a one-line change.
+
+## Finding 6 — the readiness report reloads the session once per check
+
+Added 2026-09-21, answering the open question the bench re-set raised:
+*what are the 79–112 queries every session page issues regardless of
+roster size?* Measured on `FM100` (`validated`, 20,000 rows) — the
+counts are flat in the roster but **not** in the lifecycle state, so
+these are the `validated` figures, which is the state an operator sits
+in while deciding to Activate.
+
+| page | queries | from `validation.validate_session_setup` |
+|---|---:|---:|
+| Session Home | 79 | **43 (54%)** |
+| Assignments | 92 | **43 (46%)** |
+| Validate | 112 | **86 (76%)** |
+
+**Validate's 86 is 43 × 2: it builds the report twice per render.**
+`_operations.py:187` runs it for the page body, then
+`_operations.py:221` calls `build_workflow_card_context`, which runs it
+again at `_workflow_card.py:122`. Nothing passes the first result to
+the second.
+
+**Inside one run, 22 of the 43 queries are exact repeats** — identical
+SQL *and* identical bound parameters, inside one transaction. On
+Validate it is 65 of 86. `validate_session_setup` is a clean
+orchestrator over 22 registered rules:
+
+```python
+for rule in REGISTERED_RULES:
+    for issue in rule.check(db, review_session):
+```
+
+…and **each `check` loads for itself whatever it needs.** Eleven
+identical `SELECT … FROM instruments WHERE session_id = ?` on Session
+Home come from eleven unrelated call sites, eight of them separate
+checks in the same report run:
+
+```
+build_workflow_card_context > validate_session_setup
+  > _check_instruments_no_fields                        <- loads instruments
+  > _check_new_model_no_visible_response_fields         <- loads instruments
+  > _check_assignments_reviewer_missing                 <- loads instruments
+  > _check_assignments_reviewer_missing_for_instrument  <- loads instruments
+  > _check_assignments_instrument_empty                 <- loads instruments
+  > _check_instruments_no_display_fields                <- loads instruments
+  > _check_instruments_stale_generated                  <- loads instruments
+  > _check_instruments_zero_included                    <- loads instruments
+```
+
+The rosters repeat the same way: `_identity_holders_by_email` pulls the
+full reviewer list 5×, reviewees 4×, observers 4× in one report run.
+
+**This is cheap per query and that is why it survived.** 79 queries cost
+97 ms of SQL on Session Home — every one is a fast indexed read, so no
+profile ever pointed at it and the flat count never grew with the
+roster. It shows up now only because 19R removed the costs that were
+hiding it.
+
+**The reason to fix it is not primarily speed.** Twenty-two checks each
+deciding independently what "the session's instruments" means is how
+two of them come to disagree after someone edits one. A single set of
+inputs loaded per run buys consistency; the query count is the
+symptom that made it visible. Scoped as **19R Item 5**.
 
 ## The two axes that turned out fine — measured, not assumed
 
@@ -554,11 +618,12 @@ slower than no rule) is the argument for it.
    dev-slot question; this container cannot answer it. Still open at the
    re-set: Prepare is **20 s at the bench**, not the 3.1 s an earlier
    draft claimed from the wrong fixture.
-5. **What are the 79–112 queries that every session page issues
-   regardless of size?** New at the 2026-09-21 re-set, and now the
-   largest unexplained cost on a realistic session: Session Home 79,
-   Assignments 92, Validate 112, identical at 20,000 rows and at
-   200,000. Fixed cost, never measured, never attributed.
+5. ~~**What are the 79–112 queries that every session page issues
+   regardless of size?**~~ *Answered 2026-09-21: `validate_session_setup`
+   is 54% of Session Home, 46% of Assignments and 76% of Validate,
+   because each of its 22 checks loads the rosters and instruments it
+   needs for itself, and Validate runs the whole report twice. Finding 6;
+   scoped as 19R Item 5.*
 
 ## Out of scope
 

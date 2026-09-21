@@ -17,18 +17,22 @@ and `### Status` and there is no segment-level manifest —
 the last definition-of-done line applies only when the segment's final
 item closes; an item close leaves this file in `guide/`.
 
-**The segment stays open**, with all four items closed 2026-09-21.
-Items 1–3 were the three changes measured to take every page under a
-second — they did not, and each item's `### Status` says by how much —
-and Item 4 was a defect found while they were being planned. Further
-items land as measurement or a report turns them up; `## Later
-candidates` at the end holds the optimization moves already measured
-but not scheduled.
+**The segment stays open.** Items 1–4 closed 2026-09-21: Items 1–3
+were the three changes measured to take every page under a second, and
+Item 4 was a defect found while they were being planned. **Item 5 is
+open** — the bench re-set that followed those closes left one cost
+unexplained, and `guide/app_responsiveness.md` Finding 6 attributes it.
+Further items land the same way, as measurement or a report turns them
+up; that document also holds the later candidates already measured but
+not scheduled.
 
 **Re-take any number here with** `python3 tools/bench_roster_scale.py`
-(`tools/README.md` has the recipe). Every figure below is from state B
-of that document: 1,000 reviewers × 1,000 reviewees, two instruments,
-200,000 assignment rows, session `validated`.
+(`tools/README.md` has the recipe). Items 1–4's figures are from state B
+of that document — 1,000 reviewers × 1,000 reviewees, 200,000
+assignment rows, `validated` — which was the bench when they were
+measured. **The bench moved on 2026-09-21** to 200 × 200 full matrix;
+Item 5 and anything after it use that. `guide/app_responsiveness.md`
+has both and says which is which.
 
 ---
 
@@ -764,6 +768,134 @@ path. Both corrected.
   §6, and §5a's prediction that an unedited template renames the tag
   columns — so the code was what was wrong (Item 4).
   <!-- doc-impact-waived: verified correct at the close; the item made the code match the contract rather than changing it. -->
+
+---
+
+## Item 5 — the readiness report reloads the session once per check
+
+### Opportunity
+
+`guide/app_responsiveness.md` **Finding 6** has the measurement and the
+call paths. In one sentence: `validation.validate_session_setup` is
+54% / 46% / 76% of Session Home, Assignments and Validate, because its
+22 checks each load for themselves whatever they need and Validate
+builds the whole report twice.
+
+**The reason to fix it is consistency, not speed.** These are fast
+indexed reads — 79 queries cost 97 ms — and will never be why a page
+feels slow. What is worth fixing is twenty-two checks each deciding
+independently what "the session's instruments" means, which is how two
+of them come to disagree after someone edits one.
+
+### Decision
+
+Thread a per-run inputs object through `ValidationRule.check`, loaded
+once by the orchestrator; checks read from it instead of querying. On
+Validate, pass the already-computed issues into
+`build_workflow_card_context` rather than letting it recompute.
+
+*Alternative rejected:* a request-scoped memo cache under the existing
+queries — no signature changes, same repeats removed, but it buys the
+count without the consistency. Twenty-two checks would still each be
+entitled to their own definition of the session, and the next one added
+would still write its own load.
+
+### Semantics
+
+- **The issue list must not change** — same rules, same order, same
+  `rule_key` / `fix_url` / `fix_anchor` stamping. The orchestrator's
+  public signature stays; it has 6 callers and 8 test files.
+- **The report is all-or-nothing per render, not a lifecycle-selected
+  subset.** `build_workflow_card_context` runs it only under
+  `validated_just_ran or is_validated`; on a `ready` session it runs
+  **zero** checks, which is why that page measures 35 queries.
+  `validate_session_setup` itself always iterates all 22 rules. A
+  parity test that assumed a smaller subset on `ready` would be
+  asserting a behavior that does not exist.
+- **Inputs are loaded once per report run**, never cached across runs:
+  a check must not see a roster older than the request that asked.
+  Validate's second build goes away by passing the result, not by
+  caching it.
+- `scheduled_events/_activation.py:85` calls the orchestrator outside a
+  request, so the inputs object may not assume a request scope.
+
+### Judgment calls — decided
+
+- **Inputs object over a memo cache** (2026-09-21) — see `Decision`.
+- **Measured on `validated`** (2026-09-21): the state an operator sits
+  in while deciding to Activate, and the only one where the report runs.
+
+### Blast radius (measured)
+
+| what | count | command |
+|---|---|---|
+| registered rules / check functions | 22 / 22 | `grep -c 'ValidationRule(' app/services/validation.py`; `grep -c '^def _check_' app/services/validation.py` |
+| callers of the orchestrator | 6 | `grep -rn "validation.validate_session_setup(db" app/ --include=*.py` |
+| test files naming it | 8 | `grep -rln "validate_session_setup" tests/ --include=*.py` |
+| the double build | 1 page | `_operations.py:187` + `_workflow_card.py:122` |
+
+No schema change, no migration, no template change.
+
+### PR ladder
+
+1. **Stop Validate building the report twice.** One call site, no
+   signature change, the largest single win (112 → ~69), independent of
+   the rest.
+2. **The inputs object, loaded once and threaded through `check`.**
+   It must carry **everything two checks both load**, measured rather
+   than guessed — on the bench fixture that is the instrument list, the
+   three roster lists, the roster non-empty probes, the per-instrument
+   response-field and display-field presence, and
+   `included_count_per_instrument`. The last three are per-instrument,
+   so their repeat count grows with instrument count, not roster size.
+   A parity test pins the issue list unchanged.
+3. **The guard.** A test asserting the report issues no duplicate
+   (statement, params) pair in one run, so the next check added cannot
+   quietly reintroduce its own load. It goes after rung 2 because it
+   fails until every repeated input above is covered — if rung 2 lands
+   short, this is what says so.
+4. **Close.**
+
+### Definition of done
+
+- The readiness report issues **no exact-repeat query** in one run —
+  9 statements repeat today, 22 queries of 43.
+- Validate builds the report **once**.
+- `validate_session_setup` returns the identical issue list, rule for
+  rule, on every fixture the existing validation tests carry.
+- Page query counts re-measured and Finding 6 annotated with the result.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19R.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Is Validate's second build load-bearing — a deliberate recompute
+  after something the page body mutates — or two call sites that do not
+  know about each other? *Rung 1 answers it before changing anything;
+  if it is deliberate, rung 1 becomes a comment saying so and the
+  ladder loses its cheapest win.*
+
+### Out of scope
+
+- **Which** checks run, and in what state. This item changes what a
+  check costs, never the readiness verdict.
+- The fixed queries outside the report — `session_status_pills` is 11
+  per page, `build_setup_rows` 4. Same shape, smaller, and measurable
+  again once the report stops dominating.
+
+### Doc impact
+
+- `guide/app_responsiveness.md` — annotate Finding 6 with the
+  post-change counts; it is the evidence this item answers (Item 5).
+- `spec/validate_page.md` — carried unwaived on purpose. No change is
+  expected, since the readiness contract is *which* issues surface and
+  this item changes only what computing them costs. If the build finds
+  otherwise this bullet becomes the edit; if not, the close waives it
+  with that reason. Either way the close says which (Item 5).
+- `docs/status.md` — row when the item lands (Item 5).
 
 ---
 
