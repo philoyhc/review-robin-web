@@ -150,10 +150,14 @@ def existing_count(
     """Count ``Assignment`` rows for the session, optionally scoped to
     a single instrument.
     """
-    stmt = session_scoped(Assignment.id, session_id)
+    # Not ``session_scoped``: it infers the model from ``target.class_``,
+    # which an aggregate does not have.
+    stmt = select(func.count(Assignment.id)).where(
+        Assignment.session_id == session_id
+    )
     if instrument_id is not None:
         stmt = stmt.where(Assignment.instrument_id == instrument_id)
-    return len(db.execute(stmt).all())
+    return int(db.execute(stmt).scalar_one())
 
 
 def included_count_per_instrument(
@@ -660,7 +664,11 @@ def count_pairs(
             picked_reviewee_handle,
         )
     stmt = _apply_status(stmt, status)
-    return len(db.execute(stmt).all())
+    # ``with_only_columns`` keeps the joins ``_apply_pair_search`` added.
+    # Those joins are many-to-one on the FK columns, so they cannot
+    # duplicate a row and the count needs no ``DISTINCT``.
+    count_stmt = stmt.with_only_columns(func.count(Assignment.id))
+    return int(db.execute(count_stmt).scalar_one())
 
 
 def delete_all_assignments(
