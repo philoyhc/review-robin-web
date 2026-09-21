@@ -20,7 +20,12 @@ To re-capture after a deliberate copy or rule change:
     RRW_VALIDATION_PARITY_DUMP=/tmp/parity.json pytest \
         tests/integration/test_validation_issue_parity.py
 
-then copy the file over `_validation_issue_parity.json`.
+then copy the file over `_validation_issue_parity.json` — the dump is
+written in that file's own format, so a re-capture is a content diff
+rather than a reformat.
+
+`RRW_VALIDATION_PARITY_DUMP` turns every assertion below into a skip,
+so it is a capture switch and never something CI sets.
 """
 
 from __future__ import annotations
@@ -48,7 +53,7 @@ from ._validation_scenarios import SCENARIOS
 
 
 # --------------------------------------------------------------------------- #
-# Normalisation
+# Normalization
 # --------------------------------------------------------------------------- #
 
 
@@ -170,4 +175,5 @@ def _dump(name: str, observed: list[dict[str, object]]) -> None:
         existing = {}
     existing[name] = observed
     with open(_DUMP_PATH, "w") as handle:
-        json.dump(existing, handle, indent=4, sort_keys=True)
+        json.dump(existing, handle, indent=2, sort_keys=True)
+        handle.write("\n")

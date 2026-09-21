@@ -7,7 +7,7 @@ so an absolute `from tests.…` import fails collection.
 
 Each scenario builds one session from ORM rows rather than through the
 import endpoints — the rules under test read the database, and going
-through the CSV importers would pin their normalisation here too.
+through the CSV importers would pin their normalization here too.
 Between them the six cover 19 of the 22 registered rules; the three
 they miss are the two `session.*` checks, which read no database, and
 the inert `instruments.no_rule_pinned`.

@@ -29,12 +29,14 @@ import re
 import traceback
 from collections.abc import Callable
 from collections import Counter
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
+import app as app_package
 from app.db.models import ReviewSession
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import validation
@@ -143,7 +145,9 @@ def test_no_workflow_card_page_builds_the_report_more_than_once(
     """The ceiling, not the floor: a page is free to run the report
     zero times (the card skips it outside `validated`), but never
     twice for one render."""
-    review_session = _seed_validated(client, db, code=f"rc{len(suffix)}x")
+    review_session = _seed_validated(
+        client, db, code="rc" + (suffix.strip("/") or "home")
+    )
     report_runs.clear()
 
     response = client.get(
@@ -215,18 +219,37 @@ REPORT_MODULE = "app/services/validation.py"
 #: The one place the report reaches into that loads the same rows
 #: again: `_check_instruments_stale_generated` asks the assignments
 #: engine for its verdict, and the engine builds its own
-#: `_load_reconcile_inputs`. See the guard's docstrings for why that is
-#: left alone rather than papered over.
+#: `_load_reconcile_inputs`.
+#:
+#: The whole package, not the two modules measured — `_generate.py`
+#: issues the instrument re-read but delegates both roster re-reads to
+#: `_coverage.list_reviewers` / `list_reviewees`, so naming modules
+#: would pin an internal split of the engine's own loader that is none
+#: of this test's business. The exception is therefore "the assignments
+#: engine", stated as such rather than narrowed to today's call graph.
 ENGINE_PACKAGE = "app/services/assignments/"
 
 
-def _issuing_module(repo_root: str) -> str:
+#: Resolved from the package itself rather than from a path fragment.
+#: A checkout whose directory name appears twice in its absolute path —
+#: which is exactly what GitHub Actions produces,
+#: `/home/runner/work/<repo>/<repo>/…` — defeats any split on the repo
+#: name, and the failure is silent: every module comes back under a
+#: name that matches nothing, so the guard below passes having
+#: recognised nothing at all. `test_the_guard_can_see_the_report`
+#: is what makes that loud.
+_APP_DIR = Path(app_package.__file__).resolve().parent
+_REPO_ROOT = _APP_DIR.parent
+
+
+def _issuing_module() -> str:
     """The innermost `app/` frame on the stack, as a repo-relative
     module path. That is the code that actually asked for the query,
     rather than whichever of SQLAlchemy's internals ran it."""
     for frame in reversed(traceback.extract_stack()):
-        if "/app/" in frame.filename and "site-packages" not in frame.filename:
-            return frame.filename.split(repo_root)[-1]
+        path = Path(frame.filename).resolve()
+        if _APP_DIR in path.parents:
+            return path.relative_to(_REPO_ROOT).as_posix()
     return "?"
 
 
@@ -234,20 +257,19 @@ def _capture(
     db: Session, review_session: ReviewSession
 ) -> list[tuple[tuple[str, str], str]]:
     """Run the report, returning one entry per statement it issued:
-    ``((normalised SQL, bound parameters), issuing module)``.
+    ``((normalized SQL, bound parameters), issuing module)``.
 
     Parameters are part of the key on purpose. Twenty-two checks each
     loading *the same session's* instruments is the defect; two checks
     loading two different instruments' fields is not.
     """
-    repo_root = "/review-robin-web/"
     captured: list[tuple[tuple[str, str], str]] = []
     recording = {"on": False}
 
     def before(conn, cursor, statement, parameters, context, many):  # noqa: ANN001
         if recording["on"]:
             key = (re.sub(r"\s+", " ", statement).strip(), repr(parameters))
-            captured.append((key, _issuing_module(repo_root)))
+            captured.append((key, _issuing_module()))
 
     bind = db.get_bind()
     event.listen(bind, "before_cursor_execute", before)
@@ -279,6 +301,10 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
         if module == REPORT_MODULE
     )
 
+    assert own, (
+        "the report issued no query this test could attribute to "
+        f"{REPORT_MODULE} — the guard would pass by recognising nothing"
+    )
     repeated = {key: count for key, count in own.items() if count > 1}
     assert not repeated, "\n".join(
         f"{count}x  {sql[:110]}  params={params}"
@@ -296,7 +322,9 @@ def test_every_remaining_repeat_belongs_to_the_assignments_engine(
     `assignments.staleness_by_instrument` whether regenerating would
     change anything, and that engine builds its own
     `_load_reconcile_inputs` — re-reading the instruments and both
-    rosters the report already holds. Three statements per run.
+    rosters the report already holds. Three statements per run: the
+    instruments from `_generate.py`, both rosters from `_coverage.py`,
+    which is why the exception is the package rather than one module.
 
     Rung 3's decision (19R Item 5) was to leave it. Handing the engine
     a roster loaded elsewhere is exactly the snapshot this item spent

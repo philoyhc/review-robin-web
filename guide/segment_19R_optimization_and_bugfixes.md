@@ -838,6 +838,27 @@ No schema change, no migration, no template change.
 
 ### Status
 
+**The cold read: one per item, at rung 3, over `122b0613..HEAD`.**
+Nothing wrong with the refactor — it ran a pre/post differential on six
+shapes the fixtures miss (1,005 instruments, instruments sharing an
+`order`, interleaved rosters, odd `status` values, a sibling session,
+`assignment_mode=None`) and the issue lists were byte-identical, a
+2,511-issue run included. It also re-derived the golden from
+`122b0613` itself, so the capture claim is checked rather than
+believed. What it found was around the change: the attribution in the
+new guard was path-fragile and, off-path, passed **while recognising
+nothing** — it demonstrated this by running the *pre-refactor* module
+and watching the guard go green (CI found the same thing an hour
+earlier from the other end). Fixed by resolving the root from
+`app.__file__`, plus an assertion that the guard saw the report at all.
+Also corrected here: the boundary's two roster repeats come from
+`_coverage.py`, not `_generate.py`. **Two owed at the close**, both
+below in `Doc impact`: `spec/validate_page.md` §5.1 / §7 still
+documents the two-argument `check`, so a rule written to its recipe
+now raises `TypeError` — the bullet predicted no change and the build
+found otherwise, so it becomes the edit; and `guide/app_responsiveness.md`
+Finding 6 still describes the double build and the old counts.
+
 **Rung 3 narrowed the Definition of done rather than widening the
 engine** (2026-09-21). The three remaining repeats are
 `staleness_by_instrument` building its own `_load_reconcile_inputs`,
@@ -938,11 +959,12 @@ all along.
 
 - `guide/app_responsiveness.md` — annotate Finding 6 with the
   post-change counts; it is the evidence this item answers (Item 5).
-- `spec/validate_page.md` — carried unwaived on purpose. No change is
-  expected, since the readiness contract is *which* issues surface and
-  this item changes only what computing them costs. If the build finds
-  otherwise this bullet becomes the edit; if not, the close waives it
-  with that reason. Either way the close says which (Item 5).
+- `spec/validate_page.md` — **the edit, not the waiver.** Carried
+  unwaived on purpose against the expectation of no change; the build
+  found otherwise. §5.1 and §7's "Adding a new rule" recipe still
+  document `check(db, review_session)`, so a rule written to the spec
+  today raises `TypeError` on its first run. Both, and the rule-shape
+  line, take the third argument and name `ValidationInputs` (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---
