@@ -323,10 +323,12 @@ the arithmetic happens, not what it says, and a parity test held the
 two implementations to the same answer while it did.
 
 One thing this table does *not* say: a `required` response field that
-is not `visible` is excluded from both denominators, because the
-reviewer is never shown it and so cannot answer it. The `Coverage`
-column on Responses counts the same field, for the opposite reason —
-see below.
+is not `visible` is excluded from **both columns**, because the
+reviewer is never shown it and so cannot answer it. It moves different
+halves of each — `Required Fields`' denominator, and `Progress`'s
+numerator, since `Progress` is completed assignments over assigned
+ones and no field flag can move that total. The `Coverage` column on
+Responses counts the same field, for the opposite reason — see below.
 
 **The two progress columns sort by completion percentage, not the
 raw done count.** Totals differ per row, so "3 done" orders nothing

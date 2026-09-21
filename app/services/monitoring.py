@@ -373,8 +373,16 @@ def per_reviewer_progress(
 def _per_reviewer_progress_python(
     db: Session, review_session: ReviewSession
 ) -> list[ReviewerProgress]:
-    """The pre-rewrite implementation, kept as the parity oracle until
-    the item closes (19R Item 3 rung 3)."""
+    """The pre-rewrite implementation, kept as the parity oracle.
+
+    19R Item 3 rung 3 replaced :func:`per_reviewer_progress` with an
+    aggregate query plus a Python half for group-scoped instruments.
+    This body stays in the tree past the item's close, unused by the
+    app: ``tests/integration/test_monitoring_rollup_parity.py``
+    parametrizes both implementations, so deleting it deletes half the
+    cases that hold the rewrite to the old answer. It goes when
+    something better holds that line, not on a date.
+    """
     reviewers = _assigned_active_reviewers(db, review_session.id)
     invitations = _invitations_by_reviewer(db, review_session.id)
     # Group keys are computed once for the whole session and passed
@@ -668,10 +676,11 @@ def _per_reviewee_coverage_python(
     """The pre-rewrite implementation, kept as the parity oracle.
 
     19R Item 3 rung 2 replaced :func:`per_reviewee_coverage` with an
-    aggregate query. This body stays in the tree, unused by the app,
-    until the item closes — it is the thing the new form is checked
-    against in ``tests/integration/test_monitoring_rollup_parity.py``,
-    and a rewrite with no oracle is a rewrite nobody can check.
+    aggregate query. This body stays in the tree past the item's close,
+    unused by the app — it is the thing the new form is checked against
+    in ``tests/integration/test_monitoring_rollup_parity.py``, which
+    parametrizes both, and a rewrite with no oracle is a rewrite nobody
+    can check.
 
     Joins ``reviewees ⨯ assignments ⨯ responses ⨯ instruments``;
     classifies each reviewee per ``AT_RISK_THRESHOLDS``."""

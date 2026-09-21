@@ -502,10 +502,12 @@ to the reviewee rollup and invisible to the reviewer one. Each is its
 own item if it should change. Written into
 `spec/operations_pages.md` rather than left in the test file.
 
-**The oracle earned its rung.** Eighteen mutations, all caught — four
-only after the fixture grew to carry the case, which is what
-`tests/integration/test_monitoring_rollup_parity.py`'s own comments
-record, one per shape a naive `GROUP BY` would lose. Expectations are
+**The oracle earned its rung.** Sixteen mutations against it, all
+caught — four only after the fixture grew to carry the case, which is
+what `tests/integration/test_monitoring_rollup_parity.py`'s own
+comments record, one per shape a naive `GROUP BY` would lose. Two more
+went against the mixed-fixture guards in `test_monitoring_prefetch.py`,
+which the oracle cannot reach: eighteen for the item. Expectations are
 hand-derived and two disagreed with the code on the first pass, with
 the code right both times: SQLite drops a `DateTime(timezone=True)`
 offset, so the oracle compares instants.
@@ -533,10 +535,25 @@ instrument. That sentence was the defect, written down and not read as
 one. `_mixed` now carries both kinds.
 
 **Two `diff-reviewer` reads** — the item's cumulative read at rung 3
-(`46482b64..HEAD`), and rung 4's own, since the close reopened
-`tests/`. The first found the `visible` regression above plus five
-prose findings in this block, all acted on. The second is recorded
-below.
+(`46482b64..HEAD`), and rung 4's own (`9a505099..HEAD`), since the
+close reopened `tests/`. The first found the `visible` regression
+above plus five prose findings, all acted on. The second found eleven,
+none behavioral, all in prose this close had just written or should
+have: two spec sentences overstated (below), a `Progress` denominator
+that no field flag can move, a test docstring quoting the spec
+sentence this rung deleted, a forward reference to this paragraph
+before it existed, a mutation count attributed to the wrong artefact,
+a `434` left asserted as live in `responses/_core.py`, `todo_master`'s
+roadmap unshipped and still carrying the 30-50x projection, and
+`spec/instruments.md`'s `visible` list no longer exhaustive. Two of
+those became `Doc impact` bullets this section did not have.
+
+**The oracles outlive the close, and now say so.** Both
+`_per_reviewer_progress_python` and `_per_reviewee_coverage_python`
+promised to go "until the item closes"; the parity file parametrizes
+both, so deleting either deletes half the cases holding the rewrite to
+the old answer. Kept, with the docstrings rewritten to say they go
+when something better holds that line, not on a date.
 
 **The close pass caught the same slip twice.** Two sentences written
 into `spec/operations_pages.md` generalized a per-reviewee-instrument
@@ -603,6 +620,12 @@ reading.
   rollup reads the session's response rows in one query" and the
   per-roster query budget under it are both false once the rollups stop
   reading rows at all (Item 3).
+- `spec/instruments.md` — the list of surfaces that filter response
+  fields by `visible.is_(True)` gains the operator-side reviewer
+  rollup, and names the reviewee rollup as the exception (Item 3).
+- `guide/todo_master.md` — mark Items 2 and 3 shipped, and retire the
+  "under a second (30-50x)" projection the measurements did not reach
+  (Item 3).
 - `docs/status.md` — row when the item lands (Item 3).
 
 ---

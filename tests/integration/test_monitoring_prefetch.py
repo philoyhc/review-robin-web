@@ -28,6 +28,11 @@ holds three kinds of check rather than 19K.3's two:
   bounded), never the numbers, because a legitimately added query
   should not fail a test while the contract still holds.
 
+One guard sits outside all three:
+``test_the_prefetch_loads_only_this_session`` pins that
+``responses_by_assignment`` is scoped to its session, which is a
+correctness property rather than a cost one.
+
 The last group needs a fixture with **both instrument kinds**:
 ``per_reviewer_progress`` keeps a Python path for group-scoped
 instruments, and ``_seeded`` makes none, so ``_mixed`` at the end of
@@ -386,22 +391,24 @@ def test_the_prefetch_loads_only_this_session(
 def test_the_assignments_page_query_count_is_flat_in_the_roster(
     client: TestClient, db: Session
 ) -> None:
-    """`spec/operations_pages.md` prints a budget table and says
-    *"Assignments stays flat at 43 at every size — its ``LIMIT 200`` and
-    its indexes are what hold it there, so a change that drops either
-    belongs in this table."*
+    """`spec/operations_pages.md`'s budget table says every page is flat
+    in the roster, and that the Assignments page is held there by its
+    ``LIMIT 200`` plus its indexes.
 
-    Until now nothing pinned that. The relative-growth guards above cover
-    the two pages that scale with the roster; the Assignments page's
-    claim is stronger — **flat, not linear** — and a stronger claim needs
-    its own check.
+    When this was written that claim was the Assignments page's alone —
+    the other two scaled linearly and had only relative-growth guards.
+    19R Item 3 made all three flat, and the two mixed-fixture guards at
+    the end of this file hold the other two; this one still owns the
+    page whose flatness comes from a limit rather than from an
+    aggregate.
 
-    **Flatness is what this asserts, not the number 43.** A figure
-    self-stales: any legitimately added query would fail a test pinned to
-    43 while the contract still held. What cannot change without the
+    **Flatness is what this asserts, never the figure.** A number
+    self-stales: the spec printed 43 for years while the page measured
+    49, and a test pinned to either would have failed on a legitimately
+    added query with the contract intact. What cannot change without the
     contract breaking is that the count does not move with the roster at
-    all. If this fails, either the `LIMIT 200` or an index has gone — and
-    the spec's table wants re-measuring either way.
+    all. If this fails, either the `LIMIT 200` or an index has gone —
+    and the spec's table wants re-measuring either way.
     """
     small = _seeded(client, db, 4, code="QBSM")
     large = _seeded(client, db, 8, code="QBLG")
