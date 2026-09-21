@@ -838,8 +838,21 @@ No schema change, no migration, no template change.
 
 ### Status
 
+**Rung 3 narrowed the Definition of done rather than widening the
+engine** (2026-09-21). The three remaining repeats are
+`staleness_by_instrument` building its own `_load_reconcile_inputs`,
+and the alternative was to hand it rosters the report already holds.
+Rejected: that function is not a pure read — it caches each verdict and
+flushes — and its whole value is that it cannot drift from what
+Generate would do. A parameter meaning "trust me, these rows are
+current" is the snapshot this item spent two rungs refusing to build,
+and three indexed reads do not buy it. So the guard asks whether the
+**report** loads the same thing twice, which is the defect, and a
+second test pins the exception to that one engine so the narrowing
+cannot quietly become a blanket.
+
 **Rung 2 landed its whole list, and the Definition of done's
-"no exact-repeat query" is still three short.** `ValidationInputs`
+"no exact-repeat query" was three short.** `ValidationInputs`
 covers every input the plan named, and the report went from 43 queries
 / 21 distinct to **17 / 14** on `FM100`. The three that remain are one
 statement each — instruments, reviewers, reviewees — issued a second
@@ -887,8 +900,12 @@ all along.
 
 ### Definition of done
 
-- The readiness report issues **no exact-repeat query** in one run —
-  9 statements repeat today, 22 queries of 43.
+- ~~The readiness report issues **no exact-repeat query** in one
+  run — 9 statements repeat today, 22 queries of 43.~~ Narrowed at
+  rung 3: the report issues no exact repeat **of its own**, and the
+  three that remain are the assignments engine's. Reason in `Status`;
+  both halves are asserted in
+  `tests/integration/test_readiness_report_cost.py`.
 - Validate builds the report **once**.
 - `validate_session_setup` returns the identical issue list, rule for
   rule, on every fixture the existing validation tests carry.
