@@ -772,10 +772,18 @@ path. Both corrected.
 Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
 item when someone picks it up; none blocked Items 1–4.
 
-- **Bulk-insert the generated pairs.** Prepare blocks **74.8 s** for
-  200,000 rows, 17.4 s of it SQL, adding one `Assignment()` per pair. A
-  click rather than a page, so it needs progress feedback or a background
-  job as much as it needs speed.
+- **Bulk-insert the generated pairs.** `_generate.py` adds one
+  `Assignment()` per pair, which costs **74.8 s** for 200,000 rows —
+  but the 2026-09-21 re-take puts it at **1.3 s at 100 × 100 and 3.1 s
+  at 200 × 200**, so the per-object constant only bites at a scale
+  nobody runs. Worth doing if someone is in that code anyway; it does
+  not need the progress feedback or background job this entry first
+  claimed.
+- **Find out what the 79–112 fixed queries per session page are.** New
+  at the re-take and now the largest unexplained cost on a realistic
+  session: Session Home 79, Assignments 92, Validate 112, identical at
+  2,000 assignment rows and at 200,000. Not roster cost, never
+  attributed.
 - **Turn on compression.** No compression middleware exists: the lobby
   ships 1,584 KB where gzip would send 95 KB (16.5×), the roster pages
   6–7×. One middleware line — **after** checking what the dev slot's
