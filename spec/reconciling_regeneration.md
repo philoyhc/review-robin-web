@@ -177,10 +177,14 @@ The **Prepare session** button (`POST
    because reconcile does not destroy unchanged data.
 
 The engine evaluation is in-memory, and it is **not** cheap at roster
-scale: one walk is seconds per instrument on a 1,000 × 1,000 roster, and
-this path pays for two — the dry-run and the run. That is accepted
-because the dry-run is what makes a destructive write confirmable, and
-the confirmation has to come from the same engine the run will use.
+scale: one walk is seconds per instrument on a 1,000 × 1,000 roster.
+The clean path pays for one — the run. **The confirmation path pays for
+three**: the dry-run on the first POST, a second `reconcile_impact` when
+the redirected GET renders the banner, and the run itself on the
+acknowledged POST. That is accepted because the dry-run is what makes a
+destructive write confirmable, and the confirmation has to come from the
+same engine the run will use; the redisplay is the cost of carrying the
+counts through a 303 rather than holding them in session state.
 
 **The staleness cache does not apply here.** It caches
 `staleness_by_instrument`'s per-instrument verdict against a content
