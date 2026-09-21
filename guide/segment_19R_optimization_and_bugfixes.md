@@ -144,37 +144,34 @@ No schema change, no template change.
 
 `assignments.staleness_by_instrument` answers *would regenerating change
 which pairs exist?* by running the rules engine once per instrument on
-every render. Assignments and Validate call it always; the shared
-workflow card drags it onto four more pages whenever the session is
-`validated` — six builder call sites
-(`grep -rn "build_workflow_card_context(" app/web/routes_operator/`).
+every render — on Assignments and Validate always, and on four more
+pages whenever the session is `validated`, through the shared workflow
+card (six builder call sites:
+`grep -rn "build_workflow_card_context(" app/web/routes_operator/`).
 
-The engine's floor at 1,000 × 1,000 is **2.29 s per instrument**, and a
-*narrower* rule costs **more** (3.52 s for a `MATCH` keeping a tenth),
-because `app/services/rules/engine.py` materializes and sorts the
-million-pair list before any rule is consulted. No rule an operator can
-author gets under it.
-
-Measured ceilings: **Validate 26.5 s → 1.8 s, Assignments 23.2 s →
-1.7 s, Session Home 14.1 s → 3.7 s.**
+The engine's floor at 1,000 × 1,000 is **2.29 s per instrument** and a
+*narrower* rule costs **more** (3.52 s), because the million-pair list
+is built and sorted before any rule is consulted; `app_responsiveness.md`
+has the measurement. Ceilings: **Validate 26.5 s → 1.8 s, Assignments
+23.2 s → 1.7 s, Session Home 14.1 s → 3.7 s.**
 
 ### Decision
 
-Persist the per-instrument verdict against a **content hash of its
-inputs**, recomputing on a mismatch at read — the shape
-`instruments.cached_group_pair_count` / `cached_group_pair_stamp`
-already uses for the group pair count, extended to a second pair of
-columns.
+Persist the whole **`InstrumentReconcileState`** — the verdict *and* the
+`eligible` / `self_reviews_excluded` counts it carries — against a
+**content hash of what the verdict is derived from**, recomputing on a
+mismatch at read. Same shape as
+`instruments.cached_group_pair_count` / `cached_group_pair_stamp`.
 
-*Alternatives rejected:*
+**A verdict-only cache would not work** (Codex P1 on #2514):
+`app/web/views/_assignments.py` renders `state.eligible` and reads
+`self_reviews_excluded`, so it would leave the engine running on the
+page this item exists to fix.
 
-- **18J Rec C (single-side predicate indexes)** makes the walk cheaper
-  but still per render, and it changes engine internals rather than how
-  often they run. It stays deferred as the follow-on if the cache turns
-  out to miss often; `guide/app_responsiveness.md` re-aims it.
-- **Stop building the card on the four pages that only render a summary
-  count.** The card needs the report to render that count, so this
-  removes a feature rather than a cost.
+*Alternatives rejected:* **18J Rec C** makes the walk cheaper but still
+per render — deferred as the follow-on if the cache misses often.
+**Stop building the card on the four pages that only render a summary
+count** removes a feature rather than a cost.
 
 ### Semantics
 
@@ -182,44 +179,51 @@ columns.
   including `status`, the relationships rows, the pinned rule's
   definition, the instrument's `rule_set_id`, `group_kind`, and the
   session's self-review setting. Anything left out is a wrong "fresh".
-- **A miss recomputes**; so does an unreadable or unrecognized stamp. The
-  stamp carries a version prefix so changing its shape is a miss rather
-  than a silent hit.
-- **Never serve a stale "fresh".** The verdict is a correctness signal —
-  it is the operator's only notice that generated rows no longer match
-  their rules, and `app/services/validation.py` records this rule having
-  once been a registered no-op, which "*reports a clean bill on exactly
-  the thing it exists to catch*".
-- Never-generated is still not stale, exactly as today.
+- **And the materialized rows, which are no engine input at all**
+  (Codex P1 on #2514). The verdict is a *diff* against the instrument's
+  existing `Assignment` rows, so Generate or delete-all changes the
+  answer while every engine input holds still — a cached `stale=True`
+  would outlive the regenerate that made it fresh. Hence
+  `replace_assignments` writes the new state through, having just
+  computed the diff, **and** the stamp carries a component of the row
+  set that no write leaves unchanged, so an unforeseen path invalidates
+  rather than lies. Row count plus `max(id)` is one such component; the
+  build picks the form against that requirement.
+- **A miss recomputes**, and so does an unreadable stamp; a version
+  prefix makes a shape change a miss rather than a silent hit.
+- **Never serve a stale "fresh".** It is the operator's only notice that
+  generated rows no longer match their rules, and
+  `app/services/validation.py` records this rule having once been a
+  no-op that "*reports a clean bill on exactly the thing it exists to
+  catch*". Never-generated is still not stale, as today.
 
 ### Judgment calls — decided
 
-- **Columns on `instruments`, not a new table** (2026-09-21): the verdict
-  is per instrument, and the precedent next to it already is.
+- **Columns on `instruments`, not a new table** (2026-09-21): the
+  verdict is per instrument, as the precedent beside it is.
 - **Hash the inputs, not the result** (2026-09-21): hashing the fan-out
-  means computing the fan-out, which is the cost being removed.
-- **`reconcile_impact` does not share the cache** (2026-09-21): it
-  answers a different question (how many responses a run would delete)
-  and runs on a confirmation path, not a render.
+  means computing it, which is the cost being removed.
+- **`reconcile_impact` does not share the cache** (2026-09-21): a
+  different question, on a confirmation path, not a render.
 
 ### Blast radius (measured)
 
 | what | count | command |
 |---|---|---|
-| app call sites of `staleness_by_instrument` | 2 | `grep -rn "staleness_by_instrument" app/ --include=*.py \| grep -v "def \|__init__\|:.*``"` |
+| app call sites of `staleness_by_instrument` | 2 | `grep -rn "staleness_by_instrument" app/ --include=*.py` |
 | pages reaching it through the card | 6 | `grep -rn "build_workflow_card_context(" app/web/routes_operator/` |
 | test files naming it | 1 | `grep -rln "staleness_by_instrument" tests/` |
-| migration | 1 | new columns on `instruments` |
+| migration | 1 | new columns on `instruments`, plus the write-through in `replace_assignments` |
 
 ### PR ladder
 
-1. **Migration + columns**, no reader and no writer. Round-trips on
+1. **Migration + columns**, no reader and no writer; round-trips on
    Postgres in `ci-postgres`.
-2. **The stamp helper**, with its own unit tests: same inputs → same
-   stamp, and one test per input that changes it.
-3. **Wire the read-through** in `staleness_by_instrument`: hit returns
-   the stored verdict, miss recomputes and writes. Rung 2's tests become
-   the guard.
+2. **The stamp helper** with its own unit tests: same inputs → same
+   stamp, one test per input that changes it.
+3. **Wire the read-through** in `staleness_by_instrument` and the
+   write-through in `replace_assignments`; rung 2's tests become the
+   guard.
 4. **Close.**
 
 ### Definition of done
@@ -227,6 +231,10 @@ columns.
 - A test mutates each hashed input in turn — add a reviewer, edit a
   relationship, change the rule, re-pin the instrument, flip
   self-reviews — and asserts the verdict is recomputed.
+- A test regenerates a stale instrument and asserts the next read says
+  fresh, with no engine run between.
+- A cache hit supplies `eligible` and `self_reviews_excluded` without an
+  engine run.
 - `bench --session N` shows Validate and Assignments under 2 s on the
   200,000-row fixture.
 - `alembic downgrade base && alembic upgrade head` passes on Postgres.
@@ -238,9 +246,8 @@ columns.
 
 ### Open questions
 
-- Should a cache miss be observable to an operator (a "recomputing"
-  state) or stay invisible? *The author decides at rung 3; invisible is
-  the default.*
+- Should a cache miss be observable to an operator, or stay invisible?
+  *The author decides at rung 3; invisible is the default.*
 
 ### Out of scope
 
@@ -378,32 +385,25 @@ uploads, each asserting `field_labels.resolve` after the import:
 
 | upload path | friendly label |
 |---|---|
-| Reviewers card (`/reviewers/import`) | **kept** |
-| Reviewees card (`/reviewees/import`) | **kept** |
-| Relationships card (`/relationships/import`) | **kept** |
+| the three roster cards — `/reviewers/import`, `/reviewees/import`, `/relationships/import` | **kept** |
 | Create new session (`POST /operator/sessions`) | **dropped** |
-| `quick-setup/reviewers` | **dropped** |
-| `quick-setup/reviewees` | **dropped** |
-| `quick-setup/relationships` | **dropped** |
+| `quick-setup/reviewers`, `/reviewees`, `/relationships` | **dropped** |
 | `quick-setup/submit-all` | **dropped** |
 
 Observers are excluded by design: `parse_observer_csv` discards the
 captured map and `save_observers` has no parameter for it (19C Item 1).
 
-**The spec already says this should work.** `spec/csv_contracts.md`
-lists the Quick Setup roster slots as *"same as per-page Upload — Quick
-Setup is a thin shell over the per-entity primitives"*, and documents
-`field_labels_captured` as the argument that "reconciles the tag
-friendly labels from the header: upsert present, clear absent". The
-contract is right; two call sites do not honor it. So this is a code fix
-with no spec change behind it.
+**The spec already says this should work**, so the code is what is
+wrong: `spec/csv_contracts.md` lists the Quick Setup roster slots as
+*"same as per-page Upload — Quick Setup is a thin shell over the
+per-entity primitives"*, and documents `field_labels_captured` as
+reconciling the header's labels "upsert present, clear absent".
 
-**Why the loss is not recoverable elsewhere.** 19C Item 1 retired
+**The loss is not recoverable elsewhere**: 19C Item 1 retired
 `field_labels.*` from the settings bundle precisely because roster
-headers carry them. The header is now the only way a label arrives, so a
-quick-setup upload leaves the operator retyping every label in the
-editor, and the extract → edit → re-upload round trip silently stops
-being one.
+headers carry them, so a quick-setup upload leaves the operator
+retyping every label and the extract → edit → re-upload round trip
+stops being one.
 
 ### Decision
 
@@ -411,33 +411,29 @@ Pass `field_labels_captured=result.field_labels` at the two quick-setup
 save sites, matching what `app/web/routes_operator/_shared.py` and
 `app/web/routes_operator/_setup_relationships.py` already do.
 
-*Alternative rejected:* make the argument keyword-only with no default so
-a caller cannot omit it. It would have prevented this, but it changes a
-service signature that `session_rehydrate` and the observers path also
-use — the observers path having nothing to pass by design. A gate over
-the entry points (rung 2) catches the same class without reshaping a
-service for it.
+*Alternative rejected:* make the argument keyword-only with no default.
+It would have prevented this, but it reshapes a service signature that
+`session_rehydrate` and the observers path also use — observers having
+nothing to pass by design. Rung 2's gate catches the same class without
+that.
 
 ### Semantics
 
-- **"Upsert present, clear absent" now applies on these paths too.** A
-  quick-setup upload whose header carries a bare `ReviewerTag1` will
-  clear an override the operator had set, exactly as the card already
-  does. That is the contract, and it is a behavior change beyond "labels
-  now register" — the half worth calling out at review.
+- **"Upsert present, clear absent" now applies here too.** A bare
+  `ReviewerTag1` header on a quick-setup upload will clear an override
+  the operator had set, exactly as the card already does — a behavior
+  change beyond "labels now register", and the half worth review.
 - Observers stay as they are: no capture, no parameter, no change.
-- This item changes **who calls** `field_labels.apply_import`, not what
-  it does. Whatever the card does for any header shape, the quick-setup
+- The item changes **who calls** `field_labels.apply_import`, not what
+  it does: whatever the card does for a header shape, the quick-setup
   path must now do identically.
 
 ### Judgment calls — decided
 
-- **Fix at the two helpers, not at the six routes** (2026-09-21):
+- **Fix at the two helpers, not the six routes** (2026-09-21):
   `_run_quick_setup_import` and `_run_quick_setup_relationships` are the
-  single save sites behind every affected route, including `submit-all`
-  and the create-session upload.
-- **No change to `save_*` signatures** (2026-09-21) — see the rejected
-  alternative.
+  single save sites behind every affected route.
+- **No change to `save_*` signatures** (2026-09-21) — see above.
 
 ### Blast radius (measured)
 
@@ -446,28 +442,26 @@ service for it.
 | quick-setup save sites missing the argument | 2 | `grep -n "save_fn(" app/web/routes_operator/_quick_setup.py` and the `save_relationships(` call below it |
 | routes reaching them | 6 | create-session, four per-slot, submit-all |
 | call sites already correct | 3 | `grep -rn "field_labels_captured" app/web/routes_operator/` |
-| templates | 0 | the card partial posts to routes that already exist |
 
 No schema change, no migration, no template change.
 
 ### PR ladder
 
 1. **The fix and the test that pins it.** Both arguments, plus a test
-   covering every upload entry point — the three cards green before and
-   after, the five quick-setup paths red before and green after.
-2. **The gate.** A test that enumerates the roster upload entry points
-   and fails when one saves a roster without reconciling labels, so the
-   next one added cannot repeat this.
+   over every upload entry point — the cards green before and after, the
+   five quick-setup paths red before and green after.
+2. **The gate.** A test enumerating the roster upload entry points that
+   fails when one saves without reconciling labels, so the next one
+   added cannot repeat this.
 3. **Close.**
 
 ### Definition of done
 
-- Every upload entry point in the rung-1 test keeps the label, and the
-  three cards still do.
+- Every upload entry point in the rung-1 test keeps the label.
 - `grep -rn "field_labels_captured" app/web/routes_operator/` shows five
   call sites, not three.
-- A bare-header upload through a quick-setup path clears an existing
-  override, matching the card.
+- A bare-header quick-setup upload clears an existing override, matching
+  the card.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19R.4` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -476,10 +470,10 @@ No schema change, no migration, no template change.
 
 ### Open questions
 
-- Is rung 2's gate worth its weight, or does the rung-1 test over every
-  entry point already cover it? *The author decides after rung 1; the
-  argument for the gate is that this defect is exactly what "a new entry
-  point forgot" looks like.*
+- Is rung 2's gate worth its weight, or does rung 1's test over every
+  entry point cover it? *The author decides after rung 1; the argument
+  for the gate is that this defect is what "a new entry point forgot"
+  looks like.*
 
 ### Out of scope
 
@@ -491,11 +485,10 @@ No schema change, no migration, no template change.
 
 - `docs/status.md` — row when the item lands (Item 4).
 - `spec/csv_contracts.md` — carried unwaived on purpose. No change is
-  expected: the contract already states the Quick Setup slots behave as
-  the per-page uploads do, so the code is what is wrong. If the build
-  finds otherwise, this bullet becomes the edit; if it does not, the
-  close waives it with that as the reason. Either way the close has to
-  say which (Item 4).
+  expected, since the contract already states the Quick Setup slots
+  behave as the per-page uploads do. If the build finds otherwise this
+  bullet becomes the edit; if not, the close waives it with that reason.
+  Either way the close says which (Item 4).
 
 ---
 
