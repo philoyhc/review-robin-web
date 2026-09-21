@@ -200,7 +200,6 @@ def existing_count_per_instrument(
     return {instrument_id: count for instrument_id, count in rows}
 
 
-
 def latest_generated_event_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, Any]:
