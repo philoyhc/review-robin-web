@@ -416,9 +416,9 @@ def test_stale_generated_fires_once_rows_fall_out_of_step(
 
 
 def test_zero_included_silent_when_never_generated(db: Session) -> None:
-    """Generated count == 0 → silent. The
-    ``assignments.no_included_pairs`` / ``instruments.no_rule_pinned``
-    rules carry the upstream signals."""
+    """Generated count == 0 → silent. ``assignments.no_included_pairs``
+    carries the upstream signal; ``instruments.no_rule_pinned`` carries
+    nothing, being inert since Wave 5 PR 5.3."""
     _user, review_session, _instr, _rs = _seed(db, code="zi-never")
     issues = validate_session_setup(db, review_session)
     assert _issues_with_key(issues, "instruments.zero_included") == []
