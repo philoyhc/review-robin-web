@@ -25,8 +25,10 @@ split; wall-clock is machine-specific and only comparable within one run.
     python3 tools/bench_roster_scale.py pin-rule --session 1
     python3 tools/bench_roster_scale.py post --session 1 --path /workflow/prepare
 
-`seed` refuses any `DATABASE_URL` that is not loopback — it writes tens of
-thousands of rows and must never meet a deployed database.
+Every subcommand refuses any `DATABASE_URL` that is not loopback. This tool
+writes tens of thousands of rows, drives the real Prepare and Activate
+routes, and signs in as whoever `--operator-email` names — none of which
+may ever meet a deployed database.
 """
 from __future__ import annotations
 
@@ -69,15 +71,21 @@ PAGES = (
 
 
 def _database_url() -> str:
+    """The database to work against — loopback only, for every subcommand.
+
+    The guard is here rather than on the write paths because reading is not
+    the safe half: `_client` overrides `get_current_user`, so a `bench` or
+    `profile` run against a reachable database would read another account's
+    sessions with a fabricated identity, and `post` drives the real Prepare
+    and Activate routes — replacing assignments, deleting responses, sending
+    invitations. One gate on the way in covers all of it (Codex P1 on #2513).
+    """
     url = os.environ.get("DATABASE_URL")
     if not url:
         sys.exit("DATABASE_URL is unset — point it at a local Postgres.")
-    return url
-
-
-def _require_loopback(url: str) -> None:
     if not any(marker in url for marker in LOOPBACK):
-        sys.exit(f"refusing to seed a non-loopback database: {url!r}")
+        sys.exit(f"refusing to run against a non-loopback database: {url!r}")
+    return url
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +110,6 @@ def seed(args: argparse.Namespace) -> None:
     )
 
     url = _database_url()
-    _require_loopback(url)
     engine = create_engine(url, future=True)
     started = time.perf_counter()
 
@@ -316,7 +323,6 @@ def seed_lobby(args: argparse.Namespace) -> None:
     from app.db.models import ReviewSession, SessionOperator, SessionTag, User
 
     url = _database_url()
-    _require_loopback(url)
     engine = create_engine(url, future=True)
     started = time.perf_counter()
     with Session(engine) as db:
@@ -443,7 +449,6 @@ def pin_rule(args: argparse.Namespace) -> None:
     from app.db.models import Instrument, SessionRuleSet
 
     url = _database_url()
-    _require_loopback(url)
     engine = create_engine(url, future=True)
     with Session(engine) as db:
         rule_set = SessionRuleSet(
