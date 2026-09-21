@@ -771,26 +771,41 @@ def _check_instruments_stale_generated(
     review_session: ReviewSession,
     inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    """Warning per instrument whose generated rows have fallen out of
+    """Warning per instrument whose materialized rows have fallen out of
     step with what the engine would produce now.
 
+    It fires on the two situations this rule's ``why`` names: the
+    pinned rule changed, or the rosters or relationships moved after
+    Generate.
+
     The verdict is the engine's own diff
-    (``assignments.staleness_by_instrument``), so it cannot disagree with
-    what Generate would actually do. It fires when the pinned rule
-    changed, when the rosters or relationships moved after Generate, and
-    when an instrument has never generated at all.
+    (``assignments.staleness_by_instrument``). Since 19R Item 2 that
+    diff may be served from a stamped cache rather than recomputed, so
+    it agrees with what Generate would do **under the conditions**
+    ``spec/assignments.md`` § *Staleness* states — the stamp covering
+    every input the diff reads, and Generate writing the fresh verdict
+    through. Stating it unconditionally is what that item's close
+    deliberately stopped doing.
+
+    **An instrument that has never generated is not flagged**, and the
+    engine decides that rather than this check: staleness means
+    materialized rows that have fallen out of step, which needs rows to
+    have been materialized. An always-stale badge on a fresh session is
+    the failure mode that retired the previous signal. The Workflow
+    card's Generate step and the ``assignments.*`` empty rules carry
+    that case instead.
 
     **This rule was a registered no-op between Wave 5 PR 5.1 and Segment
     19N.** Its predecessor compared per-rule eligible counts via a helper
     that retired with the operator-library tier, and the replacement was
     judged unnecessary because "the Workflow card + Generate button
-    already cover the *operator pinned a rule but never generated* case".
-    That covered one of the three situations this rule's own ``why``
-    names; the other two — rule changed, roster changed — were covered by
-    nothing, while the rule stayed in the registry with a fix link. *A
-    check that returns nothing reports a clean bill on exactly the thing
-    it exists to catch*, which is worse than its absence, because the
-    operator reads the silence as an answer.
+    already cover the *operator pinned a rule but never generated*
+    case" — which is not one of the two situations the ``why`` names, so
+    both of them were covered by nothing while the rule stayed in the
+    registry with a fix link. *A check that returns nothing reports a
+    clean bill on exactly the thing it exists to catch*, which is worse
+    than its absence, because the operator reads the silence as an
+    answer.
     """
     from app.services import assignments as assignments_service
 

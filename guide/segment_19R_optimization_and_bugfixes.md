@@ -1042,12 +1042,25 @@ that the files do not support: the inert rule is the list's **last**
 bullet, not the next one, and the `docs/status.md` row called this
 one rung while describing two.
 
+**Rung 3 took the third description after all** (author's instruction).
+The read raised `_check_instruments_stale_generated`'s own docstring as
+out of scope — app code, not in the diff, and `CLAUDE.md` forbids
+bundling an unrelated fix. But an item about descriptions of this
+registry that stopped matching it, leaving the one attached to the
+function, reads as evasion rather than discipline. It was wrong in both
+of the item's ways and in a third neither the read nor rung 1 caught:
+it claimed the rule's own `why` names **three** situations where it
+names two, and the one its historical paragraph credits as already
+covered — never generated — is not among them.
+
 ### PR ladder
 
 1. **Both edits, and the close.** One slice: the findings file names
    exactly what to change, and neither edit can break the other.
 2. **The gate** — added 2026-09-21 on the author's instruction, after
    rung 1 had landed. Same PR; see `Status`.
+3. **The third description** — added 2026-09-21 on the author's
+   instruction, after rung 2's cold read surfaced it. Same PR.
 
 ### Definition of done
 
@@ -1061,6 +1074,10 @@ one rung while describing two.
 - A test in `tests/unit/test_doc_conventions.py` derives §3.2's key
   column from `REGISTERED_RULES` and fails on order, on membership,
   and on the table moving — each under a name that says which.
+- `_check_instruments_stale_generated`'s docstring describes the rule
+  the code implements: the two situations its `why` names, the cache
+  qualification rather than the flat claim, and never-generated
+  excluded.
 - `spec/validate_page.md` §7 tells a rule author to add the §3.2 row,
   since the gate now makes that a CI failure rather than an oversight.
 - `## Doc impact` section present and current
