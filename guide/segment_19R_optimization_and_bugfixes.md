@@ -475,19 +475,13 @@ still the larger share — the rollup measures 0.69 s, Session Home
 1.36 s the page measures. Neither half alone gets it under a second;
 the page furniture is a different item's to take.
 
-**`per_reviewer_progress` is a hybrid, split by instrument kind.**
-Per-reviewee instruments in one aggregate, group-scoped ones on the
-Python dedupe, the two halves added. `RollupParts` exists for that
+**`per_reviewer_progress` is a hybrid, split by instrument kind** —
+the answer to the open question below. `RollupParts` exists for the
 addition: `ReviewerSessionState` cannot be summed, because `not
 started` does not say whether the required fields were met, so two
 halves of one reviewer's work cannot combine through a pill.
 `_state_from_assignments` became a thin wrapper over it, so the dedupe
-keeps one home. The group key is `(raw or "").strip()` over reviewee
-tags or an *active* `Relationship`, and SQL's `TRIM` does not reproduce
-Python's `strip()`, on a path where being subtly wrong means an
-operator's progress figure is subtly wrong. So the bound is honest and
-stated in the code: a session entirely group-scoped at roster scale
-gains nothing.
+keeps one home.
 
 **`per_reviewee_coverage` needed no hybrid, and `Semantics` was wrong
 about why.** It calls the group dedupe "the part that resists a plain
@@ -508,16 +502,13 @@ to the reviewee rollup and invisible to the reviewer one. Each is its
 own item if it should change. Written into
 `spec/operations_pages.md` rather than left in the test file.
 
-**What the oracle pins that a naive `GROUP BY` would get wrong**: the
-dedupe key is `(instrument, group_key)`, not the group alone;
-`last_response_at` is a max over two nestings; the invitation join
-carries `last_reminder_at`, without which `summary_counts` undercounts
-and both reminder loops skip everyone; and both `ORDER BY`s matter,
-because the operations routes paginate whatever order they are handed.
-Eighteen mutations, all caught — four only after the fixture grew to
-carry the case. Expectations are hand-derived, and two disagreed with
-the code on the first pass with the code right both times: SQLite drops
-a `DateTime(timezone=True)` offset, so the oracle compares instants.
+**The oracle earned its rung.** Eighteen mutations, all caught — four
+only after the fixture grew to carry the case, which is what
+`tests/integration/test_monitoring_rollup_parity.py`'s own comments
+record, one per shape a naive `GROUP BY` would lose. Expectations are
+hand-derived and two disagreed with the code on the first pass, with
+the code right both times: SQLite drops a `DateTime(timezone=True)`
+offset, so the oracle compares instants.
 
 **Three defects reached a reader, and all three had the same shape** —
 a guard whose fixture could not reach the case it was trusted to cover:
@@ -548,12 +539,11 @@ prose findings in this block, all acted on. The second is recorded
 below.
 
 **The budget table in `spec/operations_pages.md` was re-taken, not
-edited.** All three pages are now flat in the roster (Assignments 49,
-Invitations 35, Responses 30, unchanged from 25 × 25 to 200 × 200,
-against a table that ran to 434). Measuring the pre-19R commit showed
-two of its old rows had already drifted — Assignments was 49 there
-too, never 43 — so the figures are re-read rather than adjusted, and
-the spec now says flatness is the contract and the numbers are the
+edited.** All three pages are flat in the roster now — 49 / 35 / 30,
+unchanged from 25 × 25 to 200 × 200, against a table that ran to 434.
+Measuring the pre-19R commit showed two of its old rows had already
+drifted (Assignments was 49 there too, never 43), which is why the
+section now says flatness is the contract and the figures are the
 reading.
 
 ### PR ladder
