@@ -312,6 +312,27 @@ these four recovered 172px and it fits exactly. Renaming the
 rejected — it closed 31px of the remaining 36, leaving a hairline
 scroll, and cost a button label to do it.
 
+**`Progress` and `Required Fields` are counted in SQL for
+per-reviewee instruments** (19R Item 3), rather than by loading a
+reviewer's assignments and tallying them. A reviewer's work on
+**group-scoped** instruments is still tallied in Python and added to
+that — both columns can be the sum of the two halves, and "What these
+pages cost to render" below says why the split exists. Neither figure
+nor the pill state they carry changed with it: the rewrite moved where
+the arithmetic happens, not what it says, and a parity test held the
+two implementations to the same answer while it did.
+
+One thing this table does *not* say: a `required` response field that
+is not `visible` is excluded from **both columns**, because the
+reviewer is never shown it and so cannot answer it. `Required Fields`
+loses it from both halves — `required_done` is `required_total` minus
+what is missing, so hiding a field the reviewer had *already* answered
+drops the done count with the total. `Progress` only ever loses it
+from the numerator: that column is completed assignments over assigned
+ones, and no field flag moves an assignment count. The `Coverage`
+column on Responses counts the same field, for the opposite reason —
+see below.
+
 **The two progress columns sort by completion percentage, not the
 raw done count.** Totals differ per row, so "3 done" orders nothing
 an operator would recognize. A row with nothing to do (total 0)
@@ -508,6 +529,19 @@ Operator-meaningful summaries computed by the view adapter:
 These are guidance, not enforcement. The operator decides what to
 do; the coverage state helps them prioritize.
 
+**Counted in SQL** (19R Item 3), in one aggregate over the session's
+assignments rather than a per-assignment read; the states and the
+threshold are unchanged. Two differences from the Invitations side are
+long-standing and deliberate here rather than newly introduced, and
+both are pinned by
+`tests/integration/test_monitoring_rollup_parity.py`: this page counts
+an assignment complete only when it also carries a `submitted_at`, so a
+saved draft is progress to a reviewer and not yet coverage to a
+reviewee; and it counts every `required` field whether or not it is
+`visible`, so a field the operator has un-pinned still weighs on
+coverage. A reviewer with `status` other than `active` is dropped from
+Invitations and still counted here.
+
 ### Per-row drill-in
 
 The reviewee name is a link to a per-reviewee detail page
@@ -569,31 +603,59 @@ session.`
 
 ## What these pages cost to render
 
-Both pages read every response row in the session: Invitations rolls up
-per reviewer (`monitoring.per_reviewer_progress`), Responses rolls up
+Both pages summarize every assignment in the session: Invitations rolls
+up per reviewer (`monitoring.per_reviewer_progress`), Responses rolls up
 per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-**Every rollup reads the session's response rows in one query, never
-one assignment at a time.** `responses_service.responses_by_assignment`
-loads them once and both rollups read from it. The query count must
-stay **linear in the roster**, not quadratic in it — a per-assignment
-read is quadratic, and on a 200 × 200 roster that is the difference
-between hundreds of queries and tens of thousands. The budget, measured
-through the real routes (SQLite, in-process, one render each):
+**For a per-reviewee instrument, neither rollup reads response rows at
+all** (19R Item 3) — both count in SQL and return one row per person,
+and `per_reviewee_coverage` is that and nothing else. The paragraph
+after this one is the exception, and the only one:
+`per_reviewer_progress` still reads the response rows of *group-scoped*
+assignments, and loads those assignments themselves. What the
+aggregate path may not do is materialize a row per assignment — its
+count is a `func.count`, not a `len()` over loaded objects — and the
+measure that catches a regression there is **ORM instances loaded**,
+not queries: the implementation these replaced issued few queries and
+built every `Assignment` and `Response` in the session as an object,
+408,027 of them for one render at a 1,000 × 1,000 roster
+(`guide/app_responsiveness.md`).
+
+`per_reviewer_progress` keeps one Python path, for **group-scoped
+instruments only**: a group counts once per group, and the key is
+Python's `strip()` over reviewee tags or an active `Relationship`,
+which SQL's `TRIM` does not reproduce. That half is bounded by
+group-scoped assignments — it prefetches only their response rows and
+eager-loads only their reviewees — so a session with no group
+instrument never enters it, and one that is entirely group-scoped gains
+nothing from the rewrite.
+
+All three pages are now **flat in the roster**: the query count does not
+move between a 25 × 25 and a 200 × 200 session. Measured through the
+real routes (SQLite, in-process, one render each, 2026-09-21):
 
 | roster | assignments | Assignments | Invitations | Responses |
 |---|---:|---:|---:|---:|
-| 25 × 25 | 625 | 43 | 84 | 84 |
-| 50 × 50 | 2,500 | 43 | 134 | 134 |
-| 100 × 100 | 10,000 | 43 | 234 | 234 |
-| 200 × 200 | 40,000 | 43 | 434 | 434 |
+| 25 × 25 | 625 | 49 | 35 | 30 |
+| 50 × 50 | 2,500 | 49 | 35 | 30 |
+| 100 × 100 | 10,000 | 49 | 35 | 30 |
+| 200 × 200 | 40,000 | 49 | 35 | 30 |
 
-Roughly two queries per reviewer plus a constant, from the per-reviewer
-assignment and field lookups that remain. Assignments stays **flat at
-43 at every size** — its `LIMIT 200` and its indexes are what hold it
-there, so a change that drops either belongs in this table.
+The Invitations and Responses columns replace a per-roster budget that
+ran to 434 at the largest size — roughly two queries per reviewer, from
+per-reviewer assignment and field lookups that no longer exist.
+Assignments was never in that regime; its `LIMIT 200` and its indexes
+are what hold it flat, and the whole table was re-taken here rather
+than edited in place, because two of its old rows had drifted by a
+query or two before this item began.
+
+**Flat is the contract; the figures are the reading.** A legitimately
+added query moves a number without breaking anything, so the guards in
+`tests/integration/test_monitoring_prefetch.py` pin the flatness and
+the ORM-row bound, not these four columns. A change that makes any
+column grow with the roster belongs here, re-measured.
 
 **Paging must not change any of these counts**: the slice is applied
 after every row is built.

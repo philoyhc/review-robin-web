@@ -461,132 +461,71 @@ own numbers do not support it.
 
 ### Status
 
-**Rung 1 landed 2026-09-21** — `tests/integration/test_monitoring_rollup_parity.py`,
-12 cases, no app change. The harness is two implementation lists, one
-per rollup; rungs 2 and 3 append the SQL form and every case becomes a
-parity test with no new test code.
-
-**Rung 2 landed 2026-09-21** — `per_reviewee_coverage` as **one
-aggregate query**, two levels of grouping: per assignment (required
-fields, satisfied fields, row count, latest stamp), then per reviewee.
-`uq_response_assignment_field` is what lets the inner level ask *does a
-satisfying row exist* rather than *is the last row satisfying* — with at
-most one row per `(assignment, field)` the two cannot differ. Only
-`_classify_coverage` stays in Python, once per reviewee. The old body is
-kept as `_per_reviewee_coverage_python`, registered beside the new one,
-so the four reviewee-parametrized cases each run twice.
-
-**Measured** on the 200,000-row fixture: Responses **12.0 s → 8.6 s**
-(four runs; Invitations unchanged at 8.4 s, as it must be — it does not
-call this rollup). The query count barely moves, 2,077 → 2,074, because
-the page still reaches `per_reviewer_progress` through `summary_counts`.
-That is rung 3, and it is now the whole remaining cost on both pages.
-
-**The open question does not arise on this side, and `Semantics` was
-wrong about why.** It says a group-scoped instrument counts once per
-group and calls that "the part that resists a plain `GROUP BY`" — true
-of `per_reviewer_progress`, but `per_reviewee_coverage` has **never**
-deduped groups: it counts assignments. So this rung needed no hybrid and
-the question stayed genuinely open for rung 3, where the dedupe actually
-lives. Verified against Postgres locally as well as SQLite; the rung-1
-decision to compare instants rather than datetime objects is what makes
-the same assertions pass on both.
-
-**Rung 3 landed 2026-09-21** — `per_reviewer_progress` **split by
-instrument kind**: per-reviewee instruments in one aggregate,
-group-scoped ones on the existing Python dedupe, the two halves added.
-`RollupParts` exists for that addition — `ReviewerSessionState` cannot
-be summed, because `not started` does not say whether the required
-fields were met, so two halves of one reviewer's work cannot combine
-through a pill. `_state_from_assignments` is now a thin wrapper over
-it, so the dedupe still has one home.
-
-**The hybrid is by instrument kind, and the bound is honest.** The
-group key is `(raw or "").strip()` over reviewee tags or an *active*
-`Relationship`; reproducing it in SQL means reproducing Python's
-`strip()`, which trims more than SQL's `TRIM`, on a path where being
-subtly wrong means an operator's progress figure is subtly wrong. So a
-session that is entirely group-scoped at roster scale gains nothing —
-said in the code, not left to be found.
+**Closed 2026-09-21. Four rungs as planned** — the parity oracle
+(#2522), `per_reviewee_coverage` (#2523), `per_reviewer_progress`
+(#2524), this close. Nothing struck.
 
 **Measured, and the definition of done is not met.** Invitations
-**8.4 s → 1.36 s**, Responses **8.6 s → 1.52 s**, queries **2,079 → 78**
-and **2,074 → 73**; ORM instances for one render 408,027 → ~9,000. The
-target was **under 1 s**. What remains splits roughly in half, and the
-rollup is still the larger share of it: the rollup itself measures
-0.69 s, Session Home — same chrome, no rollup — measures 0.65 s with 79
-queries, and 0.69 + 0.65 is the 1.36 s the page measures. So neither
-half alone gets Invitations under a second; the page furniture is a
-different item's to take, and a further rollup pass would be this one's.
-Recorded rather than rounded.
+**8.4 s → 1.36 s**, Responses **8.6 s → 1.52 s**; queries 2,079 → 78
+and 2,074 → 73; ORM instances per render 408,027 → ~9,000. The target
+was under 1 s. The rollup is 0.69 s and Session Home — same chrome, no
+rollup — is 0.65 s, which is the 1.36 s: neither half alone gets there,
+and the page furniture is a later item's.
 
-**The non-regression guard is about ORM rows, not queries.** The 19K.3
-guards in `test_monitoring_prefetch.py` count queries, which is the
-right measure for an N+1 and blind to this change: the old rollups
-issued few queries and built every row as an object. The new guard
-counts instances loaded and fails on either rollup reverted.
+**`per_reviewer_progress` is a hybrid, split by instrument kind** —
+the answer to the open question below. `RollupParts` exists for the
+addition: a pill cannot be summed, because `not started` does not say
+whether the required fields were met.
 
-**Three asymmetries between the rollups are now pinned**, none obviously
-intended, all three shipped behavior this item did not change: an
-inactive reviewer is dropped by the reviewer rollup and still counted by
-the reviewee one; a draft is a completion to the reviewer rollup but not
-to the reviewee one; and a `required` field that is not `visible` is
-outstanding work to the reviewee rollup and invisible to the reviewer
-one. If any should change, that is its own item.
+**`per_reviewee_coverage` needed no hybrid, and `Semantics` was wrong
+about why.** It calls the group dedupe "the part that resists a plain
+`GROUP BY`" — true of the reviewer side; this rollup has never deduped
+groups, it counts assignments. `Semantics` is also too narrow on
+"complete": required fields plus a `submitted_at` is the reviewee side
+only. Neither definition changed here.
 
-**`Semantics` describes one rollup, not both.** It says "complete"
-means every required field with a non-empty value **and** a
-`submitted_at` — the reviewee side. The reviewer side has never required
-`submitted_at`, which is the second asymmetry above. The item changed
-neither definition; the sentence was too narrow when it was written.
+**Three asymmetries between the rollups are now pinned**, none
+obviously intended, all three pre-existing: an inactive reviewer,
+a draft, and a `required` field that is not `visible` each count on one
+side and not the other. Each is its own item if it should change; the
+directions and the reasons are in `spec/operations_pages.md`, not here.
 
-**The cold read's one real defect was the third asymmetry, dropped.**
-The reviewer side reaches its fields through `_instrument_fields_by_id`,
-which filters `visible.is_(True)`; the three new field queries did not.
-A `required=True, visible=False` field — an un-pinned chip — would then
-count as outstanding, so a reviewer who answered everything shown reads
-`in progress` and **both reminder loops keep emailing them**. Fixed in
-all three places, with
-`test_an_invisible_required_field_is_the_reviewers_third_asymmetry`
-reproducing it; each of the three is separately mutation-checked.
+**The oracles outlive the close.** Both promised to go "until the item
+closes"; the parity file parametrizes both, so deleting either deletes
+half the cases holding the rewrite to the old answer. Kept, with the
+docstrings rewritten to say they go when something better holds that
+line, not on a date. Sixteen mutations against them, all caught, four
+only after the fixture grew to carry the case; two more against the
+mixed-fixture guards in `test_monitoring_prefetch.py`.
 
-**What the oracle pins that a naive `GROUP BY` would get wrong**: the
-dedupe key is `(instrument, group_key)`, not the group alone;
-`last_response_at` is a max over two nestings, rows-of-an-assignment
-then assignments-of-a-reviewee; the reviewee side requires
-`submitted_at`; the invitation join carries `last_reminder_at`, without
-which `summary_counts` undercounts and both reminder loops skip everyone
-(Codex P2); and both `ORDER BY`s matter, because the operations routes
-paginate whatever order they are handed (Codex P2). Sixteen mutations,
-all caught — four of them only after the fixture grew to carry the case,
-which is what the fixture's own comments record.
+**Two `diff-reviewer` reads** — rung 3's over the item's cumulative
+diff (`46482b64..HEAD`), and rung 4's own (`9a505099..HEAD`, since the
+close reopened `tests/`) — plus Codex on each PR. Between them,
+**three behavioral defects, all with one shape**: a guard whose
+fixture could not reach the case it was trusted to cover. The reviewer
+side lost `_instrument_fields_by_id`'s `visible` filter, so an
+un-pinned chip's field read as outstanding and both reminder loops
+would have kept emailing a reviewer who had answered everything shown;
+the grouped fallback still prefetched the whole session; and its query
+had dropped `joinedload(Assignment.reviewee)`. The ORM-row guard's
+docstring *said* its fixture had no group-scoped instrument — that
+sentence was the defect, written down and not read as one. `_mixed`
+now carries both kinds.
 
-**Expectations are hand-derived, not captured.** Two disagreed with the
-code on the first pass and the code was right both times: SQLite drops a
-`DateTime(timezone=True)` offset, so the oracle compares instants in
-UTC — which would otherwise have bitten rung 2 from the Postgres side.
+**The close's own lesson is one slip made four times**: a truth about
+the per-reviewee-instrument path written as a claim about the rollup
+as a whole, caught twice by the close's readers and twice more by
+Codex, each time with the correct qualifier already sitting in a
+commit message or three lines down the same section. Rung 4's read
+also turned up eleven prose findings, two of which became `Doc impact`
+bullets this section did not have.
 
-**The grouped half was reading the whole session (Codex P1 + P2).**
-Two defects in the Python fallback, neither visible to the ORM-row
-guard, whose fixture has no group-scoped instrument at all: it
-prefetched **every** response in the session, so one group instrument
-put back most of the rows the aggregate half had just stopped loading;
-and its assignment query dropped the `joinedload(Assignment.reviewee)`
-the pre-rewrite loop carried, so `group_keys` lazy-loaded one reviewee
-at a time. Fixed by a `group_scoped_only=` join on
-`responses_by_assignment` and by restoring the option. Both are pinned
-by a new mixed-instrument fixture — the shape `_seeded` cannot make —
-one test asserting no per-reviewee assignment's responses are loaded as
-ORM rows, one asserting the query count is equal at 4×4 and 8×8. Each
-mutation fails exactly its own test.
-
-**Carried to rung 4.** `test_monitoring_prefetch.py`'s module docstring
-still describes the per-assignment loop as the thing it guards, and its
-two equivalence tests now call `_assignment_complete`, which only
-`_per_reviewee_coverage_python` still reaches — so they compare two
-paths through the oracle, not through the shipped rollup. Neither is
-wrong; both are now about a narrower thing than the file says. The
-close re-aims the prose and says which guard covers what.
+**The budget table in `spec/operations_pages.md` was re-taken, not
+edited.** All three pages are flat in the roster now — 49 / 35 / 30,
+unchanged from 25 × 25 to 200 × 200, against a table that ran to 434.
+The pre-19R commit measured 49 for Assignments too, never the 43 the
+spec printed, which is why the section now says flatness is the
+contract and the figures are the reading.
 
 ### PR ladder
 
@@ -615,9 +554,11 @@ close re-aims the prose and says which guard covers what.
 ### Open questions
 
 - Can the group dedupe be expressed in one query, or does it need a
-  hybrid (aggregate per `(instrument, group_key)`, then fold in Python)?
-  *Decided at rung 2 by the parity harness; the hybrid is acceptable —
-  it is bounded by group count, not by assignment count.*
+  hybrid? *A hybrid, split by instrument kind: SQL's `TRIM` does not
+  reproduce Python's `strip()` in the group key. Bounded by
+  group-scoped assignments, not by group count as rung 2 first said —
+  so an all-group session at roster scale gains nothing, which the
+  code states.*
 
 ### Out of scope
 
@@ -633,6 +574,12 @@ close re-aims the prose and says which guard covers what.
   rollup reads the session's response rows in one query" and the
   per-roster query budget under it are both false once the rollups stop
   reading rows at all (Item 3).
+- `spec/instruments.md` — the list of surfaces that filter response
+  fields by `visible.is_(True)` gains the operator-side reviewer
+  rollup, and names the reviewee rollup as the exception (Item 3).
+- `guide/todo_master.md` — mark Items 2 and 3 shipped, and retire the
+  "under a second (30-50x)" projection the measurements did not reach
+  (Item 3).
 - `docs/status.md` — row when the item lands (Item 3).
 
 ---

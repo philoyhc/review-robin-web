@@ -3212,13 +3212,21 @@ dep chains called out at the bottom of this file.
      2.4 s -> 277 ms on the 200,000-row fixture; the page is SQL-bound
      now, and the remaining cost is the counting itself.
    - **Item 2 (R1)** cache the staleness verdict against a content
-     stamp — the biggest single win, and a migration.
+     stamp — **shipped 2026-09-21**, four rungs, PRs #2518 -> #2520 and
+     the close. Session Home 11.9 s -> 0.67 s, Assignments 13.1 s ->
+     0.67 s, Validate 14.0 s -> 0.99 s, against a target of 2 s.
    - **Item 3 (R2)** roll per-person progress up in SQL rather than over
-     400,000 ORM rows.
+     400,000 ORM rows — **shipped 2026-09-21**, four rungs, PRs #2522 ->
+     #2524 and the close. Invitations 8.4 s -> 1.36 s, Responses
+     8.6 s -> 1.52 s; ORM instances per render 408,027 -> ~9,000.
    - **Item 4** the quick-setup upload cards drop tag friendly labels
      — a defect, which is why the segment carries both words.
-   Items 1-3 measured together take every operator page under a second
-   (30-50x). The segment **stays open** for further work;
+   **The 30-50x projection was a ceiling and it was not reached.** All
+   three shipped, and Invitations and Responses land at 1.36 s and
+   1.52 s against a target of under a second: what is left on those two
+   is the shared page chrome, which measures 0.65 s on a page with no
+   rollup at all, and that is its own item. The other four pages are
+   under a second. The segment **stays open** for further work;
    its `## Later candidates` holds the ones already measured — Prepare's
    74.8-second insert, compression, the pair sort key.
 

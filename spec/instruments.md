@@ -904,6 +904,13 @@ every reviewer-facing render in one step. The Response Field
 row in Band 3 stays present (so its bounds / help text remain
 editable); only the chip + the reviewer-side renders react.
 
+**The operator's reviewer-side counts filter it too** (19R Item 3):
+`monitoring.per_reviewer_progress` excludes an invisible `required`
+field from the `Required Fields` column and from what makes an
+assignment complete, since a reviewer who was never shown a field
+cannot answer it. `per_reviewee_coverage` does **not** — the
+asymmetry, and why, are in `spec/operations_pages.md`.
+
 #### Inline bounds
 
 Bounds are inline on each row. The service-side validator is

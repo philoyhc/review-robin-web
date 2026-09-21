@@ -933,10 +933,12 @@ def responses_by_assignment(
     Measured 2026-09-12 through the real routes. At 50x50 (2,500
     assignments) that lookup was 2,500 of the Invitations page's 2,633
     queries; at 200x200 (40,000 assignments), rendering Invitations and
-    Responses once cost **40,433 and 80,432 queries**. With this
-    prefetch both are **434** — linear in the roster rather than
-    quadratic in it, the residual being roughly two queries per
-    reviewer.
+    Responses once cost **40,433 and 80,432 queries**. This prefetch
+    took both to 434 — linear in the roster rather than quadratic in
+    it. 19R Item 3 then removed the loops themselves, so the two pages
+    are **35 and 30, flat at every roster size**, and the live budget
+    is the table in ``spec/operations_pages.md``, not these figures.
+    They are kept because they are why this function exists.
 
     Joined on ``Assignment.session_id`` rather than an ``in_`` over the
     ids: the id list is the assignment count, which is the thing that
