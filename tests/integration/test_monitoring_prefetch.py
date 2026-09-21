@@ -1,26 +1,37 @@
-"""The response prefetch behind the Invitations and Responses pages (19K.3).
+"""What the Invitations and Responses rollups are allowed to cost.
 
-Both pages read every response row in the session. They used to read
-them one assignment at a time: ``responses/_core.py`` inside
-``_state_from_assignments`` for the reviewer side, ``monitoring.py``
-inside ``_assignment_complete`` for the reviewee side. Measured
-2026-09-12 through the real routes at a 200x200 roster (40,000
-assignments), rendering each page once cost **40,433 and 80,432
-queries** — and the Responses page paid both passes, its second one
-(``summary_counts``) accounting for exactly half while contributing a
-single integer to the page.
+The file is named for 19K.3, which is where it started: both pages read
+every response row in the session one assignment at a time —
+``responses/_core.py`` inside ``_state_from_assignments`` for the
+reviewer side, ``monitoring.py`` inside ``_assignment_complete`` for
+the reviewee side. Measured 2026-09-12 through the real routes at a
+200x200 roster (40,000 assignments), rendering each page once cost
+**40,433 and 80,432 queries**. ``responses_by_assignment`` replaced
+that with one query per session.
 
-``responses_service.responses_by_assignment`` replaces that with one
-query per session, passed down through an optional parameter so that
-every caller which does *not* loop is unchanged.
+**19R Item 3 then removed the loops themselves**, so both rollups are
+aggregate queries and neither reads response rows for a per-reviewee
+instrument at all. That moved what needs guarding, and the file now
+holds three kinds of check rather than 19K.3's two:
 
-Two things need guarding, and they are different things:
+* **Equivalence** — the prefetched path returns the same answer as the
+  per-assignment path, the risk in any caching change. These call
+  ``_assignment_complete`` directly, which only the parity oracle
+  ``_per_reviewee_coverage_python`` still reaches; they are about the
+  prefetch, not about what the pages now run.
+* **Query count flat in the roster** — the 19K.3 guards, right for an
+  N+1 and structurally blind to 19R Item 3: the old rollups issued few
+  queries and built every row as an object.
+* **ORM instances loaded** — the 19R Item 3 guards, which is where that
+  cost is visible. ``spec/operations_pages.md`` "What these pages cost
+  to render" carries the figures; the tests pin the shape (flat, and
+  bounded), never the numbers, because a legitimately added query
+  should not fail a test while the contract still holds.
 
-* that the prefetched path returns **the same answer** as the
-  per-assignment path — the risk in any caching change; and
-* that the page **does not go back** to scaling with the assignment
-  count — the risk this item exists to remove, which no equivalence
-  test can see.
+The last group needs a fixture with **both instrument kinds**:
+``per_reviewer_progress`` keeps a Python path for group-scoped
+instruments, and ``_seeded`` makes none, so ``_mixed`` at the end of
+this file is what reaches it.
 """
 
 from __future__ import annotations
