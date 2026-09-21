@@ -324,11 +324,14 @@ two implementations to the same answer while it did.
 
 One thing this table does *not* say: a `required` response field that
 is not `visible` is excluded from **both columns**, because the
-reviewer is never shown it and so cannot answer it. It moves different
-halves of each — `Required Fields`' denominator, and `Progress`'s
-numerator, since `Progress` is completed assignments over assigned
-ones and no field flag can move that total. The `Coverage` column on
-Responses counts the same field, for the opposite reason — see below.
+reviewer is never shown it and so cannot answer it. `Required Fields`
+loses it from both halves — `required_done` is `required_total` minus
+what is missing, so hiding a field the reviewer had *already* answered
+drops the done count with the total. `Progress` only ever loses it
+from the numerator: that column is completed assignments over assigned
+ones, and no field flag moves an assignment count. The `Coverage`
+column on Responses counts the same field, for the opposite reason —
+see below.
 
 **The two progress columns sort by completion percentage, not the
 raw done count.** Totals differ per row, so "3 done" orders nothing
@@ -611,9 +614,10 @@ all** (19R Item 3) — both count in SQL and return one row per person,
 and `per_reviewee_coverage` is that and nothing else. The paragraph
 after this one is the exception, and the only one:
 `per_reviewer_progress` still reads the response rows of *group-scoped*
-assignments. What neither may do is materialize a row per assignment
-— the count is a `func.count`, not a `len()` over loaded objects — and
-the measure that catches a regression here is **ORM instances loaded**,
+assignments, and loads those assignments themselves. What the
+aggregate path may not do is materialize a row per assignment — its
+count is a `func.count`, not a `len()` over loaded objects — and the
+measure that catches a regression there is **ORM instances loaded**,
 not queries: the implementation these replaced issued few queries and
 built every `Assignment` and `Response` in the session as an object,
 408,027 of them for one render at a 1,000 × 1,000 roster
