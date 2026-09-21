@@ -858,7 +858,12 @@ rung 1 → after rung 2: Validate **112 → 69 → 43**, Session Home
 **Parity was measured, not assumed** (2026-09-21). The golden in
 `tests/integration/test_validation_issue_parity.py` was captured by
 running the **pre-refactor** module from `origin/main` against its six
-fixtures; the post-refactor run reproduces all 29 issues byte for byte.
+fixtures; the post-refactor run reproduces all 29 issues byte for byte,
+on SQLite and on Postgres alike. Its first version pinned absolute row
+ids and so passed on SQLite and failed the `ci-postgres` job — the
+sequences do not rewind on rollback. The golden pins each row's
+**position** in its session instead, which is what the assertion meant
+all along.
 
 ### PR ladder
 

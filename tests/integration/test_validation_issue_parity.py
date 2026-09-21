@@ -28,10 +28,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -343,23 +345,74 @@ SCENARIOS: dict[str, Callable[[Session], ReviewSession]] = {
 # --------------------------------------------------------------------------- #
 
 
-def _normalize(issues: list) -> list[dict[str, object]]:
+#: ``(prefix as it appears in a `field` / `fix_anchor` string, the
+#: model whose rows it numbers)``. Both spellings of each entity are
+#: listed because `field` uses ``reviewer_id:3`` where `fix_anchor`
+#: uses ``#reviewer-row-3``.
+_ID_PREFIXES: tuple[tuple[str, type], ...] = (
+    ("reviewer-row-", Reviewer),
+    ("reviewer_id:", Reviewer),
+    ("reviewee-row-", Reviewee),
+    ("reviewee_id:", Reviewee),
+    ("observer-row-", Observer),
+    ("instrument-", Instrument),
+    ("instrument_id:", Instrument),
+)
+
+
+def _ordinals(db: Session, review_session: ReviewSession) -> dict[tuple[str, int], int]:
+    """Map each ``(prefix, row id)`` to the row's 1-based position in
+    its own table for this session.
+
+    Absolute ids cannot be pinned: SQLite hands back the ids an earlier
+    rolled-back test released, Postgres sequences do not rewind, so the
+    same scenario is `#reviewer-row-2` on one dialect and
+    `#reviewer-row-9` on the other. The position is the thing the
+    assertion actually means — *which* of this session's reviewers the
+    issue points at — and it is the same number everywhere.
+    """
+    ordinals: dict[tuple[str, int], int] = {}
+    for prefix, model in _ID_PREFIXES:
+        rows = db.execute(
+            select(model.id)
+            .where(model.session_id == review_session.id)
+            .order_by(model.id)
+        ).scalars()
+        for position, row_id in enumerate(rows, start=1):
+            ordinals[(prefix, row_id)] = position
+    return ordinals
+
+
+def _to_ordinals(value: str | None, ordinals: dict[tuple[str, int], int]) -> str | None:
+    if value is None:
+        return None
+    pattern = "|".join(re.escape(prefix) for prefix, _ in _ID_PREFIXES)
+    return re.sub(
+        rf"({pattern})(\d+)",
+        lambda m: m.group(1) + str(ordinals[(m.group(1), int(m.group(2)))]),
+        value,
+    )
+
+
+def _normalize(
+    issues: list, db: Session, review_session: ReviewSession
+) -> list[dict[str, object]]:
     """Issue order is part of the contract — the Validate page renders
     them in registry order — so this preserves it rather than sorting.
 
-    Row ids appear only inside ``fix_anchor`` and ``field``; both are
-    kept, because "which row" is exactly what a refactor of the loading
-    can get wrong. They are stable within a scenario because each
-    scenario builds its own session in insertion order.
+    Row references survive in `field` and `fix_anchor`, rewritten to
+    positions by :func:`_ordinals`, because "which row" is exactly what
+    a refactor of the loading can get wrong.
     """
+    ordinals = _ordinals(db, review_session)
     return [
         {
             "rule_key": issue.rule_key,
             "severity": issue.severity.value,
             "source": issue.source,
-            "field": issue.field,
+            "field": _to_ordinals(issue.field, ordinals),
             "message": issue.message,
-            "fix_anchor": issue.fix_anchor,
+            "fix_anchor": _to_ordinals(issue.fix_anchor, ordinals),
         }
         for issue in issues
     ]
@@ -381,7 +434,9 @@ def test_the_issue_list_is_what_it_was_before_the_inputs_object(
 ) -> None:
     review_session = SCENARIOS[name](db)
 
-    observed = _normalize(validate_session_setup(db, review_session))
+    observed = _normalize(
+        validate_session_setup(db, review_session), db, review_session
+    )
 
     if _DUMP_PATH:
         _dump(name, observed)
