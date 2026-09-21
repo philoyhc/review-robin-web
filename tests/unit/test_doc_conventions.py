@@ -383,3 +383,69 @@ def test_every_semantic_token_is_catalogued_with_its_shipped_mapping() -> None:
                 )
 
     assert not wrong, "catalogued Tier-2 mapping differs from the shipped one:\n  " + "\n  ".join(wrong)
+
+
+# --------------------------------------------------------------------------- #
+# The Validate page's rule table, against the registry it transcribes
+# --------------------------------------------------------------------------- #
+
+VALIDATE_SPEC = REPO / "spec" / "validate_page.md"
+
+#: The heading whose table transcribes ``REGISTERED_RULES``.
+RULES_HEADING = "### 3.2 The registered rules"
+
+#: A table row's leading `key` cell. Rows carry prose in later columns,
+#: so only the first is matched.
+RULE_ROW = re.compile(r"^\|\s*`([a-z_]+\.[a-z_]+)`\s*\|")
+
+
+def _documented_rule_keys() -> list[str]:
+    """§3.2's `key` column, in the order the table lists it. Empty when
+    the table is not where or how it is expected."""
+    lines = VALIDATE_SPEC.read_text().splitlines()
+    try:
+        start = lines.index(RULES_HEADING)
+    except ValueError:
+        return []
+    keys: list[str] = []
+    for line in lines[start + 1 :]:
+        if line.startswith("#"):
+            break
+        match = RULE_ROW.match(line)
+        if match:
+            keys.append(match.group(1))
+    return keys
+
+
+def test_the_registered_rules_table_is_still_a_table() -> None:
+    """Parseability first, and separately, so a restructured or moved
+    table says so rather than reporting every rule as missing — and so
+    the order assertion below cannot pass by matching nothing against
+    nothing."""
+    from app.services.validation import REGISTERED_RULES
+
+    documented = _documented_rule_keys()
+    assert documented, (
+        f"no rule rows parsed under {RULES_HEADING!r} in "
+        f"{VALIDATE_SPEC.relative_to(REPO)} — the table moved or changed "
+        "shape"
+    )
+    assert len(documented) == len(REGISTERED_RULES)
+
+
+def test_the_rule_table_lists_every_rule_in_registration_order() -> None:
+    """Order is the contract, not just membership.
+
+    `validate_session_setup` iterates `REGISTERED_RULES`, §2.4 derives
+    within-gate source order from that, and
+    `tests/integration/test_validation_issue_parity.py`'s golden is
+    keyed on it — so a reader using this table to predict the order
+    issues appear in is reading a contract. It stopped being true at W8,
+    when `reviewees.unreachable_for_results` was appended to the table
+    where the code had inserted it seventh, and stayed wrong through a
+    corpus sweep and a `spec-writer` pass until someone diffed the two
+    lists (19R Item 6).
+    """
+    from app.services.validation import REGISTERED_RULES
+
+    assert _documented_rule_keys() == [rule.key for rule in REGISTERED_RULES]

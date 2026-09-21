@@ -1009,10 +1009,30 @@ at `spec/assignments.md` § *Staleness* — a spec fix that quietly undoes
 an earlier spec fix is the failure mode a close is least likely to
 notice.
 
+**The gate was deferred, then asked for** (2026-09-21). `Decision`
+records why rung 1 left it out — the author had asked for the two
+fixes, and a test is not a fix. They asked for it after rung 1 landed,
+so it is rung 2 of the same PR rather than a follow-up. `Out of scope`
+is struck rather than rewritten.
+
+It is two assertions in `tests/unit/test_doc_conventions.py`, the home
+of the other constant-derived doc gates: one that §3.2's table still
+parses, one that its key column equals `[r.key for r in
+REGISTERED_RULES]`. Parseability is asserted **separately and first**,
+following the visibility-grid gate in the same file, so a moved table
+says so rather than reporting every rule as missing — and so the order
+assertion cannot pass by matching nothing against nothing. Four
+mutants, all caught: the original W8 drift replayed, two adjacent rows
+swapped, the heading renamed (which fails the parse test, as intended),
+and a 23rd rule registered but never documented — the case the gate
+exists for.
+
 ### PR ladder
 
 1. **Both edits, and the close.** One slice: the findings file names
    exactly what to change, and neither edit can break the other.
+2. **The gate** — added 2026-09-21 on the author's instruction, after
+   rung 1 had landed. Same PR; see `Status`.
 
 ### Definition of done
 
@@ -1023,6 +1043,9 @@ notice.
 - `guide/findings_2026-09-21_validate_rules.md` retired to
   `guide/archive/` with its rows marked actioned, and both README
   index rows updated.
+- A test in `tests/unit/test_doc_conventions.py` derives §3.2's key
+  column from `REGISTERED_RULES` and fails on order, on membership,
+  and on the table moving.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19R.6` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1036,7 +1059,9 @@ notice.
 
 ### Out of scope
 
-- The §3.2 order gate — see `Decision`.
+- ~~The §3.2 order gate — see `Decision`.~~ Asked for by the author
+  after rung 1 landed and built as rung 2; the `Decision` entry stands
+  as the reasoning it was deferred on.
 - Any behavior change to either rule. Both are correct as implemented.
 
 ### Doc impact
