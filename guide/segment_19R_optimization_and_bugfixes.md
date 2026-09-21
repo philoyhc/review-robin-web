@@ -654,8 +654,8 @@ that.
 | what | count | command |
 |---|---|---|
 | quick-setup save sites missing the argument | 2 | `grep -n "save_fn(" app/web/routes_operator/_quick_setup.py` and the `save_relationships(` call below it |
-| routes reaching them | 6 | create-session, four per-slot, submit-all |
-| call sites already correct | 3 | `grep -rn "field_labels_captured" app/web/routes_operator/` |
+| routes reaching them | 5 | create-session, three per-slot (reviewers / reviewees / relationships), submit-all — **not** the observers slot, which reaches `_run_quick_setup_observers` and is out of scope |
+| call sites already correct | 2 | `grep -rn "field_labels_captured" app/web/routes_operator/` |
 
 No schema change, no migration, no template change.
 
@@ -670,13 +670,77 @@ clearing case. Measured against the pre-fix tree, **six failed and
 4,602 passed** — every failure in the new file, none anywhere else in
 the suite. That silence is the defect: nothing noticed.
 
-**The blast radius was one out, and the definition of done inherited
-it.** It recorded three correct call sites where
+**Rung 2 landed 2026-09-21** — the gate, and it is asked of the
+**router** rather than of a list. `_upload_endpoints()` walks
+`app.main.app.routes` for every POST endpoint taking an `UploadFile`
+and finds twelve; each must either be exercised by rung 1's matrix or
+carry a written reason in `EXEMPT_ENDPOINTS`. That is the half rung 1
+could not cover: its matrix enumerates the paths known to exist when it
+was written, which is exactly the blind spot that let five routes drop
+labels at once.
+
+The walk has to descend FastAPI's lazy `_IncludedRouter` wrappers —
+`app.routes` holds fifteen entries, of which seven are wrappers and
+none of the other eight is a POST, so a top-level walk finds **zero**
+upload endpoints and the gate passes vacuously.
+There is an assertion for that, and it is the one mutation G2 trips.
+Three mutations, each caught by its own assertion: a new unclassified
+route, the blinded walk, and a classified endpoint renamed away.
+
+**The cumulative cold read, at rung 2.** Thirteen findings, none
+behavioral — the change itself it cleared, having checked every
+multi-slot caller for a slot that clears as a side effect of another's
+upload (there is none: each save reconciles only its own
+`source_type`, and every caller guards on filename first) and each of
+the four exemptions against the code. What it found was in the gate and
+in this plan. Two went to the gate's own robustness: it matched the
+annotation's **source text**, so `from fastapi import UploadFile as
+Upload` or a subclass would have been invisible — it resolves
+`dependant.body_params` types now — and it keyed endpoints on the
+module basename, where `_shared.py` exists under both
+`routes_operator/` and `routes_reviewer/`, so a collision could drop an
+endpoint silently. Three went to the test file: a status assertion that
+a rejected upload also satisfies (the error path is a 303 too), a
+`create_session` case classified as covered while asserting only two of
+its three roster slots, and a `hash()`-derived session code that
+differs per run. All fixed.
+
+**The gate's own eyesight was wrong three times, so it is now pinned
+directly.** Source-text matching missed an aliased import or a
+subclass; one level of `get_args` missed `list[UploadFile] | None`
+(Codex, rung 2). Each time the twelve endpoints that exist happened not
+to use the missed shape, so the gate stayed green while seeing less —
+which is the failure it exists to prevent, wearing its own face.
+`_upload_annotation_predicate` is recursive now, and
+`test_the_gate_recognises_every_shape_an_upload_parameter_takes`
+asserts seven upload shapes and five non-uploads so a later
+simplification fails loudly. Demonstrated rather than argued: with the
+one-level check **and** a real `list[UploadFile] | None` route
+injected, the gate passes and the route is invisible; with the
+recursion, the same route trips `unclassified`.
+
+**Two findings recorded rather than fixed.** The gate asks "does this
+POST take an upload", not "does this save a roster", so
+`_rehydrate.rehydrate_commit` — which saves all three rosters from a
+stashed token and takes no `UploadFile` — is invisible to it. It is
+correct today, and the exemption reason names it, but nothing gates it;
+widening the question is a different gate and its own item. And
+`spec/csv_contracts.md` spells `parse_relationship_csv`'s parameters
+`reviewer_emails` / `reviewee_identifiers` where the code takes
+`reviewers` / `reviewees` — pre-existing, unrelated to this change, and
+not bundled into it.
+
+**Two of the three blast-radius rows were wrong, and one of them fed
+the definition of done.** "Call sites already correct" read three where
 `grep -rn "field_labels_captured" app/web/routes_operator/` gives
-**two** (`_shared.py`, `_setup_relationships.py`); the third is in
-`app/services/session_rehydrate.py`, outside the command's path. The
-done line now reads four, not two. Counted again with the command
-rather than adjusted to fit.
+**two** (`_shared.py`, `_setup_relationships.py`) — the third is in
+`app/services/session_rehydrate.py`, outside the command's path — and
+the done line inherited it, now four rather than two. "Routes reaching
+them" read six where it is **five**: the observers slot reaches
+`_run_quick_setup_observers`, which this item does not touch. The rows
+themselves are corrected rather than annotated downstream, since
+otherwise a reader lands on a figure the same document contradicts
+thirty lines later.
 
 **One trip the test file now marks for the next reader.** The first
 matrix run failed the *card* relationships case too, which would have
@@ -712,9 +776,11 @@ a dropped label. The card was never broken.
 ### Open questions
 
 - Is rung 2's gate worth its weight, or does rung 1's test over every
-  entry point cover it? *The author decides after rung 1; the argument
-  for the gate is that this defect is what "a new entry point forgot"
-  looks like.*
+  entry point cover it? *Built at the author's direction. It does not
+  overlap: the matrix asserts behavior on paths someone listed, the
+  gate asserts that the router exposes no upload endpoint nobody
+  listed. Twelve endpoints found, seven covered by the matrix, one by
+  the create-session test, four exempt with reasons.*
 
 ### Out of scope
 
@@ -724,6 +790,11 @@ a dropped label. The card was never broken.
 
 ### Doc impact
 
+- `spec/quick_setup_card_spec.md` — the create-session dispatch list
+  names `_handle_quick_setup_import` (a route wrapper `create_session`
+  never calls) and `save_relationships` directly; corrected to the four
+  `_run_quick_setup_*` helpers, which is what makes "fix the helper,
+  reach every route" true (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
 - `spec/csv_contracts.md` — carried unwaived on purpose. No change is
   expected, since the contract already states the Quick Setup slots
