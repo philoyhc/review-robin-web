@@ -98,6 +98,40 @@ cheapest change here — hours, no design, no schema.
 
 No schema change, no template change.
 
+### Status
+
+**Closed 2026-09-21. Three rungs exactly as planned** — the five plain
+counters (#2515), the `> 0` caller (#2516), this close.
+
+**The ceiling held.** `bench --session 3 --only "Setup:" --runs 3` on
+`Bench BENCH1` (200,000 assignments): Setup reviewers **2.4 s → 277 ms**
+against a projected 0.27 s, Session Home on a 10,000-assignment draft
+237 ms → 85 ms. The reviewers page is SQL-bound now, 236 ms of the 277,
+and that is the counting itself — one `count(id) WHERE session_id = 3`
+is a 21 ms parallel index scan. Nothing further is worth doing there.
+
+**Three things the plan got wrong**, all from the cold read:
+
+- Ladder rung 2 promised `_quick_setup` an `EXISTS` helper;
+  `session_lifecycle.session_has_responses` already was one.
+- `Blast radius` says **6** callers of
+  `responses.session_response_count`; there were **3**. Its `grep -v`
+  named the module `session_lifecycle` while every call site reads
+  `lifecycle.session_response_count(` — the import alias — so it
+  filtered nothing and counted the twin's callers as this one's. The
+  collision the judgment call above left alone defeated the measurement
+  of its own twin.
+- The four new `session_id` count predicates could have gone through a
+  `session_scoped_count` beside `_queries.session_scoped`; copied
+  instead, and worth writing at the site that needs a fifth.
+
+**Reads: one `diff-reviewer`**, at rung 2 over the cumulative diff
+(`abd2948f..HEAD`), five findings — the three above, plus two fixed in
+`c6742898` (a count of eight that was seven; a `count_pairs` test gap
+asserting `0 == 0`). Codex found nothing on either code rung. Three
+mutants survived rung 1's first pass, all because the fixture held one
+session. The last two `Doc impact` bullets were added at this close.
+
 ### PR ladder
 
 1. **The five plain counters.** `csv_imports` (×2), `relationships`,
@@ -124,8 +158,8 @@ No schema change, no template change.
 ### Open questions
 
 - Does any `existing_count` caller depend on the rows being loaded as a
-  side effect? *Decided at rung 1 by reading the twelve call sites; if
-  one does, it keeps its fetch and gains a comment saying why.*
+  side effect? **No** — all twelve read at rung 1; every one consumes
+  only the integer, so none kept its fetch.
 
 ### Out of scope
 
@@ -135,6 +169,8 @@ No schema change, no template change.
 ### Doc impact
 
 - `docs/status.md` — row when the item lands (Item 1).
+- `guide/todo_master.md` — mark Item 1 shipped in the 19R queue entry (Item 1; added at the close).
+- `guide/README.md` — the `app_responsiveness.md` index row still read "Investigation only — not planned" and carried an over-broad "under 9% of every page"; both corrected (Item 1; added at the close).
 
 ---
 
