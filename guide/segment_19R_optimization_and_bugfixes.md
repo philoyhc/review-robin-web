@@ -312,12 +312,26 @@ over-coverage, `Relationship.status` is not.
 every name in it — the helper, the columns, `session_library.py` — went
 in Wave 5. Rec C is re-aimed at this cache instead.
 
+**The `spec-writer` close pass found three of its own**, all acted on:
+the requalified "cannot disagree" claim existed in a **third** place,
+`spec/validate_page.md`'s rule row — the one a reader reaches from the
+rule's own Fix link, and the one with no cache explanation beneath it;
+the stamp-coverage sentence read as exhaustive while omitting the
+caller's self-review override; and "`reconcile_impact` runs on a
+confirmation path rather than a render" was wrong — it runs inside
+`build_workflow_card_context` too, gated on the `prepare_confirm`
+query parameter. *Gated rather than unconditional* is the real
+distinction, and it is what the file says now.
+
 **Pre-existing, found en route, for whoever gets there first:**
 `spec/instruments.md` calls `instruments.stale_generated` "inert by
 design", which 19N reversed; `validation.py`'s docstring for that rule
-contradicts both the code and `spec/assignments.md`. (A `preview.py`
-listed under `app/services/rules/` that never existed was dropped here,
-since the close was editing that line.)
+contradicts both the code and `spec/assignments.md`, and carries the
+unqualified "cannot disagree" claim as well; and
+`app/web/views/_assignments.py`'s module docstring still points at
+`session_library.evaluate_session_rule_eligibility`, retired in Wave 5.
+(A `preview.py` listed under `app/services/rules/` that never existed
+was dropped here, since the close was editing that line.)
 
 ### PR ladder
 
@@ -375,6 +389,10 @@ since the close was editing that line.)
 - `spec/architecture.md` — the `app/services/assignments/` module map
   gains `_reconcile_cache.py` (Item 2; added at rung 3 by the cold
   read).
+- `spec/validate_page.md` — the `instruments.stale_generated` row
+  carried the same unqualified "cannot disagree" claim, and is the one
+  place a reader arrives at from the rule's own Fix link (Item 2; added
+  at the close by `spec-writer`).
 - `docs/database.md` — the four new `instruments` columns (Item 2).
 - `guide/deferred_consolidated.md` — 18J Rec C's lift trigger and its
   stale `cached_eligibility_stamp` wire-up note (Item 2).

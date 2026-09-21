@@ -185,10 +185,13 @@ the confirmation has to come from the same engine the run will use.
 **The staleness cache does not apply here.** It caches
 `staleness_by_instrument`'s per-instrument verdict against a content
 stamp (`spec/assignments.md` § *Staleness*); `reconcile_impact` asks a
-different question — the aggregate cost of a run — on a confirmation
-path rather than a render, and always walks the engine. Generate
-invalidates the cached verdict by writing the fresh one through, so the
-Prepare path leaves no stale badge behind it.
+different question — the aggregate cost of a run — and always walks the
+engine. It can afford to: it runs on the POST handler, and on the
+confirm-banner redisplay that follows it, which is **gated on the
+`prepare_confirm` query parameter** rather than firing on every render
+the way the staleness verdict does. Generate invalidates the cached
+verdict by writing the fresh one through, so the Prepare path leaves no
+stale badge behind it.
 
 ## Source-of-truth pointers
 

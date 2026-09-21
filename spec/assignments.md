@@ -1087,8 +1087,8 @@ renders — persists on `instruments.cached_reconcile_*` against a content
 stamp. The stamp covers **everything the verdict is derived from**: both
 rosters, the relationships rows behind `pair_context`, the pinned rule,
 the instrument's `rule_set_id` and `group_kind`, the session's
-self-review setting, and a summary of the instrument's own `Assignment`
-rows. That last one is not an engine input, and it is in the stamp
+self-review setting, any caller-supplied self-review override, and a
+summary of the instrument's own `Assignment` rows. That last one is not an engine input, and it is in the stamp
 because the verdict is a *diff against the materialised rows*: Generate
 changes the answer while every rule and roster holds still. A mismatch
 on any of them recomputes.
@@ -1114,7 +1114,10 @@ asks one question and needs one answer. A per-instrument preview reads
 but no longer because they share a call: `reconcile_impact` always walks
 the engine, while `staleness_by_instrument` may serve a cached verdict.
 They agree because the cache's stamp covers every input the diff reads
-— see **Staleness** above.
+— see **Staleness** above. The row summary in that stamp is a *proxy*
+for the row set rather than the rows themselves, which makes the
+guarantee depend on ids never being reused; `docs/database.md`
+§ *Derived cache columns* says where that holds.
 The Workflow card renders `responses_deleted` and `deleted_pairs`
 from it and gates the re-POST on
 `acknowledge_response_loss=true`.
