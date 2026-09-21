@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
@@ -842,8 +842,8 @@ def _count(
     model: type[Reviewer] | type[Reviewee] | type[Observer],
     session_id: int,
 ) -> int:
-    stmt = select(model.id).where(model.session_id == session_id)
-    return len(db.execute(stmt).all())
+    stmt = select(func.count(model.id)).where(model.session_id == session_id)
+    return int(db.execute(stmt).scalar_one())
 
 
 def save_reviewers(
@@ -1094,8 +1094,10 @@ def _detach_outbox_if_reviewers(
 def _count_assignments(db: Session, session_id: int) -> int:
     from app.db.models import Assignment
 
-    stmt = select(Assignment.id).where(Assignment.session_id == session_id)
-    return len(db.execute(stmt).all())
+    stmt = select(func.count(Assignment.id)).where(
+        Assignment.session_id == session_id
+    )
+    return int(db.execute(stmt).scalar_one())
 
 
 def _count_relationships(db: Session, session_id: int) -> int:

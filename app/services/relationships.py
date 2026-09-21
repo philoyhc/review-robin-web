@@ -20,7 +20,7 @@ land. Audit event ``relationships.imported`` (registered in
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -207,8 +207,10 @@ def parse_relationship_csv(
 
 
 def existing_count(db: Session, session_id: int) -> int:
-    stmt = select(Relationship.id).where(Relationship.session_id == session_id)
-    return len(db.execute(stmt).all())
+    stmt = select(func.count(Relationship.id)).where(
+        Relationship.session_id == session_id
+    )
+    return int(db.execute(stmt).scalar_one())
 
 
 def list_for_session(
