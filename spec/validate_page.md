@@ -454,14 +454,24 @@ natural fragment-jump handles it.
 2. If the issue points at a specific row, set
    `issue.fix_anchor = "#<page>-row-{id}"` and make sure the
    target page renders the matching `<tr id="...">`.
-3. Append a `ValidationRule(...)` entry to `REGISTERED_RULES`
-   with the stable `key`, group `source`, `severity`, `why`
-   paragraph, `fix_url` callable, and `fix_page_label`.
-4. Add a unit test that constructs a session matching the rule's
+3. Add a `ValidationRule(...)` entry to `REGISTERED_RULES` with the
+   stable `key`, group `source`, `severity`, `why` paragraph,
+   `fix_url` callable, and `fix_page_label`. **Position is a
+   contract** — §2.4 derives within-gate source order from it — so put
+   the rule where it belongs among its siblings rather than at the end
+   if those differ.
+4. **Add its row to §3.2's table at the same position.**
+   `tests/unit/test_doc_conventions.py` derives that table's `key`
+   column from `REGISTERED_RULES` and fails on order as well as on
+   membership, so a rule registered without a row fails CI. The check
+   exists because a rule appended to the table where the code inserted
+   it stayed wrong from W8 through a corpus sweep and a `spec-writer`
+   pass (19R Item 6).
+5. Add a unit test that constructs a session matching the rule's
    trigger and asserts the rule yields exactly one issue with
    the expected `rule_key`, severity, and (where applicable)
    `fix_anchor`.
-5. Add the rule to the per-source row in `_setup_coverage_rows`
+6. Add the rule to the per-source row in `_setup_coverage_rows`
    if the operator needs to see it on the at-a-glance grid.
 
 `rule_key` is the stable identifier — once shipped, treat it as

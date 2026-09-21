@@ -951,7 +951,7 @@ validation rule registry and neither matches it.
   gets it wrong. Predates 19R; the rule landed in W8.
 - `spec/instruments.md` says `instruments.stale_generated` "raises no
   findings; it is inert by design". That is `instruments.no_rule_pinned`,
-  described correctly in the very next bullet. The staleness check has
+  described correctly in the same list's last bullet. The staleness check has
   been live since 19N — its own docstring narrates the Wave 5 PR 5.1 →
   19N window when it was not, which is the state this prose still
   describes as current.
@@ -1027,6 +1027,21 @@ swapped, the heading renamed (which fails the parse test, as intended),
 and a 23rd rule registered but never documented — the case the gate
 exists for.
 
+**The cold read the gate made owed.** Rung 1 was prose-only and took
+none; rung 2 put a file under `tests/`, so the item acquired one. It
+found the gate sound — seven mutations, none passing vacuously, no
+path-layout dependency and no fixture to be out of reach — and two
+defects in it, both fixed: the membership assert fired under
+*is-still-a-table* with no message, so the very case the gate exists
+for reported as "the table moved", which is the mis-attribution the
+two-test split was supposed to prevent; and the row pattern was
+stricter than its two siblings in the same file, failing on a bolded
+cell or a key carrying a digit. It also found §7 silent on the table
+row the gate now requires — added as step 4 — and two claims of mine
+that the files do not support: the inert rule is the list's **last**
+bullet, not the next one, and the `docs/status.md` row called this
+one rung while describing two.
+
 ### PR ladder
 
 1. **Both edits, and the close.** One slice: the findings file names
@@ -1045,7 +1060,9 @@ exists for.
   index rows updated.
 - A test in `tests/unit/test_doc_conventions.py` derives §3.2's key
   column from `REGISTERED_RULES` and fails on order, on membership,
-  and on the table moving.
+  and on the table moving — each under a name that says which.
+- `spec/validate_page.md` §7 tells a rule author to add the §3.2 row,
+  since the gate now makes that a CI failure rather than an oversight.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19R.6` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1072,6 +1089,10 @@ exists for.
 - `spec/instruments.md` — replace the `instruments.stale_generated`
   bullet, which describes `instruments.no_rule_pinned`'s inertness,
   with the live check's behavior (Item 6).
+- `spec/validate_page.md` — §7's "Adding a new rule" recipe gains the
+  step for §3.2's table row, which rung 2's gate turns from an
+  oversight into a CI failure (Item 6; added at the close by the cold
+  read).
 - `guide/README.md` — drop the retired findings row (Item 6).
 - `guide/archive/README.md` — add the retired findings row (Item 6).
 - `docs/status.md` — row when the item lands (Item 6).

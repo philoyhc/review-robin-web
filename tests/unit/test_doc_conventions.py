@@ -395,8 +395,12 @@ VALIDATE_SPEC = REPO / "spec" / "validate_page.md"
 RULES_HEADING = "### 3.2 The registered rules"
 
 #: A table row's leading `key` cell. Rows carry prose in later columns,
-#: so only the first is matched.
-RULE_ROW = re.compile(r"^\|\s*`([a-z_]+\.[a-z_]+)`\s*\|")
+#: so only the first is matched. Bold is tolerated and digits are
+#: allowed, matching `LIFECYCLE_ROW` and `_grid_rows` above: a stricter
+#: pattern turns a correctly documented `…_v2` key, or a bolded cell,
+#: into "the table moved" — a false failure that points the reader at
+#: the heading instead of at their own edit.
+RULE_ROW = re.compile(r"^\|\s*\*{0,2}`([a-z][a-z0-9_]*\.[a-z0-9_]+)`\*{0,2}\s*\|")
 
 
 def _documented_rule_keys() -> list[str]:
@@ -422,15 +426,12 @@ def test_the_registered_rules_table_is_still_a_table() -> None:
     table says so rather than reporting every rule as missing — and so
     the order assertion below cannot pass by matching nothing against
     nothing."""
-    from app.services.validation import REGISTERED_RULES
-
     documented = _documented_rule_keys()
     assert documented, (
         f"no rule rows parsed under {RULES_HEADING!r} in "
         f"{VALIDATE_SPEC.relative_to(REPO)} — the table moved or changed "
         "shape"
     )
-    assert len(documented) == len(REGISTERED_RULES)
 
 
 def test_the_rule_table_lists_every_rule_in_registration_order() -> None:
@@ -448,4 +449,13 @@ def test_the_rule_table_lists_every_rule_in_registration_order() -> None:
     """
     from app.services.validation import REGISTERED_RULES
 
-    assert _documented_rule_keys() == [rule.key for rule in REGISTERED_RULES]
+    documented = _documented_rule_keys()
+    registered = [rule.key for rule in REGISTERED_RULES]
+    # Named before compared, because the case this gate exists for is a
+    # rule registered and never documented, and a bare list comparison
+    # reports that as "everything after position N moved".
+    assert set(documented) == set(registered), (
+        f"documented only: {sorted(set(documented) - set(registered))}\n"
+        f"registered only: {sorted(set(registered) - set(documented))}"
+    )
+    assert documented == registered
