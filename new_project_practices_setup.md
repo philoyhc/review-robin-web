@@ -420,7 +420,12 @@ what did.
 - The first commit's first command was `date -u +%FT%TZ` (step 0 was the
   moment to run it; if you did not, run it now and say so). Carry the
   value as the `Instruction-Received:` trailer, per `CLAUDE.md` "Where
-  work runs".
+  work runs" — **in the message's final block, beside
+  `Co-Authored-By`**, since git parses only the last block and a stamp
+  in a paragraph of its own is silently dropped. Stamping is a campaign
+  rather than a per-slice habit: this first slice is worth stamping so
+  the new repository has a baseline, and after that only when a figure
+  is being taken.
 - After the commit, `python3 tools/pace_audit.py --cut 1`: it reads the
   merge history, so it has nothing to read before one exists, and on a
   clone with no remote yet it falls back to local `main`.

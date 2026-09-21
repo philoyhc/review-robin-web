@@ -226,14 +226,20 @@ reject it.
   handler trips nothing.
 - **If the suite could not run at all, say so in the PR body** and name
   what did. A disclosed gap beats an implied gate.
-- **Stamp when the instruction arrived.** The first command of a slice
-  is `date -u +%FT%TZ`; the slice's first commit carries that value as
-  a git trailer, `Instruction-Received: 2026-09-20T01:02:03Z`, and
-  fix commits answering a reader or CI do not. `tools/pace_audit.py`
-  reads it to split *turn* (previous merge → first commit, a flat
-  10–14 minute floor per slice, `rrw_sdd_in_practice.md` §6.4) into
-  the wait for an instruction and the build that followed it. No gate
-  checks it; a slice without it is not wrong, only unmeasured.
+- **Stamping the instruction time is a campaign, not a standing rule.**
+  `tools/pace_audit.py` can split *turn* (previous merge → first commit,
+  `rrw_sdd_in_practice.md` §6.4) into the wait for an instruction and
+  the build that followed it, when a slice's first commit carries
+  `Instruction-Received: 2026-09-20T01:02:03Z`. One campaign has run,
+  `#2495`–`#2516`, and §6.4 records what it found. **Stamp only when a
+  figure is being re-taken** — start the slice with `date -u +%FT%TZ`
+  and put the trailer on its first commit, not on fix commits answering
+  a reader or CI. Otherwise don't; a slice without it is not wrong.
+  **If you do stamp, the trailer must sit in the commit message's final
+  block, beside `Co-Authored-By`.** Git parses only the last block, so a
+  stamp in a paragraph of its own is silently discarded: of 37 slices
+  that wrote the line, 16 parse (19R Item 7). No gate checks either
+  failure.
 - **Two cold readers, different cadences.** A slice is read cold before
   it is marked **ready for review** — not before it is pushed: a draft
   PR is not a merge, and an unpushed commit in an ephemeral container is
