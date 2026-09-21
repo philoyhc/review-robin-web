@@ -769,20 +769,6 @@ path. Both corrected.
 
 ## Later candidates
 
-Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
-item when someone picks it up; none blocked Items 1–4.
-
-- **Bulk-insert the generated pairs.** Prepare blocks **74.8 s** for
-  200,000 rows, 17.4 s of it SQL, adding one `Assignment()` per pair. A
-  click rather than a page, so it needs progress feedback or a background
-  job as much as it needs speed.
-- **Turn on compression.** No compression middleware exists: the lobby
-  ships 1,584 KB where gzip would send 95 KB (16.5×), the roster pages
-  6–7×. One middleware line — **after** checking what the dev slot's
-  front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`), which
-  the agent's container cannot see.
-- **Precompute the pair sort key.** Sorting the million-pair list drops
-  from 0.87 s to 0.31 s when the normalized email is computed once per
-  person. Only worth doing inside a wider engine change.
-- **Anything the next measurement finds.** The tool is committed;
-  re-running it after these items is how the next item gets written.
+Moved to `guide/app_responsiveness.md` 2026-09-21, so this plan carries
+only its own items and each candidate sits with the measurement that
+motivates it.
