@@ -53,9 +53,19 @@ The allowlist is `_REVERT_RETURN_TO` in
 
 Every page route builds the card's context with one call to
 `views.build_workflow_card_context(db, review_session, *,
-return_to, validated_just_ran=False, super_failure=None,
-prepare_confirm=None, user=None, correlation_id=None)` and merges
-the returned dict into its template context via `**workflow_ctx`.
+return_to, validated_just_ran=False, issues=None,
+super_failure=None, prepare_confirm=None, user=None,
+correlation_id=None)` and merges the returned dict into its template
+context via `**workflow_ctx`.
+
+`issues` is a readiness issue list the caller already built **in this
+same request**, so the builder does not run
+`validation.validate_session_setup` a second time. Only the Validate
+route passes it, being the only page that needs the issue list for its
+own body as well as for the card; every other caller leaves it `None`
+and the builder runs the orchestrator itself. It is a per-request
+hand-off and never a cache — `spec/validate_page.md` §5.1 owns that
+contract.
 The builder lives in `app/web/views/_workflow_card.py`. It
 returns:
 

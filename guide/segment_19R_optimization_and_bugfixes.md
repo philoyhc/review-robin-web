@@ -868,6 +868,17 @@ parity golden pinning absolute row ids, which is a SQLite fact and not
 a fact. Each is fixed and mutation-pinned; `docs/status.md` carries the
 detail.
 
+**`spec-writer` at the close found one more of this item's own**, now
+in `Doc impact`: `spec/workflow_card.md` lists
+`build_workflow_card_context`'s full keyword signature, and rung 1's
+`issues` argument was missing from it. It also left two findings
+standing that are **not** this item's — `spec/validate_page.md` §3.2's
+rule table no longer matches `REGISTERED_RULES` order, and
+`spec/instruments.md` still calls `instruments.stale_generated` inert,
+which it stopped being at 19N. Both are in
+`guide/findings_2026-09-21_validate_rules.md` rather than fixed here,
+since each is a contract decision rather than a close's.
+
 ### PR ladder
 
 1. **Stop Validate building the report twice.** One call site, no
@@ -931,6 +942,11 @@ detail.
   document `check(db, review_session)`, so a rule written to the spec
   today raises `TypeError` on its first run. Both, and the rule-shape
   line, take the third argument and name `ValidationInputs` (Item 5).
+- `spec/workflow_card.md` — its signature listing for
+  `build_workflow_card_context` gains the `issues` argument rung 1
+  added, and points at `spec/validate_page.md` §5.1 for the
+  hand-off-not-a-cache contract rather than restating it (Item 5;
+  added at the close, found by `spec-writer`).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---

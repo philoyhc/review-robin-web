@@ -240,10 +240,10 @@ carries what more than one check loads — the instrument list, the
 three rosters, the per-instrument response-field /
 visible-response-field / display-field presence, and the included
 counts per instrument — plus `active_reviewees`, the roster filtered
-in Python. Twenty-two checks each deciding independently what "the
-session's instruments" means is how two of them come to disagree
-after someone edits one; one load per run is what stops that. A load
-only one check makes stays in that check.
+in Python. Checks each deciding independently what "the session's
+instruments" means is how two of them come to disagree after someone
+edits one; one load per run is what stops that. A load only one check
+makes stays in that check.
 
 It is built **once per report run and never cached** — a check must
 not see a roster older than the request that asked. `db` stays in
