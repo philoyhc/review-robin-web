@@ -169,26 +169,75 @@ def test_quick_setup_disables_when_session_is_activated(
 
 
 def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session
 ) -> None:
     """A draft session that carries persisted responses (e.g. from a
     prior activation cycle that bumped back to draft) is treated as
     unavailable for Quick Setup. The route layer's
     ``_require_response_loss_ack`` already rejects submits in this
     case; the card-level signal makes the constraint visible by
-    locking the body and hiding the Lock / Unlock toggle."""
+    locking the body and hiding the Lock / Unlock toggle.
 
-    from app.services import responses as responses_service
+    19R.1 rung 2 — this stubbed ``responses.session_response_count`` to
+    return 1 rather than seeding a response, so it was really asserting
+    *which helper the card calls*. When the card moved to
+    ``session_lifecycle.session_has_responses`` — the yes/no helper
+    seven other call sites use — the stub stopped being reached and the test
+    failed while the behaviour it names was intact. It now persists a
+    real ``Response``, which is what its own docstring claims, and is
+    indifferent to how the card asks the question.
+    """
+    import datetime as dt
+
+    from app.db.models import (
+        Assignment,
+        Instrument,
+        InstrumentResponseField,
+        Response,
+        Reviewee,
+        Reviewer,
+    )
 
     review_session = _make_session(client, db, code="qs-has-responses")
-    # The session is freshly created (draft, no responses). Stub the
-    # response-count helper so the context-builder treats it as if
-    # responses were persisted.
-    monkeypatch.setattr(
-        responses_service,
-        "session_response_count",
-        lambda db, session_id: 1,
+    assert views.build_quick_setup_context(db, review_session).is_disabled is False
+
+    instrument = Instrument(
+        session_id=review_session.id, name="I", order=0, session_seq=1
     )
+    reviewer = Reviewer(
+        session_id=review_session.id, name="R", email="r-qshr@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="E",
+        email_or_identifier="e-qshr@example.edu",
+    )
+    db.add_all([instrument, reviewer, reviewee])
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id, field_key="q1", label="Q1", order=0
+    )
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+        include=True,
+        created_by_mode="rule_based",
+    )
+    db.add_all([field, assignment])
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="4",
+            saved_at=dt.datetime(2026, 9, 21, tzinfo=dt.timezone.utc),
+            version=1,
+        )
+    )
+    db.flush()
+
     context = views.build_quick_setup_context(db, review_session)
     assert context.is_disabled is True
     assert context.is_locked is True
