@@ -17,11 +17,13 @@ and `### Status` and there is no segment-level manifest —
 the last definition-of-done line applies only when the segment's final
 item closes; an item close leaves this file in `guide/`.
 
-**The segment stays open.** Items 1–3 are the three changes that were
-measured to take every page under a second; Item 4 is a defect found
-while they were being planned. Further items land as measurement or a
-report turns them up — `## Later candidates` at the end holds the
-optimization moves already measured but not scheduled.
+**The segment stays open**, with all four items closed 2026-09-21.
+Items 1–3 were the three changes measured to take every page under a
+second — they did not, and each item's `### Status` says by how much —
+and Item 4 was a defect found while they were being planned. Further
+items land as measurement or a report turns them up; `## Later
+candidates` at the end holds the optimization moves already measured
+but not scheduled.
 
 **Re-take any number here with** `python3 tools/bench_roster_scale.py`
 (`tools/README.md` has the recipe). Every figure below is from state B
@@ -661,94 +663,71 @@ No schema change, no migration, no template change.
 
 ### Status
 
-**Rung 1 landed 2026-09-21** — both arguments at the two helpers, plus
-`tests/integration/test_upload_paths_keep_friendly_labels.py`: a matrix
-over every upload entry point, seven parametrized cases plus the
-create-session form (which the matrix cannot reach, since the labels
-ride in on the POST that *creates* the session) and the bare-header
-clearing case. Measured against the pre-fix tree, **six failed and
-4,602 passed** — every failure in the new file, none anywhere else in
-the suite. That silence is the defect: nothing noticed.
+**Closed 2026-09-21. Three rungs as planned** — the fix and its matrix
+(#2526), the gate (#2527), this close. Nothing struck.
 
-**Rung 2 landed 2026-09-21** — the gate, and it is asked of the
-**router** rather than of a list. `_upload_endpoints()` walks
+**The fix is two arguments** at `_run_quick_setup_import` and
+`_run_quick_setup_relationships`, the only save sites behind five
+upload routes. Against the pre-fix tree the suite was **6 failed,
+4,602 passed** — every failure in the new test file, none anywhere
+else. That silence was the defect: a 303 and a populated roster, and
+nothing noticed the labels going.
+
+**The gate asks the router, not a list.** `_upload_endpoints()` walks
 `app.main.app.routes` for every POST endpoint taking an `UploadFile`
-and finds twelve; each must either be exercised by rung 1's matrix or
-carry a written reason in `EXEMPT_ENDPOINTS`. That is the half rung 1
-could not cover: its matrix enumerates the paths known to exist when it
-was written, which is exactly the blind spot that let five routes drop
-labels at once.
+and finds twelve; each must be exercised by the matrix or carry a
+written reason in `EXEMPT_ENDPOINTS`. That is the half a matrix cannot
+cover — it enumerates the paths known when it was written, which is
+exactly the blind spot that let five routes drop labels at once.
 
-The walk has to descend FastAPI's lazy `_IncludedRouter` wrappers —
-`app.routes` holds fifteen entries, of which seven are wrappers and
-none of the other eight is a POST, so a top-level walk finds **zero**
-upload endpoints and the gate passes vacuously.
-There is an assertion for that, and it is the one mutation G2 trips.
-Three mutations, each caught by its own assertion: a new unclassified
-route, the blinded walk, and a classified endpoint renamed away.
+**The gate's own eyesight was wrong three times, all caught by a
+reader, none by me.** It matched the annotation's source text, so an
+aliased import or subclass was invisible; it keyed on the module
+basename, where `_shared.py` exists under two packages; and one level
+of `get_args` missed `list[UploadFile] | None` (Codex). Each time the
+twelve endpoints that exist happened not to use the missed shape, so
+the gate stayed green while seeing less than it claimed — the failure
+it exists to prevent, wearing its own face. Demonstrated rather than
+argued at the third: with the one-level check **and** a real
+`list[UploadFile] | None` route injected, the gate passes and the route
+is invisible; with the recursion it trips `unclassified`. The
+recogniser is pinned directly now, seven upload shapes and five
+non-uploads, so a later simplification fails loudly.
 
-**The cumulative cold read, at rung 2.** Thirteen findings, none
-behavioral — the change itself it cleared, having checked every
-multi-slot caller for a slot that clears as a side effect of another's
-upload (there is none: each save reconciles only its own
-`source_type`, and every caller guards on filename first) and each of
-the four exemptions against the code. What it found was in the gate and
-in this plan. Two went to the gate's own robustness: it matched the
-annotation's **source text**, so `from fastapi import UploadFile as
-Upload` or a subclass would have been invisible — it resolves
-`dependant.body_params` types now — and it keyed endpoints on the
-module basename, where `_shared.py` exists under both
-`routes_operator/` and `routes_reviewer/`, so a collision could drop an
-endpoint silently. Three went to the test file: a status assertion that
-a rejected upload also satisfies (the error path is a 303 too), a
-`create_session` case classified as covered while asserting only two of
-its three roster slots, and a `hash()`-derived session code that
-differs per run. All fixed.
+**The item's lesson is the segment's, for the fourth time: a claim is
+worth the command that proves it.** Two of three blast-radius rows were
+wrong — "routes reaching them" six where it is five (the observers slot
+is out of scope), "call sites already correct" three where the command
+gives two (the third is in `session_rehydrate.py`, outside the path it
+greps) — and the second fed a definition-of-done line. Rows corrected,
+not annotated downstream. And my first matrix run failed the *card*
+relationships case, which would have made the Opportunity table wrong
+about a path this item does not touch: `_VALID_SOURCE_FIELDS` keys
+pair-context slots `"1"`, not `"tag_1"`, and the wrong key returns a
+fallback that reads exactly like a dropped label. The card was never
+broken; the test file says so where the next reader will hit it.
 
-**The gate's own eyesight was wrong three times, so it is now pinned
-directly.** Source-text matching missed an aliased import or a
-subclass; one level of `get_args` missed `list[UploadFile] | None`
-(Codex, rung 2). Each time the twelve endpoints that exist happened not
-to use the missed shape, so the gate stayed green while seeing less —
-which is the failure it exists to prevent, wearing its own face.
-`_upload_annotation_predicate` is recursive now, and
-`test_the_gate_recognises_every_shape_an_upload_parameter_takes`
-asserts seven upload shapes and five non-uploads so a later
-simplification fails loudly. Demonstrated rather than argued: with the
-one-level check **and** a real `list[UploadFile] | None` route
-injected, the gate passes and the route is invisible; with the
-recursion, the same route trips `unclassified`.
+**Two findings recorded rather than fixed.** The gate asks "takes an
+upload", not "saves a roster", so `_rehydrate.rehydrate_commit` —
+which saves all three rosters from a stashed token — is invisible to
+it. Correct today, ungated; widening the question is its own item.
+And `spec/csv_contracts.md` spells `parse_relationship_csv`'s
+parameters differently from the code: pre-existing, unrelated, not
+bundled.
 
-**Two findings recorded rather than fixed.** The gate asks "does this
-POST take an upload", not "does this save a roster", so
-`_rehydrate.rehydrate_commit` — which saves all three rosters from a
-stashed token and takes no `UploadFile` — is invisible to it. It is
-correct today, and the exemption reason names it, but nothing gates it;
-widening the question is a different gate and its own item. And
-`spec/csv_contracts.md` spells `parse_relationship_csv`'s parameters
-`reviewer_emails` / `reviewee_identifiers` where the code takes
-`reviewers` / `reviewees` — pre-existing, unrelated to this change, and
-not bundled into it.
+**The `spec-writer` close pass found the rung-2 spec fix half-done.**
+I corrected the create-session dispatch paragraph and left the
+*submit-all* one — line 72, the Home card's everyday path — carrying
+the identical stale text, which is the more-used of the two. Same two
+defects, same fix, now applied to both, with the "only save sites"
+point stated once and cross-referenced rather than twice.
 
-**Two of the three blast-radius rows were wrong, and one of them fed
-the definition of done.** "Call sites already correct" read three where
-`grep -rn "field_labels_captured" app/web/routes_operator/` gives
-**two** (`_shared.py`, `_setup_relationships.py`) — the third is in
-`app/services/session_rehydrate.py`, outside the command's path — and
-the done line inherited it, now four rather than two. "Routes reaching
-them" read six where it is **five**: the observers slot reaches
-`_run_quick_setup_observers`, which this item does not touch. The rows
-themselves are corrected rather than annotated downstream, since
-otherwise a reader lands on a figure the same document contradicts
-thirty lines later.
-
-**One trip the test file now marks for the next reader.** The first
-matrix run failed the *card* relationships case too, which would have
-made the Opportunity table wrong about a path the item does not touch.
-It was my assertion: `field_labels._VALID_SOURCE_FIELDS` keys
-pair-context slots `"1"`, not `"tag_1"`, and resolving the wrong one
-returns the `"pair_context:tag_1"` fallback — which reads exactly like
-a dropped label. The card was never broken.
+**`spec/csv_contracts.md` needed no edit, which was the point of
+carrying it unwaived.** §1a's "upsert present, clear absent", the
+Quick Setup row at §6 ("same as per-page Upload — a thin shell over
+the per-entity primitives") and §5a's prediction that an unedited
+template renames the tag columns were all already right. The code was
+what was wrong. Waived with that reason rather than quietly dropped.
 
 ### PR ladder
 
@@ -790,24 +769,27 @@ a dropped label. The card was never broken.
 
 ### Doc impact
 
-- `spec/quick_setup_card_spec.md` — the create-session dispatch list
-  names `_handle_quick_setup_import` (a route wrapper `create_session`
-  never calls) and `save_relationships` directly; corrected to the four
+- `spec/quick_setup_card_spec.md` — **both** dispatch paragraphs named
+  `_handle_quick_setup_import` (a route wrapper neither handler calls)
+  and the save primitives as if reached directly. Corrected to the four
   `_run_quick_setup_*` helpers, which is what makes "fix the helper,
   reach every route" true (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
-- `spec/csv_contracts.md` — carried unwaived on purpose. No change is
-  expected, since the contract already states the Quick Setup slots
-  behave as the per-page uploads do. If the build finds otherwise this
-  bullet becomes the edit; if not, the close waives it with that reason.
-  Either way the close says which (Item 4).
+- `guide/todo_master.md` — mark Item 4 shipped, so the 19R roadmap
+  entry reads the same way Items 1–3 now do (Item 4).
+- `spec/csv_contracts.md` — carried unwaived on purpose, and waived at
+  the close: the build found the contract already correct on every
+  point — §1a's "upsert present, clear absent", the Quick Setup row at
+  §6, and §5a's prediction that an unedited template renames the tag
+  columns — so the code was what was wrong (Item 4).
+  <!-- doc-impact-waived: verified correct at the close; the item made the code match the contract rather than changing it. -->
 
 ---
 
 ## Later candidates
 
 Measured in `guide/app_responsiveness.md`, not scheduled. Each becomes an
-item when someone picks it up; none blocks Items 1–3.
+item when someone picks it up; none blocked Items 1–4.
 
 - **Bulk-insert the generated pairs.** Prepare blocks **74.8 s** for
   200,000 rows, 17.4 s of it SQL, adding one `Assignment()` per pair. A
@@ -822,4 +804,4 @@ item when someone picks it up; none blocks Items 1–3.
   from 0.87 s to 0.31 s when the normalized email is computed once per
   person. Only worth doing inside a wider engine change.
 - **Anything the next measurement finds.** The tool is committed;
-  re-running it after these items is how Item 4 gets written.
+  re-running it after these items is how the next item gets written.

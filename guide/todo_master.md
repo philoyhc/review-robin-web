@@ -3221,14 +3221,20 @@ dep chains called out at the bottom of this file.
      8.6 s -> 1.52 s; ORM instances per render 408,027 -> ~9,000.
    - **Item 4** the quick-setup upload cards drop tag friendly labels
      — a defect, which is why the segment carries both words.
+     **Shipped 2026-09-21**, three rungs, PRs #2526 -> #2527 and the
+     close. Five upload routes dropped the roster header's friendly
+     labels silently; the fix is two arguments at the two save sites,
+     and rung 2 added a gate asked of the router so the next upload
+     route cannot repeat it.
    **The 30-50x projection was a ceiling and it was not reached.** All
-   three shipped, and Invitations and Responses land at 1.36 s and
-   1.52 s against a target of under a second: what is left on those two
-   is the shared page chrome, which measures 0.65 s on a page with no
-   rollup at all, and that is its own item. The other four pages are
-   under a second. The segment **stays open** for further work;
-   its `## Later candidates` holds the ones already measured — Prepare's
-   74.8-second insert, compression, the pair sort key.
+   three optimization items shipped, and Invitations and Responses land
+   at 1.36 s and 1.52 s against a target of under a second: what is left
+   on those two is the shared page chrome, which measures 0.65 s on a
+   page with no rollup at all, and that is its own item. The other four
+   pages are under a second. All four items are closed and the segment
+   **stays open** for further work; its `## Later candidates` holds the
+   ones already measured — Prepare's 74.8-second insert, compression, the
+   pair sort key.
 
 #### Stubs
 
