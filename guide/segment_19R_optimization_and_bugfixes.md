@@ -538,6 +538,16 @@ one. `_mixed` now carries both kinds.
 prose findings in this block, all acted on. The second is recorded
 below.
 
+**The close pass caught the same slip twice.** Two sentences written
+into `spec/operations_pages.md` generalized a per-reviewee-instrument
+truth into a claim about the rollup as a whole — "counted in SQL" on
+the Invitations column table, and "neither rollup reads the session's
+response rows at all" in the cost section. The hybrid's own paragraph,
+three lines below the second one, contradicted it. Both qualified.
+Worth noting that the qualifier was present in the commit message and
+the `docs/status.md` row and dropped only on the way into the spec,
+which is the shortest version of this item's lesson yet.
+
 **The budget table in `spec/operations_pages.md` was re-taken, not
 edited.** All three pages are flat in the roster now — 49 / 35 / 30,
 unchanged from 25 × 25 to 200 × 200, against a table that ran to 434.

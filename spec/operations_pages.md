@@ -312,16 +312,21 @@ these four recovered 172px and it fits exactly. Renaming the
 rejected — it closed 31px of the remaining 36, leaving a hairline
 scroll, and cost a button label to do it.
 
-**`Progress` and `Required Fields` are counted in SQL** (19R Item 3),
-not by loading a reviewer's assignments and tallying them. Both
-figures and the pill state they carry are unchanged by that — the
-rewrite moved where the arithmetic happens, not what it says, and a
-parity test held the two implementations to the same answer while it
-did. One thing this table does *not* say: a `required` response field
-that is not `visible` is excluded from both denominators, because the
-reviewer is never shown it and so cannot answer it. The
-`Coverage` column on Responses counts the same field, for the opposite
-reason — see below.
+**`Progress` and `Required Fields` are counted in SQL for
+per-reviewee instruments** (19R Item 3), rather than by loading a
+reviewer's assignments and tallying them. A reviewer's work on
+**group-scoped** instruments is still tallied in Python and added to
+that — both columns can be the sum of the two halves, and "What these
+pages cost to render" below says why the split exists. Neither figure
+nor the pill state they carry changed with it: the rewrite moved where
+the arithmetic happens, not what it says, and a parity test held the
+two implementations to the same answer while it did.
+
+One thing this table does *not* say: a `required` response field that
+is not `visible` is excluded from both denominators, because the
+reviewer is never shown it and so cannot answer it. The `Coverage`
+column on Responses counts the same field, for the opposite reason —
+see below.
 
 **The two progress columns sort by completion percentage, not the
 raw done count.** Totals differ per row, so "3 done" orders nothing
@@ -599,9 +604,12 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-**Neither rollup reads the session's response rows at all.** Both are
-aggregate queries that count in SQL and return one row per person
-(19R Item 3). What they must not do is materialize a row per assignment
+**For a per-reviewee instrument, neither rollup reads response rows at
+all** (19R Item 3) — both count in SQL and return one row per person,
+and `per_reviewee_coverage` is that and nothing else. The paragraph
+after this one is the exception, and the only one:
+`per_reviewer_progress` still reads the response rows of *group-scoped*
+assignments. What neither may do is materialize a row per assignment
 — the count is a `func.count`, not a `len()` over loaded objects — and
 the measure that catches a regression here is **ORM instances loaded**,
 not queries: the implementation these replaced issued few queries and
