@@ -268,6 +268,11 @@ def _grouped_instrument_parts(
         db.execute(
             select(Assignment)
             .join(Instrument, Instrument.id == Assignment.instrument_id)
+            # ``group_keys`` reads ``assignment.reviewee`` for the
+            # boundary tags, so without this the dedupe lazy-loads one
+            # reviewee at a time — the N+1 the pre-rewrite loop avoided
+            # with the same option (Codex P2).
+            .options(joinedload(Assignment.reviewee))
             .where(
                 Assignment.session_id == review_session.id,
                 Assignment.include.is_(True),
@@ -297,8 +302,11 @@ def _grouped_instrument_parts(
     group_key_by_assignment = responses_service.group_keys(
         db, assignments=grouped, session_id=review_session.id
     )
+    # Only the grouped rows: the aggregate half has already counted
+    # every per-reviewee instrument in SQL, and loading its responses
+    # here would put back most of the ORM rows this rung removes.
     responses_by_assignment = responses_service.responses_by_assignment(
-        db, session_id=review_session.id
+        db, session_id=review_session.id, group_scoped_only=True
     )
 
     by_reviewer: dict[int, list[Assignment]] = {}

@@ -566,6 +566,20 @@ code on the first pass and the code was right both times: SQLite drops a
 `DateTime(timezone=True)` offset, so the oracle compares instants in
 UTC — which would otherwise have bitten rung 2 from the Postgres side.
 
+**The grouped half was reading the whole session (Codex P1 + P2).**
+Two defects in the Python fallback, neither visible to the ORM-row
+guard, whose fixture has no group-scoped instrument at all: it
+prefetched **every** response in the session, so one group instrument
+put back most of the rows the aggregate half had just stopped loading;
+and its assignment query dropped the `joinedload(Assignment.reviewee)`
+the pre-rewrite loop carried, so `group_keys` lazy-loaded one reviewee
+at a time. Fixed by a `group_scoped_only=` join on
+`responses_by_assignment` and by restoring the option. Both are pinned
+by a new mixed-instrument fixture — the shape `_seeded` cannot make —
+one test asserting no per-reviewee assignment's responses are loaded as
+ORM rows, one asserting the query count is equal at 4×4 and 8×8. Each
+mutation fails exactly its own test.
+
 **Carried to rung 4.** `test_monitoring_prefetch.py`'s module docstring
 still describes the per-assignment loop as the thing it guards, and its
 two equivalence tests now call `_assignment_complete`, which only

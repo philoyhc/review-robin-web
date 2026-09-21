@@ -32,9 +32,13 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import (
     Assignment,
+    Instrument,
     InstrumentResponseField,
     Response,
     ReviewSession,
+    Reviewee,
+    Reviewer,
+    User,
 )
 from app.services import monitoring
 from app.services import responses as responses_service
@@ -291,7 +295,8 @@ def test_the_rollups_do_not_load_a_row_per_assignment(
     must not quadruple the objects. The reviewer side keeps a Python
     path for group-scoped instruments — the fixture here has none, so
     what is measured is the aggregate path that carries almost every
-    real session.
+    real session. The mixed-session pair at the end of this file is
+    what covers the other path.
     """
     small = _seeded(client, db, 4, code="ORMSM")
     large = _seeded(client, db, 8, code="ORMLG")
@@ -418,4 +423,174 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
         f"claims flat at every size, held by LIMIT 200 plus indexes — "
         f"check whether one of those has gone, and re-measure the "
         f"budget table there."
+    )
+
+
+def _mixed(db: Session, n: int, code: str) -> ReviewSession:
+    """A session carrying **both** instrument kinds, which `_seeded`
+    does not.
+
+    One per-reviewee instrument and one group-scoped one, every
+    reviewer x reviewee pair assigned on both, and an answered
+    ``Response`` row on every assignment. The group boundary is
+    ``tag_1`` over two fixed values, so the *group* count stays at two
+    while the roster grows — the shape that tells the grouped half's
+    own cost apart from the roster's.
+    """
+    user = User(email=f"op-{code}@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name=code, code=code, created_by_user_id=user.id
+    )
+    db.add(review_session)
+    db.flush()
+    sid = review_session.id
+
+    reviewers = [
+        Reviewer(session_id=sid, name=f"R{i}", email=f"r{i}-{code}@example.edu")
+        for i in range(n)
+    ]
+    reviewees = [
+        Reviewee(
+            session_id=sid,
+            name=f"E{i}",
+            email_or_identifier=f"e{i}-{code}@example.edu",
+            tag_1=f"Team {i % 2}",
+        )
+        for i in range(n)
+    ]
+    db.add_all([*reviewers, *reviewees])
+
+    plain = Instrument(
+        session_id=sid, name="Plain", order=0, session_seq=1, group_kind=None
+    )
+    grouped = Instrument(
+        session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1"
+    )
+    db.add_all([plain, grouped])
+    db.flush()
+
+    fields = {
+        instrument.id: InstrumentResponseField(
+            instrument_id=instrument.id,
+            field_key="q1",
+            label="Q1",
+            required=True,
+            order=0,
+        )
+        for instrument in (plain, grouped)
+    }
+    db.add_all(fields.values())
+    db.flush()
+
+    for instrument in (plain, grouped):
+        for reviewer in reviewers:
+            for reviewee in reviewees:
+                assignment = Assignment(
+                    session_id=sid,
+                    instrument_id=instrument.id,
+                    reviewer_id=reviewer.id,
+                    reviewee_id=reviewee.id,
+                    include=True,
+                )
+                db.add(assignment)
+                db.flush()
+                db.add(
+                    Response(
+                        assignment_id=assignment.id,
+                        response_field_id=fields[instrument.id].id,
+                        value="answered",
+                    )
+                )
+    db.flush()
+    return review_session
+
+
+def test_the_grouped_half_reads_only_grouped_work(
+    client: TestClient, db: Session
+) -> None:
+    """Codex P1 on the rung-3 diff, and the gap the guard above admits.
+
+    ``per_reviewer_progress`` keeps a Python path for group-scoped
+    instruments. One group instrument in a session must not drag the
+    *per-reviewee* instruments' rows back through the ORM: the
+    aggregate half has already counted those in SQL, and a mixed
+    session at roster scale is exactly where this rewrite is supposed
+    to pay. The guard above cannot see it — its fixture has no grouped
+    instrument at all, so the Python path never runs.
+    """
+    session = _mixed(db, 4, code="MIXORM")
+    grouped_assignment_ids = set(
+        db.execute(
+            select(Assignment.id)
+            .join(Instrument, Instrument.id == Assignment.instrument_id)
+            .where(
+                Assignment.session_id == session.id,
+                Instrument.group_kind.is_not(None),
+            )
+        ).scalars()
+    )
+    plain_assignment_ids = set(
+        db.execute(
+            select(Assignment.id)
+            .join(Instrument, Instrument.id == Assignment.instrument_id)
+            .where(
+                Assignment.session_id == session.id,
+                Instrument.group_kind.is_(None),
+            )
+        ).scalars()
+    )
+    assert grouped_assignment_ids and plain_assignment_ids, "fixture is not mixed"
+
+    loaded: list[Response] = []
+
+    def cb(_session, instance):
+        if isinstance(instance, Response):
+            loaded.append(instance)
+
+    db.expunge_all()
+    event.listen(db, "loaded_as_persistent", cb)
+    try:
+        monitoring.per_reviewer_progress(db, session)
+    finally:
+        event.remove(db, "loaded_as_persistent", cb)
+
+    assert loaded, "no responses loaded at all; the assertion below is vacuous"
+    strays = {
+        r.assignment_id for r in loaded
+    } - grouped_assignment_ids
+    assert not strays, (
+        f"{len(strays)} per-reviewee assignments' responses were loaded as "
+        "ORM rows by the grouped half. The aggregate half already counted "
+        "them in SQL — pass group_scoped_only=True to "
+        "responses_by_assignment."
+    )
+
+
+def test_the_grouped_dedupe_does_not_lazy_load_a_reviewee_at_a_time(
+    client: TestClient, db: Session
+) -> None:
+    """Codex P2 on the rung-3 diff.
+
+    ``responses.group_keys`` reads ``assignment.reviewee`` for the
+    boundary tags. The loop this rung replaced fetched its assignments
+    with ``joinedload(Assignment.reviewee)``; the new grouped query has
+    to carry the same option or the dedupe issues one SELECT per
+    distinct reviewee, which grows with the roster.
+    """
+    small = _mixed(db, 4, code="MIXQSM")
+    large = _mixed(db, 8, code="MIXQLG")
+
+    db.expunge_all()
+    small_q = _count_queries(db, lambda: monitoring.per_reviewer_progress(db, small))
+    db.expunge_all()
+    large_q = _count_queries(db, lambda: monitoring.per_reviewer_progress(db, large))
+
+    assert small_q == large_q, (
+        f"per_reviewer_progress is no longer flat in the roster on a "
+        f"session with group-scoped work: {small_q} queries at 4x4 "
+        f"against {large_q} at 8x8. The likeliest cause is a lazy load "
+        f"per reviewee in the group dedupe — check the joinedload on "
+        f"the grouped assignment query."
     )

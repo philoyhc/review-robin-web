@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    Instrument,
     InstrumentResponseField,
     Response,
     ReviewSession,
@@ -920,7 +921,7 @@ def rollup_parts_from_assignments(
 
 
 def responses_by_assignment(
-    db: Session, *, session_id: int
+    db: Session, *, session_id: int, group_scoped_only: bool = False
 ) -> dict[int, list[Response]]:
     """Every response row in a session, keyed by assignment id.
 
@@ -944,12 +945,27 @@ def responses_by_assignment(
     An assignment with no responses is simply absent from the dict, so
     callers use ``.get(id, [])`` and read the same empty list the
     per-assignment query returned.
+
+    ``group_scoped_only`` narrows the join to assignments on
+    group-scoped instruments. The reviewer rollup's Python half
+    (``monitoring._grouped_instrument_parts``) needs exactly those
+    rows, and a session with one group instrument and a roster-scale
+    per-reviewee one would otherwise rematerialise every response the
+    aggregate half already counted in SQL (19R Item 3 rung 3, Codex
+    P1). Expressed as a join rather than an ``in_`` over ids for the
+    same reason the whole function is: the id list grows with the
+    assignment count, and SQLite's default variable limit is 999.
     """
-    rows = db.execute(
+    stmt = (
         select(Response)
         .join(Assignment, Response.assignment_id == Assignment.id)
         .where(Assignment.session_id == session_id)
-    ).scalars()
+    )
+    if group_scoped_only:
+        stmt = stmt.join(
+            Instrument, Instrument.id == Assignment.instrument_id
+        ).where(Instrument.group_kind.is_not(None))
+    rows = db.execute(stmt).scalars()
     out: dict[int, list[Response]] = {}
     for row in rows:
         out.setdefault(row.assignment_id, []).append(row)
