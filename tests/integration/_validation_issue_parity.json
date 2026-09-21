@@ -1,0 +1,246 @@
+{
+  "bare_draft": [
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No reviewers \u2014 import a reviewer CSV before activation",
+      "rule_key": "reviewers.empty",
+      "severity": "error",
+      "source": "reviewers"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No reviewees \u2014 import a reviewee CSV before activation",
+      "rule_key": "reviewees.empty",
+      "severity": "error",
+      "source": "reviewees"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No included assignment rows on any instrument \u2014 reviewers will see an empty surface",
+      "rule_key": "assignments.no_included_pairs",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No help contact set \u2014 reviewer-facing emails will fall back to a generic placeholder",
+      "rule_key": "email_template.no_help_contact",
+      "severity": "info",
+      "source": "email_template"
+    }
+  ],
+  "configured_never_generated": [
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No included assignment rows on any instrument \u2014 reviewers will see an empty surface",
+      "rule_key": "assignments.no_included_pairs",
+      "severity": "warning",
+      "source": "assignments"
+    }
+  ],
+  "duplicates_and_identity": [
+    {
+      "field": "email",
+      "fix_anchor": "#reviewer-row-1",
+      "message": "Duplicate reviewer email 'ana@example.edu' (2 rows)",
+      "rule_key": "reviewers.duplicate_email",
+      "severity": "error",
+      "source": "reviewers"
+    },
+    {
+      "field": "email_or_identifier",
+      "fix_anchor": "#reviewee-row-4",
+      "message": "Duplicate reviewee identifier 'dee@example.edu' (2 rows)",
+      "rule_key": "reviewees.duplicate_id",
+      "severity": "error",
+      "source": "reviewees"
+    },
+    {
+      "field": "email_or_identifier",
+      "fix_anchor": "#reviewee-row-2",
+      "message": "1 reviewee cannot view their results: identifier is not an email so /me/sessions/.../results stays unreachable for them.",
+      "rule_key": "reviewees.unreachable_for_results",
+      "severity": "warning",
+      "source": "reviewees"
+    },
+    {
+      "field": "email",
+      "fix_anchor": "#observer-row-1",
+      "message": "Duplicate observer email 'obs@example.edu' (2 rows)",
+      "rule_key": "observers.duplicate_email",
+      "severity": "error",
+      "source": "observers"
+    },
+    {
+      "field": "email",
+      "fix_anchor": "#reviewer-row-1",
+      "message": "'ana@example.edu' is 'Ana' here, but 'Ana Other' as a observer. One mailbox, one name \u2014 fix whichever row is wrong.",
+      "rule_key": "reviewers.cross_roster_identity",
+      "severity": "error",
+      "source": "reviewers"
+    },
+    {
+      "field": "email",
+      "fix_anchor": "#reviewer-row-2",
+      "message": "'ana@example.edu' is 'Ana' here, but 'Ana Other' as a observer. One mailbox, one name \u2014 fix whichever row is wrong.",
+      "rule_key": "reviewers.cross_roster_identity",
+      "severity": "error",
+      "source": "reviewers"
+    },
+    {
+      "field": "email",
+      "fix_anchor": "#reviewer-row-3",
+      "message": "'cal@example.edu' is 'Cal' here, but 'Cal Other' as a reviewee. One mailbox, one name \u2014 fix whichever row is wrong.",
+      "rule_key": "reviewers.cross_roster_identity",
+      "severity": "error",
+      "source": "reviewers"
+    },
+    {
+      "field": "email_or_identifier",
+      "fix_anchor": "#reviewee-row-1",
+      "message": "'cal@example.edu' is 'Cal Other' here, but 'Cal' as a reviewer. One mailbox, one name \u2014 fix whichever row is wrong.",
+      "rule_key": "reviewees.cross_roster_identity",
+      "severity": "error",
+      "source": "reviewees"
+    },
+    {
+      "field": "email",
+      "fix_anchor": "#observer-row-3",
+      "message": "'ana@example.edu' is 'Ana Other' here, but 'Ana' as a reviewer, 'Ana' as a reviewer. One mailbox, one name \u2014 fix whichever row is wrong.",
+      "rule_key": "observers.cross_roster_identity",
+      "severity": "error",
+      "source": "observers"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No included assignment rows on any instrument \u2014 reviewers will see an empty surface",
+      "rule_key": "assignments.no_included_pairs",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No help contact set \u2014 reviewer-facing emails will fall back to a generic placeholder",
+      "rule_key": "email_template.no_help_contact",
+      "severity": "info",
+      "source": "email_template"
+    }
+  ],
+  "instrument_field_gaps": [
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'No fields' has no response fields",
+      "rule_key": "instruments.no_fields",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' has no visible response fields \u2014 reviewers see an empty page. Select at least one response-field chip on the instrument's card.",
+      "rule_key": "instruments.no_visible_response_fields",
+      "severity": "warning",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-3",
+      "message": "Instrument 'Instrument_3' has no visible response fields \u2014 reviewers see an empty page. Select at least one response-field chip on the instrument's card.",
+      "rule_key": "instruments.no_visible_response_fields",
+      "severity": "warning",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": null,
+      "message": "No included assignment rows on any instrument \u2014 reviewers will see an empty surface",
+      "rule_key": "assignments.no_included_pairs",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-2",
+      "message": "Instrument 'No display' has no display fields \u2014 reviewer pages will be sparse",
+      "rule_key": "instruments.no_display_fields",
+      "severity": "warning",
+      "source": "instruments"
+    }
+  ],
+  "multi_instrument_gaps": [
+    {
+      "field": "reviewer_id:1|instrument_id:1",
+      "fix_anchor": "#instrument-1",
+      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments for the 'Instrument_1' instrument",
+      "rule_key": "assignments.reviewer_missing_for_instrument",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": "reviewer_id:1|instrument_id:2",
+      "fix_anchor": "#instrument-2",
+      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments for the 'Instrument_2' instrument",
+      "rule_key": "assignments.reviewer_missing_for_instrument",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": "instrument_id:3",
+      "fix_anchor": "#instrument-3",
+      "message": "Instrument 'Instrument_3' has no assignments \u2014 reviewers won't see this page",
+      "rule_key": "assignments.instrument_empty",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' would change if assignments were regenerated \u2014 re-Generate to refresh the pairs",
+      "rule_key": "instruments.stale_generated",
+      "severity": "warning",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-2",
+      "message": "Instrument 'Instrument_2' would change if assignments were regenerated \u2014 re-Generate to refresh the pairs",
+      "rule_key": "instruments.stale_generated",
+      "severity": "warning",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-2",
+      "message": "Instrument 'Instrument_2' has 1 generated row but none are included \u2014 reviewers won't see this page",
+      "rule_key": "instruments.zero_included",
+      "severity": "warning",
+      "source": "instruments"
+    }
+  ],
+  "single_instrument_generated": [
+    {
+      "field": "reviewer_id:2",
+      "fix_anchor": "#reviewer-row-2",
+      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments",
+      "rule_key": "assignments.reviewer_missing",
+      "severity": "warning",
+      "source": "assignments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' would change if assignments were regenerated \u2014 re-Generate to refresh the pairs",
+      "rule_key": "instruments.stale_generated",
+      "severity": "warning",
+      "source": "instruments"
+    }
+  ]
+}
