@@ -216,18 +216,20 @@ def test_every_other_caller_still_builds_its_own_report(
 #: `app/` is a service the report called, loading for its own purposes.
 REPORT_MODULE = "app/services/validation.py"
 
-#: The one place the report reaches into that loads the same rows
-#: again: `_check_instruments_stale_generated` asks the assignments
-#: engine for its verdict, and the engine builds its own
-#: `_load_reconcile_inputs`.
+#: The one call the exception is for. `_check_instruments_stale_generated`
+#: asks the assignments engine whether regenerating would change
+#: anything, and the engine builds its own `_load_reconcile_inputs`,
+#: re-reading the instruments and both rosters the report already
+#: holds.
 #:
-#: The whole package, not the two modules measured — `_generate.py`
-#: issues the instrument re-read but delegates both roster re-reads to
-#: `_coverage.list_reviewers` / `list_reviewees`, so naming modules
-#: would pin an internal split of the engine's own loader that is none
-#: of this test's business. The exception is therefore "the assignments
-#: engine", stated as such rather than narrowed to today's call graph.
-ENGINE_PACKAGE = "app/services/assignments/"
+#: The **call**, not the package. An earlier revision allowed anything
+#: under `app/services/assignments/`, which was too wide to enforce the
+#: rule it exists for: a check calling `included_count_per_instrument`
+#: twice issues both from `_coverage.py`, so the guard below would skip
+#: them as not the report's and this test would accept them as the
+#: engine's. Matching the frame instead pins the exception to the one
+#: path that was argued for (Codex, PR #2533).
+STALENESS_CALL = "staleness_by_instrument"
 
 
 #: Resolved from the package itself rather than from a path fragment.
@@ -253,23 +255,32 @@ def _issuing_module() -> str:
     return "?"
 
 
+def _under_staleness() -> bool:
+    """Whether this query is being issued inside the engine call the
+    exception is for, rather than merely inside its package."""
+    return any(
+        frame.name == STALENESS_CALL for frame in traceback.extract_stack()
+    )
+
+
 def _capture(
     db: Session, review_session: ReviewSession
-) -> list[tuple[tuple[str, str], str]]:
+) -> list[tuple[tuple[str, str], str, bool]]:
     """Run the report, returning one entry per statement it issued:
-    ``((normalized SQL, bound parameters), issuing module)``.
+    ``((normalized SQL, bound parameters), issuing module, whether it
+    came from inside the staleness call)``.
 
     Parameters are part of the key on purpose. Twenty-two checks each
     loading *the same session's* instruments is the defect; two checks
     loading two different instruments' fields is not.
     """
-    captured: list[tuple[tuple[str, str], str]] = []
+    captured: list[tuple[tuple[str, str], str, bool]] = []
     recording = {"on": False}
 
     def before(conn, cursor, statement, parameters, context, many):  # noqa: ANN001
         if recording["on"]:
             key = (re.sub(r"\s+", " ", statement).strip(), repr(parameters))
-            captured.append((key, _issuing_module()))
+            captured.append((key, _issuing_module(), _under_staleness()))
 
     bind = db.get_bind()
     event.listen(bind, "before_cursor_execute", before)
@@ -297,7 +308,7 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
 
     own = Counter(
         key
-        for key, module in _capture(db, review_session)
+        for key, module, _ in _capture(db, review_session)
         if module == REPORT_MODULE
     )
 
@@ -313,7 +324,7 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
 
 
 @pytest.mark.parametrize("scenario", sorted(SCENARIOS))
-def test_every_remaining_repeat_belongs_to_the_assignments_engine(
+def test_every_remaining_repeat_belongs_to_the_staleness_call(
     db: Session, scenario: str
 ) -> None:
     """The boundary, pinned rather than quietly excluded.
@@ -322,9 +333,7 @@ def test_every_remaining_repeat_belongs_to_the_assignments_engine(
     `assignments.staleness_by_instrument` whether regenerating would
     change anything, and that engine builds its own
     `_load_reconcile_inputs` — re-reading the instruments and both
-    rosters the report already holds. Three statements per run: the
-    instruments from `_generate.py`, both rosters from `_coverage.py`,
-    which is why the exception is the package rather than one module.
+    rosters the report already holds. Three statements per run.
 
     Rung 3's decision (19R Item 5) was to leave it. Handing the engine
     a roster loaded elsewhere is exactly the snapshot this item spent
@@ -343,17 +352,23 @@ def test_every_remaining_repeat_belongs_to_the_assignments_engine(
     review_session = SCENARIOS[scenario](db)
 
     captured = _capture(db, review_session)
-    counts = Counter(key for key, _ in captured)
-    modules_by_key: dict[tuple[str, str], list[str]] = {}
-    for key, module in captured:
-        modules_by_key.setdefault(key, []).append(module)
+    counts = Counter(key for key, _, _ in captured)
+    issues_by_key: dict[tuple[str, str], list[tuple[str, bool]]] = {}
+    for key, module, under_staleness in captured:
+        issues_by_key.setdefault(key, []).append((module, under_staleness))
 
     for key, count in counts.items():
         if count == 1:
             continue
-        others = [m for m in modules_by_key[key] if m != REPORT_MODULE]
+        others = [
+            (module, under_staleness)
+            for module, under_staleness in issues_by_key[key]
+            if module != REPORT_MODULE
+        ]
         assert others, f"repeat entirely inside the report: {key[0][:110]}"
-        assert all(m.startswith(ENGINE_PACKAGE) for m in others), (
-            f"{key[0][:110]}\n  repeated by {sorted(set(others))}, which is "
-            "neither the report nor the assignments engine"
+        assert all(under_staleness for _, under_staleness in others), (
+            f"{key[0][:110]}\n  repeated from "
+            f"{sorted({m for m, u in others if not u})} outside "
+            f"`{STALENESS_CALL}`, which is not the exception this rung "
+            "argued for"
         )

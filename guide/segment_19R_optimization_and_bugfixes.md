@@ -852,7 +852,13 @@ and watching the guard go green (CI found the same thing an hour
 earlier from the other end). Fixed by resolving the root from
 `app.__file__`, plus an assertion that the guard saw the report at all.
 Also corrected here: the boundary's two roster repeats come from
-`_coverage.py`, not `_generate.py`. **Two owed at the close**, both
+`_coverage.py`, not `_generate.py` — and then, on Codex's reading, the
+boundary itself. Allowing anything under `app/services/assignments/`
+was too wide to enforce the rule it exists for, since a check calling
+`included_count_per_instrument` twice issues both from `_coverage.py`
+and neither test would object. The exception is now the
+`staleness_by_instrument` **call**, matched on the stack; the mutant
+passed 20/20 under the package rule and fails 6/6 under this one. **Two owed at the close**, both
 below in `Doc impact`: `spec/validate_page.md` §5.1 / §7 still
 documents the two-argument `check`, so a rule written to its recipe
 now raises `TypeError` — the bullet predicted no change and the build
@@ -869,8 +875,8 @@ Generate would do. A parameter meaning "trust me, these rows are
 current" is the snapshot this item spent two rungs refusing to build,
 and three indexed reads do not buy it. So the guard asks whether the
 **report** loads the same thing twice, which is the defect, and a
-second test pins the exception to that one engine so the narrowing
-cannot quietly become a blanket.
+second test pins the exception to that one engine call so the
+narrowing cannot quietly become a blanket.
 
 **Rung 2 landed its whole list, and the Definition of done's
 "no exact-repeat query" was three short.** `ValidationInputs`
