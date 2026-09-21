@@ -36,6 +36,7 @@ from app.db.models import (
     Assignment,
     Instrument,
     InstrumentResponseField,
+    Invitation,
     Response,
     Reviewee,
     Reviewer,
@@ -212,6 +213,35 @@ def rollups(db: Session) -> Fixture:
     # read it differently on purpose — see
     # `test_a_draft_is_complete_to_one_rollup_and_not_the_other`.
     respond(a9, h1, "wip", submitted_at=None)
+
+    # Invitations. `ReviewerProgress` carries the row and its
+    # `last_reminder_at`, and `summary_counts` reads the status — so a
+    # fixture without them lets an implementation drop the join and
+    # still pass everything else, which would silently undercount
+    # `invited` / `opened` and make both reminder loops skip every
+    # reviewer. Alice has been opened and reminded; bob has been sent
+    # and not opened; **zoe has none**, so "no invitation" is covered
+    # too.
+    db.add_all(
+        [
+            Invitation(
+                session_id=sid,
+                reviewer_id=alice.id,
+                token_hash="tok-alice-r2parity",
+                status="opened",
+                sent_at=T0,
+                opened_at=T0 + timedelta(hours=1),
+                last_reminder_at=T0 + timedelta(hours=4),
+            ),
+            Invitation(
+                session_id=sid,
+                reviewer_id=bob.id,
+                token_hash="tok-bob-r2parity",
+                status="sent",
+                sent_at=T0,
+            ),
+        ]
+    )
     db.flush()
 
     return Fixture(
@@ -264,13 +294,23 @@ def _by_identifier(rows) -> dict[str, object]:
 
 
 @reviewer_impl
-def test_reviewer_rows_cover_active_reviewers_with_included_work(
+def test_reviewer_rows_are_the_right_reviewers_in_email_order(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
-    rows = _by_email(rollup(db, rollups.session))
-    # `zoe` is inactive. `bob`'s only other row is `include=False`, so he
-    # is present on the strength of a7 alone.
-    assert set(rows) == {"alice@example.edu", "bob@example.edu"}
+    """`zoe` is inactive. `bob`'s only other row is `include=False`, so
+    he is present on the strength of a7 alone.
+
+    Asserted as an **ordered list**, not a set: `_assigned_active_reviewers`
+    orders by email, the operations routes paginate whatever order they
+    are handed when no sort cookie is set, and an aggregate without an
+    `ORDER BY` would return database order and still satisfy a set
+    comparison — while rows moved between pages.
+    """
+    rows = rollup(db, rollups.session)
+    assert [r.reviewer.email for r in rows] == [
+        "alice@example.edu",
+        "bob@example.edu",
+    ]
 
 
 @reviewer_impl
@@ -324,6 +364,37 @@ def test_alices_progress_is_two_of_four_with_two_required_missing(
 
 
 @reviewer_impl
+def test_the_invitation_and_its_reminder_ride_on_the_row(
+    db: Session, rollups: Fixture, rollup: Callable
+) -> None:
+    """`ReviewerProgress` carries the reviewer's `Invitation` and
+    surfaces `last_reminder_at` from it — the Invitations page renders
+    both, and the manual and scheduled reminder loops filter on them.
+
+    An implementation that dropped the join would return `None` for
+    every reviewer and still satisfy every count in this file, so the
+    join is asserted directly, in all three of its states: reminded,
+    invited-but-never-reminded, and no invitation at all.
+    """
+    rows = _by_email(rollup(db, rollups.session))
+    alice = rows["alice@example.edu"]
+    assert alice.invitation is not None
+    assert alice.invitation.status == "opened"
+    assert _utc_naive(alice.last_reminder_at) == _utc_naive(
+        T0 + timedelta(hours=4)
+    )
+
+    bob = rows["bob@example.edu"]
+    assert bob.invitation is not None
+    assert bob.invitation.status == "sent"
+    assert bob.last_reminder_at is None
+
+    # zoe has no invitation, and no row either — the third state is
+    # covered by the reviewer set itself.
+    assert "zoe@example.edu" not in rows
+
+
+@reviewer_impl
 def test_an_excluded_row_is_not_work(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
@@ -342,15 +413,17 @@ def test_an_excluded_row_is_not_work(
 
 
 @reviewee_impl
-def test_reviewee_rows_cover_every_reviewee_with_included_work(
+def test_reviewee_rows_are_in_identifier_order(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
-    rows = _by_identifier(rollup(db, rollups.session))
-    assert set(rows) == {
+    """Ordered by `email_or_identifier`, and asserted as a list for the
+    same reason as the reviewer side above."""
+    rows = rollup(db, rollups.session)
+    assert [r.reviewee.email_or_identifier for r in rows] == [
         "carol@example.edu",
         "dan@example.edu",
         "erin@example.edu",
-    }
+    ]
 
 
 @reviewee_impl
@@ -480,11 +553,16 @@ def test_summary_counts_ride_on_the_reviewer_rollup(
     db: Session, rollups: Fixture
 ) -> None:
     """`summary_counts` derives entirely from `per_reviewer_progress`, so
-    a change to that rollup moves these too. Two assigned reviewers,
-    neither submitted, no invitations in this fixture."""
+    a change to that rollup moves these too — including the invitation
+    half, which is why the fixture seeds two.
+
+    Two assigned reviewers; both invited (alice `opened`, bob `sent` —
+    `invited` counts anything past `pending`); one opened; neither
+    submitted, so both incomplete.
+    """
     counts = monitoring.summary_counts(db, rollups.session)
     assert counts.assigned == 2
-    assert counts.invited == 0
-    assert counts.opened == 0
+    assert counts.invited == 2
+    assert counts.opened == 1
     assert counts.submitted == 0
     assert counts.incomplete == 2

@@ -461,36 +461,32 @@ own numbers do not support it.
 
 ### Status
 
-**Rung 1 landed 2026-09-21** — the parity oracle, 11 tests, no app
-change.
+**Rung 1 landed 2026-09-21** — `tests/integration/test_monitoring_rollup_parity.py`,
+12 cases, no app change. The harness is two implementation lists, one
+per rollup; rungs 2 and 3 append the SQL form and every case becomes a
+parity test with no new test code.
 
-- **The harness is two implementation lists**, one per rollup, each
-  holding the Python form today. Rungs 2 and 3 append the SQL form and
-  every case becomes a parity test with no new test code.
-- **Expectations are hand-derived from the contract, not captured from
-  a run** — each case shows its arithmetic so a reader can check the
-  number. Two of the first derivations disagreed with the code, and both
-  times the code was right and the *comparison* was wrong: SQLite does
-  not preserve a `DateTime(timezone=True)` offset, so the oracle compares
-  instants in UTC rather than datetime objects. That would have bitten
-  rung 2 the other way round, where Postgres returns aware.
-- **Ten mutations, all caught — but four only after the fixture grew**,
-  and the four are the item's real content:
-  - a dedupe keyed on the group alone rather than
-    `(instrument, group_key)` survived until a **second** group-scoped
-    instrument on the same boundary tag existed;
-  - `last_response_at` is a max over two nestings, the rows of an
-    assignment and the assignments of a reviewee. Taking the wrong one
-    at either level survived until one assignment had two rows *and* was
-    not the reviewee's first;
-  - ignoring `submitted_at` on the reviewee side survived until a
-    **draft** row existed.
-- **Two asymmetries between the rollups are now pinned**, neither
-  obviously intended, both shipped: an inactive reviewer is dropped by
-  the reviewer rollup and still counted by the reviewee one, and a draft
-  is a completion to the reviewer rollup but not to the reviewee one. An
-  oracle's job is to stop a rewrite ironing those out by accident; if
-  either should change, that is its own item.
+**What the oracle pins that a naive `GROUP BY` would get wrong**: the
+dedupe key is `(instrument, group_key)`, not the group alone;
+`last_response_at` is a max over two nestings, rows-of-an-assignment
+then assignments-of-a-reviewee; the reviewee side requires
+`submitted_at`; the invitation join carries `last_reminder_at`, without
+which `summary_counts` undercounts and both reminder loops skip everyone
+(Codex P2); and both `ORDER BY`s matter, because the operations routes
+paginate whatever order they are handed (Codex P2). Thirteen mutations,
+all caught — four of them only after the fixture grew to carry the case,
+which is what the fixture's own comments record.
+
+**Two asymmetries between the rollups are now pinned**, neither
+obviously intended, both shipped: an inactive reviewer is dropped by the
+reviewer rollup and still counted by the reviewee one, and a draft is a
+completion to the reviewer rollup but not to the reviewee one. If either
+should change, that is its own item.
+
+**Expectations are hand-derived, not captured.** Two disagreed with the
+code on the first pass and the code was right both times: SQLite drops a
+`DateTime(timezone=True)` offset, so the oracle compares instants in
+UTC — which would otherwise have bitten rung 2 from the Postgres side.
 
 ### PR ladder
 
