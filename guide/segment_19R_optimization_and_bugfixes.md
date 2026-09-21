@@ -1,9 +1,15 @@
-# Segment 19R — Optimization
+# Segment 19R — Optimization and bugfixes
 
 Opened 2026-09-21 off `guide/app_responsiveness.md`, which measured the
 operator surfaces on a 1,000 × 1,000 roster and found five of six slow
 pages slow for one shared reason. That document is the evidence base for
-every item here; this one is the build.
+Items 1–3; this one is the build.
+
+**Named for both halves** (2026-09-21, after Item 4 landed): the segment
+opened as *Optimization*, and the first thing added to it was a defect.
+Rather than keep filing fixes under a name that excludes them, the
+segment is the open container for this round of operator-surface work —
+performance and correctness both.
 
 **Items close independently**, so each carries its own `### Doc impact`
 and `### Status` and there is no segment-level manifest —
@@ -12,9 +18,10 @@ the last definition-of-done line applies only when the segment's final
 item closes; an item close leaves this file in `guide/`.
 
 **The segment stays open.** Items 1–3 are the three changes that were
-measured to take every page under a second. Further optimization moves
-land as Items 4, 5, … as measurement finds them — `## Later candidates`
-at the end holds the ones already measured but not scheduled.
+measured to take every page under a second; Item 4 is a defect found
+while they were being planned. Further items land as measurement or a
+report turns them up — `## Later candidates` at the end holds the
+optimization moves already measured but not scheduled.
 
 **Re-take any number here with** `python3 tools/bench_roster_scale.py`
 (`tools/README.md` has the recipe). Every figure below is from state B
@@ -358,9 +365,9 @@ own numbers do not support it.
 
 ## Item 4 — the quick-setup upload cards drop friendly labels
 
-**Not an optimization.** It is a correctness defect, filed here because
-this is the open container for the current round of work, and it depends
-on nothing in Items 1–3.
+**A defect, not an optimization** — and the reason the segment carries
+both words in its name. It depends on nothing in Items 1–3 and can land
+in any order against them.
 
 ### Opportunity
 
