@@ -2,15 +2,18 @@
 recompute invariant + the breakdown reporters.
 
 Single canonical computation surface (per
-``guide/self_review_consolidate.md``). Every write site (Assignment
-creation / fan-out / recompute) and the PR-1 backfill route through
-:func:`classify_self_review` so the rule lives in exactly one place.
+``guide/archive/self_review_consolidate.md``). The rule body is
+:func:`classify_self_review_pairs`; every write site (Assignment
+creation / fan-out / recompute) and the PR-1 backfill reach it, either
+directly or through the entity-shaped :func:`classify_self_review`
+adapter, so the rule lives in exactly one place.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from typing import NamedTuple
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -25,10 +28,62 @@ from app.services.email_identity import normalize_email
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
-    identifier = reviewee.email_or_identifier
-    if "@" not in identifier:
+    return _is_self_review_pair(
+        reviewer.email, reviewee.email_or_identifier
+    )
+
+
+def _is_self_review_pair(
+    reviewer_email: str, reviewee_identifier: str
+) -> bool:
+    """The pair-level test on the two strings it actually reads.
+
+    Split out of :func:`is_self_review` for the column-tuple path in
+    :func:`recompute_self_review_classification`, which projects
+    ``Reviewer.email`` rather than loading the entity. The rule is
+    unchanged: a reviewee identified by something other than an email
+    address can never be a self-review, and the comparison is over
+    ``normalize_email`` on both sides.
+    """
+    if "@" not in reviewee_identifier:
         return False
-    return normalize_email(reviewer.email) == normalize_email(identifier)
+    return normalize_email(reviewer_email) == normalize_email(
+        reviewee_identifier
+    )
+
+
+class AssignmentPair(NamedTuple):
+    """The projection of an assignment row that the self-review rule
+    and the group-key computation actually read.
+
+Seven slots, traced 19S Item 3: the group key needs ``id``,
+    ``instrument_id``, ``reviewer_id``, ``reviewee_id`` and the
+    ``Reviewee`` (boundary tags are read off it); the pair test needs
+    the reviewer's email; and ``is_self_review`` carries the **stored**
+    value so the recompute can report how many rows it changed without
+    re-reading them. (Six is the count of ``Assignment`` attributes the
+    two passes read; this class also carries a ``Reviewer`` column, so
+    the two figures are not the same one.)
+
+    Deliberately duck-compatible with ``Assignment`` on the five
+    attributes ``app.services.responses.group_keys`` reads, so that
+    function takes either shape unchanged.
+
+    ``Reviewee`` stays an entity rather than a tag projection because
+    the boundary spec names its fields dynamically
+    (``group_key_for_pair`` does ``getattr(reviewee, source_field)``).
+    It costs little: the ORM dedupes by primary key, so a session with
+    200 reviewees builds 200 instances however many assignment rows
+    join to them.
+    """
+
+    id: int
+    instrument_id: int
+    reviewer_id: int
+    reviewee_id: int
+    reviewer_email: str
+    reviewee: Reviewee
+    is_self_review: bool
 
 
 def count_self_review_candidates(
@@ -106,41 +161,79 @@ def classify_self_review(
       *every* assignment in the group is flagged, not just the
       ``(R, R)`` cell.
 
-    Single canonical computation surface — every write site
-    (Assignment creation / fan-out / recompute) and the PR-1 backfill
-    route through this function so the rule lives in exactly one
-    place. See ``guide/self_review_consolidate.md``.
+    Entity-shaped adapter over :func:`classify_self_review_pairs`,
+    which holds the rule. Callers that already have the three entities
+    keep this signature; the recompute, which projects columns rather
+    than loading an ``Assignment`` per row (19S Item 3), calls the pair
+    form directly. Either way the rule is stated once — see
+    ``guide/archive/self_review_consolidate.md``.
+
+    Note the adapter is not free: it builds one
+    :class:`AssignmentPair` per row on top of whatever entities the
+    caller already loaded. On ``verify_self_review_classification``,
+    the whole-session pass 19S Item 3 deliberately left alone, that is
+    ~40 ms at the 200 x 200 bench against a 13 s Prepare.
+    """
+    return classify_self_review_pairs(
+        db,
+        session_id=session_id,
+        pairs=[
+            AssignmentPair(
+                id=assignment.id,
+                instrument_id=assignment.instrument_id,
+                reviewer_id=assignment.reviewer_id,
+                reviewee_id=assignment.reviewee_id,
+                reviewer_email=reviewer.email,
+                reviewee=reviewee,
+                is_self_review=assignment.is_self_review,
+            )
+            for assignment, reviewer, reviewee in rows
+        ],
+    )
+
+
+def classify_self_review_pairs(
+    db: Session,
+    *,
+    session_id: int,
+    pairs: Sequence[AssignmentPair],
+) -> dict[int, bool]:
+    """The canonical self-review rule, over :class:`AssignmentPair`
+    projections rather than entities.
+
+    This is where the rule lives; :func:`classify_self_review` is the
+    entity-shaped adapter over it. Returns
+    ``{assignment_id: is_self_review}`` for every pair passed in. The
+    two branches are documented on that function.
     """
     from app.services.responses import group_keys
 
     group_key_by_assignment = group_keys(
-        db,
-        assignments=[assignment for assignment, _, _ in rows],
-        session_id=session_id,
+        db, assignments=pairs, session_id=session_id
     )
     # (group instrument, reviewer) -> group key of the group that
     # reviewer is a member of (i.e. groups where the (R, R) member
     # pair exists, identifying the group as a self-review group).
     self_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
-    for assignment, reviewer, reviewee in rows:
-        if assignment.id in group_key_by_assignment and is_self_review(
-            reviewer, reviewee
+    for pair in pairs:
+        if pair.id in group_key_by_assignment and _is_self_review_pair(
+            pair.reviewer_email, pair.reviewee.email_or_identifier
         ):
-            self_group_key[
-                (assignment.instrument_id, assignment.reviewer_id)
-            ] = group_key_by_assignment[assignment.id]
+            self_group_key[(pair.instrument_id, pair.reviewer_id)] = (
+                group_key_by_assignment[pair.id]
+            )
     result: dict[int, bool] = {}
-    for assignment, reviewer, reviewee in rows:
-        group_key = group_key_by_assignment.get(assignment.id)
+    for pair in pairs:
+        group_key = group_key_by_assignment.get(pair.id)
         if group_key is None:
             # Individual-scoped instrument.
-            result[assignment.id] = is_self_review(reviewer, reviewee)
+            result[pair.id] = _is_self_review_pair(
+                pair.reviewer_email, pair.reviewee.email_or_identifier
+            )
         else:
             # Group-scoped: whole-group rule.
-            result[assignment.id] = (
-                self_group_key.get(
-                    (assignment.instrument_id, assignment.reviewer_id)
-                )
+            result[pair.id] = (
+                self_group_key.get((pair.instrument_id, pair.reviewer_id))
                 == group_key
             )
     return result
@@ -187,27 +280,72 @@ def recompute_self_review_classification(
     automatically when at least one row changed.
 
     Returns the number of rows whose stored value changed.
+
+    **Column tuples in, one bulk statement out** (19S Item 3). This
+    pass runs once per instrument inside a regenerate and used to
+    re-materialize the whole session as ``(Assignment, Reviewer,
+    Reviewee)`` entities — at the 200 x 200 bench, 80,000 objects per
+    call for the sake of one boolean each. It now selects the
+    :class:`AssignmentPair` projection and writes the rows that
+    changed as a single ORM bulk UPDATE keyed by primary key. The
+    ``Reviewer`` / ``Reviewee`` joins stay because the rule reads them;
+    only the ``Assignment`` entity is gone.
     """
-    rows = db.execute(
-        select(Assignment, Reviewer, Reviewee)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(Assignment.session_id == session_id)
-    ).all()
-    if not rows:
+    pairs = [
+        AssignmentPair(
+            id=row_id,
+            instrument_id=instrument_id,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            reviewer_email=reviewer_email,
+            reviewee=reviewee,
+            is_self_review=bool(stored),
+        )
+        for (
+            row_id,
+            instrument_id,
+            reviewer_id,
+            reviewee_id,
+            stored,
+            reviewer_email,
+            reviewee,
+        ) in db.execute(
+            select(
+                Assignment.id,
+                Assignment.instrument_id,
+                Assignment.reviewer_id,
+                Assignment.reviewee_id,
+                Assignment.is_self_review,
+                Reviewer.email,
+                Reviewee,
+            )
+            .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+            .where(Assignment.session_id == session_id)
+        ).all()
+    ]
+    if not pairs:
         return 0
-    classification = classify_self_review(
-        db, session_id=session_id, rows=rows
+    classification = classify_self_review_pairs(
+        db, session_id=session_id, pairs=pairs
     )
-    changed = 0
-    for assignment, _, _ in rows:
-        new_value = classification[assignment.id]
-        if assignment.is_self_review != new_value:
-            assignment.is_self_review = new_value
-            changed += 1
+    changed = [
+        {"id": pair.id, "is_self_review": classification[pair.id]}
+        for pair in pairs
+        if pair.is_self_review != classification[pair.id]
+    ]
     if changed:
+        # ORM bulk UPDATE by primary key. Unlike the bulk *insert* in
+        # ``_materialise_one_instrument``, this form keeps the identity
+        # map in step: an ``Assignment`` the session already holds sees
+        # the new value without a reload, which is what lets
+        # ``verify_self_review_classification`` keep reading entities.
+        # SQLAlchemy is pinned only as ``>=2.0``, so that behaviour is
+        # asserted rather than assumed — see
+        # ``tests/unit/test_recompute_self_review_bulk_update.py``.
+        db.execute(update(Assignment), changed)
         db.flush()
-    return changed
+    return len(changed)
 
 
 def verify_self_review_classification(

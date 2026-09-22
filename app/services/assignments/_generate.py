@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -521,18 +521,43 @@ def _materialise_one_instrument(
         )
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
 
-    # Insert newly eligible pairs.
-    for key in diff.to_insert:
-        reviewer, reviewee, pair_include = diff.new_pairs[key]
-        db.add(
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                instrument_id=instrument.id,
-                include=pair_include,
-                created_by_mode=mode.value,
-            )
+    # Insert newly eligible pairs. Bulk Core, matching the delete
+    # half above: the ORM form built one Python object per pair —
+    # 40,000 per instrument at the 200 x 200 / 2-instrument bench,
+    # 80,000 across the session — and object construction, not SQL,
+    # was the measured cost (``guide/app_responsiveness.md`` Finding 4,
+    # 19S Item 3, which measured Prepare 26.7 s -> 13.1 s over this
+    # change and the recompute below).
+    #
+    # ``is_self_review`` is deliberately omitted: the statement
+    # compiles the column's Python-side ``default=False`` in, and the
+    # ``recompute_self_review_classification`` below is what raises it.
+    # The rows land with **no identity-map entries** — the INSERT goes
+    # out on the connection here, so that pass and the
+    # ``verify_self_review_classification`` in ``replace_assignments``
+    # see them by re-reading the transaction, not through the unit of
+    # work. (The ``db.flush()`` below is for the to-keep ``include``
+    # write-back, not for these rows.) Pinned by
+    # ``tests/unit/test_replace_assignments_bulk_insert.py``.
+    #
+    # The emptiness guard is load-bearing, not defensive: an empty
+    # parameter list compiles to a *single-row* insert of nothing but
+    # the defaults, which fails the ``NOT NULL`` on ``session_id``
+    # rather than doing nothing.
+    if diff.to_insert:
+        db.execute(
+            insert(Assignment),
+            [
+                {
+                    "session_id": review_session.id,
+                    "reviewer_id": diff.new_pairs[key][0].id,
+                    "reviewee_id": diff.new_pairs[key][1].id,
+                    "instrument_id": instrument.id,
+                    "include": diff.new_pairs[key][2],
+                    "created_by_mode": mode.value,
+                }
+                for key in diff.to_insert
+            ],
         )
 
     # Matched pairs keep their row + responses. ``include`` is

@@ -591,7 +591,7 @@ the item's subject is `guide/` and `docs/` index prose.
 
 ---
 
-## Item 3 — Prepare builds one ORM object per pair, three times over
+## Item 3 — Prepare builds one ORM object per pair, three times over — ✅ **closed 2026-09-22**
 
 **Promoted from Item 1 entry E1** on the author's ruling, 2026-09-22.
 **Widened to the recompute pass** on the author's ruling, 2026-09-22,
@@ -624,9 +624,12 @@ Two changes, one rung each.
    `db.execute(delete(Assignment).where(...))`, PR #1065 — while the
    insert half stayed ORM.
 2. **The recompute pass** — `recompute_self_review_classification`
-   re-materialises the same set as full entities one line later. It
-   drops to a **column-tuple select plus a Core bulk `update`** for the
-   rows whose flag changed.
+   re-materializes the same set as full entities one line later. It
+   drops to a **column-tuple select plus one bulk `update`** for the
+   rows whose flag changed. **Built as the ORM-enabled bulk UPDATE by
+   primary key, not a Core one**, and the distinction is load-bearing:
+   only the ORM form writes through to already-loaded entities, which
+   is what lets the entity-shaped verify pass stay as it is.
 
 **Rejected: `bulk_save_objects` / `add_all`** — both still construct one
 Python object per pair, which is the cost Finding 4 measures.
@@ -640,58 +643,54 @@ cheaper one to move and the safer one to leave.
 
 ### Semantics
 
-- **The insert is one of three full materialisations** (traced
-  2026-09-22). The assignment set is built as Python objects at the
-  insert (`_generate.py:528`), again by
-  `recompute_self_review_classification`'s whole-session
-  `select(Assignment, Reviewer, Reviewee)` once per instrument
-  (`_generate.py:557`), and again by the identical select in
-  `verify_self_review_classification` (`_generate.py:1084`). **This is
-  why the item was widened**: rung 1 alone removes a third at best, and
-  the rows are rebuilt as entities one line later.
-- **The recompute pass writes, so column tuples need a write path.** It
-  **compares** `assignment.is_self_review` to the freshly computed value
-  and only counts and assigns on a difference (`_self_review.py:203`).
-  With no entity there is nothing to mutate, so the changed rows go back
-  as one Core `update` keyed by id — and **the stored flag must be in
-  the projection**, or the `changed` count callers read cannot be
-  reproduced. That is the whole contract: a projection of
-  `id`, `instrument_id`, `reviewer_id`, `reviewee_id`, the `Reviewee`
-  and `is_self_review`.
-- **The `group_keys` coupling is one attribute, and it is the trap.**
-  `_group_key_by_assignment` reads `assignment.reviewee`
-  (`app/services/responses/_group_reconciliation.py:123`) — a
-  many-to-one lazy load that resolves from the identity map **only
-  because the same query loaded every `Reviewee`**. Column tuples remove
-  that attribute, so the reviewee is passed explicitly;
-  `classify_self_review` already holds it. `group_keys` needs a variant
-  taking ids + reviewees. Everything else it reads is `id`,
-  `instrument_id`, `reviewer_id` and `reviewee_id`
-  (`_group_reconciliation.py:122`).
-- **The existing verify pass is rung 2's oracle.** It recomputes
-  independently and **raises `AssertionError` in a test env** on drift
-  (`_generate.py:1088`), so every test that regenerates assignments
-  already fails if the rewritten recompute classifies differently. Rung
-  2 adds cases, not an oracle.
-- **The flush is load-bearing and stays.** A Core insert leaves no
-  identity-map entries, so the passes after it must keep seeing the rows
-  through the flush — the property rung 1 establishes **before**
-  changing the insert.
-- **`is_self_review` is omitted at the insert site**, relying on the
-  column's Python-side `default=False` — so rung 1 names the Core form:
-  `db.execute(insert(Assignment), [dicts])` applies Python-side
-  defaults, a multi-VALUES `insert().values([…])` does not behave
-  identically.
-- **`include` is per row** (`pair_include` from the diff), so the
-  payload is a list of dicts with per-row values, not one shared
-  default. `created_by_mode` likewise carries the enum's value per row.
-- **An empty `diff.to_insert` must issue no statement.** A Core
-  `insert()` handed an empty list is an error on some dialects rather
-  than a no-op.
+Compacted at close; the corrections these bullets went through are in
+`Status`. Line numbers deliberately removed — this item moved every one
+of them, which is the hazard.
+
+- **The insert was one of three full materializations** (traced
+  2026-09-22): the insert itself, `recompute_self_review_classification`
+  once per instrument, and the identical select in
+  `verify_self_review_classification`. Rungs 1 and 2 took the first two;
+  the third is deferred.
+- **The recompute writes, so the projection needs the stored flag.** It
+  compares `is_self_review` to the freshly computed value and counts
+  only differences, so without the stored flag the `changed` count
+  callers read cannot be reproduced. **Seven slots**: `id`,
+  `instrument_id`, `reviewer_id`, `reviewee_id`, the `Reviewee`,
+  `is_self_review`, `Reviewer.email`. (`Blast radius`'s six counts
+  *`Assignment`* attributes — a different thing, and this bullet
+  conflated them until the close.)
+- **The `Reviewee` has to stay an entity**; the rest can be columns.
+  `_group_key_by_assignment` reads `assignment.reviewee` and the
+  boundary spec names its fields dynamically. It costs little: the ORM
+  dedupes by primary key, so a session's reviewee count bounds the
+  instances however many rows join to them — asserted, 3 for 6 rows.
+- **`group_keys` needed no variant, only the honest type.** Those five
+  attributes — `id`, `instrument_id`, `reviewer_id`, `reviewee_id`,
+  `reviewee` — are *all* it reads, so the projection goes through the
+  existing function. `GroupKeyable`, a `Protocol` naming the five, now
+  annotates it; `Assignment` and `AssignmentPair` both satisfy it
+  structurally. Nothing enforces it — the repo runs no type checker.
+- **The existing verify pass is an oracle for misclassification, not
+  for absence.** It raises `AssertionError` in a test env on drift, so
+  a wrong classification fails every regenerate test; but it finds no
+  drift in zero rows, so it would not notice the insert writing
+  nothing. Both rungs carry their own discriminating test as a result.
+- **`is_self_review` is omitted at the insert site**, and the two Core
+  insert forms do not differ on it: both compile the column's
+  Python-side `default=False` in, and neither supplies `created_at`,
+  which has only a `server_default`. The executemany form is kept for
+  taking per-row dicts.
+- **`include` and `created_by_mode` are per row**, so the payload is a
+  list of dicts with per-row values, not one shared default.
+- **An empty `diff.to_insert` must issue no statement**, and the guard
+  is stronger than defensive: an empty parameter list compiles a
+  *single-row* insert of nothing but the defaults and fails the
+  `NOT NULL` on `session_id`.
 - **Both dialects, and the audit envelope is unchanged.** Executemany
   behaves on Postgres and SQLite alike but `rowcount` does not, so the
   audit event's `counts` keeps coming from the diff, which computes it
-  before the insert either way.
+  before the insert either way. Verified on both in CI.
 
 ### Judgment calls — decided
 
@@ -721,24 +720,38 @@ single-instrument full matrix.
 | `replace_assignments`: call sites in `app/` / test files that **call** it / that merely name it | **5** / **11** / **16** | `git grep -l "replace_assignments(" -- tests`, and without the paren |
 | schema change | **none** | the columns are untouched; no migration |
 
-**The bench is not re-takeable here** — re-checked 2026-09-22:
-`pg_isready` answers *no response* on 5432 (client present, no cluster),
-and `tools/bench_roster_scale.py` refuses a non-loopback `DATABASE_URL`
-by design. Rung 3 discloses rather than assuming a figure.
+**The bench was re-taken here, and this paragraph used to say it could
+not be.** It read: *the bench is not re-takeable here* — on the evidence
+that `pg_isready` answers *no response* on 5432 and that
+`tools/bench_roster_scale.py` refuses a non-loopback `DATABASE_URL`.
+Both facts are true and the conclusion drawn from them was wrong:
+`postgresql-16` is installed in the container, so `initdb` +
+`pg_ctl -o '-p 5433'` — the recipe in the bench tool's own docstring —
+gives a loopback cluster, and rung 3 measured a real before / after on
+it. **What was actually checked was whether a cluster was already
+running**, not whether one could be started. Figures in
+`guide/app_responsiveness.md` Finding 4.
 
 ### PR ladder
 
-1. **Rung 1 — the bulk insert, flush property first.** Lands a test
-   that the post-insert self-review verify pass sees every inserted row,
-   *then* the Core insert under it. **Must not touch** Validate, Invite,
-   the recompute pass, or the diff computation.
-2. **Rung 2 — the recompute pass.** `group_keys` gains its
-   ids-and-reviewees variant, `recompute_self_review_classification`
-   drops to a column-tuple select and a Core bulk `update`. **Must not
-   change** the classification rule or the verify pass — the existing
-   in-test `AssertionError` on drift is the oracle.
+1. **Rung 1 — the bulk insert, flush property first.** ✅ done
+   2026-09-22. Lands a test that the post-insert self-review verify
+   pass sees every inserted row, *then* the Core insert under it.
+   **Must not touch** Validate, Invite, the recompute pass, or the diff
+   computation. **Cumulative-diff base for the item's cold read:
+   `05145da`** (the `main` commit rung 1 branched from — the read runs
+   at rung 2 per `CLAUDE.md`'s per-item cadence).
+2. **Rung 2 — the recompute pass.** ✅ done 2026-09-22.
+   `recompute_self_review_classification` drops to a column-tuple
+   select and an ORM bulk `update`; `group_keys` gains the
+   `GroupKeyable` protocol rather than the planned variant (see
+   `Semantics`). The classification rule and the verify pass are
+   unchanged — the rule moved to `classify_self_review_pairs` with
+   `classify_self_review` as the entity adapter over it, so it is
+   still stated once.
 3. **Rung 3 — re-take Finding 4, or disclose that it could not be
-   re-taken.** `guide/app_responsiveness.md` Finding 4 gains the
+   re-taken.** ✅ done 2026-09-22 — **re-taken**, and the plan's claim
+   that it could not be is corrected in `Blast radius`. `guide/app_responsiveness.md` Finding 4 gains the
    post-fix figure beside its 20.0 s; with no loopback Postgres
    available, the item's `Status` says so and names the dev slot rather
    than quoting an unmeasured improvement. **Must not change code.**
@@ -767,12 +780,66 @@ by design. Rung 3 discloses rather than assuming a figure.
 
 ### Open questions
 
-- Do either of the self-review passes rely on the ORM identity map
-  rather than on the flush? **Partly answered by the trace**: the
-  group path's `assignment.reviewee` resolves *from* the identity map
-  today, which is why rung 2 must pass the reviewee explicitly. Whether
-  anything else does is settled by rung 1's test, written before the
-  insert changes.
+- ~~Do either of the self-review passes rely on the ORM identity map
+  rather than on the flush?~~ *Answered 2026-09-22, and in both
+  directions. The **read** side does: the group path's
+  `assignment.reviewee` resolved from the identity map, which is why
+  the projection passes the reviewee explicitly. The **write** side
+  does too, and the plan had it backwards — the recompute's bulk
+  `UPDATE` must write through to loaded entities or the entity-shaped
+  verify pass reports drift that is not there, which the ORM-enabled
+  form does and a Core one would not.*
+
+### Status
+
+**✅ closed 2026-09-22**, three rungs. Intended: replace the per-pair
+ORM insert. Done: that, plus the recompute pass — two of the three
+materializations gone, the verify pass deferred — and **Prepare
+measured 26.7 s → 13.1 s**, 2.0×, with the insert 9.9 s of the 13.6 s
+and the recompute 3.7 s (`guide/app_responsiveness.md` Finding 4).
+
+**The item's figures corrected the plan four times**, which is the
+thing worth keeping:
+
+- **The bench was re-takeable here** — see `Blast radius`, which used
+  to say it was not.
+- **The insert was the larger half**, not the "third of the cost at
+  best" the widening was argued from. The widening still earned its
+  3.7 s; the premise was wrong.
+- **The two insert forms do not differ** on the omitted default, and
+  the correction that said they differ on `created_at` was wrong too
+  — see `Semantics`.
+- **The identity map needed writing through, not expiring** — see
+  `Open questions`.
+
+**Reads: one `diff-reviewer` over `git diff 05145da..HEAD`, one
+`spec-writer`, and between them they found the item's worst defect.**
+Rung 2 shipped asserting *"one statement, not one per row — the point
+of the change"*, and the pre-19S unit of work **also** emitted one
+executemany `UPDATE`: all six tests passed against a full revert of
+both rungs. The same gap was true of rung 1 by design (its three were
+written to pass before the insert changed) but nothing then owned the
+change. Both rungs now carry a discriminating test counting **entity
+construction** — mapper `init` for the insert, ORM `load` for the
+recompute — 4 → 0 objects and 6 `Assignment` + 2 `Reviewer` loads → 0,
+each failing on revert with the expected figure in the message. That
+is `docs/unenforced_conventions.md` §1.8's own 19R.5 precedent
+recurring: a test that passed having recognized nothing.
+
+Also from the reads, and not fixed here: **16 docstring references
+across 11 files cite `guide/self_review_consolidate.md`**, archived to
+`guide/archive/`. `tests/unit/test_doc_references.py` covers `.md`
+prose, not Python docstrings — the same class as **Item 8** one layer
+down, and a sweep rather than this PR's business.
+
+**Length: 267 lines against the ~120 budget**, after compacting
+`Semantics` by 41 and `Status` at close. Recorded rather than fixed
+further, and `docs/unenforced_conventions.md` §1.9 is why: the
+remaining bulk is `Decision`, `Blast radius`, the ladder and the
+definition of done, and cutting those to hit a soft target is the
+failure that entry names — the cheapest way to satisfy a length limit
+is to move the reasoning out of sight. Third item this segment to
+overrun, which is itself §1.9's point.
 
 ### Out of scope
 
@@ -789,6 +856,13 @@ by design. Rung 3 discloses rather than assuming a figure.
 
 - `guide/app_responsiveness.md` — Finding 4 gains the post-fix figure,
   or the disclosure that it could not be re-taken here (Item 3).
+- `spec/assignments.md` — § *Self-review policy* names the canonical
+  computation surface and the individual-scoped arm's inner test; the
+  refactor moved both (Item 3). **Added mid-item**, after two
+  independent reads found the same drift and pointed out that a spec
+  the plan does not name is a spec the close does not look at.
+- `spec/rrw_functional_spec.md` — the same sentence one altitude up
+  (Item 3).
 - `docs/status.md` — row when the item lands (Item 3).
 
 ---

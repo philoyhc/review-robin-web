@@ -504,8 +504,8 @@ generation from the session's self-reviews-active flag for
 self-review pairs — see [§8.6](#86-self-review-behaviour)),
 self-review flag.
 
-The self-review flag is computed by `classify_self_review` and
-depends on the instrument's unit of review:
+The self-review flag depends on the instrument's unit of
+review:
 
 - **Individual-scoped** — true when reviewer.email matches
   reviewee.email, case-insensitively.

@@ -3329,8 +3329,8 @@ dep chains called out at the bottom of this file.
    **Plan:** `guide/segment_19S_post_assessment.md`.
    **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
    the independent cold read at `guide/codex_assessment_21sep.md`.
-   - **Item 1 — the register**, eight entries, **seven disposed of** as
-     of 2026-09-22. Closed: the hand-maintained indexes (**E4**, split —
+   - **Item 1 — the register**, eight entries, **all eight disposed of**
+     as of 2026-09-22. Closed: the hand-maintained indexes (**E4**, split —
      gateable half to Item 2, residue to
      `docs/unenforced_conventions.md` §1.5), the bench headline
      outliving its own correction (**E2**), a guard's evidence bar
@@ -3343,26 +3343,29 @@ dep chains called out at the bottom of this file.
      prose about the work being wrong more often than the work
      (**E5** → Item 5). Every entry is disposed of, and **Item 1 closed
      2026-09-22** on that basis.
-   - **Item 2 — the four index gates** *(planned, not built)*. Every
+   - **Item 2 — the four index gates** ✅ **closed 2026-09-22**. Every
      archived plan from segment 16 on has a `## Done` entry, those
      headings ascend by declared PR, `docs/status.md`'s `As of` matches
      its newest row, and no `**Plan:**` pointer under `## Upcoming`
      resolves into `guide/archive/`. All four pass today and need no
      allowlist, which is `docs/unenforced_conventions.md` §2's bar.
-   - **Item 3 — Prepare's per-pair insert** *(planned, not built)*.
-     **20.0 s** at the 200 × 200 bench, 5.7 s at half; a Core bulk
-     insert replaces `db.add(Assignment(...))` per pair, with the
-     self-review verify pass's visibility established first. Two rungs;
-     the bench may not be re-takeable in the build container, which
-     rung 2 handles rather than assumes.
+   - **Item 3 — Prepare's per-pair insert** ✅ **closed 2026-09-22**,
+     three rungs, and **widened to the self-review recompute** on the
+     author's ruling after a trace found the insert was one of three
+     full ORM materialisations. A bulk insert replaces
+     `db.add(Assignment(...))` per pair and the recompute drops to a
+     column projection plus one bulk `UPDATE`; the read-only verify
+     pass is the deferred third. **Prepare measured 26.7 s → 13.1 s**
+     — the bench *was* re-takeable in the build container, which the
+     plan had said it was not.
    - **Item 4 — what `spec/csv_contracts.md` §3.2 actually describes**
-     *(planned, not built)*. An **investigation**, on the author's
+     ✅ **closed 2026-09-22**. An **investigation**, on the author's
      ruling, not the signature rename it looks like: the prose beside
      the wrong signature is correct, and the four per-row rules beside
      it have never been checked against the code. Behavior first,
      adjudication second.
    - **Item 5 — a `Blast radius` row records a number, not when it was
-     true** *(planned, not built)*. E5 promoted, and narrower than its
+     true** ✅ **closed 2026-09-22**. E5 promoted, and narrower than its
      title: of its seven instances four are already homed in
      `docs/unenforced_conventions.md` §§1.4–1.6, and the residue splits
      into claims that cite their own command and claims about the

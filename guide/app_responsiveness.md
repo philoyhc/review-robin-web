@@ -75,11 +75,14 @@ fact, not a standing one, and the next page-time question at this scale
 is a query question.
 
 **Prepare is the one thing that is not comfortable**, and Finding 4
-stands as written. **20 seconds at the upper bound** is a click with no
+stood as written. **20 seconds at the upper bound** is a click with no
 feedback, and the 5.7 s at half the roster shows it climbing steeply —
 80,000 rows is not where the per-object constant stops mattering. An
 earlier draft of this section claimed the finding was overstated; that
 was drawn from the tenth-of-the-matrix fixture and is withdrawn.
+**Actioned 2026-09-22 as 19S Item 3** — Finding 4 carries the before /
+after, measured 2.0× on one machine. It is still seconds, not
+milliseconds.
 
 **Two costs do not scale with the roster at all**, and on a small
 session they dominate:
@@ -116,11 +119,10 @@ report crosses its stated trigger. Prepare's insert is the exception
 under discussion, logged as entry **E1** of
 `guide/segment_19S_post_assessment.md`.
 
-- **Bulk-insert the generated pairs.** `assignments/_generate.py` adds
-  one `Assignment()` per pair. **20.0 s at the bench**, 74.8 s at
-  1,000 × 1,000 — see Finding 4. A click rather than a page, so it
-  needs progress feedback or a background job as much as it needs
-  speed.
+- ~~**Bulk-insert the generated pairs.**~~ *Done 2026-09-22 as 19S
+  Item 3, which also took the self-review recompute — Finding 4 has the
+  before / after. Progress feedback for what is left was deliberately
+  not bundled in, and is not queued.*
 - ~~**Find out what the 79–112 fixed queries per session page are.**~~
   *Answered 2026-09-21 — Finding 6. The readiness report reloads the
   session once per check, and Validate builds the whole report twice.
@@ -320,6 +322,49 @@ matrix, 80,000 rows — Prepare is **20.0 s**, and 5.7 s at half that
 roster. A draft of the section above briefly claimed the finding was
 overstated; that was measured on a fixture keeping a tenth of the
 matrix and is withdrawn.
+
+### Actioned 2026-09-22 — 19S Item 3, Prepare halves
+
+Two of Prepare's three full materialisations of the assignment set are
+gone: the per-pair `db.add(Assignment(...))` is a bulk Core insert, and
+`recompute_self_review_classification` selects a column projection and
+writes changed rows as one bulk `UPDATE`. The third, the read-only
+`verify_self_review_classification`, is deliberately left.
+
+Taken 2026-09-22 on a throwaway loopback `postgres:16` cluster in the
+agent container, `alembic upgrade head` applied — **a different machine
+from the 2026-09-21 run above, so read the three rows against each
+other and not against the 20.0 s**. Each row is a freshly seeded
+`seed --reviewers 200 --reviewees 200` session (80,000 rows over 2
+instruments), `post --path /workflow/prepare`, one session per run so
+every run does the full insert:
+
+| | wall | SQL | Python | queries |
+|---|---|---|---|---|
+| before, `05145da` | 26.7 s | 7.3 s | 19.4 s | 134 |
+| insert only, `7a4b22e` | 16.8 s | 5.2 s | 11.6 s | **58** |
+| both, `c9e4cfb` | **13.1 s** | 5.1 s | **8.0 s** | 58 |
+
+Runs: 26.7 / 26.5 / 26.9, 16.7 / 16.9, 12.8 / 13.1 / 13.9. **2.0×
+overall; Python 2.4×.** All four sessions end with an identical
+80,000 rows, all `include`, no self-reviews, one `created_by_mode`.
+
+Three things this measurement says that the plan for it did not:
+
+- **The insert was the larger half, not the smaller.** 19S Item 3 was
+  widened to the recompute pass because the insert was reckoned "a
+  third of the cost at best". It delivered 9.9 s of the 13.6 s saved,
+  and the recompute 3.7 s. The widening was still worth doing — it is
+  the whole of the second row's Python drop — but the premise was
+  wrong.
+- **The whole query drop is the insert's**, 134 → 58, and it lands
+  entirely in the first row. The recompute's change is pure Python: its
+  select was already one statement.
+- **SQL time barely moves after the insert** (5.2 → 5.1 s), so what is
+  left of Prepare's 13.1 s is still mostly Python, and a third
+  materialisation is still in it. Whether that is worth another pass,
+  or whether 13 s now wants progress feedback instead, is not settled
+  here.
 
 ## Finding 5 — nothing is compressed
 
@@ -616,7 +661,9 @@ the three that needs no design.
    rows, 17.4 s of it SQL — so most of the minute is ORM object churn a
    Core `insert()` with a list of dicts would not do. Unlike R1–R3 this
    one is a click, not a page, so the bar is different: it needs progress
-   feedback or a background job as much as it needs speed.
+   feedback or a background job as much as it needs speed. *Taken
+   2026-09-22 as 19S Item 3 — the insert and the self-review recompute;
+   the feedback half was not.*
 5. **Turn on compression.** One middleware line, worth 1.49 MB on the
    lobby alone and 6–16× on every page here. Confirm first what the dev
    slot's front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`),
