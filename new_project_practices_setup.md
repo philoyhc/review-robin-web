@@ -153,7 +153,7 @@ commit.
 | `docs/unenforced_conventions.md` | skeleton | — | constitution VI's short list; starts empty |
 | `.github/workflows/ci.yml` | verbatim | — | ruff + pytest -n auto on 3.12 |
 | `.github/workflows/ci-postgres.yml` | adapt | — | DB user / password / name; the alembic round-trip stays |
-| `tests/unit/test_doc_references.py` | verbatim | — | the twins, path-reference and section-reference gates; read only the tree |
+| `tests/unit/test_doc_references.py` | verbatim | — | the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check **skip** on a fresh export — both need a corpus a new repo has not got |
 | `tests/unit/test_guide_indexes.py` | verbatim | — | the guide-index gate; reads the skeleton READMEs |
 | `tests/unit/__init__.py` | skeleton | — | makes tests/unit a package; the contrast audit imports its helper relatively |
 | `app/web/spec_registry.py` | deferred | app | imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES |

@@ -1835,8 +1835,19 @@ gets a collection error instead.
 
 | corpus | citations | resolve |
 |---|---:|---|
-| live prose (the 72 files `LIVE_PROSE` already covers) | **2** | 2 |
+| live prose (the 72 files `LIVE_PROSE` already covers) | **7** | 7 |
 | `guide/archive/` | **3** | **0** |
+
+**That "7" was "2" until the cold read.** The first build anchored the
+file half on `tests/`, inheriting `PATH_REF`'s refusal of a bare
+filename — and the repo's **majority** convention for a test citation is
+the bare filename (`docs/security_posture.md`'s gate table, 4 of them).
+So the gate saw 2 of 7 and the plan published the 2 as a property of
+the corpus when it was a property of the pattern: a `§1.6` miss, in the
+item that cites §1.6. The pattern now takes both shapes; the bare one
+resolves by a single `tests/**/<name>` glob, where two matches fail
+loudly rather than guess, which is why the shorthand is safe here and
+is not for a bare *path*.
 
 All three archived citations are stale — one in 19F's plan, two in
 `guide/archive/unfinished_business.md`. Archived prose is history and
@@ -1906,7 +1917,8 @@ Taken 2026-09-22 at `9b32a9f`.
 
 | what | count | command |
 |---|---|---|
-| node-id citations in `LIVE_PROSE` | **2** | the scan in `Opportunity` |
+| node-id citations in `LIVE_PROSE` | **7** (2 anchored, 5 bare) | the scan in `Opportunity` |
+| backticked `::` citations in `LIVE_PROSE` that are **not** test node ids | **43** | the same scan — `module.py::symbol` naming app code, a different convention and out of scope |
 | stale citations in `guide/archive/` | **3** of 3 | the same scan, archive corpus |
 | class-based tests in the suite | **0** | `grep -c "^class Test" tests/ -r` |
 | parametrised node-id citations, any corpus | **0** | the same scan, `\[` in the name |
@@ -1954,10 +1966,12 @@ that a cited pytest node id names a test that exists. Done, plus three
 supporting tests — a floor, a recogniser exercised outside its live
 examples, and the archive exemption asserted rather than assumed.
 
-**Every `Blast radius` figure re-took at the build**: 2 live citations
-both resolving, 3 archived citations all stale, 0 parametrised ids, 0
-class-based tests. One was wrong — the module is **5** test functions,
-not the "4 checks" the plan counted — and is corrected above.
+**Every `Blast radius` figure re-took at the build** — 3 archived
+citations all stale, 0 parametrised ids, 0 class-based tests — and
+**two were wrong**. The module is **5** test functions, not the "4
+checks" the plan counted. And the live corpus is **7** citations, not
+2: the 2 was what the first pattern could see, not what is there. Both
+corrected above.
 
 **The escape question was not in the plan, and mutation answered it.**
 The path check has an inline marker (`<!-- path-ref-ok -->`) and a
@@ -1996,8 +2010,39 @@ register — `docs/status.md`'s timeline, `guide/todo_master.md`'s
 `## Done` — is unchecked, and so is one in a live segment plan. Both are
 stated where they can be read, and the second is left open above.
 
-Reads: one code slice outside a ladder gets its own `diff-reviewer`
-read; run before this was marked ready.
+**Reads: one `diff-reviewer`, and it found two defects in the gate plus
+eight smaller things.** Recorded here because a close that says only
+*a read was run* records the cadence and not the outcome.
+
+The two that mattered:
+
+- **The gate saw 2 of 7 citations.** `NODE_REF` anchored the file half
+  on `tests/`, and the bare filename is the repo's majority convention.
+  Corrected above; coverage is 7 of 7 resolvable, still green from the
+  first commit.
+- **The floor did not floor the scan.** It re-implemented the pattern
+  walk instead of calling `_node_refs`, so gutting that helper to
+  `return []` left all nine tests green **with a genuinely broken
+  citation in the repo** — verified, then fixed by having `_node_refs`
+  return every citation rather than only failures. That is §1.8's own
+  19R.5 instance reproduced *inside the item that cites it*, which is
+  the thing worth carrying forward: the M1–M5 set tested the check and
+  never tested the scan under it.
+
+The rest: the resolver's `^\s*def` resolved nested defs, class methods
+and `def`s written inside strings — all silent false passes, now
+column-0 anchored and visibly failing; its docstring's class-method
+caveat named the wrong mechanism (such an id is not *matched*, not
+*loosely resolved*); parametrised ids with `.`, `/` or a space were
+silently skipped where the plan said they must fail loudly; the module's
+own header still said *"Three checks"*, in the file whose job is doc
+currency; `tools/practice_kit.py` exports this module verbatim and two
+new tests could not pass in a fresh repo (they skip now, verified by
+running the export); and the section escape's cost — it opts a whole
+section out of the *path* gate too — was unstated.
+
+Mutations now **seven**, M6 and M7 added by the read: the gutted scan,
+and a bare-filename citation renamed.
 
 ### Out of scope
 

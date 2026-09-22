@@ -3393,7 +3393,7 @@ dep chains called out at the bottom of this file.
      Item 4's own defect record, not the assessment. `PATH_REF` cannot
      reach a node id's closing backtick, so a citation of the form
      `` `tests/…py::test_name` `` was wholly unchecked — file half
-     included. The case is not the 2 live citations, both resolving, but
+     included. The case is not the 7 live citations, all resolving, but
      the **3** in `guide/archive/` that are all stale across two
      segments. Missing from this list until the close, which is the
      drift class the segment is about.
