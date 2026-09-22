@@ -891,24 +891,54 @@ item's own subject applied to itself: §3.2's description was never
 checked, and the cheapest way to produce another unchecked description
 would have been to read the code and paraphrase it.
 
-**The finding that matters most is not the stale signature.** §3.2's
-table calls all four rules *"per-row error"*, which is true of the
-parser and false of the import: `Severity.error` is blocking, both
-callers gate on `result.is_blocked`, so **one bad row rejects the whole
-file**. Measured — a two-row CSV with one unknown reviewer returns
-`rows=1, blocked=True` and saves neither. That is the one row in the
-register whose adjudication may be a behavior change rather than a
-wording fix, which is exactly why the item split investigation from
-adjudication.
+**The finding that matters most is not the stale signature**: the save
+policy is **all-or-nothing and undocumented**. `Severity.error` is
+blocking and both callers gate on `result.is_blocked`, so one bad row
+rejects the whole file — measured, a two-row CSV with one unknown
+reviewer returns `rows=1, blocked=True` and saves neither.
+
+**Rung 1 first filed that as a contradiction and it is not**, on a
+reviewer's correction: §3.2's table is headed *Per-row validation* over
+a column headed *Detection*, so *"per-row error"* describes where an
+error is attached and the parser does exactly that. The section is
+**silent** on what the import then does. The register is five
+spec-silent rows against three spec-vs-code, and the corrected row
+forces no behavior question — partial import would be a new product
+decision, not the resolution of a divergence.
 
 **Three claims in the section are right**, and the register says so:
 the *"already-loaded session rosters"* prose, the required / optional
 column lists, and the `seed_display_fields_from_assignments` note
 including its explanation of the name.
 
+**The register is ten rows, not eight, and the last two came from a
+checker.** A `spec-writer` verification pass over the finished register
+— a reader who did not write it, `constitution.md` III — confirmed all
+eight and still found:
+
+- **Row 9, a live bug the probe missed.** `seen_pairs[…] = index` is
+  written **before** the `Status` check, so a first row with a bad
+  status is dropped *and* keeps its pair key; a later valid row for the
+  same pair is then rejected as *"Duplicate pair … also on row 1"* and
+  the pair reaches `ParseResult` from neither. Measured after the
+  report: two rows, first `Status=bogus`, second valid ⇒ `rows=0`. The
+  twelve-case probe missed it because **no case combined two failure
+  modes in one file** — a coverage shape, not an oversight in any one
+  case.
+- **Row 10, a false claim outside §3.2 and inside its subject.** §5's
+  primitives table says `_parse_email` is used on the Relationships
+  importer's columns. It is not — `relationships.py` has **0**
+  occurrences — so that importer does **no email-format validation**,
+  and a typo is reported as *"Unknown reviewer"*.
+
+It corrected three asides inside rows 1–8 as well: §3.1 does **not**
+repeat §3.2's *lowercase* claim, the `W8` label belongs to
+`spec/validate_page.md` rather than `spec/participant_model.md`, and an
+`is_blocked` citation pointed at the class rather than the property.
+
 **Four of the register's own line citations were wrong on first
-writing** and were corrected before the commit, caught by printing
-every cited line rather than re-reading the file.
+writing** and were corrected before the first commit, caught by
+printing every cited line rather than re-reading the file.
 
 **Rung 2 is unchanged and unstarted** — the adjudication is the
 author's call per `rrw_sdd_in_practice.md` §4.
