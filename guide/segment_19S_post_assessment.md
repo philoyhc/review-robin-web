@@ -1525,60 +1525,41 @@ the gap is the operator who is not uploading one.
 
 ### Semantics
 
+**Both halves of this section shipped into `spec/csv_contracts.md`
+§ *Settings CSV — apply precedence* and `spec/settings_inventory.md`
+§10 at the close**, which is where the rule now lives for a reader who
+has never seen this plan. What stays here is what the specs do not
+carry: why it was decided this way.
+
 - **Ordering is the mechanism, and it is the analogy the other fields
   already use** (author's ruling, 2026-09-22: *follow the analogy of
-  other fields where the form overrides the CSV update*). `POST
-  /sessions` parses the form, calls `sessions.create_session`, then
-  dispatches the staged Quick Setup uploads, of which the settings CSV
-  is the **last** — so the box's `set_tags` call goes **after** that
-  block, and a settings CSV's `session_tags[]` rows are discarded when
-  the box is non-empty. That is what form-wins means for the other five
-  fields too: whole-field, not merged.
-- **The precedence itself is precedent, not invention.**
-  `_apply_session_metadata` resolves each field by one of two rules —
-  *fill-blanks* for `name`, `code`, `description`, `deadline`,
-  `help_contact`, so the form wins (its docstring names this flow), and
-  *force-apply* for the other twelve keys it writes, where the CSV wins
-  because they are *"session config, not operator-typed identity"*. All
-  13 Create form fields overlap the CSV: the same 5 form-wins, and 8 of
-  the twelve CSV-wins (the other four are not on the form). A typed tag
-  is operator-typed.
-- **Rejected: making `_apply_session_tags` fill-blanks**, which is the
-  literal per-field rule and would have been the tidier home for it.
+  other fields where the form overrides the CSV update*). The box's
+  `set_tags` runs after the settings block, so a bundle's
+  `session_tags[]` rows are discarded when the box is non-empty —
+  whole-field, not merged, which is what form-wins already means for
+  the other five.
+- **Rejected: making `_apply_session_tags` fill-blanks**, the literal
+  per-field rule and the tidier home.
   `tests/unit/test_apply_session_config.py::test_round_trip_carries_session_tags`
-  pins the opposite — *"the destination pre-seeds a stale tag that must
-  be dropped"* (18P PR D2) — and `_run_quick_setup_settings` is shared
-  by three flows, one of them `POST /sessions/{id}/import-config` on an
-  **existing** session. Ordering delivers the ruling without touching
-  either.
-- **Empty box writes nothing**: no `set_tags` call, so a settings CSV's
-  tags apply unopposed and no audit event is emitted.
-- **Bad input is silently skipped, matching the lobby.** `set_tags`
-  catches `normalize_tag`'s `ValueError` per tag and drops that one, so
-  an over-long tag disappears without an error. Both surfaces share the
-  service; Create gains no error affordance the lobby lacks.
-- **Partial failure follows the handler's existing per-block shape.**
-  The session is created and committed before the tag write, exactly as
-  it is before every other Quick Setup block, and `set_tags` commits on
-  its own; a DB error there leaves a created session with no tags and
-  redirects with the block's error flag.
-- **Comma-delimited, matching the lobby's `name="tags"`**, so one habit
-  works on both surfaces. `normalize_tag` decides the stored form and a
-  repeated tag collapses.
+  pins the opposite (18P PR D2: *"the destination pre-seeds a stale tag
+  that must be dropped"*), and the applier is shared with
+  `POST /sessions/{id}/import-config` on an **existing** session.
+  Ordering delivers the ruling without touching either.
+- **Empty box writes nothing** — no call at all, so a bundle's tags
+  apply unopposed and no audit event fires. The same empty string means
+  *clear* on the lobby's row expander; both meanings are now written
+  down, because one helper serving both would silently pick one.
+- **Bad input is silently skipped, matching the lobby**: `set_tags`
+  drops a tag whose `normalize_tag` raises. Create gains no error
+  affordance the lobby lacks, and comma-delimited `name="tags"` means
+  one habit works on both.
 - **No lifecycle gate applies** — the session does not exist yet, which
-  is why Create is the easy surface and Session Home is not (the
-  superseded entry records that blocker and it stays out).
+  is why Create is the easy surface and Session Home is not.
 - **The force-apply path re-runs no ordering check, and that is safe —
-  traced 2026-09-22, not assumed.** The route validates End ≥ Start and
-  Release-from ≥ End before create; the CSV force-applies the same
-  datetimes afterwards unchecked, and no Validate rule covers ordering.
-  **Every consumer guards itself** — the release window stays shut
-  unless the session `is_expired` whatever the anchors say (**19F PR
-  2a**, motivated by exactly this path), scheduled activation fires
-  only from `validated`, and past-deadline reminders are skipped with
-  an audit event. So the check is an interactive-path courtesy, not a
-  correctness boundary; the spec edit says so rather than leaving a
-  reader to infer a hole.
+  traced, not assumed.** Every consumer guards itself, so the route's
+  End ≥ Start check is an interactive-path courtesy rather than a
+  correctness boundary. `spec/csv_contracts.md` carries the trace so a
+  reader does not infer a hole.
 
 ### Judgment calls — decided
 
@@ -1648,7 +1629,8 @@ two buttons inside it carry no inline style at all. So **rung 3's
 - `python3 tools/close_check.py 19S.6` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+- `docs/status.md` row added. **The archive move is the segment's,
+  not this item's** — 19S stays open on Item 7.
 
 ### Open questions
 
@@ -1660,117 +1642,99 @@ two buttons inside it carry no inline style at all. So **rung 3's
 
 ### Status
 
-**Rung 1 done, 2026-09-22.** Intended: the card, inert. Done, plus
-three tests that pin inertness as a *property* rather than as a
-comment — rung 2 inverts them by design.
+**Closed 2026-09-22, three rungs** (#2561 → #2562 → #2563 → this).
+Intended: a Tags box on Create, written after the settings CSV so a
+typed tag beats a bundle's rows; then the page's `.btn` pair. Done,
+plus two things the plan did not schedule — a bundled P1 and a
+spec-level rewrite of what "the form wins" means.
 
-**Inertness has two halves and the tests assert both.** The input
-carries no `name`, so a browser does not submit it, and no
-`form="create-session-form"`, which is what associates a control
-rendered outside the `<form>` with it — every live control in this row
-has one. Either alone leaves the control half-wired, and a mutation
-adding just one is caught. A round trip through `POST /sessions`
-carrying `tags=` confirms the created session is untagged, which is the
-half no markup assertion can make.
+**Rung 3 was a no-op as scheduled.** Both buttons are already
+canonical (`.btn` Primary / `.btn secondary`), and the line the plan's
+Blast radius called button markup is the `.btn-pair` wrapper's margin.
+Its real content is the doc impact the item accrued.
 
-**Five mutations, and the last two are `docs/unenforced_conventions.md`
-§1.11's own diagnostic on its first slice**: the card's `_card()` helper
-degenerated to `""`, and `tags_for_sessions` to `{}`. Both caught — the
-first by the deliberate *"the control is genuinely there to be wired"*
-assertion, which exists so the two `not in` checks cannot pass on an
-empty string.
+**The precedence rule had never been written down.** It lived only in
+`_apply_session_metadata`: fill-blanks for five identity fields,
+force-apply for twelve config keys, `assignment_mode` / `status`
+ignored. Tags are neither, and win by **ordering** rather than by
+narrowing `_apply_session_tags` — that applier is wipe-and-replace with
+no section-presence flag and is shared with `import-config` on an
+existing session, where the wipe is 18P PR D2's pinned behavior. So
+Create is immune to it and `import-config` is not, which the spec now
+says rather than implies.
 
-`tags_for_sessions` also corrected a first draft: it keys **every** id
-it is asked about, so the empty state is an empty list and not an
-absent key. Asserted against the helper rather than assumed, which is
-the same §1.11 habit one level down.
+**A P1 that predates the item rides here, disclosed.**
+`apply_session_config` flushes and never commits, `get_db` closes
+without committing, so all three callers of `_run_quick_setup_settings`
+returned success over discarded work. Rung 2 made it *conditional* — a
+typed tag's own commit saved the import as a side effect, so the loss
+only showed when the box was blank. Verified on `main` against a
+file-backed SQLite read through a second session.
 
-All four `Blast radius` figures re-took at `c329180`, unchanged.
+**The suite could not have caught it, and three attempts are in the
+test's docstring** so the next person reaches for them in order.
+Reading rows back proves nothing (the fixture shares a transaction, so
+a flush reads like a commit); counting `after_commit` proves nothing (a
+savepoint release emits none — a draft asserting on them passed with
+the fix removed); counting commits across a whole create cancels at 2
+against 2. The test calls the helper directly and spies on
+`Session.commit` as a **class** attribute.
 
-**Dev slot, 2026-09-22.** The card rendered flush against User
-interface settings: `.bottom-grid .card { margin-bottom: 0; }` makes
-the *grid* own row spacing, which was complete while every cell held
-one card. Fixed in `base.html` with
-`.bottom-grid .card + .card { margin-top: 20px; }` — cards in different
-cells are not siblings, so single-card cells are untouched and the next
-stacked pair gets it free. The `<h3>` became the field's label
-("Tags (optional)") and the duplicate `<label>` went; the input takes
-its accessible name from the heading by `aria-labelledby`, since
-deleting the label outright would have left it unlabelled. Both
-`tools/theme_*.html` regenerated — the second only surfaced after the
-first was fixed, so every generator was run.
+**Sixteen mutations across the three rungs, all caught but one.**
+Both §1.11 kinds each rung: property (the write moved before the
+settings block, the emptiness guard removed, the write dropped from the
+error path, and the full revert) and helper (`_tags_of` → `[]`,
+`_settings_csv` → an empty bundle, `_card` → `""`, `tags_for_sessions`
+→ `{}`). The one that caught nothing is a finding on my own test rather
+than a pass: `_create`'s status assertion guards nothing and is kept as
+a **diagnostic**, so a rejected create reads as such instead of as
+empty tags. The helper round also caught the test's CSV shape — a first
+draft used `str` and a bare `help_contact` where the exporter writes
+`string` and `session.help_contact`, so the bundle applied **nothing**
+and the ordering tests passed while measuring nothing. The empty-box
+case is the control that catches an inert bundle.
 
-**Rung 2 done, 2026-09-22.** The input is live and
-`POST /operator/sessions` calls `set_tags` after the settings block.
-Rung 1's three inertness assertions are **inverted rather than
-deleted**, so the diff shows the control going live.
+**Dev slot, 2026-09-22.** The two cards rendered flush. The `<h3>`
+became the field's label and the duplicate `<label>` went, with
+`aria-labelledby` so deleting it did not leave the box unlabelled.
 
-**One decision the plan did not make.** Ordering the write after the
-settings block left the typed tag discarded whenever an *earlier* slot
-failed and the handler returned early — the operator is sent back to
-fix a CSV and what they typed here is gone. The write now also runs in
-`quick_setup_error_redirect`, which is safe in the same sense the
-success path is: a block that failed wrote no tags, and one that never
-ran cannot have, so it is still "after the settings CSV" in the only
-sense that matters. Pinned by a test that first asserts the upload
-really failed.
+**Reads: one `diff-reviewer` over `git diff c329180..HEAD`, one
+`spec-writer`, at this rung. Both found real defects, and the
+overlapping one was in prose this rung had just written.**
 
-**Eight mutations, both §1.11 kinds.** Property: the write moved before
-the settings block (2 fail), the emptiness guard removed (1), the write
-dropped from the error path (1), and the **revert** — no write at all
-(4). Helpers: `_tags_of` → `[]` (5), `_settings_csv` → an empty bundle
-(1), `_card` → `""` (2), and `_create`'s status assertion removed —
-**0**, which is a finding on my own test rather than a pass. That
-assertion guards nothing; it is kept as a diagnostic so a rejected
-create reads as such instead of as empty tags, and the docstring now
-says so.
-
-The helper round also caught the test's CSV shape: a first draft used
-`str` for the `data_type` and a bare `help_contact` for the field,
-where the exporter writes `string` and `session.help_contact`. The
-bundle applied **nothing**, and the ordering tests passed while
-measuring nothing — which is why the empty-box case is the control:
-it asserts the CSV's tags land when unopposed, and is the only test
-that catches an inert bundle.
-
-**A review of rung 2 found a P1 that predates it, and the fix rides
-here.** `apply_session_config` flushes but never commits, and `get_db`
-closes without committing — so **all three** callers of
-`_run_quick_setup_settings` returned a success redirect over work that
-was then rolled back. Verified on `main` against a file-backed SQLite
-read through a second session: a create carrying a settings CSV
-persists the session row and **neither** the CSV's `help_contact` nor
-its tags.
-
-Rung 2 did not cause it; it made it **conditional**. A typed tag
-reached `set_tags`, whose own commit saved the settings import as a
-side effect, so the loss only showed when the box was blank —
-correctness depending on an unrelated field, which is worse than
-uniformly broken. `_run_quick_setup_settings` now commits, matching
-what every other slot's saver already does (`save_reviewers` and
-`set_tags` each commit their own unit of work) and fixing all three
-callers at once. Recorded as a **bundled fix** rather than deferred,
-and named as such.
-
-**The suite could not have caught it, and three attempts to make it
-say so are recorded in the test's docstring** — the next person will
-reach for them in the same order. Reading rows back proves nothing: the
-integration `db` fixture shares a transaction with the app, so a
-flushed row reads like a committed one. Counting `after_commit`
-**events** proves nothing: that fixture joins an external transaction,
-so a commit releasing a savepoint emits none, and a draft asserting on
-them **passed with the fix removed**. Counting commits across a whole
-create does not isolate the path: a create with a CSV takes one fewer
-baseline commit than one without, so the difference cancels at 2
-against 2 either way. The test calls the helper directly, spying on
-`Session.commit` as a **class** attribute — the route resolves its own
-session through `get_db`, so an instance patch counts nothing.
-
-That is three §1.11 failures inside one fix for a §1.11-shaped bug,
-which is the entry's own point rather than an aside.
-
-Reads: the item's one `diff-reviewer` read is owed at rung 3, the last
-build rung, over `git diff c329180..HEAD`.
+- **Both** caught `sessions_overview.md` claiming all three tag write
+  surfaces go through `set_tags`; the toolbar's `bulk-tags` uses
+  `add_tag` / `remove_tag`, so the file contradicted its own bullet
+  three lines above.
+- `spec-writer`: fill-blanks does not mean "the form always wins" —
+  only `name` and `code` are `required`, so a blank `description`,
+  `deadline` or `help_contact` *is* filled from the bundle. The
+  mechanism was right and the precondition was invented.
+- `diff-reviewer`, and the one worth the read on its own: the dev-slot
+  gap fix added an app-wide `.bottom-grid .card + .card` rule where
+  `spec/ui_elements.md` §10 already names `.bottom-left` for two cards
+  stacked in one cell — and §4 states the contract the new rule
+  overturned. It would also have double-spaced the cards *inside* a
+  `.bottom-left` the first time a pair returned to one. Reverted; the
+  cell is a `.bottom-left`; a test fails on the plain `<div>`.
+- `diff-reviewer`: `_card()` returned the rest of the page, so every
+  `in card` assertion was about the document's tail — and the recorded
+  mutation set had degenerated it to `""` and never to `body`, the
+  widening it actually had. §1.11's subject, missed by the person who
+  wrote §1.11, for the second time in this segment.
+- Four specs governing the page said nothing about the card, and
+  `roundtrip_coverage.md` — authoritative over the §10 section the new
+  rule went into — still had tags round-tripping unconditionally. All
+  updated.
+- Adjudicated, not acted on: the base SHA carries one unrelated
+  prose-only commit (§1.11's own log), so the read was ~70 lines wide
+  of the item; `<p class="muted">` where §8 names `.form-help` for
+  helper text, left because it matches the neighbouring card and the
+  dev slot has been signed off on it; and the card's inline
+  `style="margin-top: 0;"`, which wants a `.card h3` rule in
+  `base.html` — 6 instances across 4 templates, a cross-page change
+  this container cannot verify. Both are logged for the register
+  rather than swept.
 
 ### Out of scope
 
@@ -1801,6 +1765,23 @@ build rung, over `git diff c329180..HEAD`.
   see `Semantics`). Audited 2026-09-22: neither that spec nor
   `spec/settings_inventory.md` states any of it, so the rule lives only
   in `_apply_session.py` (Item 6).
+- `spec/settings_inventory.md` — §10 gains the same precedence rule
+  from the settings side, with the field lists (Item 6).
+- `spec/quick_setup_card_spec.md` — the new-session variant's
+  submission semantics gain the tag write ordered after the Settings
+  slot, and its **failure mode** gains the typed tag surviving a
+  bailed-out create (Item 6, from the cold read).
+- `spec/operator_ui_concept.md` — the `/operator/sessions/new` per-page
+  contract enumerates its cards, and gains this one plus the
+  `.bottom-left` column that spaces the pair (Item 6, from the cold
+  read).
+- `spec/rrw_functional_spec.md` §9.2 — the Create form's field list
+  gains session tags (Item 6, from the cold read).
+- `spec/roundtrip_coverage.md` — the session-tag row is no longer an
+  unconditional ✅: the Create page's box overrides a bundle uploaded
+  with it. The `spec/` index makes this file authoritative over
+  `spec/settings_inventory.md` §10, so the rule cannot live only there
+  (Item 6, from the cold read).
 - `docs/status.md` — row when the item lands (Item 6).
 
 ---
