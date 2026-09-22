@@ -1281,6 +1281,16 @@
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
+      /* Two cards STACKED inside one grid cell — the case the rule
+         above does not cover. It zeroes ``margin-bottom`` so the grid
+         owns spacing between *rows*, which was complete while every
+         cell held exactly one card; 19S Item 6 put a second card under
+         User interface settings and the two rendered flush. The
+         adjacent-sibling selector restores the gap for that case only:
+         cards in different cells are not siblings, so a single-card
+         cell is untouched. Matches the 20px the cards' own
+         ``margin-bottom`` supplies elsewhere. */
+      .bottom-grid .card + .card { margin-top: 20px; }
       /* `.grid-right` — a lone card in a `.bottom-grid`, held to the
          right-hand column at half width instead of stretching across
          both. Added 19I Item 12 in a refinement AFTER rung 4 (author,
