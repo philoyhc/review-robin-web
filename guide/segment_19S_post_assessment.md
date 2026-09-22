@@ -734,10 +734,17 @@ single-instrument full matrix.
 | `replace_assignments`: call sites in `app/` / test files that **call** it / that merely name it | **5** / **11** / **16** | `git grep -l "replace_assignments(" -- tests`, and without the paren |
 | schema change | **none** | the columns are untouched; no migration |
 
-**The bench is not re-takeable here** — re-checked 2026-09-22:
-`pg_isready` answers *no response* on 5432 (client present, no cluster),
-and `tools/bench_roster_scale.py` refuses a non-loopback `DATABASE_URL`
-by design. Rung 3 discloses rather than assuming a figure.
+**The bench was re-taken here, and this paragraph used to say it could
+not be.** It read: *the bench is not re-takeable here* — on the evidence
+that `pg_isready` answers *no response* on 5432 and that
+`tools/bench_roster_scale.py` refuses a non-loopback `DATABASE_URL`.
+Both facts are true and the conclusion drawn from them was wrong:
+`postgresql-16` is installed in the container, so `initdb` +
+`pg_ctl -o '-p 5433'` — the recipe in the bench tool's own docstring —
+gives a loopback cluster, and rung 3 measured a real before / after on
+it. **What was actually checked was whether a cluster was already
+running**, not whether one could be started. Figures in
+`guide/app_responsiveness.md` Finding 4.
 
 ### PR ladder
 
