@@ -238,6 +238,63 @@ the joke it sounds like.
 
 ---
 
+### 1.10 A `Blast radius` row's number is re-run against its anchor
+
+- **Written down at** `guide/segment_19S_post_assessment.md` Item 5,
+  whose rung 1 built the prerequisite — a section must now state the
+  commit or date it was measured at, checked by G5 in
+  `tests/unit/test_index_currency.py`. Rung 2 was to decide, **on the
+  anchored corpus rather than on a guess**, whether re-running the
+  commands is worth building. This entry is that answer: **no**, and
+  the measurement is why.
+- **What the anchored corpus actually contains**, measured 2026-09-22
+  at `a62d40c` over the 7 in-scope sections:
+
+  | | count |
+  |---|---:|
+  | rows | **33** |
+  | whose value is a bare `**N**` | 13 |
+  | whose command cell is one self-contained command | 13 |
+  | **both — machine-comparable** | **4** |
+
+- **The 29 are not sloppy; they are qualified.** A `Blast radius` figure
+  worth recording usually needs a qualifier to be true — *"**67**, of
+  which **52** are unmentioned"*, *"**8**, of which **1** is button
+  markup"*, *"**5** / **11** / **16**"*, *"**106** / **39**, of which
+  **0** miss a heading"*. The qualifier is what makes the number honest
+  and is exactly what makes it uncomparable. Raising coverage means
+  forcing bare integers, which trades the qualifier away — mechanising
+  badly, which is Article VI's own disqualifier.
+- **The re-run would catch something real, though.** Of the 4
+  comparable rows, **1 was wrong at its own anchor**: Item 7 published
+  *"datalists in the lobby template: **1**"* against
+  `grep -n "datalist" …`, which yields **2** — the opening and closing
+  tag. `app/web/templates/operator/sessions_list.html` is byte-identical
+  between that anchor and `a62d40c`, so this is a **mis-measurement,
+  not drift**: the author counted elements while the stated command
+  counts lines. Corrected when this entry was written. That is the
+  class the re-run catches, and 1 of 4 is a real hit rate.
+- **Why not, then.** Three reasons, in order of weight:
+  1. **Coverage is 4 of 33 by nature**, and cannot be raised without
+     making the other 29 worse.
+  2. **It would execute shell out of prose.** Re-running means `exec`ing
+     strings taken from a freely-edited markdown cell, in CI. A plan file
+     is not an execution surface, and making it one to check 4 rows is a
+     poor trade at any coverage.
+  3. **Against HEAD it is noise; against the anchor it needs a worktree
+     per sha** — 5 distinct shas across 7 sections today. Against HEAD a
+     differing answer is indistinguishable from the tree having moved,
+     which is the problem rung 1 was built to fix and re-running at HEAD
+     re-creates.
+- **What covers it instead.** The anchor itself, which G5 now enforces:
+  it gives a human the means to check a row that looks wrong, by
+  checking out the sha and re-running the command — which is how the
+  one live error above was found. The habit is *when a figure matters,
+  re-run it at its anchor before citing it*. Nothing measures whether
+  anyone did, which is the concession — but unlike every other entry
+  here, the prerequisite for doing it cheaply is now a gate rather than
+  a hope.
+
 ## 2. Enforceable but not enforced — the revisit queue
 
 None of these needs an allowlist, and each would pass on the current
