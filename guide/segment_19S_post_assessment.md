@@ -2173,3 +2173,146 @@ citation, M8 a column-0 non-test def cited as a node id.
 - `CLAUDE.md` / `AGENTS.md` — the *"A green `ruff` is not evidence"*
   entry for that module names what it now covers (Item 8).
 - `docs/status.md` — row when the item lands (Item 8).
+
+---
+
+## Item 9 — Owners on Create, and Tags on Session Home
+
+**Logged 2026-09-22 on the author's instruction**, in two parts. Both were
+`Out of scope` on Item 6 and deferred before it; this item promotes
+them out, emptying `guide/deferred_consolidated.md`'s *Tags, Owners
+and a typeahead* entry of all but the button relocation.
+
+### Opportunity
+
+Item 6 put a Tags card on Create and stopped there, and both templates
+say what that left: Create carries **0** owner mentions — a session is
+born with exactly one owner and the operator goes to Session Home to
+add a second — and Session Home carries **0** tag mentions, on the card
+that edits every other session-level attribute.
+
+**Nothing is missing underneath, on either side.** `add_owner` /
+`remove_owner` are the whole owner write path and commit for
+themselves exactly as `set_tags` does, and `session.owner_added` is
+already emitted. The gap is UI over paths that work end to end — which
+is what Item 6 was, and why this is one item and not a segment.
+
+### Decision
+
+**Part A — an Owners card below Tags on Create.** The right-hand
+column becomes User interface settings → Tags → Owners at no CSS cost:
+Item 6's rung 3 made that cell a `.bottom-left`, so its `gap` spaces a
+third card for free.
+
+**Part B — a Tags card below User interface settings on Session
+Home's details card**, in that page's matching `.bottom-left` column,
+above the Save / Cancel / Lock cluster. It takes the card's existing
+dual-mode convention (`data-display-only` / `data-edit-only` /
+`data-config-input`, `form="config-save-{{ session.id }}"`) rather
+than a second mechanism.
+
+**Rejected for Part A: reusing `POST /sessions/{id}/owners/add`.** It
+needs a session id this page has not got — the finding the deferred
+entry preserved. Rows stage in the form and apply after
+`sessions.create_session` returns, the ordering Tags already uses, so
+the page gains no third shape.
+
+### Semantics
+
+- **Empty box means the opposite on the two surfaces, and that is
+  deliberate.** On Create an empty Tags box writes *nothing*, because
+  `set_tags` with an empty set is a replace that would drop what a
+  settings CSV had just applied. On Session Home it must mean *clear*,
+  matching the lobby's row expander, because there is a set to edit.
+  `spec/csv_contracts.md` § *Settings CSV — apply precedence* already
+  states both meanings; Part B is the first code to depend on it.
+- **Part B does not touch `_apply_session_config_form`.** That helper
+  takes exactly the 13 non-tag fields, and Item 6 ruled tags are
+  written beside the config work, not through it. The tag write is a
+  second call in `POST /sessions/{id}/config`.
+- **Part A inherits `add_owner`'s two rejections** with nowhere yet to
+  put them: `not_in_workspace` (target not on the operator allowlist)
+  and `already_owner` — which self-add always is, the creator being
+  owner #1 from `sessions.py`. And **`workspace_operator_candidates`
+  needs a session** to exclude current owners; on Create the list is
+  every workspace operator but the creator, a narrower query the
+  service gains rather than a new service.
+
+### Judgment calls — decided
+
+- **One box of emails, not a staged add/remove table** (2026-09-22) —
+  nothing exists to remove before the session does, and the table is
+  what made the deferred entry call Owners "a staged mini-editor". The
+  table stays on Session Home, which is where a session has owners.
+- **Tags between UI settings and the button cluster, not after it**
+  (2026-09-22) — the cluster is the column's last child by convention.
+- **Two parts, one item** (2026-09-22) — they share a rule (the
+  empty-box split above) and neither is a segment's worth alone.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `d4b1ba9`.
+
+| What | Count | Command |
+|---|---|---|
+| owner mentions on Create | **0** | `grep -c -i owner app/web/templates/operator/session_new.html` |
+| tag mentions on Session Home | **0** | `grep -c -i tag app/web/templates/operator/session_detail.html` |
+| `add_owner` / `remove_owner` call sites | **3** (2 routes + sys-admin) | `grep -rn "add_owner(\|remove_owner(" app/ --include='*.py'` |
+| `set_tags` call sites | **2** | `grep -rn "set_tags(" app/ --include='*.py'` |
+| `workspace_operator_candidates` call sites | **1** | the same `grep` |
+| `.bottom-left` columns on the two pages | **2** / **4** | `grep -c "bottom-left" <each template>` |
+| lifecycle states the config card gates against | **2 of 5** | `config_editing` at `app/web/routes_operator/_session_home.py` |
+
+### PR ladder
+
+1. **Rung 1 — Part B**, the smaller half and the one whose open
+   question is answered first. Scaffold then write, per `CLAUDE.md`.
+2. **Rung 2 — Part A's scaffold**: the Owners card inert, no write.
+3. **Rung 3 — Part A's write**: staged rows applied after
+   `create_session`, with the two rejections surfaced.
+
+### Definition of done
+
+- A tag typed on Session Home's details card persists and **an
+  emptied box clears the set**, both asserted through the route.
+- A co-owner named on Create owns the created session, and
+  `not_in_workspace` / `already_owner` each reach the operator rather
+  than failing silently — all asserted through the route.
+- The three-card column verified on the dev slot; layout is not
+  testable here.
+- `pytest -n auto` green, `ruff check .` clean, `node` present.
+- `tools/close_check.py 19S.9` exits 0; `spec-writer` run; `Status`
+  compacted; `docs/status.md` row.
+
+### Open questions
+
+- **Does the Session Home Tags box escape the card's `config_editing`
+  gate?** The deferred entry recorded this as the blocker and called it
+  a design call, and it is still one. The gate is `is_draft or
+  is_validated`, so inside the card tags are editable in **2 of 5**
+  lifecycle states where the lobby edits them in **any** — the two
+  surfaces then disagree about the same field. Escaping the gate means
+  the box needs its own save rather than riding
+  `form="config-save-…"`, which is the cost. **Recommendation: escape
+  it** — tags are classification, not configuration, which is why the
+  lobby never gated them. **Rung 1 is blocked on this**; Part A is not.
+
+### Out of scope
+
+- **Typeahead on either new box** — Item 7, open on its own fork.
+- **The Create page's button relocation**, the deferred entry's last
+  unbuilt change, independent of both parts.
+- **Owner *removal* on Create** — see the judgment call.
+
+### Doc impact
+
+- `spec/operator_ui_concept.md` — the `/operator/sessions/new` card
+  list gains Owners; Session Home's details card gains Tags (Item 9).
+- `spec/sessions_overview.md` — the tag write surfaces become four
+  (Item 9).
+- `spec/session_home.md` — the details card's contents, and a control
+  escaping its edit gate if the open question resolves that way
+  (Item 9).
+- `guide/deferred_consolidated.md` — the entry narrows to the button
+  relocation alone (Item 9).
+- `docs/status.md` — row when the item lands (Item 9).

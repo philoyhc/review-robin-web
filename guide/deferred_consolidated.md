@@ -1598,17 +1598,24 @@ fixture count, not the two-line call site.
 
 ### Tags, Owners and a typeahead on the Create page (19R Item 9, moved here unbuilt)
 
-> **Superseded in part, 2026-09-22.** **19S Item 6 built the Tags
-> half** — a half-width Tags card on `session_new.html` writing
+> **Nearly all of this is now scheduled, 2026-09-22.** **19S Item 6
+> built the Tags half** — a Tags card on `session_new.html` writing
 > through `set_tags`, ordered after the settings CSV so a typed tag
-> beats a bundle's `session_tags[]` rows. **Owners and Session Home
-> stay deferred**, and this entry stays for them: Owners is a staged
-> mini-editor rather than one input and one call, and Session Home's
-> config card is gated by `config_editing`, which would make tags
+> beats a bundle's `session_tags[]` rows. It went in the **right**
+> column below User interface settings, not the left column below
+> Description as change 1 below proposes. The **typeahead** is 19S
+> Item 7, open on the fork this entry's own analysis found. And
+> **Owners on Create and tags on Session Home are 19S Item 9**, on
+> the author's instruction, taking with them the two blockers below
+> that this entry preserved: that Owners cannot reuse its own routes,
+> and that the config card's `config_editing` gate would make tags
 > editable in 2 of 5 lifecycle states where the lobby edits them in
-> any. The **typeahead** is 19S Item 7, open on the fork this entry's
-> own analysis found — a native `datalist` completes a whole field
-> value and the boxes are comma-separated.
+> any.
+>
+> **What is left here is change 2 alone** — moving Cancel / Create
+> session to the foot of the right column. It rides whatever next
+> opens the page; Item 9 scopes it out. The rest of this entry stays
+> as the reasoning those three items start from.
 
 Opened as 19R Item 9 on 2026-09-21, designed against a mock-up over
 four rounds, then moved here the same day: *"it's not absolutely
