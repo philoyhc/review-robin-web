@@ -1037,9 +1037,7 @@ the audit events are emitted, and tags already reach a new session
 through the settings CSV (`_apply_session_tags`, 18P PR D2). The gap is
 UI over a path that works end to end.
 
-**The placement is the author's, not the superseded plan's**, which put
-Tags in the *left* column below Description and gave this slot to
-Owners. **Owners stays deferred**, as that entry itself recommends:
+**Owners stays deferred**, as the superseded entry itself recommends:
 *"Tags is one input and one `set_tags` call; Owners is a staged
 mini-editor."*
 
@@ -1057,61 +1055,60 @@ the gap is the operator who is not uploading one.
 
 ### Semantics
 
-- **Ordering is forced**: `set_tags` needs the id, so tags apply after
-  create. A failed tag write must not leave a session created and
-  silently untagged — rung 2 decides between one transaction and a
-  reported partial.
-- **The box and the settings CSV can both carry tags, and the existing
-  rule decides it.** Audited 2026-09-22: `POST /sessions` parses the
-  form, calls `sessions.create_session`, **then** applies the CSV, and
-  `_apply_session_metadata` resolves each field by one of **two rules**:
+- **Ordering is the mechanism, and it is the analogy the other fields
+  already use** (author's ruling, 2026-09-22: *follow the analogy of
+  other fields where the form overrides the CSV update*). `POST
+  /sessions` parses the form, calls `sessions.create_session`, then
+  dispatches the staged Quick Setup uploads, of which the settings CSV
+  is the **last** — so the box's `set_tags` call goes **after** that
+  block, and a settings CSV's `session_tags[]` rows are discarded when
+  the box is non-empty. That is what form-wins means for the other five
+  fields too: whole-field, not merged.
+- **The precedence itself is precedent, not invention.**
+  `_apply_session_metadata` resolves each field by one of two rules —
   *fill-blanks* for `name`, `code`, `description`, `deadline`,
-  `help_contact`, so **the form wins** — its docstring names this flow,
-  *"on Create New Session, operator-typed fields are non-empty so the
-  snapshot fills in only the blanks"* — and *force-apply* for the eight
-  scheduling / toggle / timezone fields, where **the CSV wins** because
-  they are *"session config, not operator-typed identity"*. **All 13
-  Create form fields overlap the CSV**, 5 form-wins and 8 CSV-wins, and
-  a typed tag is operator-typed.
-- **But tags cannot just follow that rule, because their applier is
-  wipe-and-replace.** `_apply_session_tags` deletes every existing tag
-  not in the CSV, runs on **every** apply, and `_ParsedConfig.session_tags`
-  is a bare `list[str]` with **no section-presence flag** — so a bundle
-  with no `session_tags[]` rows is indistinguishable from one asking for
-  none, and **wipes the session's tags**. That is deliberate for the
-  round-trip (*"mirroring the other list sections"*) and fatal for a
-  form box applied before it. Rung 2 therefore either writes the box's
-  tags **after** `apply_session_config`, or merges them into the plan
-  before it — whichever it picks, the form's tags survive a settings
-  CSV that carries none.
+  `help_contact`, so the form wins (its docstring names this flow), and
+  *force-apply* for the other twelve keys it writes, where the CSV wins
+  because they are *"session config, not operator-typed identity"*. All
+  13 Create form fields overlap the CSV: the same 5 form-wins, and 8 of
+  the twelve CSV-wins (the other four are not on the form). A typed tag
+  is operator-typed.
+- **Rejected: making `_apply_session_tags` fill-blanks**, which is the
+  literal per-field rule and would have been the tidier home for it.
+  `tests/unit/test_apply_session_config.py::test_round_trip_carries_session_tags`
+  pins the opposite — *"the destination pre-seeds a stale tag that must
+  be dropped"* (18P PR D2) — and `_run_quick_setup_settings` is shared
+  by three flows, one of them `POST /sessions/{id}/import-config` on an
+  **existing** session. Ordering delivers the ruling without touching
+  either.
+- **Empty box writes nothing**: no `set_tags` call, so a settings CSV's
+  tags apply unopposed and no audit event is emitted.
+- **Bad input is silently skipped, matching the lobby.** `set_tags`
+  catches `normalize_tag`'s `ValueError` per tag and drops that one, so
+  an over-long tag disappears without an error. Both surfaces share the
+  service; Create gains no error affordance the lobby lacks.
+- **Partial failure follows the handler's existing per-block shape.**
+  The session is created and committed before the tag write, exactly as
+  it is before every other Quick Setup block, and `set_tags` commits on
+  its own; a DB error there leaves a created session with no tags and
+  redirects with the block's error flag.
 - **Comma-delimited, matching the lobby's `name="tags"`**, so one habit
-  works on both surfaces.
-- `normalize_tag` decides the stored form; a repeated tag collapses; an
-  empty box writes nothing and emits **no** audit event.
+  works on both surfaces. `normalize_tag` decides the stored form and a
+  repeated tag collapses.
 - **No lifecycle gate applies** — the session does not exist yet, which
   is why Create is the easy surface and Session Home is not (the
   superseded entry records that blocker and it stays out).
-- **The force-apply path does not re-run the interactive ordering
-  check, and that is safe — traced 2026-09-22, not assumed.** The route
-  calls `scheduled_events.validate_schedule_ordering` (End ≥ Start;
-  Release-from ≥ End) before create; the CSV force-applies the same
-  datetimes afterwards with no re-check, and no Validate rule covers
-  ordering. **Every downstream consumer guards itself**, each for its
-  own reason: `is_response_release_window_open` returns `False` unless
-  the session `is_expired`, **whatever the anchors say** — added at
-  **19F PR 2a** precisely because *"every path that sets them without
-  the button opened the window in a state the UI would never offer"*,
-  naming a **backdated anchor on Quick Setup** as one of its two
-  motivating cases, which is this path; a `responses_release_until`
-  before its anchor leaves the window permanently shut rather than
-  early-open; scheduled activation fires only from `validated` and
-  otherwise takes a one-shot skip with
-  `session.scheduled_activation_skipped`; and reminders past the
-  deadline are skipped with an audit event
-  (`scheduled_events/_reminders.py`). So the ordering check is an
-  **interactive-path courtesy** — a field-level error instead of an odd
-  schedule — not a correctness boundary, and the spec edit this item
-  owes says so rather than leaving a reader to infer a hole.
+- **The force-apply path re-runs no ordering check, and that is safe —
+  traced 2026-09-22, not assumed.** The route validates End ≥ Start and
+  Release-from ≥ End before create; the CSV force-applies the same
+  datetimes afterwards unchecked, and no Validate rule covers ordering.
+  **Every consumer guards itself** — the release window stays shut
+  unless the session `is_expired` whatever the anchors say (**19F PR
+  2a**, motivated by exactly this path), scheduled activation fires
+  only from `validated`, and past-deadline reminders are skipped with
+  an audit event. So the check is an interactive-path courtesy, not a
+  correctness boundary; the spec edit says so rather than leaving a
+  reader to infer a hole.
 
 ### Judgment calls — decided
 
@@ -1122,8 +1119,11 @@ the gap is the operator who is not uploading one.
   card, so the inert card is rung 1 and the write is rung 2.
 - **The form wins over the settings CSV, by precedent rather than by
   invention** (2026-09-22) — following the identity-versus-config split
-  already implemented rather than adding a second philosophy. The cost
-  is that tags need the ordering worked out, since their applier wipes.
+  already implemented rather than adding a second philosophy.
+- **And it wins by ordering, not by changing the applier** (author's
+  ruling, 2026-09-22, *follow the analogy of other fields*) — the
+  write goes after the settings block; `Semantics` has what that rules
+  out and why.
 
 ### Blast radius (measured)
 
@@ -1137,16 +1137,17 @@ Taken 2026-09-22 at `0ca204b`.
 | lines with an inline `style=` | **8**, of which **1** is button markup (`.btn-pair`, line 121) | `grep -n 'style="[^"]*"' app/web/templates/operator/session_new.html` |
 
 **That last row corrects the superseded entry's *"8 inline-styled
-buttons"***: the other seven are `page-grid` / `fill-col` wrappers and
-an `h3`, so the `.btn` ride-along is one pair, not eight.
+buttons"***: seven are layout wrappers and an `h3`, so rung 3's `.btn`
+ride-along is one pair.
 
 ### PR ladder
 
 1. **Rung 1 — the scaffold.** The half-width card in place with real
    copy and an inert input. **Must not** write anything.
-2. **Rung 2 — the write.** `set_tags` after create, the CSV precedence
-   answered, the partial-failure behaviour decided. **Must not** add
-   typeahead — that is Item 7.
+2. **Rung 2 — the write.** `set_tags` after the settings-CSV block, per
+   the ordering in `Semantics`. **Must not** change
+   `_apply_session_tags`, and **must not** add typeahead — that is
+   Item 7.
 3. **Rung 3 — the `.btn` pair on this page**, per `CLAUDE.md`'s
    convention, asking first if either button does not fit a canonical
    role.
@@ -1155,9 +1156,13 @@ an `h3`, so the `.btn` ride-along is one pair, not eight.
 
 - A session created with tags in the box has them, asserted through the
   route rather than the service.
-- **A create carrying both a typed tag and a settings CSV with no
-  `session_tags[]` rows keeps the typed tag**, asserted through the
-  route — the case the wipe-and-replace applier would silently lose.
+- **A create carrying both a typed tag and a settings CSV keeps the
+  typed tag and only it**, asserted through the route for both CSV
+  shapes: no `session_tags[]` rows (the case the wipe would silently
+  lose) and rows carrying other tags (the case the ordering decides).
+- **An empty box with a settings CSV carrying tags keeps the CSV's**,
+  asserted — the other half of the rule.
+- `test_round_trip_carries_session_tags` still passes untouched.
 - An empty box emits no `session.tag_added` event, asserted.
 - `pytest -n auto` green and `ruff check .` clean, with `node` present.
 - The card is verified on the dev slot, since layout is not testable
@@ -1170,13 +1175,11 @@ an `h3`, so the `.btn` ride-along is one pair, not eight.
 
 ### Open questions
 
-- ~~**Box or settings CSV wins** when a create carries both?~~
-  **Answered 2026-09-22 by audit, not by decision: the form wins**, on
-  the rule already in `_apply_session_metadata` — operator-typed fields
-  are fill-blanks and a typed tag is operator-typed. The audit is in
-  `Semantics`; what it leaves rung 2 is *mechanism*, not precedence,
-  because the tag applier's wipe-and-replace means ordering has to be
-  chosen deliberately.
+- ~~**Box or settings CSV wins** when a create carries both, and by
+  what mechanism?~~ **Both answered 2026-09-22** — the form wins, on
+  the rule already in `_apply_session_metadata`, and it wins by
+  ordering the write after the settings block. `Semantics` carries the
+  reasoning and what it rules out. Nothing is left open.
 
 ### Out of scope
 
@@ -1185,6 +1188,12 @@ an `h3`, so the `.btn` ride-along is one pair, not eight.
   tags editable in 2 of 5 lifecycle states where the lobby edits them in
   any — the superseded entry's recorded blocker.
 - **Typeahead** — Item 7.
+- **The absent-section wipe on an existing-session re-import.** With no
+  section-presence flag, a settings CSV carrying no `session_tags[]`
+  rows is indistinguishable from one asking for none, so
+  `POST /sessions/{id}/import-config` clears the session's tags. The
+  ordering above makes Create immune; fixing it for that route is a
+  candidate entry of its own, not a rung here.
 
 ### Doc impact
 
@@ -1195,11 +1204,11 @@ an `h3`, so the `.btn` ride-along is one pair, not eight.
   (Item 6).
 - `spec/csv_contracts.md` — the settings CSV's apply semantics state
   the two rules (fill-blanks for operator-typed identity, force-apply
-  for config), the tag section's wipe-on-absence, **and why the
+  for config), the tag section's wipe-on-absence, **the Create-page
+  ordering that puts the typed box after the CSV**, **and why the
   force-apply path needs no ordering re-check** (each consumer guards;
-  see `Semantics`). Audited 2026-09-22 and found **undocumented**:
-  `grep -i "precedence\|wins"` over `spec/csv_contracts.md` and
-  `spec/settings_inventory.md` returns nothing, so the rule lives only
+  see `Semantics`). Audited 2026-09-22: neither that spec nor
+  `spec/settings_inventory.md` states any of it, so the rule lives only
   in `_apply_session.py` (Item 6).
 - `docs/status.md` — row when the item lands (Item 6).
 
