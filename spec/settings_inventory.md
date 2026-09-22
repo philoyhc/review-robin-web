@@ -545,7 +545,7 @@ decides per field by one of two rules:
 
 | rule | fields | who wins |
 |---|---|---|
-| **Fill-blanks** | `name`, `code`, `description`, `deadline`, `help_contact` | the **form** — these are operator-typed identity, and on Create they are non-empty, so the snapshot only fills gaps |
+| **Fill-blanks** | `name`, `code`, `description`, `deadline`, `help_contact` | the **form**, but only where it was filled in — `name` and `code` are `required` so the CSV never reaches them; blank `description` / `deadline` / `help_contact` are filled from the snapshot |
 | **Force-apply** | `display_timezone`, `scheduled_activate_at`, `responses_release_at` / `_until`, `invite_offsets`, `reminder_offsets`, `relationships_enabled`, `observers_enabled` and four more the form does not carry | the **CSV** — session config rather than typed identity |
 
 `assignment_mode` and `status` are a third case: **defensively ignored

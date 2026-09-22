@@ -252,12 +252,15 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   The lobby's two — the row expander's `{id}/lobby-edit` and the
   toolbar's `bulk-tags` — were the only ones until 19S Item 6 put a
   **Tags box on the Create page**, so a session can be born tagged
-  instead of coming back here to be classified. All three go through
-  `session_tags.set_tags`, which is a whole-set replace, so the box is
-  not additive either. Where a create also carries a settings CSV, the
-  typed box wins: `POST /operator/sessions` calls `set_tags` **after**
-  the staged Quick Setup uploads, of which the settings bundle is the
-  last. `spec/csv_contracts.md` § *Settings CSV — apply precedence*
+  instead of coming back here to be classified. The box writes through
+  `session_tags.set_tags`, the same whole-set replace the row expander
+  uses, so it is not additive — only the toolbar's `bulk-tags` is,
+  through `add_tag` / `remove_tag`. Where a create also carries a
+  settings CSV, the typed box wins: `POST /operator/sessions` calls
+  `set_tags` **after** the staged Quick Setup uploads, of which the
+  settings bundle is the last — and on a *failed* upload too, so a
+  bailed-out create does not silently discard what was typed.
+  `spec/csv_contracts.md` § *Settings CSV — apply precedence*
   owns that rule and why it is ordering rather than a second
   precedence philosophy.
 - **Purging unlinks the email outbox.** Both purge modes delete rows

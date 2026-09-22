@@ -490,13 +490,20 @@ All 13 fields on the Create form also appear in this CSV, and
 the session, so the file runs last. `_apply_session_metadata` then
 resolves each field by one of **two rules** — *fill-blanks* for
 operator-typed identity (`name`, `code`, `description`, `deadline`,
-`help_contact`), where the form wins because those are non-empty on
-Create; and *force-apply* for the twelve config keys it writes
+`help_contact`), where the form wins **only where it was filled in**;
+and *force-apply* for the twelve config keys it writes
 (timezone, the schedule anchors and offsets, the two UI toggles and
 four the form does not carry), where the CSV wins. `assignment_mode`
 and `status` are a third case, **defensively ignored on import** as
 machine-derived. `spec/settings_inventory.md` §10 carries the field
 lists.
+
+Fill-blanks is therefore not "the form always wins" for all five:
+`name` and `code` are `required` on the Create form, so the CSV can
+never reach them, but `description`, `deadline` and `help_contact` are
+optional — submit any of them blank and the bundle fills it. That is
+the rule working as written (`if existing not in (None, ""): continue`),
+not a precedence a caller can choose.
 
 **Session tags are neither, and the Create page's box wins by
 ordering.** A typed tag is operator-typed identity, so the form should
@@ -513,7 +520,12 @@ plainly:
 So the rule is delivered by **running the box's `set_tags` after the
 settings block**, not by narrowing the applier for one caller. An
 empty box writes nothing at all — calling `set_tags` with an empty set
-would be a replace, and would drop what the CSV had just applied.
+would be a replace, and would drop what the CSV had just applied. The
+write also runs on the **failed-upload redirect**, so a create that
+bails out at an earlier Quick Setup slot still keeps the typed tag; a
+slot that failed wrote no tags and a slot that never ran cannot have,
+so that path is still "after the settings CSV" in the only sense that
+matters.
 Create is therefore immune to the wipe above; `import-config` on an
 existing session is **not**, and that remains an open hazard rather
 than a solved one.
