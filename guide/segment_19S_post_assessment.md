@@ -1009,10 +1009,13 @@ documents the current behavior rather than changing it, and says so.
    `CLAUDE.md` forbids bundling an unrelated bug fix with other work,
    and rung 1 could not have known one would fall out.
    - **2a — the one code disposition.** ✅ **Done 2026-09-22.** Row 9's
-     fix plus its test, and the dead branch in the same block. Nothing
-     else; no spec edit.
-   - **2b — the nine prose dispositions.** §3.2 and §5, per row. **Must
-     not** re-open questions rung 1 answered.
+     fix plus its test, the dead branch in the same block, **and
+     §3.2's duplicate rule** — the sentence the fix falsified, edited
+     in the rung that changed the behavior rather than deferred. An
+     earlier draft of this line said *"no spec edit"*, which the cold
+     read disproved.
+   - **2b — the eight remaining prose dispositions.** §3.2 and §5, per
+     row. **Must not** re-open questions rung 1 answered.
 
 ### Definition of done
 
