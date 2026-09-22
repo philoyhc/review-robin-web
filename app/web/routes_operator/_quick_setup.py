@@ -1001,6 +1001,18 @@ async def _run_quick_setup_settings(
     )
     if not result.ok:
         return "parse"
+    # ``apply_session_config`` flushes but does not commit, and
+    # ``get_db`` closes without committing — so every one of this
+    # helper's three callers returned a success redirect over work that
+    # was then rolled back. Committing here matches what the other
+    # slots' savers already do (``save_reviewers`` and ``set_tags``
+    # each commit their own unit of work) and fixes all three callers
+    # at once. Found by a review of 19S Item 6 rung 2 and **not caused
+    # by it**: `main` loses the import identically. What rung 2 did was
+    # make it *conditional* — a typed tag reached ``set_tags``, whose
+    # commit saved the settings import as a side effect, so the bug
+    # only showed when the Tags box was blank.
+    db.commit()
     return None
 
 

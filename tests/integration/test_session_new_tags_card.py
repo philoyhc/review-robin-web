@@ -31,15 +31,20 @@ tags is the case the ordering decides.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 
+import pytest
+from fastapi import UploadFile
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as SASession
 
-from app.db.models import AuditEvent, ReviewSession
+from app.db.models import AuditEvent, ReviewSession, User
 from app.services import session_tags
+from app.web.routes_operator import _quick_setup
 
 
 def _card(body: str) -> str:
@@ -91,6 +96,16 @@ def _create(
     )
     assert response.status_code == 303, response.text
     return 0
+
+
+def _make_session(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    """A committed session to run the settings helper against."""
+    _create(client, code=code)
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
 
 
 def _tags_of(db: Session, code: str) -> list[str]:
@@ -259,3 +274,77 @@ def test_a_typed_tag_survives_a_failed_quick_setup_upload(
         "the upload failed, which is the precondition of this test"
     )
     assert _tags_of(db, "tags-bad-csv") == ["typed"]
+
+
+def test_the_settings_slot_commits_its_own_work(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``_run_quick_setup_settings`` commits, whatever the Tags box.
+
+    Found by a review of this rung and **not caused by it**:
+    ``apply_session_config`` flushes but never commits, and ``get_db``
+    closes without committing, so all three of this helper's callers
+    returned a success redirect over work that was then rolled back.
+    Verified on ``main`` against a file-backed SQLite read through a
+    second session — the session row persists and **neither** the CSV's
+    ``help_contact`` nor its tags do.
+
+    What this rung did was make it *conditional*: a typed tag reached
+    ``set_tags``, whose own commit saved the settings import as a side
+    effect, so the loss only showed when the box was blank. Worse than
+    uniformly broken, which is why the fix rides here rather than
+    waiting for an item of its own.
+
+    **Asserted on the helper rather than through the route**, after
+    three route-level attempts measured nothing — each recorded because
+    the next person will reach for them in the same order:
+
+    * reading rows back proves nothing. The integration ``db`` fixture
+      shares a transaction with the app, so a flushed row reads exactly
+      like a committed one. That blind spot is why the suite was green
+      while production dropped the import.
+    * counting ``after_commit`` **events** proves nothing. That fixture
+      joins an external transaction, so a commit releasing a savepoint
+      emits none, and a draft asserting on them passed with the fix
+      removed.
+    * counting commits across a whole create does not isolate this
+      path: a create *with* a CSV takes one fewer baseline commit than
+      one without, so the difference cancels and the comparison reads
+      2 against 2 either way.
+
+    Calling the helper directly removes all three confounds. The spy is
+    on ``Session.commit`` as a **class** attribute, because the route
+    resolves its own session through ``get_db`` — an instance patch on
+    the ``db`` fixture counts nothing the app does.
+    """
+    review_session = _make_session(client, db, code="settings-commit")
+    calls: list[str] = []
+    real_commit = SASession.commit
+
+    def _spy(self: SASession, *args: object, **kwargs: object) -> None:
+        calls.append("c")
+        return real_commit(self, *args, **kwargs)
+
+    monkeypatch.setattr(SASession, "commit", _spy)
+    reason = asyncio.run(
+        _quick_setup._run_quick_setup_settings(
+            file=UploadFile(
+                filename="s.csv",
+                file=io.BytesIO(
+                    _settings_csv(
+                        [("session.help_contact", "x@example.edu", "string")]
+                    )
+                ),
+            ),
+            review_session=review_session,
+            user=db.get(User, review_session.created_by_user_id),
+            db=db,
+        )
+    )
+
+    assert reason is None, f"the bundle was rejected: {reason}"
+    assert calls, (
+        "the settings import never committed — apply_session_config "
+        "only flushes and get_db closes without committing, so the "
+        "work is rolled back behind a success redirect"
+    )

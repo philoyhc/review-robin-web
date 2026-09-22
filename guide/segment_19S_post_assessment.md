@@ -1729,6 +1729,42 @@ measuring nothing — which is why the empty-box case is the control:
 it asserts the CSV's tags land when unopposed, and is the only test
 that catches an inert bundle.
 
+**A review of rung 2 found a P1 that predates it, and the fix rides
+here.** `apply_session_config` flushes but never commits, and `get_db`
+closes without committing — so **all three** callers of
+`_run_quick_setup_settings` returned a success redirect over work that
+was then rolled back. Verified on `main` against a file-backed SQLite
+read through a second session: a create carrying a settings CSV
+persists the session row and **neither** the CSV's `help_contact` nor
+its tags.
+
+Rung 2 did not cause it; it made it **conditional**. A typed tag
+reached `set_tags`, whose own commit saved the settings import as a
+side effect, so the loss only showed when the box was blank —
+correctness depending on an unrelated field, which is worse than
+uniformly broken. `_run_quick_setup_settings` now commits, matching
+what every other slot's saver already does (`save_reviewers` and
+`set_tags` each commit their own unit of work) and fixing all three
+callers at once. Recorded as a **bundled fix** rather than deferred,
+and named as such.
+
+**The suite could not have caught it, and three attempts to make it
+say so are recorded in the test's docstring** — the next person will
+reach for them in the same order. Reading rows back proves nothing: the
+integration `db` fixture shares a transaction with the app, so a
+flushed row reads like a committed one. Counting `after_commit`
+**events** proves nothing: that fixture joins an external transaction,
+so a commit releasing a savepoint emits none, and a draft asserting on
+them **passed with the fix removed**. Counting commits across a whole
+create does not isolate the path: a create with a CSV takes one fewer
+baseline commit than one without, so the difference cancels at 2
+against 2 either way. The test calls the helper directly, spying on
+`Session.commit` as a **class** attribute — the route resolves its own
+session through `get_db`, so an instance patch counts nothing.
+
+That is three §1.11 failures inside one fix for a §1.11-shaped bug,
+which is the entry's own point rather than an aside.
+
 Reads: the item's one `diff-reviewer` read is owed at rung 3, the last
 build rung, over `git diff c329180..HEAD`.
 
