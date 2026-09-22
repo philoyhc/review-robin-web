@@ -650,11 +650,14 @@ cheaper one to move and the safer one to leave.
   why the item was widened**: rung 1 alone removes a third at best, and
   the rows are rebuilt as entities one line later.
 - **The recompute pass writes, so column tuples need a write path.** It
-  sets `assignment.is_self_review` on the loaded entity and flushes
-  (`_self_review.py:191`). With no entity there is nothing to mutate, so
-  the changed rows go back as one Core `update` keyed by id — the
-  function's `changed` return value and its flush-only-if-changed
-  behaviour are preserved, because callers read the count.
+  **compares** `assignment.is_self_review` to the freshly computed value
+  and only counts and assigns on a difference (`_self_review.py:203`).
+  With no entity there is nothing to mutate, so the changed rows go back
+  as one Core `update` keyed by id — and **the stored flag must be in
+  the projection**, or the `changed` count callers read cannot be
+  reproduced. That is the whole contract: a projection of
+  `id`, `instrument_id`, `reviewer_id`, `reviewee_id`, the `Reviewee`
+  and `is_self_review`.
 - **The `group_keys` coupling is one attribute, and it is the trap.**
   `_group_key_by_assignment` reads `assignment.reviewee`
   (`app/services/responses/_group_reconciliation.py:123`) — a
@@ -662,8 +665,9 @@ cheaper one to move and the safer one to leave.
   because the same query loaded every `Reviewee`**. Column tuples remove
   that attribute, so the reviewee is passed explicitly;
   `classify_self_review` already holds it. `group_keys` needs a variant
-  taking ids + reviewees. Everything else it reads is `instrument_id`,
-  `reviewer_id` and `reviewee_id`.
+  taking ids + reviewees. Everything else it reads is `id`,
+  `instrument_id`, `reviewer_id` and `reviewee_id`
+  (`_group_reconciliation.py:122`).
 - **The existing verify pass is rung 2's oracle.** It recomputes
   independently and **raises `AssertionError` in a test env** on drift
   (`_generate.py:1088`), so every test that regenerates assignments
@@ -713,8 +717,8 @@ single-instrument full matrix.
 | the insert site | **1** | `grep -rn "Assignment(" app/ --include='*.py'` — 2 hits, the other is the model class |
 | full materialisations of the assignment set per regenerate | **3** (insert, recompute per instrument, verify once) | the three call sites cited in `Semantics` |
 | objects built per pass at the bench | **80,000** | 200 × 200 |
-| entity attributes the two passes actually read | **4** (`id`, `instrument_id`, `reviewer_id`, `reviewee`) | the trace in `Semantics` |
-| `replace_assignments`: call sites in `app/` / test files | **5** / **32** | `grep -rn` and `grep -rln` on the name |
+| entity attributes the two passes actually read | **6** (`id`, `instrument_id`, `reviewer_id`, `reviewee_id`, `reviewee`, `is_self_review`) | the trace in `Semantics` |
+| `replace_assignments`: call sites in `app/` / test files that **call** it / that merely name it | **5** / **11** / **16** | `git grep -l "replace_assignments(" -- tests`, and without the paren |
 | schema change | **none** | the columns are untouched; no migration |
 
 **The bench is not re-takeable here** — re-checked 2026-09-22:
@@ -749,7 +753,8 @@ by design. Rung 3 discloses rather than assuming a figure.
   recomputed, asserted.
 - The rewritten recompute returns the **same `changed` count and the
   same classification** as the entity version on a group-scoped
-  instrument, asserted — the case `assignment.reviewee` served.
+  instrument, asserted — the count needs the stored flag in the
+  projection, the classification needs the `Reviewee`.
 - Prepare re-measured at 200 × 200 and recorded in Finding 4 — **or**
   `### Status` states that no cluster was available and the figure is
   owed from the dev slot.
