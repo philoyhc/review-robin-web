@@ -420,9 +420,9 @@ what did.
 - The first commit's first command was `date -u +%FT%TZ` (step 0 was the
   moment to run it; if you did not, run it now and say so). Carry the
   value as the `Instruction-Received:` trailer, per `CLAUDE.md` "Where
-  work runs" — **in the message's final block, beside
-  `Co-Authored-By`**, since git parses only the last block and a stamp
-  in a paragraph of its own is silently dropped. Stamping is a campaign
+  work runs" — in the message's final block, beside `Co-Authored-By`,
+  so git's own trailer parser sees it (`tools/pace_audit.py` reads the
+  line anywhere in the message). Stamping is a campaign
   rather than a per-slice habit: this first slice is worth stamping so
   the new repository has a baseline, and after that only when a figure
   is being taken.

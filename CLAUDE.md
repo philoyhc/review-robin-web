@@ -235,11 +235,12 @@ reject it.
   figure is being re-taken** — start the slice with `date -u +%FT%TZ`
   and put the trailer on its first commit, not on fix commits answering
   a reader or CI. Otherwise don't; a slice without it is not wrong.
-  **If you do stamp, the trailer must sit in the commit message's final
-  block, beside `Co-Authored-By`.** Git parses only the last block, so a
-  stamp in a paragraph of its own is silently discarded: of 37 slices
-  that wrote the line, 16 parse (19R Item 7). No gate checks either
-  failure.
+  **If you do stamp, put the trailer in the commit message's final
+  block, beside `Co-Authored-By`**, so git's own trailer parser sees it:
+  21 of the first 38 stamps sat in a paragraph of their own and were
+  lost to that parser (19R Item 7). `tools/pace_audit.py` has read the
+  line anywhere in the message since 2026-09-22, so a misplaced stamp
+  still counts there; no gate checks a missing one.
 - **Two cold readers, different cadences.** A slice is read cold before
   it is marked **ready for review** — not before it is pushed: a draft
   PR is not a merge, and an unpushed commit in an ephemeral container is

@@ -34,7 +34,7 @@ Definitions, all in minutes:
                  (instruction, context load, the gate run), the slope what
                  scales with the build.
 * ``wait`` / ``build``  when a slice's first commit carries an
-                 ``Instruction-Received: <UTC ISO-8601>`` trailer (CLAUDE.md
+                 ``Instruction-Received: <UTC ISO-8601>`` line (CLAUDE.md
                  "Where work runs"), turn splits at it: ``wait`` is previous
                  merge -> instruction, ``build`` is instruction -> first
                  commit. Reported once at least three slices carry it.
@@ -176,20 +176,29 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
     return rows
 
 
+STAMP_RE = re.compile(r"^Instruction-Received:[ \t]*(\S+)[ \t]*$", re.MULTILINE)
+
+
 def instruction_received(merge_sha: str) -> int | None:
-    """Epoch seconds from the ``Instruction-Received`` trailer on the slice's
+    """Epoch seconds from the ``Instruction-Received`` line on the slice's
     first commit, or None. Read from the earliest commit only: a later fix
-    commit answers a reader or CI, not an instruction."""
+    commit answers a reader or CI, not an instruction.
+
+    Matched on its own line anywhere in the message, not as a git trailer:
+    git parses only a message's *last* paragraph as trailers, and of the
+    38 slices that had written the line by 2026-09-22, 21 had put it in a
+    paragraph of its own above ``Co-Authored-By`` and were silently
+    dropped by ``%(trailers:...)`` (19R Item 7). The *last* match wins: a
+    real stamp sits at or near the end, and a commit quoting the sample
+    line from ``CLAUDE.md`` above it must not be read as stamped then."""
     first = git("rev-list", "--reverse", f"{merge_sha}^1..{merge_sha}^2").split()
     if not first:
         return None
-    raw = git(
-        "log", "-1", "--format=%(trailers:key=Instruction-Received,valueonly)", first[0]
-    ).strip()
-    if not raw:
+    matches = STAMP_RE.findall(git("log", "-1", "--format=%B", first[0]))
+    if not matches:
         return None
     try:
-        return int(dt.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp())
+        return int(dt.datetime.fromisoformat(matches[-1].replace("Z", "+00:00")).timestamp())
     except ValueError:
         return None
 

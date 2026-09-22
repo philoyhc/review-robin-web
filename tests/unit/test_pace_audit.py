@@ -1,7 +1,9 @@
 """The ``Instruction-Received`` split in ``tools/pace_audit.py``.
 
-The trailer is read from a slice's *first* commit only, bounded to the
-slice's own window, and reported once three slices carry it. These tests
+The stamp is read from a slice's *first* commit only — on its own line
+anywhere in the message, since git's trailer parser sees only the final
+paragraph — bounded to the slice's own window, and reported once three
+slices carry it. These tests
 build a throwaway git repo rather than reading this one: ``actions/checkout@v4``
 clones at depth 1, so nothing that depends on this repository's history
 can run in CI.
@@ -100,6 +102,33 @@ def _stamped(minute: int, subject: str = "build") -> str:
 def test_trailer_on_the_first_commit_is_read(repo: Repo) -> None:
     sha = repo.slice([(_stamped(3), 8)], merge_minute=10)
     assert pa.instruction_received(sha) == int((T0 + dt.timedelta(minutes=3)).timestamp())
+
+
+def test_a_stamp_above_the_final_block_is_read(repo: Repo) -> None:
+    # Git parses only the last paragraph as trailers; 21 of 38 stamps sat
+    # in a paragraph of their own above Co-Authored-By and were lost to
+    # %(trailers:...). The line is matched anywhere in the message.
+    message = f"build\n\nInstruction-Received: {_at(3)}\n\nCo-Authored-By: X <x@example.com>"
+    sha = repo.slice([(message, 8)], merge_minute=10)
+    assert pa.instruction_received(sha) == int((T0 + dt.timedelta(minutes=3)).timestamp())
+
+
+def test_the_last_stamp_line_wins_over_a_quoted_sample(repo: Repo) -> None:
+    # A commit editing CLAUDE.md may quote the sample line at column 0
+    # above its own stamp; the real stamp is the later one.
+    message = (
+        f"document the stamp\n\nInstruction-Received: {_at(1)}\n\n"
+        f"Instruction-Received: {_at(3)}\nCo-Authored-By: X <x@example.com>"
+    )
+    sha = repo.slice([(message, 8)], merge_minute=10)
+    assert pa.instruction_received(sha) == int((T0 + dt.timedelta(minutes=3)).timestamp())
+
+
+def test_a_stamp_mentioned_mid_sentence_is_not_read(repo: Repo) -> None:
+    # Prose about the stamp is not a stamp: the line must stand alone.
+    message = f"build\n\nsee the Instruction-Received: {_at(3)} convention"
+    sha = repo.slice([(message, 8)], merge_minute=10)
+    assert pa.instruction_received(sha) is None
 
 
 def test_no_trailer_is_none(repo: Repo) -> None:
