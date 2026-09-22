@@ -188,15 +188,17 @@ def instruction_received(merge_sha: str) -> int | None:
     git parses only a message's *last* paragraph as trailers, and of the
     38 slices that had written the line by 2026-09-22, 21 had put it in a
     paragraph of its own above ``Co-Authored-By`` and were silently
-    dropped by ``%(trailers:...)`` (19R Item 7). The first match wins."""
+    dropped by ``%(trailers:...)`` (19R Item 7). The *last* match wins: a
+    real stamp sits at or near the end, and a commit quoting the sample
+    line from ``CLAUDE.md`` above it must not be read as stamped then."""
     first = git("rev-list", "--reverse", f"{merge_sha}^1..{merge_sha}^2").split()
     if not first:
         return None
-    match = STAMP_RE.search(git("log", "-1", "--format=%B", first[0]))
-    if not match:
+    matches = STAMP_RE.findall(git("log", "-1", "--format=%B", first[0]))
+    if not matches:
         return None
     try:
-        return int(dt.datetime.fromisoformat(match.group(1).replace("Z", "+00:00")).timestamp())
+        return int(dt.datetime.fromisoformat(matches[-1].replace("Z", "+00:00")).timestamp())
     except ValueError:
         return None
 

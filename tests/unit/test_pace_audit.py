@@ -113,6 +113,17 @@ def test_a_stamp_above_the_final_block_is_read(repo: Repo) -> None:
     assert pa.instruction_received(sha) == int((T0 + dt.timedelta(minutes=3)).timestamp())
 
 
+def test_the_last_stamp_line_wins_over_a_quoted_sample(repo: Repo) -> None:
+    # A commit editing CLAUDE.md may quote the sample line at column 0
+    # above its own stamp; the real stamp is the later one.
+    message = (
+        f"document the stamp\n\nInstruction-Received: {_at(1)}\n\n"
+        f"Instruction-Received: {_at(3)}\nCo-Authored-By: X <x@example.com>"
+    )
+    sha = repo.slice([(message, 8)], merge_minute=10)
+    assert pa.instruction_received(sha) == int((T0 + dt.timedelta(minutes=3)).timestamp())
+
+
 def test_a_stamp_mentioned_mid_sentence_is_not_read(repo: Repo) -> None:
     # Prose about the stamp is not a stamp: the line must stand alone.
     message = f"build\n\nsee the Instruction-Received: {_at(3)} convention"

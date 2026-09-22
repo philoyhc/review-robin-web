@@ -22,8 +22,8 @@ whole-history audit that separates the gates' cost from the reads', and
 the finding that *turn* is a flat, size-independent floor. The tool
 gains the turn fit it quotes. No earlier number changed.
 
-**Revised 2026-09-22.** Section 6.4's 2026-09-21 paragraph is re-taken
-with the 21 lost stamps recovered — `tools/pace_audit.py` now reads the
+**Revised 2026-09-22.** Section 6.4's stamping-campaign paragraph
+(added 2026-09-21) is re-taken with the 21 lost stamps recovered — `tools/pace_audit.py` now reads the
 line anywhere in a first commit's message — and the turn split reverses:
 build, not the wait for an instruction, is the larger part of the floor.
 No earlier number changed; the n=14 figure is kept as what it was.
@@ -242,8 +242,9 @@ catches a slice that omits the line entirely. (Count the denominator
 the way `tools/pace_audit.py` does — `--first-parent`, and the since
 date pinned to midnight UTC per its `since_arg`, whose absence cost
 this item 13 slices on the first pass. The split's n=14 is smaller than
-16 because the tool also drops a stamp whose timestamp does not fall
-between the previous merge and the first commit.) Re-stamp when a figure is
+16 because two stamped slices sat across a session gap — a cycle over
+three hours — and the tool drops those from every figure, not only this
+one.) Re-stamp when a figure is
 being re-taken, keeping the trailer in the final block so git's own
 parser sees it too; since 2026-09-22 `tools/pace_audit.py` matches the
 line anywhere in the message, which is what recovered the 21 below.
@@ -251,13 +252,13 @@ line anywhere in the message, which is what recovered the 21 below.
 is the fit.*
 
 **Annotated 2026-09-22.** Re-taken at `#2542` with the 21 recovered:
-**35** of the 83 slices under the per-item cadence carry a stamp inside
-their own window, and the split is *wait* median **1.9** minutes,
-*build* median **5.6** — the reverse of the n=14 reading. The 17 that
-parsed as trailers were nearly all one thread's, which stamped seconds
-before its first commit (build median **3.8**); the 21 recovered are
-the other thread's, which built for a median **6.4** minutes first, up
-to 33. So the 9-minute floor is mostly the agent's own work before its
+38 of the 83 slices under the per-item cadence carry a stamp, **35**
+inside a session (three sat across a gap), and the split is *wait*
+median **1.9** minutes, *build* median **5.6** — the reverse of the n=14
+reading. Those 14 are still in the 35 at build median **3.0**, and were
+nearly all one thread's, which stamped seconds before its first commit;
+the 21 recovered are the other thread's, which built for a median
+**6.4** minutes first, up to 33. So the 9-minute floor is mostly the agent's own work before its
 first commit — loading the context, reading the plan, running the gates
 — and only a minority the instruction loop; the mean wait of **12**
 minutes is five slices where the author was away 40 to 146 minutes, and
@@ -265,10 +266,11 @@ says nothing about the floor. No cadence rule touches that component,
 and none should: it is the build, moved before the commit. The cadence
 figures held: 83 slices since `#2460`, median cycle **31** (30 over the
 first 33), iteration **10.5**, PR-opened-to-merged **18** against 28 in
-the per-rung week; slices carrying a read-response commit rose to
-**43%** from 30% as 19R's code items came through, at **40.5** against
-**28.7** for a product slice without one — the same 12-minute read cost
-as before, now paid once per item rather than per rung.
+the per-rung week (GitHub's timestamps, `--prs`); slices carrying a
+read-response commit rose to **43%** from 30% as 19R's code items came
+through, at **40.5** against **28.7** for a product slice without one —
+a **12**-minute read cost where the per-rung week's was 26 (49 against
+23, the 2026-09-19 note), now paid once per item rather than per rung.
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronisation
 
