@@ -3323,17 +3323,20 @@ dep chains called out at the bottom of this file.
    **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
    the independent cold read at `guide/codex_assessment_21sep.md`.
    - **Item 1 — the register.** Eight entries, **none scheduled**, each
-     one thing with no home of its own: Prepare's 20 s per-pair insert
-     (**E1**), re-taking the bench against real data (**E2**), the
-     ≥1,000 LOC watchlist living only in a snapshot that archives
-     (**E3**), the hand-maintained indexes drifting (**E4**, **closed
-     2026-09-22**), prose about the work being wrong more often than the
-     work (**E5**), a new guard having no evidence bar (**E6**), plans
-     overrunning their own length budget (**E7**), and the two
-     divergences 19R recorded, did not fix, and has now archived
-     (**E8**). A register, not a queue: both end-of-window reads warned
-     against another open-ended container, and one put it directly —
-     *a measurement is not automatically a backlog item*.
+     one thing with no home of its own. **Four closed 2026-09-22**: the
+     hand-maintained indexes drifting (**E4**, split — gateable half to
+     Item 2, residue to `docs/unenforced_conventions.md` §1.5), the
+     bench headline outliving its own correction (**E2**, linked to the
+     section that already qualified it), and two rehomed to that same
+     register — a new guard's evidence bar (**E6** → §1.8) and the plan
+     length budget (**E7** → §1.9). **Four open**: Prepare's 20 s
+     per-pair insert (**E1**), the ≥1,000 LOC watchlist living only in
+     a snapshot that archives (**E3**), prose about the work being wrong
+     more often than the work (**E5**), and the two divergences 19R
+     recorded, did not fix, and has now archived (**E8**). A register,
+     not a queue: both end-of-window reads warned against another
+     open-ended container, and one put it directly — *a measurement is
+     not automatically a backlog item*.
    - **Item 2 — the four index gates** *(planned 2026-09-22, not yet
      built)*. E4's gateable half, promoted: every archived plan from
      segment 16 on has a `## Done` entry, those headings run ascending

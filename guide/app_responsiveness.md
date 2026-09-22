@@ -12,6 +12,18 @@ below, no index is missing, and adding one would change nothing. Five of the six
 slow pages are slow for a single shared reason, and it is the same reason
 on all five.
 
+**That sentence is a 2026-09-20 reading of a pre-19R tree, and the bench
+section below inverts it** — see *"The composition has inverted, and the
+document's headline with it"*, which carries the figures: 19R moved the
+counting **into** SQL, so at the 200 × 200 bench SQL is **84% of
+Invitations** and 83% of Responses. It is kept as written because the
+investigation it heads was measured then, and because nothing regressed;
+what changed is which half of the page time is which. The next page-time
+question at this scale is a **query** question, and
+`guide/codebase_assessment_22sep.md` §8 move 3 asks for it to be put to
+**real** data rather than to more code — a re-take this synthetic bench
+cannot stand in for.
+
 ## The bench, re-set 2026-09-21 — 200 × 200 full matrix
 
 **The upper bound is 200 reviewers each reviewing 200 reviewees**
