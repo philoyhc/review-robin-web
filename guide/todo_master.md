@@ -3147,6 +3147,54 @@ prose is a spec claim neither the author nor the code has settled.
 
 ---
 
+### Segment 19R — Optimization and bugfixes — ✅ **closed + archived** (**eight items, all closed**, plus a ninth moved out unbuilt; opened 2026-09-21, closed 2026-09-22; PRs #2515 → #2540; plan archived: `guide/archive/segment_19R_optimization_and_bugfixes.md`)
+
+The build half of `guide/app_responsiveness.md`, which measured the
+operator surfaces and found **it was not a database problem**: SQL was
+never more than 9% of any slow page, and five of the six were slow
+because the rules engine ran on page load. Items close independently, so
+each carries its own `Doc impact` / `Status` and there is no
+segment-level manifest.
+
+- **Items 1–3 — the three measured recommendations.** Counts by
+  `count()` rather than by fetching the rows (Setup reviewers 2.4 s
+  → 277 ms); the `staleness_by_instrument` verdict cached against a
+  content stamp (Session Home 11.9 s → 0.67 s, Assignments 13.1 s
+  → 0.67 s, Validate 14.0 s → 0.99 s); both Operations rollups moved
+  into SQL (Invitations 8.4 s → 1.36 s, Responses 8.6 s → 1.52 s, ORM
+  instances per render 408,027 → ~9,000). **The under-1 s target was
+  missed on two pages and the shared page chrome is why** — 0.65 s on
+  a page with no rollup at all.
+- **Item 5 — the cost the re-set bench could not explain.** The
+  readiness report loaded the session once per check and Validate built
+  it twice; 22 rules now take one per-run `ValidationInputs`
+  (report 43 queries → 17, Validate 112 → 43).
+- **Items 4, 6–8 — the correctness half**, which is why the segment
+  carries both words. Five Quick Setup upload routes silently dropped
+  roster friendly labels; two rule-registry documents had stopped
+  matching the registry (nine wrong passages in six files); the
+  `Instruction-Received` stamp was retired as a standing rule after 37
+  writes of which 16 parsed; `compute_staleness` was retired at zero
+  callers.
+
+**Closed on its intake channel, not on the theme running out.** The plan
+was written to admit further items as measurement turned them up, and
+both end-of-window reads asked it to stop being that —
+`guide/codebase_assessment_22sep.md` §8 ranks the close **first of
+three moves**. The measured-but-unscheduled candidates stay in
+`guide/app_responsiveness.md`; what the reads surfaced with no home is
+logged in `guide/segment_19S_post_assessment.md` as a register.
+
+**The lesson, recorded across eight `Status` blocks:** *a claim is worth
+what the command proving it is worth.* Blast-radius greps defeated by an
+import alias and by their own scope, three guards that passed while
+recognising nothing, a parity golden pinning SQLite row ids, and a close
+that claimed a cold read had run before the change in the same commit
+whose body said it was still running. Every one caught by a reader or a
+run, none by re-reading.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -3202,43 +3250,29 @@ dep chains called out at the bottom of this file.
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
 
-2. **19R — Optimization and bugfixes (open segment).**
-   **Plan:** `guide/segment_19R_optimization_and_bugfixes.md`.
-   **Evidence:** `guide/app_responsiveness.md` — the operator surfaces
-   measured on a 1,000 x 1,000 roster, where five of six slow pages are
-   slow for one shared reason and SQL is under 9% of any of them.
-   - **Item 1 (R3)** count with `count()` — **shipped 2026-09-21**,
-     three rungs, PRs #2515 -> #2516 and the close. Setup reviewers
-     2.4 s -> 277 ms on the 200,000-row fixture; the page is SQL-bound
-     now, and the remaining cost is the counting itself.
-   - **Item 2 (R1)** cache the staleness verdict against a content
-     stamp — **shipped 2026-09-21**, four rungs, PRs #2518 -> #2520 and
-     the close. Session Home 11.9 s -> 0.67 s, Assignments 13.1 s ->
-     0.67 s, Validate 14.0 s -> 0.99 s, against a target of 2 s.
-   - **Item 3 (R2)** roll per-person progress up in SQL rather than over
-     400,000 ORM rows — **shipped 2026-09-21**, four rungs, PRs #2522 ->
-     #2524 and the close. Invitations 8.4 s -> 1.36 s, Responses
-     8.6 s -> 1.52 s; ORM instances per render 408,027 -> ~9,000.
-   - **Item 4** the quick-setup upload cards drop tag friendly labels
-     — a defect, which is why the segment carries both words.
-     **Shipped 2026-09-21**, three rungs, PRs #2526 -> #2527 and the
-     close. Five upload routes dropped the roster header's friendly
-     labels silently; the fix is two arguments at the two save sites,
-     and rung 2 added a gate asked of the router so the next upload
-     route cannot repeat it.
-   **The 30-50x projection was a ceiling and it was not reached.** All
-   three optimization items shipped, and Invitations and Responses land
-   at 1.36 s and 1.52 s against a target of under a second: what is left
-   on those two is the shared page chrome, which measures 0.65 s on a
-   page with no rollup at all, and that is its own item. The other four
-   pages are under a second. Items 1-4 are closed and the segment
-   **stays open**: **Item 5** takes the one cost the 2026-09-21 bench
-   re-set could not explain — every session page issues 79-112 queries
-   whatever the roster size, because the readiness report reloads the
-   session once per check and Validate builds it twice
-   (`guide/app_responsiveness.md` Finding 6). That document also holds
-   the later candidates already measured — Prepare's insert,
-   compression, the pair sort key.
+2. **19S — Post-assessment register (open segment).**
+   **Plan:** `guide/segment_19S_post_assessment.md`.
+   **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
+   the independent cold read at `guide/codex_assessment_21sep.md`.
+   - **A register, not a queue.** Eight entries, **none scheduled**,
+     each one thing with no home of its own — seven from the two
+     end-of-window reads, an eighth from the `spec-writer` pass at
+     19R's close — with its evidence cited rather than copied, and the
+     trigger that would promote it to a full item. Both reads warned
+     against another open-ended refinement container, and one put it
+     directly: *a measurement is not automatically a backlog item*.
+   - **Promotion is the author's call**, on a named trigger. An entry
+     that is never promoted is not a failure of the register; losing
+     the finding would have been.
+   - Entries at open: Prepare's 20 s per-pair insert (**E1**), re-taking
+     the bench against real data rather than the code (**E2**), the
+     ≥1,000 LOC watchlist living only in a snapshot that archives
+     (**E3**), the hand-maintained indexes drifting with nothing to
+     gate them (**E4**), prose about the work being wrong more often
+     than the work (**E5**), a new guard having no evidence bar
+     (**E6**), plans overrunning their own length budget (**E7**), and
+     the two divergences 19R recorded, did not fix, and has now
+     archived (**E8**).
 
 #### Stubs
 

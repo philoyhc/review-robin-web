@@ -92,10 +92,17 @@ because those features are off on that older fixture.
 
 ## Later candidates
 
-Moved here from `guide/segment_19R_optimization_and_bugfixes.md`
-2026-09-21 so the segment carries only its own items and the
-measurements stay with the evidence. Each becomes an item when someone
-picks it up.
+Moved here from segment 19R's plan on 2026-09-21 — now
+`guide/archive/segment_19R_optimization_and_bugfixes.md` — so the
+segment carried only its own items and the measurements stay with the
+evidence.
+
+**They stay candidates.** At 19R's close both end-of-window reads asked
+that the existence of a measured candidate not be turned into a queue,
+so one is promoted to an item only when pilot scale or an operator
+report crosses its stated trigger. Prepare's insert is the exception
+under discussion, logged as entry **E1** of
+`guide/segment_19S_post_assessment.md`.
 
 - **Bulk-insert the generated pairs.** `assignments/_generate.py` adds
   one `Assignment()` per pair. **20.0 s at the bench**, 74.8 s at

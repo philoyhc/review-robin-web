@@ -17,14 +17,27 @@ and `### Status` and there is no segment-level manifest —
 the last definition-of-done line applies only when the segment's final
 item closes; an item close leaves this file in `guide/`.
 
-**The segment stays open.** Items 1–4 closed 2026-09-21: Items 1–3
-were the three changes measured to take every page under a second, and
-Item 4 was a defect found while they were being planned. **Item 5 is
-open** — the bench re-set that followed those closes left one cost
-unexplained, and `guide/app_responsiveness.md` Finding 6 attributes it.
-Further items land the same way, as measurement or a report turns them
-up; that document also holds the later candidates already measured but
-not scheduled.
+**Closed 2026-09-22 — eight items shipped, a ninth deferred unbuilt.**
+Items 1–3 were the three changes `guide/app_responsiveness.md`
+recommended; Item 4 was a defect found while they were being planned;
+Item 5 took the one cost the bench re-set could not explain (that
+document's Finding 6); Items 6–8 closed the last known code-vs-prose
+divergence in the rule registry, ending in the retirement of the helper
+the wrong descriptions kept reproducing. Item 9 moved to
+`guide/deferred_consolidated.md` Part C on the author's call.
+
+**It closed on the intake channel, not on the theme running out.** The
+segment was written as an open container — *further items land the same
+way, as measurement or a report turns them up* — and both reads at the
+window's end asked for it to stop being one: `guide/codebase_assessment_22sep.md`
+§8 ranks closing it first of three moves, and
+`guide/codex_assessment_21sep.md` §8 reaches the same conclusion from a
+fresh context, adding *do not add another item merely because the file
+is already open*. The measured-but-unscheduled candidates stay in
+`guide/app_responsiveness.md`, which is their home; what the assessments
+surfaced with **no** home is logged as entries in
+`guide/segment_19S_post_assessment.md`, a register rather than a queue.
+A genuine defect from here routes to its own bounded plan.
 
 **Re-take any number here with** `python3 tools/bench_roster_scale.py`
 (`tools/README.md` has the recipe). Items 1–4's figures are from state B
