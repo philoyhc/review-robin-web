@@ -166,6 +166,61 @@ the joke it sounds like.
   the reason it is here is that the last four months of it went
   unobserved.
 
+### 1.8 A new guard states the three things that make it evidence
+
+- **Written down at** `guide/segment_19S_post_assessment.md` Item 1
+  entry **E6**, proposed by `guide/codex_assessment_21sep.md` §5; adopted
+  per-item at 19S.2 rather than as a standing rule.
+- **The rule.** Before a guard is called complete: the fixture reaches
+  the case, a mutation of the protected property fails, and the
+  recogniser is exercised outside its current production examples.
+- **The instance.** Segment 19R produced **four** guards that passed
+  while seeing less than they claimed. The upload-route recogniser was
+  wrong three times — matching annotation source text, keying endpoints
+  on a basename that exists under two packages, expanding one level of
+  `get_args` so `list[UploadFile] | None` was invisible — and each time
+  the twelve real endpoints happened not to use the missed shape, so it
+  stayed green (19R.4). The no-duplicate query guard **passed having
+  recognised nothing**, demonstrated by running the pre-refactor module
+  against it and watching it go green (19R.5).
+- **Why not.** A check would have to establish that a *mutation was
+  tried*, and nothing in the tree records that. Mutation testing as a
+  gate is the wrong size for this repo — it would run the suite once per
+  mutant — and the cheap proxy, requiring a commit message or PR body to
+  name the mutations, enforces **the mention** rather than the mutating.
+  That is §1.7's disqualifying shape exactly, and Article VI's.
+- **What covers it instead.** The definition of done of any item adding
+  a guard, which is where 19S.2 put it: *each of the four checks fails
+  under a mutation of what it protects, the four mutations recorded in
+  `### Status`*. Per-item, verifiable in the item, and worthless if
+  nobody writes it — which is the concession.
+
+### 1.9 A plan stays inside its length budget
+
+- **Written down at** `.claude/skills/segment-plan/SKILL.md` "Length"
+  (~250 lines a segment, ~120 an item); raised as
+  `guide/segment_19S_post_assessment.md` Item 1 entry **E7**, from
+  `guide/codex_assessment_21sep.md` §7.
+- **The instance.** 19R's plan closed at **1,541 lines for eight items**.
+  Its items each compacted at their own close and it still landed there.
+  19S, written after the budget was raised as a finding, opens past the
+  ~250 and its Item 2 came in at ~160 against ~120 after two deliberate
+  trim passes.
+- **Why not — and this one is not about feasibility.** `wc -l` over
+  `guide/segment_*.md` is a check anyone could write in a line. Two
+  things disqualify it. It would be **red from its first commit**, so it
+  fails §2's bar and would arrive as a cleanup rather than a guard. And
+  the budget is stated as *"a signal, not a limit to game: past it, ask
+  what a reader in six months needs and cut the rest"* — mechanising a
+  signal converts it into a limit, and the cheapest way to satisfy a
+  line-count limit is to move the reasoning somewhere the limit does not
+  look. A gate that is best satisfied by hiding the content is worse
+  than the paragraph.
+- **What covers it instead.** The skill's own compaction rules at close,
+  and the author noticing. Nothing measures whether either happened,
+  which is why the overruns above are recorded here rather than claimed
+  as fixed.
+
 ---
 
 ## 2. Enforceable but not enforced — the revisit queue
@@ -229,8 +284,12 @@ decision not to.
 
 ## What this file is not
 
-**Not a backlog.** §2 is two entries and should stay small; if it grows,
-that is a signal the practice is accumulating rules faster than checks.
+**Not a backlog.** §2 is three entries and should stay small; if it
+grows, that is a signal the practice is accumulating rules faster than
+checks. (It said *two* until 2026-09-22, having missed §2.3's arrival —
+the growth its own sentence calls a signal went unrecorded, which is the
+class `guide/segment_19S_post_assessment.md` Item 2 gates for two
+hand-maintained indexes and §1.5 leaves to a habit for the rest.)
 
 **Not a replacement for `docs/practice-audit-2026-09-04.md` §2.** That
 audit is a record of what was true on its date and is not rewritten —

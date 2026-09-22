@@ -103,15 +103,25 @@ before the pilot, not after* — while `guide/codex_assessment_21sep.md`
 scale crosses its trigger. **Trigger:** the author choosing between
 those two readings, or a known pilot roster size.
 
-#### E2 — the bench headline is a dated fact, not a standing one
+#### E2 — the bench headline is a dated fact, not a standing one — ✅ **closed 2026-09-22**
 
-`guide/app_responsiveness.md` is written around *it was not a database
-problem* — SQL under 9% of any slow page. 19R.3 moved the counting into
-SQL and Invitations is now ~84% SQL, so the headline inverted inside
-the same window that wrote it. `guide/codebase_assessment_22sep.md` §8
-move 3: re-take the bench, not the code, and ask the next performance
-question of real data. **Trigger:** deployment concluded with
-representative data — the synthetic bench cannot answer it.
+**Closed by linking, not by writing the caveat** — the caveat was
+already there. `guide/app_responsiveness.md` opens on *"this is not a
+database problem"* (SQL under 9% of any slow page), and its re-set bench
+section, 45 lines down, already said *"The composition has inverted, and
+the document's headline with it"* with the figures: **84% of Invitations**
+(540 ms of 646 ms) and 83% of Responses, because 19R.3 moved the counting
+into SQL. **The entry was the gap between the claim and its own
+correction**, not a missing measurement, so the fix is a forward pointer
+at the headline. A reader who stops at the opening claim now cannot miss
+it.
+
+**The re-take stays owed and unscheduled**, which is what E2 could not
+close: `guide/codebase_assessment_22sep.md` §8 move 3 asks the next
+performance question of **real** data, and the synthetic bench cannot
+answer it. That sits with **E1**'s trigger — deployment with
+representative rosters — not with this entry, whose subject was the
+stale headline.
 
 #### E3 — the ≥1,000 LOC watchlist lives only in a document that archives
 
@@ -182,37 +192,44 @@ am not sure what one would look like*; `guide/codex_assessment_21sep.md`
 are verified. **Logged with no design. Trigger:** a proposal specific
 enough to test.
 
-#### E6 — a new guard has no evidence bar
+#### E6 — a new guard has no evidence bar — ✅ **closed 2026-09-22**
 
-`guide/codex_assessment_21sep.md` §5 proposes three pieces of evidence
-before a guard is called complete: **the fixture reaches the case, a
-mutation of the protected property fails, and the recognizer is tested
-outside its current production examples.**
+**Rehomed to `docs/unenforced_conventions.md` §1.8**, which is the
+register `constitution.md` VI promises for a rule that stays guidance.
+The bar is `guide/codex_assessment_21sep.md` §5's three pieces: the
+fixture reaches the case, a mutation of the protected property fails,
+and the recogniser is exercised outside its production examples.
 
-19R produced four counterexamples, each a guard that passed while
-seeing less than it claimed — the upload-route recognizer wrong three
-times (19R.4) and the no-duplicate query guard passing having
-recognised nothing (19R.5). Candidate home: `CLAUDE.md` "Where work
-runs", or `constitution.md`. **Trigger:** the author's call, weighed
-against 19R.7's lesson that a standing rule nothing checks is worse
-than no rule.
+**Not made a standing rule**, which was the entry's own open question.
+A check would have to establish that a *mutation was tried*, and nothing
+in the tree records that; the cheap proxy — requiring a commit message
+to name the mutations — enforces the mention rather than the mutating,
+which is §1.7's disqualifying shape and 19R.7's lesson in one. So it
+lives per-item instead, and **Item 2 is the first to carry it**: its
+definition of done demands a mutation per check with the four recorded
+in `### Status`.
 
-#### E7 — plans overrun their own length budget
+**19R's four counterexamples are recorded in §1.8**, not left in this
+entry, so they survive the segment: three wrong upload recognisers
+(19R.4) and a query guard that passed having recognised nothing (19R.5).
 
-`guide/codex_assessment_21sep.md` §7: 19R's plan closed at **1,541
-lines for eight items**, against the `segment-plan` skill's ~120 per
-item and ~250 per segment, and doc/spec/guide now totals 170,163 lines.
-The skill already names the cause — `Status` and answered open
-questions growing after the thinking is done — and already sets the
-budget and the compaction rule
-(`.claude/skills/segment-plan/SKILL.md`, "Length"). What is missing is
-anything that notices, and 19R's items each compacted at their own
-close and still landed here. **This file is itself past that ~250**, on
-eight entries and two items with no `Status` yet, and **Item 2 came in
-at ~160 against the ~120 item budget after two deliberate trim
-passes** — so the budget's stated cause is not what got either there,
-which is a data point for whatever E7 becomes. **Trigger:** same as E4, and it shares E4's
-objection — measuring this means judging prose.
+#### E7 — plans overrun their own length budget — ✅ **closed 2026-09-22**
+
+**Rehomed to `docs/unenforced_conventions.md` §1.9**, with the reason
+corrected on the way. This entry had said measuring it *"means judging
+prose"*, sharing E4's objection. **That was wrong**: `wc -l` over
+`guide/segment_*.md` is a one-line check. Two other things disqualify
+it, and §1.9 says so rather than claiming infeasibility — it would be
+**red from its first commit**, so it fails §2's bar and would arrive as
+a cleanup rather than a guard; and the budget is stated as *"a signal,
+not a limit to game"*, where mechanising a signal converts it into a
+limit whose cheapest satisfaction is moving the reasoning somewhere the
+limit does not look.
+
+**The overruns are recorded there as instances, not as fixed**: 19R at
+1,541 lines for eight items, and this file past ~250 with Item 2 at ~160
+against ~120 after two trim passes. A register whose own entry overran
+its budget is the honest evidence for whatever this becomes.
 
 #### E8 — two findings 19R recorded, did not fix, and has now archived
 
