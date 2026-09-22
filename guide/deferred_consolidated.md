@@ -1598,6 +1598,18 @@ fixture count, not the two-line call site.
 
 ### Tags, Owners and a typeahead on the Create page (19R Item 9, moved here unbuilt)
 
+> **Superseded in part, 2026-09-22.** **19S Item 6 built the Tags
+> half** — a half-width Tags card on `session_new.html` writing
+> through `set_tags`, ordered after the settings CSV so a typed tag
+> beats a bundle's `session_tags[]` rows. **Owners and Session Home
+> stay deferred**, and this entry stays for them: Owners is a staged
+> mini-editor rather than one input and one call, and Session Home's
+> config card is gated by `config_editing`, which would make tags
+> editable in 2 of 5 lifecycle states where the lobby edits them in
+> any. The **typeahead** is 19S Item 7, open on the fork this entry's
+> own analysis found — a native `datalist` completes a whole field
+> value and the boxes are comma-separated.
+
 Opened as 19R Item 9 on 2026-09-21, designed against a mock-up over
 four rounds, then moved here the same day: *"it's not absolutely
 essential."* Nothing was built. Recorded at design-settled state so a

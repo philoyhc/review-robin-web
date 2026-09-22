@@ -1604,11 +1604,15 @@ Taken 2026-09-22 at `0ca204b`.
 | tag mentions on the page | **0** | `grep -c -i tag app/web/templates/operator/session_new.html` |
 | the write path | **1** function, `set_tags` | `grep -n "^def " app/services/session_tags.py` |
 | `vocabulary()` call sites | **2**, both the lobby's views | `grep -rn "vocabulary(" app/ --include='*.py'` |
-| lines with an inline `style=` | **8**, of which **1** is button markup (`.btn-pair`, line 121) | `grep -n 'style="[^"]*"' app/web/templates/operator/session_new.html` |
+| lines with an inline `style=` | **9** at the close (8 at this anchor) | the same `grep` — **rung 1 added the ninth**, the Tags card's `<h3 style="margin-top: 0;">`, copying the UI-settings card beside it |
+| of those, **button** markup | **0** | the one line the pre-close figure called button markup is the `.btn-pair` **wrapper's** margin; the buttons themselves carry no inline style |
 
-**That last row corrects the superseded entry's *"8 inline-styled
-buttons"***: seven are layout wrappers and an `h3`, so rung 3's `.btn`
-ride-along is one pair.
+**Those rows correct the superseded entry's *"8 inline-styled
+buttons"*** twice over. First at the plan: seven of the eight are
+layout wrappers and an `h3`. Then at the close: the eighth is not a
+button either — it is the `.btn-pair` wrapper's `margin-top`, and the
+two buttons inside it carry no inline style at all. So **rung 3's
+`.btn` ride-along is zero pairs, not one**.
 
 ### PR ladder
 
@@ -1623,7 +1627,7 @@ ride-along is one pair.
    byte-identical.
 3. **Rung 3 — the `.btn` pair on this page**, per `CLAUDE.md`'s
    convention, asking first if either button does not fit a canonical
-   role.
+   role. ✅ done 2026-09-22 — **nothing to migrate**; see `Status`.
 
 ### Definition of done
 

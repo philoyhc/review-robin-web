@@ -248,6 +248,18 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **Tags have a third write surface, and it is not on this page.**
+  The lobby's two — the row expander's `{id}/lobby-edit` and the
+  toolbar's `bulk-tags` — were the only ones until 19S Item 6 put a
+  **Tags box on the Create page**, so a session can be born tagged
+  instead of coming back here to be classified. All three go through
+  `session_tags.set_tags`, which is a whole-set replace, so the box is
+  not additive either. Where a create also carries a settings CSV, the
+  typed box wins: `POST /operator/sessions` calls `set_tags` **after**
+  the staged Quick Setup uploads, of which the settings bundle is the
+  last. `spec/csv_contracts.md` § *Settings CSV — apply precedence*
+  owns that rule and why it is ordering rather than a second
+  precedence philosophy.
 - **Purging unlinks the email outbox.** Both purge modes delete rows
   that `email_outbox` references — invitations under either, reviewers
   under `rosters` — so each clears those foreign keys before the delete

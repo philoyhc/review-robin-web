@@ -530,6 +530,37 @@ The CSVs split the work three ways:
    **Independent of the porting workflow** — no import
    counterpart, not part of round-trip.
 
+### What wins when a form and a Settings CSV both set a field
+
+Written down 2026-09-22 (19S Item 6). It had never been stated
+anywhere: the rule lived only in
+`app/services/session_config_io/_apply_session.py`, and a `grep` for
+*precedence* or *wins* over this file and `spec/csv_contracts.md`
+returned nothing.
+
+**All 13 fields on the Create form also appear in the Settings CSV**,
+and `POST /operator/sessions` always applies the CSV *after* creating
+the session — so the file runs last and `_apply_session_metadata`
+decides per field by one of two rules:
+
+| rule | fields | who wins |
+|---|---|---|
+| **Fill-blanks** | `name`, `code`, `description`, `deadline`, `help_contact` | the **form** — these are operator-typed identity, and on Create they are non-empty, so the snapshot only fills gaps |
+| **Force-apply** | `display_timezone`, `scheduled_activate_at`, `responses_release_at` / `_until`, `invite_offsets`, `reminder_offsets`, `relationships_enabled`, `observers_enabled` and four more the form does not carry | the **CSV** — session config rather than typed identity |
+
+`assignment_mode` and `status` are a third case: **defensively ignored
+on import** as machine-derived.
+
+**Session tags are neither, and win by ordering.** The Create page's
+Tags box is operator-typed identity, so the form should win — but
+`_apply_session_tags` is wipe-and-replace with no section-presence
+flag, and it is shared with `POST /sessions/{id}/import-config` on an
+*existing* session, where that wipe is the round-trip behavior 18P
+PR D2 pinned. So the rule is delivered by **running the box's
+`set_tags` after the settings block** rather than by narrowing the
+applier. `spec/csv_contracts.md` § *Settings CSV — apply precedence*
+carries the mechanism and what it rules out.
+
 ### Coverage by inventory section
 
 | § | Section | In CSV? | Where / why |

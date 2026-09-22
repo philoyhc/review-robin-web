@@ -469,6 +469,70 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 
+**The apply commits.** `apply_session_config` itself only flushes, so
+`_run_quick_setup_settings` — the helper all three upload routes share
+— commits after a successful apply. Stated because the omission was a
+live defect until 2026-09-22: `get_db` closes without committing, so
+every settings import returned a success redirect over work that was
+then rolled back, and no test could see it (the integration fixture
+shares a transaction with the app, so a flushed row reads like a
+committed one).
+
+#### Settings CSV — apply precedence
+
+**Written down 2026-09-22** (19S Item 6); before that the rule lived
+only in `app/services/session_config_io/_apply_session.py` and a
+`grep` for *precedence* or *wins* over this file and
+`spec/settings_inventory.md` returned nothing.
+
+All 13 fields on the Create form also appear in this CSV, and
+`POST /operator/sessions` always applies the bundle *after* creating
+the session, so the file runs last. `_apply_session_metadata` then
+resolves each field by one of **two rules** — *fill-blanks* for
+operator-typed identity (`name`, `code`, `description`, `deadline`,
+`help_contact`), where the form wins because those are non-empty on
+Create; and *force-apply* for the twelve config keys it writes
+(timezone, the schedule anchors and offsets, the two UI toggles and
+four the form does not carry), where the CSV wins. `assignment_mode`
+and `status` are a third case, **defensively ignored on import** as
+machine-derived. `spec/settings_inventory.md` §10 carries the field
+lists.
+
+**Session tags are neither, and the Create page's box wins by
+ordering.** A typed tag is operator-typed identity, so the form should
+win — but `_apply_session_tags` is **wipe-and-replace with no
+section-presence flag**, which has two consequences worth stating
+plainly:
+
+- a bundle carrying **no** `session_tags[]` rows is indistinguishable
+  from one asking for none, so it **clears** the session's tags; and
+- the applier is shared with `POST /sessions/{id}/import-config` on an
+  *existing* session, where that wipe is the round-trip behavior 18P
+  PR D2 pinned.
+
+So the rule is delivered by **running the box's `set_tags` after the
+settings block**, not by narrowing the applier for one caller. An
+empty box writes nothing at all — calling `set_tags` with an empty set
+would be a replace, and would drop what the CSV had just applied.
+Create is therefore immune to the wipe above; `import-config` on an
+existing session is **not**, and that remains an open hazard rather
+than a solved one.
+
+**The force-apply path re-runs no cross-field ordering check, and that
+is safe rather than overlooked.** `POST /operator/sessions` validates
+End ≥ Start and Release-from ≥ End before creating; the CSV then
+force-applies the same datetimes unchecked, and no Validate rule
+covers ordering — so a hand-edited bundle can write a set the
+interactive form would reject. Every consumer guards itself:
+`is_response_release_window_open` returns `False` unless the session
+`is_expired` **whatever the anchors say** (19F PR 2a, added for this
+class), a `responses_release_until` before its anchor leaves the
+window permanently shut rather than early-open, scheduled activation
+fires only from `validated` and otherwise takes a one-shot audited
+skip, and past-deadline reminders are skipped with an audit event. The
+route's check is an interactive-path courtesy, not a correctness
+boundary.
+
 **Round-trip notes:**
 
 - **`field_labels.*` is not a Settings key, and a bundle carrying
