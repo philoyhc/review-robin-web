@@ -42,6 +42,13 @@ PRs landed in the global chronology.
 > rule** — many predate the convention. Leave those where they are;
 > the invariant to keep is that headings which *do* declare one run
 > ascending.
+> **Both invariants are checked, not merely asked for.**
+> `tests/unit/test_index_currency.py` fails when an archived plan from
+> segment 16 on has no entry in this section, and when the headings that
+> declare a PR number stop running ascending. Segments before 16 are
+> legacy and out of scope: 52 of the 67 archived plans from that era are
+> unmentioned here, and it used grouped headings (`### Segment 11`,
+> `### Segment 13`) rather than one per plan.
 
 ### P0 — Stop the bleeding (Instruments UI ↔ data drift)
 
