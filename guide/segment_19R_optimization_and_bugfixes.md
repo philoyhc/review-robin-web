@@ -17,6 +17,11 @@ and `### Status` and there is no segment-level manifest —
 the last definition-of-done line applies only when the segment's final
 item closes; an item close leaves this file in `guide/`.
 
+**Closed 2026-09-22 at eight items**, with a ninth moved to
+`guide/deferred_consolidated.md` unbuilt. See `## Status — segment
+close` at the end. The paragraph below is left as written on
+2026-09-21, when the segment was open and Item 5 was the live one.
+
 **The segment stays open.** Items 1–4 closed 2026-09-21: Items 1–3
 were the three changes measured to take every page under a second, and
 Item 4 was a defect found while they were being planned. **Item 5 is
