@@ -1041,6 +1041,27 @@ the gap is the operator who is not uploading one.
 - **No lifecycle gate applies** — the session does not exist yet, which
   is why Create is the easy surface and Session Home is not (the
   superseded entry records that blocker and it stays out).
+- **The force-apply path does not re-run the interactive ordering
+  check, and that is safe — traced 2026-09-22, not assumed.** The route
+  calls `scheduled_events.validate_schedule_ordering` (End ≥ Start;
+  Release-from ≥ End) before create; the CSV force-applies the same
+  datetimes afterwards with no re-check, and no Validate rule covers
+  ordering. **Every downstream consumer guards itself**, each for its
+  own reason: `is_response_release_window_open` returns `False` unless
+  the session `is_expired`, **whatever the anchors say** — added at
+  **19F PR 2a** precisely because *"every path that sets them without
+  the button opened the window in a state the UI would never offer"*,
+  naming a **backdated anchor on Quick Setup** as one of its two
+  motivating cases, which is this path; a `responses_release_until`
+  before its anchor leaves the window permanently shut rather than
+  early-open; scheduled activation fires only from `validated` and
+  otherwise takes a one-shot skip with
+  `session.scheduled_activation_skipped`; and reminders past the
+  deadline are skipped with an audit event
+  (`scheduled_events/_reminders.py`). So the ordering check is an
+  **interactive-path courtesy** — a field-level error instead of an odd
+  schedule — not a correctness boundary, and the spec edit this item
+  owes says so rather than leaving a reader to infer a hole.
 
 ### Judgment calls — decided
 
@@ -1124,10 +1145,12 @@ an `h3`, so the `.btn` ride-along is one pair, not eight.
   (Item 6).
 - `spec/csv_contracts.md` — the settings CSV's apply semantics state
   the two rules (fill-blanks for operator-typed identity, force-apply
-  for config) and the tag section's wipe-on-absence. Audited
-  2026-09-22 and found **undocumented**: `grep -i "precedence\|wins"`
-  over `spec/csv_contracts.md` and `spec/settings_inventory.md` returns
-  nothing, so the rule lives only in `_apply_session.py` (Item 6).
+  for config), the tag section's wipe-on-absence, **and why the
+  force-apply path needs no ordering re-check** (each consumer guards;
+  see `Semantics`). Audited 2026-09-22 and found **undocumented**:
+  `grep -i "precedence\|wins"` over `spec/csv_contracts.md` and
+  `spec/settings_inventory.md` returns nothing, so the rule lives only
+  in `_apply_session.py` (Item 6).
 - `docs/status.md` — row when the item lands (Item 6).
 
 ---
