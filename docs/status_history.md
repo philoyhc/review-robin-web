@@ -11,7 +11,7 @@ larger part, and a status file nobody can scan has stopped being one.
 verbatim, in the order they were in. That is why this file opts out of
 the retired-terminology gate — a row quoting a control by the name it
 had on the day is the point of keeping it. The split *is* the compaction:
-`guide/codebase_assessment_18sep.md` §3 records that **compaction with
+`guide/archive/codebase_assessment_18sep.md` §3 records that **compaction with
 no register is deletion**, so the register here is a whole file rather
 than a summary of one.
 
