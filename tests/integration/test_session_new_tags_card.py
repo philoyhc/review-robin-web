@@ -48,22 +48,39 @@ from app.web.routes_operator import _quick_setup
 
 
 def _card(body: str) -> str:
-    """The Tags card's own markup — its anchor to its closing tag.
+    """The Tags card's own markup — its opening tag to its closing one.
 
-    Bounded at the **next** ``<div class="card"``, or at the end of the
-    page when it is the last one. A first draft returned ``body[start:]``
-    — the whole tail of the document — so every ``in card`` assertion was
-    really an assertion about the rest of the page. Nothing passed
-    vacuously at the time, but the mutation set had degenerated this
-    helper to ``""`` (the narrowing) and never to ``body`` (the widening
-    it actually had), which is `docs/unenforced_conventions.md` §1.11's
-    own subject. ``test_the_card_helper_is_bounded`` is the guard.
+    Bounded by a ``<div>`` depth scan, not by the next sibling card.
+    Two earlier drafts over-returned and the guard did not say so:
+    the first returned ``body[start:]`` — the whole tail of the
+    document — and the second bounded at the *next* ``<div class="card"``
+    and silently fell back to the same tail when there was none, which
+    is the live case, the Tags card being the page's last. Both are the
+    widening `docs/unenforced_conventions.md` §1.11 is about, and the
+    mutation that exposed the second one had to keep the opening-tag
+    ``rfind``: gutting the helper wholesale failed the guard for an
+    unrelated reason and read as caught. ``test_the_card_helper_is_bounded``
+    now asserts the slice is balanced, which no fallback can satisfy.
     """
-    start = body.find('id="session-tags"')
-    assert start != -1, "the Tags card is missing from the page"
-    start = body.rfind('<div class="card"', 0, start)
-    end = body.find('<div class="card"', start + 1)
-    return body[start:] if end == -1 else body[start:end]
+    anchor = body.find('id="session-tags"')
+    assert anchor != -1, "the Tags card is missing from the page"
+    start = body.rfind("<div", 0, anchor)
+    assert start != -1, "the Tags card's anchor has no opening tag"
+
+    depth = 0
+    i = start
+    while True:
+        opened = body.find("<div", i)
+        closed = body.find("</div>", i)
+        assert closed != -1, "the Tags card's <div> is never closed"
+        if opened != -1 and opened < closed:
+            depth += 1
+            i = opened + len("<div")
+            continue
+        depth -= 1
+        i = closed + len("</div>")
+        if depth == 0:
+            return body[start:i]
 
 
 def _settings_csv(rows: list[tuple[str, str, str]]) -> bytes:
@@ -157,24 +174,33 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
 
     The guard the helper's own docstring names. Every other render test
     reads ``assert X in _card(body)``, so a helper that over-returns
-    makes all of them weaker without failing any — the widening mutation
-    is invisible unless something asserts the boundary itself.
+    makes all of them weaker without failing any.
+
+    **Balance is the assertion that cannot be satisfied by accident.**
+    The Tags card is the page's last, so any slice running to the end of
+    the document holds the unmatched ``</div>``s that close the column,
+    the grid and the page — a count no correctly bounded slice can have.
+    Anchoring instead on "a later card is absent" or "a template partial's
+    name does not appear" proved worthless: there is no later card, and a
+    ``{% include %}`` emits its contents and never its filename.
     """
     body = client.get("/operator/sessions/new").text
     card = _card(body)
 
     assert 'id="session-tags"' in card
-    assert card.count('<div class="card"') == 1, (
-        "the slice stops at the next card, so it holds exactly one"
+    assert card.startswith('<div class="card"'), "the slice starts at the card"
+    assert card.endswith("</div>"), "and stops at a closing tag"
+    assert card.count("<div") == card.count("</div>"), (
+        "balanced — a slice running past the card carries the extra "
+        "closing tags of every wrapper it escapes"
     )
-    # The card is the last on the page today, so an unbounded helper
-    # returns nearly the same string. Anchor on something that is
-    # definitely outside it and definitely on the page.
-    assert 'id="user-interface-settings"' not in card
-    assert "_schedule_ordering_js" not in card
-    assert len(card) < len(body) / 4, (
-        "one card, not the tail of the document"
+    assert card.count('<div class="card"') == 1, "exactly one card"
+    # Something rendered after the card, proving the slice really stops.
+    tail = body[body.index(card) + len(card):]
+    assert "getElementById" in tail, (
+        "the page's inline scripts follow the card and are not in it"
     )
+    assert "getElementById" not in card
 
 
 def test_the_two_stacked_cards_use_the_documented_column_primitive(
