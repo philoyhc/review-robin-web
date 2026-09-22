@@ -3388,6 +3388,15 @@ dep chains called out at the bottom of this file.
      would be wrong**, because a native `datalist` completes the whole
      field and the box is comma-separated. So the fork is a UX change or
      a per-token script, priced in rung 1 before either is built.
+   - **Item 8 — a pytest node id cited in live prose resolves**
+     ✅ **closed 2026-09-22**, one rung, 0 production LOC. Logged out of
+     Item 4's own defect record, not the assessment. `PATH_REF` cannot
+     reach a node id's closing backtick, so a citation of the form
+     `` `tests/…py::test_name` `` was wholly unchecked — file half
+     included. The case is not the 2 live citations, both resolving, but
+     the **3** in `guide/archive/` that are all stale across two
+     segments. Missing from this list until the close, which is the
+     drift class the segment is about.
    - **Promotion is the author's call** on a named trigger. An entry
      never promoted is not a failure of the register; losing the
      finding would have been.
