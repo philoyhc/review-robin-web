@@ -212,7 +212,8 @@ reject it.
   no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
   (the twins, every anchored backticked repo path in live prose —
   top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
-  file included — and every `§N` pointer), `tests/unit/test_doc_conventions.py`
+  file included — every `§N` pointer, and every cited pytest node id),
+  `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document),
   `tests/unit/test_index_currency.py` (an archived plan from segment 16

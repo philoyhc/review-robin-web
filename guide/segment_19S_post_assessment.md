@@ -1814,7 +1814,7 @@ Taken 2026-09-22 at `0ca204b`.
 
 ---
 
-## Item 8 — a pytest node id cited in live prose resolves
+## Item 8 — a pytest node id cited in live prose resolves — ✅ **closed 2026-09-22**
 
 **Logged 2026-09-22 on the author's instruction**, out of Item 4's own
 defect record rather than out of the assessment: that item produced
@@ -1835,8 +1835,19 @@ gets a collection error instead.
 
 | corpus | citations | resolve |
 |---|---:|---|
-| live prose (the 72 files `LIVE_PROSE` already covers) | **2** | 2 |
+| live prose (the 72 files `LIVE_PROSE` already covers) | **7** | 7 |
 | `guide/archive/` | **3** | **0** |
+
+**That "7" was "2" until the cold read.** The first build anchored the
+file half on `tests/`, inheriting `PATH_REF`'s refusal of a bare
+filename — and the repo's **majority** convention for a test citation is
+the bare filename (`docs/security_posture.md`'s gate table, 4 of them).
+So the gate saw 2 of 7 and the plan published the 2 as a property of
+the corpus when it was a property of the pattern: a `§1.6` miss, in the
+item that cites §1.6. The pattern now takes both shapes; the bare one
+resolves by a single `tests/**/<name>` glob, where two matches fail
+loudly rather than guess, which is why the shorthand is safe here and
+is not for a bare *path*.
 
 All three archived citations are stale — one in 19F's plan, two in
 `guide/archive/unfinished_business.md`. Archived prose is history and
@@ -1906,20 +1917,22 @@ Taken 2026-09-22 at `9b32a9f`.
 
 | what | count | command |
 |---|---|---|
-| node-id citations in `LIVE_PROSE` | **2** | the scan in `Opportunity` |
+| node-id citations in `LIVE_PROSE` | **7** (2 anchored, 5 bare) | the scan in `Opportunity` |
+| backticked `::` citations in `LIVE_PROSE` that are **not** test node ids | **43** | the same scan — `module.py::symbol` naming app code, a different convention and out of scope |
 | stale citations in `guide/archive/` | **3** of 3 | the same scan, archive corpus |
 | class-based tests in the suite | **0** | `grep -c "^class Test" tests/ -r` |
 | parametrised node-id citations, any corpus | **0** | the same scan, `\[` in the name |
-| `tests/unit/test_doc_references.py` | **~320** lines, 4 checks today | `grep -c "" tests/unit/test_doc_references.py` |
+| `tests/unit/test_doc_references.py` | **316** lines, **5** test functions (3 subjects: twins, paths, `§N`) | `grep -c "" …` / `grep -c "^def test_" …` — the plan said "4 checks"; re-measured at the build |
 | production LOC | **0** | the item adds a test only |
 
 ### PR ladder
 
-1. **Rung 1 — the check.** One test in
+1. **Rung 1 — the check.** ✅ done 2026-09-22. One test in
    `tests/unit/test_doc_references.py`, plus a mutation proving it
    fails on a renamed citation and a live floor asserting the scan sees
    the citations that exist. **Must not** widen `LIVE_PROSE` or touch
-   the path / `§N` checks.
+   the path / `§N` checks — **the constraint bound**, and decided the
+   escape question; see `Status`.
 
 ### Definition of done
 
@@ -1940,9 +1953,108 @@ Taken 2026-09-22 at `9b32a9f`.
 ### Open questions
 
 - Should a node id in a **live segment plan** be checked? `DATED_DOC`
-  excludes it today and one such citation exists. **Decided by:** the
-  author, or the first stale instance there. Recommendation: leave it,
-  since widening `LIVE_PROSE` changes a corpus three checks share.
+  excludes it today and one such citation exists — re-confirmed at the
+  build, still exactly one, in this file. **Left open deliberately**, as
+  the recommendation said: widening `LIVE_PROSE` changes a corpus three
+  checks share, and this item is scoped not to. **Decided by:** the
+  author, or the first stale instance there.
+
+### Status
+
+**✅ closed 2026-09-22**, one rung, 0 production LOC. Intended: one check
+that a cited pytest node id names a test that exists. Done, plus three
+supporting tests — a floor, a recogniser exercised outside its live
+examples, and the archive exemption asserted rather than assumed.
+
+**Every `Blast radius` figure re-took at the build** — 3 archived
+citations all stale, 0 parametrised ids, 0 class-based tests — and
+**two were wrong**. The module is **5** test functions, not the "4
+checks" the plan counted. And the live corpus is **7** citations, not
+2: the 2 was what the first pattern could see, not what is there. Both
+corrected above.
+
+**The escape question was not in the plan, and mutation answered it.**
+The path check has an inline marker (`<!-- path-ref-ok -->`) and a
+section marker, and reusing both looked free. It is not:
+`test_no_inline_path_marker_outlives_the_reference_it_covers` computes
+coverage from *path* references alone, so a marker placed over a broken
+**node id** reads as covering nothing and turns the suite red — the
+remedy this check's own failure message offered would itself have
+failed. Teaching that check about node ids means editing a check the
+ladder scopes out, and minting a second marker with zero uses is
+mechanism ahead of need. So: the **section** escape is honoured (M5
+below proves it), there is **no inline escape**, and the failure message
+says so. The first citation that needs one is the argument for adding it.
+
+That also caught a second defect of my own: the floor asserted every
+live citation *resolves*, which contradicts the section escape — a
+legal escaped citation would have failed it. A floor that contradicts
+its own escape gets deleted the first time someone uses the escape.
+
+**Mutations run** (`docs/unenforced_conventions.md` §1.8):
+
+| mutation | caught by |
+|---|---|
+| M1 cited test renamed | the check |
+| M2 cited test *file* renamed | the check |
+| M3 recogniser matches nothing | floor + recogniser + archive |
+| M4 resolver broken open (always returns OK) | recogniser + archive |
+| M5 broken citation in a section-escaped register | **stays green**, by design |
+
+M4 is the one worth keeping: the archive test's `assert stale` doubles
+as a guard against a resolver that never reports failure, which is the
+way this check would most plausibly rot.
+
+**The residual §1.6 asks for**: a node id inside a section-escaped dated
+register — `docs/status.md`'s timeline, `guide/todo_master.md`'s
+`## Done` — is unchecked, and so is one in a live segment plan. Both are
+stated where they can be read, and the second is left open above.
+
+**Reads: one `diff-reviewer`, and it found two defects in the gate plus
+eight smaller things.** Recorded here because a close that says only
+*a read was run* records the cadence and not the outcome.
+
+The two that mattered:
+
+- **The gate saw 2 of 7 citations.** `NODE_REF` anchored the file half
+  on `tests/`, and the bare filename is the repo's majority convention.
+  Corrected above; coverage is 7 of 7 resolvable, still green from the
+  first commit.
+- **The floor did not floor the scan.** It re-implemented the pattern
+  walk instead of calling `_node_refs`, so gutting that helper to
+  `return []` left all nine tests green **with a genuinely broken
+  citation in the repo** — verified, then fixed by having `_node_refs`
+  return every citation rather than only failures. That is §1.8's own
+  19R.5 instance reproduced *inside the item that cites it*, which is
+  the thing worth carrying forward: the M1–M5 set tested the check and
+  never tested the scan under it.
+
+The rest: the resolver's `^\s*def` resolved nested defs, class methods
+and `def`s written inside strings — all silent false passes, now
+column-0 anchored and visibly failing; its docstring's class-method
+caveat named the wrong mechanism (such an id is not *matched*, not
+*loosely resolved*); parametrised ids with `.`, `/` or a space were
+silently skipped where the plan said they must fail loudly; the module's
+own header still said *"Three checks"*, in the file whose job is doc
+currency; `tools/practice_kit.py` exports this module verbatim and two
+new tests could not pass in a fresh repo (they skip now, verified by
+running the export); and the section escape's cost — it opts a whole
+section out of the *path* gate too — was unstated.
+
+**Codex then found the half the cold read missed.** Its two P2 findings
+were against the pre-fix commit and one was already closed — the
+parametrised ids with spaces, slashes and colons it flagged are matched
+and rejected as of that push. The other was not, and the cold read had
+only found half of it: anchoring `def` at column 0 fixed *where* the
+definition sits but nothing checked *what it is called*, so a column-0
+helper resolved — `tests/…::override_get_current_user` passed the gate
+while `pytest --collect-only` on it exits 4. The name must now start
+with `test`, pytest's `python_functions` default and not overridden
+here. Node-id syntax means *a thing pytest collects*, so a name that
+cannot be one is a broken citation.
+
+Mutations now **eight**: M6 the gutted scan, M7 a renamed bare-filename
+citation, M8 a column-0 non-test def cited as a node id.
 
 ### Out of scope
 
