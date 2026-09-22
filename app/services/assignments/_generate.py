@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -521,18 +521,39 @@ def _materialise_one_instrument(
         )
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
 
-    # Insert newly eligible pairs.
-    for key in diff.to_insert:
-        reviewer, reviewee, pair_include = diff.new_pairs[key]
-        db.add(
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                instrument_id=instrument.id,
-                include=pair_include,
-                created_by_mode=mode.value,
-            )
+    # Insert newly eligible pairs. Bulk Core, matching the delete
+    # half above: at the 200 x 200 bench the ORM form built 80,000
+    # Python objects per instrument and about a minute of the measured
+    # cost was that construction rather than SQL
+    # (``guide/app_responsiveness.md`` Finding 4, 19S Item 3).
+    #
+    # ``is_self_review`` is deliberately omitted: passing the rows as
+    # executemany parameter dicts compiles the column's Python-side
+    # ``default=False`` into the statement, and the
+    # ``recompute_self_review_classification`` below is what raises it.
+    # The rows land with no identity-map entries, so that pass and the
+    # ``verify_self_review_classification`` in ``replace_assignments``
+    # see them through the ``db.flush()`` below — pinned by
+    # ``tests/unit/test_replace_assignments_bulk_insert.py``.
+    #
+    # The emptiness guard is load-bearing, not defensive: an empty
+    # parameter list compiles to a *single-row* insert of nothing but
+    # the defaults, which fails the ``NOT NULL`` on ``session_id``
+    # rather than doing nothing.
+    if diff.to_insert:
+        db.execute(
+            insert(Assignment),
+            [
+                {
+                    "session_id": review_session.id,
+                    "reviewer_id": diff.new_pairs[key][0].id,
+                    "reviewee_id": diff.new_pairs[key][1].id,
+                    "instrument_id": instrument.id,
+                    "include": diff.new_pairs[key][2],
+                    "created_by_mode": mode.value,
+                }
+                for key in diff.to_insert
+            ],
         )
 
     # Matched pairs keep their row + responses. ``include`` is

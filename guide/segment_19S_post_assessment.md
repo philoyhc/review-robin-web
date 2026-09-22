@@ -678,16 +678,24 @@ cheaper one to move and the safer one to leave.
   through the flush — the property rung 1 establishes **before**
   changing the insert.
 - **`is_self_review` is omitted at the insert site**, relying on the
-  column's Python-side `default=False` — so rung 1 names the Core form:
-  `db.execute(insert(Assignment), [dicts])` applies Python-side
-  defaults, a multi-VALUES `insert().values([…])` does not behave
-  identically.
+  column's Python-side `default=False`. Rung 1 used
+  `db.execute(insert(Assignment), [dicts])`, which compiles that
+  default into the statement — **measured, and it corrects this
+  bullet**: the plan said a multi-VALUES `insert().values([…])` "does
+  not behave identically", and on the default it does. Both forms
+  compile `is_self_review` in; they differ in what they do with
+  `created_at` (executemany supplies it Python-side, `values([…])`
+  leaves it to the `server_default`) and in the PK pre-fetch. The
+  executemany form is kept for taking per-row dicts, not for the
+  reason first given.
 - **`include` is per row** (`pair_include` from the diff), so the
   payload is a list of dicts with per-row values, not one shared
   default. `created_by_mode` likewise carries the enum's value per row.
-- **An empty `diff.to_insert` must issue no statement.** A Core
-  `insert()` handed an empty list is an error on some dialects rather
-  than a no-op.
+- **An empty `diff.to_insert` must issue no statement** — and the
+  guard is stronger than "defensive". Measured on SQLite at rung 1: an
+  empty parameter list does not no-op, it compiles a **single-row**
+  insert of nothing but the defaults and fails the `NOT NULL` on
+  `session_id`.
 - **Both dialects, and the audit envelope is unchanged.** Executemany
   behaves on Postgres and SQLite alike but `rowcount` does not, so the
   audit event's `counts` keeps coming from the diff, which computes it
@@ -728,10 +736,13 @@ by design. Rung 3 discloses rather than assuming a figure.
 
 ### PR ladder
 
-1. **Rung 1 — the bulk insert, flush property first.** Lands a test
-   that the post-insert self-review verify pass sees every inserted row,
-   *then* the Core insert under it. **Must not touch** Validate, Invite,
-   the recompute pass, or the diff computation.
+1. **Rung 1 — the bulk insert, flush property first.** ✅ done
+   2026-09-22. Lands a test that the post-insert self-review verify
+   pass sees every inserted row, *then* the Core insert under it.
+   **Must not touch** Validate, Invite, the recompute pass, or the diff
+   computation. **Cumulative-diff base for the item's cold read:
+   `05145da`** (the `main` commit rung 1 branched from — the read runs
+   at rung 2 per `CLAUDE.md`'s per-item cadence).
 2. **Rung 2 — the recompute pass.** `group_keys` gains its
    ids-and-reviewees variant, `recompute_self_review_classification`
    drops to a column-tuple select and a Core bulk `update`. **Must not
@@ -773,6 +784,30 @@ by design. Rung 3 discloses rather than assuming a figure.
   today, which is why rung 2 must pass the reviewee explicitly. Whether
   anything else does is settled by rung 1's test, written before the
   insert changes.
+
+### Status
+
+**Rung 1 done, 2026-09-22.** Intended: a test pinning that the insert's
+rows are visible to the two self-review passes, then the Core insert.
+Both landed; `is_self_review` is still omitted at the insert site and
+still raised by the recompute.
+
+Two `Semantics` bullets were **corrected by measurement rather than
+confirmed** — the multi-VALUES claim (both forms compile the default
+in) and the empty-list claim (SQLite does not no-op, it fails a
+`NOT NULL`). Both are rewritten above with what was measured.
+
+The mutation demonstration found something worth recording: moving the
+recompute above the insert is caught by the *existing* verify-pass
+`AssertionError`, but **emptying the insert entirely is not** — with no
+rows, `verify_self_review_classification` finds no drift and passes.
+So the oracle the plan leaned on covers misclassification, not absence;
+rung 1's column-tuple row count is what covers the second, and that is
+the test's justification for existing.
+
+Reads: none yet. Rung 1 is a code rung inside the ladder, so the
+`diff-reviewer` read is owed **once at rung 2** over
+`git diff 05145da..HEAD`.
 
 ### Out of scope
 
